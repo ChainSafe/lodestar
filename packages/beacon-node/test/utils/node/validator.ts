@@ -68,7 +68,9 @@ export async function getAndInitDevValidators({
       Validator.initializeFromBeaconNode({
         db,
         config: node.config,
-        api: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
+        api: {
+          clientOrUrls: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
+        },
         slashingProtection,
         logger,
         processShutdownCallback: () => {},

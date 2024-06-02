@@ -3,7 +3,7 @@ import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger, toSafePrintableUrl} from "@lodestar/utils";
-import {getClient, ApiClient, routes} from "@lodestar/api";
+import {getClient, ApiClient, routes, ApiRequestInit, defaultInit} from "@lodestar/api";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
 import {waitForGenesis} from "./genesis.js";
@@ -45,7 +45,10 @@ export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   db: LodestarValidatorDatabaseController;
   config: ChainForkConfig;
-  api: ApiClient | string | string[];
+  api: {
+    clientOrUrls: ApiClient | string | string[];
+    globalInit?: ApiRequestInit;
+  };
   signers: Signer[];
   logger: Logger;
   processShutdownCallback: ProcessShutdownCallback;
@@ -158,20 +161,21 @@ export class Validator {
     const loggerVc = getLoggerVc(logger, clock);
 
     let api: ApiClient;
-    if (typeof opts.api === "string" || Array.isArray(opts.api)) {
+    const {clientOrUrls, globalInit} = opts.api;
+    if (typeof clientOrUrls === "string" || Array.isArray(clientOrUrls)) {
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
       api = getClient(
         {
-          urls: typeof opts.api === "string" ? [opts.api] : opts.api,
+          urls: typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls,
           // Validator would need the beacon to respond within the slot
           // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
-          globalInit: {timeoutMs: config.SECONDS_PER_SLOT * 1000, signal: controller.signal},
+          globalInit: {timeoutMs: config.SECONDS_PER_SLOT * 1000, signal: controller.signal, ...globalInit},
         },
         {config, logger, metrics: metrics?.restApiClient}
       );
     } else {
-      api = opts.api;
+      api = clientOrUrls;
     }
 
     const indicesService = new IndicesService(logger, api, metrics);
@@ -270,14 +274,19 @@ export class Validator {
     const {logger, config} = opts;
 
     let api: ApiClient;
-    if (typeof opts.api === "string" || Array.isArray(opts.api)) {
-      const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
+    const {clientOrUrls, globalInit} = opts.api;
+    if (typeof clientOrUrls === "string" || Array.isArray(clientOrUrls)) {
+      const urls = typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls;
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
-      api = getClient({urls, globalInit: {signal: opts.abortController.signal}}, {config, logger});
-      logger.info("Beacon node", {urls: urls.map(toSafePrintableUrl).toString()});
+      api = getClient({urls, globalInit: {signal: opts.abortController.signal, ...globalInit}}, {config, logger});
+      logger.info("Beacon node", {
+        urls: urls.map(toSafePrintableUrl).toString(),
+        requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
+        responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
+      });
     } else {
-      api = opts.api;
+      api = clientOrUrls;
     }
 
     const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
