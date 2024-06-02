@@ -182,7 +182,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
   beaconNodeOptions.set({metrics: {validatorMonitorLogs: args.validatorMonitorLogs}});
   // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {version}});
+  beaconNodeOptions.set({api: {version, commit}});
 
   // Combine bootnodes from different sources
   const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(

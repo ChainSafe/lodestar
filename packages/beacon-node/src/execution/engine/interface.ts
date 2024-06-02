@@ -97,11 +97,11 @@ export type BlobsBundle = {
 };
 
 export type ClientVersion = {
-  code: ClientCode,
-  name: string,
-  version: string,
-  commit: Uint8Array,
-}
+  code: ClientCode;
+  name: string;
+  version: string;
+  commit: string;
+};
 
 export type VersionedHashes = Uint8Array[];
 

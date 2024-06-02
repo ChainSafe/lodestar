@@ -61,6 +61,8 @@ import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
+import {ClientCode} from "../../../execution/index.js";
+import {ApiOptions} from "../../options.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
@@ -126,6 +128,8 @@ export function getValidatorApi({
    */
   const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
+
+  const defaultGraffiti = getDefaultGraffiti();
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -333,6 +337,56 @@ export function getValidatorApi({
       );
   }
 
+  async function getDefaultGraffiti(): Promise<string> {
+    const consensusCode = ClientCode.LS;
+    const consensusCommit = opts.version ?? "";
+
+    const lodestarClientVersion = {
+      code: consensusCode,
+      name: "Lodestar",
+      version: opts.version ?? "",
+      commit: consensusCommit,
+    };
+
+    const executionClientVersions = await chain.executionEngine
+      .getClientVersion(lodestarClientVersion)
+      .catch((_) => []);
+
+    if (executionClientVersions.length !== 0) {
+      const executionCode = executionClientVersions[0].code;
+      const executionCommit = executionClientVersions[0].commit;
+
+      return `${executionCode}|${executionCommit.slice(0, 2)}|${consensusCode}|${consensusCommit.slice(0, 2)}`;
+    }
+
+    return "";
+  }
+
+  async function getDefaultGraffiti(): Promise<string> {
+    const consensusCode = ClientCode.LS;
+    const consensusCommit = opts.version ?? "";
+
+    const lodestarClientVersion = {
+      code: consensusCode,
+      name: "Lodestar",
+      version: opts.version ?? "",
+      commit: consensusCommit,
+    };
+
+    const executionClientVersions = await chain.executionEngine
+      .getClientVersion(lodestarClientVersion)
+      .catch((_) => []);
+
+    if (executionClientVersions.length !== 0) {
+      const executionCode = executionClientVersions[0].code;
+      const executionCommit = executionClientVersions[0].commit;
+
+      return `${executionCode}|${executionCommit.slice(0, 2)}|${consensusCode}|${consensusCommit.slice(0, 2)}`;
+    }
+
+    return "";
+  }
+
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {
@@ -404,7 +458,7 @@ export function getValidatorApi({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || ""),
+        graffiti: toGraffitiBuffer(graffiti || (await defaultGraffiti)),
         commonBlockBody,
       });
 
@@ -472,7 +526,7 @@ export function getValidatorApi({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || ""),
+        graffiti: toGraffitiBuffer(graffiti || (await defaultGraffiti)),
         feeRecipient,
         commonBlockBody,
       });
@@ -578,14 +632,14 @@ export function getValidatorApi({
       builderBoostFactor: `${builderBoostFactor}`,
     };
 
-    logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    const commonBlockBody = await chain.produceCommonBlockBody({
-      slot,
-      parentBlockRoot,
-      randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti || ""),
-    });
-    logger.debug("Produced common block body", loggerContext);
+      logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
+      const commonBlockBody = await chain.produceCommonBlockBody({
+        slot,
+        parentBlockRoot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(graffiti || (await defaultGraffiti)),
+      });
+      logger.debug("Produced common block body", loggerContext);
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,

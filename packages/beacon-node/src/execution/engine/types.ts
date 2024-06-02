@@ -16,7 +16,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes, ClientVersion} from "./interface.js";
+import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -64,7 +64,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
 
   /**
-   * TODO Electra: add comment
+   * Object - Instance of ClientVersion
    */
   engine_getClientVersionV1: [ClientVersionRpc];
 };
@@ -164,13 +164,16 @@ export type PayloadAttributesRpc = {
   parentBeaconBlockRoot?: DATA;
 };
 
-// TODO Electra: add comment
 export type ClientVersionRpc = {
-  code: DATA;
-  name: DATA;
-  version: DATA;
+  /** ClientCode */
+  code: string;
+  /** string, Human-readable name of the client */
+  name: string;
+  /** string, the version string of the current implementation */
+  version: string;
+  /** DATA, 4 bytes - first four bytes of the latest commit hash of this Lodestar build  */
   commit: DATA;
-}
+};
 
 export interface BlobsBundleRpc {
   commitments: DATA[]; // each 48 bytes
