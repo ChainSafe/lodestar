@@ -404,9 +404,16 @@ function mergeInits<E extends Endpoint>(
   return {
     ...defaultInit,
     ...definition.init,
-    ...urlInit,
-    ...localInit,
+    // Sanitize user provided values
+    ...removeUndefined(urlInit),
+    ...removeUndefined(localInit),
     headers: mergeHeaders(urlInit.headers, localInit.headers),
+  };
+}
+
+function removeUndefined<T extends object>(obj: T): {[K in keyof T]: Exclude<T[K], undefined>} {
+  return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined)) as {
+    [K in keyof T]: Exclude<T[K], undefined>;
   };
 }
 
