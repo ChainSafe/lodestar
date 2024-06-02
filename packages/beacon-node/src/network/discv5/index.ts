@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import {PeerId, Secp256k1PeerId} from "@libp2p/interface";
+import {PeerId} from "@libp2p/interface";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR} from "@chainsafe/enr";
@@ -42,7 +42,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   static async init(opts: Discv5Opts): Promise<Discv5Worker> {
     const workerData: Discv5WorkerData = {
       enr: opts.discv5.enr,
-      peerIdProto: exportToProtobuf(opts.peerId as Secp256k1PeerId),
+      peerIdProto: exportToProtobuf(opts.peerId),
       bindAddrs: opts.discv5.bindAddrs,
       config: opts.discv5.config ?? {},
       bootEnrs: opts.discv5.bootEnrs,

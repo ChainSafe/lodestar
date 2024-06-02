@@ -142,7 +142,7 @@ describe.skip("data serialization through worker boundary", function () {
     getConnectedPeers: [],
     getConnectedPeerCount: [],
     updateStatus: [statusZero],
-    publishGossip: ["test-topic", bytes, {allowPublishToZeroTopicPeers: true, ignoreDuplicatePublishError: true}],
+    publishGossip: ["test-topic", bytes, {allowPublishToZeroPeers: true, ignoreDuplicatePublishError: true}],
     close: [],
     scrapeMetrics: [],
     writeProfile: [0, ""],
