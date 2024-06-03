@@ -10,7 +10,6 @@ import {
   ResponseMetadataCodec,
   Endpoint,
   SszRequestMethods,
-  JsonRequestMethods,
 } from "./types.js";
 import {WireFormat} from "./wireFormat.js";
 
@@ -47,21 +46,6 @@ export function JsonOnlyReq<E extends Endpoint>(
       throw Error("Not implemented");
     },
     onlySupport: WireFormat.json,
-  };
-}
-
-export function SszOnlyReq<E extends Endpoint>(
-  req: Omit<RequestWithBodyCodec<E>, keyof JsonRequestMethods<E>>
-): RequestWithBodyCodec<E> {
-  return {
-    ...req,
-    writeReqJson: () => {
-      throw Error("Not implemented");
-    },
-    parseReqJson: () => {
-      throw Error("Not implemented");
-    },
-    onlySupport: WireFormat.ssz,
   };
 }
 
