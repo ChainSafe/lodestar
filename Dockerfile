@@ -23,7 +23,7 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 # Note: This step is redundant for the host arch
 FROM node:22-alpine as build_deps
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
 
 COPY --from=build_src /usr/app .
 
