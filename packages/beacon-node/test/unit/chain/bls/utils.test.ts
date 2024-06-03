@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {chunkifyMaximizeChunkSize} from "../../../../src/chain/bls/utils.js";
+import {chunkifyMaximizeChunkSize} from "../../../../src/chain/bls/multithread/utils.js";
 import {linspace} from "../../../../src/util/numpy.js";
 
 describe("chain / bls / utils / chunkifyMaximizeChunkSize", () => {

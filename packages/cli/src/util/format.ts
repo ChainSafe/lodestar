@@ -1,5 +1,5 @@
 import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {CoordType} from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
 
 /**
