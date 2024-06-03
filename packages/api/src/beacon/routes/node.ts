@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ByteListType, ContainerType, OptionalType} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks, altair, ssz} from "@lodestar/types";
+import {ssz, stringType} from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ArrayOf,
@@ -19,19 +19,16 @@ import {WireFormat} from "../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export const byteListType = new ByteListType(100);
 export const NetworkIdentityType = new ContainerType(
   {
-    peerId: byteListType,
-    enr: byteListType,
-    p2pAddresses: ArrayOf(byteListType),
-    discoveryAddresses: ArrayOf(byteListType),
-    metadata: new ContainerType({
-      ...ssz.phase0.Metadata.fields,
-      // TODO: optional type does not really map to a field that can be `undefined` / missing
-      // the container would throw an error if JSON key is not defined, it rather maps to `type | null`
-      syncnets: new OptionalType(ssz.altair.Metadata.fields.syncnets),
-    }),
+    /** Cryptographic hash of a peer’s public key. [Read more](https://docs.libp2p.io/concepts/peer-id/) */
+    peerId: stringType,
+    /** Ethereum node record. [Read more](https://eips.ethereum.org/EIPS/eip-778) */
+    enr: stringType,
+    p2pAddresses: ArrayOf(stringType),
+    discoveryAddresses: ArrayOf(stringType),
+    /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
+    metadata: ssz.altair.Metadata,
   },
   {jsonCase: "eth2"}
 );
@@ -46,17 +43,7 @@ export const PeerCountType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
-// Differs from the ssz type because each property is string-encoded
-export type NetworkIdentity = {
-  /** Cryptographic hash of a peer’s public key. [Read more](https://docs.libp2p.io/concepts/peer-id/) */
-  peerId: string;
-  /** Ethereum node record. [Read more](https://eips.ethereum.org/EIPS/eip-778) */
-  enr: string;
-  p2pAddresses: string[];
-  discoveryAddresses: string[];
-  /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
-  metadata: allForks.Metadata;
-};
+export type NetworkIdentity = ValueOf<typeof NetworkIdentityType>;
 
 export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";
 export type PeerDirection = "inbound" | "outbound";
@@ -72,12 +59,7 @@ export type NodePeer = {
 
 export type PeersMeta = {count: number};
 
-export type PeerCount = {
-  disconnected: number;
-  connecting: number;
-  connected: number;
-  disconnecting: number;
-};
+export type PeerCount = ValueOf<typeof PeerCountType>;
 
 export type FilterGetPeers = {
   state?: PeerState[];
@@ -210,35 +192,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: EmptyRequestCodec,
       resp: {
         onlySupport: WireFormat.json,
-        data: {
-          toJson: (data) => ({
-            peer_id: data.peerId,
-            enr: data.enr,
-            p2p_addresses: data.p2pAddresses,
-            discovery_addresses: data.discoveryAddresses,
-            metadata: ssz.altair.Metadata.toJson(data.metadata as altair.Metadata),
-          }),
-          // TODO validation
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fromJson: (data: any) => ({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            peerId: data.peer_id,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            enr: data.enr,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            p2pAddresses: data.p2p_addresses,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            discoveryAddresses: data.discovery_addresses,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            metadata: ssz.altair.Metadata.fromJson(data.metadata),
-          }),
-          serialize: () => {
-            throw new Error("Not implemented");
-          },
-          deserialize: () => {
-            throw new Error("Not implemented");
-          },
-        },
+        data: NetworkIdentityType,
         meta: EmptyMetaCodec,
       },
     },
