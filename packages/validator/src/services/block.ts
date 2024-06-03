@@ -3,11 +3,14 @@ import {
   BLSPubkey,
   Slot,
   BLSSignature,
-  allForks,
-  isBlindedSignedBeaconBlock,
   ProducedBlockSource,
   deneb,
   isBlockContents,
+  BeaconBlock,
+  SignedBeaconBlockOrContents,
+  BeaconBlockOrContents,
+  SignedBeaconBlock,
+  isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
@@ -26,14 +29,14 @@ import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 type FullOrBlindedBlockWithContents =
   | {
       version: ForkPreBlobs;
-      block: allForks.BeaconBlock;
+      block: BeaconBlock<ForkPreBlobs, "full">;
       contents: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkBlobs;
-      block: allForks.BeaconBlock;
+      block: BeaconBlock<ForkBlobs, "full">;
       contents: {
         kzgProofs: deneb.KZGProofs;
         blobs: deneb.Blobs;
@@ -43,7 +46,7 @@ type FullOrBlindedBlockWithContents =
     }
   | {
       version: ForkExecution;
-      block: allForks.BlindedBeaconBlock;
+      block: BeaconBlock<ForkExecution, "blinded">;
       contents: null;
       executionPayloadBlinded: true;
       executionPayloadSource: ProducedBlockSource;
@@ -160,7 +163,11 @@ export class BlockProposingService {
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
-      await this.publishBlockWrapper(signedBlock, blockContents.contents, publishOpts).catch((e: Error) => {
+      await this.publishBlockWrapper(
+        signedBlock as SignedBeaconBlock<ForkBlobs>,
+        blockContents.contents,
+        publishOpts
+      ).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
@@ -174,7 +181,7 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (
-    signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+    signedBlock: SignedBeaconBlockOrContents<ForkBlobs>,
     contents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
@@ -304,10 +311,11 @@ function parseProduceBlockResponse(
       debugLogCtx,
     } as FullOrBlindedBlockWithContents & DebugLogCtx;
   } else {
-    if (isBlockContents(response.data)) {
+    const data = response.data as BeaconBlockOrContents;
+    if (isBlockContents(data)) {
       return {
-        block: response.data.block,
-        contents: {blobs: response.data.blobs, kzgProofs: response.data.kzgProofs},
+        block: data.block,
+        contents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
         version: response.version,
         executionPayloadBlinded: false,
         executionPayloadSource,

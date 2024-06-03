@@ -1,5 +1,21 @@
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
+import {
+  altair,
+  BeaconBlock,
+  BeaconBlockBody,
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientHeader,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  phase0,
+  Root,
+  RootHex,
+  Slot,
+  ssz,
+  SSZTypesFor,
+  SyncPeriod,
+} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   CachedBeaconStateAltair,
@@ -16,7 +32,14 @@ import {
 } from "@lodestar/light-client/spec";
 import {Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE, ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
+import {
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  SYNC_COMMITTEE_SIZE,
+  ForkName,
+  ForkSeq,
+  ForkExecution,
+  ForkLightClient,
+} from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -40,7 +63,7 @@ type DependentRootHex = RootHex;
 type BlockRooHex = RootHex;
 
 export type SyncAttestedData = {
-  attestedHeader: allForks.LightClientHeader;
+  attestedHeader: LightClientHeader;
   /** Precomputed root to prevent re-hashing */
   blockRoot: Uint8Array;
 } & (
@@ -178,11 +201,11 @@ export class LightClientServer {
    * Keep in memory since this data is very transient, not useful after a few slots
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
-  private checkpointHeaders = new Map<BlockRooHex, allForks.LightClientHeader>();
-  private latestHeadUpdate: allForks.LightClientOptimisticUpdate | null = null;
+  private checkpointHeaders = new Map<BlockRooHex, LightClientHeader>();
+  private latestHeadUpdate: LightClientOptimisticUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
-  private finalized: allForks.LightClientFinalityUpdate | null = null;
+  private finalized: LightClientFinalityUpdate | null = null;
 
   constructor(
     private readonly opts: LightClientServerOpts,
@@ -225,7 +248,7 @@ export class LightClientServer {
    * - Use block's syncAggregate
    */
   onImportBlockHead(
-    block: allForks.AllForksLightClient["BeaconBlock"],
+    block: BeaconBlock<ForkLightClient>,
     postState: CachedBeaconStateAltair,
     parentBlockSlot: Slot
   ): void {
@@ -260,7 +283,7 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getBootstrap(blockRoot: Uint8Array): Promise<allForks.LightClientBootstrap> {
+  async getBootstrap(blockRoot: Uint8Array): Promise<LightClientBootstrap> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
@@ -305,7 +328,7 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdate(period: number): Promise<allForks.LightClientUpdate> {
+  async getUpdate(period: number): Promise<LightClientUpdate> {
     // Signature data
     const update = await this.db.bestLightClientUpdate.get(period);
     if (!update) {
@@ -336,11 +359,11 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  getOptimisticUpdate(): allForks.LightClientOptimisticUpdate | null {
+  getOptimisticUpdate(): LightClientOptimisticUpdate | null {
     return this.latestHeadUpdate;
   }
 
-  getFinalityUpdate(): allForks.LightClientFinalityUpdate | null {
+  getFinalityUpdate(): LightClientFinalityUpdate | null {
     return this.finalized;
   }
 
@@ -356,7 +379,7 @@ export class LightClientServer {
   }
 
   private async persistPostBlockImportData(
-    block: allForks.AllForksLightClient["BeaconBlock"],
+    block: BeaconBlock<ForkLightClient>,
     postState: CachedBeaconStateAltair,
     parentBlockSlot: Slot
   ): Promise<void> {
@@ -476,7 +499,7 @@ export class LightClientServer {
       return;
     }
 
-    const headerUpdate: allForks.LightClientOptimisticUpdate = {
+    const headerUpdate: LightClientOptimisticUpdate = {
       attestedHeader,
       syncAggregate,
       signatureSlot,
@@ -633,7 +656,7 @@ export class LightClientServer {
       finalityBranch,
       syncAggregate,
       signatureSlot,
-    } as allForks.LightClientUpdate;
+    } as LightClientUpdate;
 
     // attestedData and the block of syncAggregate may not be in same sync period
     // should not use attested data slot as sync period
@@ -669,7 +692,7 @@ export class LightClientServer {
   /**
    * Get finalized header from db. Keeps a small in-memory cache to speed up most of the lookups
    */
-  private async getFinalizedHeader(finalizedBlockRoot: Uint8Array): Promise<allForks.LightClientHeader | null> {
+  private async getFinalizedHeader(finalizedBlockRoot: Uint8Array): Promise<LightClientHeader | null> {
     const finalizedBlockRootHex = toHexString(finalizedBlockRoot);
     const cachedFinalizedHeader = this.checkpointHeaders.get(finalizedBlockRootHex);
     if (cachedFinalizedHeader) {
@@ -697,28 +720,23 @@ export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-export function blockToLightClientHeader(
-  fork: ForkName,
-  block: allForks.AllForksLightClient["BeaconBlock"]
-): allForks.LightClientHeader {
+export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<ForkLightClient>): LightClientHeader {
   const blockSlot = block.slot;
   const beacon: phase0.BeaconBlockHeader = {
     slot: blockSlot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: block.stateRoot,
-    bodyRoot: (ssz[fork].BeaconBlockBody as allForks.AllForksLightClientSSZTypes["BeaconBlockBody"]).hashTreeRoot(
-      block.body
-    ),
+    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkLightClient, "BeaconBlockBody">).hashTreeRoot(block.body),
   };
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    const blockBody = block.body as allForks.AllForksExecution["BeaconBlockBody"];
+    const blockBody = block.body as BeaconBlockBody<ForkExecution>;
     const execution = executionPayloadToPayloadHeader(ForkSeq[fork], blockBody.executionPayload);
     return {
       beacon,
       execution,
       executionBranch: getBlockBodyExecutionHeaderProof(fork as ForkExecution, blockBody),
-    } as allForks.LightClientHeader;
+    } as LightClientHeader;
   } else {
     return {beacon};
   }

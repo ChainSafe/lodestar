@@ -17,6 +17,7 @@ import {
   stringType,
   BeaconBlock,
   BeaconBlockOrContents,
+  SignedUnsigned,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";

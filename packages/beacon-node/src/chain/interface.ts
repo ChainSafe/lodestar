@@ -1,6 +1,5 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {
-  allForks,
   UintNum64,
   Root,
   phase0,
@@ -12,6 +11,10 @@ import {
   Wei,
   capella,
   altair,
+  BeaconBlock,
+  ExecutionPayload,
+  FullOrBlinded,
+  SignedBeaconBlock,
 } from "@lodestar/types";
 import {
   BeaconStateAllForks,
@@ -22,8 +25,8 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkAll} from "@lodestar/params";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -120,7 +123,7 @@ export interface IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
-  readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
+  readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
@@ -162,25 +165,25 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(
     slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   /**
    * Get local block by root, does not fetch from the network
    */
   getBlockByRoot(
     root: RootHex
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: allForks.BeaconBlock;
+    block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
   produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: allForks.BlindedBeaconBlock;
+    block: BeaconBlock<ForkAll, "blinded">;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
   }>;
@@ -204,7 +207,7 @@ export interface IBeaconChain {
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
-  persistBlock(data: allForks.BeaconBlock | allForks.BlindedBeaconBlock, suffix?: string): void;
+  persistBlock(data: BeaconBlock<ForkAll, FullOrBlinded>, suffix?: string): void;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
@@ -220,13 +223,13 @@ export interface IBeaconChain {
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
 
-  getBlockRewards(blockRef: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards>;
+  getBlockRewards(blockRef: BeaconBlock<ForkAll, FullOrBlinded>): Promise<BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
   getSyncCommitteeRewards(
-    blockRef: allForks.FullOrBlindedBeaconBlock,
+    blockRef: BeaconBlock<ForkAll, FullOrBlinded>,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards>;
 }

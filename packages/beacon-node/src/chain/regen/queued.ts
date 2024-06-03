@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Slot, allForks, RootHex, Epoch} from "@lodestar/types";
+import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
@@ -86,7 +86,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * which is usually the gossip block.
    */
   getPreStateSync(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
     const parentRoot = toHexString(block.parentRoot);
@@ -200,7 +200,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * - State after `block.parentRoot` dialed forward to block.slot
    */
   async getPreState(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {

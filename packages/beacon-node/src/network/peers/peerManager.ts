@@ -2,7 +2,7 @@ import {Connection, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {Metadata, altair, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
@@ -90,7 +90,7 @@ export interface IReqRespBeaconNodePeerManager {
   sendPing(peerId: PeerId): Promise<phase0.Ping>;
   sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
   sendGoodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
-  sendMetadata(peerId: PeerId): Promise<allForks.Metadata>;
+  sendMetadata(peerId: PeerId): Promise<Metadata>;
 }
 
 export type PeerManagerModules = {
@@ -301,7 +301,7 @@ export class PeerManager {
   /**
    * Handle a METADATA request + response (rpc handler responds with METADATA automatically)
    */
-  private onMetadata(peer: PeerId, metadata: allForks.Metadata): void {
+  private onMetadata(peer: PeerId, metadata: Metadata): void {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());

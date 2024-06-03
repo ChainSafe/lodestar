@@ -1,7 +1,7 @@
-import {allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {IBeaconChain} from "../../../../chain/interface.js";
@@ -9,7 +9,7 @@ import {rootHexRegex} from "../../../../eth1/provider/utils.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,
-  block: allForks.SignedBeaconBlock,
+  block: SignedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {
   return {
@@ -25,7 +25,7 @@ export function toBeaconHeaderResponse(
 export async function resolveBlockId(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
-): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
+): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
   const res = await resolveBlockIdOrNull(chain, blockId);
   if (!res) {
     throw new ApiError(404, `No block found for id '${blockId}'`);
@@ -37,7 +37,7 @@ export async function resolveBlockId(
 async function resolveBlockIdOrNull(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
-): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
     return chain.getBlockByRoot(chain.forkChoice.getHead().blockRoot);

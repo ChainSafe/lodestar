@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {deneb, Epoch, phase0, allForks, Slot} from "@lodestar/types";
+import {deneb, Epoch, phase0, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
@@ -55,7 +55,7 @@ export async function beaconBlocksMaybeBlobsByRange(
 // Assumes that the blobs are in the same sequence as blocks, doesn't require block to be sorted
 export function matchBlockWithBlobs(
   config: ChainForkConfig,
-  allBlocks: WithBytes<allForks.SignedBeaconBlock>[],
+  allBlocks: WithBytes<SignedBeaconBlock>[],
   allBlobSidecars: deneb.BlobSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,

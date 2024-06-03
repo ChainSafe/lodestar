@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks, ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
-import {allForks, Root, allForks as allForkTypes, ssz, Slot} from "@lodestar/types";
+import {Root, ssz, Slot, SignedBeaconBlock} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBlsVerifier} from "../../chain/bls/index.js";
 import {WithBytes} from "../../network/interface.js";
@@ -11,21 +11,21 @@ export type BackfillBlockHeader = {
   root: Root;
 };
 
-export type BackfillBlock = BackfillBlockHeader & {block: allForks.SignedBeaconBlock};
+export type BackfillBlock = BackfillBlockHeader & {block: SignedBeaconBlock};
 
 export function verifyBlockSequence(
   config: BeaconConfig,
-  blocks: WithBytes<allForkTypes.SignedBeaconBlock>[],
+  blocks: WithBytes<SignedBeaconBlock>[],
   anchorRoot: Root
 ): {
   nextAnchor: BackfillBlock | null;
-  verifiedBlocks: WithBytes<allForkTypes.SignedBeaconBlock>[];
+  verifiedBlocks: WithBytes<SignedBeaconBlock>[];
   error?: BackfillSyncErrorCode.NOT_LINEAR;
 } {
   let nextRoot: Root = anchorRoot;
   let nextAnchor: BackfillBlock | null = null;
 
-  const verifiedBlocks: WithBytes<allForkTypes.SignedBeaconBlock>[] = [];
+  const verifiedBlocks: WithBytes<SignedBeaconBlock>[] = [];
   for (const block of blocks.reverse()) {
     const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
     if (!ssz.Root.equals(blockRoot, nextRoot)) {
@@ -44,7 +44,7 @@ export function verifyBlockSequence(
 export async function verifyBlockProposerSignature(
   bls: IBlsVerifier,
   state: CachedBeaconStateAllForks,
-  blocks: WithBytes<allForkTypes.SignedBeaconBlock>[]
+  blocks: WithBytes<SignedBeaconBlock>[]
 ): Promise<void> {
   if (blocks.length === 1 && blocks[0].data.message.slot === GENESIS_SLOT) return;
   const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {

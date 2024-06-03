@@ -1,8 +1,8 @@
-import {GENESIS_SLOT} from "@lodestar/params";
-import {allForks} from "@lodestar/types";
+import {ForkAll, GENESIS_SLOT} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db} from "@lodestar/db";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {SSZTypesFor} from "@lodestar/types";
 import {Bucket} from "../buckets.js";
 
 export class PreGenesisState {
@@ -10,7 +10,7 @@ export class PreGenesisState {
   private readonly bucket: Bucket;
   private readonly db: Db;
   private readonly key: Uint8Array;
-  private readonly type: allForks.AllForksSSZTypes["BeaconState"];
+  private readonly type: SSZTypesFor<ForkAll, "BeaconState">;
 
   constructor(config: ChainForkConfig, db: Db) {
     this.config = config;

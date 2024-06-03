@@ -18,9 +18,9 @@ import {
   isForkBlobs,
   isForkExecution,
   ForkSeq,
-  ForkPreBlobs,
-  ForkBlobs,
   ForkExecution,
+  ForkAll,
+  ForkBlobs,
 } from "@lodestar/params";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
@@ -31,12 +31,15 @@ import {
   Epoch,
   ProducedBlockSource,
   bellatrix,
-  allForks,
   BLSSignature,
   isBlindedBeaconBlock,
   isBlockContents,
   phase0,
-  Wei,
+  BlockContents,
+  BeaconBlock,
+  BeaconBlockOrContents,
+  isSignedBlockContents,
+  SignedBeaconBlockOrContents,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
@@ -496,14 +499,14 @@ export function getValidatorApi({
         void chain.persistBlock(block, "produced_engine_block");
       }
       if (isForkBlobs(version)) {
-        const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
+        const blockHash = toHex((block as BeaconBlock<ForkBlobs>).body.executionPayload.blockHash);
         const contents = chain.producedContentsCache.get(blockHash);
         if (contents === undefined) {
           throw Error("contents missing in cache");
         }
 
         return {
-          data: {block, ...contents} as allForks.BlockContents,
+          data: {block, ...contents} as BlockContents<ForkBlobs, "unsigned">,
           version,
           executionPayloadValue,
           consensusBlockValue,
@@ -578,14 +581,20 @@ export function getValidatorApi({
       builderBoostFactor: `${builderBoostFactor}`,
     };
 
-    logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    const commonBlockBody = await chain.produceCommonBlockBody({
+    const produceBlock: ServerApi<routes.validator.Api>["produceBlock"] = async function produceBlock(
       slot,
-      parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti || ""),
-    });
-    logger.debug("Produced common block body", loggerContext);
+      graffiti
+    ) {
+      const producedData = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti);
+      if (isForkBlobs(producedData.version)) {
+        throw Error(`Invalid call to produceBlock for deneb+ fork=${producedData.version}`);
+      } else {
+        // TODO: need to figure out why typescript requires typecasting here
+        // by typing of produceFullBlockOrContents respose it should have figured this out itself
+        return producedData as {data: BeaconBlock};
+      }
+    };
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
@@ -797,13 +806,13 @@ export function getValidatorApi({
 
       if (isBlockContents(data)) {
         const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
-        return {data: blindedBlock, meta: {version}};
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution, "full">);
+        return {executionPayloadValue, consensusBlockValue, data: blindedBlock, executionPayloadBlinded, version};
       } else if (isBlindedBeaconBlock(data)) {
         return {data, meta: {version}};
       } else {
-        const blindedBlock = beaconBlockToBlinded(config, data as allForks.AllForksExecution["BeaconBlock"]);
-        return {data: blindedBlock, meta: {version}};
+        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution, "full">);
+        return {executionPayloadValue, consensusBlockValue, data: blindedBlock, executionPayloadBlinded, version};
       }
     },
 

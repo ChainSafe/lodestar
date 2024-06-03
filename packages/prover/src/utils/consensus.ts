@@ -1,5 +1,5 @@
 import {ApiClient} from "@lodestar/api/beacon";
-import {allForks, Bytes32, capella} from "@lodestar/types";
+import {Bytes32, capella} from "@lodestar/types";
 import {GenesisData, Lightclient} from "@lodestar/light-client";
 import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
@@ -49,7 +49,7 @@ export async function getExecutionPayloads({
   startSlot: number;
   endSlot: number;
   logger: Logger;
-}): Promise<Map<number, allForks.ExecutionPayload>> {
+}): Promise<Map<number, ExecutionPayload>> {
   [startSlot, endSlot] = [Math.min(startSlot, endSlot), Math.max(startSlot, endSlot)];
   if (startSlot === endSlot) {
     logger.debug("Fetching EL payload", {slot: startSlot});
@@ -57,7 +57,7 @@ export async function getExecutionPayloads({
     logger.debug("Fetching EL payloads", {startSlot, endSlot});
   }
 
-  const payloads = new Map<number, allForks.ExecutionPayload>();
+  const payloads = new Map<number, ExecutionPayload>();
 
   let slot = endSlot;
   let block = await fetchNearestBlock(api, slot);
@@ -82,8 +82,8 @@ export async function getExecutionPayloadForBlockNumber(
   api: ApiClient,
   startSlot: number,
   blockNumber: number
-): Promise<Map<number, allForks.ExecutionPayload>> {
-  const payloads = new Map<number, allForks.ExecutionPayload>();
+): Promise<Map<number, ExecutionPayload>> {
+  const payloads = new Map<number, ExecutionPayload>();
 
   let block = await fetchNearestBlock(api, startSlot);
   payloads.set(block.message.slot, block.message.body.executionPayload);
