@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ListCompositeType, ValueOf, byteArrayEquals} from "@chainsafe/ssz";
-import {ssz, SyncPeriod, allForks, deneb} from "@lodestar/types";
+import {ListCompositeType, ValueOf} from "@chainsafe/ssz";
+import {ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
-import {getLightClientForkTypes} from "../../utils/fork.js";
+import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
+import {getLightClientForkTypes, toForkName} from "../../utils/fork.js";
 import {
   EmptyArgs,
   EmptyRequestCodec,
@@ -13,6 +13,7 @@ import {
   EmptyMetaCodec,
   EmptyRequest,
   WithVersion,
+  JsonOnlyResp,
 } from "../../utils/codecs.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -30,12 +31,7 @@ export type Endpoints = {
    */
   getLightClientUpdatesByRange: Endpoint<
     "GET",
-    {
-      startPeriod: SyncPeriod;
-      count: number;
-      /** Only required for ssz response wire encoding */
-      genesisValidatorsRoot?: Uint8Array;
-    },
+    {startPeriod: SyncPeriod; count: number},
     {query: {start_period: number; count: number}},
     allForks.LightClientUpdate[],
     {versions: ForkName[]}
@@ -88,82 +84,31 @@ export type Endpoints = {
   >;
 };
 
-export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
-  // this beacon config will be stored here in this closure so fork digests don't need to be recomputed
-  let beaconConfig: BeaconConfig | undefined;
-
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getLightClientUpdatesByRange: {
       url: "/eth/v1/beacon/light_client/updates",
       method: "GET",
       req: {
-        writeReq: ({startPeriod, count, genesisValidatorsRoot}) => {
-          // store the beacon config if its a new genesisValidatorsRoot
-          if (
-            genesisValidatorsRoot &&
-            (beaconConfig === undefined || !byteArrayEquals(beaconConfig.genesisValidatorsRoot, genesisValidatorsRoot))
-          ) {
-            beaconConfig = createBeaconConfig(config, genesisValidatorsRoot);
-          }
-          return {query: {start_period: startPeriod, count}};
-        },
+        writeReq: ({startPeriod, count}) => ({query: {start_period: startPeriod, count}}),
         parseReq: ({query}) => ({startPeriod: query.start_period, count: query.count}),
         schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
       },
-      resp: {
+      resp: JsonOnlyResp({
         data: {
           toJson: (data, meta) => {
-            if (data.length !== meta.versions.length) {
-              throw new Error("TODO"); // TODO
-            }
             const json: unknown[] = [];
-            for (const [i, version] of meta.versions.entries()) {
-              json.push(getLightClientForkTypes(version).LightClientUpdate.toJson(data[i] as deneb.LightClientUpdate));
+            for (const [i, update] of data.entries()) {
+              json.push(getLightClientForkTypes(meta.versions[i]).LightClientUpdate.toJson(update));
             }
             return json;
           },
           fromJson: (data, meta) => {
+            const updates = data as unknown[];
             const value: allForks.LightClientUpdate[] = [];
-            for (let i = 0; i < meta.versions.length; i++) {
+            for (let i = 0; i < updates.length; i++) {
               const version = meta.versions[i];
-              value.push(getLightClientForkTypes(version).LightClientUpdate.fromJson((data as unknown[])[i]));
-            }
-            return value;
-          },
-          serialize: (data, meta) => {
-            if (data.length !== meta.versions.length) {
-              throw new Error("TODO"); // TODO
-            }
-            if (!beaconConfig) {
-              throw new Error("TODO"); // TODO
-            }
-            const bufs: Uint8Array[] = [];
-            for (const [i, version] of meta.versions.entries()) {
-              const forkDigest = beaconConfig.forkName2ForkDigest(version);
-              const serialized = getLightClientForkTypes(version).LightClientUpdate.serialize(
-                data[i] as deneb.LightClientUpdate
-              );
-              const length = ssz.UintNum64.serialize(4 + serialized.length);
-              bufs.push(length, forkDigest, serialized);
-            }
-            return Buffer.concat(bufs);
-          },
-          deserialize: (data) => {
-            if (!beaconConfig) {
-              throw new Error("TODO"); // TODO
-            }
-            let offset = 0;
-            const value: allForks.LightClientUpdate[] = [];
-            while (offset < data.length) {
-              const length = ssz.UintNum64.deserialize(data.subarray(offset, offset + 8));
-              const forkDigest = ssz.ForkDigest.deserialize(data.subarray(offset + 8, offset + 12));
-              const version = beaconConfig.forkDigest2ForkName(forkDigest);
-              value.push(
-                getLightClientForkTypes(version).LightClientUpdate.deserialize(
-                  data.subarray(offset + 12, offset + length)
-                )
-              );
-              offset += length;
+              value.push(getLightClientForkTypes(version).LightClientUpdate.fromJson(updates[i]));
             }
             return value;
           },
@@ -171,33 +116,32 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: {
           toJson: (meta) => meta,
           fromJson: (val) => val as {versions: ForkName[]},
-          toHeadersObject: (meta) => ({
-            [MetaHeader.Version]: meta.versions.join(","),
-          }),
-          fromHeaders: (headers) => ({
-            // TODO: this header format is not spec compliant, do we care?
-            versions: headers.getRequired(MetaHeader.Version).split(",") as ForkName[],
-          }),
+          toHeadersObject: () => ({}),
+          fromHeaders: () => ({versions: []}),
         },
         transform: {
           toResponse: (data, meta) => {
-            const r: unknown[] = [];
-            for (let i = 0; i < (data as unknown[]).length; i++) {
-              r.push({data: (data as unknown[])[i], version: (meta as {versions: string[]}).versions[i]});
+            const updates = data as unknown[];
+            const resp: unknown[] = [];
+            for (let i = 0; i < updates.length; i++) {
+              resp.push({data: updates[i], version: (meta as {versions: string[]}).versions[i]});
             }
-            return r;
+            return resp;
           },
           fromResponse: (resp) => {
-            const d: allForks.LightClientUpdate[] = [];
-            const meta: {versions: ForkName[]} = {versions: []};
-            for (const {data, version} of resp as {data: allForks.LightClientUpdate; version: ForkName}[]) {
-              d.push(data);
-              meta.versions.push(version);
+            if (!Array.isArray(resp)) {
+              throw Error("JSON is not an array");
             }
-            return {data: d, meta};
+            const updates: allForks.LightClientUpdate[] = [];
+            const meta: {versions: ForkName[]} = {versions: []};
+            for (const {data, version} of resp as {data: allForks.LightClientUpdate; version: string}[]) {
+              updates.push(data);
+              meta.versions.push(toForkName(version));
+            }
+            return {data: updates, meta};
           },
         },
-      },
+      }),
     },
     getLightClientOptimisticUpdate: {
       url: "/eth/v1/beacon/light_client/optimistic_update",
