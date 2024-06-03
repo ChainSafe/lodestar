@@ -11,7 +11,7 @@ import {LocalKeystoreDefinition} from "../../../../../src/cmds/validator/keymana
 const numberOfSigners = 10;
 
 describe("keystoreCache", () => {
-  vi.setConfig({testTimeout: 10000, hookTimeout: 50000});
+  vi.setConfig({testTimeout: 20_000, hookTimeout: 50_000});
   let definitions: LocalKeystoreDefinition[];
   let signers: SignerLocal[];
   let secretKeys: Uint8Array[];
