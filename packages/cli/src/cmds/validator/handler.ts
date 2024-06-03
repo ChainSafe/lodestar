@@ -8,7 +8,7 @@ import {
   ValidatorProposerConfig,
   defaultOptions,
 } from "@lodestar/validator";
-import {routes} from "@lodestar/api";
+import {WireFormat, routes} from "@lodestar/api";
 import {getMetrics} from "@lodestar/validator";
 import {
   RegistryMetricCreator,
@@ -152,7 +152,13 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       db,
       config,
       slashingProtection,
-      api: args.beaconNodes,
+      api: {
+        clientOrUrls: args.beaconNodes,
+        globalInit: {
+          requestWireFormat: parseWireFormat(args, "http.requestWireFormat"),
+          responseWireFormat: parseWireFormat(args, "http.responseWireFormat"),
+        },
+      },
       logger,
       processShutdownCallback,
       signers,
@@ -268,4 +274,20 @@ function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.B
   }
 
   return broadcastValidation as routes.beacon.BroadcastValidation;
+}
+
+function parseWireFormat(args: IValidatorCliArgs, key: keyof IValidatorCliArgs): WireFormat | undefined {
+  const wireFormat = args[key];
+
+  if (wireFormat !== undefined) {
+    switch (wireFormat) {
+      case WireFormat.json:
+      case WireFormat.ssz:
+        break;
+      default:
+        throw new YargsError(`Invalid input for ${key}, must be one of "${WireFormat.json}" or "${WireFormat.ssz}"`);
+    }
+  }
+
+  return wireFormat;
 }

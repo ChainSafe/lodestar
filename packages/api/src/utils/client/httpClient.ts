@@ -40,7 +40,7 @@ const URL_SCORE_DELTA_ERROR = 2 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MAX = 10 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MIN = 0;
 
-const defaultInit: Required<ExtraRequestInit> = {
+export const defaultInit: Required<ExtraRequestInit> = {
   timeoutMs: DEFAULT_TIMEOUT_MS,
   retries: DEFAULT_RETRIES,
   retryDelay: DEFAULT_RETRY_DELAY,
