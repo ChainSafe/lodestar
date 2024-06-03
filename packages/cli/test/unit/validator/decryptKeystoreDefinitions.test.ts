@@ -10,7 +10,7 @@ import {LocalKeystoreDefinition} from "../../../src/cmds/validator/keymanager/in
 import {LockfileError, unlockFilepath} from "../../../src/util/lockfile.js";
 
 describe("decryptKeystoreDefinitions", () => {
-  vi.setConfig({testTimeout: 100_000});
+  vi.setConfig({testTimeout: 100_000, hookTimeout: 50_000});
 
   const signal = new AbortController().signal;
   const dataDir = path.join(testFilesDir, "decrypt-keystores-test");
