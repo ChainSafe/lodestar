@@ -11,8 +11,8 @@ import {WireFormat} from "../wireFormat.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 
 export type ExtraRequestInit = {
-  requestWireFormat?: WireFormat;
-  responseWireFormat?: WireFormat;
+  requestWireFormat?: `${WireFormat}`;
+  responseWireFormat?: `${WireFormat}`;
   timeoutMs?: number;
   retries?: number;
   retryDelay?: number;
@@ -60,6 +60,8 @@ export function createApiRequest<E extends Endpoint>(
           headers.set(HttpHeader.ContentType, MediaType.ssz);
         }
         break;
+      default:
+        throw Error(`Invalid requestWireFormat: ${requestWireFormat}`);
     }
   }
   const queryString = req.query ? stringifyQuery(req.query) : "";
@@ -87,6 +89,8 @@ export function createApiRequest<E extends Endpoint>(
       case WireFormat.ssz:
         headers.set(HttpHeader.Accept, `${MediaType.ssz};q=1,${MediaType.json};q=0.9`);
         break;
+      default:
+        throw Error(`Invalid responseWireFormat: ${init.responseWireFormat}`);
     }
   }
 
