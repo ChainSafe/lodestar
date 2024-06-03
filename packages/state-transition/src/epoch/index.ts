@@ -13,6 +13,7 @@ import {
   EpochTransitionCache,
 } from "../types.js";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
+import {CachedBeaconStateEIP7716} from "../cache/stateCache.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -27,8 +28,7 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
-import { processNetExcessPenalties } from "./processNetExcessPenalties.js";
-import { CachedBeaconStateEIP7716 } from "../cache/stateCache.js";
+import {processNetExcessPenalties} from "./processNetExcessPenalties.js";
 
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";

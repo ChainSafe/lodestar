@@ -48,7 +48,7 @@ export const chainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x04000000"),
   DENEB_FORK_EPOCH: 269568, // March 13, 2024, 01:55:35pm UTC
-  
+
   // EIP-7716
   EIP7716_FORK_VERSION: b("0x05000000"),
   EIP7716_FORK_EPOCH: Infinity,

@@ -74,9 +74,9 @@ export type ChainConfig = {
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
 
   // EIP-7716
-  PENALTY_ADJUSTMENT_FACTOR: number,
-  MAX_PENALTY_FACTOR: number,
-  PENALTY_RECOVERY_RATE: number,
+  PENALTY_ADJUSTMENT_FACTOR: number;
+  MAX_PENALTY_FACTOR: number;
+  PENALTY_RECOVERY_RATE: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
