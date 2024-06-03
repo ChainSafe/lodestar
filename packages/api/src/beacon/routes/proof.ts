@@ -8,8 +8,7 @@ import {ArrayOf} from "../../utils/codecs.js";
 import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
 
 export const CompactMultiProofType = new ContainerType({
-  // TODO ensure limit of all lists is sane
-  leaves: ArrayOf(ssz.Root),
+  leaves: ArrayOf(ssz.Root, 10000),
   descriptor: new ByteListType(2048),
 });
 
