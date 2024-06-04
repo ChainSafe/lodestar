@@ -46,6 +46,6 @@ export default defineConfig({
       ],
     },
     diff: process.env.TEST_COMPACT_DIFF ? path.join(import.meta.dirname, "./scripts/vitest/vitest.diff.ts") : undefined,
-    onConsoleLog: () => process.env.TEST_QUIET_CONSOLE !== "true",
+    onConsoleLog: () => !process.env.TEST_QUIET_CONSOLE,
   },
 });
