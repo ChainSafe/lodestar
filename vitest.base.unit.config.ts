@@ -22,7 +22,7 @@ export default defineConfig({
     ],
     reporters: process.env.GITHUB_ACTIONS
       ? ["verbose", "hanging-process", "github-actions"]
-      : [process.env.TEST_COMPACT_OUTPUT === "true" ? "basic" : "verbose", "hanging-process"],
+      : [process.env.TEST_COMPACT_OUTPUT ? "basic" : "verbose", "hanging-process"],
     coverage: {
       enabled: process.env.CI === "true",
       clean: true,
