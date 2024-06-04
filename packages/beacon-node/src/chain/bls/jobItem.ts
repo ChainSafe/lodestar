@@ -1,11 +1,12 @@
-import {PublicKey, aggregatePublicKeys, aggregateSignatures, randomBytesNonZero} from "@chainsafe/blst";
-import {signatureFromBytes} from "@lodestar/utils";
+import bls from "@chainsafe/bls";
+import {CoordType, PointFormat, PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {LinkedList} from "../../util/array.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {VerifySignatureOpts} from "./interface.js";
 import {getAggregatedPubkey} from "./utils.js";
 import {BlsWorkReq} from "./types.js";
+import {randomBytesNonZero} from "./utils.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
 
@@ -49,7 +50,7 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsWorkReq {
+export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: Metrics | null): BlsWorkReq {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
@@ -70,9 +71,11 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map((set) => signatureFromBytes(set.signature));
+      const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
       timer?.();
 
+      // adding verification randomness is napi specific. must not attempt with herumi until
+      // @chainsafe/bls is updated to support it with herumi
       const randomness: Uint8Array[] = [];
       for (let i = 0; i < job.sets.length; i++) {
         randomness.push(randomBytesNonZero(8));
@@ -82,8 +85,8 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
         sets: [
           {
             message: job.message,
-            publicKey: aggregatePublicKeys(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
-            signature: aggregateSignatures(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
+            publicKey: bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
+            signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
           },
         ],
       };

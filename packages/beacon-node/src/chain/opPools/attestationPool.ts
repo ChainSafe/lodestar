@@ -1,10 +1,11 @@
-import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {PointFormat, Signature} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
 import {phase0, Slot, RootHex} from "@lodestar/types";
-import {MapDef, signatureFromBytesNoCheck} from "@lodestar/utils";
+import {MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot} from "./utils.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
  * The number of slots that will be stored in the pool.
@@ -190,7 +191,10 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
   }
 
   aggregate.aggregationBits.set(bitIndex, true);
-  aggregate.signature = aggregateSignatures([aggregate.signature, signatureFromBytesNoCheck(attestation.signature)]);
+  aggregate.signature = bls.Signature.aggregate([
+    aggregate.signature,
+    signatureFromBytesNoCheck(attestation.signature),
+  ]);
   return InsertOutcome.Aggregated;
 }
 
@@ -213,6 +217,6 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   return {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
-    signature: aggFast.signature.serialize(true),
+    signature: aggFast.signature.toBytes(PointFormat.compressed),
   };
 }

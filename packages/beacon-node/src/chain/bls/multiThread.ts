@@ -1,5 +1,6 @@
 import os from "node:os";
-import {PublicKey} from "@chainsafe/blst";
+import bls from "@chainsafe/bls";
+import {PointFormat, PublicKey} from "@chainsafe/bls/types";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../util/queue/index.js";
@@ -75,6 +76,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
 
+  private readonly format = PointFormat.uncompressed;
+
   private blsPoolSize: number;
   private workersBusy = 0;
 
@@ -90,6 +93,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private closed = false;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
+    if (bls.implementation === "herumi") {
+      throw new Error("Herumi BLS implementation is not supported");
+    }
+
     this.logger = modules.logger;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
@@ -291,7 +298,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = jobItemWorkReq(job, this.metrics);
+          workReq = jobItemWorkReq(job, this.format, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 

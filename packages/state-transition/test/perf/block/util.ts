@@ -1,6 +1,6 @@
+import bls from "@chainsafe/bls";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
-import {SecretKey} from "@chainsafe/blst";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
@@ -210,13 +210,13 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0
   depositRootViewDU["dirtyLength"] = true;
 
   for (let i = 0; i < count; i++) {
-    const sk = SecretKey.deserialize(Buffer.alloc(32, i + 1));
-    const pubkey = sk.toPublicKey().serialize();
+    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+    const pubkey = sk.toPublicKey().toBytes();
     const depositMessage: phase0.DepositMessage = {pubkey, withdrawalCredentials, amount: 32e9};
     // Sign with disposable keys
     const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
     const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
-    const depositData: phase0.DepositData = {...depositMessage, signature: sk.sign(signingRoot).serialize()};
+    const depositData: phase0.DepositData = {...depositMessage, signature: sk.sign(signingRoot).toBytes()};
     depositsData.push(depositData);
 
     // First, push all deposits to the tree to generate proofs against the same root

@@ -1,4 +1,4 @@
-import {aggregatePublicKeys} from "@chainsafe/blst";
+import bls from "@chainsafe/bls";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -32,7 +32,7 @@ export function getNextSyncCommittee(
     indices,
     syncCommittee: {
       pubkeys,
-      aggregatePubkey: aggregatePublicKeys(pubkeys).serialize(),
+      aggregatePubkey: bls.aggregatePublicKeys(pubkeys),
     },
   };
 }
