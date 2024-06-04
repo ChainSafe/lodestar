@@ -58,12 +58,14 @@ export type EngineApiRpcParamTypes = {
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
   engine_getPayloadBodiesByHashV1: DATA[][];
+  engine_getPayloadBodiesByHashV2: DATA[][];
 
   /**
    *  1. start: QUANTITY, 64 bits - Starting block number
    *  2. count: QUANTITY, 64 bits - Number of blocks to return
    */
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+  engine_getPayloadBodiesByRangeV2: [start: QUANTITY, count: QUANTITY];
 };
 
 export type PayloadStatus = {
@@ -102,8 +104,10 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV4: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByRangeV2: (ExecutionPayloadBodyRpc | null)[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -217,8 +221,8 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
 
   // ELECTRA adds depositRequests/depositRequests to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositReceipts, withdrawalRequests} = data as electra.ExecutionPayload;
-    payload.depositRequests = depositReceipts.map(serializeDepositRequest);
+    const {depositRequests, withdrawalRequests} = data as electra.ExecutionPayload;
+    payload.depositRequests = depositRequests.map(serializeDepositRequest);
     payload.withdrawalRequests = withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest);
   }
 
@@ -316,7 +320,7 @@ export function parseExecutionPayload(
         `depositRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).depositReceipts = depositRequests.map(deserializeDepositRequest);
+    (executionPayload as electra.ExecutionPayload).depositRequests = depositRequests.map(deserializeDepositRequest);
 
     if (withdrawalRequests == null) {
       throw Error(
