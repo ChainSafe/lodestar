@@ -1,5 +1,5 @@
 // // Uncomment code below to re-generate the keys
-// import bls from "@chainsafe/blst";
+// import bls from "@chainsafe/bls";
 // const sks: string[] = [];
 // const pks: string[] = [];
 // for (let i = 0; i < 4; i++) {

@@ -4,7 +4,6 @@ const __dirname = new URL(".", import.meta.url).pathname;
 const polyfillsDir = path.join(__dirname, "../polyfills");
 
 const emptyModulePath = path.join(__dirname, "../polyfills/emptyModule.js");
-const emptyBlstModulePath = path.join(__dirname, "../polyfills/emptyBlstModule.js");
 
 export function blsBrowserPlugin(): Plugin {
   return {
@@ -20,7 +19,7 @@ export function blsBrowserPlugin(): Plugin {
             "@chainsafe/bls": "@chainsafe/bls/herumi",
             // This is just used to generate `privateKey` which is not used in the browser.
             "@chainsafe/bls-keygen": path.join(polyfillsDir, "bls-keygen.js"),
-            "@chainsafe/blst": emptyBlstModulePath,
+            "@chainsafe/blst": emptyModulePath,
             "@chainsafe/bls-hd-key": emptyModulePath,
             crypto: emptyModulePath,
             "node:crypto": emptyModulePath,

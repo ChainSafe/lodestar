@@ -22,12 +22,7 @@ export const createKeystores = async (
 
   if (keys.type === "local") {
     for (const key of keys.secretKeys) {
-      const keystore = await Keystore.create(
-        SHARED_VALIDATOR_PASSWORD,
-        key.serialize(),
-        key.toPublicKey().serialize(),
-        ""
-      );
+      const keystore = await Keystore.create(SHARED_VALIDATOR_PASSWORD, key.toBytes(), key.toPublicKey().toBytes(), "");
 
       await writeFile(
         path.join(keystoresDir, `${key.toPublicKey().toHex()}.json`),

@@ -1,6 +1,7 @@
 import {toBufferBE} from "bigint-buffer";
 import {digest} from "@chainsafe/as-sha256";
-import {SecretKey} from "@chainsafe/blst";
+import type {SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
 
 let curveOrder: bigint;
@@ -18,5 +19,5 @@ export function interopSecretKeys(validatorCount: number): SecretKey[] {
 export function interopSecretKey(index: number): SecretKey {
   const CURVE_ORDER = getCurveOrder();
   const secretKeyBytes = toBufferBE(bytesToBigInt(digest(intToBytes(index, 32))) % CURVE_ORDER, 32);
-  return SecretKey.deserialize(secretKeyBytes);
+  return bls.SecretKey.fromBytes(secretKeyBytes);
 }

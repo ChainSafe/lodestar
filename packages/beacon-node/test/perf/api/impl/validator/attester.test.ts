@@ -1,4 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
+import {PointFormat} from "@chainsafe/bls/types";
 // eslint-disable-next-line import/no-relative-packages
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
@@ -35,7 +36,7 @@ describe("api / impl / validator", () => {
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
           const pubkey = state.epochCtx.index2pubkey[i];
-          pubkey.serialize();
+          pubkey.toBytes(PointFormat.compressed);
         }
       },
     });

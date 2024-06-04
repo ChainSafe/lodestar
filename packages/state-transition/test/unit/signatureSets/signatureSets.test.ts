@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import {describe, it, expect} from "vitest";
+import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
-import {SecretKey} from "@chainsafe/blst";
 import {config} from "@lodestar/config/default";
 import {phase0, capella, ValidatorIndex, BLSSignature, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
@@ -61,9 +61,7 @@ describe("signatureSets", () => {
       exit: FAR_FUTURE_EPOCH,
     });
     for (const validator of validators) {
-      validator.pubkey = SecretKey.fromKeygen(crypto.getRandomValues(new Uint8Array(32)))
-        .toPublicKey()
-        .serialize();
+      validator.pubkey = bls.SecretKey.fromKeygen().toPublicKey().toBytes();
     }
 
     const state = generateCachedState(config, {validators});

@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
@@ -25,8 +25,8 @@ describe("BlockDutiesService", function () {
   const config = createChainForkConfig(mainnetConfig);
 
   beforeAll(() => {
-    const secretKeys = Array.from({length: 2}, (_, i) => SecretKey.deserialize(Buffer.alloc(32, i + 1)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
+    const secretKeys = Array.from({length: 2}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
   });
 

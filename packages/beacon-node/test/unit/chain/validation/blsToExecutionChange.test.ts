@@ -1,6 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
+import bls from "@chainsafe/bls";
+import {PointFormat} from "@chainsafe/bls/types";
 import {describe, it, beforeEach, afterEach, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {capella, ssz} from "@lodestar/types";
@@ -28,12 +29,12 @@ describe("validate bls to execution change", () => {
   // Validator has to be active for long enough
   stateEmpty.slot = defaultConfig.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
   // A withdrawal key which we will keep same on the two vals we generate
-  const wsk = SecretKey.fromKeygen(Buffer.alloc(32, 0));
+  const wsk = bls.SecretKey.fromKeygen();
 
   // Generate and add first val
-  const sk1 = SecretKey.fromKeygen(Buffer.alloc(32, 1));
-  const pubkey1 = sk1.toPublicKey().serialize();
-  const fromBlsPubkey = wsk.toPublicKey().serialize();
+  const sk1 = bls.SecretKey.fromKeygen();
+  const pubkey1 = sk1.toPublicKey().toBytes(PointFormat.compressed);
+  const fromBlsPubkey = wsk.toPublicKey().toBytes(PointFormat.compressed);
   const withdrawalCredentials = digest(fromBlsPubkey);
   withdrawalCredentials[0] = BLS_WITHDRAWAL_PREFIX;
   const validator = ssz.phase0.Validator.toViewDU({
@@ -49,8 +50,8 @@ describe("validate bls to execution change", () => {
   stateEmpty.validators[0] = validator;
 
   // Gen and add second val
-  const sk2 = SecretKey.fromKeygen(Buffer.alloc(32, 2));
-  const pubkey2 = sk2.toPublicKey().serialize();
+  const sk2 = bls.SecretKey.fromKeygen();
+  const pubkey2 = sk2.toPublicKey().toBytes(PointFormat.compressed);
   // Set the next validator to already eth1 credential
   const withdrawalCredentialsTwo = digest(fromBlsPubkey);
   withdrawalCredentialsTwo[0] = ETH1_ADDRESS_WITHDRAWAL_PREFIX;
@@ -80,7 +81,7 @@ describe("validate bls to execution change", () => {
   const signatureFork = ForkName.phase0;
   const domain = config.getDomainAtFork(signatureFork, DOMAIN_BLS_TO_EXECUTION_CHANGE);
   const signingRoot = computeSigningRoot(ssz.capella.BLSToExecutionChange, blsToExecutionChange, domain);
-  const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).serialize()};
+  const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).toBytes()};
 
   beforeEach(() => {
     chainStub = getMockedBeaconChain();

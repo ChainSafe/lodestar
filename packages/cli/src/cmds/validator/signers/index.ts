@@ -1,5 +1,5 @@
 import path from "node:path";
-import {SecretKey} from "@chainsafe/blst";
+import bls from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {toHexString} from "@chainsafe/ssz";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -72,7 +72,7 @@ export async function getSignersFromArgs(
     const indexes = parseRange(args.mnemonicIndexes);
     return indexes.map((index) => ({
       type: SignerType.Local,
-      secretKey: SecretKey.deserialize(deriveEth2ValidatorKeys(masterSK, index).signing),
+      secretKey: bls.SecretKey.fromBytes(deriveEth2ValidatorKeys(masterSK, index).signing),
     }));
   }
 
@@ -148,7 +148,7 @@ export async function getSignersFromArgs(
 export function getSignerPubkeyHex(signer: Signer): string {
   switch (signer.type) {
     case SignerType.Local:
-      return toHexString(signer.secretKey.toPublicKey().serialize());
+      return toHexString(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
       return signer.pubkey;

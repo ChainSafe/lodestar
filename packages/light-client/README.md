@@ -50,12 +50,6 @@ lodestar lightclient \
 
 For this example we will assume there is a running beacon node at `https://lodestar-sepolia.chainsafe.io`
 
-If you are running light-client on a server/node environment there is a faster version of bls that can help with performance. It is a peerDependency and needs to be installed separately by the consumer of this package. This was done so that for browser situations there is not a hard requirement for node-only code that will cause bundling errors. On startup, if running in a node environment, and `@chainsafe/blst` is installed the LightClient will automatically use the faster bls bindings.
-
-```sh
-npm i -S @chainsafe/blst
-```
-
 ```ts
 import {Lightclient, LightclientEvent} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
