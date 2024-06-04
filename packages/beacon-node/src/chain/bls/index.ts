@@ -1,5 +1,4 @@
 export type {IBlsVerifier} from "./interface.js";
-export type {JobQueueItemType} from "./jobItem.js";
-export type {BlsMultiThreadWorkerPoolModules} from "./multiThread.js";
-export {BlsMultiThreadWorkerPool} from "./multiThread.js";
+export type {BlsMultiThreadWorkerPoolModules, JobQueueItemType} from "./multithread/index.js";
+export {BlsMultiThreadWorkerPool} from "./multithread/index.js";
 export {BlsSingleThreadVerifier} from "./singleThread.js";
