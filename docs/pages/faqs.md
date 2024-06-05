@@ -4,15 +4,14 @@ This section of the documentation will cover common questions and encounters oft
 
 ## Tooling
 
-:::note "Incorrect yarn version"
+:::note "Package manager issues"
 
-Lodestar is using [yarn classic](https://classic.yarnpkg.com/lang/en/). Using more recent versions will lead to issues (e.g. spurious insertion of `packageManager` field in `package.json`).
+Lodestar relies on [corepack](https://nodejs.org/api/corepack.html) and associated `packageManager` value to manage its package manager version.
 
-To set yarn to the right version globally, use the following command:
+Make sure `corepack` is correctly enabled if you envounter some package manager related issues:
 
 ```bash
-# Get latest classic version from https://classic.yarnpkg.com/lang/en/
-yarn policies set-version $LATEST_CLASSIC_VERSION
+corepack enable
 ```
 
 :::
