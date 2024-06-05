@@ -15,6 +15,9 @@ export type DepositRequests = ValueOf<typeof ssz.DepositRequests>;
 export type ExecutionLayerWithdrawalRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequest>;
 export type ExecutionLayerWithdrawalRequests = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequests>;
 
+export type ExecutionLayerConsolidationRequest = ValueOf<typeof ssz.ExecutionLayerConsolidationRequest>;
+export type ExecutionLayerConsolidationRequests = ValueOf<typeof ssz.ExecutionLayerConsolidationRequests>;
+
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 
