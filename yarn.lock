@@ -306,10 +306,10 @@
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^0.4.8"
 
-"@chainsafe/blst@^0.2.10":
-  version "0.2.10"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.10.tgz#77802e5b1ff2d98ec1d25dcd5f7d27b89d376a40"
-  integrity sha512-ofecTL5fWsNwnpS2oUh56dDXJRmCEcDKNNBFDb2ux+WtvdjrdSq6B+L/eNlg+sVBzXbzrCw1jq8Y8+cYiHg32w==
+"@chainsafe/blst@^0.2.11":
+  version "0.2.11"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.11.tgz#5ec85cd663592819d1dc51127e75dfd834250e3d"
+  integrity sha512-URyOLq5GtxBoxibOnd2pgLydCy0UZzbiIIBcsRAvGxAsRzjZL04TsQfwRkz5aphU3a1ebeRoMmI/HHyMCiFSQg==
   dependencies:
     "@types/tar" "^6.1.4"
     node-fetch "^2.6.1"
