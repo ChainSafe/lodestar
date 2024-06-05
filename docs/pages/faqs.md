@@ -2,20 +2,6 @@
 
 This section of the documentation will cover common questions and encounters often asked by users and developers.
 
-## Tooling
-
-:::note "Package manager issues"
-
-Lodestar relies on [corepack](https://nodejs.org/api/corepack.html) and associated `packageManager` value to manage its package manager version.
-
-Make sure `corepack` is correctly enabled if you envounter some package manager related issues:
-
-```bash
-corepack enable
-```
-
-:::
-
 ## Troubleshooting Lodestar
 
 ### Running a beacon node
