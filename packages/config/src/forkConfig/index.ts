@@ -11,7 +11,7 @@ import {
   ForkLightClient,
   ForkBlobs,
 } from "@lodestar/params";
-import {Slot, Version, ssz, SSZTypesFor, SSZBlindedTypesFor} from "@lodestar/types";
+import {Slot, Version, ssz, SSZTypesFor, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
@@ -92,7 +92,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return this.getForkInfo(slot).version;
     },
     getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F> {
-      return ssz.allForks[this.getForkName(slot)] as SSZTypesFor<F>;
+      return sszTypesFor(this.getForkName(slot)) as SSZTypesFor<F>;
     },
     getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution> {
       const forkName = this.getForkName(slot);
@@ -101,12 +101,12 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return ssz.allForksExecution[forkName];
     },
-    getBlindedForkTypes(slot: Slot): SSZBlindedTypesFor<ForkExecution> {
+    getBlindedForkTypes(slot: Slot): (typeof ssz.allForksBlinded)[ForkExecution] {
       const forkName = this.getForkName(slot);
       if (!isForkExecution(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
       }
-      return ssz.allForksBlinded[forkName] as SSZBlindedTypesFor<ForkExecution>;
+      return ssz.allForksBlinded[forkName];
     },
     getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
       const forkName = this.getForkName(slot);

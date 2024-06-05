@@ -1,4 +1,3 @@
-import {CompositeType, CompositeView, CompositeViewDU, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName} from "@lodestar/params";
 import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
@@ -6,7 +5,6 @@ import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {Slot} from "./primitive/types.js";
-import {allForks, allForksBlinded} from "./sszTypes.js";
 
 export * from "./primitive/types.js";
 export {ts as phase0} from "./phase0/index.js";
@@ -26,28 +24,6 @@ export enum ProducedBlockSource {
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
-
-/**
- * An AllForks type must accept as any parameter the UNION of all fork types.
- * The generic argument of `AllForksTypeOf` must be the union of the fork types:
- *
- *
- * For example, `allForks.BeaconState.defaultValue()` must return
- * ```
- * phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState
- * ```
- *
- * And `allForks.BeaconState.serialize()` must accept as parameter
- * ```
- * phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState
- * ```
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType<
-  ValueOf<UnionOfForkTypes>,
-  CompositeView<UnionOfForkTypes>,
-  CompositeViewDU<UnionOfForkTypes>
->;
 
 type TypesByFork = {
   [ForkName.phase0]: {
@@ -162,51 +138,9 @@ type TypesByFork = {
   };
 };
 
-type SSZTypesByFork = {
-  [F in keyof typeof allForks]: {
-    [T in keyof (typeof allForks)[F]]: (typeof allForks)[F][T];
-  };
-};
-
-type SSZBlindedTypesByFork = {
-  [F in keyof typeof allForksBlinded]: {
-    [T in keyof (typeof allForksBlinded)[F]]: (typeof allForksBlinded)[F][T];
-  };
-};
-
 export type TypesFor<F extends ForkName, K extends keyof TypesByFork[F] | void = void> = K extends void
   ? TypesByFork[F]
   : TypesByFork[F][Exclude<K, void>];
-
-export type SSZTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F] | void = void> = K extends void
-  ? // It compiles fine, need to debug the error
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    {[K2 in keyof SSZTypesByFork[F]]: AllForksTypeOf<SSZTypesByFork[F][K2]>}
-  : // It compiles fine, need to debug the error
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    AllForksTypeOf<SSZTypesByFork[F][Exclude<K, void>]>;
-
-export type SSZInstanceTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F]> = CompositeViewDU<
-  // It compiles fine, need to debug the error
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  SSZTypesByFork[F][K]
->;
-
-export type SSZBlindedTypesFor<
-  F extends ForkExecution,
-  K extends keyof SSZBlindedTypesByFork[F] | void = void,
-> = K extends void
-  ? // It compiles fine, need to debug the error
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    {[K2 in keyof SSZBlindedTypesByFork[F]]: AllForksTypeOf<SSZBlindedTypesByFork[F][K2]>}
-  : // It compiles fine, need to debug the error
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    AllForksTypeOf<SSZBlindedTypesByFork[F][Exclude<K, void>]>;
 
 export type FullOrBlinded = "full" | "blinded";
 export type SignedUnsigned = "signed" | "unsigned";

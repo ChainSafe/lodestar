@@ -1,3 +1,4 @@
+import {CompositeType, CompositeView, CompositeViewDU, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkBlobs, ForkExecution, ForkLightClient, ForkName} from "@lodestar/params";
 import {ssz as phase0} from "./phase0/index.js";
 import {ssz as altair} from "./altair/index.js";
@@ -12,7 +13,7 @@ export {phase0, altair, bellatrix, capella, deneb};
  * Index the ssz types that differ by fork
  * A record of AllForksSSZTypes indexed by fork
  */
-export const allForks = {
+const typesByFork = {
   [ForkName.phase0]: {
     BeaconBlock: phase0.BeaconBlock,
     BeaconBlockBody: phase0.BeaconBlockBody,
@@ -106,13 +107,9 @@ const executionForks: ForkExecution[] = [ForkName.bellatrix, ForkName.capella, F
 const lightCLientForks: ForkLightClient[] = [ForkName.altair, ForkName.bellatrix, ForkName.capella, ForkName.deneb];
 const blobsForks: ForkBlobs[] = [ForkName.deneb];
 
-export const allForksExecution = pick(allForks, ...executionForks);
-export const allForksLightClient = pick(allForks, ...lightCLientForks);
-export const allForksBlobs = pick(allForks, ...blobsForks);
-/**
- * Index the blinded ssz types that differ by fork
- * A record of AllForksBlindedSSZTypes indexed by fork
- */
+export const allForksExecution = pick(typesByFork, ...executionForks);
+export const allForksLightClient = pick(typesByFork, ...lightCLientForks);
+export const allForksBlobs = pick(typesByFork, ...blobsForks);
 export const allForksBlinded = {
   bellatrix: {
     BeaconBlockBody: bellatrix.BlindedBeaconBlockBody,
@@ -130,3 +127,45 @@ export const allForksBlinded = {
     SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
   },
 };
+
+/**
+ * A type of union of forks must accept as any parameter the UNION of all fork types.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UnionForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType<
+  ValueOf<UnionOfForkTypes>,
+  CompositeView<UnionOfForkTypes>,
+  CompositeViewDU<UnionOfForkTypes>
+>;
+
+type SSZTypesByFork = {
+  [F in keyof typeof typesByFork]: {
+    [T in keyof (typeof typesByFork)[F]]: (typeof typesByFork)[F][T];
+  };
+};
+
+export type SSZTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F] | void = void> = K extends void
+  ? // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    {[K2 in keyof SSZTypesByFork[F]]: UnionForksTypeOf<SSZTypesByFork[F][K2]>}
+  : // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    UnionForksTypeOf<SSZTypesByFork[F][Exclude<K, void>]>;
+
+export function sszTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F] | void = void>(
+  fork: F,
+  typeName?: K
+): SSZTypesFor<F, K> {
+  return (
+    typeName === undefined ? typesByFork[fork] : typesByFork[fork][typeName as keyof SSZTypesByFork[F]]
+  ) as SSZTypesFor<F, K>;
+}
+
+export type SSZInstanceTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F]> = CompositeViewDU<
+  // It compiles fine, need to debug the error
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  SSZTypesByFork[F][K]
+>;
