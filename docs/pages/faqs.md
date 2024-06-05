@@ -8,7 +8,7 @@ This section of the documentation will cover common questions and encounters oft
 
 Lodestar relies on [corepack](https://nodejs.org/api/corepack.html) and associated `packageManager` value to manage its package manager version.
 
-Make sure `corepack` is correctly enabled if you envounter some package manager related issues:
+Make sure `corepack` is correctly enabled if you encounter some package manager related issues:
 
 ```bash
 corepack enable
