@@ -1,8 +1,8 @@
 export * from "./types.js";
 import * as ssz from "./sszTypes.js";
 import {sszTypesFor} from "./sszTypes.js";
-import type {SSZTypesFor, SSZInstanceTypesFor} from "./sszTypes.js";
-export {sszTypesFor, SSZTypesFor, SSZInstanceTypesFor, ssz};
+import type {SSZBlindedTypesFor, SSZTypesFor, SSZInstanceTypesFor} from "./sszTypes.js";
+export {sszTypesFor, SSZBlindedTypesFor, SSZTypesFor, SSZInstanceTypesFor, ssz};
 // Typeguards
 export * from "./utils/typeguards.js";
 // String type

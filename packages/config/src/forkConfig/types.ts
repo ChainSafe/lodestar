@@ -1,5 +1,5 @@
 import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName, ForkSeq} from "@lodestar/params";
-import {Epoch, SSZTypesFor, Slot, Version, ssz} from "@lodestar/types";
+import {Epoch, SSZBlindedTypesFor, SSZTypesFor, Slot, Version} from "@lodestar/types";
 
 export type ForkInfo = {
   name: ForkName;
@@ -35,7 +35,7 @@ export type ForkConfig = {
   /** Get execution SSZ types by hard-fork*/
   getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution>;
   /** Get blinded SSZ types by hard-fork */
-  getBlindedForkTypes(slot: Slot): (typeof ssz.allForksBlinded)[ForkExecution];
+  getBlindedForkTypes(slot: Slot): SSZBlindedTypesFor<ForkExecution>;
   /** Get blobs SSZ types by hard-fork*/
   getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs>;
 };

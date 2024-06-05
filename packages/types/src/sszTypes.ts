@@ -128,6 +128,27 @@ export const allForksBlinded = {
   },
 };
 
+// TODO: These helpers should be removed along with `allForksBlinded`
+type SSZBlindedTypesByFork = {
+  [F in keyof typeof allForksBlinded]: {
+    [T in keyof (typeof allForksBlinded)[F]]: (typeof allForksBlinded)[F][T];
+  };
+};
+
+// TODO: These helpers should be removed along with `allForksBlinded`
+export type SSZBlindedTypesFor<
+  F extends ForkExecution,
+  K extends keyof SSZBlindedTypesByFork[F] | void = void,
+> = K extends void
+  ? // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    {[K2 in keyof SSZBlindedTypesByFork[F]]: UnionForksTypeOf<SSZBlindedTypesByFork[F][K2]>}
+  : // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    UnionForksTypeOf<SSZBlindedTypesByFork[F][Exclude<K, void>]>;
+
 /**
  * A type of union of forks must accept as any parameter the UNION of all fork types.
  */
