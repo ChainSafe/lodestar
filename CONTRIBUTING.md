@@ -16,7 +16,7 @@ When using MacOS, there are a couple of extra prerequisites that are required.
 
 ## Getting Started
 
-- :gear: Make sure [Corepack](https://nodejs.org/api/corepack.html) is enabled via `corepck enable`.
+- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html).
 - :gear: Run `yarn` to install dependencies.
 - :gear: Run `yarn build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
