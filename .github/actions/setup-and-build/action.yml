@@ -8,12 +8,18 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Cache Yarn dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/yarn
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: ${{ runner.os }}-yarn-
+
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
         node-version: ${{inputs.node}}
         check-latest: true
-        cache: yarn
 
     - name: Node.js version
       id: node
