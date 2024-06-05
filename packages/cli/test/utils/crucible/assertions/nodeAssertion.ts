@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/blst";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {routes} from "@lodestar/api/beacon";
 import {AssertionResult, ValidatorClientKeys, Assertion, ValidatorClient} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";

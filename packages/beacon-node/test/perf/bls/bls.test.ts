@@ -1,16 +1,7 @@
 import crypto from "node:crypto";
 import {itBench} from "@dapplion/benchmark";
-import {
-  CoordType,
-  PublicKey,
-  SecretKey,
-  Signature,
-  aggregatePublicKeys,
-  aggregateSignatures,
-  verify,
-  verifyMultipleAggregateSignatures,
-} from "@chainsafe/blst";
-import {signatureFromBytes} from "@lodestar/utils";
+import bls from "@chainsafe/bls";
+import {CoordType, type PublicKey, type SecretKey} from "@chainsafe/bls/types";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", function () {
@@ -29,7 +20,7 @@ describe("BLS ops", function () {
       const bytes = new Uint8Array(32);
       const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       dataView.setUint32(0, i + 1, true);
-      const secretKey = SecretKey.deserialize(bytes);
+      const secretKey = bls.SecretKey.fromBytes(bytes);
       const publicKey = secretKey.toPublicKey();
       keypair = {secretKey, publicKey};
       keypairs.set(i, keypair);
@@ -42,7 +33,7 @@ describe("BLS ops", function () {
     if (!set) {
       const {secretKey, publicKey} = getKeypair(i);
       const message = Buffer.alloc(32, i + 1);
-      set = {publicKey, message: message, signature: secretKey.sign(message).serialize()};
+      set = {publicKey, message: message, signature: secretKey.sign(message).toBytes()};
       sets.set(i, set);
     }
     return set;
@@ -55,15 +46,15 @@ describe("BLS ops", function () {
     let set = sameMessageSets.get(i);
     if (!set) {
       const {secretKey, publicKey} = getKeypair(i);
-      set = {publicKey, message, signature: secretKey.sign(message).serialize()};
+      set = {publicKey, message, signature: secretKey.sign(message).toBytes()};
       sameMessageSets.set(i, set);
     }
     return set;
   }
 
   // Note: getSet() caches the value, does not re-compute every time
-  itBench({id: "BLS verify - blst-native", beforeEach: () => getSet(0)}, (set) => {
-    const isValid = verify(set.message, set.publicKey, Signature.deserialize(set.signature));
+  itBench({id: `BLS verify - ${bls.implementation}`, beforeEach: () => getSet(0)}, (set) => {
+    const isValid = bls.Signature.fromBytes(set.signature).verify(set.publicKey, set.message);
     if (!isValid) throw Error("Invalid");
   });
 
@@ -71,14 +62,14 @@ describe("BLS ops", function () {
   // We may want to bundle up to 32 sets in a single batch.
   for (const count of [3, 8, 32, 64, 128]) {
     itBench({
-      id: `BLS verifyMultipleSignatures ${count} - blst-native`,
+      id: `BLS verifyMultipleSignatures ${count} - ${bls.implementation}`,
       beforeEach: () => linspace(0, count - 1).map((i) => getSet(i)),
       fn: (sets) => {
-        const isValid = verifyMultipleAggregateSignatures(
+        const isValid = bls.Signature.verifyMultipleSignatures(
           sets.map((set) => ({
             publicKey: set.publicKey,
             message: set.message,
-            signature: Signature.deserialize(set.signature),
+            signature: bls.Signature.fromBytes(set.signature),
           }))
         );
         if (!isValid) throw Error("Invalid");
@@ -94,7 +85,8 @@ describe("BLS ops", function () {
       id: `BLS deserializing ${numValidators} signatures`,
       fn: () => {
         for (const signature of signatures) {
-          signatureFromBytes(signature);
+          // true = validate signature
+          bls.Signature.fromBytes(signature, CoordType.affine, true);
         }
       },
     });
@@ -105,15 +97,15 @@ describe("BLS ops", function () {
   // TODO: figure out why it does not work with 256 or more
   for (const count of [3, 8, 32, 64, 128]) {
     itBench({
-      id: `BLS verifyMultipleSignatures - same message - ${count} - blst-native`,
+      id: `BLS verifyMultipleSignatures - same message - ${count} - ${bls.implementation}`,
       beforeEach: () => linspace(0, count - 1).map((i) => getSetSameMessage(i)),
       fn: (sets) => {
         // aggregate and verify aggregated signatures
-        const aggregatedPubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
-        const aggregatedSignature = aggregateSignatures(
-          sets.map((set) => Signature.deserialize(set.signature, CoordType.affine))
+        const aggregatedPubkey = bls.PublicKey.aggregate(sets.map((set) => set.publicKey));
+        const aggregatedSignature = bls.Signature.aggregate(
+          sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, false))
         );
-        const isValid = verify(sets[0].message, aggregatedPubkey, aggregatedSignature);
+        const isValid = aggregatedSignature.verify(aggregatedPubkey, sets[0].message);
         if (!isValid) throw Error("Invalid");
       },
     });
@@ -122,10 +114,10 @@ describe("BLS ops", function () {
   // Attestations in Mainnet contain 128 max on average
   for (const count of [32, 128]) {
     itBench({
-      id: `BLS aggregatePubkeys ${count} - blst-native`,
+      id: `BLS aggregatePubkeys ${count} - ${bls.implementation}`,
       beforeEach: () => linspace(0, count - 1).map((i) => getKeypair(i).publicKey),
       fn: (pubkeys) => {
-        aggregatePublicKeys(pubkeys);
+        bls.PublicKey.aggregate(pubkeys);
       },
     });
   }

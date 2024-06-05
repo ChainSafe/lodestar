@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ChildProcess} from "node:child_process";
-import {SecretKey} from "@chainsafe/blst";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {Web3} from "web3";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";

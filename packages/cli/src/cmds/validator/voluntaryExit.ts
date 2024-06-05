@@ -1,5 +1,5 @@
 import inquirer from "inquirer";
-import {Signature} from "@chainsafe/blst";
+import bls from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {phase0, ssz, ValidatorIndex, Epoch} from "@lodestar/types";
-import {CliCommand, fromHex, toHex} from "@lodestar/utils";
+import {CliCommand, toHex} from "@lodestar/utils";
 import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
 import {ApiClient, getClient} from "@lodestar/api";
 import {ensure0xPrefix, YargsError, wrapError} from "../../util/index.js";
@@ -161,7 +161,7 @@ async function processVoluntaryExit(
         data: voluntaryExit,
         type: SignableMessageType.VOLUNTARY_EXIT,
       });
-      signature = Signature.deserialize(fromHex(signatureHex));
+      signature = bls.Signature.fromHex(signatureHex);
       break;
     }
     default:
@@ -170,7 +170,7 @@ async function processVoluntaryExit(
 
   const signedVoluntaryExit: phase0.SignedVoluntaryExit = {
     message: voluntaryExit,
-    signature: signature.serialize(),
+    signature: signature.toBytes(),
   };
 
   (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();

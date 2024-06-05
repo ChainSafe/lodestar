@@ -13,6 +13,7 @@ Casper
 Chai
 ChainSafe
 Codespaces
+Corepack
 Customizations
 DPoS
 DVs
@@ -169,7 +170,6 @@ orchestrator
 osx
 overriden
 params
-peerDependency
 pid
 plaintext
 pre

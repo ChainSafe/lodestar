@@ -10,7 +10,6 @@ type GlobalSingleArgs = {
   paramsFile?: string;
   preset: string;
   presetFile?: string;
-  uvThreadpoolSize?: number;
 };
 
 export const defaultNetwork: NetworkName = "mainnet";
@@ -44,12 +43,6 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     hidden: true,
     description: "Preset configuration file to override the active preset with custom values",
     type: "string",
-  },
-
-  uvThreadpoolSize: {
-    hidden: true,
-    description: "Set the number of worker threads libuv should create",
-    type: "number",
   },
 };
 

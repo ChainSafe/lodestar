@@ -1,5 +1,5 @@
 import tmp from "tmp";
-import {SecretKey} from "@chainsafe/blst";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";

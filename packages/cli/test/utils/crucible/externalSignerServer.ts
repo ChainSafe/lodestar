@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/blst";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {fastify, FastifyInstance} from "fastify";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";

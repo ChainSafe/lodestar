@@ -1,4 +1,5 @@
-import {CoordType, PublicKey} from "@chainsafe/blst";
+import {CoordType} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
@@ -761,7 +762,7 @@ export class EpochCache {
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
     this.pubkey2index.set(pubkey, index);
-    this.index2pubkey[index] = PublicKey.deserialize(pubkey, CoordType.jacobian); // Optimize for aggregation
+    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
