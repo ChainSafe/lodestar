@@ -19,7 +19,6 @@ import {
   isForkExecution,
   ForkSeq,
   ForkExecution,
-  ForkAll,
   ForkBlobs,
 } from "@lodestar/params";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
@@ -37,9 +36,6 @@ import {
   phase0,
   BlockContents,
   BeaconBlock,
-  BeaconBlockOrContents,
-  isSignedBlockContents,
-  SignedBeaconBlockOrContents,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";

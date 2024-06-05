@@ -5,12 +5,10 @@ import {
   BeaconBlock,
   SignedBeaconBlock,
   BeaconBlockHeader,
-  BeaconBlockBody,
   SignedBeaconBlockHeader,
-  SSZTypesFor,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkAll, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ZERO_HASH} from "../constants/index.js";
 import {BeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
