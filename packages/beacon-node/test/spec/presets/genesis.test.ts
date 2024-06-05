@@ -1,6 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
-import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";
+import {phase0, Root, ssz, TimeSeconds, deneb, ExecutionPayload} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -9,7 +9,7 @@ import {
   isValidGenesisState,
 } from "@lodestar/state-transition";
 import {bnToNum} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
+import {ForkExecution, ForkName} from "@lodestar/params";
 
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
@@ -60,7 +60,9 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         deposits,
         undefined,
         testcase["execution_payload_header"] &&
-          executionPayloadHeaderType.toViewDU(testcase["execution_payload_header"] as deneb.ExecutionPayloadHeader)
+          executionPayloadHeaderType.toViewDU(
+            testcase["execution_payload_header"] as ExecutionPayload<ForkName.deneb, "blinded">
+          )
       );
     },
     // eth1.yaml
@@ -141,7 +143,7 @@ type GenesisInitSpecTest = {
   meta: {
     deposits_count: number;
   };
-  execution_payload_header?: allForks.ExecutionPayloadHeader;
+  execution_payload_header?: ExecutionPayload<ForkExecution, "blinded">;
   state: BeaconStateAllForks;
 };
 

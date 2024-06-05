@@ -75,8 +75,8 @@ export function processExecutionPayload(
 
   const payloadHeader = isExecutionPayload(payload) ? executionPayloadToPayloadHeader(fork, payload) : payload;
 
-  // TODO Deneb: Types are not happy by default. Since it's a generic allForks type going through ViewDU
-  // transformation then into allForks, probably some weird intersection incompatibility happens
+  // TODO Deneb: Types are not happy by default. Since it's a generic type going through ViewDU
+  // transformation then into all forks compatible probably some weird intersection incompatibility happens
   state.latestExecutionPayloadHeader = state.config
     .getExecutionForkTypes(state.slot)
     .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
