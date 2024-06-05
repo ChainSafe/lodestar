@@ -1,6 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
-import {phase0, Root, ssz, TimeSeconds, deneb, ExecutionPayload} from "@lodestar/types";
+import {phase0, Root, ssz, TimeSeconds, ExecutionPayload} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
