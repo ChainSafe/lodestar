@@ -97,6 +97,8 @@ const forkChoiceTest =
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
             assertCorrectProgressiveBalances,
+            proposerBoostEnabled: true,
+            proposerBoostReorgEnabled: true,
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
@@ -312,7 +314,7 @@ const forkChoiceTest =
                   tickTime % config.SECONDS_PER_SLOT,
                   currentSlot
                 );
-                logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
+                console.log(`Not reorged reason ${notReorgedReason} at step ${i}`);
                 expect(proposerHead.blockRoot).toEqualWithMessage(
                   step.checks.get_proposer_head,
                   `Invalid proposer head at step ${i}`
