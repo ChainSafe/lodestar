@@ -47,10 +47,15 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getState: {
     args: ["head", "json"],
-    res: {executionOptimistic: true, data: ssz.phase0.BeaconState.defaultValue()},
+    res: {executionOptimistic: true, finalized: false, data: ssz.phase0.BeaconState.defaultValue()},
   },
   getStateV2: {
     args: ["head", "json"],
-    res: {executionOptimistic: true, data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
+    res: {
+      executionOptimistic: true,
+      finalized: false,
+      data: ssz.altair.BeaconState.defaultValue(),
+      version: ForkName.altair,
+    },
   },
 };

@@ -26,7 +26,7 @@ import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/propose
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
-import {logSigners} from "./signers/logSigners.js";
+import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
@@ -93,13 +93,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
-    if (args["keymanager"]) {
-      logger.warn("No local keystores or remote signers found with current args, expecting to be added via keymanager");
-    } else {
-      throw new YargsError(
-        "No local keystores and remote signers found with current args, start with --keymanager if intending to add them later (via keymanager)"
-      );
-    }
+    warnOrExitNoSigners(args, logger);
   }
 
   logSigners(logger, signers);
@@ -172,6 +166,11 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       useProduceBlockV3: args.useProduceBlockV3,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
       blindedLocal: args.blindedLocal,
+      externalSigner: {
+        url: args["externalSigner.url"],
+        fetch: args["externalSigner.fetch"],
+        fetchInterval: args["externalSigner.fetchInterval"],
+      },
     },
     metrics
   );

@@ -12,7 +12,7 @@ export async function resolveStateId(
   chain: IBeaconChain,
   stateId: routes.beacon.StateId,
   opts?: StateGetOpts
-): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
+): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
   const stateRes = await resolveStateIdOrNull(chain, stateId, opts);
   if (!stateRes) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
@@ -25,12 +25,12 @@ async function resolveStateIdOrNull(
   chain: IBeaconChain,
   stateId: routes.beacon.StateId,
   opts?: StateGetOpts
-): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
+): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
   if (stateId === "head") {
     // TODO: This is not OK, head and headState must be fetched atomically
     const head = chain.forkChoice.getHead();
     const headState = chain.getHeadState();
-    return {state: headState, executionOptimistic: isOptimisticBlock(head)};
+    return {state: headState, executionOptimistic: isOptimisticBlock(head), finalized: false};
   }
 
   if (stateId === "genesis") {
@@ -129,37 +129,42 @@ export function filterStateValidatorsByStatus(
   return responses;
 }
 
-type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {valid: false; code: number; reason: string};
+type StateValidatorIndexResponse =
+  | {valid: true; validatorIndex: ValidatorIndex}
+  | {valid: false; code: number; reason: string};
 
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap
 ): StateValidatorIndexResponse {
-  let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {
+    // mutate `id` and fallthrough to below
     if (id.startsWith("0x")) {
-      // mutate `id` and fallthrough to below
       try {
         id = fromHexString(id);
       } catch (e) {
         return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
       }
     } else {
-      validatorIndex = Number(id);
-      // validator is invalid or added later than given stateId
-      if (!Number.isSafeInteger(validatorIndex)) {
-        return {valid: false, code: 400, reason: "Invalid validator index"};
-      }
-      if (validatorIndex >= state.validators.length) {
-        return {valid: false, code: 404, reason: "Validator index from future state"};
-      }
-      return {valid: true, validatorIndex};
+      id = Number(id);
     }
   }
 
+  if (typeof id === "number") {
+    const validatorIndex = id;
+    // validator is invalid or added later than given stateId
+    if (!Number.isSafeInteger(validatorIndex)) {
+      return {valid: false, code: 400, reason: "Invalid validator index"};
+    }
+    if (validatorIndex >= state.validators.length) {
+      return {valid: false, code: 404, reason: "Validator index from future state"};
+    }
+    return {valid: true, validatorIndex};
+  }
+
   // typeof id === Uint8Array
-  validatorIndex = pubkey2index.get(id as BLSPubkey);
+  const validatorIndex = pubkey2index.get(id);
   if (validatorIndex === undefined) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }

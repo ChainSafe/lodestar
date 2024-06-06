@@ -14,12 +14,13 @@ import {
   ReqSerializer,
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
+  WithFinalized,
   ContainerData,
 } from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {parseAcceptHeader, writeAcceptHeader} from "../../utils/acceptHeader.js";
 import {ApiClientResponse, ResponseFormat} from "../../interfaces.js";
-import {ExecutionOptimistic, StateId} from "./beacon/state.js";
+import {ExecutionOptimistic, Finalized, StateId} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -85,7 +86,9 @@ export type Api = {
     stateId: StateId,
     format?: "json"
   ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic}}>
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; finalized: Finalized};
+    }>
   >;
   getState(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getState(
@@ -93,7 +96,9 @@ export type Api = {
     format?: ResponseFormat
   ): Promise<
     ApiClientResponse<{
-      [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
+      [HttpStatusCode.OK]:
+        | Uint8Array
+        | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; finalized: Finalized};
     }>
   >;
 
@@ -110,7 +115,12 @@ export type Api = {
     format?: "json"
   ): Promise<
     ApiClientResponse<{
-      [HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
+      [HttpStatusCode.OK]: {
+        data: allForks.BeaconState;
+        executionOptimistic: ExecutionOptimistic;
+        finalized: Finalized;
+        version: ForkName;
+      };
     }>
   >;
   getStateV2(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
@@ -121,7 +131,12 @@ export type Api = {
     ApiClientResponse<{
       [HttpStatusCode.OK]:
         | Uint8Array
-        | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
+        | {
+            data: allForks.BeaconState;
+            executionOptimistic: ExecutionOptimistic;
+            finalized: Finalized;
+            version: ForkName;
+          };
     }>
   >;
 };
@@ -185,10 +200,14 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getDebugChainHeads: ContainerData(ArrayOf(SlotRoot)),
     getDebugChainHeadsV2: ContainerData(ArrayOf(SlotRootExecutionOptimistic)),
     getProtoArrayNodes: ContainerData(ArrayOf(protoNodeSszType)),
-    getState: ContainerDataExecutionOptimistic(ssz.phase0.BeaconState),
-    getStateV2: WithExecutionOptimistic(
-      // Teku returns fork as UPPERCASE
-      WithVersion((fork: ForkName) => ssz[fork.toLowerCase() as ForkName].BeaconState as TypeJson<allForks.BeaconState>)
+    getState: WithFinalized(ContainerDataExecutionOptimistic(ssz.phase0.BeaconState)),
+    getStateV2: WithFinalized(
+      WithExecutionOptimistic(
+        // Teku returns fork as UPPERCASE
+        WithVersion(
+          (fork: ForkName) => ssz[fork.toLowerCase() as ForkName].BeaconState as TypeJson<allForks.BeaconState>
+        )
+      )
     ),
   };
 }

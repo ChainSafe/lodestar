@@ -179,6 +179,22 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
 }
 
 /**
+ * SSZ factory helper to wrap an existing type with `{finalized: boolean}`
+ */
+export function WithFinalized<T extends {data: unknown}>(type: TypeJson<T>): TypeJson<T & {finalized: boolean}> {
+  return {
+    toJson: ({finalized, ...data}) => ({
+      ...(type.toJson(data as unknown as T) as Record<string, unknown>),
+      finalized,
+    }),
+    fromJson: ({finalized, ...data}: T & {finalized: boolean}) => ({
+      ...type.fromJson(data),
+      finalized,
+    }),
+  };
+}
+
+/**
  * SSZ factory helper to wrap an existing type with `{executionPayloadValue: Wei, consensusBlockValue: Wei}`
  */
 export function WithBlockValues<T extends {data: unknown}>(

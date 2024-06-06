@@ -86,9 +86,6 @@ const testDatas = {
 
 const ignoredOperations = [
   /* missing route */
-  /* https://github.com/ChainSafe/lodestar/issues/6058 */
-  "postStateValidators",
-  "postStateValidatorBalances",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
@@ -103,29 +100,6 @@ const ignoredOperations = [
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
-  /*
-   https://github.com/ChainSafe/lodestar/issues/5693
-   missing finalized
-   */
-  getStateRoot: {response: ["finalized"]},
-  getStateFork: {response: ["finalized"]},
-  getStateFinalityCheckpoints: {response: ["finalized"]},
-  getStateValidators: {response: ["finalized"]},
-  getStateValidator: {response: ["finalized"]},
-  getStateValidatorBalances: {response: ["finalized"]},
-  getEpochCommittees: {response: ["finalized"]},
-  getEpochSyncCommittees: {response: ["finalized"]},
-  getStateRandao: {response: ["finalized"]},
-  getBlockHeaders: {response: ["finalized"]},
-  getBlockHeader: {response: ["finalized"]},
-  getBlockV2: {response: ["finalized"]},
-  getBlockRoot: {response: ["finalized"]},
-  getBlockAttestations: {response: ["finalized"]},
-  getStateV2: {response: ["finalized"]},
-  getBlockRewards: {response: ["finalized"]},
-  getAttestationsRewards: {response: ["finalized"]},
-  getSyncCommitteeRewards: {response: ["finalized"]},
-
   /* 
    https://github.com/ChainSafe/lodestar/issues/6168
    /query/syncing_status - must be integer

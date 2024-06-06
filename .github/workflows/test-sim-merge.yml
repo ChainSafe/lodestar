@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           check-latest: true
           cache: yarn
       - name: Node.js version
@@ -70,18 +70,6 @@ jobs:
           LODESTAR_PRESET: mainnet
           ENGINE_PORT: 8551
           ETH_PORT: 8661
-
-      # Enable the blob sims when stable images
-      # - name: Pull ethereumjs blobs
-      #   run: docker pull $ETHEREUMJS_BLOBS_IMAGE
-
-      # - name: Test Lodestar <> ethereumjs blobs
-      #   run: yarn test:sim:blobs
-      #   working-directory: packages/beacon-node
-      #   env:
-      #     EL_BINARY_DIR: ${{ env.ETHEREUMJS_BLOBS_IMAGE }}
-      #     EL_SCRIPT_DIR: ethereumjsdocker
-      #     DEV_RUN: true
 
       - name: Upload debug log test files
         if: ${{ always() }}

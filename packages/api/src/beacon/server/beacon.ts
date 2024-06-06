@@ -22,8 +22,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       handler: async (req) => {
         const response = await api.getBlock(...reqSerializers.getBlock.parseReq(req));
         if (response instanceof Uint8Array) {
-          // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(response);
+          // Fastify 4.x.x will automatically add header `Content-Type: application/octet-stream` if TypedArray
+          return response;
         } else {
           return returnTypes.getBlock.toJson(response);
         }
@@ -37,8 +37,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
           const slot = extractSlotFromBlockBytes(response);
           const version = config.getForkName(slot);
           void res.header("Eth-Consensus-Version", version);
-          // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(response);
+          // Fastify 4.x.x will automatically add header `Content-Type: application/octet-stream` if TypedArray
+          return response;
         } else {
           void res.header("Eth-Consensus-Version", response.version);
           return returnTypes.getBlockV2.toJson(response);

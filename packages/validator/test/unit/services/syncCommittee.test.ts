@@ -98,7 +98,7 @@ describe("SyncCommitteeService", function () {
 
         // Return empty replies to duties service
         api.beacon.getStateValidators.mockResolvedValue({
-          response: {data: [], executionOptimistic: false},
+          response: {data: [], executionOptimistic: false, finalized: false},
           ok: true,
           status: HttpStatusCode.OK,
         });

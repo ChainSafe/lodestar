@@ -2,6 +2,7 @@ import {ContainerType} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
+import {fromU64Str, toU64Str} from "../../../utils/serdes.js";
 import {
   RoutesData,
   ReturnTypes,
@@ -10,6 +11,7 @@ import {
   Schema,
   ReqSerializers,
   ReqSerializer,
+  WithFinalized,
 } from "../../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -22,6 +24,11 @@ export type ValidatorId = string | number;
  * a later time. If the field is not present, assume the False value.
  */
 export type ExecutionOptimistic = boolean;
+
+/**
+ * True if the response references the finalized history of the chain, as determined by fork choice.
+ */
+export type Finalized = boolean;
 
 export type ValidatorStatus =
   | "active"
@@ -85,11 +92,15 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateRoot(
-    stateId: StateId
-  ): Promise<
+  getStateRoot(stateId: StateId): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {root: Root}; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: {root: Root};
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -100,11 +111,15 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateFork(
-    stateId: StateId
-  ): Promise<
+  getStateFork(stateId: StateId): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.Fork; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: phase0.Fork;
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -121,7 +136,13 @@ export type Api = {
     epoch?: Epoch
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {randao: Root}; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: {randao: Root};
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -133,11 +154,15 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateFinalityCheckpoints(
-    stateId: StateId
-  ): Promise<
+  getStateFinalityCheckpoints(stateId: StateId): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: FinalityCheckpoints; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: FinalityCheckpoints;
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -155,7 +180,37 @@ export type Api = {
     filters?: ValidatorFilters
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: ValidatorResponse[];
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
+
+  /**
+   * Get validators from state
+   * Returns filterable list of validators with their balance, status and index.
+   * @param stateId State identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
+   * @param id Either hex encoded public key (with 0x prefix) or validator index
+   * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
+   */
+  postStateValidators(
+    stateId: StateId,
+    filters?: ValidatorFilters
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: ValidatorResponse[];
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -172,7 +227,13 @@ export type Api = {
     validatorId: ValidatorId
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ValidatorResponse; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: ValidatorResponse;
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -189,7 +250,36 @@ export type Api = {
     indices?: ValidatorId[]
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ValidatorBalance[]; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: ValidatorBalance[];
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST
+    >
+  >;
+
+  /**
+   * Get validator balances from state
+   * Returns filterable list of validator balances.
+   * @param stateId State identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
+   * @param id Either hex encoded public key (with 0x prefix) or validator index
+   */
+  postStateValidatorBalances(
+    stateId: StateId,
+    indices?: ValidatorId[]
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: ValidatorBalance[];
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST
     >
   >;
@@ -208,7 +298,13 @@ export type Api = {
     filters?: CommitteesFilters
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: EpochCommitteeResponse[]; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: EpochCommitteeResponse[];
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -218,7 +314,13 @@ export type Api = {
     epoch?: Epoch
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: EpochSyncCommitteeResponse; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: EpochSyncCommitteeResponse;
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -236,7 +338,9 @@ export const routesData: RoutesData<Api> = {
   getStateRandao: {url: "/eth/v1/beacon/states/{state_id}/randao", method: "GET"},
   getStateValidator: {url: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}", method: "GET"},
   getStateValidators: {url: "/eth/v1/beacon/states/{state_id}/validators", method: "GET"},
+  postStateValidators: {url: "/eth/v1/beacon/states/{state_id}/validators", method: "POST"},
   getStateValidatorBalances: {url: "/eth/v1/beacon/states/{state_id}/validator_balances", method: "GET"},
+  postStateValidatorBalances: {url: "/eth/v1/beacon/states/{state_id}/validator_balances", method: "POST"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -252,7 +356,9 @@ export type ReqTypes = {
   getStateRandao: {params: {state_id: StateId}; query: {epoch?: number}};
   getStateValidator: {params: {state_id: StateId; validator_id: ValidatorId}};
   getStateValidators: {params: {state_id: StateId}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}};
+  postStateValidators: {params: {state_id: StateId}; body: {ids?: string[]; statuses?: ValidatorStatus[]}};
   getStateValidatorBalances: {params: {state_id: StateId}; query: {id?: ValidatorId[]}};
+  postStateValidatorBalances: {params: {state_id: StateId}; body?: string[]};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -311,12 +417,48 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
+    postStateValidators: {
+      writeReq: (state_id, filters) => ({
+        params: {state_id},
+        body: {
+          ids: filters?.id?.map((id) => (typeof id === "string" ? id : toU64Str(id))),
+          statuses: filters?.status,
+        },
+      }),
+      parseReq: ({params, body}) => [
+        params.state_id,
+        {
+          id: body.ids?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id))),
+          status: body.statuses,
+        },
+      ],
+      schema: {
+        params: {state_id: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    },
+
     getStateValidatorBalances: {
       writeReq: (state_id, id) => ({params: {state_id}, query: {id}}),
       parseReq: ({params, query}) => [params.state_id, query.id],
       schema: {
         params: {state_id: Schema.StringRequired},
         query: {id: Schema.UintOrStringArray},
+      },
+    },
+
+    postStateValidatorBalances: {
+      writeReq: (state_id, ids) => ({
+        params: {state_id},
+        body: ids?.map((id) => (typeof id === "string" ? id : toU64Str(id))) || [],
+      }),
+      parseReq: ({params, body}) => [
+        params.state_id,
+        body?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id))),
+      ],
+      schema: {
+        params: {state_id: Schema.StringRequired},
+        body: Schema.UintOrStringArray,
       },
     },
   };
@@ -376,14 +518,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
   );
 
   return {
-    getStateRoot: ContainerDataExecutionOptimistic(RootContainer),
-    getStateFork: ContainerDataExecutionOptimistic(ssz.phase0.Fork),
-    getStateRandao: ContainerDataExecutionOptimistic(RandaoContainer),
-    getStateFinalityCheckpoints: ContainerDataExecutionOptimistic(FinalityCheckpoints),
-    getStateValidators: ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponse)),
-    getStateValidator: ContainerDataExecutionOptimistic(ValidatorResponse),
-    getStateValidatorBalances: ContainerDataExecutionOptimistic(ArrayOf(ValidatorBalance)),
-    getEpochCommittees: ContainerDataExecutionOptimistic(ArrayOf(EpochCommitteeResponse)),
-    getEpochSyncCommittees: ContainerDataExecutionOptimistic(EpochSyncCommitteesResponse),
+    getStateRoot: WithFinalized(ContainerDataExecutionOptimistic(RootContainer)),
+    getStateFork: WithFinalized(ContainerDataExecutionOptimistic(ssz.phase0.Fork)),
+    getStateRandao: WithFinalized(ContainerDataExecutionOptimistic(RandaoContainer)),
+    getStateFinalityCheckpoints: WithFinalized(ContainerDataExecutionOptimistic(FinalityCheckpoints)),
+    getStateValidators: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponse))),
+    postStateValidators: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponse))),
+    getStateValidator: WithFinalized(ContainerDataExecutionOptimistic(ValidatorResponse)),
+    getStateValidatorBalances: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(ValidatorBalance))),
+    postStateValidatorBalances: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(ValidatorBalance))),
+    getEpochCommittees: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(EpochCommitteeResponse))),
+    getEpochSyncCommittees: WithFinalized(ContainerDataExecutionOptimistic(EpochSyncCommitteesResponse)),
   };
 }

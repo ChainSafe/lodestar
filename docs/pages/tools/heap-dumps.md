@@ -34,15 +34,15 @@ curl -X POST http://localhost:9596/eth/v1/lodestar/write_heapdump?dirpath=/some/
 
 It is best to analyze on a local development machine so if Lodestar is running on a cloud instance download the dump to the local environment. Open Chrome, or any Chromium based browser (the example photos were taken using Brave). In the url bar type `chrome:://inspect` to bring up the DevTools menu (in brave the url will be rewritten to `brave://inspect`).
 
-![DevTools](../../images/heap-dumps/devtools.png)
+![DevTools](/images/heap-dumps/devtools.png)
 
 Click on the `Open dedicated DevTools for Node` link to open the node specific window and click on the `Memory` tab as shown below.
 
-![Memory Tab](../../images/heap-dumps/memory-tab.png)
+![Memory Tab](/images/heap-dumps/memory-tab.png)
 
 Load the profile by either right clicking on the left pane or by clicking the `Load` button at the bottom.
 
-![Load Profile](../../images/heap-dumps/load-profile.png)
+![Load Profile](/images/heap-dumps/load-profile.png)
 
 ### Analyzing a `V8` heap dump
 
@@ -105,7 +105,7 @@ $ git clone https://github.com/nodejs/node.git
 $ cd node
 
 # Use whichever version of node you prefer
-$ git checkout v20.10.0
+$ git checkout v22.1.0
 $ ./configure --debug
 
 # This command only builds the debug version of node and assumes

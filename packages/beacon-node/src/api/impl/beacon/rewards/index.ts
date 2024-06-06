@@ -5,18 +5,18 @@ import {resolveBlockId} from "../blocks/utils.js";
 export function getBeaconRewardsApi({chain}: Pick<ApiModules, "chain">): ServerApi<routes.beacon.rewards.Api> {
   return {
     async getBlockRewards(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       const data = await chain.getBlockRewards(block.message);
-      return {data, executionOptimistic};
+      return {data, executionOptimistic, finalized};
     },
     async getAttestationsRewards(epoch, validatorIds) {
-      const {rewards, executionOptimistic} = await chain.getAttestationsRewards(epoch, validatorIds);
-      return {data: rewards, executionOptimistic};
+      const {rewards, executionOptimistic, finalized} = await chain.getAttestationsRewards(epoch, validatorIds);
+      return {data: rewards, executionOptimistic, finalized};
     },
     async getSyncCommitteeRewards(blockId, validatorIds) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       const data = await chain.getSyncCommitteeRewards(block.message, validatorIds);
-      return {data, executionOptimistic};
+      return {data, executionOptimistic, finalized};
     },
   };
 }

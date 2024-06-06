@@ -30,7 +30,7 @@ $ which llvm-config
 /opt/homebrew/opt/llvm/bin/llvm-config # if this is not what comes up restart the shell
 $ npm install -g llnode
 $ llnode
-(lldb) plugin load '/Users/ninja_user/.nvm/versions/node/v20.5.1/lib/node_modules/llnode/llnode.dylib'
+(lldb) plugin load '/Users/ninja_user/.nvm/versions/node/v22.1.0/lib/node_modules/llnode/llnode.dylib'
 (lldb) settings set prompt '(llnode) '
 (llnode)
 ```
@@ -58,7 +58,7 @@ Once you collect the core dump you can load it into `llnode` for debugging.
 $ llnode -f /path/to/node_debug -c /Users/ninja_user/coredumps/node.coredump
 (lldb) target create "node_debug" --core "node.coredump"
 Core file '/Users/ninja_user/coredumps/node.coredump' (x86_64) was loaded.
-(lldb) plugin load '/Users/ninja_user/.nvm/versions/node/v20.5.1/lib/node_modules/llnode/llnode.dylib'
+(lldb) plugin load '/Users/ninja_user/.nvm/versions/node/v22.1.0/lib/node_modules/llnode/llnode.dylib'
 (lldb) settings set prompt '(llnode) '
 (llnode)
 ```
