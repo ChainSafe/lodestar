@@ -40,7 +40,7 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
-          label: "Bootnode",
+          label: "Discv5 Bootnode",
           collapsed: false,
           items: ["run/bootnode/bootnode-cli"],
         },
@@ -54,11 +54,7 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Lodestar Light Client",
-          items: [
-            "libraries/lightclient-prover/lightclient-cli",
-            "libraries/lightclient-prover/lightclient",
-            "libraries/lightclient-prover/prover",
-          ],
+          items: ["libraries/lightclient-prover/lightclient-cli", "libraries/lightclient-prover/lightclient"],
         },
         {
           type: "category",
