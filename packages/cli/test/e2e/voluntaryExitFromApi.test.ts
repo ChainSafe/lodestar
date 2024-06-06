@@ -64,8 +64,9 @@ describe("voluntary exit from api", function () {
     const indexToExit = 0;
     const pubkeyToExit = interopSecretKey(indexToExit).toPublicKey().toHex();
 
-    const res = await keymanagerClient.signVoluntaryExit({pubkey: pubkeyToExit, epoch: exitEpoch});
-    const signedVoluntaryExit = res.value();
+    const signedVoluntaryExit = (
+      await keymanagerClient.signVoluntaryExit({pubkey: pubkeyToExit, epoch: exitEpoch})
+    ).value();
 
     expect(signedVoluntaryExit.message.epoch).toBe(exitEpoch);
     expect(signedVoluntaryExit.message.validatorIndex).toBe(indexToExit);

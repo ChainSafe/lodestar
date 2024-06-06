@@ -44,7 +44,7 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
         const errEs = err as unknown as EventSourceError;
 
         // Ignore noisy errors due to beacon node being offline
-        if (!errEs.message.includes("ECONNREFUSED")) {
+        if (!errEs.message?.includes("ECONNREFUSED")) {
           onError?.(new Error(errEs.message));
         }
 
@@ -60,4 +60,4 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
 }
 
 // https://github.com/EventSource/eventsource/blob/82e034389bd2c08d532c63172b8e858c5b185338/lib/eventsource.js#L143
-type EventSourceError = {status?: number; message: string};
+type EventSourceError = {status?: number; message?: string};
