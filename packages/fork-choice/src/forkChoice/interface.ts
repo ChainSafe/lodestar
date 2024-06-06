@@ -54,7 +54,7 @@ export enum NotReorgedReason {
   ReorgMoreThanOneSlot = "reorgMoreThanOneSlot",
   ProposerBoostNotWornOff = "proposerBoostNotWornOff",
   HeadBlockNotWeak = "headBlockNotWeak",
-  ParentBlockIsStrong = "parentBlockIsStrong",
+  ParentBlockNotStrong = "ParentBlockNotStrong",
   NotProposingOnTime = "notProposingOnTime",
 }
 

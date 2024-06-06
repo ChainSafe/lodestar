@@ -193,7 +193,7 @@ describe("Forkchoice / GetProposerHead", function () {
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
-      expectedNotReorgedReason: NotReorgedReason.ParentBlockIsStrong,
+      expectedNotReorgedReason: NotReorgedReason.ParentBlockNotStrong,
     },
     {
       id: "No reorg if not proposing on time",
