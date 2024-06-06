@@ -97,8 +97,8 @@ const forkChoiceTest =
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
             assertCorrectProgressiveBalances,
-            proposerBoostEnabled: true,
-            proposerBoostReorgEnabled: true,
+            proposerBoost: true,
+            proposerBoostReorg: true,
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),

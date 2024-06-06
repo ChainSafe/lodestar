@@ -45,8 +45,8 @@ import {
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
 export type ForkChoiceOpts = {
-  proposerBoostEnabled?: boolean;
-  proposerBoostReorgEnabled?: boolean;
+  proposerBoost?: boolean;
+  proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
 };
 
@@ -223,7 +223,7 @@ export class ForkChoice implements IForkChoice {
    */
   predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
+    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
       this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
       return headBlock;
     }
@@ -269,7 +269,7 @@ export class ForkChoice implements IForkChoice {
     let proposerHead = headBlock;
 
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
+    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
       this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
@@ -375,7 +375,7 @@ export class ForkChoice implements IForkChoice {
      * starting from the proposerIndex
      */
     let proposerBoost: {root: RootHex; score: number} | null = null;
-    if (this.opts?.proposerBoostEnabled && this.proposerBoostRoot) {
+    if (this.opts?.proposerBoost && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
         getCommitteeFraction(this.fcStore.justified.totalBalance, {
@@ -533,7 +533,7 @@ export class ForkChoice implements IForkChoice {
     // before attesting interval = before 1st interval
     const isTimely = this.isBlockTimely(block, blockDelaySec);
     if (
-      this.opts?.proposerBoostEnabled &&
+      this.opts?.proposerBoost &&
       isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null

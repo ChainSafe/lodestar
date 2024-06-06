@@ -84,8 +84,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       const state = stateOg.value.clone();
       const chain = new BeaconChain(
         {
-          proposerBoostEnabled: true,
-          proposerBoostReorgEnabled: false,
+          proposerBoost: true,
+          proposerBoostReorg: false,
           computeUnrealized: false,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,

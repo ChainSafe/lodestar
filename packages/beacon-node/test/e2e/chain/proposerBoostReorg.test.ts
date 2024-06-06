@@ -37,7 +37,7 @@ describe(
     });
 
     const reorgSlot = 10;
-    const proposerBoostReorgEnabled = true;
+    const proposerBoostReorg = true;
     /**
      *                reorgSlot
      *              /
@@ -69,8 +69,8 @@ describe(
           chain: {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: TimelinessForkChoice,
-            proposerBoostEnabled: true,
-            proposerBoostReorgEnabled,
+            proposerBoost: true,
+            proposerBoostReorg,
           },
         },
         validatorCount,

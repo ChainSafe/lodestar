@@ -12,8 +12,8 @@ export type ChainArgs = {
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
-  "chain.proposerBoostEnabled"?: boolean;
-  "chain.proposerBoostReorgEnabled"?: boolean;
+  "chain.proposerBoost"?: boolean;
+  "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
@@ -44,8 +44,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
-    proposerBoostEnabled: args["chain.proposerBoostEnabled"],
-    proposerBoostReorgEnabled: args["chain.proposerBoostReorgEnabled"],
+    proposerBoost: args["chain.proposerBoost"],
+    proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
@@ -125,19 +125,19 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.proposerBoostEnabled": {
+  "chain.proposerBoost": {
     hidden: true,
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
-    defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
+    defaultDescription: String(defaultOptions.chain.proposerBoost),
     group: "chain",
   },
 
-  "chain.proposerBoostReorgEnabled": {
+  "chain.proposerBoostReorg": {
     hidden: true,
     type: "boolean",
     description: "Enable proposer boost reorg to reorg out a late block",
-    defaultDescription: String(defaultOptions.chain.proposerBoostReorgEnabled),
+    defaultDescription: String(defaultOptions.chain.proposerBoostReorg),
     group: "chain",
   },
 
