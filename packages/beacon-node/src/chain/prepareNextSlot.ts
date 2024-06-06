@@ -161,7 +161,6 @@ export class PrepareNextSlotScheduler {
             )) as CachedBeaconStateExecutions;
             updatedHeadRoot = proposerHeadRoot;
           }
-          this.computeStateHashTreeRoot(updatedPrepareState);
 
           // Update the builder status, if enabled shoot an api call to check status
           this.chain.updateBuilderStatus(clockSlot);
@@ -197,6 +196,8 @@ export class PrepareNextSlotScheduler {
             feeRecipient,
           });
         }
+
+        this.computeStateHashTreeRoot(updatedPrepareState);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
