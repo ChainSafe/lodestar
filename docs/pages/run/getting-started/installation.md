@@ -81,7 +81,7 @@ Lodestar should now be ready for use.
 ./lodestar --help
 ```
 
-See [Command Line Reference](./../reference/cli.md) for further information.
+See [Command Line Reference](./../../reference/cli.md) for further information.
 
 ### Known Issues
 
