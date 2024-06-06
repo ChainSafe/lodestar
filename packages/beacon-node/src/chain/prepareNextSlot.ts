@@ -152,7 +152,6 @@ export class PrepareNextSlotScheduler {
               proposerHeadRoot,
             });
             this.metrics?.weakHeadDetected.inc();
-            // TODO: figure out how to call regen.getBlockSlotState() only once in the case of proposing next slot
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,

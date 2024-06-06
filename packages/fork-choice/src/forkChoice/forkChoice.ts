@@ -328,7 +328,7 @@ export class ForkChoice implements IForkChoice {
     const parentNode = this.protoArray.getNode(parentBlock.blockRoot);
     // If parentNode is unavailable, give up reorg
     if (parentNode === undefined || parentNode.weight <= parentThreshold) {
-      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotStrong};
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockIsStrong};
     }
 
     // Reorg if all above checks fail
