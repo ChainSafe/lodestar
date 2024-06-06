@@ -1,5 +1,9 @@
 # Installation
 
+## Binaries
+
+Binaries can be downloaded from [this page](https://github.com/ChainSafe/lodestar/releases/) under the `Assets` section.
+
 ## Docker Installation
 
 The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is maintained actively. It contains the `lodestar` CLI preinstalled.
