@@ -1,4 +1,3 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
@@ -40,7 +39,7 @@ import {
   Wei,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
+import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -244,7 +243,7 @@ export function getValidatorApi({
     }
     const cp = {
       epoch: cpHex.epoch,
-      root: fromHexString(cpHex.rootHex),
+      root: fromHex(cpHex.rootHex),
     };
     const slot0 = computeStartSlotAtEpoch(cp.epoch);
     // if not, wait for ChainEvent.checkpoint event until slot 1 of epoch
@@ -382,7 +381,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      parentBlockRoot = fromHexString(chain.recomputeForkChoiceHead().blockRoot);
+      parentBlockRoot = fromHex(chain.recomputeForkChoiceHead().blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
@@ -449,7 +448,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      parentBlockRoot = fromHexString(chain.recomputeForkChoiceHead().blockRoot);
+      parentBlockRoot = fromHex(chain.recomputeForkChoiceHead().blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
@@ -522,7 +521,7 @@ export function getValidatorApi({
     // forkChoice.updateTime() might have already been called by the onSlot clock
     // handler, in which case this should just return.
     chain.forkChoice.updateTime(slot);
-    const parentBlockRoot = fromHexString(chain.recomputeForkChoiceHead().blockRoot);
+    const parentBlockRoot = fromHex(chain.recomputeForkChoiceHead().blockRoot);
 
     const fork = config.getForkName(slot);
     // set some sensible opts
@@ -806,7 +805,7 @@ export function getValidatorApi({
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
       const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
-      const headBlockRoot = fromHexString(headBlockRootHex);
+      const headBlockRoot = fromHex(headBlockRootHex);
 
       const beaconBlockRoot =
         slot >= headSlot

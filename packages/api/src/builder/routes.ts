@@ -26,7 +26,7 @@ import {fromHeaders} from "../utils/headers.js";
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
 // handler already checks the status code and will not attempt to parse the body, but it will return no value.
 // It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
-type MaybeSignedBuilderBid = allForks.SignedBuilderBid | undefined;
+export type MaybeSignedBuilderBid = allForks.SignedBuilderBid | undefined;
 
 const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
 

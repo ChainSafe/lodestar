@@ -40,18 +40,18 @@ await env.start({runTimeoutMs: estimatedTimeoutMs});
 const node = env.nodes[0].beacon;
 await waitForSlot("Wait for 2 slots before checking endpoints", {env, slot: 2});
 
-const stateValidators = (await node.api.beacon.getStateValidators({stateId: "head"})).value();
+const validators = (await node.api.beacon.getStateValidators({stateId: "head"})).value();
 
 await env.tracker.assert("should have correct validators count called without filters", async () => {
-  assert.equal(stateValidators.length, validatorCount);
+  assert.equal(validators.length, validatorCount);
 });
 
 await env.tracker.assert("should have correct validator index for first validator filters", async () => {
-  assert.equal(stateValidators[0].index, 0);
+  assert.equal(validators[0].index, 0);
 });
 
 await env.tracker.assert("should have correct validator index for second validator filters", async () => {
-  assert.equal(stateValidators[1].index, 1);
+  assert.equal(validators[1].index, 1);
 });
 
 await env.tracker.assert(
@@ -63,8 +63,10 @@ await env.tracker.assert(
     const res = await node.api.beacon.getStateValidators({stateId: "head", validatorIds: [filterPubKey]});
 
     assert.equal(res.value().length, 1);
-    assert.equal(res.meta().executionOptimistic, false);
-    assert.equal(res.meta().finalized, false);
+
+    const {executionOptimistic, finalized} = res.meta();
+    assert.equal(executionOptimistic, false);
+    assert.equal(finalized, false);
   }
 );
 

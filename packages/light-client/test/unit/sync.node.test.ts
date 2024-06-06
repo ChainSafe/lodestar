@@ -186,8 +186,5 @@ async function getHeadStateProof(
   const descriptor = computeDescriptor(gindices);
   const proof = (await api.proof.getStateProof({stateId, descriptor})).value();
 
-  return {
-    proof,
-    header,
-  };
+  return {proof, header};
 }

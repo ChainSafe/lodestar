@@ -3,7 +3,7 @@ import {fileURLToPath} from "node:url";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
-import {getDefinitions as getDefinitions} from "../../../src/builder/routes.js";
+import {getDefinitions} from "../../../src/builder/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 import {testData} from "./testData.js";

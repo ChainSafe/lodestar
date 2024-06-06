@@ -22,8 +22,8 @@ export class ProofServerApiMock implements ProofApi {
   }): ReturnType<ProofApi["getStateProof"]> {
     const state = this.states.get(stateId);
     if (!state) throw Error(`stateId ${stateId} not available`);
-    const proof = createProof(state.node, {type: ProofType.compactMulti, descriptor}) as CompactMultiProof;
-    return {data: proof, meta: {version: ForkName.bellatrix}};
+    const proof = createProof(state.node, {type: ProofType.compactMulti, descriptor});
+    return {data: proof as CompactMultiProof, meta: {version: ForkName.bellatrix}};
   }
 
   async getBlockProof({blockId}: {blockId: string}): ReturnType<ProofApi["getBlockProof"]> {

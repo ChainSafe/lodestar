@@ -11,7 +11,7 @@ export type ServerOpts = {
   host: string;
 };
 
-export type LightClientEndpoints = Pick<Endpoints, "lightclient" | "proof" | "events">;
+type LightClientEndpoints = Pick<Endpoints, "lightclient" | "proof" | "events">;
 
 export async function startServer(
   opts: ServerOpts,

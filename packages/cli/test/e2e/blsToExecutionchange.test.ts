@@ -44,8 +44,8 @@ describe("bLSToExecutionChange cmd", function () {
     // Wait for beacon node API to be available + genesis
     await retry(
       async () => {
-        const head = await client.beacon.getBlockHeader({blockId: "head"});
-        if (head.value().header.message.slot < 1) throw Error("pre-genesis");
+        const head = (await client.beacon.getBlockHeader({blockId: "head"})).value();
+        if (head.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 60}
     );
@@ -72,8 +72,8 @@ describe("bLSToExecutionChange cmd", function () {
       "--toExecutionAddress 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     ]);
 
-    const pooledBlsChanges = await client.beacon.getPoolBLSToExecutionChanges();
-    const {message} = pooledBlsChanges.value()[0];
+    const pooledBlsChanges = (await client.beacon.getPoolBLSToExecutionChanges()).value();
+    const {message} = pooledBlsChanges[0];
     const {validatorIndex, toExecutionAddress, fromBlsPubkey} = message;
     if (
       validatorIndex !== 0 ||

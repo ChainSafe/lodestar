@@ -62,11 +62,9 @@ like to choose for BLS To Execution Change.",
     const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
     const config = createBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    const stateValidators = (
-      await client.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})
-    ).value();
-    const stateValidator = stateValidators[0];
-    if (stateValidator === undefined) {
+    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validator = validators[0];
+    if (validator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
 
@@ -74,7 +72,7 @@ like to choose for BLS To Execution Change.",
     const fromBlsPubkey = blsPrivkey.toPublicKey().toBytes(PointFormat.compressed);
 
     const blsToExecutionChange: capella.BLSToExecutionChange = {
-      validatorIndex: stateValidator.index,
+      validatorIndex: validator.index,
       fromBlsPubkey,
       toExecutionAddress: fromHexString(args.toExecutionAddress),
     };

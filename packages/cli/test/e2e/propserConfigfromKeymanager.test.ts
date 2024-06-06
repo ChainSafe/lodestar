@@ -1,6 +1,7 @@
 import path from "node:path";
 import {describe, it, beforeAll, vi} from "vitest";
 import {rimraf} from "rimraf";
+import {ImportStatus} from "@lodestar/api/keymanager";
 import {Interchange} from "@lodestar/validator";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
@@ -54,11 +55,16 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
     // Produce and encrypt keystores
     // Import test keys
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
-    await keymanagerClient.importKeystores({
+    const importRes = await keymanagerClient.importKeystores({
       keystores: keystoresStr,
       passwords: passphrases,
       slashingProtection: slashingProtectionStr,
     });
+    expectDeepEquals(
+      importRes.value(),
+      keystoresStr.map(() => ({status: ImportStatus.imported})),
+      "Wrong importKeystores response"
+    );
 
     //////////////// Fee Recipient
 

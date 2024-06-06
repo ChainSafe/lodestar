@@ -292,8 +292,8 @@ export class Validator {
     const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node");
 
-    const spec = (await api.config.getSpec()).value();
-    assertEqualParams(config, spec);
+    const res = await api.config.getSpec();
+    assertEqualParams(config, res.value());
     logger.info("Verified connected beacon node and validator have same the config");
 
     await assertEqualGenesis(opts, genesis);
@@ -356,12 +356,10 @@ export class Validator {
    * Create a signed voluntary exit message for the given validator by its key.
    */
   async signVoluntaryExit(publicKey: string, exitEpoch?: number): Promise<phase0.SignedVoluntaryExit> {
-    const stateValidators = (
-      await this.api.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})
-    ).value();
+    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
 
-    const stateValidator = stateValidators[0];
-    if (stateValidator === undefined) {
+    const validator = validators[0];
+    if (validator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
 
@@ -369,7 +367,7 @@ export class Validator {
       exitEpoch = computeEpochAtSlot(getCurrentSlot(this.config, this.clock.genesisTime));
     }
 
-    return this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
+    return this.validatorStore.signVoluntaryExit(publicKey, validator.index, exitEpoch);
   }
 
   private async fetchBeaconHealth(): Promise<BeaconHealth> {

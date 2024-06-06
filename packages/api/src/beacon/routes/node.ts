@@ -85,10 +85,6 @@ export enum NodeHealth {
   NOT_INITIALIZED_OR_ISSUES = HttpStatusCode.SERVICE_UNAVAILABLE,
 }
 
-export type NodeHealthOptions = {
-  syncingStatus?: number;
-};
-
 /**
  * Read information about the beacon node.
  */
@@ -177,7 +173,7 @@ export type Endpoints = {
   getHealth: Endpoint<
     // ⏎
     "GET",
-    NodeHealthOptions,
+    {syncingStatus?: number},
     {query: {syncing_status?: number}},
     EmptyResponseData,
     EmptyMeta

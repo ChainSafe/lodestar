@@ -53,7 +53,8 @@ describe("httpClient fallback", () => {
       if (serverErrors.get(i)) {
         if (i === 1) {
           // Simulate one of the servers returning a HTTP error
-          // which is handled differently than network errors
+          // which is handled separately from network errors
+          // but the fallback logic should be the same
           return new Response(null, {status: 500});
         } else {
           throw Error(`test_error_server_${i}`);

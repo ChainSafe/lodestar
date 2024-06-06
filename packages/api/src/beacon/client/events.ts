@@ -42,7 +42,12 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
       // The only way to abort the connection from the client is via eventSource.close()
       eventSource.onerror = function onerror(err) {
         const errEs = err as unknown as EventSourceError;
-        onError?.(new Error(errEs.message));
+
+        // Ignore noisy errors due to beacon node being offline
+        if (!errEs.message.includes("ECONNREFUSED")) {
+          onError?.(new Error(errEs.message));
+        }
+
         // Consider 400 and 500 status errors unrecoverable, close the eventsource
         if (errEs.status === 400 || errEs.status === 500) {
           close();

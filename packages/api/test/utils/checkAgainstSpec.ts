@@ -105,7 +105,6 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
             : (routeDef.req as RequestWithBodyCodec<Es[string]>).writeReqJson(testData.args);
 
           // Stringify param and query to simulate rendering in HTTP query
-          // TODO: Review conversions in fastify and other servers
           stringifyProperties(reqJson.params ?? {});
           stringifyProperties(reqJson.query ?? {});
 

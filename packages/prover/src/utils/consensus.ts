@@ -101,7 +101,7 @@ export async function getGenesisData(api: Pick<ApiClient, "beacon">): Promise<Ge
   const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
 
   return {
-    genesisTime: Number(genesisTime),
+    genesisTime,
     genesisValidatorsRoot,
   };
 }

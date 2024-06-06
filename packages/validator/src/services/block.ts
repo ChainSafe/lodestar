@@ -214,7 +214,6 @@ export class BlockProposingService {
       blindedLocal,
       builderBoostFactor,
     });
-    const response = res.value();
     const meta = res.meta();
 
     const debugLogCtx = {
@@ -229,7 +228,7 @@ export class BlockProposingService {
       api: "produceBlockV3",
     };
 
-    return parseProduceBlockResponse({data: response, ...meta}, debugLogCtx, builderSelection);
+    return parseProduceBlockResponse({data: res.value(), ...meta}, debugLogCtx, builderSelection);
   };
 
   /** a wrapper function used for backward compatibility with the clients who don't have v3 implemented yet */
@@ -250,24 +249,22 @@ export class BlockProposingService {
     if (ForkSeq[fork] < ForkSeq.bellatrix || builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
       Object.assign(debugLogCtx, {api: "produceBlockV2"});
       const res = await this.api.validator.produceBlockV2({slot, randaoReveal, graffiti});
-      const response = res.value();
       const {version} = res.meta();
       const executionPayloadSource = ProducedBlockSource.engine;
 
       return parseProduceBlockResponse(
-        {data: response, executionPayloadBlinded: false, executionPayloadSource, version},
+        {data: res.value(), executionPayloadBlinded: false, executionPayloadSource, version},
         debugLogCtx,
         builderSelection
       );
     } else {
       Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
       const res = await this.api.validator.produceBlindedBlock({slot, randaoReveal, graffiti});
-      const response = res.value();
       const {version} = res.meta();
       const executionPayloadSource = ProducedBlockSource.builder;
 
       return parseProduceBlockResponse(
-        {data: response, executionPayloadBlinded: true, executionPayloadSource, version},
+        {data: res.value(), executionPayloadBlinded: true, executionPayloadSource, version},
         debugLogCtx,
         builderSelection
       );

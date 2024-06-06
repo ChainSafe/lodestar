@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import got from "got";
-import {WireFormat, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
@@ -49,7 +49,7 @@ export async function getNetworkCachedState(
           {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
           {config}
         );
-        return client.debug.getStateV2({stateId: slot}, {responseWireFormat: WireFormat.ssz}).then((r) => {
+        return client.debug.getStateV2({stateId: slot}).then((r) => {
           return r.ssz();
         });
       },

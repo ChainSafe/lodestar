@@ -13,10 +13,7 @@ export const VersionType = new ContainerType({
   version: new StringType<ForkName>(),
 });
 VersionType.fields.version.fromJson = (json) => {
-  if (typeof json !== "string") {
-    throw Error(`JSON invalid type ${typeof json} expected string`);
-  }
-  return toForkName(json);
+  return toForkName(stringType.fromJson(json));
 };
 
 export const ExecutionOptimisticType = new ContainerType(
@@ -77,13 +74,15 @@ export type ExecutionOptimisticAndDependentRootMeta = ValueOf<typeof ExecutionOp
 
 export enum MetaHeader {
   Version = "Eth-Consensus-Version",
-  Finalized = "Eth-Consensus-Finalized",
-  DependentRoot = "Eth-Consensus-Dependent-Root",
   ConsensusBlockValue = "Eth-Consensus-Block-Value",
-  ExecutionOptimistic = "Eth-Execution-Optimistic",
-  ExecutionPayloadSource = "Eth-Execution-Payload-Source",
   ExecutionPayloadBlinded = "Eth-Execution-Payload-Blinded",
   ExecutionPayloadValue = "Eth-Execution-Payload-Value",
+
+  /* Lodestar-specific (non-standardized) headers */
+  Finalized = "Eth-Consensus-Finalized",
+  DependentRoot = "Eth-Consensus-Dependent-Root",
+  ExecutionOptimistic = "Eth-Execution-Optimistic",
+  ExecutionPayloadSource = "Eth-Execution-Payload-Source",
 }
 
 export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimisticMeta> = {

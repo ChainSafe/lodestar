@@ -30,15 +30,16 @@ export async function connectNewCLNode(newNode: BeaconNode, nodes: BeaconNode[])
     if (node === newNode) continue;
 
     if (node.client === BeaconClient.Lodestar) {
-      const res = await (node as BeaconNode<BeaconClient.Lodestar>).api.lodestar.connectPeer({
-        peerId: clIdentity.peerId,
-        // As the lodestar is always running on host
-        // convert the address to local host to connect the container node
-        multiaddrs: clIdentity.p2pAddresses.map((str) =>
-          str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/")
-        ),
-      });
-      res.assertOk();
+      (
+        await (node as BeaconNode<BeaconClient.Lodestar>).api.lodestar.connectPeer({
+          peerId: clIdentity.peerId,
+          // As the lodestar is always running on host
+          // convert the address to local host to connect the container node
+          multiaddrs: clIdentity.p2pAddresses.map((str) =>
+            str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/")
+          ),
+        })
+      ).assertOk();
     }
   }
 }

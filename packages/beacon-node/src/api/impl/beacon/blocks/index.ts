@@ -422,12 +422,12 @@ export function getBeaconBlockApi({
     publishBlock,
     publishBlindedBlock,
 
-    async publishBlindedBlockV2(args, context) {
-      await publishBlindedBlock(args, context);
+    async publishBlindedBlockV2(args, context, opts) {
+      await publishBlindedBlock(args, context, opts);
     },
 
-    async publishBlockV2(args, context) {
-      await publishBlock(args, context);
+    async publishBlockV2(args, context, opts) {
+      await publishBlock(args, context, opts);
     },
 
     async getBlobSidecars({blockId, indices}) {

@@ -11,10 +11,15 @@ import {WireFormat} from "../wireFormat.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 
 export type ExtraRequestInit = {
+  /** Wire format to use in HTTP requests to server */
   requestWireFormat?: `${WireFormat}`;
+  /** Preferred wire format for HTTP responses from server */
   responseWireFormat?: `${WireFormat}`;
+  /** Timeout of requests in milliseconds */
   timeoutMs?: number;
+  /** Number of retries per request */
   retries?: number;
+  /** Retry delay, only relevant if retries > 0 */
   retryDelay?: number;
 };
 

@@ -38,10 +38,7 @@ export class ChainHeaderTracker {
         signal,
         onEvent: this.onHeadUpdate,
         onError: (e) => {
-          // Ignore noisy errors due to beacon node being offline
-          if (!e.message.includes("ECONNREFUSED")) {
-            this.logger.error("Failed to receive head event", {}, e);
-          }
+          this.logger.error("Failed to receive head event", {}, e);
         },
         onClose: () => {
           this.logger.verbose("Closed stream for head event", {});

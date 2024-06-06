@@ -27,10 +27,10 @@ export function getProofApi(
       state.commit();
       const stateNode = state.node;
 
-      const proof = createProof(stateNode, {type: ProofType.compactMulti, descriptor}) as CompactMultiProof;
+      const proof = createProof(stateNode, {type: ProofType.compactMulti, descriptor});
 
       return {
-        data: proof,
+        data: proof as CompactMultiProof,
         meta: {version: config.getForkName(state.slot)},
       };
     },
@@ -45,10 +45,10 @@ export function getProofApi(
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
 
-      const proof = createProof(blockNode, {type: ProofType.compactMulti, descriptor}) as CompactMultiProof;
+      const proof = createProof(blockNode, {type: ProofType.compactMulti, descriptor});
 
       return {
-        data: proof,
+        data: proof as CompactMultiProof,
         meta: {version: config.getForkName(block.message.slot)},
       };
     },

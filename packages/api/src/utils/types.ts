@@ -40,6 +40,7 @@ export type HttpMethod = "GET" | "POST" | "DELETE";
 
 /**
  * This type describes the general shape of a route
+ *
  * This includes both http and application-level shape
  * - The http method
  *   - Used to more strictly enforce the shape of the request
@@ -97,7 +98,7 @@ export type RequestWithBodyCodec<E extends Endpoint> = JsonRequestMethods<E> &
   };
 
 /**
- * Handles translation between Endpoint["args"] and Endpoint["request"]
+ * Handles translation between `Endpoint["args"]` and `Endpoint["request"]`
  */
 export type RequestCodec<E extends Endpoint> = E["method"] extends "GET"
   ? RequestWithoutBodyCodec<E>

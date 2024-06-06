@@ -192,7 +192,6 @@ export class SyncCommitteeService {
 
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
     const res = await this.api.validator.produceSyncCommitteeContribution({slot, subcommitteeIndex, beaconBlockRoot});
-    const contribution = res.value();
 
     const signedContributions: altair.SignedContributionAndProof[] = [];
 
@@ -203,7 +202,7 @@ export class SyncCommitteeService {
           // Produce signed contributions only for validators that are subscribed aggregators.
           if (selectionProof !== null) {
             signedContributions.push(
-              await this.validatorStore.signContributionAndProof(duty, selectionProof, contribution)
+              await this.validatorStore.signContributionAndProof(duty, selectionProof, res.value())
             );
             this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
           }

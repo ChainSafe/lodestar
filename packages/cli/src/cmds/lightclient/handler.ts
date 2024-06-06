@@ -25,7 +25,7 @@ export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): P
     config,
     logger,
     genesisData: {
-      genesisTime: Number(genesisTime),
+      genesisTime,
       genesisValidatorsRoot,
     },
     checkpointRoot: fromHexString(args.checkpointRoot),
