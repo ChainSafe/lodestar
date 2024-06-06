@@ -314,7 +314,7 @@ const forkChoiceTest =
                   tickTime % config.SECONDS_PER_SLOT,
                   currentSlot
                 );
-                console.log(`Not reorged reason ${notReorgedReason} at step ${i}`);
+                logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
                 expect(proposerHead.blockRoot).toEqualWithMessage(
                   step.checks.get_proposer_head,
                   `Invalid proposer head at step ${i}`
