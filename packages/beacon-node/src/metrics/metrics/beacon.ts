@@ -1,8 +1,8 @@
 import {ProducedBlockSource} from "@lodestar/types";
 import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
-import { UpdateHeadOpt } from "@lodestar/fork-choice";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
 
@@ -72,7 +72,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
         name: "beacon_fork_choice_errors_total",
         help: "Count of occasions where fork choice has returned an error when trying to find a head",
-        labelNames: ["entrypoint"]
+        labelNames: ["entrypoint"],
       }),
       changedHead: register.gauge({
         name: "beacon_fork_choice_changed_head_total",

@@ -4,6 +4,7 @@ import {
   computeTimeAtSlot,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
+  CachedBeaconStateAllForks,
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
@@ -114,14 +115,6 @@ export class PrepareNextSlotScheduler {
         RegenCaller.precomputeEpoch
       );
 
-      // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
-      // see https://github.com/ChainSafe/lodestar/issues/6194
-      const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
-        source: StateHashTreeRootSource.prepareNextSlot,
-      });
-      prepareState.hashTreeRoot();
-      hashTreeRootTimer?.();
-
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
@@ -159,6 +152,7 @@ export class PrepareNextSlotScheduler {
               proposerHeadRoot,
             });
             this.metrics?.weakHeadDetected.inc();
+            // TODO: figure out how to call regen.getBlockSlotState() only once in the case of proposing next slot
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
@@ -167,6 +161,7 @@ export class PrepareNextSlotScheduler {
             )) as CachedBeaconStateExecutions;
             updatedHeadRoot = proposerHeadRoot;
           }
+          this.computeStateHashTreeRoot(updatedPrepareState);
 
           // Update the builder status, if enabled shoot an api call to check status
           this.chain.updateBuilderStatus(clockSlot);
@@ -215,6 +210,8 @@ export class PrepareNextSlotScheduler {
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
+      } else {
+        this.computeStateHashTreeRoot(prepareState);
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
@@ -223,4 +220,14 @@ export class PrepareNextSlotScheduler {
       }
     }
   };
+
+  computeStateHashTreeRoot(state: CachedBeaconStateAllForks): void {
+    // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
+    // see https://github.com/ChainSafe/lodestar/issues/6194
+    const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
+      source: StateHashTreeRootSource.prepareNextSlot,
+    });
+    state.hashTreeRoot();
+    hashTreeRootTimer?.();
+  }
 }
