@@ -62,9 +62,6 @@ jobs:
       - name: Lint built docs
         run: yarn docs:lint:fix
 
-      - name: Set up Python
-        uses: actions/setup-python@v1
-
       - name: Build docs
         working-directory: docs
         run: yarn && yarn build

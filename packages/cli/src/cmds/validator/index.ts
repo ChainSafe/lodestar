@@ -12,7 +12,7 @@ import {validatorHandler} from "./handler.js";
 export const validator: CliCommand<IValidatorCliArgs, GlobalArgs> = {
   command: "validator",
   describe: "Run one or multiple validator clients",
-  docsFolder: "validator-management",
+  docsFolder: "run/validator-management",
   examples: [
     {
       command: "validator --network goerli",
