@@ -2,7 +2,7 @@
 
 ## Binaries
 
-Binaries can be downloaded from [this page](https://github.com/ChainSafe/lodestar/releases/) under the `Assets` section.
+Binaries can be downloaded from [the release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
 
 ## Docker Installation
 

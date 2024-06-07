@@ -3,9 +3,12 @@ import type {SidebarsConfig} from "@docusaurus/plugin-content-docs";
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     "index",
+    "introduction",
+    "security",
     {
       type: "category",
       label: "Run A Node",
+      collapsed: false,
       items: [
         "run/getting-started/quick-start",
         "run/getting-started/installation",
@@ -49,7 +52,6 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Developer Tools",
-      collapsed: false,
       items: [
         {
           type: "category",
@@ -58,7 +60,7 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
-          label: "Lodestar Light Prover",
+          label: "Lodestar Prover",
           items: ["libraries/lightclient-prover/prover"],
         },
       ],
@@ -68,12 +70,10 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Contributing",
-      collapsed: false,
       items: [
         {
           type: "category",
           label: "Advanced Topics",
-          collapsed: false,
           items: ["contribution/advanced-topics/setting-up-a-testnet"],
         },
         "contribution/depgraph",
@@ -81,6 +81,7 @@ const sidebars: SidebarsConfig = {
           type: "category",
           label: "Development Tools",
           items: [
+            "contribution/dev-cli",
             "contribution/tools/debugging",
             "contribution/tools/flamegraphs",
             "contribution/tools/heap-dumps",
@@ -90,7 +91,6 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Testing",
-          collapsed: false,
           items: [
             "contribution/testing/index",
             "contribution/testing/end-to-end-tests",
