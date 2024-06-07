@@ -5,7 +5,7 @@ import {gcStats} from "@chainsafe/prometheus-gc-stats";
 /**
  * Collects event loop utilization metrics compared to the last call
  */
-function collectEvenLoopUtilization(register: Registry, prefix?: string, intervalMs: number = 5000): () => void {
+function collectEventLoopUtilization(register: Registry, prefix?: string, intervalMs: number = 5000): () => void {
   const key = `${prefix}_` ?? "";
 
   const metricUtilization = new Histogram({
@@ -16,14 +16,14 @@ function collectEvenLoopUtilization(register: Registry, prefix?: string, interva
   });
 
   const metricIdle = new Histogram({
-    name: `${key}_nodejs_eventloop_idle`,
+    name: `${key}nodejs_eventloop_idle`,
     help: "Histogram of Event Loop idle time between two successive calls.",
     registers: [register],
     buckets: [1, intervalMs / 10, intervalMs / 2, intervalMs],
   });
 
   const metricActive = new Histogram({
-    name: `${key}_nodejs_eventloop_active`,
+    name: `${key}nodejs_eventloop_active`,
     help: "Histogram of Event Loop active time between two successive calls.",
     registers: [register],
     buckets: [1, intervalMs / 10, intervalMs / 2, intervalMs],
@@ -54,7 +54,7 @@ export function collectNodeJSMetrics(register: Registry, prefix?: string): () =>
     eventLoopMonitoringPrecision: 10,
   });
 
-  const terminateEluCollection = collectEvenLoopUtilization(register, prefix);
+  const terminateEluCollection = collectEventLoopUtilization(register, prefix);
 
   // Collects GC metrics using a native binding module
   // - nodejs_gc_runs_total: Counts the number of time GC is invoked
