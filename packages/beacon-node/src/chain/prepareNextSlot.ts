@@ -150,13 +150,15 @@ export class PrepareNextSlotScheduler {
             this.logger.verbose("Weak head detected. May build on this block instead:", {
               proposerHeadSlot,
               proposerHeadRoot,
+              headSlot,
+              headRoot,
             });
             this.metrics?.weakHeadDetected.inc();
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
               {dontTransferCache: !isEpochTransition},
-              RegenCaller.precomputeEpoch
+              RegenCaller.predictProposerHead
             )) as CachedBeaconStateExecutions;
             updatedHeadRoot = proposerHeadRoot;
           }
