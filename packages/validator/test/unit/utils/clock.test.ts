@@ -85,9 +85,8 @@ describe("util / Clock", function () {
     const testConfig = {SECONDS_PER_SLOT: 12} as BeaconConfig;
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
 
-    // Tests can fail under certain time slots, overriding the system time 
+    // Tests can fail under certain time slots, overriding the system time
     // with a specific value allows us to run tests deterministically
-    // See : https://github.com/ChainSafe/lodestar/issues/6734
     beforeEach(() => {
       vi.setSystemTime(genesisTime * 1000);
     });
