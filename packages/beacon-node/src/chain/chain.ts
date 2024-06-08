@@ -29,7 +29,7 @@ import {
   bellatrix,
   isBlindedBeaconBlock,
 } from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -45,7 +45,14 @@ import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts, CommonBlockBody} from "./interface.js";
+import {
+  IBeaconChain,
+  ProposerPreparationData,
+  BlockHash,
+  StateGetOpts,
+  CommonBlockBody,
+  FindHeadFnName,
+} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -279,7 +286,8 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts,
-      this.justifiedBalancesGetter.bind(this)
+      this.justifiedBalancesGetter.bind(this),
+      logger
     );
     const regen = new QueuedStateRegenerator({
       config,
@@ -703,12 +711,50 @@ export class BeaconChain implements IBeaconChain {
 
   recomputeForkChoiceHead(): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.recomputeForkChoiceHead});
 
     try {
-      return this.forkChoice.updateHead();
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc();
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicialHead});
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  predictProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.predictProposerHead});
+
+    try {
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  getProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.getProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
+
+    try {
+      const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
+        mode: UpdateHeadOpt.GetProposerHead,
+        secFromSlot,
+        slot,
+      });
+
+      if (isHeadTimely && notReorgedReason !== undefined) {
+        this.metrics?.forkChoice.notReorgedReason.inc({reason: notReorgedReason});
+      }
+      return head;
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetProposerHead});
       throw e;
     } finally {
       timer?.();

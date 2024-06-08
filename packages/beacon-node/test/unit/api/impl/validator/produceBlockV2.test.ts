@@ -47,6 +47,7 @@ describe("api/validator - produceBlockV2", function () {
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
+    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
     modules.chain.recomputeForkChoiceHead.mockReturnValue(
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
@@ -87,7 +88,7 @@ describe("api/validator - produceBlockV2", function () {
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
 
     const headSlot = 0;
-    modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
+    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
 
     modules.chain.recomputeForkChoiceHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
     modules.chain["opPool"].getSlashingsAndExits.mockReturnValue([[], [], [], []]);

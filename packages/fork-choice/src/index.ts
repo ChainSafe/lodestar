@@ -9,7 +9,7 @@ export type {
 } from "./protoArray/interface.js";
 export {ExecutionStatus} from "./protoArray/interface.js";
 
-export {ForkChoice, type ForkChoiceOpts, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
 export {
   type IForkChoice,
   type PowBlockHex,

@@ -97,6 +97,8 @@ const forkChoiceTest =
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
             assertCorrectProgressiveBalances,
+            proposerBoost: true,
+            proposerBoostReorg: true,
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
@@ -270,7 +272,7 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = chain.forkChoice.updateHead();
+              const head = (chain.forkChoice as ForkChoice).updateHead();
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {
