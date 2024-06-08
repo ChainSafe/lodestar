@@ -50,16 +50,16 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.nextSyncCommittee = stateElectraCloned.nextSyncCommittee;
   stateElectraView.latestExecutionPayloadHeader = ssz.electra.BeaconState.fields.latestExecutionPayloadHeader.toViewDU({
     ...stateElectraCloned.latestExecutionPayloadHeader.toValue(),
-    depositReceiptsRoot: ssz.Root.defaultValue(),
+    depositRequestsRoot: ssz.Root.defaultValue(),
     withdrawalRequestsRoot: ssz.Root.defaultValue(),
   });
   stateElectraView.nextWithdrawalIndex = stateDeneb.nextWithdrawalIndex;
   stateElectraView.nextWithdrawalValidatorIndex = stateDeneb.nextWithdrawalValidatorIndex;
   stateElectraView.historicalSummaries = stateElectraCloned.historicalSummaries;
 
-  // latestExecutionPayloadHeader's depositReceiptsRoot and withdrawalRequestsRoot set to zeros by default
-  // default value of depositReceiptsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
-  stateElectraView.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
+  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
+  stateElectraView.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
   stateElectraView.depositBalanceToConsume = BigInt(0);
   stateElectraView.exitBalanceToConsume = BigInt(0);
 
@@ -136,9 +136,9 @@ export function upgradeStateToElectraOriginal(stateDeneb: CachedBeaconStateDeneb
     epoch: stateDeneb.epochCtx.epoch,
   });
 
-  // latestExecutionPayloadHeader's depositReceiptsRoot and withdrawalRequestsRoot set to zeros by default
-  // default value of depositReceiptsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
-  stateElectra.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
+  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
+  stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
 
   const validatorsArr = stateElectra.validators.getAllReadonly();
 

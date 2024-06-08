@@ -219,11 +219,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       }
     }
 
-    if (payload.depositReceipts.length !== 1) {
-      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${payload.depositReceipts.length}`);
+    if (payload.depositRequests.length !== 1) {
+      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${payload.depositRequests.length}`);
     }
 
-    const actualDepositRequest = payload.depositReceipts[0];
+    const actualDepositRequest = payload.depositRequests[0];
     assert.deepStrictEqual(
       actualDepositRequest,
       depositRequestB,
@@ -431,8 +431,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("Historical validator length for epoch 1 or 2 is not dropped properly");
     }
 
-    if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
-      throw Error("state.depositReceiptsStartIndex is not set upon processing new deposit receipt");
+    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
+      throw Error("state.depositRequestsStartIndex is not set upon processing new deposit receipt");
     }
 
     // wait for 1 slot to print current epoch stats
