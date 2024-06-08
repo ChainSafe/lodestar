@@ -295,7 +295,7 @@ describe(
             chain: {
               blsVerifyAllMainThread: true,
               forkchoiceConstructor: ReorgedForkChoice,
-              proposerBoostEnabled: true,
+              proposerBoost: true,
             },
           },
           validatorCount,
@@ -318,7 +318,7 @@ describe(
               nHistoricalStates: true,
               maxBlockStates,
               maxCPStateEpochsInMemory,
-              proposerBoostEnabled: true,
+              proposerBoost: true,
             },
             metrics: {enabled: true},
           },

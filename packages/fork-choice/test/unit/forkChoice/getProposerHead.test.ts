@@ -235,8 +235,8 @@ describe("Forkchoice / GetProposerHead", function () {
       });
 
       const forkChoice = new ForkChoice(config, fcStore, protoArr, {
-        proposerBoostEnabled: true,
-        // proposerBoostReorgEnabled: true,
+        proposerBoost: true,
+        proposerBoostReorg: true,
       });
 
       const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(

@@ -87,6 +87,7 @@ describe("api/validator - produceBlockV3", function () {
         modules.chain.recomputeForkChoiceHead.mockReturnValue({
           blockRoot: toHexString(fullBlock.parentRoot),
         } as ProtoBlock);
+        modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
 
         if (enginePayloadValue !== null) {
           const commonBlockBody: CommonBlockBody = {

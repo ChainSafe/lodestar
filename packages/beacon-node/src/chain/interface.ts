@@ -64,6 +64,12 @@ export type StateGetOpts = {
   allowRegen: boolean;
 };
 
+export enum FindHeadFnName {
+  recomputeForkChoiceHead = "recomputeForkChoiceHead",
+  predictProposerHead = "predictProposerHead",
+  getProposerHead = "getProposerHead",
+}
+
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
@@ -187,6 +193,12 @@ export interface IBeaconChain {
   getStatus(): phase0.Status;
 
   recomputeForkChoiceHead(): ProtoBlock;
+
+  /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
+  predictProposerHead(slot: Slot): ProtoBlock;
+
+  /** When proposerBoostReorg is enabled and we are proposing a block, this is called to determine which head block to build on */
+  getProposerHead(slot: Slot): ProtoBlock;
 
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 

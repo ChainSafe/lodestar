@@ -28,7 +28,8 @@ describe("produceBlockBody", () => {
     state = stateOg.clone();
     chain = new BeaconChain(
       {
-        proposerBoostEnabled: true,
+        proposerBoost: true,
+        proposerBoostReorg: false,
         computeUnrealized: false,
         safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
         disableArchiveOnCheckpoint: true,

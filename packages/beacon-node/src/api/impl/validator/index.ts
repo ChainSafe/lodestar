@@ -381,7 +381,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      parentBlockRoot = fromHex(chain.recomputeForkChoiceHead().blockRoot);
+      parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
@@ -448,7 +448,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      parentBlockRoot = fromHex(chain.recomputeForkChoiceHead().blockRoot);
+      parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
@@ -521,7 +521,7 @@ export function getValidatorApi({
     // forkChoice.updateTime() might have already been called by the onSlot clock
     // handler, in which case this should just return.
     chain.forkChoice.updateTime(slot);
-    const parentBlockRoot = fromHex(chain.recomputeForkChoiceHead().blockRoot);
+    const parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
 
     const fork = config.getForkName(slot);
     // set some sensible opts
