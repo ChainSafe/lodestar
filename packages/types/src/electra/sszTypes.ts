@@ -112,7 +112,7 @@ export const SignedAggregateAndProof = new ContainerType(
   {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
 );
 
-export const DepositReceipt = new ContainerType(
+export const DepositRequest = new ContainerType(
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
@@ -120,10 +120,10 @@ export const DepositReceipt = new ContainerType(
     signature: BLSSignature,
     index: DepositIndex,
   },
-  {typeName: "DepositReceipt", jsonCase: "eth2"}
+  {typeName: "DepositRequest", jsonCase: "eth2"}
 );
 
-export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
+export const DepositRequests = new ListCompositeType(DepositRequest, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
 
 export const ExecutionLayerWithdrawalRequest = new ContainerType(
   {
@@ -141,7 +141,7 @@ export const ExecutionLayerWithdrawalRequests = new ListCompositeType(
 export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
-    depositReceipts: DepositReceipts, // New in ELECTRA
+    depositRequests: DepositRequests, // New in ELECTRA
     withdrawalRequests: ExecutionLayerWithdrawalRequests, // New in ELECTRA
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
@@ -150,7 +150,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
-    depositReceiptsRoot: Root, // New in ELECTRA
+    depositRequestsRoot: Root, // New in ELECTRA
     withdrawalRequestsRoot: Root, // New in ELECTRA
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
@@ -340,7 +340,7 @@ export const BeaconState = new ContainerType(
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
-    depositReceiptsStartIndex: UintBn64, // New in ELECTRA:EIP6110
+    depositRequestsStartIndex: UintBn64, // New in ELECTRA:EIP6110
     depositBalanceToConsume: Gwei, // New in Electra:EIP7251
     exitBalanceToConsume: Gwei, // New in Electra:EIP7251
     earliestExitEpoch: Epoch, // New in Electra:EIP7251
