@@ -155,7 +155,7 @@ export const ExecutionPayload = new ContainerType(
     ...denebSsz.ExecutionPayload.fields,
     depositRequests: DepositRequests, // New in ELECTRA
     withdrawalRequests: ExecutionLayerWithdrawalRequests, // New in ELECTRA
-    consolidationRequests: ExecutionLayerConsolidationRequest, // [New in Electra]
+    consolidationRequests: ExecutionLayerConsolidationRequests, // [New in Electra]
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -168,23 +168,6 @@ export const ExecutionPayloadHeader = new ContainerType(
     consolidationRequestsRoot: Root, // New in ELECTRA
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
-);
-
-export const Consolidation = new ContainerType(
-  {
-    sourceIndex: ValidatorIndex,
-    targetIndex: ValidatorIndex,
-    epoch: Epoch,
-  },
-  {typeName: "Consolidation", jsonCase: "eth2"}
-);
-
-export const SignedConsolidation = new ContainerType(
-  {
-    message: Consolidation,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedConsolidation", jsonCase: "eth2"}
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
@@ -236,7 +219,6 @@ export const BlindedBeaconBlockBody = new ContainerType(
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in ELECTRA
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
-    consolidations: new ListCompositeType(SignedConsolidation, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD), // [New in Electra]
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );

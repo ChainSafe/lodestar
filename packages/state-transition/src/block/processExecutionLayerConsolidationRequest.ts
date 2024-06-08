@@ -1,7 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {electra, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
-import {verifyConsolidationSignature} from "../signatureSets/index.js";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
@@ -10,13 +9,55 @@ import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 
 export function processExecutionLayerConsolidationRequest(
   state: CachedBeaconStateElectra,
-  signedConsolidation: electra.ExecutionLayerConsolidationRequest
+  elConsolidationRequest: electra.ExecutionLayerConsolidationRequest
 ): void {
-  assertValidConsolidation(state, signedConsolidation);
 
-  // Initiate source validator exit and append pending consolidation
-  const {sourceIndex, targetIndex} = signedConsolidation.message;
-  const sourceValidator = state.validators.get(sourceIndex);
+  // If the pending consolidations queue is full, consolidation requests are ignored
+  if (state.pendingConsolidations.length >= PENDING_CONSOLIDATIONS_LIMIT) {
+    return;
+  }
+
+  // If there is too little available consolidation churn limit, consolidation requests are ignored
+  if (getConsolidationChurnLimit(state) <= MIN_ACTIVATION_BALANCE) {
+    return;
+  }
+
+  const {sourcePubkey, targetPubkey} = elConsolidationRequest;
+  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
+  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
+
+  if (sourceIndex === undefined || targetIndex === undefined) {
+    return;
+  }
+
+  // Verify that source != target, so a consolidation cannot be used as an exit.
+  if (sourceIndex === targetIndex){
+    return;
+  }
+
+  const sourceValidator = state.validators.getReadonly(sourceIndex);
+  const targetValidator = state.validators.getReadonly(targetIndex);
+  const sourceWithdrawalAddress = toHexString(sourceValidator.withdrawalCredentials.subarray(12));
+  const currentEpoch = state.epochCtx.epoch;
+
+  // Verify withdrawal credentials
+  if (hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials) || hasExecutionWithdrawalCredential(targetValidator.withdrawalCredentials)) {
+    return;
+  }
+
+  if (sourceWithdrawalAddress !== toHexString(elConsolidationRequest.sourceAddress)) {
+    return;
+  }
+
+  // Verify the source and the target are active
+  if (!isActiveValidator(sourceValidator, currentEpoch) || !isActiveValidator(targetValidator, currentEpoch)) {
+    return;
+  }
+
+  // Verify exits for source and target have not been initiated
+  if (sourceValidator.exitEpoch !== FAR_FUTURE_EPOCH || targetValidator.exitEpoch !== FAR_FUTURE_EPOCH) {
+    return;
+  }
 
   const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(sourceValidator.effectiveBalance));
   sourceValidator.exitEpoch = exitEpoch;
@@ -27,85 +68,4 @@ export function processExecutionLayerConsolidationRequest(
     targetIndex,
   });
   state.pendingConsolidations.push(pendingConsolidation);
-}
-
-function assertValidConsolidation(
-  state: CachedBeaconStateElectra,
-  signedConsolidation: electra.SignedConsolidation
-): void {
-  // If the pending consolidations queue is full, no consolidations are allowed in the block
-  if (state.pendingConsolidations.length >= PENDING_CONSOLIDATIONS_LIMIT) {
-    throw new Error("Pending consolidation queue is full");
-  }
-
-  // If there is too little available consolidation churn limit, no consolidations are allowed in the block
-  // assert get_consolidation_churn_limit(state) > MIN_ACTIVATION_BALANCE
-  if (getConsolidationChurnLimit(state) <= MIN_ACTIVATION_BALANCE) {
-    throw new Error(`Consolidation churn limit too low. consolidationChurnLimit=${getConsolidationChurnLimit(state)}`);
-  }
-
-  const consolidation = signedConsolidation.message;
-  const {sourceIndex, targetIndex} = consolidation;
-
-  // Verify that source != target, so a consolidation cannot be used as an exit.
-  if (sourceIndex === targetIndex) {
-    throw new Error(
-      `Consolidation source and target index cannot be the same: sourceIndex=${sourceIndex} targetIndex=${targetIndex}`
-    );
-  }
-
-  const sourceValidator = state.validators.getReadonly(sourceIndex);
-  const targetValidator = state.validators.getReadonly(targetIndex);
-  const currentEpoch = state.epochCtx.epoch;
-
-  // Verify the source and the target are active
-  if (!isActiveValidator(sourceValidator, currentEpoch)) {
-    throw new Error(`Consolidation source validator is not active: sourceIndex=${sourceIndex}`);
-  }
-
-  if (!isActiveValidator(targetValidator, currentEpoch)) {
-    throw new Error(`Consolidation target validator is not active: targetIndex=${targetIndex}`);
-  }
-
-  // Verify exits for source and target have not been initiated
-  if (sourceValidator.exitEpoch !== FAR_FUTURE_EPOCH) {
-    throw new Error(`Consolidation source validator has initialized exit: sourceIndex=${sourceIndex}`);
-  }
-  if (targetValidator.exitEpoch !== FAR_FUTURE_EPOCH) {
-    throw new Error(`Consolidation target validator has initialized exit: targetIndex=${targetIndex}`);
-  }
-
-  // Consolidations must specify an epoch when they become valid; they are not valid before then
-  if (currentEpoch < consolidation.epoch) {
-    throw new Error(
-      `Consolidation epoch is after the current epoch: consolidationEpoch=${consolidation.epoch} currentEpoch=${currentEpoch}`
-    );
-  }
-
-  // Verify the source and the target have Execution layer withdrawal credentials
-  if (!hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials)) {
-    throw new Error(
-      `Consolidation source validator does not have execution withdrawal credentials: sourceIndex=${sourceIndex}`
-    );
-  }
-  if (!hasExecutionWithdrawalCredential(targetValidator.withdrawalCredentials)) {
-    throw new Error(
-      `Consolidation target validator does not have execution withdrawal credentials: targetIndex=${targetIndex}`
-    );
-  }
-
-  // Verify the same withdrawal address
-  const sourceWithdrawalAddress = toHexString(sourceValidator.withdrawalCredentials.subarray(12));
-  const targetWithdrawalAddress = toHexString(targetValidator.withdrawalCredentials.subarray(12));
-
-  if (sourceWithdrawalAddress !== targetWithdrawalAddress) {
-    throw new Error(
-      `Consolidation source and target withdrawal address are different: source: ${sourceWithdrawalAddress} target: ${targetWithdrawalAddress}`
-    );
-  }
-
-  // Verify consolidation is signed by the source and the target
-  if (!verifyConsolidationSignature(state, signedConsolidation)) {
-    throw new Error("Consolidation not valid");
-  }
 }
