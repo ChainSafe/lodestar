@@ -225,6 +225,7 @@ export const HistoricalBatchRoots = new ContainerType(
 );
 
 // The main Validator type is the 'ContainerNodeStructType' version
+// this is actually not ValidatorNodeStruct, it's normal ContainerType
 export const Validator = ValidatorNodeStruct;
 
 // Export as stand-alone for direct tree optimizations

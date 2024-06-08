@@ -1,4 +1,4 @@
-import {ByteViews, ContainerNodeStructType, ValueOfFields} from "@chainsafe/ssz";
+import {ByteViews, ContainerType, ValueOfFields} from "@chainsafe/ssz";
 import * as primitiveSsz from "../primitive/sszTypes.js";
 
 const {Boolean, Bytes32, UintNum64, BLSPubkey, EpochInf} = primitiveSsz;
@@ -28,7 +28,7 @@ export const ValidatorType = {
 /**
  * Improve serialization performance for state.validators.serialize();
  */
-export class ValidatorNodeStructType extends ContainerNodeStructType<typeof ValidatorType> {
+export class ValidatorType extends ContainerType<typeof ValidatorType> {
   constructor() {
     super(ValidatorType, {typeName: "Validator", jsonCase: "eth2"});
   }
@@ -73,4 +73,4 @@ function writeEpochInf(dataView: DataView, offset: number, value: number): numbe
   }
   return offset;
 }
-export const ValidatorNodeStruct = new ValidatorNodeStructType();
+export const ValidatorNodeStruct = new ValidatorType();
