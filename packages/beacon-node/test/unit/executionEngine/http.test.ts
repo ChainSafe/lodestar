@@ -218,7 +218,7 @@ describe("ExecutionEngine / http", () => {
 
     returnValue = response;
 
-    const res = await executionEngine.getPayloadBodiesByHash(reqBlockHashes);
+    const res = await executionEngine.getPayloadBodiesByHash(ForkName.bellatrix, reqBlockHashes);
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
@@ -271,7 +271,7 @@ describe("ExecutionEngine / http", () => {
 
     returnValue = response;
 
-    const res = await executionEngine.getPayloadBodiesByRange(startBlockNumber, blockCount);
+    const res = await executionEngine.getPayloadBodiesByRange(ForkName.bellatrix, startBlockNumber, blockCount);
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
