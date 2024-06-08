@@ -28,7 +28,7 @@ export const ValidatorType = {
 /**
  * Improve serialization performance for state.validators.serialize();
  */
-export class ValidatorType extends ContainerType<typeof ValidatorType> {
+export class ValidatorNodeStructType extends ContainerType<typeof ValidatorType> {
   constructor() {
     super(ValidatorType, {typeName: "Validator", jsonCase: "eth2"});
   }
@@ -73,4 +73,4 @@ function writeEpochInf(dataView: DataView, offset: number, value: number): numbe
   }
   return offset;
 }
-export const ValidatorNodeStruct = new ValidatorType();
+export const ValidatorNodeStruct = new ValidatorNodeStructType();
