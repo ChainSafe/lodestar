@@ -98,7 +98,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV3: this.getPayload.bind(this),
       engine_getPayloadV4: this.getPayload.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
+      engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
+      engine_getPayloadBodiesByRangeV2: this.getPayloadBodiesByRange.bind(this),
     };
   }
 

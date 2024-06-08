@@ -71,7 +71,7 @@ export function processOperations(
       processExecutionLayerWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
     }
 
-    for (const depositRequest of bodyElectra.executionPayload.depositReceipts) {
+    for (const depositRequest of bodyElectra.executionPayload.depositRequests) {
       processDepositRequest(fork, stateElectra, depositRequest);
     }
 
