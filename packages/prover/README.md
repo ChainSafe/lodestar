@@ -14,7 +14,7 @@ A set of tools allowing to verify EL client JSON-RPC calls.
 You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy. For prover use case see below example.
 
 ```ts
-import Web3 from "web3";
+import {Web3} from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
 const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
@@ -38,7 +38,7 @@ In this scenario the actual provider is mutated to handle the RPC requests and v
 For some scenarios when you don't want to mutate the provider you can pass an option `mutateProvider` as `false`. In this scenario the object `httpProvider` is not mutated and you get a new object `provider`. This is useful when your provider object does not allow mutation, e.g. Metamask provider accessible through `window.ethereum`. If not provided `mutateProvider` is considered as `true` by default. In coming releases we will switch its default behavior to `false`.
 
 ```ts
-import Web3 from "web3";
+import {Web3} from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
 const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
@@ -51,7 +51,7 @@ const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, 
   mutateProvider: false,
 });
 
-const web3 = new Web3(provider);
+const web3 = new Web3(provider); // TODO: type is not compatible
 
 const address = "0xf97e180c050e5Ab072211Ad2C213Eb5AEE4DF134";
 const balance = await web3.eth.getBalance(address, "latest");

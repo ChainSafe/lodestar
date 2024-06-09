@@ -32,7 +32,7 @@
     "test:spec": "vitest --run --config vitest.spec.config.ts --dir test/spec/",
     "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json"
   },
   "repository": {
     "type": "git",

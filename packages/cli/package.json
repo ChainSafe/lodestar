@@ -38,7 +38,7 @@
     "test:sim:deneb": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/deneb.test.ts",
     "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/backupEthProvider.test.ts",
     "test": "yarn test:unit && yarn test:e2e",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json"
   },
   "repository": {
     "type": "git",

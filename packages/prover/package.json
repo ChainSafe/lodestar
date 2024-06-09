@@ -57,7 +57,7 @@
     "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
     "test:e2e": "LODESTAR_PRESET=minimal vitest --run --config vitest.e2e.config.ts --dir test/e2e",
-    "check-readme": "typescript-docs-verifier",
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json",
     "generate-fixtures": "node --loader ts-node/esm scripts/generate_fixtures.ts"
   },
   "dependencies": {

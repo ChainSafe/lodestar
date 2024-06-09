@@ -69,7 +69,7 @@
     "test:browsers:chrome": "yarn run build:dist && vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:firefox": "yarn run build:dist && vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json"
   },
   "dependencies": {
     "@chainsafe/bls": "7.1.3",
