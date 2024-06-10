@@ -103,8 +103,11 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     );
   },
 
-  execution_layer_consolidation_request: (state, testCase: {consolidation: electra.ExecutionLayerConsolidationRequest}) => {
-    blockFns.processExecutionLayerConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation);
+  execution_layer_consolidation_request: (
+    state,
+    testCase: {execution_layer_consolidation_request: electra.ExecutionLayerConsolidationRequest}
+  ) => {
+    blockFns.processExecutionLayerConsolidationRequest(state as CachedBeaconStateElectra, testCase.execution_layer_consolidation_request);
   },
 
 };
