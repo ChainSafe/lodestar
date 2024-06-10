@@ -18,6 +18,9 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
     return {
       mode: "mock",
       genesisBlockHash: "",
+      // Allows to quickly spin up Lodestar on any network as engine mock
+      // will consider itself synced without having to sync from genesis.
+      validateBlockHashes: false,
     };
   }
 
@@ -72,9 +75,8 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   },
 
   "execution.engineMock": {
-    description: "Set the execution engine to mock mode",
+    description: "Set the execution engine to mock mode (development only)",
     type: "boolean",
-    hidden: true,
     group: "execution",
   },
 

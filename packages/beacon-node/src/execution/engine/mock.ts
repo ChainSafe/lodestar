@@ -35,6 +35,8 @@ export type ExecutionEngineMockOpts = {
   onlyPredefinedResponses?: boolean;
   capellaForkTimestamp?: number;
   denebForkTimestamp?: number;
+  /**  Skip validation of parent and finalized block hash */
+  validateBlockHashes?: boolean;
 };
 
 type ExecutionBlock = {
@@ -168,7 +170,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     //    validation is locally available. The validation process is specified in the Payload validation section.
     //
     // > Mock only validates that parent is known
-    if (!this.validBlocks.has(parentHash)) {
+    if (this.opts.validateBlockHashes !== false && !this.validBlocks.has(parentHash)) {
       // if requisite data for the payload's acceptance or validation is missing
       // return {status: SYNCING, latestValidHash: null, validationError: null}
       return {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null};
@@ -253,7 +255,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
 
     // 5. Client software MUST update its forkchoice state if payloads referenced by forkchoiceState.headBlockHash and
     //    forkchoiceState.finalizedBlockHash are VALID.
-    if (!this.validBlocks.has(finalizedBlockHash)) {
+    if (this.opts.validateBlockHashes !== false && !this.validBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
     this.headBlockHash = headBlockHash;

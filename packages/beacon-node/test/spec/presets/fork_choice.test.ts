@@ -72,6 +72,7 @@ const forkChoiceTest =
           genesisBlockHash: isExecutionStateType(anchorState)
             ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
             : ZERO_HASH_HEX,
+          validateBlockHashes: true,
         });
 
         const controller = new AbortController();
