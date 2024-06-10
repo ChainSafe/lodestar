@@ -12,28 +12,15 @@ import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
 import * as gnosis from "./gnosis.js";
-import * as goerli from "./goerli.js";
-import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 import * as holesky from "./holesky.js";
 import * as chiado from "./chiado.js";
 import * as ephemery from "./ephemery.js";
 
-export type NetworkName =
-  | "mainnet"
-  | "dev"
-  | "gnosis"
-  | "goerli"
-  | "ropsten"
-  | "sepolia"
-  | "holesky"
-  | "chiado"
-  | "ephemery";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
-  "goerli",
-  "ropsten",
   "sepolia",
   "holesky",
   "chiado",
@@ -69,10 +56,6 @@ export function getNetworkData(network: NetworkName): {
       return dev;
     case "gnosis":
       return gnosis;
-    case "goerli":
-      return goerli;
-    case "ropsten":
-      return ropsten;
     case "sepolia":
       return sepolia;
     case "holesky":
