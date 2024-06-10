@@ -2,10 +2,11 @@ import fs from "node:fs";
 import got from "got";
 import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {WireFormat, getClient} from "@lodestar/api";
+import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
+import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {Slot, ssz} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
 import {BeaconStateAllForks, getLatestBlockRoot, computeCheckpointEpochAtStateSlot} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
@@ -156,18 +157,30 @@ export async function fetchWeakSubjectivityState(
     }
 
     // getStateV2 should be available for all forks including phase0
-    const getStatePromise = api.debug.getStateV2({stateId}, {responseWireFormat: WireFormat.ssz});
+    const getStatePromise = api.debug.getStateV2(
+      {stateId},
+      {
+        responseWireFormat: WireFormat.ssz,
+        headers: {
+          // Set Accept header explicitly to fix Checkpointz incompatibility
+          // See https://github.com/ethpandaops/checkpointz/issues/165
+          [HttpHeader.Accept]: MediaType.ssz,
+        },
+      }
+    );
 
-    const {stateBytes, fork} = await callFnWhenAwait(
+    const stateBytes = await callFnWhenAwait(
       getStatePromise,
       () => logger.info("Download in progress, please wait..."),
       GET_STATE_LOG_INTERVAL
     ).then((res) => {
-      return {stateBytes: res.ssz(), fork: res.meta().version};
+      return res.ssz();
     });
 
     logger.info("Download completed", {stateId});
-    const wsState = ssz.allForks[fork].BeaconState.deserializeToViewDU(stateBytes);
+    // It should not be required to get fork type from bytes but Checkpointz does not return
+    // Eth-Consensus-Version header, see https://github.com/ethpandaops/checkpointz/issues/164
+    const wsState = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
     return {
       wsState,
