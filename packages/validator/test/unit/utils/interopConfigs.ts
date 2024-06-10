@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const lightHouseHoleskyConfig = {
+export const lighthouseHoleskyConfig = {
   CONFIG_NAME: "holesky",
   PRESET_BASE: "mainnet",
   TERMINAL_TOTAL_DIFFICULTY: "0",
