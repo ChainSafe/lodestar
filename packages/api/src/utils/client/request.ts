@@ -43,7 +43,7 @@ export function createApiRequest<E extends Endpoint>(
   args: E["args"],
   init: ApiRequestInitRequired
 ): Request {
-  const headers = new Headers(init.headers);
+  const headers = new Headers();
 
   let req: E["request"];
 
@@ -102,7 +102,7 @@ export function createApiRequest<E extends Endpoint>(
   return new Request(url, {
     ...init,
     method: definition.method,
-    headers: mergeHeaders(headers, req.headers),
+    headers: mergeHeaders(headers, req.headers, init.headers),
     body: req.body as BodyInit,
   });
 }

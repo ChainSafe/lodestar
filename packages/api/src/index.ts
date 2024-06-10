@@ -2,6 +2,7 @@
 export * from "./beacon/index.js";
 export {HttpStatusCode} from "./utils/httpStatusCode.js";
 export {WireFormat} from "./utils/wireFormat.js";
+export {HttpHeader, MediaType} from "./utils/headers.js";
 export type {HttpErrorCodes, HttpSuccessCodes} from "./utils/httpStatusCode.js";
 export {ApiResponse, HttpClient, FetchError, isFetchError, fetch, defaultInit} from "./utils/client/index.js";
 export type {ApiRequestInit} from "./utils/client/request.js";

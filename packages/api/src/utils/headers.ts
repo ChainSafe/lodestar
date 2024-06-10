@@ -90,28 +90,29 @@ export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}
   }
 }
 
-export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefined): Headers {
-  if (!a) {
-    return new Headers(b);
-  }
-  const headers = new Headers(a);
-  if (!b) {
-    return headers;
-  }
-  if (Array.isArray(b)) {
-    for (const [key, value] of b) {
-      headers.set(key, value);
+export function mergeHeaders(...headersList: (HeadersInit | undefined)[]): Headers {
+  const mergedHeaders = new Headers();
+
+  for (const headers of headersList) {
+    if (!headers) {
+      continue;
     }
-  } else if (b instanceof Headers) {
-    for (const [key, value] of b as unknown as Iterable<[string, string]>) {
-      headers.set(key, value);
-    }
-  } else {
-    for (const [key, value] of Object.entries(b)) {
-      headers.set(key, value);
+    if (Array.isArray(headers)) {
+      for (const [key, value] of headers) {
+        mergedHeaders.set(key, value);
+      }
+    } else if (headers instanceof Headers) {
+      for (const [key, value] of headers as unknown as Iterable<[string, string]>) {
+        mergedHeaders.set(key, value);
+      }
+    } else {
+      for (const [key, value] of Object.entries(headers)) {
+        mergedHeaders.set(key, value);
+      }
     }
   }
-  return headers;
+
+  return mergedHeaders;
 }
 
 /**
