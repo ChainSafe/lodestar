@@ -5,7 +5,11 @@ const DEFAULT_SEPARATOR = "\n\n";
 const LINE_BREAK = "\n\n";
 
 function sanitizeDescription(description: string): string {
-  return description.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{", "&#123;").replaceAll("}", "&#125;");
+  return description
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("{", "&#123;")
+    .replaceAll("}", "&#125;");
 }
 
 function renderExampleBody(example: CliExample, lodestarCommand?: string): string {
@@ -27,10 +31,10 @@ ${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
  * -------------------
  * #### Basic `validator` command example
  *
- * Run one validator client with all the keystores available in the directory .goerli/keystores
+ * Run one validator client with all the keystores available in the directory .holesky/keystores
  *
  * ```
- * validator --network goerli
+ * validator --network holesky
  * ```
  * -------------------
  */
@@ -46,15 +50,15 @@ function renderCommandExample(example: CliExample, lodestarCommand?: string): st
  *
  * #### Basic `validator` command example
  *
- * Run one validator client with all the keystores available in the directory .goerli/keystores
+ * Run one validator client with all the keystores available in the directory .holesky/keystores
  *
  * ```
- * validator --network goerli
+ * validator --network holesky
  * ```
  *
  * #### Advanced `validator` command example
  *
- * Run one validator client with all the keystores available in the directory .goerli/keystores
+ * Run one validator client with all the keystores available in the directory .holesky/keystores
  * using an rcConfig file for configuration
  *
  * ```
@@ -183,7 +187,7 @@ The following sub-commands are available with the \`${command}\` command:`,
  * Import an interchange file to the slashing protection DB
  *
  * ```
- * ./lodestar validator slashing-protection import --network goerli --file interchange.json
+ * ./lodestar validator slashing-protection import --network holesky --file interchange.json
  * ```
  */
 function renderSubCommand(sub: SubCommandDefinition, lodestarCommand?: string): string {

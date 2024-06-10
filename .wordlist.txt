@@ -139,7 +139,6 @@ flamegraph
 flamegraphs
 getNetworkIdentity
 gnosis
-goerli
 heapdump
 heaptrack
 holesky
@@ -182,7 +181,6 @@ repos
 req
 reqresp
 responder
-ropsten
 runtime
 scalability
 secp

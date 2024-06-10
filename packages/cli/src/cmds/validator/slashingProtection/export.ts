@@ -26,7 +26,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
 
     examples: [
       {
-        command: "validator slashing-protection export --network goerli --file interchange.json",
+        command: "validator slashing-protection export --network holesky --file interchange.json",
         description: "Export an interchange JSON file for all validators in the slashing protection DB",
       },
     ],

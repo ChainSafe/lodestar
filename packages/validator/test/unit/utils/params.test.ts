@@ -3,13 +3,13 @@ import {chainConfigToJson, ChainConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params.js";
-import {lightHouseRopstenConfig, prysmRopstenConfig, tekuRopstenConfig, nimbusRopstenConfig} from "./interopConfigs.js";
+import {lightHouseHoleskyConfig, prysmHoleskyConfig, tekuHoleskyConfig, nimbusHoleskyConfig} from "./interopConfigs.js";
 
 const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
-  {name: "lighthouse", items: [networksChainConfig.ropsten, lightHouseRopstenConfig]},
-  {name: "prysm", items: [networksChainConfig.ropsten, prysmRopstenConfig]},
-  {name: "teku", items: [networksChainConfig.ropsten, tekuRopstenConfig]},
-  {name: "nimbus", items: [networksChainConfig.ropsten, nimbusRopstenConfig]},
+  {name: "lighthouse", items: [networksChainConfig.holesky, lightHouseHoleskyConfig]},
+  {name: "prysm", items: [networksChainConfig.holesky, prysmHoleskyConfig]},
+  {name: "teku", items: [networksChainConfig.holesky, tekuHoleskyConfig]},
+  {name: "nimbus", items: [networksChainConfig.holesky, nimbusHoleskyConfig]},
 ];
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -38,7 +38,7 @@ describe("utils / params / assertEqualParams", () => {
   });
 
   for (const {name, items} of testCases) {
-    it(`${name} ropsten == lodestar ropsten`, () => {
+    it(`${name} holesky == lodestar holesky`, () => {
       assertEqualParams(items[0], items[1]);
     });
   }

@@ -11,7 +11,7 @@ export type ChainConfig = {
    * Free-form short name of the network that this configuration applies to - known
    * canonical network names include:
    * * 'mainnet' - there can be only one
-   * * 'prater' - testnet
+   * * 'holesky' - testnet
    * Must match the regex: [a-z0-9\-]
    */
   CONFIG_NAME: string;

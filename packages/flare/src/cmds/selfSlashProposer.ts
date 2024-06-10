@@ -21,7 +21,7 @@ export const selfSlashProposer: CliCommand<SelfSlashArgs, Record<never, never>, 
   describe: "Self slash validators of a provided mnemonic with ProposerSlashing",
   examples: [
     {
-      command: "self-slash-proposer --network goerli",
+      command: "self-slash-proposer --network holesky",
       description: "Self slash validators of a provided mnemonic",
     },
   ],
