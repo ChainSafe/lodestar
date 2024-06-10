@@ -17,7 +17,7 @@ export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
     const spawnOpts: SpawnChildProcessOptions = {
       env: jobOption.cli.env,
       pipeStdioToFile: jobOption.logs.stdoutFilePath,
-      id: jobOption.id,
+      logPrefix: jobOption.id,
     };
 
     const health = jobOption.health;

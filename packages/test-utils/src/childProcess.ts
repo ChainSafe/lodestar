@@ -10,7 +10,7 @@ export type ChildProcessLogOptions = {
   /**
    * A string key to identify the process in logs
    */
-  id?: string;
+  logPrefix?: string;
   /**
    * Hide stdio from parent process and only show errors
    */
@@ -258,7 +258,7 @@ export async function spawnChildProcess(
 ): Promise<childProcess.ChildProcessWithoutNullStreams> {
   const options = {...defaultStartOpts, ...opts} as SpawnChildProcessOptions;
   const {env, signal, health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs} = options;
-  const {id, testContext} = options;
+  const {logPrefix, testContext} = options;
 
   return new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve, reject) => {
     void (async () => {
@@ -310,7 +310,7 @@ export async function spawnChildProcess(
         try {
           await waitForHealth({
             health,
-            id: id ?? String(proc.pid as number) ?? "",
+            id: logPrefix ?? String(proc.pid as number) ?? "",
             logHealthChecksAfterMs,
             healthTimeoutMs,
             healthCheckIntervalMs,
@@ -320,7 +320,7 @@ export async function spawnChildProcess(
         } catch (error) {
           reject(
             new Error(
-              `Health check timeout. id=${id} pid=${proc.pid} healthTimeout=${prettyMsToTime(healthTimeoutMs ?? 0)}`
+              `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(healthTimeoutMs ?? 0)}`
             )
           );
         }
@@ -328,7 +328,7 @@ export async function spawnChildProcess(
         proc.once("exit", (code: number) => {
           reject(
             new Error(
-              `Process exited before healthy. id=${id} pid=${proc.pid} healthTimeout=${prettyMsToTime(
+              `Process exited before healthy. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(
                 healthTimeoutMs ?? 0
               )} code=${code} command="${command} ${args.join(" ")}"`
             )
@@ -354,7 +354,7 @@ export function handleLoggingForChildProcess(
   proc: ChildProcessWithoutNullStreams | ChildProcess,
   options: ChildProcessLogOptions
 ): void {
-  const {id, logger, pipeOnlyError, pipeStdioToFile, pipeStdioToParent} = options;
+  const {logPrefix, logger, pipeOnlyError, pipeStdioToFile, pipeStdioToParent} = options;
 
   if (logger && !pipeOnlyError) {
     proc.stdout?.on("data", (chunk) => {
@@ -375,7 +375,7 @@ export function handleLoggingForChildProcess(
   const getLogPrefixStream = (): stream.Transform =>
     new stream.Transform({
       transform(chunk, _encoding, callback) {
-        callback(null, `[${id}] [${proc.pid}]: ${Buffer.from(chunk).toString("utf8")}`);
+        callback(null, `[${logPrefix}] [${proc.pid}]: ${Buffer.from(chunk).toString("utf8")}`);
       },
     });
 
