@@ -1,15 +1,15 @@
 import {ChildProcess} from "node:child_process";
-import {
-  spawnChildProcess,
-  stopChildProcess,
-  ChildProcessHealthStatus,
-  SpawnChildProcessOptions,
-  ChildProcessResolve,
-} from "@lodestar/test-utils";
+import {spawnChildProcess, stopChildProcess, SpawnChildProcessOptions, ChildProcessResolve} from "@lodestar/test-utils";
+import {Logger} from "@lodestar/logger";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
   type = RunnerType.ChildProcess as const;
+  private logger: Logger;
+
+  constructor(opts: {logger: Logger}) {
+    this.logger = opts.logger;
+  }
 
   create(jobOption: Omit<JobOptions<RunnerType.ChildProcess>, "children">): Job {
     let childProcess: ChildProcess;
@@ -24,14 +24,7 @@ export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
 
     if (health) {
       spawnOpts.healthTimeoutMs = 30000;
-      spawnOpts.health = async (): Promise<ChildProcessHealthStatus> =>
-        health()
-          .then((status) => {
-            return status.ok ? {healthy: true} : {healthy: false};
-          })
-          .catch((error) => {
-            return {healthy: false, message: (error as Error).message};
-          });
+      spawnOpts.health = health;
     } else {
       spawnOpts.resolveOn = ChildProcessResolve.Completion;
     }
