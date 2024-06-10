@@ -458,7 +458,7 @@ export function getValidatorApi({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || (await defaultGraffiti)),
+        graffiti: toGraffitiBuffer(graffiti ?? (await defaultGraffiti)),
         commonBlockBody,
       });
 
