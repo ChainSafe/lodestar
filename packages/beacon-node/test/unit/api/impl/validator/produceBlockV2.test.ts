@@ -58,7 +58,7 @@ describe("api/validator - produceBlockV2", function () {
     });
 
     // check if expectedFeeRecipient is passed to produceBlock
-    await api.produceBlockV2(slot, randaoReveal, graffiti, {feeRecipient});
+    await api.produceBlockV2({slot, randaoReveal, graffiti, feeRecipient});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
@@ -69,7 +69,7 @@ describe("api/validator - produceBlockV2", function () {
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
     // pick it from beaconProposerCache
-    await api.produceBlockV2(slot, randaoReveal, graffiti);
+    await api.produceBlockV2({slot, randaoReveal, graffiti});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
@@ -116,7 +116,7 @@ describe("api/validator - produceBlockV2", function () {
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
-      proposerPubKey: Uint8Array.from(Buffer.alloc(32, 1)),
+      proposerPubKey: new Uint8Array(32).fill(1),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -126,7 +126,7 @@ describe("api/validator - produceBlockV2", function () {
       ZERO_HASH_HEX,
       {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
-        prevRandao: Uint8Array.from(Buffer.alloc(32, 0)),
+        prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: feeRecipient,
       }
     );
@@ -140,7 +140,7 @@ describe("api/validator - produceBlockV2", function () {
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
-      proposerPubKey: Uint8Array.from(Buffer.alloc(32, 1)),
+      proposerPubKey: new Uint8Array(32).fill(1),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -150,7 +150,7 @@ describe("api/validator - produceBlockV2", function () {
       ZERO_HASH_HEX,
       {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
-        prevRandao: Uint8Array.from(Buffer.alloc(32, 0)),
+        prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: "0x fee recipient address",
       }
     );

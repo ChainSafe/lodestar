@@ -10,7 +10,7 @@ import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {phase0, ssz, ValidatorIndex, Epoch} from "@lodestar/types";
 import {CliCommand, toHex} from "@lodestar/utils";
 import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
-import {Api, ApiError, getClient} from "@lodestar/api";
+import {ApiClient, getClient} from "@lodestar/api";
 import {ensure0xPrefix, YargsError, wrapError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -75,9 +75,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     // Do not use known networks cache, it defaults to mainnet for devnets
     const {config: chainForkConfig, network} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const genesisRes = await client.beacon.getGenesis();
-    ApiError.assert(genesisRes, "Unable to fetch genesisValidatorsRoot from beacon node");
-    const {genesisValidatorsRoot, genesisTime} = genesisRes.response.data;
+    const {genesisValidatorsRoot, genesisTime} = (await client.beacon.getGenesis()).value();
     const config = createBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
     // Set exitEpoch to current epoch if unspecified
@@ -143,7 +141,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
 };
 
 async function processVoluntaryExit(
-  {config, client}: {config: BeaconConfig; client: Api},
+  {config, client}: {config: BeaconConfig; client: ApiClient},
   exitEpoch: Epoch,
   validatorToExit: {index: ValidatorIndex; signer: Signer; pubkey: string}
 ): Promise<void> {
@@ -170,12 +168,12 @@ async function processVoluntaryExit(
       throw new YargsError(`Unexpected signer type for ${pubkey}`);
   }
 
-  ApiError.assert(
-    await client.beacon.submitPoolVoluntaryExit({
-      message: voluntaryExit,
-      signature: signature.toBytes(),
-    })
-  );
+  const signedVoluntaryExit: phase0.SignedVoluntaryExit = {
+    message: voluntaryExit,
+    signature: signature.toBytes(),
+  };
+
+  (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
 }
 
 type SignerPubkey = {signer: Signer; pubkey: string};
@@ -206,13 +204,12 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-async function resolveValidatorIndexes(client: Api, signersToExit: SignerPubkey[]) {
+async function resolveValidatorIndexes(client: ApiClient, signersToExit: SignerPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 
-  const res = await client.beacon.getStateValidators("head", {id: pubkeys});
-  ApiError.assert(res, "Can not fetch state validators from beacon node");
+  const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pubkeys})).value();
 
-  const dataByPubkey = new Map(res.response.data.map((item) => [toHex(item.validator.pubkey), item]));
+  const dataByPubkey = new Map(validators.map((item) => [toHex(item.validator.pubkey), item]));
 
   return signersToExit.map(({signer, pubkey}) => {
     const item = dataByPubkey.get(pubkey);

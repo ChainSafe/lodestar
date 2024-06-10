@@ -2,8 +2,8 @@
 import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Web3} from "web3";
-import {Api} from "@lodestar/api";
-import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
+import {ApiClient} from "@lodestar/api";
+import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
@@ -144,8 +144,8 @@ export interface ExecutionGeneratorOptions<E extends ExecutionClient = Execution
   clientOptions: ExecutionClientsOptions[E];
 }
 
-export type LodestarAPI = Api;
-export type LighthouseAPI = Omit<Api, "lodestar"> & {
+export type LodestarAPI = ApiClient;
+export type LighthouseAPI = Omit<ApiClient, "lodestar"> & {
   lighthouse: {
     getPeers(): Promise<{
       status: number;

@@ -1,23 +1,23 @@
 import {describe, it, expect, beforeEach, afterEach, beforeAll, afterAll} from "vitest";
 import {FastifyInstance} from "fastify";
 import {sleep} from "@lodestar/utils";
-import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
+import {config} from "@lodestar/config/default";
+import {Endpoints, getDefinitions, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";
-import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";
 
 describe("beacon / events", () => {
-  const mockApi = getMockApi<Api>(routesData);
+  const mockApi = getMockApi<Endpoints>(getDefinitions(config));
   let server: FastifyInstance;
   let baseUrl: string;
 
   beforeAll(async () => {
     const res = getTestServer();
     server = res.server;
-    for (const route of Object.values(getRoutes(mockApi))) {
-      registerRoute(server, route);
+    for (const route of Object.values(getRoutes(config, mockApi))) {
+      server.route(route);
     }
 
     baseUrl = await res.start();
@@ -52,7 +52,7 @@ describe("beacon / events", () => {
     const eventsReceived: BeaconEvent[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      mockApi.eventstream.mockImplementation(async (topics, signal, onEvent) => {
+      mockApi.eventstream.mockImplementation(async ({topics, onEvent}) => {
         try {
           expect(topics).toEqual(topicsToRequest);
           for (const event of eventsToSend) {
@@ -60,15 +60,19 @@ describe("beacon / events", () => {
             await sleep(5);
           }
         } catch (e) {
-          reject(e as Error);
+          reject(e);
         }
       });
 
       // Capture them on the client
-      const client = getClient(baseUrl);
-      void client.eventstream(topicsToRequest, controller.signal, (event) => {
-        eventsReceived.push(event);
-        if (eventsReceived.length >= eventsToSend.length) resolve();
+      const client = getClient(config, baseUrl);
+      void client.eventstream({
+        topics: topicsToRequest,
+        signal: controller.signal,
+        onEvent: (event) => {
+          eventsReceived.push(event);
+          if (eventsReceived.length >= eventsToSend.length) resolve();
+        },
       });
     });
 

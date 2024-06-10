@@ -1,8 +1,8 @@
 import {ssz} from "@lodestar/types";
 import {
-  Api,
   DeleteRemoteKeyStatus,
   DeletionStatus,
+  Endpoints,
   ImportRemoteKeyStatus,
   ImportStatus,
 } from "../../../src/keymanager/routes.js";
@@ -15,9 +15,9 @@ const graffitiRandUtf8 = "636861696e736166652f6c6f64657374";
 const gasLimitRand = 30_000_000;
 const builderBoostFactorRand = BigInt(100);
 
-export const testData: GenericServerTestCases<Api> = {
+export const testData: GenericServerTestCases<Endpoints> = {
   listKeys: {
-    args: [],
+    args: undefined,
     res: {
       data: [
         {
@@ -29,16 +29,16 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   importKeystores: {
-    args: [[pubkeyRand], ["pass1"], "slash_protection"],
+    args: {keystores: ["keystore"], passwords: ["pass1"], slashingProtection: "slash_protection"},
     res: {data: [{status: ImportStatus.imported}]},
   },
   deleteKeys: {
-    args: [[pubkeyRand]],
-    res: {data: [{status: DeletionStatus.deleted}], slashingProtection: "slash_protection"},
+    args: {pubkeys: [pubkeyRand]},
+    res: {data: {statuses: [{status: DeletionStatus.deleted}], slashingProtection: "slash_protection"}},
   },
 
   listRemoteKeys: {
-    args: [],
+    args: undefined,
     res: {
       data: [
         {
@@ -50,66 +50,66 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   importRemoteKeys: {
-    args: [[{pubkey: pubkeyRand, url: "https://sign.er"}]],
+    args: {remoteSigners: [{pubkey: pubkeyRand, url: "https://sign.er"}]},
     res: {data: [{status: ImportRemoteKeyStatus.imported}]},
   },
   deleteRemoteKeys: {
-    args: [[pubkeyRand]],
+    args: {pubkeys: [pubkeyRand]},
     res: {data: [{status: DeleteRemoteKeyStatus.deleted}]},
   },
 
   listFeeRecipient: {
-    args: [pubkeyRand],
+    args: {pubkey: pubkeyRand},
     res: {data: {pubkey: pubkeyRand, ethaddress: ethaddressRand}},
   },
   setFeeRecipient: {
-    args: [pubkeyRand, ethaddressRand],
+    args: {pubkey: pubkeyRand, ethaddress: ethaddressRand},
     res: undefined,
   },
   deleteFeeRecipient: {
-    args: [pubkeyRand],
+    args: {pubkey: pubkeyRand},
     res: undefined,
   },
 
-  listGraffiti: {
-    args: [pubkeyRand],
+  getGraffiti: {
+    args: {pubkey: pubkeyRand},
     res: {data: {pubkey: pubkeyRand, graffiti: graffitiRandUtf8}},
   },
   setGraffiti: {
-    args: [pubkeyRand, graffitiRandUtf8],
+    args: {pubkey: pubkeyRand, graffiti: graffitiRandUtf8},
     res: undefined,
   },
   deleteGraffiti: {
-    args: [pubkeyRand],
+    args: {pubkey: pubkeyRand},
     res: undefined,
   },
 
   getGasLimit: {
-    args: [pubkeyRand],
+    args: {pubkey: pubkeyRand},
     res: {data: {pubkey: pubkeyRand, gasLimit: gasLimitRand}},
   },
   setGasLimit: {
-    args: [pubkeyRand, gasLimitRand],
+    args: {pubkey: pubkeyRand, gasLimit: gasLimitRand},
     res: undefined,
   },
   deleteGasLimit: {
-    args: [pubkeyRand],
+    args: {pubkey: pubkeyRand},
     res: undefined,
   },
   signVoluntaryExit: {
-    args: [pubkeyRand, 1],
+    args: {pubkey: pubkeyRand, epoch: 1},
     res: {data: ssz.phase0.SignedVoluntaryExit.defaultValue()},
   },
   getBuilderBoostFactor: {
-    args: [pubkeyRand],
+    args: {pubkey: pubkeyRand},
     res: {data: {pubkey: pubkeyRand, builderBoostFactor: builderBoostFactorRand}},
   },
   setBuilderBoostFactor: {
-    args: [pubkeyRand, builderBoostFactorRand],
+    args: {pubkey: pubkeyRand, builderBoostFactor: builderBoostFactorRand},
     res: undefined,
   },
   deleteBuilderBoostFactor: {
-    args: [pubkeyRand],
+    args: {pubkey: pubkeyRand},
     res: undefined,
   },
 };

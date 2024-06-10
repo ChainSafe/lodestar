@@ -1,9 +1,8 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
-import {BLSPubkey, phase0} from "@lodestar/types";
-import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {BLSPubkey, Epoch, phase0, ValidatorIndex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {IBeaconChain, StateGetOpts} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -142,7 +141,7 @@ export function getStateValidatorIndex(
     // mutate `id` and fallthrough to below
     if (id.startsWith("0x")) {
       try {
-        id = fromHexString(id);
+        id = fromHex(id);
       } catch (e) {
         return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
       }

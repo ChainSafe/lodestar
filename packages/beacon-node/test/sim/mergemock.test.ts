@@ -212,7 +212,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     let builderBlocks = 0;
     await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(routes.events.EventType.block, async (blockData) => {
-        const {data: fullOrBlindedBlock} = (await bn.api.beacon.getBlockV2(blockData.block)) as {
+        const {data: fullOrBlindedBlock} = (await bn.api.beacon.getBlockV2({blockId: blockData.block})) as {
           data: allForks.SignedBeaconBlock;
         };
         if (fullOrBlindedBlock !== undefined) {

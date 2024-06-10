@@ -1,13 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import {toHexString} from "@chainsafe/ssz";
-import {routes, ServerApi} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
-import {LodestarThreadType} from "@lodestar/api/lib/beacon/routes/lodestar.js";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
@@ -22,13 +21,13 @@ export function getLodestarApi({
   db,
   network,
   sync,
-}: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ServerApi<routes.lodestar.Api> {
+}: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ApplicationMethods<routes.lodestar.Endpoints> {
   let writingHeapdump = false;
   let writingProfile = false;
   const defaultProfileMs = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
 
   return {
-    async writeHeapdump(thread = "main", dirpath = ".") {
+    async writeHeapdump({thread = "main", dirpath = "."}) {
       if (writingHeapdump) {
         throw Error("Already writing heapdump");
       }
@@ -54,7 +53,7 @@ export function getLodestarApi({
       }
     },
 
-    async writeProfile(thread: LodestarThreadType = "network", durationMs = defaultProfileMs, dirpath = ".") {
+    async writeProfile({thread = "network", duration = defaultProfileMs, dirpath = "."}) {
       if (writingProfile) {
         throw Error("Already writing network profile");
       }
@@ -65,14 +64,14 @@ export function getLodestarApi({
         let profile: string;
         switch (thread) {
           case "network":
-            filepath = await network.writeNetworkThreadProfile(durationMs, dirpath);
+            filepath = await network.writeNetworkThreadProfile(duration, dirpath);
             break;
           case "discv5":
-            filepath = await network.writeDiscv5Profile(durationMs, dirpath);
+            filepath = await network.writeDiscv5Profile(duration, dirpath);
             break;
           default:
             // main thread
-            profile = await profileNodeJS(durationMs);
+            profile = await profileNodeJS(duration);
             filepath = path.join(dirpath, `main_thread_${new Date().toISOString()}.cpuprofile`);
             fs.writeFileSync(filepath, profile);
             break;
@@ -92,7 +91,7 @@ export function getLodestarApi({
       return {data: sync.getSyncChainsDebugState()};
     },
 
-    async getGossipQueueItems(gossipType: GossipType | string) {
+    async getGossipQueueItems({gossipType}) {
       return {
         data: await network.dumpGossipQueue(gossipType as GossipType),
       };
@@ -144,16 +143,15 @@ export function getLodestarApi({
       chain.regen.dropCache();
     },
 
-    async connectPeer(peerIdStr, multiaddrStrs) {
-      await network.connectToPeer(peerIdStr, multiaddrStrs);
+    async connectPeer({peerId, multiaddrs}) {
+      await network.connectToPeer(peerId, multiaddrs);
     },
 
-    async disconnectPeer(peerIdStr) {
-      await network.disconnectPeer(peerIdStr);
+    async disconnectPeer({peerId}) {
+      await network.disconnectPeer(peerId);
     },
 
-    async getPeers(filters) {
-      const {state, direction} = filters || {};
+    async getPeers({state, direction}) {
       const peers = (await network.dumpPeers()).filter(
         (nodePeer) =>
           (!state || state.length === 0 || state.includes(nodePeer.state)) &&
@@ -172,16 +170,16 @@ export function getLodestarApi({
       };
     },
 
-    async dumpDbBucketKeys(bucketReq) {
+    async dumpDbBucketKeys({bucket}) {
       for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
         if (repo instanceof Repository) {
-          if (String(repo["bucket"]) === bucketReq || repo["bucketId"] === bucketReq) {
+          if (String(repo["bucket"]) === bucket || repo["bucketId"] === bucket) {
             return {data: stringifyKeys(await repo.keys())};
           }
         }
       }
 
-      throw Error(`Unknown Bucket '${bucketReq}'`);
+      throw Error(`Unknown Bucket '${bucket}'`);
     },
 
     async dumpDbStateIndex() {
@@ -204,7 +202,7 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
     case "getPreState": {
       const slot = regenRequest.args[0].slot;
       return {
-        root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
+        root: toHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
         slot,
       };
     }

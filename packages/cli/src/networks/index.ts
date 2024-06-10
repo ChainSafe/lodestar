@@ -2,11 +2,10 @@ import fs from "node:fs";
 import got from "got";
 import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ApiError, getClient} from "@lodestar/api";
-import {getStateTypeFromBytes} from "@lodestar/beacon-node";
+import {WireFormat, getClient} from "@lodestar/api";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {Slot} from "@lodestar/types";
+import {Slot, ssz} from "@lodestar/types";
 import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
 import {BeaconStateAllForks, getLatestBlockRoot, computeCheckpointEpochAtStateSlot} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
@@ -174,19 +173,18 @@ export async function fetchWeakSubjectivityState(
     }
 
     // getStateV2 should be available for all forks including phase0
-    const getStatePromise = api.debug.getStateV2(stateId, "ssz");
+    const getStatePromise = api.debug.getStateV2({stateId}, {responseWireFormat: WireFormat.ssz});
 
-    const stateBytes = await callFnWhenAwait(
+    const {stateBytes, fork} = await callFnWhenAwait(
       getStatePromise,
       () => logger.info("Download in progress, please wait..."),
       GET_STATE_LOG_INTERVAL
     ).then((res) => {
-      ApiError.assert(res, "Can not fetch state from beacon node");
-      return res.response;
+      return {stateBytes: res.ssz(), fork: res.meta().version};
     });
 
     logger.info("Download completed", {stateId});
-    const wsState = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
+    const wsState = ssz.allForks[fork].BeaconState.deserializeToViewDU(stateBytes);
 
     return {
       wsState,

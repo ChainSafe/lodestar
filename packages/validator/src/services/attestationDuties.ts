@@ -3,7 +3,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {batchItems, IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -48,7 +48,7 @@ export class AttestationDutiesService {
 
   constructor(
     private readonly logger: LoggerVc,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     chainHeadTracker: ChainHeaderTracker,
@@ -213,10 +213,12 @@ export class AttestationDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (beaconCommitteeSubscriptions.length > 0) {
       const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
-      const responses = await Promise.all(subscriptionsBatches.map(this.api.validator.prepareBeaconCommitteeSubnet));
+      const responses = await Promise.all(
+        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
+      );
 
       for (const res of responses) {
-        ApiError.assert(res, "Failed to subscribe to beacon committee subnets");
+        res.assertOk();
       }
     }
   }
@@ -230,11 +232,10 @@ export class AttestationDutiesService {
       return;
     }
 
-    const res = await this.api.validator.getAttesterDuties(epoch, indexArr);
-    ApiError.assert(res, "Failed to obtain attester duty");
-    const attesterDuties = res.response;
-    const {dependentRoot} = attesterDuties;
-    const relevantDuties = attesterDuties.data.filter((duty) => {
+    const res = await this.api.validator.getAttesterDuties({epoch, indices: indexArr});
+    const attesterDuties = res.value();
+    const {dependentRoot} = res.meta();
+    const relevantDuties = attesterDuties.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });

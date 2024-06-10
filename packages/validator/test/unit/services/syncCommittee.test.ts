@@ -4,11 +4,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {HttpStatusCode, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
 import {SyncCommitteeService, SyncCommitteeServiceOpts} from "../../../src/services/syncCommittee.js";
 import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub} from "../../utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
@@ -97,16 +97,12 @@ describe("SyncCommitteeService", function () {
         ];
 
         // Return empty replies to duties service
-        api.beacon.getStateValidators.mockResolvedValue({
-          response: {data: [], executionOptimistic: false, finalized: false},
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
-        api.validator.getSyncCommitteeDuties.mockResolvedValue({
-          response: {data: [], executionOptimistic: false},
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
+        api.beacon.getStateValidators.mockResolvedValue(
+          mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
+        );
+        api.validator.getSyncCommitteeDuties.mockResolvedValue(
+          mockApiResponse({data: [], meta: {executionOptimistic: false}})
+        );
 
         // Mock duties service to return some duties directly
         vi.spyOn(syncCommitteeService["dutiesService"], "getDutiesAtSlot").mockResolvedValue(duties);
@@ -114,32 +110,18 @@ describe("SyncCommitteeService", function () {
         // Mock beacon's sync committee and contribution routes
 
         chainHeaderTracker.getCurrentChainHead.mockReturnValue(beaconBlockRoot);
-        api.beacon.submitPoolSyncCommitteeSignatures.mockResolvedValue({
-          response: undefined,
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
-        api.validator.produceSyncCommitteeContribution.mockResolvedValue({
-          response: {data: contribution},
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
-        api.validator.publishContributionAndProofs.mockResolvedValue({
-          response: undefined,
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
+        api.beacon.submitPoolSyncCommitteeSignatures.mockResolvedValue(mockApiResponse({}));
+        api.validator.produceSyncCommitteeContribution.mockResolvedValue(mockApiResponse({data: contribution}));
+        api.validator.publishContributionAndProofs.mockResolvedValue(mockApiResponse({}));
 
         if (opts.distributedAggregationSelection) {
           // Mock distributed validator middleware client selections endpoint
           // and return a selection proof that passes `is_sync_committee_aggregator` test
-          api.validator.submitSyncCommitteeSelections.mockResolvedValue({
-            response: {
+          api.validator.submitSyncCommitteeSelections.mockResolvedValue(
+            mockApiResponse({
               data: [{validatorIndex: 0, slot: 0, subcommitteeIndex: 0, selectionProof: Buffer.alloc(1, 0x19)}],
-            },
-            ok: true,
-            status: HttpStatusCode.OK,
-          });
+            })
+          );
         }
 
         // Mock signing service
@@ -158,16 +140,20 @@ describe("SyncCommitteeService", function () {
             selectionProof: ZERO_HASH,
           };
           expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledOnce();
-          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledWith([selection]);
+          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledWith({selections: [selection]});
         }
 
         // Must submit the signature received through signSyncCommitteeSignature()
         expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledOnce();
-        expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledWith([syncCommitteeSignature]);
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledWith({
+          signatures: [syncCommitteeSignature],
+        });
 
         // Must submit the aggregate received through produceSyncCommitteeContribution() then signContributionAndProof()
         expect(api.validator.publishContributionAndProofs).toHaveBeenCalledOnce();
-        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledWith([contributionAndProof]);
+        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledWith({
+          contributionAndProofs: [contributionAndProof],
+        });
       });
     });
   }

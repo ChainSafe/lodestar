@@ -1,4 +1,5 @@
-import {Api, ServerApi} from "@lodestar/api";
+import {Endpoints} from "@lodestar/api";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
@@ -10,7 +11,7 @@ export {allNamespaces} from "@lodestar/api";
 
 export type BeaconRestApiServerOpts = Omit<RestApiServerOpts, "bearerToken"> & {
   enabled: boolean;
-  api: (keyof Api)[];
+  api: (keyof Endpoints)[];
 };
 
 export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
@@ -26,7 +27,7 @@ export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
 export type BeaconRestApiServerModules = RestApiServerModules & {
   config: ChainForkConfig;
   logger: Logger;
-  api: {[K in keyof Api]: ServerApi<Api[K]>};
+  api: BeaconApiMethods;
   metrics: RestApiServerMetrics | null;
 };
 

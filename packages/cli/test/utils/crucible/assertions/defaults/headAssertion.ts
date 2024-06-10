@@ -1,4 +1,3 @@
-import {ApiError} from "@lodestar/api";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {AssertionResult, Assertion} from "../../interfaces.js";
@@ -13,12 +12,11 @@ export const headAssertion: Assertion<"head", HeadSummary> = {
   id: "head",
   match: everySlotMatcher,
   async capture({node}) {
-    const head = await node.beacon.api.beacon.getBlockHeader("head");
-    ApiError.assert(head);
+    const head = (await node.beacon.api.beacon.getBlockHeader({blockId: "head"})).value();
 
     return {
-      blockRoot: toHexString(head.response.data.root),
-      slot: head.response.data.header.message.slot,
+      blockRoot: toHexString(head.root),
+      slot: head.header.message.slot,
     };
   },
   async assert({nodes, node, store, slot, dependantStores}) {

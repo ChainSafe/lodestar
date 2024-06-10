@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey} from "@chainsafe/bls/types";
 import {BitArray} from "@chainsafe/ssz";
-import {Api, ApiError} from "@lodestar/api";
+import {ApiClient} from "@lodestar/api";
 import {altair, Bytes32, Root, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
 import {GenesisData} from "../index.js";
@@ -81,18 +81,15 @@ export function isEmptyHeader(header: BeaconBlockHeader): boolean {
 export const isNode =
   Object.prototype.toString.call(typeof process !== "undefined" ? process : 0) === "[object process]";
 
-export async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
-  const res = await api.beacon.getGenesis();
-  ApiError.assert(res);
+export async function getGenesisData(api: Pick<ApiClient, "beacon">): Promise<GenesisData> {
+  const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
 
   return {
-    genesisTime: res.response.data.genesisTime,
-    genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
+    genesisTime,
+    genesisValidatorsRoot,
   };
 }
 
-export async function getFinalizedSyncCheckpoint(api: Pick<Api, "beacon">): Promise<Bytes32> {
-  const res = await api.beacon.getStateFinalityCheckpoints("head");
-  ApiError.assert(res);
-  return res.response.data.finalized.root;
+export async function getFinalizedSyncCheckpoint(api: Pick<ApiClient, "beacon">): Promise<Bytes32> {
+  return (await api.beacon.getStateFinalityCheckpoints({stateId: "head"})).value().finalized.root;
 }

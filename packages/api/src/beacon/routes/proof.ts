@@ -1,63 +1,81 @@
-import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers} from "../../utils/index.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../interfaces.js";
+/* eslint-disable @typescript-eslint/naming-convention */
+import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
+import {ByteListType, ContainerType, fromHexString, toHexString} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {ssz} from "@lodestar/types";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {ArrayOf} from "../../utils/codecs.js";
+import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
+
+export const CompactMultiProofType = new ContainerType({
+  leaves: ArrayOf(ssz.Root, 10000),
+  descriptor: new ByteListType(2048),
+});
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type Api = {
+export type Endpoints = {
   /**
    * Returns a multiproof of `descriptor` at the requested `stateId`.
    * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
    */
-  getStateProof(
-    stateId: string,
-    descriptor: Uint8Array
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Proof}}>>;
+  getStateProof: Endpoint<
+    "GET",
+    {stateId: string; descriptor: Uint8Array},
+    {params: {state_id: string}; query: {format: string}},
+    CompactMultiProof,
+    VersionMeta
+  >;
   /**
    * Returns a multiproof of `descriptor` at the requested `blockId`.
    * The requested `blockId` may not be available. Regular nodes only keep recent states in memory.
    */
-  getBlockProof(
-    blockId: string,
-    descriptor: Uint8Array
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Proof}}>>;
+  getBlockProof: Endpoint<
+    "GET",
+    {blockId: string; descriptor: Uint8Array},
+    {params: {block_id: string}; query: {format: string}},
+    CompactMultiProof,
+    VersionMeta
+  >;
 };
 
-/**
- * Define javascript values for each route
- */
-export const routesData: RoutesData<Api> = {
-  getStateProof: {url: "/eth/v0/beacon/proof/state/{state_id}", method: "GET"},
-  getBlockProof: {url: "/eth/v0/beacon/proof/block/{block_id}", method: "GET"},
-};
-
-/* eslint-disable @typescript-eslint/naming-convention */
-export type ReqTypes = {
-  getStateProof: {params: {state_id: string}; query: {format: string}};
-  getBlockProof: {params: {block_id: string}; query: {format: string}};
-};
-
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getStateProof: {
-      writeReq: (state_id, descriptor) => ({params: {state_id}, query: {format: toHexString(descriptor)}}),
-      parseReq: ({params, query}) => [params.state_id, fromHexString(query.format)],
-      schema: {params: {state_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
+      url: "/eth/v0/beacon/proof/state/{state_id}",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, descriptor}) => ({params: {state_id: stateId}, query: {format: toHexString(descriptor)}}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, descriptor: fromHexString(query.format)}),
+        schema: {params: {state_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
+      },
+      resp: {
+        data: {
+          toJson: (data) => CompactMultiProofType.toJson(data),
+          fromJson: (data) => ({...CompactMultiProofType.fromJson(data), type: ProofType.compactMulti}),
+          serialize: (data) => CompactMultiProofType.serialize(data),
+          deserialize: (data) => ({...CompactMultiProofType.deserialize(data), type: ProofType.compactMulti}),
+        },
+        meta: VersionCodec,
+      },
     },
     getBlockProof: {
-      writeReq: (block_id, descriptor) => ({params: {block_id}, query: {format: toHexString(descriptor)}}),
-      parseReq: ({params, query}) => [params.block_id, fromHexString(query.format)],
-      schema: {params: {block_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
+      url: "/eth/v0/beacon/proof/block/{block_id}",
+      method: "GET",
+      req: {
+        writeReq: ({blockId, descriptor}) => ({params: {block_id: blockId}, query: {format: toHexString(descriptor)}}),
+        parseReq: ({params, query}) => ({blockId: params.block_id, descriptor: fromHexString(query.format)}),
+        schema: {params: {block_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
+      },
+      resp: {
+        data: {
+          toJson: (data) => CompactMultiProofType.toJson(data),
+          fromJson: (data) => ({...CompactMultiProofType.fromJson(data), type: ProofType.compactMulti}),
+          serialize: (data) => CompactMultiProofType.serialize(data),
+          deserialize: (data) => ({...CompactMultiProofType.deserialize(data), type: ProofType.compactMulti}),
+        },
+        meta: VersionCodec,
+      },
     },
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  return {
-    // Just sent the proof JSON as-is
-    getStateProof: sameType(),
-    getBlockProof: sameType(),
   };
 }

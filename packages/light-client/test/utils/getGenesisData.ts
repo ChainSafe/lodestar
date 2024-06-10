@@ -1,4 +1,4 @@
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {NetworkName} from "@lodestar/config/networks.js";
 
@@ -16,11 +16,10 @@ async function getGenesisData(): Promise<void> {
   for (const network of networksInInfura) {
     const baseUrl = getInfuraBeaconUrl(network);
     const api = getClient({baseUrl}, {config});
-    const res = await api.beacon.getGenesis();
-    ApiError.assert(res);
+    const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
     console.log(network, {
-      genesisTime: Number(res.response.data.genesisTime),
-      genesisValidatorsRoot: "0x" + Buffer.from(res.response.data.genesisValidatorsRoot).toString("hex"),
+      genesisTime,
+      genesisValidatorsRoot: "0x" + Buffer.from(genesisValidatorsRoot).toString("hex"),
     });
   }
 }

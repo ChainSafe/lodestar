@@ -1,4 +1,4 @@
-import {HttpErrorCodes} from "../client/httpStatusCode.js";
+import {HttpErrorCodes} from "../httpStatusCode.js";
 
 export class ApiError extends Error {
   statusCode: HttpErrorCodes;

@@ -1,22 +1,25 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {ApiModules} from "../../types.js";
 import {resolveBlockId} from "../blocks/utils.js";
 
-export function getBeaconRewardsApi({chain}: Pick<ApiModules, "chain">): ServerApi<routes.beacon.rewards.Api> {
+export function getBeaconRewardsApi({
+  chain,
+}: Pick<ApiModules, "chain">): ApplicationMethods<routes.beacon.rewards.Endpoints> {
   return {
-    async getBlockRewards(blockId) {
+    async getBlockRewards({blockId}) {
       const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       const data = await chain.getBlockRewards(block.message);
-      return {data, executionOptimistic, finalized};
+      return {data, meta: {executionOptimistic, finalized}};
     },
-    async getAttestationsRewards(epoch, validatorIds) {
+    async getAttestationsRewards({epoch, validatorIds}) {
       const {rewards, executionOptimistic, finalized} = await chain.getAttestationsRewards(epoch, validatorIds);
-      return {data: rewards, executionOptimistic, finalized};
+      return {data: rewards, meta: {executionOptimistic, finalized}};
     },
-    async getSyncCommitteeRewards(blockId, validatorIds) {
+    async getSyncCommitteeRewards({blockId, validatorIds}) {
       const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       const data = await chain.getSyncCommitteeRewards(block.message, validatorIds);
-      return {data, executionOptimistic, finalized};
+      return {data, meta: {executionOptimistic, finalized}};
     },
   };
 }

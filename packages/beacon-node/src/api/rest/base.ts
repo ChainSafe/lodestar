@@ -2,6 +2,7 @@ import {parse as parseQueryString} from "qs";
 import {FastifyInstance, FastifyRequest, fastify, errorCodes} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
+import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
@@ -63,6 +64,8 @@ export class RestApiServer {
       bodyLimit: opts.bodyLimit,
       http: {maxHeaderSize: opts.headerLimit},
     });
+
+    addSszContentTypeParser(server);
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
