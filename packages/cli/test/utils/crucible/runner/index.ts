@@ -9,7 +9,7 @@ export class Runner implements IRunner {
   private emitter = new EventEmitter({captureRejections: true});
   private runners: {[RunnerType.ChildProcess]: ChildProcessRunner; [RunnerType.Docker]: DockerRunner};
 
-  constructor({logger, logsDir}: {logger: LoggerNode; logsDir: string}) {
+  constructor({logger}: {logger: LoggerNode}) {
     this.logger = logger;
     this.runners = {
       [RunnerType.ChildProcess]: new ChildProcessRunner({logger: this.logger.child({module: "cp"})}),
