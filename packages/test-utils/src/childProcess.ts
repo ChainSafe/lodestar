@@ -1,10 +1,34 @@
 /* eslint-disable no-console */
-import childProcess from "node:child_process";
+import childProcess, {ChildProcess, ChildProcessWithoutNullStreams} from "node:child_process";
 import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
-import {prettyMsToTime, sleep} from "@lodestar/utils";
+import {prettyMsToTime, retry, sleep, Logger} from "@lodestar/utils";
 import {TestContext} from "./interfaces.js";
+
+export type ChildProcessLogOptions = {
+  /**
+   * A string key to identify the process in logs
+   */
+  id?: string;
+  /**
+   * Hide stdio from parent process and only show errors
+   */
+  pipeOnlyError?: boolean;
+} & (
+  | {
+      /**
+       * If true, pipe child process stdio to parent process
+       */
+      pipeStdioToFile?: string;
+      /**
+       * If true, pipe child process stdio to parent process
+       */
+      pipeStdioToParent?: boolean;
+      logger?: never;
+    }
+  | {logger?: Logger; pipeStdioToFile?: never; pipeStdioToParent?: never; logPrefix?: never}
+);
 
 /**
  * If timeout is greater than 0, the parent will send the signal
@@ -13,11 +37,8 @@ import {TestContext} from "./interfaces.js";
  */
 const defaultTimeout = 15 * 60 * 1000; // ms
 
-export type ExecChildProcessOptions = {
+export type ExecChildProcessOptions = ChildProcessLogOptions & {
   env?: Record<string, string>;
-  pipeStdioToFile?: string;
-  pipeStdioToParent?: boolean;
-  logPrefix?: string;
   timeoutMs?: number;
   maxBuffer?: number;
   signal?: AbortSignal;
@@ -28,7 +49,7 @@ export type ExecChildProcessOptions = {
  * If the child process exits with code > 0, rejects
  */
 export async function execChildProcess(cmd: string | string[], options?: ExecChildProcessOptions): Promise<string> {
-  const {timeoutMs, maxBuffer, logPrefix, pipeStdioToParent, pipeStdioToFile} = options ?? {};
+  const {timeoutMs, maxBuffer} = options ?? {};
   const cmdStr = Array.isArray(cmd) ? cmd.join(" ") : cmd;
 
   return new Promise((resolve, reject) => {
@@ -44,28 +65,7 @@ export async function execChildProcess(cmd: string | string[], options?: ExecChi
       }
     );
 
-    const logPrefixStream = new stream.Transform({
-      transform(chunk, _encoding, callback) {
-        callback(null, `${logPrefix} ${proc.pid}: ${Buffer.from(chunk).toString("utf8")}`);
-      },
-    });
-
-    if (pipeStdioToParent) {
-      proc.stdout?.pipe(logPrefixStream).pipe(process.stdout);
-      proc.stderr?.pipe(logPrefixStream).pipe(process.stderr);
-    }
-
-    if (pipeStdioToFile) {
-      fs.mkdirSync(path.dirname(pipeStdioToFile), {recursive: true});
-      const stdoutFileStream = fs.createWriteStream(pipeStdioToFile);
-
-      proc.stdout?.pipe(logPrefixStream).pipe(stdoutFileStream);
-      proc.stderr?.pipe(logPrefixStream).pipe(stdoutFileStream);
-
-      proc.once("exit", (_code: number) => {
-        stdoutFileStream.close();
-      });
-    }
+    handleLoggingForChildProcess(proc, options ?? {});
 
     if (options?.signal) {
       options.signal.addEventListener(
@@ -161,33 +161,11 @@ export enum ChildProcessResolve {
   Healthy,
 }
 
-export type ChildProcessHealthStatus = {healthy: boolean; error?: string};
-
-export type SpawnChildProcessOptions = {
+export type HealthCheckOptions = {
   /**
-   * Environment variables to pass to child process
+   * If health attribute defined we will consider resolveOn = ChildProcessResolve.Healthy
    */
-  env?: Record<string, string>;
-  /**
-   * If true, pipe child process stdio to parent process
-   */
-  pipeStdioToFile?: string;
-  /**
-   * If true, pipe child process stdio to parent process
-   */
-  pipeStdioToParent?: boolean;
-  /**
-   * The prefix to add to child process stdio to identify it from logs
-   */
-  logPrefix?: string;
-  /**
-   * Hide stdio from parent process and only show errors
-   */
-  pipeOnlyError?: boolean;
-  /**
-   * Child process resolve behavior
-   */
-  resolveOn?: ChildProcessResolve;
+  health: () => Promise<void>;
   /**
    * Timeout to wait for child process before considering it unhealthy
    */
@@ -200,29 +178,70 @@ export type SpawnChildProcessOptions = {
    * Log health checks after this time
    */
   logHealthChecksAfterMs?: number;
-  /**
-   * Test context to pass to child process. Useful for testing to close the process after test case
-   */
-  testContext?: TestContext;
-  /**
-   * Abort signal to stop child process
-   */
-  signal?: AbortSignal;
-  /**
-   * If health attribute defined we will consider resolveOn = ChildProcessResolve.Healthy
-   */
-  health?: () => Promise<{healthy: boolean; error?: string}>;
+};
+
+export type SpawnChildProcessOptions = Partial<HealthCheckOptions> &
+  ChildProcessLogOptions & {
+    /**
+     * Environment variables to pass to child process
+     */
+    env?: Record<string, string>;
+    /**
+     * Child process resolve behavior
+     */
+    resolveOn?: ChildProcessResolve;
+    /**
+     * Test context to pass to child process. Useful for testing to close the process after test case
+     */
+    testContext?: TestContext;
+    /**
+     * Abort signal to stop child process
+     */
+    signal?: AbortSignal;
+  };
+
+const defaultHealthOptions = {
+  healthCheckIntervalMs: 1000,
+  logHealthChecksAfterMs: 2000,
+  healthTimeoutMs: 10000,
 };
 
 const defaultStartOpts = {
+  ...defaultHealthOptions,
   env: {},
-  pipeStdToParent: false,
-  pipeOnlyError: false,
-  logPrefix: "",
-  healthCheckIntervalMs: 1000,
-  logHealthChecksAfterMs: 2000,
   resolveOn: ChildProcessResolve.Immediate,
 };
+
+export async function waitForHealth({
+  id,
+  health,
+  healthTimeoutMs = defaultHealthOptions.healthTimeoutMs,
+  logHealthChecksAfterMs = defaultHealthOptions.logHealthChecksAfterMs,
+  healthCheckIntervalMs = defaultHealthOptions.healthCheckIntervalMs,
+}: HealthCheckOptions & {id: string}): Promise<void> {
+  console.log({healthTimeoutMs, logHealthChecksAfterMs, healthCheckIntervalMs});
+  const startHealthCheckMs = Date.now();
+
+  await retry(
+    async () => {
+      try {
+        await health();
+      } catch (error) {
+        const timeSinceHealthCheckStart = Date.now() - startHealthCheckMs;
+        if (timeSinceHealthCheckStart > logHealthChecksAfterMs) {
+          console.log(
+            `Health check unsuccessful. id=${id} timeSinceHealthCheckStart=${prettyMsToTime(timeSinceHealthCheckStart)}`
+          );
+        }
+        throw error;
+      }
+    },
+    {
+      retryDelay: healthCheckIntervalMs,
+      retries: healthTimeoutMs === undefined ? 1 : Math.floor(healthTimeoutMs / healthCheckIntervalMs),
+    }
+  );
+}
 
 /**
  * Spawn child process and return it
@@ -237,9 +256,9 @@ export async function spawnChildProcess(
   args: string[],
   opts?: Partial<SpawnChildProcessOptions>
 ): Promise<childProcess.ChildProcessWithoutNullStreams> {
-  const options = {...defaultStartOpts, ...opts};
-  const {env, pipeStdioToFile, pipeStdioToParent, logPrefix, pipeOnlyError, signal} = options;
-  const {health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs, testContext} = options;
+  const options = {...defaultStartOpts, ...opts} as SpawnChildProcessOptions;
+  const {env, signal, health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs} = options;
+  const {id, testContext} = options;
 
   return new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve, reject) => {
     void (async () => {
@@ -247,12 +266,7 @@ export async function spawnChildProcess(
         env: {...process.env, ...env},
       });
 
-      const getLogPrefixStream = (): stream.Transform =>
-        new stream.Transform({
-          transform(chunk, _encoding, callback) {
-            callback(null, `[${logPrefix}] [${proc.pid}]: ${Buffer.from(chunk).toString("utf8")}`);
-          },
-        });
+      handleLoggingForChildProcess(proc, options);
 
       if (testContext) {
         testContext.afterEach(async () => {
@@ -270,28 +284,6 @@ export async function spawnChildProcess(
           },
           {once: true}
         );
-      }
-
-      if (pipeStdioToFile) {
-        fs.mkdirSync(path.dirname(pipeStdioToFile), {recursive: true});
-        const stdoutFileStream = fs.createWriteStream(pipeStdioToFile);
-
-        proc.stdout.pipe(getLogPrefixStream()).pipe(stdoutFileStream);
-        proc.stderr.pipe(getLogPrefixStream()).pipe(stdoutFileStream);
-
-        proc.once("exit", (_code: number) => {
-          stdoutFileStream.close();
-        });
-      }
-
-      if (pipeStdioToParent) {
-        proc.stdout.pipe(getLogPrefixStream()).pipe(process.stdout);
-        proc.stderr.pipe(getLogPrefixStream()).pipe(process.stderr);
-      }
-
-      if (!pipeStdioToParent && pipeOnlyError) {
-        // If want to see only errors then show it on the output stream of main process
-        proc.stderr.pipe(getLogPrefixStream()).pipe(process.stdout);
       }
 
       // If there is any error in running the child process, reject the promise
@@ -315,54 +307,28 @@ export async function spawnChildProcess(
 
       // If there is a health check, wait for it to pass
       if (health) {
-        const startHealthCheckMs = Date.now();
-        const intervalId = setInterval(() => {
-          health()
-            .then((isHealthy) => {
-              if (isHealthy.healthy) {
-                clearInterval(intervalId);
-                clearTimeout(healthTimeoutId);
-                proc.removeAllListeners("exit");
-                resolve(proc);
-              } else {
-                const timeSinceHealthCheckStart = Date.now() - startHealthCheckMs;
-                if (timeSinceHealthCheckStart > logHealthChecksAfterMs) {
-                  console.log(
-                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${
-                      proc.pid
-                    } timeSinceHealthCheckStart=${prettyMsToTime(timeSinceHealthCheckStart)}`
-                  );
-                }
-              }
-            })
-            .catch((e) => {
-              console.error("Error on health check, health functions must never throw", e);
-            });
-        }, healthCheckIntervalMs);
-
-        const healthTimeoutId = setTimeout(() => {
-          clearTimeout(healthTimeoutId);
-
-          if (intervalId !== undefined) {
-            reject(
-              new Error(
-                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(
-                  healthTimeoutMs ?? 0
-                )}`
-              )
-            );
-          }
-        }, healthTimeoutMs);
-
-        proc.once("exit", (code: number) => {
-          if (healthTimeoutId !== undefined) return;
-
-          clearInterval(intervalId);
-          clearTimeout(healthTimeoutId);
-
+        try {
+          await waitForHealth({
+            health,
+            id: id ?? String(proc.pid as number) ?? "",
+            logHealthChecksAfterMs,
+            healthTimeoutMs,
+            healthCheckIntervalMs,
+          });
+          proc.removeAllListeners("exit");
+          resolve(proc);
+        } catch (error) {
           reject(
             new Error(
-              `Process exited before healthy. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(
+              `Health check timeout. id=${id} pid=${proc.pid} healthTimeout=${prettyMsToTime(healthTimeoutMs ?? 0)}`
+            )
+          );
+        }
+
+        proc.once("exit", (code: number) => {
+          reject(
+            new Error(
+              `Process exited before healthy. id=${id} pid=${proc.pid} healthTimeout=${prettyMsToTime(
                 healthTimeoutMs ?? 0
               )} code=${code} command="${command} ${args.join(" ")}"`
             )
@@ -382,4 +348,59 @@ export function bufferStderr(proc: childProcess.ChildProcessWithoutNullStreams):
   return {
     read: () => data,
   };
+}
+
+export function handleLoggingForChildProcess(
+  proc: ChildProcessWithoutNullStreams | ChildProcess,
+  options: ChildProcessLogOptions
+): void {
+  const {id, logger, pipeOnlyError, pipeStdioToFile, pipeStdioToParent} = options;
+
+  if (logger && !pipeOnlyError) {
+    proc.stdout?.on("data", (chunk) => {
+      logger.debug(Buffer.from(chunk).toString("utf8"));
+    });
+
+    proc.stderr?.on("data", (chunk) => {
+      logger.debug(Buffer.from(chunk).toString("utf8"));
+    });
+  }
+
+  if (logger && pipeOnlyError) {
+    proc.stderr?.on("data", (chunk) => {
+      logger.debug(Buffer.from(chunk).toString("utf8"));
+    });
+  }
+
+  const getLogPrefixStream = (): stream.Transform =>
+    new stream.Transform({
+      transform(chunk, _encoding, callback) {
+        callback(null, `[${id}] [${proc.pid}]: ${Buffer.from(chunk).toString("utf8")}`);
+      },
+    });
+
+  if (pipeStdioToFile) {
+    fs.mkdirSync(path.dirname(pipeStdioToFile), {recursive: true});
+    const stdoutFileStream = fs.createWriteStream(pipeStdioToFile);
+
+    proc.once("exit", (_code: number) => {
+      stdoutFileStream.close();
+    });
+
+    if (pipeOnlyError) {
+      proc.stderr?.pipe(getLogPrefixStream()).pipe(stdoutFileStream);
+    } else {
+      proc.stdout?.pipe(getLogPrefixStream()).pipe(stdoutFileStream);
+      proc.stderr?.pipe(getLogPrefixStream()).pipe(stdoutFileStream);
+    }
+  }
+
+  if (pipeStdioToParent) {
+    if (pipeOnlyError) {
+      proc.stderr?.pipe(getLogPrefixStream()).pipe(process.stderr);
+    } else {
+      proc.stdout?.pipe(getLogPrefixStream()).pipe(process.stdout);
+      proc.stderr?.pipe(getLogPrefixStream()).pipe(process.stderr);
+    }
+  }
 }

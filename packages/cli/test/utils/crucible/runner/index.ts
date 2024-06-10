@@ -1,20 +1,19 @@
 import {EventEmitter} from "node:events";
-import path from "node:path";
-import {Logger} from "@lodestar/logger";
+import {LoggerNode} from "@lodestar/logger/node";
 import {IRunner, Job, JobOptions, RunnerEvent, RunnerType} from "../interfaces.js";
 import {ChildProcessRunner} from "./childProcessRunner.js";
 import {DockerRunner} from "./dockerRunner.js";
 
 export class Runner implements IRunner {
-  readonly logger: Logger;
+  readonly logger: LoggerNode;
   private emitter = new EventEmitter({captureRejections: true});
   private runners: {[RunnerType.ChildProcess]: ChildProcessRunner; [RunnerType.Docker]: DockerRunner};
 
-  constructor({logsDir, logger}: {logsDir: string; logger: Logger}) {
+  constructor({logger, logsDir}: {logger: LoggerNode; logsDir: string}) {
     this.logger = logger;
     this.runners = {
-      [RunnerType.ChildProcess]: new ChildProcessRunner(),
-      [RunnerType.Docker]: new DockerRunner(path.join(logsDir, "docker_runner.log")),
+      [RunnerType.ChildProcess]: new ChildProcessRunner({logger: this.logger.child({module: "cp"})}),
+      [RunnerType.Docker]: new DockerRunner({logger: this.logger.child({module: "docker"})}),
     };
   }
 
@@ -59,7 +58,7 @@ export class Runner implements IRunner {
         await job.start();
 
         this.emitter.emit("started", jobOption.id);
-        this.logger.info(`Started "${jobOption.id}" logFile=${jobOption.logs.stdoutFilePath}...`);
+        this.logger.debug(`Started "${jobOption.id}" logFile=${jobOption.logs.stdoutFilePath}...`);
 
         if (childrenJob) await childrenJob.start();
       });
@@ -71,7 +70,7 @@ export class Runner implements IRunner {
         if (childrenJob) await childrenJob.stop();
         await job.stop();
         this.emitter.emit("stopped", jobOption.id);
-        this.logger.info(`Stopped "${jobOption.id}"...`);
+        this.logger.debug(`Stopped "${jobOption.id}"...`);
       });
     }
 

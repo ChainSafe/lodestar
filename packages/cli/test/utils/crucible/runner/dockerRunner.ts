@@ -1,12 +1,7 @@
 import {ChildProcess} from "node:child_process";
+import {Logger} from "@lodestar/logger";
 import {sleep} from "@lodestar/utils";
-import {
-  ChildProcessHealthStatus,
-  SpawnChildProcessOptions,
-  execChildProcess,
-  spawnChildProcess,
-  ChildProcessResolve,
-} from "@lodestar/test-utils";
+import {SpawnChildProcessOptions, execChildProcess, spawnChildProcess, ChildProcessResolve} from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 const dockerNetworkIpRange = "192.168.0";
@@ -14,19 +9,18 @@ const dockerNetworkName = "sim-env-net";
 
 export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   type = RunnerType.Docker as const;
+  private logger: Logger;
 
   private ipIndex = 2;
-  private logFilePath: string;
 
-  constructor(logFilePath: string) {
-    this.logFilePath = logFilePath;
+  constructor(opts: {logger: Logger}) {
+    this.logger = opts.logger;
   }
 
   async start(): Promise<void> {
     try {
       await execChildProcess(`docker network create --subnet ${dockerNetworkIpRange}.0/24 ${dockerNetworkName}`, {
-        logPrefix: "docker-runner",
-        pipeStdioToFile: this.logFilePath,
+        logger: this.logger,
       });
     } catch {
       // During multiple sim tests files the network might already exist
@@ -38,8 +32,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     for (let i = 0; i < 5; i++) {
       try {
         await execChildProcess(`docker network rm ${dockerNetworkName}`, {
-          logPrefix: "docker-runner",
-          pipeStdioToFile: this.logFilePath,
+          logger: this.logger,
         });
         return;
       } catch {
@@ -90,21 +83,14 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     const spawnOpts: SpawnChildProcessOptions = {
       env: jobOption.cli.env,
       pipeStdioToFile: jobOption.logs.stdoutFilePath,
-      logPrefix: jobOption.id,
+      id: jobOption.id,
     };
 
     const health = jobOption.health;
 
     if (health) {
       spawnOpts.healthTimeoutMs = 30000;
-      spawnOpts.health = async (): Promise<ChildProcessHealthStatus> =>
-        health()
-          .then((status) => {
-            return status.ok ? {healthy: true} : {healthy: false};
-          })
-          .catch((error) => {
-            return {healthy: false, message: (error as Error).message};
-          });
+      spawnOpts.health = health;
     } else {
       spawnOpts.resolveOn = ChildProcessResolve.Completion;
     }
@@ -120,7 +106,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
         }
         // TODO: Debug why stopping the process was not killing the container
         // await stopChildProcess(childProcess);
-        await execChildProcess(`docker stop ${jobOption.id} --time 2 || true`, {pipeStdioToParent: true});
+        await execChildProcess(`docker stop ${jobOption.id} --time 2 || true`, {logger: this.logger});
       },
     };
   }

@@ -7,7 +7,7 @@ import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
-import {Logger} from "@lodestar/logger";
+import {LogLevel, Logger} from "@lodestar/logger";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
@@ -29,6 +29,7 @@ export type SimulationOptions = {
   controller: AbortController;
   genesisTime: number;
   trustedSetup?: boolean;
+  logLevel?: LogLevel;
 };
 
 export enum BeaconClient {
@@ -234,8 +235,6 @@ export type ExecutionNodeGenerator<E extends ExecutionClient> = (
   runner: IRunner
 ) => ExecutionNode;
 
-export type HealthStatus = {ok: true} | {ok: false; reason: string; checkId: string};
-
 export type JobOptions<T extends RunnerType = RunnerType.ChildProcess | RunnerType.Docker> = {
   readonly id: string;
 
@@ -257,7 +256,7 @@ export type JobOptions<T extends RunnerType = RunnerType.ChildProcess | RunnerTy
 
   // Will be called frequently to check the health of job startup
   // If not present then wait for the job to exit
-  health?(): Promise<HealthStatus>;
+  health?(): Promise<void>;
 
   // Called once before the `job.start` is called
   bootstrap?(): Promise<void>;
