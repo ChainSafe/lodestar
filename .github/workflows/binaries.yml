@@ -6,10 +6,18 @@ on:
       version:
         required: true
         type: string
+      branch:
+        default: unstable
+        required: false
+        type: string
   workflow_call:
     inputs:
       version:
         required: true
+        type: string
+      branch:
+        default: ${{ github.ref }}
+        required: false
         type: string
 
 jobs:
@@ -28,6 +36,8 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
       - name: Install arm64 specifics
         if: matrix.arch == 'arm64'
         run: |-
