@@ -15,7 +15,6 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Beacon node",
-          collapsed: false,
           items: [
             "run/beacon-management/starting-a-node",
             "run/beacon-management/beacon-cli",
@@ -28,7 +27,6 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Validator Client",
-          collapsed: false,
           items: [
             "run/validator-management/vc-configuration",
             "run/validator-management/validator-cli",
@@ -38,13 +36,11 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Logging and Metrics",
-          collapsed: false,
           items: ["run/logging-and-metrics/prometheus-grafana", "run/logging-and-metrics/client-monitoring"],
         },
         {
           type: "category",
           label: "Discv5 Bootnode",
-          collapsed: false,
           items: ["run/bootnode/bootnode-cli"],
         },
       ],
@@ -52,15 +48,16 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Developer Tools",
+      collapsed: false,
       items: [
         {
           type: "category",
-          label: "Lodestar Light Client",
+          label: "Light Client",
           items: ["libraries/lightclient-prover/lightclient-cli", "libraries/lightclient-prover/lightclient"],
         },
         {
           type: "category",
-          label: "Lodestar Prover",
+          label: "Prover",
           items: ["libraries/lightclient-prover/prover"],
         },
       ],
@@ -70,6 +67,7 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Contributing",
+      collapsed: false,
       items: [
         {
           type: "category",

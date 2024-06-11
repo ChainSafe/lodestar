@@ -1,5 +1,5 @@
 ---
-title: Stake with a Validator Client
+title: Starting a Validator Client
 ---
 
 # Validator Configuration
