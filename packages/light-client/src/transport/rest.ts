@@ -49,11 +49,6 @@ export class LightClientRestTransport implements LightClientTransport {
     return {version: res.meta().version, data: res.value()};
   }
 
-  async fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
-    const res = await this.api.beacon.getBlockV2({blockId: blockRootAsString});
-    return {version: res.meta().version, data: res.value()};
-  }
-
   onOptimisticUpdate(handler: (optimisticUpdate: allForks.LightClientOptimisticUpdate) => void): void {
     this.subscribeEventstream();
     this.eventEmitter.on(routes.events.EventType.lightClientOptimisticUpdate, handler);
