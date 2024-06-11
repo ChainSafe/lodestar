@@ -102,21 +102,22 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     }
 
     // Prune invalid SSZ objects every interval
-    const {persistInvalidSszObjectsDir} = options.chain;
-    const pruneInvalidSSZObjectsInterval = persistInvalidSszObjectsDir
-      ? setInterval(() => {
-          try {
-            const deletedFiles = pruneOldFilesInDir(
-              persistInvalidSszObjectsDir,
-              (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
-            );
-            logger.info("Pruned invalid SSZ objects", {deletedFiles});
-          } catch (e) {
-            logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
-          }
-          // Run every ~1 hour
-        }, HOURS_TO_MS)
-      : null;
+    const {persistInvalidSszObjectsDir, persistInvalidSszObjects} = options.chain;
+    const pruneInvalidSSZObjectsInterval =
+      persistInvalidSszObjectsDir && persistInvalidSszObjects
+        ? setInterval(() => {
+            try {
+              const deletedFiles = pruneOldFilesInDir(
+                persistInvalidSszObjectsDir,
+                (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
+              );
+              logger.info("Pruned invalid SSZ objects", {deletedFiles});
+            } catch (e) {
+              logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
+            }
+            // Run every ~1 hour
+          }, HOURS_TO_MS)
+        : null;
 
     // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {
