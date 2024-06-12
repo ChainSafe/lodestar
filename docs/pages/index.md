@@ -23,12 +23,12 @@ title: Home
 
 Hardware specifications minimum / recommended, to run the Lodestar client.
 
-|           | Minimum                          | Recommended                       |
-| --------- | -------------------------------- | --------------------------------- |
+|           | Minimum                                | Recommended                            |
+| --------- | -------------------------------------- | -------------------------------------- |
 | Processor | Intel Core i3–9100 or AMD Ryzen 5 3450 | Intel Core i7–9700 or AMD Ryzen 7 4700 |
-| Memory    | 16GB RAM                          | 32GB RAM                           |
-| Storage   | 100GB available space SSD         | 1TB available space SSD         |
-| Internet  | Broadband connection             | Broadband connection              |
+| Memory    | 16GB RAM                               | 32GB RAM                               |
+| Storage   | 100GB available space SSD              | 1TB available space SSD                |
+| Internet  | Broadband connection                   | Broadband connection                   |
 
 ## About these docs
 
