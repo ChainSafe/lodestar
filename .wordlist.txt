@@ -77,8 +77,8 @@ Plaintext
 PoS
 Prysm
 Quickstart
-Reth
 RPC
+Reth
 Ryzen
 SHA
 SSD
