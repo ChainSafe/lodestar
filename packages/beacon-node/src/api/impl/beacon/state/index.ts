@@ -151,10 +151,10 @@ export function getBeaconStateApi({
       };
     },
 
-    async getStateValidatorBalances({stateId, validatorIds}) {
+    async getStateValidatorBalances({stateId, validatorIds = []}) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
 
-      if (validatorIds) {
+      if (validatorIds.length) {
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
