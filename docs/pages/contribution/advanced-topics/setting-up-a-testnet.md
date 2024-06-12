@@ -4,7 +4,7 @@ title: Setting Up a Testnet
 
 # Setting-Up a Testnet
 
-To quickly test and run Lodestar we recommend starting a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators
+To quickly test and run Lodestar we recommend starting a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators. The [dev scripts](https://github.com/ChainSafe/lodestar/tree/unstable/scripts/dev) can used for simplicity but below instructions provide more insights on how it works and include details about different configurations.
 
 **Terminal 1**
 
