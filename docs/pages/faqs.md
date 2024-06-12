@@ -37,7 +37,7 @@ NODE_OPTIONS: --max-old-space-size=8192
 Lodestar reads all environment variables prefixed with `LODESTAR` and will try to parse
 them similar to command line arguments, meaning any unknown argument will cause an error.
 
-```
+```txt
 ✖ Unknown arguments: servicePort, servicePortEthConsensusP2p,
 port9000Tcp, port9000TcpPort, port9000TcpProto, port9000TcpAddr, serviceHost
 ```

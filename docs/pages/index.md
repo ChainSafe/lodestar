@@ -10,7 +10,7 @@ title: Home
 
 ### Getting started
 
-- Install [binaries](./run/getting-started/installation/#binaries), follow the installation method for [source install](./run/getting-started/installation/#build-from-source) or [Docker install](./run/getting-started/installation/#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
+- Follow the instructions for [build from source](./run/getting-started/installation#build-from-source), [binaries](./run/getting-started/installation#binaries), or [Docker](./run/getting-started/installation#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
 - Use [Lodestar libraries](./supporting-libraries/index.md) in your next Ethereum Typescript project.
 - Run a beacon node on [mainnet or a public testnet](./run/beacon-management/starting-a-node.md).
 - Utilize the whole stack by [starting a local testnet](./contribution/advanced-topics/setting-up-a-testnet.md).
