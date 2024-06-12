@@ -1,10 +1,24 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
+import {
+  Epoch,
+  phase0,
+  capella,
+  Slot,
+  ssz,
+  StringType,
+  RootHex,
+  altair,
+  UintNum64,
+  LightClientOptimisticUpdate,
+  LightClientFinalityUpdate,
+  SSEPayloadAttributes,
+} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getExecutionForkTypes, getLightClientForkTypes} from "../../utils/fork.js";
+import {VersionType} from "../../utils/metadata.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 const stringType = new StringType();
@@ -169,6 +183,23 @@ export type TypeJson<T> = {
 };
 
 export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const WithVersion = <T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> => {
+    return {
+      toJson: ({data, version}) => ({
+        data: getType(version).toJson(data),
+        version,
+      }),
+      fromJson: (val) => {
+        const {version} = VersionType.fromJson(val);
+        return {
+          data: getType(version).fromJson((val as {data: unknown}).data),
+          version,
+        };
+      },
+    };
+  };
+
   return {
     [EventType.head]: new ContainerType(
       {

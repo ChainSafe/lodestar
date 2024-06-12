@@ -196,7 +196,12 @@ export class BlockProposingService {
       if (contents === null) {
         (await this.api.beacon.publishBlockV2({signedBlockOrContents: signedBlock, ...opts})).assertOk();
       } else {
-        (await this.api.beacon.publishBlockV2({signedBlockOrContents: {...contents, signedBlock}, ...opts})).assertOk();
+        (
+          await this.api.beacon.publishBlockV2({
+            signedBlockOrContents: {...contents, signedBlock} as SignedBeaconBlockOrContents,
+            ...opts,
+          })
+        ).assertOk();
       }
     }
   };
@@ -280,7 +285,7 @@ export class BlockProposingService {
 }
 
 function parseProduceBlockResponse(
-  response: {data: allForks.FullOrBlindedBeaconBlockOrContents} & {
+  response: {data: BeaconBlockOrContents} & {
     executionPayloadSource: ProducedBlockSource;
     executionPayloadBlinded: boolean;
     version: ForkName;
@@ -311,7 +316,7 @@ function parseProduceBlockResponse(
       debugLogCtx,
     } as FullOrBlindedBlockWithContents & DebugLogCtx;
   } else {
-    const data = response.data as BeaconBlockOrContents;
+    const data = response.data;
     if (isBlockContents(data)) {
       return {
         block: data.block,
