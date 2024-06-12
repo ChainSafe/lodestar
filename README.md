@@ -17,7 +17,7 @@
 - :gear: Follow the installation method for [source install](https://chainsafe.github.io/lodestar/getting-started/installation/#build-from-source), [NPM install](https://chainsafe.github.io/lodestar/getting-started/installation/#install-from-npm-not-recommended), or [Docker install](https://chainsafe.github.io/lodestar/getting-started/installation/#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
 - :books: Use [Lodestar libraries](https://chainsafe.github.io/lodestar/supporting-libraries/libraries/) in your next Ethereum Typescript project.
 - :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/getting-started/starting-a-node/).
-- :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet/).
+- :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
 - :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
 - :nerd_face: View the [Package and dependency structure](https://chainsafe.github.io/lodestar/contribution/depgraph/).
 - :memo: Prospective contributors can read the [contributing section](./CONTRIBUTING.md) to understand how we develop and test on Lodestar.

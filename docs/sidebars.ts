@@ -3,16 +3,18 @@ import type {SidebarsConfig} from "@docusaurus/plugin-content-docs";
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     "index",
+    "introduction",
+    "security",
     {
       type: "category",
       label: "Run A Node",
+      collapsed: false,
       items: [
         "run/getting-started/quick-start",
         "run/getting-started/installation",
         {
           type: "category",
           label: "Beacon node",
-          collapsed: false,
           items: [
             "run/beacon-management/starting-a-node",
             "run/beacon-management/beacon-cli",
@@ -25,7 +27,6 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Validator Client",
-          collapsed: false,
           items: [
             "run/validator-management/vc-configuration",
             "run/validator-management/validator-cli",
@@ -35,13 +36,11 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Logging and Metrics",
-          collapsed: false,
           items: ["run/logging-and-metrics/prometheus-grafana", "run/logging-and-metrics/client-monitoring"],
         },
         {
           type: "category",
           label: "Discv5 Bootnode",
-          collapsed: false,
           items: ["run/bootnode/bootnode-cli"],
         },
       ],
@@ -53,12 +52,12 @@ const sidebars: SidebarsConfig = {
       items: [
         {
           type: "category",
-          label: "Lodestar Light Client",
+          label: "Light Client",
           items: ["libraries/lightclient-prover/lightclient-cli", "libraries/lightclient-prover/lightclient"],
         },
         {
           type: "category",
-          label: "Lodestar Light Prover",
+          label: "Prover",
           items: ["libraries/lightclient-prover/prover"],
         },
       ],
@@ -73,7 +72,6 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Advanced Topics",
-          collapsed: false,
           items: ["contribution/advanced-topics/setting-up-a-testnet"],
         },
         "contribution/depgraph",
@@ -81,6 +79,7 @@ const sidebars: SidebarsConfig = {
           type: "category",
           label: "Development Tools",
           items: [
+            "contribution/dev-cli",
             "contribution/tools/debugging",
             "contribution/tools/flamegraphs",
             "contribution/tools/heap-dumps",
@@ -90,7 +89,6 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Testing",
-          collapsed: false,
           items: [
             "contribution/testing/index",
             "contribution/testing/end-to-end-tests",
