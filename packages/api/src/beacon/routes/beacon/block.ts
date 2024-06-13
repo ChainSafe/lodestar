@@ -12,7 +12,7 @@ import {
   BeaconBlockBody,
   SignedBeaconBlockOrContents,
 } from "@lodestar/types";
-import {ForkAll, ForkName, ForkSeq} from "@lodestar/params";
+import {ForkAll, ForkExecution, ForkName, ForkSeq} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyMetaCodec, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
@@ -185,7 +185,7 @@ export type Endpoints = {
    */
   publishBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: SignedBeaconBlock<ForkAll, "blinded">},
+    {signedBlindedBlock: SignedBeaconBlock<ForkExecution, "blinded">},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
