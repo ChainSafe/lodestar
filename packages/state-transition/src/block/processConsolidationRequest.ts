@@ -9,7 +9,7 @@ import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 
 export function processConsolidationRequest(
   state: CachedBeaconStateElectra,
-  elConsolidationRequest: electra.ConsolidationRequest
+  consolidationRequest: electra.ConsolidationRequest
 ): void {
 
   // If the pending consolidations queue is full, consolidation requests are ignored
@@ -22,7 +22,7 @@ export function processConsolidationRequest(
     return;
   }
 
-  const {sourcePubkey, targetPubkey} = elConsolidationRequest;
+  const {sourcePubkey, targetPubkey} = consolidationRequest;
   const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
   const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
 
@@ -37,7 +37,7 @@ export function processConsolidationRequest(
 
   const sourceValidator = state.validators.getReadonly(sourceIndex);
   const targetValidator = state.validators.getReadonly(targetIndex);
-  const sourceWithdrawalAddress = toHexString(sourceValidator.withdrawalCredentials.subarray(12));
+  const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   const currentEpoch = state.epochCtx.epoch;
 
   // Verify withdrawal credentials
@@ -45,7 +45,7 @@ export function processConsolidationRequest(
     return;
   }
 
-  if (sourceWithdrawalAddress !== toHexString(elConsolidationRequest.sourceAddress)) {
+  if (Buffer.compare(sourceWithdrawalAddress, consolidationRequest.sourceAddress) !== 0) {
     return;
   }
 
