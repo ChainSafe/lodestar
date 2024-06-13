@@ -61,8 +61,8 @@ export const AttestingIndices = new ListBasicType(
 export const Attestation = new ContainerType(
   {
     aggregationBits: AggregationBits, // Modified in ELECTRA
-    data: phase0Ssz.AttestationData,
     committeeBits: CommitteeBits, // New in ELECTRA
+    data: phase0Ssz.AttestationData,
     signature: BLSSignature,
   },
   {typeName: "Attestation", jsonCase: "eth2"}
