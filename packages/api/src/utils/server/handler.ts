@@ -65,15 +65,22 @@ export function createFastifyHandler<E extends Endpoint>(
           returnBytes: responseWireFormat === WireFormat.ssz,
         });
       } else {
+        let requestWireFormat: WireFormat;
         const contentType = req.headers[HttpHeader.ContentType];
-        if (contentType === undefined) {
-          throw new ApiError(400, "Content-Type header is required");
+        if (contentType === undefined && req.body === undefined) {
+          // Default to json parser if body is omitted. This is not possible for most
+          // routes as request will fail schema validation before this handler is called
+          requestWireFormat = WireFormat.json;
+        } else {
+          if (contentType === undefined) {
+            throw new ApiError(400, "Content-Type header is required");
+          }
+          const requestMediaType = parseContentTypeHeader(contentType);
+          if (requestMediaType === null) {
+            throw new ApiError(415, `Unsupported media type: ${contentType.split(";", 1)[0]}`);
+          }
+          requestWireFormat = getWireFormat(requestMediaType);
         }
-        const requestMediaType = parseContentTypeHeader(contentType);
-        if (requestMediaType === null) {
-          throw new ApiError(415, `Unsupported media type: ${contentType.split(";", 1)[0]}`);
-        }
-        const requestWireFormat = getWireFormat(requestMediaType);
 
         const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
         if (onlySupport !== undefined && onlySupport !== requestWireFormat) {
