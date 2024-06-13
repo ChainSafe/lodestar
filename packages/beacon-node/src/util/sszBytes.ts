@@ -83,7 +83,7 @@ export function getSeenAttDataKey(forkSeq: ForkSeq, data: Uint8Array): SeenAttDa
  */
 export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): AttDataCommitteeBitsBase64 | null {
   const attestationData = getSeenAttDataKeyPhase0(electraAttestationBytes);
-  
+
   if (attestationData === null) {
     return null;
   }
@@ -95,7 +95,6 @@ export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): A
   }
 
   return attestationData + toBase64(committeeBits.uint8Array);
-
 }
 
 /**
