@@ -1,6 +1,8 @@
+import { FAR_FUTURE_EPOCH } from "@lodestar/params";
 import {CachedBeaconStateElectra} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
+import { getCurrentEpoch } from "../util/epoch.js";
 
 /**
  * Starting from Electra:
@@ -11,16 +13,35 @@ import {getActivationExitChurnLimit} from "../util/validator.js";
  */
 export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): void {
   const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state));
+  const currentEpoch = getCurrentEpoch(state);
   let processedAmount = 0n;
   let nextDepositIndex = 0;
+  let depositToPostpone = [];
 
   for (const deposit of state.pendingBalanceDeposits.getAllReadonly()) {
-    const {amount} = deposit;
-    if (processedAmount + amount > availableForProcessing) {
-      break;
+    const {amount, index: DepositIndex} = deposit;
+    const validator = state.validators.get(DepositIndex);
+
+    // Validator is exiting, postpone the deposit until after withdrawable epoch
+    if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
+      if (currentEpoch <= validator.withdrawableEpoch) {
+        depositToPostpone.push(deposit);
+      } else {
+        // Deposited balance will never become active. Increase balance but do not consume churn
+        increaseBalance(state, deposit.index, Number(amount));
+      }
+    } else {
+      // Validator is not exiting, attempt to process deposit
+      if ((processedAmount + amount) > availableForProcessing) {
+        // Deposit does not fit in the churn, no more deposit processing in this epoch.
+        break;
+      } else {
+        // Deposit fits in the churn, process it. Increase balance and consume churn.
+        increaseBalance(state, deposit.index, Number(amount));
+        processedAmount = processedAmount + amount;
+      }
     }
-    increaseBalance(state, deposit.index, Number(amount));
-    processedAmount = processedAmount + amount;
+    // Regardless of how the deposit was handled, we move on in the queue.
     nextDepositIndex++;
   }
 
@@ -31,5 +52,10 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): 
     state.depositBalanceToConsume = 0n;
   } else {
     state.depositBalanceToConsume = availableForProcessing - processedAmount;
+  }
+
+  // TODO Electra: add a function in ListCompositeTreeView to support batch push operation
+  for (const deposit of depositToPostpone) {
+    state.pendingBalanceDeposits.push(deposit);
   }
 }
