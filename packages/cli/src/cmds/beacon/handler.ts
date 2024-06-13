@@ -107,11 +107,11 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       persistInvalidSszObjectsDir && persistInvalidSszObjects
         ? setInterval(() => {
             try {
-              const deletedFiles = pruneOldFilesInDir(
+              const deletedFileCount = pruneOldFilesInDir(
                 persistInvalidSszObjectsDir,
                 (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
               );
-              logger.info("Pruned invalid SSZ objects", {deletedFiles});
+              logger.info("Pruned invalid SSZ objects", {deletedFileCount});
             } catch (e) {
               logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
             }

@@ -2,17 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 
 export function pruneOldFilesInDir(dirpath: string, maxAgeMs: number): number {
-  let deletedFiles = 0;
+  let deletedFileCount = 0;
   for (const entryName of fs.readdirSync(dirpath)) {
     const entryPath = path.join(dirpath, entryName);
 
     const stat = fs.statSync(entryPath);
     if (stat.isDirectory()) {
-      deletedFiles += pruneOldFilesInDir(entryPath, maxAgeMs);
+      deletedFileCount += pruneOldFilesInDir(entryPath, maxAgeMs);
     } else if (stat.isFile()) {
       if (Date.now() - stat.mtimeMs > maxAgeMs) {
         fs.unlinkSync(entryPath);
-        deletedFiles += 1;
+        deletedFileCount += 1;
       }
     }
   }
@@ -21,5 +21,5 @@ export function pruneOldFilesInDir(dirpath: string, maxAgeMs: number): number {
   if (fs.readdirSync(dirpath).length === 0) {
     fs.rmdirSync(dirpath);
   }
-  return deletedFiles;
+  return deletedFileCount;
 }
