@@ -41,7 +41,10 @@ export function processConsolidationRequest(
   const currentEpoch = state.epochCtx.epoch;
 
   // Verify withdrawal credentials
-  if (hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials) || hasExecutionWithdrawalCredential(targetValidator.withdrawalCredentials)) {
+  if (
+    !hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials) ||
+    !hasExecutionWithdrawalCredential(targetValidator.withdrawalCredentials)
+  ) {
     return;
   }
 
