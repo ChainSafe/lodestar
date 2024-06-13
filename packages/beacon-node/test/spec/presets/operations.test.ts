@@ -92,21 +92,11 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processWithdrawals(ForkSeq.capella, state as CachedBeaconStateCapella, testCase.execution_payload);
   },
 
-  withdrawal_request: (
-    state,
-    testCase: {withdrawal_request: electra.WithdrawalRequest}
-  ) => {
-    blockFns.processWithdrawalRequest(
-      ForkSeq.electra,
-      state as CachedBeaconStateElectra,
-      testCase.withdrawal_request
-    );
+  withdrawal_request: (state, testCase: {withdrawal_request: electra.WithdrawalRequest}) => {
+    blockFns.processWithdrawalRequest(ForkSeq.electra, state as CachedBeaconStateElectra, testCase.withdrawal_request);
   },
 
-  consolidation_request: (
-    state,
-    testCase: {consolidation_request: electra.ConsolidationRequest}
-  ) => {
+  consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
     blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
   },
 

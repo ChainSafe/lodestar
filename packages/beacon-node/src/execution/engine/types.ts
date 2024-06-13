@@ -327,9 +327,8 @@ export function parseExecutionPayload(
         `withdrawalRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).withdrawalRequests = withdrawalRequests.map(
-      deserializeWithdrawalRequest
-    );
+    (executionPayload as electra.ExecutionPayload).withdrawalRequests =
+      withdrawalRequests.map(deserializeWithdrawalRequest);
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
@@ -418,9 +417,7 @@ export function deserializeDepositRequest(serialized: DepositRequestRpc): electr
   } as electra.DepositRequest;
 }
 
-export function serializeWithdrawalRequest(
-  withdrawalRequest: electra.WithdrawalRequest
-): WithdrawalRequestRpc {
+export function serializeWithdrawalRequest(withdrawalRequest: electra.WithdrawalRequest): WithdrawalRequestRpc {
   return {
     sourceAddress: bytesToData(withdrawalRequest.sourceAddress),
     validatorPubkey: bytesToData(withdrawalRequest.validatorPubkey),
@@ -428,9 +425,7 @@ export function serializeWithdrawalRequest(
   };
 }
 
-export function deserializeWithdrawalRequest(
-  withdrawalRequest: WithdrawalRequestRpc
-): electra.WithdrawalRequest {
+export function deserializeWithdrawalRequest(withdrawalRequest: WithdrawalRequestRpc): electra.WithdrawalRequest {
   return {
     sourceAddress: dataToBytes(withdrawalRequest.sourceAddress, 20),
     validatorPubkey: dataToBytes(withdrawalRequest.validatorPubkey, 48),
@@ -444,9 +439,7 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
         depositRequests: data.depositRequests ? data.depositRequests.map(deserializeDepositRequest) : null,
-        withdrawalRequests: data.withdrawalRequests
-          ? data.withdrawalRequests.map(deserializeWithdrawalRequest)
-          : null,
+        withdrawalRequests: data.withdrawalRequests ? data.withdrawalRequests.map(deserializeWithdrawalRequest) : null,
       }
     : null;
 }
@@ -457,9 +450,7 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
         depositRequests: data.depositRequests ? data.depositRequests.map(serializeDepositRequest) : null,
-        withdrawalRequests: data.withdrawalRequests
-          ? data.withdrawalRequests.map(serializeWithdrawalRequest)
-          : null,
+        withdrawalRequests: data.withdrawalRequests ? data.withdrawalRequests.map(serializeWithdrawalRequest) : null,
       }
     : null;
 }

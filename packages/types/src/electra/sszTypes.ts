@@ -133,10 +133,7 @@ export const WithdrawalRequest = new ContainerType(
   },
   {typeName: "WithdrawalRequest", jsonCase: "eth2"}
 );
-export const WithdrawalRequests = new ListCompositeType(
-  WithdrawalRequest,
-  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
-);
+export const WithdrawalRequests = new ListCompositeType(WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
 export const ConsolidationRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,

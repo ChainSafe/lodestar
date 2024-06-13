@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {electra, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 
