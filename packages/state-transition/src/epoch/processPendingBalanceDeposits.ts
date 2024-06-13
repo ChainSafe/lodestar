@@ -1,8 +1,8 @@
-import { FAR_FUTURE_EPOCH } from "@lodestar/params";
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateElectra} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
-import { getCurrentEpoch } from "../util/epoch.js";
+import {getCurrentEpoch} from "../util/epoch.js";
 
 /**
  * Starting from Electra:
@@ -16,23 +16,23 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): 
   const currentEpoch = getCurrentEpoch(state);
   let processedAmount = 0n;
   let nextDepositIndex = 0;
-  let depositToPostpone = [];
+  const depositsToPostpone = [];
 
   for (const deposit of state.pendingBalanceDeposits.getAllReadonly()) {
-    const {amount, index: DepositIndex} = deposit;
-    const validator = state.validators.get(DepositIndex);
+    const {amount, index: depositIndex} = deposit;
+    const validator = state.validators.get(depositIndex);
 
     // Validator is exiting, postpone the deposit until after withdrawable epoch
     if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
       if (currentEpoch <= validator.withdrawableEpoch) {
-        depositToPostpone.push(deposit);
+        depositsToPostpone.push(deposit);
       } else {
         // Deposited balance will never become active. Increase balance but do not consume churn
         increaseBalance(state, deposit.index, Number(amount));
       }
     } else {
       // Validator is not exiting, attempt to process deposit
-      if ((processedAmount + amount) > availableForProcessing) {
+      if (processedAmount + amount > availableForProcessing) {
         // Deposit does not fit in the churn, no more deposit processing in this epoch.
         break;
       } else {
@@ -55,7 +55,7 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): 
   }
 
   // TODO Electra: add a function in ListCompositeTreeView to support batch push operation
-  for (const deposit of depositToPostpone) {
+  for (const deposit of depositsToPostpone) {
     state.pendingBalanceDeposits.push(deposit);
   }
 }
