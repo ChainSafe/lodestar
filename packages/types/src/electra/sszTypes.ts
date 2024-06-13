@@ -125,28 +125,28 @@ export const DepositRequest = new ContainerType(
 
 export const DepositRequests = new ListCompositeType(DepositRequest, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
 
-export const ExecutionLayerWithdrawalRequest = new ContainerType(
+export const WithdrawalRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
     validatorPubkey: BLSPubkey,
     amount: UintNum64,
   },
-  {typeName: "ExecutionLayerWithdrawalRequest", jsonCase: "eth2"}
+  {typeName: "WithdrawalRequest", jsonCase: "eth2"}
 );
-export const ExecutionLayerWithdrawalRequests = new ListCompositeType(
-  ExecutionLayerWithdrawalRequest,
+export const WithdrawalRequests = new ListCompositeType(
+  WithdrawalRequest,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
 );
-export const ExecutionLayerConsolidationRequest = new ContainerType(
+export const ConsolidationRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
     sourcePubkey: BLSPubkey,
     targetPubkey: BLSPubkey,
   },
-  {typeName: "ExecutionLayerConsolidationRequest", jsonCase: "eth2"}
+  {typeName: "ConsolidationRequest", jsonCase: "eth2"}
 );
-export const ExecutionLayerConsolidationRequests = new ListCompositeType(
-  ExecutionLayerConsolidationRequest,
+export const ConsolidationRequests = new ListCompositeType(
+  ConsolidationRequest,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
 );
 
@@ -154,8 +154,8 @@ export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
     depositRequests: DepositRequests, // New in ELECTRA
-    withdrawalRequests: ExecutionLayerWithdrawalRequests, // New in ELECTRA
-    consolidationRequests: ExecutionLayerConsolidationRequests, // [New in Electra]
+    withdrawalRequests: WithdrawalRequests, // New in ELECTRA
+    consolidationRequests: ConsolidationRequests, // [New in Electra]
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );

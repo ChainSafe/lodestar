@@ -9,10 +9,10 @@ import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
-import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
+import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
 import {ProcessBlockOpts} from "./types.js";
-import {processExecutionLayerConsolidationRequest} from "./processExecutionLayerConsolidationRequest.js";
+import {processConsolidationRequest} from "./processConsolidationRequest.js";
 
 export {
   processProposerSlashing,
@@ -20,10 +20,10 @@ export {
   processAttestations,
   processDeposit,
   processVoluntaryExit,
-  processExecutionLayerWithdrawalRequest,
+  processWithdrawalRequest,
   processBlsToExecutionChange,
   processDepositRequest,
-  processExecutionLayerConsolidationRequest,
+  processConsolidationRequest,
 };
 
 export function processOperations(
@@ -72,11 +72,11 @@ export function processOperations(
     }
 
     for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
+      processWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
     }
 
     for (const elConsolidationRequest of bodyElectra.executionPayload.consolidationRequests) {
-      processExecutionLayerConsolidationRequest(stateElectra, elConsolidationRequest);
+      processConsolidationRequest(stateElectra, elConsolidationRequest);
     }
   }
 }

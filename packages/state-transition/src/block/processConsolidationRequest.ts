@@ -7,9 +7,9 @@ import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.j
 import {hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 
-export function processExecutionLayerConsolidationRequest(
+export function processConsolidationRequest(
   state: CachedBeaconStateElectra,
-  elConsolidationRequest: electra.ExecutionLayerConsolidationRequest
+  elConsolidationRequest: electra.ConsolidationRequest
 ): void {
 
   // If the pending consolidations queue is full, consolidation requests are ignored

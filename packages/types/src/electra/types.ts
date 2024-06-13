@@ -12,11 +12,11 @@ export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof
 export type DepositRequest = ValueOf<typeof ssz.DepositRequest>;
 export type DepositRequests = ValueOf<typeof ssz.DepositRequests>;
 
-export type ExecutionLayerWithdrawalRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequest>;
-export type ExecutionLayerWithdrawalRequests = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequests>;
+export type WithdrawalRequest = ValueOf<typeof ssz.WithdrawalRequest>;
+export type WithdrawalRequests = ValueOf<typeof ssz.WithdrawalRequests>;
 
-export type ExecutionLayerConsolidationRequest = ValueOf<typeof ssz.ExecutionLayerConsolidationRequest>;
-export type ExecutionLayerConsolidationRequests = ValueOf<typeof ssz.ExecutionLayerConsolidationRequests>;
+export type ConsolidationRequest = ValueOf<typeof ssz.ConsolidationRequest>;
+export type ConsolidationRequests = ValueOf<typeof ssz.ConsolidationRequests>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
