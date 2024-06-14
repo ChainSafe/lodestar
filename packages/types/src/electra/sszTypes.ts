@@ -62,8 +62,8 @@ export const Attestation = new ContainerType(
   {
     aggregationBits: AggregationBits, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
-    committeeBits: CommitteeBits, // New in ELECTRA
     signature: BLSSignature,
+    committeeBits: CommitteeBits, // New in ELECTRA
   },
   {typeName: "Attestation", jsonCase: "eth2"}
 );
