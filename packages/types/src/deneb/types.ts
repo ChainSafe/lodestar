@@ -49,4 +49,4 @@ export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimist
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
 
 export type ProducedBlobSidecars = Omit<BlobSidecars, "signedBlockHeader" | "kzgCommitmentInclusionProof">;
-export type Contents = Omit<BlockContents<ForkName.deneb, "unsigned">, "block">;
+export type Contents = Omit<BlockContents<ForkName.deneb>, "block">;

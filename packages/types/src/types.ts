@@ -142,55 +142,38 @@ export type TypesFor<F extends ForkName, K extends keyof TypesByFork[F] | void =
   ? TypesByFork[F]
   : TypesByFork[F][Exclude<K, void>];
 
-export type FullOrBlinded = "full" | "blinded";
-export type SignedUnsigned = "signed" | "unsigned";
+export type BeaconBlockHeader<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlockHeader"];
+export type SignedBeaconBlockHeader<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBeaconBlockHeader"];
 
-export type BeaconBlockHeader<F extends ForkName = ForkAll> = TypesByFork[F]["BeaconBlockHeader"];
-export type SignedBeaconBlockHeader<F extends ForkName = ForkAll> = TypesByFork[F]["SignedBeaconBlockHeader"];
+export type BeaconBlock<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlock"];
+export type BlindedBeaconBlock<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BlindedBeaconBlock"];
 
-export type BeaconBlock<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
-  ? TypesByFork[F]["BeaconBlock"]
-  : F extends ForkExecution
-    ? TypesByFork[F]["BlindedBeaconBlock"]
-    : never;
-export type SignedBeaconBlock<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
-  ? TypesByFork[F]["SignedBeaconBlock"]
-  : F extends ForkExecution
-    ? TypesByFork[F]["SignedBlindedBeaconBlock"]
-    : never;
+export type SignedBeaconBlock<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBeaconBlock"];
+export type SignedBlindedBeaconBlock<F extends ForkExecution = ForkExecution> =
+  TypesByFork[F]["SignedBlindedBeaconBlock"];
 
-export type BeaconBlockBody<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
-  ? TypesByFork[F]["BeaconBlockBody"]
-  : F extends ForkExecution
-    ? TypesByFork[F]["BlindedBeaconBlockBody"]
-    : never;
+export type BeaconBlockBody<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlockBody"];
+export type BlindedBeaconBlockBody<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BlindedBeaconBlockBody"];
 
-export type BlockContents<F extends ForkBlobs = ForkBlobs, S extends SignedUnsigned = "signed"> = S extends "signed"
-  ? TypesByFork[F]["SignedBlockContents"]
-  : TypesByFork[F]["BlockContents"];
+export type BlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlockContents"];
+export type SignedBlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["SignedBlockContents"];
+export type SignedOrUnsignedBlockContents<F extends ForkBlobs = ForkBlobs> = BlockContents<F> | SignedBlockContents<F>;
 
-export type BeaconBlockOrContents<
-  FB extends ForkAll = ForkAll,
-  FC extends ForkBlobs = ForkBlobs,
-  B extends FullOrBlinded = "full",
-> = BeaconBlock<FB, B> | BlockContents<FC, "unsigned">;
+export type BeaconBlockOrContents<FB extends ForkAll = ForkAll, FC extends ForkBlobs = ForkBlobs> =
+  | BeaconBlock<FB>
+  | BlockContents<FC>;
 
-export type SignedBeaconBlockOrContents<
-  FB extends ForkAll = ForkAll,
-  FC extends ForkBlobs = ForkBlobs,
-  B extends FullOrBlinded = "full",
-> = SignedBeaconBlock<FB, B> | BlockContents<FC, "signed">;
+export type SignedBeaconBlockOrContents<FB extends ForkAll = ForkAll, FC extends ForkBlobs = ForkBlobs> =
+  | SignedBeaconBlock<FB>
+  | SignedBlockContents<FC>;
 
-export type ExecutionPayload<
-  F extends ForkExecution = ForkExecution,
-  B extends FullOrBlinded = "full",
-> = B extends "full" ? TypesByFork[F]["ExecutionPayload"] : TypesByFork[F]["ExecutionPayloadHeader"];
-
-export type ExecutionPayloadAndBlobsBundle<F extends ForkBlobs = ForkBlobs> =
-  TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
+export type ExecutionPayload<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayload"];
+export type BlindedExecutionPayload<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayloadHeader"];
 
 export type BlobsBundle<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlobsBundle"];
 export type Contents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["Contents"];
+export type ExecutionPayloadAndBlobsBundle<F extends ForkBlobs = ForkBlobs> =
+  TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
 
 export type LightClientHeader<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientHeader"];
 export type LightClientBootstrap<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientBootstrap"];
@@ -207,9 +190,6 @@ export type BeaconState<F extends ForkName = ForkAll> = TypesByFork[F]["BeaconSt
 
 export type Metadata<F extends ForkName = ForkAll> = TypesByFork[F]["Metadata"];
 
-export type BuilderBid<
-  F extends ForkExecution = ForkExecution,
-  S extends SignedUnsigned = "signed",
-> = S extends "signed" ? TypesByFork[F]["SignedBuilderBid"] : TypesByFork[F]["BuilderBid"];
-
+export type BuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BuilderBid"];
+export type SignedBuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SignedBuilderBid"];
 export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];

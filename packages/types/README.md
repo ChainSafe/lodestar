@@ -67,13 +67,13 @@ import {Epoch, ssz} from "@lodestar/types";
 const epoch: Epoch = ssz.Epoch.defaultValue();
 ```
 
-In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. Typescript interfaces for this purpose are exported under the `allForks` namespace. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
+In some cases, we need interfaces that accept types across across forks, like when the fork is not known ahead of time. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
 
 ```typescript
 import {ForkName} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
+import {ssz, BeaconState} from "@lodestar/types";
 
-const state: allForks.BeaconState = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
+const state: BeaconState<ForkName.phase0> = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
 ```
 
 ## License
