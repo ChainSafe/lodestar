@@ -6,7 +6,7 @@ import {Lightclient, LightclientEvent, utils, transport} from "../../dist/lightc
 describe("web bundle for lightclient", () => {
   vi.setConfig({testTimeout: 20_000});
 
-  // Some time bundle take some time to load in the browser
+  // Sometimes bundle takes some time to load in the browser
   beforeAll(async () => {
     await sleep(2000);
   });
