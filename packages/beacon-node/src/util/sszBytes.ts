@@ -26,8 +26,8 @@ export type AttDataCommitteeBitsBase64 = string;
 // class Attestation(Container):
 //   aggregation_bits: BitList[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT] - offset 4
 //   data: AttestationData - target data - 128
-//   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT]
 //   signature: BLSSignature - 96
+//   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT]
 //
 // for all forks
 // class AttestationData(Container): 128 bytes fixed size
@@ -82,14 +82,19 @@ export function getSeenAttDataKey(forkSeq: ForkSeq, data: Uint8Array): SeenAttDa
  * Return null if data is not long enough to extract attestation data.
  */
 export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): AttDataCommitteeBitsBase64 | null {
-  const startIndex = VARIABLE_FIELD_OFFSET;
-  const seenKeyLength = ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE;
+  const attestationData = getSeenAttDataKeyPhase0(electraAttestationBytes);
 
-  if (electraAttestationBytes.length < startIndex + seenKeyLength) {
+  if (attestationData === null) {
     return null;
   }
 
-  return toBase64(electraAttestationBytes.subarray(startIndex, startIndex + seenKeyLength));
+  const committeeBits = getCommitteeBitsFromAttestationSerialized(electraAttestationBytes);
+
+  if (committeeBits === null) {
+    return null;
+  }
+
+  return attestationData + toBase64(committeeBits.uint8Array);
 }
 
 /**
@@ -112,7 +117,7 @@ export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null 
 export function getAggregationBitsFromAttestationSerialized(fork: ForkName, data: Uint8Array): BitArray | null {
   const aggregationBitsStartIndex =
     ForkSeq[fork] >= ForkSeq.electra
-      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE + SIGNATURE_SIZE
+      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE
       : VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
 
   if (data.length < aggregationBitsStartIndex) {
@@ -127,11 +132,8 @@ export function getAggregationBitsFromAttestationSerialized(fork: ForkName, data
  * Extract signature from attestation serialized bytes.
  * Return null if data is not long enough to extract signature.
  */
-export function getSignatureFromAttestationSerialized(fork: ForkName, data: Uint8Array): BLSSignature | null {
-  const signatureStartIndex =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE
-      : VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE;
+export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSignature | null {
+  const signatureStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE;
 
   if (data.length < signatureStartIndex + SIGNATURE_SIZE) {
     return null;
@@ -145,7 +147,7 @@ export function getSignatureFromAttestationSerialized(fork: ForkName, data: Uint
  * Return null if data is not long enough to extract committee bits.
  */
 export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
-  const committeeBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE;
+  const committeeBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
 
   if (data.length < committeeBitsStartIndex + COMMITTEE_BITS_SIZE) {
     return null;
