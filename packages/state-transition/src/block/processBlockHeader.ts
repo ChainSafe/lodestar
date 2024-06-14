@@ -1,6 +1,5 @@
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {BeaconBlock, FullOrBlinded, ssz} from "@lodestar/types";
-import {ForkAll} from "@lodestar/params";
+import {BeaconBlock, BlindedBeaconBlock, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
 import {blindedOrFullBlockToHeader} from "../util/index.js";
@@ -10,7 +9,7 @@ import {blindedOrFullBlockToHeader} from "../util/index.js";
  * PERF: Fixed work independent of block contents.
  * NOTE: `block` body root MUST be pre-cached.
  */
-export function processBlockHeader(state: CachedBeaconStateAllForks, block: BeaconBlock<ForkAll, FullOrBlinded>): void {
+export function processBlockHeader(state: CachedBeaconStateAllForks, block: BeaconBlock | BlindedBeaconBlock): void {
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {

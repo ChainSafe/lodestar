@@ -8,9 +8,10 @@ import {
   BeaconBlockBody,
   ExecutionPayload,
   isExecutionPayload,
-  FullOrBlinded,
+  BlindedExecutionPayload,
+  BlindedBeaconBlockBody,
 } from "@lodestar/types";
-import {ForkAll, ForkExecution, ForkName, ForkSeq} from "@lodestar/params";
+import {ForkExecution, ForkName, ForkSeq} from "@lodestar/params";
 
 import {
   BeaconStateBellatrix,
@@ -101,13 +102,13 @@ export function isExecutionBlockBodyType(blockBody: BeaconBlockBody): blockBody 
   return (blockBody as BeaconBlockBody<ForkExecution>).executionPayload !== undefined;
 }
 
-export function getFullOrBlindedPayload(block: BeaconBlock): ExecutionPayload<ForkExecution, FullOrBlinded> {
+export function getFullOrBlindedPayload(block: BeaconBlock): ExecutionPayload | BlindedExecutionPayload {
   return getFullOrBlindedPayloadFromBody(block.body);
 }
 
 export function getFullOrBlindedPayloadFromBody(
-  body: BeaconBlockBody<ForkAll, FullOrBlinded>
-): ExecutionPayload<ForkExecution, FullOrBlinded> {
+  body: BeaconBlockBody | BlindedBeaconBlockBody
+): ExecutionPayload | BlindedExecutionPayload {
   if (isBlindedBeaconBlockBody(body)) {
     return body.executionPayloadHeader;
   } else if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
@@ -118,11 +119,11 @@ export function getFullOrBlindedPayloadFromBody(
 }
 
 export function isCapellaPayload(
-  payload: ExecutionPayload<ForkExecution, FullOrBlinded>
-): payload is ExecutionPayload<ForkName.capella, FullOrBlinded> {
+  payload: ExecutionPayload | BlindedExecutionPayload
+): payload is ExecutionPayload<ForkName.capella> | BlindedExecutionPayload<ForkName.capella> {
   return (
     (payload as ExecutionPayload<ForkName.capella>).withdrawals !== undefined ||
-    (payload as ExecutionPayload<ForkName.capella, "blinded">).withdrawalsRoot !== undefined
+    (payload as BlindedExecutionPayload<ForkName.capella>).withdrawalsRoot !== undefined
   );
 }
 
@@ -132,13 +133,10 @@ export function isCapellaPayloadHeader(
   return (payload as capella.ExecutionPayloadHeader).withdrawalsRoot !== undefined;
 }
 
-export function executionPayloadToPayloadHeader(
-  fork: ForkSeq,
-  payload: ExecutionPayload
-): ExecutionPayload<ForkExecution, "blinded"> {
+export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: ExecutionPayload): BlindedExecutionPayload {
   const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
 
-  const bellatrixPayloadFields: ExecutionPayload<ForkExecution, "blinded"> = {
+  const bellatrixPayloadFields: BlindedExecutionPayload = {
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,

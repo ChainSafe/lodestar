@@ -5,9 +5,9 @@ import {
   BLSPubkey,
   deneb,
   Wei,
-  ExecutionPayload,
-  SignedBeaconBlock,
   SignedBeaconBlockOrContents,
+  BlindedExecutionPayload,
+  SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {ForkExecution} from "@lodestar/params";
 
@@ -33,9 +33,9 @@ export interface IExecutionBuilder {
     parentHash: Root,
     proposerPubKey: BLSPubkey
   ): Promise<{
-    header: ExecutionPayload<ForkExecution, "blinded">;
+    header: BlindedExecutionPayload;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }>;
-  submitBlindedBlock(signedBlock: SignedBeaconBlock<ForkExecution, "blinded">): Promise<SignedBeaconBlockOrContents>;
+  submitBlindedBlock(signedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents>;
 }

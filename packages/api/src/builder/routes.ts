@@ -6,12 +6,12 @@ import {
   Slot,
   Root,
   BLSPubkey,
-  BuilderBid,
-  SignedBeaconBlock,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
+  SignedBlindedBeaconBlock,
+  SignedBuilderBid,
 } from "@lodestar/types";
-import {ForkExecution, ForkName, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
@@ -36,7 +36,7 @@ import {fromHeaders} from "../utils/headers.js";
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
 // handler already checks the status code and will not attempt to parse the body, but it will return no value.
 // It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
-export type MaybeSignedBuilderBid = BuilderBid<ForkExecution, "signed"> | undefined;
+export type MaybeSignedBuilderBid = SignedBuilderBid | undefined;
 
 const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
 
@@ -72,7 +72,7 @@ export type Endpoints = {
 
   submitBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: SignedBeaconBlock<ForkExecution, "blinded">},
+    {signedBlindedBlock: SignedBlindedBeaconBlock},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta

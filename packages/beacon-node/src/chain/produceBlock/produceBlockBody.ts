@@ -13,7 +13,9 @@ import {
   SSEPayloadAttributes,
   BeaconBlock,
   BeaconBlockBody,
-  ExecutionPayload,
+  BlindedExecutionPayload,
+  BlindedBeaconBlockBody,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -28,7 +30,7 @@ import {
   getExpectedWithdrawals,
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, ForkExecution, isForkExecution, ForkAll} from "@lodestar/params";
+import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
 import {toHex, sleep, Logger} from "@lodestar/utils";
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
@@ -76,10 +78,8 @@ export enum BlockType {
 }
 export type AssembledBodyType<T extends BlockType> = T extends BlockType.Full
   ? BeaconBlockBody
-  : BeaconBlockBody<ForkAll, "blinded">;
-export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
-  ? BeaconBlock
-  : BeaconBlock<ForkAll, "blinded">;
+  : BlindedBeaconBlockBody;
+export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full ? BeaconBlock : BlindedBeaconBlock;
 
 export enum BlobsResultType {
   preDeneb,
@@ -193,7 +193,7 @@ export async function produceBlockBody<T extends BlockType>(
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
-      (blockBody as BeaconBlockBody<ForkExecution, "blinded">).executionPayloadHeader = builderRes.header;
+      (blockBody as BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
       executionPayloadValue = builderRes.executionPayloadValue;
 
       const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
@@ -443,7 +443,7 @@ async function prepareExecutionPayloadHeader(
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
-  header: ExecutionPayload<ForkExecution, "blinded">;
+  header: BlindedExecutionPayload;
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
 }> {

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkAll, ForkExecution, ForkSeq} from "@lodestar/params";
+import {ForkExecution, ForkSeq} from "@lodestar/params";
 import {
   Root,
   isBlindedBeaconBlock,
@@ -12,14 +12,16 @@ import {
   BlobsBundle,
   SignedBeaconBlockOrContents,
   Contents,
-  FullOrBlinded,
+  SignedBlindedBeaconBlock,
+  BlindedBeaconBlock,
+  BlindedExecutionPayload,
 } from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
 
 export function blindedOrFullBlockHashTreeRoot(
   config: ChainForkConfig,
-  blindedOrFull: BeaconBlock<ForkAll, FullOrBlinded>
+  blindedOrFull: BeaconBlock | BlindedBeaconBlock
 ): Root {
   return isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
@@ -30,7 +32,7 @@ export function blindedOrFullBlockHashTreeRoot(
 
 export function blindedOrFullBlockToHeader(
   config: ChainForkConfig,
-  blindedOrFull: BeaconBlock<ForkAll, FullOrBlinded>
+  blindedOrFull: BeaconBlock | BlindedBeaconBlock
 ): BeaconBlockHeader {
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
@@ -47,21 +49,15 @@ export function blindedOrFullBlockToHeader(
   };
 }
 
-export function beaconBlockToBlinded(
-  config: ChainForkConfig,
-  block: BeaconBlock<ForkExecution>
-): BeaconBlock<ForkExecution, "blinded"> {
+export function beaconBlockToBlinded(config: ChainForkConfig, block: BeaconBlock<ForkExecution>): BlindedBeaconBlock {
   const fork = config.getForkName(block.slot);
   const executionPayloadHeader = executionPayloadToPayloadHeader(ForkSeq[fork], block.body.executionPayload);
-  const blindedBlock = {...block, body: {...block.body, executionPayloadHeader}} as BeaconBlock<
-    ForkExecution,
-    "blinded"
-  >;
+  const blindedBlock = {...block, body: {...block.body, executionPayloadHeader}} as BlindedBeaconBlock;
   return blindedBlock;
 }
 
 export function signedBlindedBlockToFull(
-  signedBlindedBlock: SignedBeaconBlock<ForkExecution, "blinded">,
+  signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null
 ): SignedBeaconBlock {
   const signedBlock = {
@@ -78,8 +74,7 @@ export function signedBlindedBlockToFull(
 
   // state transition can't seem to handle executionPayloadHeader presense in merge block
   // so just delete the extra field we don't require
-  delete (signedBlock.message.body as {executionPayloadHeader?: ExecutionPayload<ForkExecution, "blinded">})
-    .executionPayloadHeader;
+  delete (signedBlock.message.body as {executionPayloadHeader?: BlindedExecutionPayload}).executionPayloadHeader;
   return signedBlock;
 }
 
@@ -98,7 +93,7 @@ export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | Exe
 }
 
 export function reconstructFullBlockOrContents(
-  signedBlindedBlock: SignedBeaconBlock<ForkExecution, "blinded">,
+  signedBlindedBlock: SignedBlindedBeaconBlock,
   {
     executionPayload,
     contents,

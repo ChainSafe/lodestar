@@ -28,15 +28,15 @@ import {
   bellatrix,
   isBlindedBeaconBlock,
   BeaconBlock,
-  FullOrBlinded,
-  BeaconBlockBody,
   SignedBeaconBlock,
   ExecutionPayload,
+  BlindedBeaconBlock,
+  BlindedBeaconBlockBody,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {ForkAll, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -567,7 +567,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: BeaconBlock<ForkAll, "blinded">;
+    block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
   }> {
@@ -620,9 +620,7 @@ export class BeaconChain implements IBeaconChain {
     const bodyRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
-        : this.config
-            .getBlindedForkTypes(slot)
-            .BeaconBlockBody.hashTreeRoot(body as BeaconBlockBody<ForkAll, "blinded">);
+        : this.config.getBlindedForkTypes(slot).BeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
     this.logger.debug("Computing block post state from the produced body", {
       slot,
       bodyRoot: toHexString(bodyRoot),
@@ -642,7 +640,7 @@ export class BeaconChain implements IBeaconChain {
     const blockRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
-        : this.config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block as BeaconBlock<ForkAll, "blinded">);
+        : this.config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toHex(blockRoot);
 
     // track the produced block for consensus broadcast validations
@@ -776,7 +774,7 @@ export class BeaconChain implements IBeaconChain {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
-  persistBlock(data: BeaconBlock<ForkAll, FullOrBlinded>, suffix?: string): void {
+  persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
       const sszType = this.config.getBlindedForkTypes(slot).BeaconBlock;
@@ -1100,7 +1098,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  async getBlockRewards(block: BeaconBlock<ForkAll, FullOrBlinded>): Promise<BlockRewards> {
+  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
     const preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
@@ -1139,7 +1137,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getSyncCommitteeRewards(
-    block: BeaconBlock<ForkAll, FullOrBlinded>,
+    block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
     const preState = this.regen.getPreStateSync(block);

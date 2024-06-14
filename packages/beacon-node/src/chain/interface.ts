@@ -13,8 +13,8 @@ import {
   altair,
   BeaconBlock,
   ExecutionPayload,
-  FullOrBlinded,
   SignedBeaconBlock,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {
   BeaconStateAllForks,
@@ -26,7 +26,6 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkAll} from "@lodestar/params";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -183,7 +182,7 @@ export interface IBeaconChain {
     shouldOverrideBuilder?: boolean;
   }>;
   produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: BeaconBlock<ForkAll, "blinded">;
+    block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
   }>;
@@ -207,7 +206,7 @@ export interface IBeaconChain {
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
-  persistBlock(data: BeaconBlock<ForkAll, FullOrBlinded>, suffix?: string): void;
+  persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
@@ -223,13 +222,13 @@ export interface IBeaconChain {
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
 
-  getBlockRewards(blockRef: BeaconBlock<ForkAll, FullOrBlinded>): Promise<BlockRewards>;
+  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
   getSyncCommitteeRewards(
-    blockRef: BeaconBlock<ForkAll, FullOrBlinded>,
+    blockRef: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards>;
 }

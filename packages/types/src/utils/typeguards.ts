@@ -49,7 +49,7 @@ export function isBlindedSignedBeaconBlock<F extends ForkExecution>(
 }
 
 export function isBlindedBeaconBlockBody<F extends ForkExecution>(
-  body: BeaconBlockBody
+  body: BeaconBlockBody | BlindedBeaconBlockBody
 ): body is BlindedBeaconBlockBody<F> {
   return "executionPayloadHeader" in body && body.executionPayloadHeader !== undefined;
 }

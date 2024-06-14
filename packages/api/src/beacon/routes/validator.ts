@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkBlobs, ForkAll} from "@lodestar/params";
+import {isForkBlobs} from "@lodestar/params";
 import {
   altair,
   BLSSignature,
@@ -17,6 +17,7 @@ import {
   stringType,
   BeaconBlock,
   BeaconBlockOrContents,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
@@ -381,7 +382,7 @@ export type Endpoints = {
       graffiti: string;
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
-    BeaconBlock<ForkAll, "blinded">,
+    BlindedBeaconBlock,
     VersionMeta
   >;
 

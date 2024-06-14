@@ -11,6 +11,7 @@ import {
   BeaconBlockOrContents,
   SignedBeaconBlock,
   isBlindedSignedBeaconBlock,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
@@ -29,14 +30,14 @@ import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 type FullOrBlindedBlockWithContents =
   | {
       version: ForkPreBlobs;
-      block: BeaconBlock<ForkPreBlobs, "full">;
+      block: BeaconBlock<ForkPreBlobs>;
       contents: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkBlobs;
-      block: BeaconBlock<ForkBlobs, "full">;
+      block: BeaconBlock<ForkBlobs>;
       contents: {
         kzgProofs: deneb.KZGProofs;
         blobs: deneb.Blobs;
@@ -46,7 +47,7 @@ type FullOrBlindedBlockWithContents =
     }
   | {
       version: ForkExecution;
-      block: BeaconBlock<ForkExecution, "blinded">;
+      block: BlindedBeaconBlock;
       contents: null;
       executionPayloadBlinded: true;
       executionPayloadSource: ProducedBlockSource;

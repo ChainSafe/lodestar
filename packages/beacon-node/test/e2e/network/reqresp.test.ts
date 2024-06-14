@@ -1,7 +1,7 @@
 import {describe, it, expect, afterEach, beforeEach} from "vitest";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {ForkAll, ForkName} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
 import {altair, phase0, Root, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
@@ -328,10 +328,7 @@ function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): Respo
   return wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
 }
 
-function wrapBlockAsEncodedPayload(
-  config: ChainForkConfig,
-  block: SignedBeaconBlock<ForkAll, "full">
-): ResponseOutgoing {
+function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconBlock): ResponseOutgoing {
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
     fork: config.getForkName(block.message.slot),

@@ -21,7 +21,6 @@ import {
   ForkPreBlobs,
   ForkBlobs,
   ForkExecution,
-  ForkAll,
 } from "@lodestar/params";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
@@ -39,8 +38,9 @@ import {
   Wei,
   BeaconBlock,
   BlockContents,
-  SignedUnsigned,
   BeaconBlockOrContents,
+  BlindedBeaconBlock,
+  SignedBlockContents,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
@@ -96,10 +96,10 @@ const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
   | {data: BeaconBlock<ForkPreBlobs>; version: ForkPreBlobs}
-  | {data: BlockContents<ForkBlobs, SignedUnsigned>; version: ForkBlobs}
+  | {data: BlockContents | SignedBlockContents; version: ForkBlobs}
 );
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: BeaconBlock<ForkAll, "blinded">;
+  data: BlindedBeaconBlock;
   version: ForkExecution;
 };
 

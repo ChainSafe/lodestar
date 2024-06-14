@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
-import {ForkName, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, fromHex, toHex} from "@lodestar/utils";
 import {
   deneb,
@@ -9,6 +9,7 @@ import {
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {
   BlockSource,
@@ -474,7 +475,7 @@ export function getBeaconBlockApi({
 
 async function reconstructBuilderBlockOrContents(
   chain: ApiModules["chain"],
-  signedBlindedBlock: SignedBeaconBlock<ForkName, "blinded">
+  signedBlindedBlock: SignedBlindedBeaconBlock
 ): Promise<SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {

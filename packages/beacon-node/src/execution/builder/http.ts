@@ -5,9 +5,9 @@ import {
   BLSPubkey,
   deneb,
   Wei,
-  ExecutionPayload,
-  SignedBeaconBlock,
   SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  BlindedExecutionPayload,
 } from "@lodestar/types";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
@@ -111,7 +111,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     parentHash: Root,
     proposerPubkey: BLSPubkey
   ): Promise<{
-    header: ExecutionPayload<ForkExecution, "blinded">;
+    header: BlindedExecutionPayload;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }> {
@@ -126,9 +126,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     return {header, executionPayloadValue, blobKzgCommitments};
   }
 
-  async submitBlindedBlock(
-    signedBlindedBlock: SignedBeaconBlock<ForkExecution, "blinded">
-  ): Promise<SignedBeaconBlockOrContents> {
+  async submitBlindedBlock(signedBlindedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents> {
     const data = (await this.api.submitBlindedBlock({signedBlindedBlock}, {retries: 2})).value();
 
     const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);
