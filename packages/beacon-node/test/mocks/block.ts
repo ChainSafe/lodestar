@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {ssz, allForks} from "@lodestar/types";
 import {ForkInfo, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {mainnetChainConfig} from "@lodestar/config/presets";
+import {mainnetChainConfig} from "@lodestar/config/configs";
 
 const directory = "./__fixtures__/";
 

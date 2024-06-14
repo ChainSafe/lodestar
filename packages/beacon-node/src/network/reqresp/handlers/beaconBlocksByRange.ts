@@ -22,8 +22,8 @@ export async function* onBeaconBlocksByRange(
   // Finalized range of blocks
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
-    for await (const {key, value} of db.finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
-      const {name, seq} = chain.config.getForkInfo(db.finalized.decodeKey(key));
+    for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+      const {name, seq} = chain.config.getForkInfo(finalized.decodeKey(key));
 
       yield {
         data: await chain.blindedOrFullBlockToFullBytes(seq, value),

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {ForkInfo} from "@lodestar/config";
 import {allForks, capella} from "@lodestar/types";
 import {isForkExecution} from "@lodestar/params";
@@ -9,7 +9,7 @@ import {
   isBlindedBytes,
   serializeFullOrBlindedSignedBeaconBlock,
 } from "../../../src/util/fullOrBlindedBlock.js";
-import {chainConfig, mockBlocks} from "../../utils/mocks/block.js";
+import {chainConfig, mockBlocks} from "../../mocks/block.js";
 import {byteArrayEquals} from "../../../src/util/bytes.js";
 
 type FullOrBlind = "full" | "blinded";
@@ -28,7 +28,7 @@ const fullOrBlindedBlocks = Object.values(mockBlocks)
 describe("isBlindedBytes", () => {
   for (const [fullOrBlinded, {seq, name}, , block] of fullOrBlindedBlocks) {
     it(`should return ${fullOrBlinded === "blinded"} for ${fullOrBlinded} ${name} blocks`, () => {
-      expect(isBlindedBytes(seq, block)).to.equal(isForkExecution(name) && fullOrBlinded === "blinded");
+      expect(isBlindedBytes(seq, block)).toEqual(isForkExecution(name) && fullOrBlinded === "blinded");
     });
   }
 });
@@ -37,7 +37,7 @@ describe("serializeFullOrBlindedSignedBeaconBlock", () => {
   for (const [fullOrBlinded, {name}, block, expected] of fullOrBlindedBlocks) {
     it(`should serialize ${fullOrBlinded} ${name} block`, () => {
       const serialized = serializeFullOrBlindedSignedBeaconBlock(chainConfig, block);
-      expect(byteArrayEquals(serialized, expected)).to.be.true;
+      expect(byteArrayEquals(serialized, expected)).toBeTruthy();
     });
   }
 });
@@ -50,7 +50,7 @@ describe("deserializeFullOrBlindedSignedBeaconBlock", () => {
         isForkExecution(name) && fullOrBlinded === "blinded"
           ? chainConfig.getBlindedForkTypes(block.message.slot).SignedBeaconBlock
           : chainConfig.getForkTypes(block.message.slot).SignedBeaconBlock;
-      expect(type.equals(deserialized as any, block as any)).to.be.true;
+      expect(type.equals(deserialized as any, block as any)).toBeTruthy();
     });
   }
 });
@@ -69,7 +69,7 @@ describe("blindedOrFullBlockToBlinded", function () {
           chainConfig.getBlindedForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded!)
         : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, isExecution ? blinded! : full);
-      expect(isEqual).to.be.true;
+      expect(isEqual).toBeTruthy();
     });
     if (!blinded) continue;
     it(`should convert blinded ${name} to blinded block`, () => {
@@ -77,7 +77,7 @@ describe("blindedOrFullBlockToBlinded", function () {
       const isEqual = isForkExecution(name)
         ? chainConfig.getBlindedForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded)
         : chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded);
-      expect(isEqual).to.be.true;
+      expect(isEqual).toBeTruthy();
     });
   }
 });
@@ -94,12 +94,12 @@ describe("blindedOrFullBlockToFull", function () {
     };
     it(`should convert full ${name} to full block`, () => {
       const result = blindedOrFullBlockToFull(chainConfig, seq, full, transactionsAndWithdrawals);
-      expect(chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, full)).to.be.true;
+      expect(chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, full)).toBeTruthy();
     });
     if (!blinded) continue;
     it(`should convert blinded ${name} to full block`, () => {
       const result = blindedOrFullBlockToFull(chainConfig, seq, blinded, transactionsAndWithdrawals);
-      expect(chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, full)).to.be.true;
+      expect(chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, full)).toBeTruthy();
     });
   }
 });
