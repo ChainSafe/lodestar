@@ -54,12 +54,12 @@ describe("attestation SSZ serialized picking", () => {
           attestation.aggregationBits.toBoolArray()
         );
         expect(getCommitteeBitsFromAttestationSerialized(bytes)).toEqual(attestation.committeeBits);
-        expect(getSignatureFromAttestationSerialized(ForkName.electra, bytes)).toEqual(attestation.signature);
+        expect(getSignatureFromAttestationSerialized(bytes)).toEqual(attestation.signature);
       } else {
         expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, bytes)?.toBoolArray()).toEqual(
           attestation.aggregationBits.toBoolArray()
         );
-        expect(getSignatureFromAttestationSerialized(ForkName.phase0, bytes)).toEqual(attestation.signature);
+        expect(getSignatureFromAttestationSerialized(bytes)).toEqual(attestation.signature);
       }
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
@@ -99,8 +99,8 @@ describe("attestation SSZ serialized picking", () => {
   it("getSignatureFromAttestationSerialized - invalid data", () => {
     const invalidSignatureDataSizes = [0, 4, 100, 128, 227];
     for (const size of invalidSignatureDataSizes) {
-      expect(getSignatureFromAttestationSerialized(ForkName.phase0, Buffer.alloc(size))).toBeNull();
-      expect(getSignatureFromAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
+      expect(getSignatureFromAttestationSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getSignatureFromAttestationSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 });

@@ -457,7 +457,7 @@ async function validateGossipAttestationNoSignatureCheck(
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
-    : getSignatureFromAttestationSerialized(fork, attestationOrCache.serializedData);
+    : getSignatureFromAttestationSerialized(attestationOrCache.serializedData);
   if (signature === null) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
