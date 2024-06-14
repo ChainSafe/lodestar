@@ -122,7 +122,7 @@ describe("sync / unknown block sync", function () {
       await connected;
       loggerNodeA.info("Node A connected to Node B");
 
-      const headInput = getBlockInput.preDeneb(config, head, BlockSource.gossip, null);
+      const headInput = getBlockInput.preData(config, head, BlockSource.gossip, null);
 
       switch (event) {
         case NetworkEvent.unknownBlockParent:
