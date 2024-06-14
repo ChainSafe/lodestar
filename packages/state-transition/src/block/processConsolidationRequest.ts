@@ -61,6 +61,7 @@ export function processConsolidationRequest(
     return;
   }
 
+  // TODO Electra: See if we can get rid of big int
   const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(sourceValidator.effectiveBalance));
   sourceValidator.exitEpoch = exitEpoch;
   sourceValidator.withdrawableEpoch = exitEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
