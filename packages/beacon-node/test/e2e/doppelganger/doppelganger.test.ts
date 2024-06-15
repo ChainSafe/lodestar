@@ -1,8 +1,7 @@
 import {describe, afterEach, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api/beacon";
-import {BLSPubkey, Epoch, phase0, Slot} from "@lodestar/types";
-import {ssz} from "@lodestar/types";
+import {BLSPubkey, Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Validator} from "@lodestar/validator";

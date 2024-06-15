@@ -505,12 +505,12 @@ export function getValidatorApi({
         }
 
         return {
-          data: {block, ...contents},
+          data: {block, ...contents} as BlockContents,
           version,
           executionPayloadValue,
           consensusBlockValue,
           shouldOverrideBuilder,
-        } as ProduceBlockOrContentsRes;
+        };
       } else {
         return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
       }
@@ -754,7 +754,7 @@ export function getValidatorApi({
 
     async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
       const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
-      return {data: data, meta};
+      return {data, meta};
     },
 
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {

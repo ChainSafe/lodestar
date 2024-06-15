@@ -15,10 +15,12 @@ import {
   SSEPayloadAttributes,
 } from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getExecutionForkTypes, getLightClientForkTypes} from "../../utils/fork.js";
 import {VersionType} from "../../utils/metadata.js";
+
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 const stringType = new StringType();

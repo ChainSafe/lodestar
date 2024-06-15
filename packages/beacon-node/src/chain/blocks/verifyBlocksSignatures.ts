@@ -1,7 +1,6 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {SignedBeaconBlock} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
 import {Metrics} from "../../metrics/metrics.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
@@ -38,7 +37,7 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(preState0, block as SignedBeaconBlock<ForkName.altair>, {
+          getBlockSignatureSets(preState0, block, {
             skipProposerSignature: opts.validProposerSignature,
           })
         );

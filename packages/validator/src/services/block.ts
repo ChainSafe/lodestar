@@ -9,9 +9,9 @@ import {
   BeaconBlock,
   SignedBeaconBlockOrContents,
   BeaconBlockOrContents,
-  SignedBeaconBlock,
   isBlindedSignedBeaconBlock,
   BlindedBeaconBlock,
+  SignedBeaconBlock,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
@@ -164,11 +164,7 @@ export class BlockProposingService {
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
-      await this.publishBlockWrapper(
-        signedBlock as SignedBeaconBlock<ForkBlobs>,
-        blockContents.contents,
-        publishOpts
-      ).catch((e: Error) => {
+      await this.publishBlockWrapper(signedBlock, blockContents.contents, publishOpts).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
@@ -182,7 +178,7 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (
-    signedBlock: SignedBeaconBlockOrContents<ForkBlobs>,
+    signedBlock: SignedBeaconBlockOrContents,
     contents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
@@ -199,7 +195,7 @@ export class BlockProposingService {
       } else {
         (
           await this.api.beacon.publishBlockV2({
-            signedBlockOrContents: {...contents, signedBlock} as SignedBeaconBlockOrContents,
+            signedBlockOrContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkBlobs>},
             ...opts,
           })
         ).assertOk();
@@ -286,7 +282,7 @@ export class BlockProposingService {
 }
 
 function parseProduceBlockResponse(
-  response: {data: BeaconBlockOrContents} & {
+  response: {data: BeaconBlockOrContents | BlindedBeaconBlock} & {
     executionPayloadSource: ProducedBlockSource;
     executionPayloadBlinded: boolean;
     version: ForkName;

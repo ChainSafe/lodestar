@@ -115,7 +115,7 @@ export function getFullOrBlindedPayloadFromBody(
   } else if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
     return (body as bellatrix.BeaconBlockBody).executionPayload;
   } else {
-    throw Error("Ǹot beacon block or blinded beacon block");
+    throw Error("Not full or blinded beacon block");
   }
 }
 
