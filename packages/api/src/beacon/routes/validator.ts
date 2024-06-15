@@ -18,6 +18,7 @@ import {
   BeaconBlock,
   BeaconBlockOrContents,
   BlindedBeaconBlock,
+  BlockContents,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
@@ -370,7 +371,7 @@ export type Endpoints = {
         blinded_local?: boolean;
       };
     },
-    BeaconBlockOrContents,
+    BeaconBlock | BlindedBeaconBlock | BlockContents,
     ProduceBlockV3Meta
   >;
 
@@ -734,7 +735,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
               ? getBlindedForkTypes(version).BeaconBlock
               : isForkBlobs(version)
                 ? BlockContentsType
-                : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents>
+                : ssz[version].BeaconBlock) as Type<BeaconBlock | BlindedBeaconBlock | BlockContents>
         ),
         meta: {
           toJson: (meta) => ({

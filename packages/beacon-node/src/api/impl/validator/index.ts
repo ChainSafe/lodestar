@@ -38,9 +38,7 @@ import {
   Wei,
   BeaconBlock,
   BlockContents,
-  BeaconBlockOrContents,
   BlindedBeaconBlock,
-  SignedBlockContents,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
@@ -96,7 +94,7 @@ const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
   | {data: BeaconBlock<ForkPreBlobs>; version: ForkPreBlobs}
-  | {data: BlockContents | SignedBlockContents; version: ForkBlobs}
+  | {data: BlockContents; version: ForkBlobs}
 );
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;
@@ -756,7 +754,7 @@ export function getValidatorApi({
 
     async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
       const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
-      return {data: data as BeaconBlockOrContents, meta};
+      return {data: data, meta};
     },
 
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
@@ -771,25 +769,25 @@ export function getValidatorApi({
 
       if (opts.blindedLocal === true && ForkSeq[meta.version] >= ForkSeq.bellatrix) {
         if (meta.executionPayloadBlinded) {
-          return {data: data as BeaconBlockOrContents, meta};
+          return {data, meta};
         } else {
           if (isBlockContents(data)) {
             const {block} = data;
             const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
             return {
-              data: blindedBlock as BeaconBlockOrContents,
+              data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
             };
           } else {
             const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
             return {
-              data: blindedBlock as BeaconBlockOrContents,
+              data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
             };
           }
         }
       } else {
-        return {data: data as BeaconBlockOrContents, meta};
+        return {data, meta};
       }
     },
 
