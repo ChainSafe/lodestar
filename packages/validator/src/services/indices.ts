@@ -83,12 +83,12 @@ export class IndicesService {
       return this.pollValidatorIndicesPromise;
     }
 
-    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex);
     // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.pollValidatorIndicesPromise.finally(() => {
-      this.pollValidatorIndicesPromise = null;
-    });
+    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex)
+      .catch((_e) => [])
+      .finally(() => {
+        this.pollValidatorIndicesPromise = null;
+      });
     return this.pollValidatorIndicesPromise;
   }
 
