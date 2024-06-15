@@ -10,6 +10,7 @@ import {
   isExecutionPayload,
   BlindedExecutionPayload,
   BlindedBeaconBlockBody,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {ForkExecution, ForkName, ForkSeq} from "@lodestar/params";
 
@@ -26,7 +27,7 @@ import {
  * Execution enabled = merge is done.
  * When (A) state has execution data OR (B) block has execution data
  */
-export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBlock): boolean {
+export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBlock | BlindedBeaconBlock): boolean {
   if (isMergeTransitionComplete(state)) {
     return true;
   }
@@ -114,7 +115,7 @@ export function getFullOrBlindedPayloadFromBody(
   } else if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
     return (body as bellatrix.BeaconBlockBody).executionPayload;
   } else {
-    throw Error("Ǹot FullOrBlindedBeaconBlock");
+    throw Error("Ǹot beacon block or blinded beacon block");
   }
 }
 
