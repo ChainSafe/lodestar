@@ -18,6 +18,7 @@ import {HttpStatusCode} from "../../utils/httpStatusCode.js";
 import {WireFormat} from "../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+
 export const NetworkIdentityType = new ContainerType(
   {
     /** Cryptographic hash of a peer’s public key. [Read more](https://docs.libp2p.io/concepts/peer-id/) */
