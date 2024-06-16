@@ -7,11 +7,11 @@ import {
   deneb,
   isBlockContents,
   BeaconBlock,
-  SignedBeaconBlockOrContents,
   BeaconBlockOrContents,
   isBlindedSignedBeaconBlock,
   BlindedBeaconBlock,
   SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
@@ -178,7 +178,7 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (
-    signedBlock: SignedBeaconBlockOrContents,
+    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     contents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
