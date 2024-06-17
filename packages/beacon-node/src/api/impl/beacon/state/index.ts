@@ -11,13 +11,7 @@ import {
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
-import {
-  filterStateValidatorsByStatus,
-  getStateValidatorIndex,
-  getValidatorStatus,
-  resolveStateId,
-  toValidatorResponse,
-} from "./utils.js";
+import {getStateValidatorIndex, resolveStateId, toValidatorResponse} from "./utils.js";
 
 export function getBeaconStateApi({
   chain,
@@ -75,55 +69,8 @@ export function getBeaconStateApi({
       };
     },
 
-    async getStateValidators({stateId, validatorIds = [], statuses = []}) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
-      const currentEpoch = getCurrentEpoch(state);
-      const {validators, balances} = state; // Get the validators sub tree once for all the loop
-      const {pubkey2index} = chain.getHeadState().epochCtx;
-
-      const validatorResponses: routes.beacon.ValidatorResponse[] = [];
-      if (validatorIds.length) {
-        for (const id of validatorIds) {
-          const resp = getStateValidatorIndex(id, state, pubkey2index);
-          if (resp.valid) {
-            const validatorIndex = resp.validatorIndex;
-            const validator = validators.getReadonly(validatorIndex);
-            if (statuses.length && !statuses.includes(getValidatorStatus(validator, currentEpoch))) {
-              continue;
-            }
-            const validatorResponse = toValidatorResponse(
-              validatorIndex,
-              validator,
-              balances.get(validatorIndex),
-              currentEpoch
-            );
-            validatorResponses.push(validatorResponse);
-          }
-        }
-        return {
-          data: validatorResponses,
-          meta: {executionOptimistic, finalized},
-        };
-      } else if (statuses.length) {
-        const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
-        return {
-          data: validatorsByStatus,
-          meta: {executionOptimistic, finalized},
-        };
-      }
-
-      // TODO: This loops over the entire state, it's a DOS vector
-      const validatorsArr = state.validators.getAllReadonlyValues();
-      const balancesArr = state.balances.getAll();
-      const resp: routes.beacon.ValidatorResponse[] = [];
-      for (let i = 0; i < validatorsArr.length; i++) {
-        resp.push(toValidatorResponse(i, validatorsArr[i], balancesArr[i], currentEpoch));
-      }
-
-      return {
-        data: resp,
-        meta: {executionOptimistic, finalized},
-      };
+    async getStateValidators() {
+      throw Error();
     },
 
     async postStateValidators(args, context) {
