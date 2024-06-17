@@ -80,10 +80,12 @@ export class IndicesService {
     // AttestationDutiesService, SyncCommitteeDutiesService and DoppelgangerService will call this function at the same time, so this will
     // cache the promise and return it to the second caller, preventing calling the API twice for the same data.
     if (this.pollValidatorIndicesPromise) {
+      console.log("promise is null");
       return this.pollValidatorIndicesPromise;
     }
 
     this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex).finally(() => {
+      console.log("finally called");
       // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
       this.pollValidatorIndicesPromise = null;
     });

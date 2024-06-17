@@ -151,12 +151,12 @@ export class SyncCommitteeDutiesService {
       }),
 
       // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
-      // this.validatorStore
-      //   .pollValidatorIndices()
-      //   .then((newIndices) => this.pollSyncCommittees(currentEpoch, newIndices))
-      //   .catch((e: Error) => {
-      //     this.logger.error("Error on poll indices and SyncDuties", {epoch: currentEpoch}, e);
-      //   }),
+      this.validatorStore
+        .pollValidatorIndices()
+        .then((newIndices) => this.pollSyncCommittees(currentEpoch, newIndices))
+        .catch((e: Error) => {
+          this.logger.error("Error on poll indices and SyncDuties", {epoch: currentEpoch}, e);
+        }),
     ]);
 
     // After both, prune
