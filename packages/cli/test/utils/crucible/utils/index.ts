@@ -181,7 +181,6 @@ export const registerProcessHandler = (env: Simulation): void => {
   });
 
   process.on("uncaughtException", async (err) => {
-    console.trace("uncaughtException");
     console.error("Uncaught exception:", err);
     await env.stop(1, "Uncaught exception");
   });
