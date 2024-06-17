@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   BeaconStateAllForks,
@@ -55,7 +55,7 @@ export function generateState(
     opts.validators ??
     (withPubkey
       ? Array.from({length: numValidators}, (_, i) => {
-          const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+          const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
           return generateValidator({
             ...validatorOpts,
             pubkey: sk.toPublicKey().toBytes(),

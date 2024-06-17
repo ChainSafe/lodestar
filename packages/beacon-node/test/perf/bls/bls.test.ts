@@ -1,7 +1,14 @@
 import crypto from "node:crypto";
 import {itBench} from "@dapplion/benchmark";
-import bls from "@chainsafe/bls";
-import {CoordType, type PublicKey, type SecretKey} from "@chainsafe/bls/types";
+import {
+  PublicKey,
+  SecretKey,
+  Signature,
+  aggregatePublicKeys,
+  aggregateSignatures,
+  verify,
+  verifyMultipleAggregateSignatures,
+} from "@chainsafe/blst";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", function () {
@@ -20,7 +27,7 @@ describe("BLS ops", function () {
       const bytes = new Uint8Array(32);
       const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       dataView.setUint32(0, i + 1, true);
-      const secretKey = bls.SecretKey.fromBytes(bytes);
+      const secretKey = SecretKey.fromBytes(bytes);
       const publicKey = secretKey.toPublicKey();
       keypair = {secretKey, publicKey};
       keypairs.set(i, keypair);
@@ -53,8 +60,8 @@ describe("BLS ops", function () {
   }
 
   // Note: getSet() caches the value, does not re-compute every time
-  itBench({id: `BLS verify - ${bls.implementation}`, beforeEach: () => getSet(0)}, (set) => {
-    const isValid = bls.Signature.fromBytes(set.signature).verify(set.publicKey, set.message);
+  itBench({id: "BLS verify - blst", beforeEach: () => getSet(0)}, (set) => {
+    const isValid = verify(set.message, set.publicKey, Signature.fromBytes(set.signature));
     if (!isValid) throw Error("Invalid");
   });
 
@@ -62,14 +69,14 @@ describe("BLS ops", function () {
   // We may want to bundle up to 32 sets in a single batch.
   for (const count of [3, 8, 32, 64, 128]) {
     itBench({
-      id: `BLS verifyMultipleSignatures ${count} - ${bls.implementation}`,
+      id: `BLS verifyMultipleSignatures ${count} - blst`,
       beforeEach: () => linspace(0, count - 1).map((i) => getSet(i)),
       fn: (sets) => {
-        const isValid = bls.Signature.verifyMultipleSignatures(
+        const isValid = verifyMultipleAggregateSignatures(
           sets.map((set) => ({
-            publicKey: set.publicKey,
-            message: set.message,
-            signature: bls.Signature.fromBytes(set.signature),
+            pk: set.publicKey,
+            msg: set.message,
+            sig: Signature.fromBytes(set.signature),
           }))
         );
         if (!isValid) throw Error("Invalid");
@@ -86,7 +93,7 @@ describe("BLS ops", function () {
       fn: () => {
         for (const signature of signatures) {
           // true = validate signature
-          bls.Signature.fromBytes(signature, CoordType.affine, true);
+          Signature.fromBytes(signature, true);
         }
       },
     });
@@ -97,15 +104,13 @@ describe("BLS ops", function () {
   // TODO: figure out why it does not work with 256 or more
   for (const count of [3, 8, 32, 64, 128]) {
     itBench({
-      id: `BLS verifyMultipleSignatures - same message - ${count} - ${bls.implementation}`,
+      id: `BLS verifyMultipleSignatures - same message - ${count} - blst`,
       beforeEach: () => linspace(0, count - 1).map((i) => getSetSameMessage(i)),
       fn: (sets) => {
         // aggregate and verify aggregated signatures
-        const aggregatedPubkey = bls.PublicKey.aggregate(sets.map((set) => set.publicKey));
-        const aggregatedSignature = bls.Signature.aggregate(
-          sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, false))
-        );
-        const isValid = aggregatedSignature.verify(aggregatedPubkey, sets[0].message);
+        const aggregatedPubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
+        const aggregatedSignature = aggregateSignatures(sets.map((set) => Signature.fromBytes(set.signature)));
+        const isValid = verify(sets[0].message, aggregatedPubkey, aggregatedSignature);
         if (!isValid) throw Error("Invalid");
       },
     });
@@ -114,10 +119,10 @@ describe("BLS ops", function () {
   // Attestations in Mainnet contain 128 max on average
   for (const count of [32, 128]) {
     itBench({
-      id: `BLS aggregatePubkeys ${count} - ${bls.implementation}`,
+      id: `BLS aggregatePubkeys ${count} - blst`,
       beforeEach: () => linspace(0, count - 1).map((i) => getKeypair(i).publicKey),
       fn: (pubkeys) => {
-        bls.PublicKey.aggregate(pubkeys);
+        aggregatePublicKeys(pubkeys);
       },
     });
   }

@@ -1,5 +1,5 @@
 import inquirer from "inquirer";
-import bls from "@chainsafe/bls";
+import {Signature} from "@chainsafe/blst";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {phase0, ssz, ValidatorIndex, Epoch} from "@lodestar/types";
-import {CliCommand, toHex} from "@lodestar/utils";
+import {CliCommand, fromHex, toHex} from "@lodestar/utils";
 import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
 import {ApiClient, getClient} from "@lodestar/api";
 import {ensure0xPrefix, YargsError, wrapError} from "../../util/index.js";
@@ -161,7 +161,7 @@ async function processVoluntaryExit(
         data: voluntaryExit,
         type: SignableMessageType.VOLUNTARY_EXIT,
       });
-      signature = bls.Signature.fromHex(signatureHex);
+      signature = Signature.fromBytes(fromHex(signatureHex));
       break;
     }
     default:

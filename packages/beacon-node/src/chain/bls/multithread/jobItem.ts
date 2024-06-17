@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType, PointFormat, PublicKey} from "@chainsafe/bls/types";
+import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
@@ -49,14 +48,14 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: Metrics | null): BlsWorkReq {
+export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsWorkReq {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
         opts: job.opts,
         sets: job.sets.map((set) => ({
           // this can throw, handled in the consumer code
-          publicKey: getAggregatedPubkey(set, metrics).toBytes(format),
+          publicKey: getAggregatedPubkey(set, metrics).toBytes(),
           signature: set.signature,
           message: set.signingRoot,
         })),
@@ -70,15 +69,15 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
+      const signatures = job.sets.map((set) => Signature.fromBytes(set.signature, true));
       timer?.();
 
       return {
         opts: job.opts,
         sets: [
           {
-            publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)).toBytes(format),
-            signature: bls.Signature.aggregate(signatures).toBytes(format),
+            publicKey: aggregatePublicKeys(job.sets.map((set) => set.publicKey)).toBytes(),
+            signature: aggregateSignatures(signatures).toBytes(),
             message: job.message,
           },
         ],
