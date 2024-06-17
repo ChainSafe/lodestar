@@ -30,9 +30,9 @@ export function pollPrepareBeaconProposer(
 
     // prepareBeaconProposer is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.prepareBeaconProposer once
-    await validatorStore.pollValidatorIndices().catch((e: Error) => {
-      logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
-    });
+    // await validatorStore.pollValidatorIndices().catch((e: Error) => {
+    //   logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
+    // });
 
     const indicesChunks = batchItems(validatorStore.getAllLocalIndices(), {batchSize: REGISTRATION_CHUNK_SIZE});
 
@@ -77,9 +77,9 @@ export function pollBuilderValidatorRegistration(
 
     // registerValidator is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.registerValidator once
-    await validatorStore.pollValidatorIndices().catch((e: Error) => {
-      logger.error("Error on pollValidatorIndices for registerValidator", {epoch}, e);
-    });
+    // await validatorStore.pollValidatorIndices().catch((e: Error) => {
+    //   logger.error("Error on pollValidatorIndices for registerValidator", {epoch}, e);
+    // });
     const pubkeyHexes = validatorStore
       .getAllLocalIndices()
       .map((index) => validatorStore.getPubkeyOfIndex(index))

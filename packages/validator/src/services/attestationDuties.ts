@@ -148,12 +148,12 @@ export class AttestationDutiesService {
       }),
 
       // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
-      this.validatorStore
-        .pollValidatorIndices()
-        .then((newIndices) => this.pollBeaconAttesters(epoch, newIndices))
-        .catch((e: Error) => {
-          this.logger.error("Error on poll indices and attesters", {epoch}, e);
-        }),
+      // this.validatorStore
+      //   .pollValidatorIndices()
+      //   .then((newIndices) => this.pollBeaconAttesters(epoch, newIndices))
+      //   .catch((e: Error) => {
+      //     this.logger.error("Error on poll indices and attesters", {epoch}, e);
+      //   }),
     ]);
 
     // After both, prune
