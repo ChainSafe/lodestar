@@ -30,9 +30,9 @@ export function pollPrepareBeaconProposer(
 
     // prepareBeaconProposer is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.prepareBeaconProposer once
-    // await validatorStore.pollValidatorIndices().catch((e: Error) => {
-    //   logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
-    // });
+    await validatorStore.pollValidatorIndices().catch((e: Error) => {
+      logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
+    });
 
     const indicesChunks = batchItems(validatorStore.getAllLocalIndices(), {batchSize: REGISTRATION_CHUNK_SIZE});
 
