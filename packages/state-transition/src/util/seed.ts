@@ -78,7 +78,9 @@ export function computeProposerIndex(
       return candidateIndex;
     }
     i += 1;
-    if (i === indices.length) {
+    // TODO Electra: Spec does not have this condition to end infinite loop. Spec test won't pass if we
+    // only loop the validator indices once
+    if (i === indices.length * 2) {
       return -1;
     }
   }
