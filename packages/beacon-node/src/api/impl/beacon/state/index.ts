@@ -70,7 +70,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidators() {
-      throw Error();
+      throw Error("Internal error");
     },
 
     async postStateValidators(args, context) {
