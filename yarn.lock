@@ -308,8 +308,8 @@
 
 "@chainsafe/blst@https://github.com/chainsafe/blst-ts/raw/cayman/napi-rs-tarball/next/chainsafe-blst-v0.0.0.tgz":
   version "0.0.0"
-  uid "3aa6b47e083234520767968b1dc7f28453b70e04"
-  resolved "https://github.com/chainsafe/blst-ts/raw/cayman/napi-rs-tarball/next/chainsafe-blst-v0.0.0.tgz#3aa6b47e083234520767968b1dc7f28453b70e04"
+  uid "4d6fce598429e888ad4fd49d7f4b7234537be5b6"
+  resolved "https://github.com/chainsafe/blst-ts/raw/cayman/napi-rs-tarball/next/chainsafe-blst-v0.0.0.tgz#4d6fce598429e888ad4fd49d7f4b7234537be5b6"
 
 "@chainsafe/discv5@^9.0.0":
   version "9.0.0"
