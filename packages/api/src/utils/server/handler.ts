@@ -11,6 +11,7 @@ import {
   SszRequestData,
   SszRequestMethods,
   isRequestWithoutBody,
+  RequestWithoutBodyCodec,
 } from "../types.js";
 import {WireFormat, fromWireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError} from "./error.js";
@@ -57,41 +58,44 @@ export function createFastifyHandler<E extends Endpoint>(
     }
     const responseWireFormat = responseMediaType !== null ? getWireFormat(responseMediaType) : null;
 
-    let args: E["args"], requestWireFormat: WireFormat | null;
-    try {
-      if (isRequestWithoutBody(definition)) {
-        requestWireFormat = null;
-        args = definition.req.parseReq(req as RequestData);
+    let requestWireFormat: WireFormat | null;
+    if (isRequestWithoutBody(definition)) {
+      requestWireFormat = null;
+    } else {
+      const contentType = req.headers[HttpHeader.ContentType];
+      if (contentType === undefined && req.body === undefined) {
+        // Default to json parser if body is omitted. This is not possible for most
+        // routes as request will fail schema validation before this handler is called
+        requestWireFormat = WireFormat.json;
       } else {
-        const contentType = req.headers[HttpHeader.ContentType];
-        if (contentType === undefined && req.body === undefined) {
-          // Default to json parser if body is omitted. This is not possible for most
-          // routes as request will fail schema validation before this handler is called
-          requestWireFormat = WireFormat.json;
-        } else {
-          if (contentType === undefined) {
-            throw new ApiError(400, "Content-Type header is required");
-          }
-          const requestMediaType = parseContentTypeHeader(contentType);
-          if (requestMediaType === null) {
-            throw new ApiError(415, `Unsupported media type: ${contentType.split(";", 1)[0]}`);
-          }
-          requestWireFormat = getWireFormat(requestMediaType);
+        if (contentType === undefined) {
+          throw new ApiError(400, "Content-Type header is required");
         }
+        const requestMediaType = parseContentTypeHeader(contentType);
+        if (requestMediaType === null) {
+          throw new ApiError(415, `Unsupported media type: ${contentType.split(";", 1)[0]}`);
+        }
+        requestWireFormat = getWireFormat(requestMediaType);
+      }
 
-        const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
-        if (onlySupport !== undefined && onlySupport !== requestWireFormat) {
-          throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
-        }
+      const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
+      if (onlySupport !== undefined && onlySupport !== requestWireFormat) {
+        throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
+      }
+    }
 
-        switch (requestWireFormat) {
-          case WireFormat.json:
-            args = (definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonRequestData);
-            break;
-          case WireFormat.ssz:
-            args = (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszRequestData<E["request"]>);
-            break;
-        }
+    let args: E["args"];
+    try {
+      switch (requestWireFormat) {
+        case WireFormat.json:
+          args = (definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonRequestData);
+          break;
+        case WireFormat.ssz:
+          args = (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszRequestData<E["request"]>);
+          break;
+        case null:
+          args = (definition.req as RequestWithoutBodyCodec<E>).parseReq(req as RequestData);
+          break;
       }
     } catch (e) {
       if (e instanceof ApiError) throw e;
