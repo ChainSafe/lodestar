@@ -96,6 +96,10 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processWithdrawalRequest(ForkSeq.electra, state as CachedBeaconStateElectra, testCase.withdrawal_request);
   },
 
+  deposit_request: (state, testCase: {deposit_request: electra.DepositRequest}) => {
+    blockFns.processDepositRequest(ForkSeq.electra, state as CachedBeaconStateElectra, testCase.deposit_request);
+  },
+
   consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
     blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
   },
@@ -151,6 +155,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         address_change: ssz.capella.SignedBLSToExecutionChange,
         // Electra
         withdrawal_request: ssz.electra.WithdrawalRequest,
+        deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
       },
       shouldError: (testCase) => testCase.post === undefined,
