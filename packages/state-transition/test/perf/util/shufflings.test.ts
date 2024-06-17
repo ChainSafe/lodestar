@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 import {Epoch} from "@lodestar/types";
-import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {DOMAIN_BEACON_PROPOSER, ForkSeq} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
@@ -28,7 +28,13 @@ describe("epoch shufflings", () => {
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
       const epochSeed = getSeed(state, state.epochCtx.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-      computeProposers(epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
+      const fork = state.config.getForkSeq(state.slot);
+      computeProposers(
+        epochSeed,
+        state.epochCtx.nextShuffling,
+        state.epochCtx.effectiveBalanceIncrements,
+        fork >= ForkSeq.electra
+      );
     },
   });
 
@@ -42,7 +48,9 @@ describe("epoch shufflings", () => {
   itBench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
+      const fork = state.config.getForkSeq(state.slot);
       getNextSyncCommittee(
+        fork,
         state,
         state.epochCtx.nextShuffling.activeIndices,
         state.epochCtx.effectiveBalanceIncrements
