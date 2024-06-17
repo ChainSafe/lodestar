@@ -193,7 +193,10 @@ export function applyDeposits(
     }
 
     const balance = balancesArr[i];
-    const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), getValidatorMaxEffectiveBalance(validator.withdrawalCredentials));
+    const effectiveBalance = Math.min(
+      balance - (balance % EFFECTIVE_BALANCE_INCREMENT),
+      getValidatorMaxEffectiveBalance(validator.withdrawalCredentials)
+    );
 
     validator.effectiveBalance = effectiveBalance;
     epochCtx.effectiveBalanceIncrementsSet(i, effectiveBalance);

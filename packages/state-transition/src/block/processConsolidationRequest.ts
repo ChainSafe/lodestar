@@ -34,7 +34,7 @@ export function processConsolidationRequest(
     return;
   }
 
-  const sourceValidator = state.validators.getReadonly(sourceIndex);
+  const sourceValidator = state.validators.get(sourceIndex);
   const targetValidator = state.validators.getReadonly(targetIndex);
   const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   const currentEpoch = state.epochCtx.epoch;

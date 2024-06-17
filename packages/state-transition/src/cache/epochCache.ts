@@ -394,7 +394,12 @@ export class EpochCache {
     // Allow to create CachedBeaconState for empty states, or no active validators
     const proposers =
       currentShuffling.activeIndices.length > 0
-        ? computeProposers(currentProposerSeed, currentShuffling, effectiveBalanceIncrements, currentEpoch >= config.ELECTRA_FORK_EPOCH)
+        ? computeProposers(
+            currentProposerSeed,
+            currentShuffling,
+            effectiveBalanceIncrements,
+            currentEpoch >= config.ELECTRA_FORK_EPOCH
+          )
         : [];
 
     const proposersNextEpoch: ProposersDeferred = {
@@ -571,7 +576,12 @@ export class EpochCache {
     this.proposersPrevEpoch = this.proposers;
 
     const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-    this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements, currEpoch >= this.config.ELECTRA_FORK_EPOCH);
+    this.proposers = computeProposers(
+      currentProposerSeed,
+      this.currentShuffling,
+      this.effectiveBalanceIncrements,
+      currEpoch >= this.config.ELECTRA_FORK_EPOCH
+    );
 
     // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
     this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)};
@@ -771,7 +781,7 @@ export class EpochCache {
         this.proposersNextEpoch.seed,
         this.nextShuffling,
         this.effectiveBalanceIncrements,
-        this.epoch + 1 >= this.config.ELECTRA_FORK_EPOCH,
+        this.epoch + 1 >= this.config.ELECTRA_FORK_EPOCH
       );
       this.proposersNextEpoch = {computed: true, indexes};
     }

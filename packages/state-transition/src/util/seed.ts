@@ -18,6 +18,9 @@ import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
 
+// Max number of iterations over validator set when computing proposer index
+const MAX_ITERATION_OVER_VALIDATORS = 10;
+
 /**
  * Compute proposer indices for an epoch
  */
@@ -25,7 +28,7 @@ export function computeProposers(
   epochSeed: Uint8Array,
   shuffling: {epoch: Epoch; activeIndices: ArrayLike<ValidatorIndex>},
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
-  isAfterElectra: boolean,
+  isAfterElectra: boolean
 ): number[] {
   const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
   const proposers = [];
@@ -35,7 +38,7 @@ export function computeProposers(
         effectiveBalanceIncrements,
         shuffling.activeIndices,
         digest(Buffer.concat([epochSeed, intToBytes(slot, 8)])),
-        isAfterElectra,
+        isAfterElectra
       )
     );
   }
@@ -51,7 +54,7 @@ export function computeProposerIndex(
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ArrayLike<ValidatorIndex>,
   seed: Uint8Array,
-  isAfterElectra: boolean,
+  isAfterElectra: boolean
 ): ValidatorIndex {
   if (indices.length === 0) {
     throw Error("Validator indices must not be empty");
@@ -59,7 +62,9 @@ export function computeProposerIndex(
 
   // TODO: Inline outside this function
   const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-  const MAX_EFFECTIVE_BALANCE_INCREMENT = isAfterElectra ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+  const MAX_EFFECTIVE_BALANCE_INCREMENT = isAfterElectra
+    ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
+    : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
@@ -78,9 +83,9 @@ export function computeProposerIndex(
       return candidateIndex;
     }
     i += 1;
-    // TODO Electra: Spec does not have this condition to end infinite loop. Spec test won't pass if we
-    // only loop the validator indices once
-    if (i === indices.length * 2) {
+    // Spec does not have this condition to end infinite loop. Spec test won't pass if we
+    // only loop the validator indices once. Electra spec test requires MAX_ITERATION_OVER_VALIDATORS >= 6
+    if (i === indices.length * MAX_ITERATION_OVER_VALIDATORS) {
       return -1;
     }
   }
@@ -104,7 +109,10 @@ export function getNextSyncCommitteeIndices(
 ): ValidatorIndex[] {
   // TODO: Bechmark if it's necessary to inline outside of this function
   const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-  const MAX_EFFECTIVE_BALANCE_INCREMENT = fork >= ForkSeq.electra ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+  const MAX_EFFECTIVE_BALANCE_INCREMENT =
+    fork >= ForkSeq.electra
+      ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
+      : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
   const epoch = computeEpochAtSlot(state.slot) + 1;
 
