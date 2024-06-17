@@ -23,11 +23,6 @@ import {BeaconHealth, Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
-process.on("uncaughtException", async (err) => {
-  console.trace("uncaughtException");
-  console.log(err);
-});
-
 export type ValidatorModules = {
   opts: ValidatorOptions;
   genesis: Genesis;
