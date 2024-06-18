@@ -57,7 +57,7 @@ import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
 import {computeAnchorCheckpoint} from "./initState.js";
-import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool, BlsAsyncBlstVerifier} from "./bls/index.js";
+import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
   SeenAttesters,
   SeenAggregators,
@@ -209,12 +209,10 @@ export class BeaconChain implements IBeaconChain {
     this.executionBuilder = executionBuilder;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    // hard-code async blst verifier
-    const bls =
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      new BlsAsyncBlstVerifier({metrics}) || opts.blsVerifyAllMainThread
-        ? new BlsSingleThreadVerifier({metrics})
-        : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
+    // by default, verify signatures on both main threads and worker threads
+    const bls = opts.blsVerifyAllMainThread
+      ? new BlsSingleThreadVerifier({metrics})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
