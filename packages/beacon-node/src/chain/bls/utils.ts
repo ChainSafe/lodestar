@@ -1,4 +1,4 @@
-import {PublicKey, aggregatePublicKeys} from "@chainsafe/blst";
+import {PublicKey, aggregatePublicKeys, aggregatePublicKeysAsync} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 
@@ -10,6 +10,26 @@ export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metric
     case SignatureSetType.aggregate: {
       const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
       const pubkeys = aggregatePublicKeys(signatureSet.pubkeys);
+      timer?.();
+      return pubkeys;
+    }
+
+    default:
+      throw Error("Unknown signature set type");
+  }
+}
+
+export async function getAggregatedPubkeyAsync(
+  signatureSet: ISignatureSet,
+  metrics: Metrics | null = null
+): Promise<PublicKey> {
+  switch (signatureSet.type) {
+    case SignatureSetType.single:
+      return signatureSet.pubkey;
+
+    case SignatureSetType.aggregate: {
+      const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
+      const pubkeys = await aggregatePublicKeysAsync(signatureSet.pubkeys);
       timer?.();
       return pubkeys;
     }
