@@ -1,7 +1,8 @@
 import {parse as parseQueryString} from "qs";
-import {FastifyInstance, FastifyRequest, fastify} from "fastify";
+import {FastifyInstance, FastifyRequest, fastify, errorCodes} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
+import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
@@ -27,6 +28,11 @@ export type RestApiServerMetrics = SocketMetrics & {
   responseTime: Histogram<{operationId: string}>;
   errors: Gauge<{operationId: string}>;
 };
+
+/**
+ * Error code used by Fastify if media type is not supported (415)
+ */
+const INVALID_MEDIA_TYPE_CODE = errorCodes.FST_ERR_CTP_INVALID_MEDIA_TYPE().code;
 
 /**
  * REST API powered by `fastify` server.
@@ -58,6 +64,8 @@ export class RestApiServer {
       bodyLimit: opts.bodyLimit,
       http: {maxHeaderSize: opts.headerLimit},
     });
+
+    addSszContentTypeParser(server);
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
@@ -107,7 +115,7 @@ export class RestApiServer {
 
       const operationId = getOperationId(req);
 
-      if (err instanceof ApiError) {
+      if (err instanceof ApiError || err.code === INVALID_MEDIA_TYPE_CODE) {
         this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
       } else {
         this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);

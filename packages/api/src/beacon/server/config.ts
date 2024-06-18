@@ -1,9 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/config.js";
-import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
-import {ServerApi} from "../../interfaces.js";
+import {ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
+import {Endpoints, getDefinitions} from "../routes/config.js";
 
-export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
-  // All routes return JSON, use a server auto-generator
-  return getGenericJsonServer<ServerApi<Api>, ReqTypes>({routesData, getReturnTypes, getReqSerializers}, config, api);
+export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
+  return createFastifyRoutes(getDefinitions(config), methods);
 }

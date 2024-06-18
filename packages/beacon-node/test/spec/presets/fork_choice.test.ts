@@ -7,7 +7,7 @@ import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
 import {bnToNum, fromHex} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq, isForkBlobs, ForkName} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
@@ -97,6 +97,8 @@ const forkChoiceTest =
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
             assertCorrectProgressiveBalances,
+            proposerBoost: true,
+            proposerBoostReorg: true,
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
@@ -210,17 +212,14 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.postDeneb(
-                    config,
-                    signedBlock,
-                    BlockSource.gossip,
-                    blobSidecars,
-                    BlobsSource.gossip,
-                    null,
-                    [null]
-                  );
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, null, {
+                    fork: ForkName.deneb,
+                    blobs: blobSidecars,
+                    blobsBytes: [null],
+                    blobsSource: BlobsSource.gossip,
+                  });
                 } else {
-                  blockImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null);
+                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip, null);
                 }
 
                 await chain.processBlock(blockImport, {
@@ -270,7 +269,7 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = chain.forkChoice.updateHead();
+              const head = (chain.forkChoice as ForkChoice).updateHead();
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {

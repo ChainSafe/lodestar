@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorIndex} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -48,7 +48,7 @@ export class IndicesService {
 
   constructor(
     private readonly logger: Logger,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly metrics: Metrics | null
   ) {
     if (metrics) {
@@ -126,32 +126,31 @@ export class IndicesService {
   }
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const res = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
-    ApiError.assert(res, "Can not fetch state validators from beacon node");
+    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: pubkeysHex})).value();
 
     const newIndices = [];
 
     const allValidatorStatuses = new MapDef<SimpleValidatorStatus, number>(() => 0);
 
-    for (const validatorState of res.response.data) {
+    for (const validator of validators) {
       // Group all validators by status
-      const status = statusToSimpleStatusMapping(validatorState.status);
+      const status = statusToSimpleStatusMapping(validator.status);
       allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
 
-      const pubkeyHex = toHexString(validatorState.validator.pubkey);
+      const pubkeyHex = toHexString(validator.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.info("Validator seen on beacon chain", {
-          validatorIndex: validatorState.index,
+          validatorIndex: validator.index,
           pubKey: pubkeyHex,
         });
-        this.pubkey2index.set(pubkeyHex, validatorState.index);
-        this.index2pubkey.set(validatorState.index, pubkeyHex);
-        newIndices.push(validatorState.index);
+        this.pubkey2index.set(pubkeyHex, validator.index);
+        this.index2pubkey.set(validator.index, pubkeyHex);
+        newIndices.push(validator.index);
       }
     }
 
     // The number of validators that are not in the beacon chain
-    const pendingCount = pubkeysHex.length - res.response.data.length;
+    const pendingCount = pubkeysHex.length - validators.length;
 
     allValidatorStatuses.set("pending", allValidatorStatuses.getOrDefault("pending") + pendingCount);
 

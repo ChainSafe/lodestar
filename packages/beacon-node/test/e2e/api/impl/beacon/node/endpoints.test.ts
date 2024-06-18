@@ -1,8 +1,7 @@
 import {describe, beforeAll, afterAll, it, expect, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {Api, getClient} from "@lodestar/api/beacon";
-import {ApiError} from "@lodestar/api";
+import {ApiClient, getClient} from "@lodestar/api/beacon";
 import {sleep} from "@lodestar/utils";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
@@ -17,7 +16,7 @@ describe("beacon node api", function () {
   const validatorCount = 8;
 
   let bn: BeaconNode;
-  let client: Api;
+  let client: ApiClient;
 
   beforeAll(async () => {
     bn = await getDevBeaconNode({
@@ -46,9 +45,8 @@ describe("beacon node api", function () {
   describe("getSyncingStatus", () => {
     it("should return valid syncing status", async () => {
       const res = await client.node.getSyncingStatus();
-      ApiError.assert(res);
 
-      expect(res.response.data).toEqual({
+      expect(res.value()).toEqual({
         headSlot: "0",
         syncDistance: "0",
         isSyncing: false,
@@ -59,9 +57,8 @@ describe("beacon node api", function () {
 
     it("should return 'el_offline' as 'true' for default dev node", async () => {
       const res = await client.node.getSyncingStatus();
-      ApiError.assert(res);
 
-      expect(res.response.data.elOffline).toEqual(false);
+      expect(res.value().elOffline).toEqual(false);
     });
 
     it("should return 'el_offline' as 'true' when EL not available", async () => {
@@ -103,9 +100,8 @@ describe("beacon node api", function () {
       await sleep(chainConfigDef.SECONDS_PER_SLOT * 2 * 1000);
 
       const res = await clientElOffline.node.getSyncingStatus();
-      ApiError.assert(res);
 
-      expect(res.response.data.elOffline).toEqual(true);
+      expect(res.value().elOffline).toEqual(true);
 
       await Promise.all(validators.map((v) => v.close()));
       await bnElOffline.close();
@@ -116,7 +112,7 @@ describe("beacon node api", function () {
     const portSyncing = 9598;
 
     let bnSyncing: BeaconNode;
-    let clientSyncing: Api;
+    let clientSyncing: ApiClient;
 
     beforeAll(async () => {
       bnSyncing = await getDevBeaconNode({

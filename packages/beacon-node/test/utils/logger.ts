@@ -21,6 +21,6 @@ export const testLogger = (module?: string, opts?: TestLoggerOpts): LoggerNode =
     opts.module = module;
   }
   const level = getEnvLogLevel();
-  opts.level = level ?? LogLevel.info;
+  opts.level = level ?? opts.level ?? LogLevel.info;
   return getNodeLogger(opts);
 };

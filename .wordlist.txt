@@ -13,6 +13,7 @@ Casper
 Chai
 ChainSafe
 Codespaces
+Corepack
 Customizations
 DPoS
 DVs
@@ -77,6 +78,8 @@ PoS
 Prysm
 Quickstart
 RPC
+Reth
+Ryzen
 SHA
 SSD
 SSZ
@@ -138,7 +141,6 @@ flamegraph
 flamegraphs
 getNetworkIdentity
 gnosis
-goerli
 heapdump
 heaptrack
 holesky
@@ -169,7 +171,6 @@ orchestrator
 osx
 overriden
 params
-peerDependency
 pid
 plaintext
 pre
@@ -182,7 +183,6 @@ repos
 req
 reqresp
 responder
-ropsten
 runtime
 scalability
 secp

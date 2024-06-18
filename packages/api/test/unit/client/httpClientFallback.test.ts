@@ -1,8 +1,18 @@
-import {describe, it, beforeEach, afterEach, expect, vi} from "vitest";
-import {HttpClient, fetch} from "../../../src/utils/client/index.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {HttpClient, RouteDefinitionExtra, fetch} from "../../../src/utils/client/index.js";
+import {AnyEndpoint, EmptyRequestCodec, EmptyResponseCodec} from "../../../src/utils/codecs.js";
+import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";
 
 describe("httpClient fallback", () => {
-  const testRoute = {url: "/test-route", method: "GET" as const};
+  const url = "/test-route";
+  const testDefinition: RouteDefinitionExtra<AnyEndpoint> = {
+    url,
+    method: "GET",
+    req: EmptyRequestCodec,
+    resp: EmptyResponseCodec,
+    operationId: "testRoute",
+    urlFormatter: compileRouteUrlFormatter(url),
+  };
   const DEBUG_LOGS = Boolean(process.env.DEBUG);
 
   // Using fetchSub instead of actually setting up servers because there are some strange
@@ -41,9 +51,16 @@ describe("httpClient fallback", () => {
       await new Promise((r) => setTimeout(r, 10));
       const i = getServerIndex(url);
       if (serverErrors.get(i)) {
-        throw Error(`test_error_server_${i}`);
+        if (i === 1) {
+          // Simulate one of the servers returning a HTTP error
+          // which is handled separately from network errors
+          // but the fallback logic should be the same
+          return new Response(null, {status: 500});
+        } else {
+          throw Error(`test_error_server_${i}`);
+        }
       } else {
-        return {ok: true} as Response;
+        return new Response(null, {status: 200});
       }
     });
   });
@@ -69,7 +86,7 @@ describe("httpClient fallback", () => {
   }
 
   async function requestTestRoute(): Promise<void> {
-    await httpClient.request(testRoute);
+    await httpClient.request(testDefinition, {}, {});
   }
 
   it("Should only call server 0", async () => {

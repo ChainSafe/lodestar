@@ -1,5 +1,5 @@
 import {Root} from "@lodestar/types";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {fromHex, Logger} from "@lodestar/utils";
 import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
@@ -44,7 +44,7 @@ export async function getGenesisValidatorsRoot(args: GlobalArgs & ISlashingProte
   const genesis = await api.beacon.getGenesis();
 
   try {
-    ApiError.assert(genesis, "Can not fetch genesis data");
+    genesis.assertOk();
   } catch (e) {
     if (args.force) {
       return Buffer.alloc(32, 0);
@@ -52,5 +52,5 @@ export async function getGenesisValidatorsRoot(args: GlobalArgs & ISlashingProte
     throw e;
   }
 
-  return genesis.response.data.genesisValidatorsRoot;
+  return genesis.value().genesisValidatorsRoot;
 }

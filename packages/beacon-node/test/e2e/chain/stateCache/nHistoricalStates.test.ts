@@ -12,7 +12,7 @@ import {waitForEvent} from "../../../utils/events/resolver.js";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
 import {connect, onPeerConnect} from "../../../utils/network.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
-import {ReorgedForkChoice} from "../../../mocks/forkchoice.js";
+import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";
 
 /**
  * Test different reorg scenarios to make sure the StateCache implementations are correct.
@@ -249,8 +249,6 @@ describe(
         // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
         numEpochsPersisted: 4,
         // chain is NOT finalized end of test
-        // TODO: remove this after proposer boost reorg is fully implemented
-        skip: true,
       },
     ];
 
@@ -295,7 +293,9 @@ describe(
             chain: {
               blsVerifyAllMainThread: true,
               forkchoiceConstructor: ReorgedForkChoice,
-              proposerBoostEnabled: true,
+              // this node does not need to reload state
+              nHistoricalStates: false,
+              proposerBoost: true,
             },
           },
           validatorCount,
@@ -315,10 +315,11 @@ describe(
             chain: {
               blsVerifyAllMainThread: true,
               forkchoiceConstructor: ReorgedForkChoice,
+              // this node can follow with nHistoricalStates flag and it has to reload state
               nHistoricalStates: true,
               maxBlockStates,
               maxCPStateEpochsInMemory,
-              proposerBoostEnabled: true,
+              proposerBoost: true,
             },
             metrics: {enabled: true},
           },
@@ -347,9 +348,16 @@ describe(
         afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
 
         // wait for checkpoint 3 at slot 24, both nodes should reach same checkpoint
+        const cpEpoch = 3;
+        const cpSlot = 3 * SLOTS_PER_EPOCH;
         const checkpoints = await Promise.all(
           [reorgedBn, followupBn].map((bn) =>
-            waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.checkpoint, 240000, (cp) => cp.epoch === 3)
+            waitForEvent<phase0.Checkpoint>(
+              bn.chain.emitter,
+              ChainEvent.checkpoint,
+              (cpSlot + genesisSlotsDelay + 1) * testParams.SECONDS_PER_SLOT * 1000,
+              (cp) => cp.epoch === cpEpoch
+            )
           )
         );
         expect(checkpoints[0]).toEqual(checkpoints[1]);
@@ -369,7 +377,8 @@ describe(
             waitForEvent<ReorgEventData>(
               bn.chain.emitter,
               routes.events.EventType.chainReorg,
-              240000,
+              // reorged event happens at reorgedSlot + 1
+              (reorgedSlot + 1 - cpSlot + 1) * testParams.SECONDS_PER_SLOT * 1000,
               (reorgData) => reorgData.slot === reorgedSlot + 1
             )
           )

@@ -28,7 +28,8 @@ describe("produceBlockBody", () => {
     state = stateOg.clone();
     chain = new BeaconChain(
       {
-        proposerBoostEnabled: true,
+        proposerBoost: true,
+        proposerBoostReorg: false,
         computeUnrealized: false,
         safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
         disableArchiveOnCheckpoint: true,
@@ -64,7 +65,7 @@ describe("produceBlockBody", () => {
     beforeEach: async () => {
       const head = chain.forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-      const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].serialize();
+      const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
       return {chain, state, head, proposerIndex, proposerPubKey};
     },

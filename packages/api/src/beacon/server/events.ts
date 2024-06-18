@@ -1,17 +1,15 @@
-import {Api, ReqTypes, routesData, getEventSerdes, eventTypes} from "../routes/events.js";
-import {ApiError, ServerRoutes} from "../../utils/server/index.js";
-import {ServerApi} from "../../interfaces.js";
+import {ChainForkConfig} from "@lodestar/config";
+import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
+import {Endpoints, getDefinitions, eventTypes, getEventSerdes} from "../routes/events.js";
 
-export function getRoutes(api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
+export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
   const eventSerdes = getEventSerdes();
+  const serverRoutes = createFastifyRoutes(getDefinitions(config), methods);
 
   return {
     // Non-JSON route. Server Sent Events (SSE)
     eventstream: {
-      url: routesData.eventstream.url,
-      method: routesData.eventstream.method,
-      id: "eventstream",
-
+      ...serverRoutes.eventstream,
       handler: async (req, res) => {
         const validTopics = new Set(Object.values(eventTypes));
         for (const topic of req.query.topics) {
@@ -40,13 +38,17 @@ export function getRoutes(api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
           res.raw.setHeader("X-Accel-Buffering", "no");
 
           await new Promise<void>((resolve, reject) => {
-            void api.eventstream(req.query.topics, controller.signal, (event) => {
-              try {
-                const data = eventSerdes.toJson(event);
-                res.raw.write(serializeSSEEvent({event: event.type, data}));
-              } catch (e) {
-                reject(e as Error);
-              }
+            void methods.eventstream({
+              topics: req.query.topics,
+              signal: controller.signal,
+              onEvent: (event) => {
+                try {
+                  const data = eventSerdes.toJson(event);
+                  res.raw.write(serializeSSEEvent({event: event.type, data}));
+                } catch (e) {
+                  reject(e);
+                }
+              },
             });
 
             // The stream will never end by the server unless the node is stopped.
@@ -61,16 +63,6 @@ export function getRoutes(api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
         } finally {
           controller.abort();
         }
-      },
-
-      // TODO: Bundle this in /routes/events?
-      schema: {
-        querystring: {
-          type: "object",
-          properties: {
-            topics: {type: "array", items: {type: "string"}},
-          },
-        },
       },
     },
   };

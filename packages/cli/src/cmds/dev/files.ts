@@ -40,7 +40,7 @@ export async function writeTestnetFiles(
 
     const sk = interopSecretKey(i);
 
-    const keystore = await Keystore.create(password, sk.serialize(), sk.toPublicKey().serialize(), "");
+    const keystore = await Keystore.create(password, sk.toBytes(), sk.toPublicKey().toBytes(), "");
 
     persistedKeystoresBackend.writeKeystore({
       keystoreStr: keystore.stringify(),

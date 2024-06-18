@@ -1,8 +1,15 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
-import {ProtoBlock, MaybeValidExecutionStatus, LVHExecResponse, ProtoNode} from "../protoArray/interface.js";
+import {
+  ProtoBlock,
+  MaybeValidExecutionStatus,
+  LVHExecResponse,
+  ProtoNode,
+  DataAvailabilityStatus,
+} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
+import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -43,18 +50,18 @@ export type AncestorResult =
 
 // Reason for not proposer boost reorging
 export enum NotReorgedReason {
-  HeadBlockIsTimely,
-  ParentBlockNotAvailable,
-  ProposerBoostReorgDisabled,
-  NotShufflingStable,
-  NotFFGCompetitive,
-  ChainLongUnfinality,
-  ParentBlockDistanceMoreThanOneSlot,
-  ReorgMoreThanOneSlot,
-  ProposerBoostNotWornOff,
-  HeadBlockNotWeak,
-  ParentBlockNotStrong,
-  NotProposingOnTime,
+  HeadBlockIsTimely = "headBlockIsTimely",
+  ParentBlockNotAvailable = "parentBlockNotAvailable",
+  ProposerBoostReorgDisabled = "proposerBoostReorgDisabled",
+  NotShufflingStable = "notShufflingStable",
+  NotFFGCompetitive = "notFFGCompetitive",
+  ChainLongUnfinality = "chainLongUnfinality",
+  ParentBlockDistanceMoreThanOneSlot = "parentBlockDistanceMoreThanOneSlot",
+  ReorgMoreThanOneSlot = "reorgMoreThanOneSlot",
+  ProposerBoostNotWornOff = "proposerBoostNotWornOff",
+  HeadBlockNotWeak = "headBlockNotWeak",
+  ParentBlockNotStrong = "ParentBlockNotStrong",
+  NotProposingOnTime = "notProposingOnTime",
 }
 
 export type ForkChoiceMetrics = {
@@ -92,7 +99,11 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
-  updateHead(): ProtoBlock;
+  updateAndGetHead(mode: UpdateAndGetHeadOpt): {
+    head: ProtoBlock;
+    isHeadTimely?: boolean;
+    notReorgedReason?: NotReorgedReason;
+  };
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
@@ -124,7 +135,8 @@ export interface IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
+    executionStatus: MaybeValidExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.

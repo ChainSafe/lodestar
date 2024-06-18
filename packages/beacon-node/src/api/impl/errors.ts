@@ -1,4 +1,4 @@
-import {ApiError} from "@lodestar/api/beacon/server";
+import {ApiError} from "@lodestar/api/server";
 
 export {ApiError};
 

@@ -8,21 +8,28 @@ describe("HTTPClient options", () => {
   const bearerToken2 = "token-2";
 
   it("Single root baseUrl option", () => {
-    const httpClient = new HttpClient({baseUrl: baseUrl1, bearerToken: bearerToken1});
+    const httpClient = new HttpClient({baseUrl: baseUrl1, globalInit: {bearerToken: bearerToken1}});
 
-    expect(httpClient["urlsOpts"]).toEqual([{baseUrl: baseUrl1, bearerToken: bearerToken1}]);
+    const [urlInit] = httpClient["urlsInits"];
+
+    expect(urlInit.baseUrl).toBe(baseUrl1);
+    expect(urlInit.bearerToken).toBe(bearerToken1);
   });
 
   it("Multiple urls option with common bearerToken", () => {
     const httpClient = new HttpClient({
       urls: [baseUrl1, baseUrl2],
-      bearerToken: bearerToken1,
+      globalInit: {
+        bearerToken: bearerToken1,
+      },
     });
 
-    expect(httpClient["urlsOpts"]).toEqual([
-      {baseUrl: baseUrl1, bearerToken: bearerToken1},
-      {baseUrl: baseUrl2, bearerToken: bearerToken1},
-    ]);
+    const [urlInit1, urlInit2] = httpClient["urlsInits"];
+
+    expect(urlInit1.baseUrl).toBe(baseUrl1);
+    expect(urlInit1.bearerToken).toBe(bearerToken1);
+    expect(urlInit2.baseUrl).toBe(baseUrl2);
+    expect(urlInit2.bearerToken).toBe(bearerToken1);
   });
 
   it("Multiple urls as object option", () => {
@@ -33,39 +40,47 @@ describe("HTTPClient options", () => {
       ],
     });
 
-    expect(httpClient["urlsOpts"]).toEqual([
-      {baseUrl: baseUrl1, bearerToken: bearerToken1},
-      {baseUrl: baseUrl2, bearerToken: bearerToken2},
-    ]);
+    const [urlInit1, urlInit2] = httpClient["urlsInits"];
+
+    expect(urlInit1.baseUrl).toBe(baseUrl1);
+    expect(urlInit1.bearerToken).toBe(bearerToken1);
+    expect(urlInit2.baseUrl).toBe(baseUrl2);
+    expect(urlInit2.bearerToken).toBe(bearerToken2);
   });
 
   it("baseUrl and urls option", () => {
     const httpClient = new HttpClient({
       baseUrl: baseUrl1,
-      bearerToken: bearerToken1,
+      globalInit: {bearerToken: bearerToken1},
       urls: [{baseUrl: baseUrl2, bearerToken: bearerToken2}],
     });
 
-    expect(httpClient["urlsOpts"]).toEqual([
-      {baseUrl: baseUrl1, bearerToken: bearerToken1},
-      {baseUrl: baseUrl2, bearerToken: bearerToken2},
-    ]);
+    const [urlInit1, urlInit2] = httpClient["urlsInits"];
+
+    expect(urlInit1.baseUrl).toBe(baseUrl1);
+    expect(urlInit1.bearerToken).toBe(bearerToken1);
+    expect(urlInit2.baseUrl).toBe(baseUrl2);
+    expect(urlInit2.bearerToken).toBe(bearerToken2);
   });
 
   it("de-duplicate urls", () => {
     const httpClient = new HttpClient({
       baseUrl: baseUrl1,
-      bearerToken: bearerToken1,
+      globalInit: {bearerToken: bearerToken1},
       urls: [
         {baseUrl: baseUrl2, bearerToken: bearerToken2},
         {baseUrl: baseUrl1, bearerToken: bearerToken1},
         {baseUrl: baseUrl2, bearerToken: bearerToken2},
       ],
     });
-    expect(httpClient["urlsOpts"]).toEqual([
-      {baseUrl: baseUrl1, bearerToken: bearerToken1},
-      {baseUrl: baseUrl2, bearerToken: bearerToken2},
-    ]);
+
+    const [urlInit1, urlInit2, urlInit3] = httpClient["urlsInits"];
+
+    expect(urlInit1.baseUrl).toBe(baseUrl1);
+    expect(urlInit1.bearerToken).toBe(bearerToken1);
+    expect(urlInit2.baseUrl).toBe(baseUrl2);
+    expect(urlInit2.bearerToken).toBe(bearerToken2);
+    expect(urlInit3).toBeUndefined();
   });
 
   it("Throw if empty baseUrl", () => {

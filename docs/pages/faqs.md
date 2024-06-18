@@ -2,6 +2,20 @@
 
 This section of the documentation will cover common questions and encounters often asked by users and developers.
 
+## Tooling
+
+:::note "Package manager issues"
+
+Lodestar relies on [Corepack](https://nodejs.org/api/corepack.html) and associated `packageManager` value to manage its package manager version.
+
+Make sure `corepack` is correctly enabled if you encounter some package manager related issues:
+
+```bash
+corepack enable
+```
+
+:::
+
 ## Troubleshooting Lodestar
 
 ### Running a beacon node
@@ -23,7 +37,7 @@ NODE_OPTIONS: --max-old-space-size=8192
 Lodestar reads all environment variables prefixed with `LODESTAR` and will try to parse
 them similar to command line arguments, meaning any unknown argument will cause an error.
 
-```
+```txt
 ✖ Unknown arguments: servicePort, servicePortEthConsensusP2p,
 port9000Tcp, port9000TcpPort, port9000TcpProto, port9000TcpAddr, serviceHost
 ```

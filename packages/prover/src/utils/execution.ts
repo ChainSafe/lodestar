@@ -48,8 +48,6 @@ export async function getELBlock(
 export function getChainCommon(network: string): Common {
   switch (network) {
     case "mainnet":
-    case "goerli":
-    case "ropsten":
     case "sepolia":
     case "holesky":
     case "ephemery":

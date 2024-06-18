@@ -1,6 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, vi, afterEach} from "vitest";
 import {when} from "vitest-when";
+import {routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
@@ -44,7 +45,7 @@ describe("api - beacon - getBlockHeaders", function () {
     modules.db.block.get.mockResolvedValue(blockFromDb3);
 
     modules.db.blockArchive.get.mockResolvedValue(null);
-    const {data: blockHeaders} = await api.getBlockHeaders({});
+    const {data: blockHeaders} = (await api.getBlockHeaders({})) as {data: routes.beacon.BlockHeaderResponse[]};
     expect(blockHeaders).not.toBeNull();
     expect(blockHeaders.length).toBe(2);
     expect(blockHeaders.filter((header) => header.canonical).length).toBe(1);
@@ -66,7 +67,7 @@ describe("api - beacon - getBlockHeaders", function () {
       .calledWith(0)
       .thenResolve({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false, finalized: false});
     when(modules.forkChoice.getBlockSummariesAtSlot).calledWith(0).thenReturn([]);
-    const {data: blockHeaders} = await api.getBlockHeaders({slot: 0});
+    const {data: blockHeaders} = (await api.getBlockHeaders({slot: 0})) as {data: routes.beacon.BlockHeaderResponse[]};
     expect(blockHeaders.length).toBe(1);
     expect(blockHeaders[0].canonical).toBe(true);
   });
@@ -91,7 +92,9 @@ describe("api - beacon - getBlockHeaders", function () {
       .thenReturn(generateProtoBlock({blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(canonical.message))}));
     modules.db.block.get.mockResolvedValue(generateSignedBlockAtSlot(1));
     modules.db.block.get.mockResolvedValue(generateSignedBlockAtSlot(2));
-    const {data: blockHeaders} = await api.getBlockHeaders({parentRoot});
+    const {data: blockHeaders} = (await api.getBlockHeaders({parentRoot})) as {
+      data: routes.beacon.BlockHeaderResponse[];
+    };
     expect(blockHeaders.length).toBe(3);
     expect(blockHeaders.filter((b) => b.canonical).length).toBe(2);
   });

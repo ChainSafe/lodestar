@@ -1,28 +1,27 @@
-import {Api} from "@lodestar/api/beacon";
+import {ApiClient} from "@lodestar/api/beacon";
 import {allForks, Bytes32, capella} from "@lodestar/types";
 import {GenesisData, Lightclient} from "@lodestar/light-client";
-import {ApiError} from "@lodestar/api";
 import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {hexToBuffer} from "./conversion.js";
 
-export async function fetchBlock(api: Api, slot: number): Promise<capella.SignedBeaconBlock | undefined> {
-  const res = await api.beacon.getBlockV2(slot);
+export async function fetchBlock(api: ApiClient, slot: number): Promise<capella.SignedBeaconBlock | undefined> {
+  const res = await api.beacon.getBlockV2({blockId: slot});
 
-  if (res.ok) return res.response.data as capella.SignedBeaconBlock;
+  if (res.ok) return res.value() as capella.SignedBeaconBlock;
   return;
 }
 
 export async function fetchNearestBlock(
-  api: Api,
+  api: ApiClient,
   slot: number,
   direction: "up" | "down" = "down"
 ): Promise<capella.SignedBeaconBlock> {
-  const res = await api.beacon.getBlockV2(slot);
+  const res = await api.beacon.getBlockV2({blockId: slot});
 
-  if (res.ok) return res.response.data as capella.SignedBeaconBlock;
+  if (res.ok) return res.value() as capella.SignedBeaconBlock;
 
-  if (!res.ok && res.error.code === 404) {
+  if (!res.ok && res.status === 404) {
     return fetchNearestBlock(api, direction === "down" ? slot - 1 : slot + 1);
   }
 
@@ -46,7 +45,7 @@ export async function getExecutionPayloads({
   endSlot,
   logger,
 }: {
-  api: Api;
+  api: ApiClient;
   startSlot: number;
   endSlot: number;
   logger: Logger;
@@ -80,7 +79,7 @@ export async function getExecutionPayloads({
 }
 
 export async function getExecutionPayloadForBlockNumber(
-  api: Api,
+  api: ApiClient,
   startSlot: number,
   blockNumber: number
 ): Promise<Map<number, allForks.ExecutionPayload>> {
@@ -98,17 +97,16 @@ export async function getExecutionPayloadForBlockNumber(
   return payloads;
 }
 
-export async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
-  const res = await api.beacon.getGenesis();
-  ApiError.assert(res);
+export async function getGenesisData(api: Pick<ApiClient, "beacon">): Promise<GenesisData> {
+  const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
 
   return {
-    genesisTime: Number(res.response.data.genesisTime),
-    genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
+    genesisTime,
+    genesisValidatorsRoot,
   };
 }
 
-export async function getSyncCheckpoint(api: Pick<Api, "beacon">, checkpoint?: string): Promise<Bytes32> {
+export async function getSyncCheckpoint(api: Pick<ApiClient, "beacon">, checkpoint?: string): Promise<Bytes32> {
   let syncCheckpoint: Bytes32 | undefined = checkpoint ? hexToBuffer(checkpoint) : undefined;
 
   if (syncCheckpoint && syncCheckpoint.byteLength !== 32) {
@@ -116,9 +114,8 @@ export async function getSyncCheckpoint(api: Pick<Api, "beacon">, checkpoint?: s
   }
 
   if (!syncCheckpoint) {
-    const res = await api.beacon.getStateFinalityCheckpoints("head");
-    ApiError.assert(res);
-    syncCheckpoint = res.response.data.finalized.root;
+    const res = await api.beacon.getStateFinalityCheckpoints({stateId: "head"});
+    syncCheckpoint = res.value().finalized.root;
   }
 
   return syncCheckpoint;

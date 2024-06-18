@@ -8,6 +8,7 @@ import {
   ExecutionStatus,
   JustifiedBalancesGetter,
   ForkChoiceOpts as RawForkChoiceOpts,
+  DataAvailabilityStatus,
 } from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
@@ -95,6 +96,8 @@ export function initializeForkChoice(
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       currentSlot
     ),

@@ -1,4 +1,3 @@
-import {ApiError} from "@lodestar/api";
 import {AssertionResult, Assertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
@@ -6,9 +5,7 @@ export const connectedPeerCountAssertion: Assertion<"connectedPeerCount", number
   id: "connectedPeerCount",
   match: everySlotMatcher,
   async capture({node}) {
-    const res = await node.beacon.api.node.getPeerCount();
-    ApiError.assert(res);
-    return res.response.data.connected;
+    return (await node.beacon.api.node.getPeerCount()).value().connected;
   },
   async assert({nodes, slot, store}) {
     const errors: AssertionResult[] = [];

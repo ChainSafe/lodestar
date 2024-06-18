@@ -165,9 +165,9 @@ function parseResponseType(expectedRes: string | null): BlockInputType | null | 
     case null:
       return null;
     case "pd":
-      return BlockInputType.postDeneb;
+      return BlockInputType.availableData;
     case "bp":
-      return BlockInputType.blobsPromise;
+      return BlockInputType.dataPromise;
     default:
       return Error(expectedRes);
   }

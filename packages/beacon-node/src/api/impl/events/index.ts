@@ -1,9 +1,12 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {ApiModules} from "../types.js";
 
-export function getEventsApi({chain}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.events.Api> {
+export function getEventsApi({
+  chain,
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.events.Endpoints> {
   return {
-    async eventstream(topics, signal, onEvent) {
+    async eventstream({topics, signal, onEvent}) {
       const onAbortFns: (() => void)[] = [];
 
       for (const topic of topics) {

@@ -1,4 +1,4 @@
-import {Api, getClient} from "@lodestar/api/beacon";
+import {ApiClient, getClient} from "@lodestar/api/beacon";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
@@ -20,7 +20,7 @@ import {PayloadStore} from "./payload_store.js";
 
 type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
   transport: LightClientRestTransport;
-  api: Api;
+  api: ApiClient;
   config: ChainForkConfig;
 };
 
@@ -32,7 +32,7 @@ export class ProofProvider {
 
   readonly config: ChainForkConfig;
   readonly network: NetworkName;
-  readonly api: Api;
+  readonly api: ApiClient;
 
   lightClient?: Lightclient;
 

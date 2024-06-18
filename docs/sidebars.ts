@@ -4,78 +4,87 @@ const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     "index",
     "introduction",
-    {
-      type: "doc",
-      label: "Security",
-      id: "security",
-    },
+    "security",
     {
       type: "category",
-      label: "Getting Started",
-      items: ["getting-started/quick-start", "getting-started/installation", "getting-started/starting-a-node"],
-    },
-    "data-retention",
-    {
-      type: "category",
-      label: "Beacon Node",
+      label: "Run A Node",
+      collapsed: false,
       items: [
-        "beacon-management/beacon-cli",
-        "beacon-management/networking",
-        "beacon-management/mev-and-builder-integration",
-        "beacon-management/syncing",
-      ],
-    },
-    {
-      type: "category",
-      label: "Validator",
-      items: [
-        "validator-management/validator-cli",
-        "validator-management/vc-configuration",
-        "validator-management/external-signer",
-      ],
-    },
-    {
-      type: "category",
-      label: "Bootnode",
-      items: ["bootnode/bootnode-cli"],
-    },
-    {
-      type: "category",
-      label: "Light Client and Prover",
-      items: [
-        "lightclient-prover/lightclient-cli",
+        "run/getting-started/quick-start",
+        "run/getting-started/installation",
         {
-          type: "doc",
+          type: "category",
+          label: "Beacon node",
+          items: [
+            "run/beacon-management/starting-a-node",
+            "run/beacon-management/beacon-cli",
+            "run/beacon-management/data-retention",
+            "run/beacon-management/networking",
+            "run/beacon-management/mev-and-builder-integration",
+            "run/beacon-management/syncing",
+          ],
+        },
+        {
+          type: "category",
+          label: "Validator Client",
+          items: [
+            "run/validator-management/vc-configuration",
+            "run/validator-management/validator-cli",
+            "run/validator-management/external-signer",
+          ],
+        },
+        {
+          type: "category",
+          label: "Logging and Metrics",
+          items: ["run/logging-and-metrics/prometheus-grafana", "run/logging-and-metrics/client-monitoring"],
+        },
+        {
+          type: "category",
+          label: "Discv5 Bootnode",
+          items: ["run/bootnode/bootnode-cli"],
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Developer Tools",
+      collapsed: false,
+      items: [
+        {
+          type: "category",
           label: "Light Client",
-          id: "lightclient-prover/lightclient",
+          items: ["libraries/lightclient-prover/lightclient-cli", "libraries/lightclient-prover/lightclient"],
         },
         {
-          type: "doc",
+          type: "category",
           label: "Prover",
-          id: "lightclient-prover/prover",
+          items: ["libraries/lightclient-prover/prover"],
         },
       ],
     },
-    {
-      type: "category",
-      label: "Logging and Metrics",
-      items: ["logging-and-metrics/prometheus-grafana", "logging-and-metrics/client-monitoring"],
-    },
+
     "supporting-libraries/index",
     {
       type: "category",
       label: "Contributing",
+      collapsed: false,
       items: [
         {
-          type: "doc",
-          label: "Getting Started",
-          id: "contribution/getting-started",
+          type: "category",
+          label: "Advanced Topics",
+          items: ["contribution/advanced-topics/setting-up-a-testnet"],
         },
         "contribution/depgraph",
         {
-          type: "doc",
-          label: "Dev CLI Reference",
-          id: "contribution/dev-cli",
+          type: "category",
+          label: "Development Tools",
+          items: [
+            "contribution/dev-cli",
+            "contribution/tools/debugging",
+            "contribution/tools/flamegraphs",
+            "contribution/tools/heap-dumps",
+            "contribution/tools/core-dumps",
+          ],
         },
         {
           type: "category",
@@ -90,16 +99,6 @@ const sidebars: SidebarsConfig = {
           ],
         },
       ],
-    },
-    {
-      type: "category",
-      label: "Tools",
-      items: ["tools/debugging", "tools/flamegraphs", "tools/heap-dumps", "tools/core-dumps"],
-    },
-    {
-      type: "category",
-      label: "Advanced Topics",
-      items: ["advanced-topics/setting-up-a-testnet"],
     },
     "faqs",
   ],

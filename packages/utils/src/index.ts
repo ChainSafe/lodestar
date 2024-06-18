@@ -1,7 +1,6 @@
 export * from "./yaml/index.js";
 export * from "./assert.js";
 export * from "./base64.js";
-export * from "./bls.js";
 export * from "./bytes.js";
 export * from "./command.js";
 export * from "./err.js";

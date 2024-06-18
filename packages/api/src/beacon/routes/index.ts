@@ -1,12 +1,12 @@
-import {Api as BeaconApi} from "./beacon/index.js";
-import {Api as ConfigApi} from "./config.js";
-import {Api as DebugApi} from "./debug.js";
-import {Api as EventsApi} from "./events.js";
-import {Api as LightclientApi} from "./lightclient.js";
-import {Api as LodestarApi} from "./lodestar.js";
-import {Api as NodeApi} from "./node.js";
-import {Api as ProofApi} from "./proof.js";
-import {Api as ValidatorApi} from "./validator.js";
+import {Endpoints as BeaconEndpoints} from "./beacon/index.js";
+import {Endpoints as ConfigEndpoints} from "./config.js";
+import {Endpoints as DebugEndpoints} from "./debug.js";
+import {Endpoints as EventsEndpoints} from "./events.js";
+import {Endpoints as LightclientEndpoints} from "./lightclient.js";
+import {Endpoints as LodestarEndpoints} from "./lodestar.js";
+import {Endpoints as NodeEndpoints} from "./node.js";
+import {Endpoints as ProofEndpoints} from "./proof.js";
+import {Endpoints as ValidatorEndpoints} from "./validator.js";
 
 import * as beacon from "./beacon/index.js";
 import * as config from "./config.js";
@@ -19,18 +19,19 @@ import * as proof from "./proof.js";
 import * as validator from "./validator.js";
 export {beacon, config, debug, events, lightclient, lodestar, node, proof, validator};
 
-export type Api = {
-  beacon: BeaconApi;
-  config: ConfigApi;
-  debug: DebugApi;
-  events: EventsApi;
-  lightclient: LightclientApi;
-  lodestar: LodestarApi;
-  node: NodeApi;
-  proof: ProofApi;
-  validator: ValidatorApi;
+export type Endpoints = {
+  beacon: BeaconEndpoints;
+  config: ConfigEndpoints;
+  debug: DebugEndpoints;
+  events: EventsEndpoints;
+  lightclient: LightclientEndpoints;
+  lodestar: LodestarEndpoints;
+  node: NodeEndpoints;
+  proof: ProofEndpoints;
+  validator: ValidatorEndpoints;
 };
 
+// TODO: update to reflect new design
 // Reasoning of the API definitions
 // ================================
 //

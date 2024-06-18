@@ -1,4 +1,4 @@
-import {aggregatePublicKeys} from "@chainsafe/blst";
+import bls from "@chainsafe/bls";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getNextSyncCommitteeIndices} from "../util/seed.js";
@@ -32,7 +32,7 @@ export function processSyncCommitteeUpdates(state: CachedBeaconStateAltair): voi
     state.currentSyncCommittee = state.nextSyncCommittee;
     state.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU({
       pubkeys: nextSyncCommitteePubkeys,
-      aggregatePubkey: aggregatePublicKeys(nextSyncCommitteePubkeys).serialize(),
+      aggregatePubkey: bls.aggregatePublicKeys(nextSyncCommitteePubkeys),
     });
 
     // Rotate syncCommittee cache

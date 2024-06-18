@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, vi} from "vitest";
 import {config} from "@lodestar/config/default";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -46,6 +46,7 @@ describe("LodestarForkChoice", function () {
   justifiedBalances[1] = 2;
   justifiedBalances[2] = 3;
   const executionStatus = ExecutionStatus.PreMerge;
+  const dataAvailabilityStatus = DataAvailabilityStatus.PreData;
   const blockDelaySec = 0;
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
@@ -93,15 +94,43 @@ describe("LodestarForkChoice", function () {
       const currentSlot = childBlock.message.slot;
       forkChoice.updateTime(currentSlot);
 
-      forkChoice.onBlock(targetBlock.message, targetState, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(orphanedBlock.message, orphanedState, blockDelaySec, currentSlot, executionStatus);
+      forkChoice.onBlock(
+        targetBlock.message,
+        targetState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        orphanedBlock.message,
+        orphanedState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
       let head = forkChoice.getHead();
       expect(head.slot).toBe(orphanedBlock.message.slot);
-      forkChoice.onBlock(parentBlock.message, parentState, blockDelaySec, currentSlot, executionStatus);
+      forkChoice.onBlock(
+        parentBlock.message,
+        parentState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
       // tie break condition causes head to be orphaned block (based on hex root comparison)
       head = forkChoice.getHead();
       expect(head.slot).toBe(orphanedBlock.message.slot);
-      forkChoice.onBlock(childBlock.message, childState, blockDelaySec, currentSlot, executionStatus);
+      forkChoice.onBlock(
+        childBlock.message,
+        childState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
       head = forkChoice.getHead();
       // without vote, head gets stuck at orphaned block
       expect(head.slot).toBe(orphanedBlock.message.slot);
@@ -160,19 +189,19 @@ describe("LodestarForkChoice", function () {
       const currentSlot = 128;
       forkChoice.updateTime(currentSlot);
 
-      forkChoice.onBlock(block08.message, state08, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(block12.message, state12, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(block16.message, state16, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(block20.message, state20, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(block24.message, state24, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(block28.message, state28, blockDelaySec, currentSlot, executionStatus);
+      forkChoice.onBlock(block08.message, state08, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
+      forkChoice.onBlock(block12.message, state12, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
+      forkChoice.onBlock(block16.message, state16, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
+      forkChoice.onBlock(block20.message, state20, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
+      forkChoice.onBlock(block24.message, state24, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
+      forkChoice.onBlock(block28.message, state28, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message))).toHaveLength(3);
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message))).toHaveLength(5);
       expect(forkChoice.getBlockHex(hashBlock(block08.message))).not.toBeNull();
       expect(forkChoice.getBlockHex(hashBlock(block12.message))).not.toBeNull();
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(true);
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(true);
-      forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus);
+      forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       forkChoice.prune(hashBlock(block16.message));
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBeWithMessage(
         0,
@@ -202,10 +231,38 @@ describe("LodestarForkChoice", function () {
       const currentSlot = 35;
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, currentSlot);
       forkChoice.updateTime(currentSlot);
-      forkChoice.onBlock(targetBlock.message, targetState, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(orphanedBlock.message, orphanedState, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(parentBlock.message, parentState, blockDelaySec, currentSlot, executionStatus);
-      forkChoice.onBlock(childBlock.message, childState, blockDelaySec, currentSlot, executionStatus);
+      forkChoice.onBlock(
+        targetBlock.message,
+        targetState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        orphanedBlock.message,
+        orphanedState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        parentBlock.message,
+        parentState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        childBlock.message,
+        childState,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
       const childBlockRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(childBlock.message));
       // the old way to get non canonical blocks
       const nonCanonicalSummaries = forkChoice
@@ -244,17 +301,38 @@ describe("LodestarForkChoice", function () {
       blockW.message.parentRoot = finalizedRoot;
       const stateW = runStateTransition(anchorState, blockW);
       blockW.message.stateRoot = stateW.hashTreeRoot();
-      forkChoice.onBlock(blockW.message, stateW, blockDelaySec, blockW.message.slot, executionStatus);
+      forkChoice.onBlock(
+        blockW.message,
+        stateW,
+        blockDelaySec,
+        blockW.message.slot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
 
       // X
       const {block: blockX, state: stateX} = makeChild({block: blockW, state: stateW}, 12);
       stateX.blockRoots.set(blockW.message.slot, ssz.phase0.BeaconBlock.hashTreeRoot(blockW.message));
-      forkChoice.onBlock(blockX.message, stateX, blockDelaySec, blockX.message.slot, executionStatus);
+      forkChoice.onBlock(
+        blockX.message,
+        stateX,
+        blockDelaySec,
+        blockX.message.slot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
 
       // Y, same epoch to X
       const {block: blockY, state: stateY} = makeChild({block: blockX, state: stateX}, 13);
       stateY.blockRoots.set(blockW.message.slot, ssz.phase0.BeaconBlock.hashTreeRoot(blockW.message));
-      forkChoice.onBlock(blockY.message, stateY, blockDelaySec, blockY.message.slot, executionStatus);
+      forkChoice.onBlock(
+        blockY.message,
+        stateY,
+        blockDelaySec,
+        blockY.message.slot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
 
       // Y and Z are candidates for new head, make more attestations on Y
       forkChoice.updateTime(blockY.message.slot);
@@ -288,7 +366,14 @@ describe("LodestarForkChoice", function () {
         epoch: computeEpochAtSlot(blockW.message.slot),
       });
       forkChoice.updateTime(blockZ.message.slot);
-      forkChoice.onBlock(blockZ.message, stateZ, blockDelaySec, blockZ.message.slot, executionStatus);
+      forkChoice.onBlock(
+        blockZ.message,
+        stateZ,
+        blockDelaySec,
+        blockZ.message.slot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
 
       const head = forkChoice.updateHead();
       expect(head.blockRoot).toBeWithMessage(

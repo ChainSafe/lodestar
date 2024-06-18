@@ -137,19 +137,19 @@ function computeTotalAttestationsRewardsAltair(
   transitionCache: EpochTransitionCache,
   idealRewards: IdealAttestationsReward[],
   penalties: AttestationsPenalty[],
-  validatorIds?: (ValidatorIndex | string)[] // validatorIds filter
+  validatorIds: (ValidatorIndex | string)[] = []
 ): TotalAttestationsReward[] {
   const rewards = [];
   const {statuses} = transitionCache;
   const {epochCtx, config} = state;
   const validatorIndices = validatorIds
-    ?.map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(id)))
+    .map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(id)))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
 
   for (let i = 0; i < statuses.length; i++) {
-    if (validatorIndices !== undefined && !validatorIndices.includes(i)) {
+    if (validatorIndices.length && !validatorIndices.includes(i)) {
       continue;
     }
 

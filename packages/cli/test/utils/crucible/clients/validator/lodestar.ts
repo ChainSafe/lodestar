@@ -69,12 +69,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
         stdoutFilePath: logFilePath,
       },
       health: async () => {
-        try {
-          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
-          return {ok: true};
-        } catch (err) {
-          return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};
-        }
+        await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
       },
     },
   ]);
