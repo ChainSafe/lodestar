@@ -10,6 +10,8 @@ import {getCurrentEpoch} from "../util/epoch.js";
  * For each eligible `deposit`, call `increaseBalance()`.
  * Remove the processed deposits from `state.pendingBalanceDeposits`.
  * Update `state.depositBalanceToConsume` for the next epoch
+ * 
+ * TODO Electra: Update ssz library to support batch push to `pendingBalanceDeposits`
  */
 export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): void {
   const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state));
