@@ -5,6 +5,7 @@ export function getApiClientStub(): {[K in keyof Endpoints]: Mocked<ApiClientMet
   return {
     beacon: {
       getStateValidators: vi.fn(),
+      postStateValidators: vi.fn(),
       publishBlindedBlockV2: vi.fn(),
       publishBlockV2: vi.fn(),
       submitPoolSyncCommitteeSignatures: vi.fn(),

@@ -85,7 +85,7 @@ describe("AttestationService", function () {
         ];
 
         // Return empty replies to duties service
-        api.beacon.getStateValidators.mockResolvedValue(
+        api.beacon.postStateValidators.mockResolvedValue(
           mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
         );
         api.validator.getAttesterDuties.mockResolvedValue(
