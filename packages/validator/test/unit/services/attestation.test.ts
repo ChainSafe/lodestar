@@ -5,6 +5,7 @@ import {ssz} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -100,7 +101,9 @@ describe("AttestationService", function () {
 
         // Mock beacon's attestation and aggregates endpoints
         api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: attestation.data}));
-        api.validator.getAggregatedAttestation.mockResolvedValue(mockApiResponse({data: attestation}));
+        api.validator.getAggregatedAttestation.mockResolvedValue(
+          mockApiResponse({data: attestation, meta: {version: ForkName.phase0}})
+        );
 
         api.beacon.submitPoolAttestations.mockResolvedValue(mockApiResponse({}));
         api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));

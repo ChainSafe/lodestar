@@ -41,6 +41,7 @@ import {
   VersionMeta,
   VersionType,
 } from "../../utils/metadata.js";
+import {fromHeaders} from "../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -811,7 +812,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReq: ({query}) => ({
           attestationDataRoot: fromHexString(query.attestation_data_root),
           slot: query.slot,
-          committeeIndex: query.slot,
+          committeeIndex: query.committeeIndex,
         }),
         schema: {
           query: {
@@ -833,7 +834,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "POST",
       req: {
         writeReqJson: ({signedAggregateAndProofs}) => {
-          const fork = config.getForkName(signedAggregateAndProofs[0].message.aggregate.data.slot);
+          const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
           return {
             body:
               ForkSeq[fork] >= ForkSeq.electra
@@ -847,7 +848,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const fork = toForkName(headers[MetaHeader.Version]);
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
+          const fork =
+            versionHeader !== undefined
+              ? toForkName(versionHeader)
+              : config.getForkName(
+                  Number(
+                    (body as {message: {aggregate: {data: {slot: string}}}}[])[0]?.message.aggregate.data.slot ?? 0
+                  )
+                );
+
           return {
             signedAggregateAndProofs:
               ForkSeq[fork] >= ForkSeq.electra
@@ -856,7 +866,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         writeReqSsz: ({signedAggregateAndProofs}) => {
-          const fork = config.getForkName(signedAggregateAndProofs[0].message.aggregate.data.slot);
+          const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
           return {
             body:
               ForkSeq[fork] >= ForkSeq.electra
@@ -870,7 +880,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const fork = toForkName(headers[MetaHeader.Version]);
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
+          const fork = toForkName(versionHeader);
           return {
             signedAggregateAndProofs:
               ForkSeq[fork] >= ForkSeq.electra

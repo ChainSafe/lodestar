@@ -17,6 +17,7 @@ import {
 } from "../../../utils/codecs.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
 import {toForkName} from "../../../utils/fork.js";
+import {fromHeaders} from "../../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -247,7 +248,12 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const fork = toForkName(headers[MetaHeader.Version]);
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
+          const fork =
+            versionHeader !== undefined
+              ? toForkName(versionHeader)
+              : config.getForkName(Number((body as {data: {slot: string}}[])[0]?.data.slot ?? 0));
+
           return {
             signedAttestations:
               ForkSeq[fork] >= ForkSeq.electra
@@ -266,7 +272,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const fork = toForkName(headers[MetaHeader.Version]);
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
+          const fork = toForkName(versionHeader);
           return {
             signedAttestations:
               ForkSeq[fork] >= ForkSeq.electra
