@@ -89,7 +89,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
 
   getPoolAttestations: {
     args: {slot: 1, committeeIndex: 2},
-    res: {data: [ssz.phase0.Attestation.defaultValue()]},
+    res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {version: ForkName.deneb}},
   },
   getPoolAttesterSlashings: {
     args: undefined,
