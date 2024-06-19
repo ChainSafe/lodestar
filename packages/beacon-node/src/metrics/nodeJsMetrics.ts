@@ -4,8 +4,10 @@ import {gcStats} from "@chainsafe/prometheus-gc-stats";
 
 /**
  * Collects event loop utilization metrics compared to the last call
+ * 
+ * @param interval how often to collect the metrics in seconds 
  */
-function collectEventLoopUtilization(register: Registry, prefix?: string, intervalMs: number = 5000): () => void {
+function collectEventLoopUtilization(register: Registry, prefix?: string, interval: number = 5): () => void {
   const key = `${prefix}_` ?? "";
 
   const metricUtilization = new Histogram({
@@ -16,32 +18,34 @@ function collectEventLoopUtilization(register: Registry, prefix?: string, interv
   });
 
   const metricIdle = new Histogram({
-    name: `${key}nodejs_eventloop_idle`,
-    help: "Histogram of Event Loop idle time between two successive calls.",
+    name: `${key}nodejs_eventloop_idle_seconds`,
+    help: "Histogram of Event Loop idle time in seconds between two successive calls.",
     registers: [register],
-    buckets: [1, intervalMs / 10, intervalMs / 2, intervalMs],
+    buckets: [1, interval / 10, interval / 2, interval],
   });
 
   const metricActive = new Histogram({
-    name: `${key}nodejs_eventloop_active`,
-    help: "Histogram of Event Loop active time between two successive calls.",
+    name: `${key}nodejs_eventloop_active_seconds`,
+    help: "Histogram of Event Loop active time in seconds between two successive calls.",
     registers: [register],
-    buckets: [1, intervalMs / 10, intervalMs / 2, intervalMs],
+    buckets: [1, interval / 10, interval / 2, interval],
   });
 
   const previousEventLoopUtilizations = new Map<string, EventLoopUtilization>();
-  const interval = setInterval(() => {
+  const intervalId = setInterval(() => {
     const previousElu = previousEventLoopUtilizations.get(key);
     const currentElu = performance.eventLoopUtilization();
+    // `idle` and `active` are in milliseconds, capped by `interval` * 1000
+    // `utilization` is a ratio between 0 and 1, similar to regular CPU utilization
     const {utilization, idle, active} = performance.eventLoopUtilization(currentElu, previousElu);
-    metricUtilization.observe(utilization); /* between 0-1 */
-    metricIdle.observe(idle); /* in ms, max `intervalMs` */
-    metricActive.observe(active); /* in ms, max `intervalMs` */
+    metricUtilization.observe(utilization);
+    metricIdle.observe(idle*1000);
+    metricActive.observe(active*1000);
     previousEventLoopUtilizations.set(key, currentElu);
-  }, intervalMs);
+  }, interval * 1000);
 
   return () => {
-    clearInterval(interval);
+    clearInterval(intervalId);
     previousEventLoopUtilizations.clear();
   };
 }
