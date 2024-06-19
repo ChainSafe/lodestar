@@ -6,6 +6,7 @@ export type ChainArgs = {
   suggestedFeeRecipient: string;
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
+  "chain.blsVerifyAllAsyncBlst"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
@@ -98,6 +99,14 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     description: "Always use main threads for BLS verification",
     defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
+    group: "chain",
+  },
+
+  "chain.blsVerifyAllAsyncBlst": {
+    hidden: true,
+    type: "boolean",
+    description: "Always use async blst for BLS verification",
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllAsyncBlst),
     group: "chain",
   },
 
