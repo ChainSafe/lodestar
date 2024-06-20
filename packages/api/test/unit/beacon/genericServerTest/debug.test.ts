@@ -42,11 +42,11 @@ describe("beacon / debug", () => {
     });
 
     it("getStateV2", async () => {
-      const state = ssz.phase0.BeaconState.defaultValue();
-      const stateSerialized = ssz.phase0.BeaconState.serialize(state);
+      const state = ssz.deneb.BeaconState.defaultValue();
+      const stateSerialized = ssz.deneb.BeaconState.serialize(state);
       mockApi.getStateV2.mockResolvedValue({
         data: stateSerialized,
-        meta: {version: ForkName.phase0, executionOptimistic: false, finalized: false},
+        meta: {version: ForkName.deneb, executionOptimistic: false, finalized: false},
       });
 
       const httpClient = new HttpClient({baseUrl});
