@@ -4,8 +4,8 @@ import {gcStats} from "@chainsafe/prometheus-gc-stats";
 
 /**
  * Collects event loop utilization metrics compared to the last call
- * 
- * @param interval how often to collect the metrics in seconds 
+ *
+ * @param interval how often to collect the metrics in seconds
  */
 function collectEventLoopUtilization(register: Registry, prefix?: string, interval: number = 5): () => void {
   const key = `${prefix}_` ?? "";
@@ -39,8 +39,8 @@ function collectEventLoopUtilization(register: Registry, prefix?: string, interv
     // `utilization` is a ratio between 0 and 1, similar to regular CPU utilization
     const {utilization, idle, active} = performance.eventLoopUtilization(currentElu, previousElu);
     metricUtilization.observe(utilization);
-    metricIdle.observe(idle*1000);
-    metricActive.observe(active*1000);
+    metricIdle.observe(idle * 1000);
+    metricActive.observe(active * 1000);
     previousEventLoopUtilizations.set(key, currentElu);
   }, interval * 1000);
 
