@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks, Slot, ssz, RootHex, deneb, phase0, isSignedBlockContents} from "@lodestar/types";
+import {allForks, Slot, ssz, RootHex, deneb, isSignedBlockContents} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
-import {EmptyMeta, EmptyMetaCodec, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
+import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
   ExecutionOptimisticAndFinalizedCodec,
   ExecutionOptimisticAndFinalizedMeta,
@@ -66,19 +66,6 @@ export enum BroadcastValidation {
 }
 
 export type Endpoints = {
-  /**
-   * Get block
-   * Returns the complete `SignedBeaconBlock` for a given block ID.
-   */
-  getBlock: Endpoint<
-    // ⏎
-    "GET",
-    BlockArgs,
-    {params: {block_id: string}},
-    phase0.SignedBeaconBlock,
-    EmptyMeta
-  >;
-
   /**
    * Get block
    * Retrieves block details for given block id.
@@ -220,15 +207,6 @@ const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: 
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    getBlock: {
-      url: "/eth/v1/beacon/blocks/{block_id}",
-      method: "GET",
-      req: blockIdOnlyReq,
-      resp: {
-        data: ssz.phase0.SignedBeaconBlock,
-        meta: EmptyMetaCodec,
-      },
-    },
     getBlockV2: {
       url: "/eth/v2/beacon/blocks/{block_id}",
       method: "GET",
