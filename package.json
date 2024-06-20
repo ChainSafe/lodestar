@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "preinstall": "cd temp-deps/blst-ts && yarn && yarn build",
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
     "build": "lerna run build",
