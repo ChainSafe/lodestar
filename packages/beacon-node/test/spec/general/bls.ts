@@ -1,9 +1,8 @@
 import {
-  CoordType,
   PublicKey,
   SecretKey,
   Signature,
-  aggregatePublicKeys,
+  aggregateSerializedPublicKeys,
   aggregateSignatures,
   aggregateVerify,
   fastAggregateVerify,
@@ -90,7 +89,11 @@ function aggregate(input: string[]): string {
 function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
   try {
-    return aggregateVerify(messages.map(fromHexString), pubkeys.map(fromHexString), fromHexString(signature));
+    return aggregateVerify(
+      messages.map(fromHexString),
+      pubkeys.map(fromHexString).map((pk) => PublicKey.deserialize(pk)),
+      Signature.deserialize(fromHexString(signature))
+    );
   } catch {
     return false;
   }
@@ -108,7 +111,7 @@ function eth_aggregate_pubkeys(input: string[]): string | null {
     if (pk === G1_POINT_AT_INFINITY) return null;
   }
 
-  const agg = aggregatePublicKeys(input.map((hex) => fromHexString(hex))).serialize();
+  const agg = aggregateSerializedPublicKeys(input.map((hex) => fromHexString(hex))).serialize();
   return toHexString(agg);
 }
 
@@ -135,8 +138,8 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
 
   return fastAggregateVerify(
     fromHexString(message),
-    pubkeys.map((hex) => fromHexString(hex)),
-    fromHexString(signature)
+    pubkeys.map((hex) => PublicKey.deserialize(fromHexString(hex))),
+    Signature.deserialize(fromHexString(signature))
   );
 }
 
@@ -156,7 +159,7 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
     return fastAggregateVerify(
       fromHexString(message),
       pubkeys.map((hex) => {
-        const pk = PublicKey.deserialize(fromHexString(hex), CoordType.jacobian);
+        const pk = PublicKey.deserialize(fromHexString(hex));
         pk.keyValidate();
         return pk;
       }),
@@ -189,7 +192,11 @@ function sign(input: {privkey: string; message: string}): string | null {
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
   const {pubkey, message, signature} = input;
   try {
-    return _verify(fromHexString(message), fromHexString(pubkey), fromHexString(signature));
+    return _verify(
+      fromHexString(message),
+      PublicKey.deserialize(fromHexString(pubkey)),
+      Signature.deserialize(fromHexString(signature))
+    );
   } catch {
     return false;
   }

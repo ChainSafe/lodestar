@@ -1,5 +1,5 @@
 import {describe, it, beforeAll, expect, beforeEach, afterEach} from "vitest";
-import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {AggregationSet, PublicKey, SecretKey} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/index.js";
 import {testLogger} from "../../../utils/logger.js";
@@ -23,7 +23,7 @@ describe("chain / bls / multithread queue", function () {
   });
 
   const sets: ISignatureSet[] = [];
-  const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
+  const sameMessageSets: AggregationSet[] = [];
   const sameMessage = Buffer.alloc(32, 100);
 
   beforeAll(() => {
@@ -39,8 +39,8 @@ describe("chain / bls / multithread queue", function () {
         signature: sig.serialize(),
       });
       sameMessageSets.push({
-        publicKey: pk,
-        signature: sk.sign(sameMessage).serialize(),
+        pk: pk,
+        sig: sk.sign(sameMessage).serialize(),
       });
     }
   });

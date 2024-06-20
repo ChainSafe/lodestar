@@ -1,12 +1,11 @@
 import crypto from "node:crypto";
 import {itBench} from "@dapplion/benchmark";
 import {
-  CoordType,
   PublicKey,
   SecretKey,
   Signature,
   aggregatePublicKeys,
-  aggregateSignatures,
+  aggregateSerializedSignatures,
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/blst";
@@ -76,9 +75,9 @@ describe("BLS ops", function () {
       fn: (sets) => {
         const isValid = verifyMultipleAggregateSignatures(
           sets.map((set) => ({
-            publicKey: set.publicKey,
-            message: set.message,
-            signature: Signature.deserialize(set.signature),
+            pk: set.publicKey,
+            msg: set.message,
+            sig: Signature.deserialize(set.signature),
           }))
         );
         if (!isValid) throw Error("Invalid");
@@ -110,9 +109,7 @@ describe("BLS ops", function () {
       fn: (sets) => {
         // aggregate and verify aggregated signatures
         const aggregatedPubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
-        const aggregatedSignature = aggregateSignatures(
-          sets.map((set) => Signature.deserialize(set.signature, CoordType.affine))
-        );
+        const aggregatedSignature = aggregateSerializedSignatures(sets.map((set) => set.signature));
         const isValid = verify(sets[0].message, aggregatedPubkey, aggregatedSignature);
         if (!isValid) throw Error("Invalid");
       },

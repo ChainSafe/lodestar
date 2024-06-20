@@ -1,5 +1,5 @@
 import os from "node:os";
-import {PublicKey} from "@chainsafe/blst";
+import {AggregationSet, PublicKey} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../util/queue/index.js";
@@ -180,7 +180,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Verify signature sets of the same message, only supports worker verification.
    */
   async verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    sets: AggregationSet[],
     message: Uint8Array,
     opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {

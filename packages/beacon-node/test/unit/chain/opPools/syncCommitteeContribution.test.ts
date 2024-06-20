@@ -1,4 +1,4 @@
-import {SecretKey, fastAggregateVerify} from "@chainsafe/blst";
+import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll} from "vitest";
 import {newFilledArray} from "@lodestar/state-transition";
@@ -113,8 +113,8 @@ describe("aggregate", function () {
       expect(
         fastAggregateVerify(
           blockRoot,
-          testSks.map((sk) => sk.toPublicKey().serialize()),
-          syncAggregate.syncCommitteeSignature
+          testSks.map((sk) => sk.toPublicKey()),
+          Signature.deserialize(syncAggregate.syncCommitteeSignature)
         )
       ).toBe(true);
     });

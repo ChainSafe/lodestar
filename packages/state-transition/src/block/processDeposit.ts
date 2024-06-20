@@ -1,4 +1,4 @@
-import {CoordType, PublicKey, verify} from "@chainsafe/blst";
+import {PublicKey, verify} from "@chainsafe/blst";
 import {phase0, ssz} from "@lodestar/types";
 import {signatureFromBytes, verifyMerkleBranch} from "@lodestar/utils";
 
@@ -55,7 +55,7 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
     try {
       // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-      const publicKey = PublicKey.deserialize(pubkey, CoordType.affine);
+      const publicKey = PublicKey.deserialize(pubkey);
       publicKey.keyValidate();
       const signature = signatureFromBytes(deposit.data.signature);
       if (!verify(signingRoot, publicKey, signature)) {

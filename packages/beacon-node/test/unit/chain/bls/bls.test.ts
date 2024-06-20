@@ -1,4 +1,4 @@
-import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {AggregationSet, PublicKey, SecretKey} from "@chainsafe/blst";
 import {describe, it, expect, beforeEach} from "vitest";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {signatureFromBytes} from "@lodestar/utils";
@@ -54,15 +54,15 @@ describe("BlsVerifier ", function () {
     });
 
     describe(`${verifier.constructor.name} - verifySignatureSetsSameMessage`, () => {
-      let sets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
+      let sets: AggregationSet[] = [];
       // same signing root for all sets
       const signingRoot = Buffer.alloc(32, 100);
 
       beforeEach(() => {
         sets = secretKeys.map((secretKey) => {
           return {
-            publicKey: secretKey.toPublicKey(),
-            signature: secretKey.sign(signingRoot).serialize(),
+            pk: secretKey.toPublicKey(),
+            sig: secretKey.sign(signingRoot).serialize(),
           };
         });
       });
@@ -73,7 +73,7 @@ describe("BlsVerifier ", function () {
 
       it("should return false for invalid signature", async () => {
         // signature is valid but not respective to the signing root
-        sets[1].signature = secretKeys[1].sign(Buffer.alloc(32)).serialize();
+        sets[1].sig = secretKeys[1].sign(Buffer.alloc(32)).serialize();
         expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });
 
@@ -83,7 +83,7 @@ describe("BlsVerifier ", function () {
         expect(() => {
           signatureFromBytes(malformedSignature);
         }).toThrow();
-        sets[1].signature = malformedSignature;
+        sets[1].sig = malformedSignature;
         expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });
     });

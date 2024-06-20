@@ -1,12 +1,22 @@
 import {
-  asyncVerify,
-  asyncVerifyMultipleAggregateSignatures,
+  Signature,
+  SignatureSet,
   verify,
+  verifyAsync,
   verifyMultipleAggregateSignatures,
+  verifyMultipleAggregateSignaturesAsync,
 } from "@chainsafe/blst";
 import {WorkRequestSet} from "./types.js";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
+
+function deserializeSet(set: WorkRequestSet): SignatureSet {
+  return {
+    msg: set.message,
+    pk: set.publicKey,
+    sig: set.signature instanceof Uint8Array ? Signature.deserialize(set.signature) : set.signature,
+  };
+}
 
 /**
  * Verify signatures sets with batch verification or regular core verify depending on the set count.
@@ -15,7 +25,7 @@ const MIN_SET_COUNT_TO_BATCH = 2;
 export function verifySets(sets: WorkRequestSet[]): boolean {
   try {
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return verifyMultipleAggregateSignatures(sets);
+      return verifyMultipleAggregateSignatures(sets.map(deserializeSet));
     }
 
     // .every on an empty array returns true
@@ -24,7 +34,7 @@ export function verifySets(sets: WorkRequestSet[]): boolean {
     }
 
     // If too few signature sets verify them without batching
-    return sets.every(({message, publicKey, signature}) => verify(message, publicKey, signature));
+    return sets.map(deserializeSet).every(({msg, pk, sig}) => verify(msg, pk, sig));
   } catch (_) {
     // A signature could be malformed, in that case fromBytes throws error
     // blst-ts `verifyMultipleSignatures` is also a fallible operation if mul_n_aggregate fails
@@ -36,7 +46,7 @@ export function verifySets(sets: WorkRequestSet[]): boolean {
 export async function asyncVerifySets(sets: WorkRequestSet[]): Promise<boolean> {
   try {
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return await asyncVerifyMultipleAggregateSignatures(sets);
+      return await verifyMultipleAggregateSignaturesAsync(sets.map(deserializeSet));
     }
 
     // .every on an empty array returns true
@@ -44,9 +54,7 @@ export async function asyncVerifySets(sets: WorkRequestSet[]): Promise<boolean> 
       throw Error("Empty signature sets");
     }
 
-    const promises = await Promise.all(
-      sets.map(({message, publicKey, signature}) => asyncVerify(message, publicKey, signature))
-    );
+    const promises = await Promise.all(sets.map(deserializeSet).map(({msg, pk, sig}) => verifyAsync(msg, pk, sig)));
     // If too few signature sets verify them without batching
     return promises.every((isValid) => isValid);
   } catch (_) {

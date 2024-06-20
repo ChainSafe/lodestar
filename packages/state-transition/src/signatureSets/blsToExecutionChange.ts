@@ -1,4 +1,4 @@
-import {CoordType, PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/blst";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
@@ -26,7 +26,7 @@ export function getBlsToExecutionChangeSignatureSet(
 
   // The withdrawal pubkey is the same as signedBLSToExecutionChange's fromBlsPubkey as it should
   // be validated against the withdrawal credentials digest
-  const pubkey = PublicKey.deserialize(signedBLSToExecutionChange.message.fromBlsPubkey, CoordType.affine);
+  const pubkey = PublicKey.deserialize(signedBLSToExecutionChange.message.fromBlsPubkey);
   pubkey.keyValidate();
   return {
     type: SignatureSetType.single,

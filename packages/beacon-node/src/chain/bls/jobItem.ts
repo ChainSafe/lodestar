@@ -1,5 +1,10 @@
-import {PublicKey, aggregatePublicKeys, aggregateSignatures, randomBytesNonZero} from "@chainsafe/blst";
-import {signatureFromBytes} from "@lodestar/utils";
+import {
+  PublicKey,
+  aggregatePublicKeys,
+  aggregateSignatures,
+  aggregateWithRandomness,
+  AggregationSet,
+} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {LinkedList} from "../../util/array.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -24,7 +29,7 @@ export type JobQueueItemSameMessage = {
   reject: (error?: Error) => void;
   addedTimeMs: number;
   opts: VerifySignatureOpts;
-  sets: {publicKey: PublicKey; signature: Uint8Array}[];
+  sets: AggregationSet[];
   message: Uint8Array;
 };
 
@@ -70,20 +75,16 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map((set) => signatureFromBytes(set.signature));
+      const {pk, sig} = aggregateWithRandomness(job.sets);
       timer?.();
 
-      const randomness: Uint8Array[] = [];
-      for (let i = 0; i < job.sets.length; i++) {
-        randomness.push(randomBytesNonZero(8));
-      }
       return {
         opts: job.opts,
         sets: [
           {
             message: job.message,
-            publicKey: aggregatePublicKeys(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
-            signature: aggregateSignatures(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
+            publicKey: pk,
+            signature: sig,
           },
         ],
       };
@@ -112,8 +113,8 @@ export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): Link
           sets: [
             {
               type: SignatureSetType.single,
-              pubkey: set.publicKey,
-              signature: set.signature,
+              pubkey: set.pk,
+              signature: set.sig,
               signingRoot: job.message,
             },
           ],

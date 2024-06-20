@@ -1,4 +1,4 @@
-import {CoordType, PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -78,6 +78,6 @@ export function pollExternalSignerPubkeys(
 function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
     const pubkeyBytes = fromHexString(pubkeyHex);
-    PublicKey.deserialize(pubkeyBytes, CoordType.jacobian).keyValidate();
+    PublicKey.deserialize(pubkeyBytes).keyValidate();
   }
 }

@@ -1,4 +1,4 @@
-import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
+import {AggregationSet, PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {signatureFromBytes} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -35,16 +35,16 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   }
 
   async verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    sets: AggregationSet[],
     message: Uint8Array
   ): Promise<boolean[]> {
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
-    const pubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
+    const pubkey = aggregatePublicKeys(sets.map((set) => set.pk));
     let isAllValid = true;
     // validate signature = true
     const signatures = sets.map((set) => {
       try {
-        return signatureFromBytes(set.signature);
+        return signatureFromBytes(set.sig);
       } catch (_) {
         // at least one set has malformed signature
         isAllValid = false;
@@ -66,7 +66,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
         if (sig === null) {
           return false;
         }
-        return verify(message, set.publicKey, sig);
+        return verify(message, set.pk, sig);
       });
     }
 

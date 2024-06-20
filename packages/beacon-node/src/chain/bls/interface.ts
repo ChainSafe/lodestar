@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {AggregationSet, PublicKey} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 
 export type VerifySignatureOpts = {
@@ -53,7 +53,7 @@ export interface IBlsVerifier {
    *   - only support `batchable` option
    */
   verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    sets: AggregationSet[],
     messsage: Uint8Array,
     opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;

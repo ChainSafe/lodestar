@@ -107,7 +107,7 @@ export class SyncCommitteeMessagePool {
     return {
       ...contribution,
       aggregationBits: contribution.aggregationBits,
-      signature: contribution.signature.serialize(true),
+      signature: contribution.signature.serialize(),
     };
   }
 

@@ -213,6 +213,6 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   return {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
-    signature: aggFast.signature.serialize(true),
+    signature: aggFast.signature.serialize(),
   };
 }
