@@ -1,6 +1,5 @@
-import bls from "@chainsafe/bls";
-import {PointFormat} from "@chainsafe/bls/types";
 import {describe, it, beforeEach, beforeAll, vi, afterEach} from "vitest";
+import {SecretKey} from "@chainsafe/blst";
 import {config} from "@lodestar/config/default";
 import {
   CachedBeaconStateAllForks,
@@ -25,7 +24,7 @@ describe("validate voluntary exit", () => {
   let opPool: MockedBeaconChain["opPool"];
 
   beforeAll(() => {
-    const sk = bls.SecretKey.fromKeygen();
+    const sk = SecretKey.fromKeygen(Buffer.alloc(32));
 
     const stateEmpty = ssz.phase0.BeaconState.defaultValue();
 
@@ -34,7 +33,7 @@ describe("validate voluntary exit", () => {
 
     // Add a validator that's active since genesis and ready to exit
     const validator = ssz.phase0.Validator.toViewDU({
-      pubkey: sk.toPublicKey().toBytes(PointFormat.compressed),
+      pubkey: sk.toPublicKey().serialize(),
       withdrawalCredentials: Buffer.alloc(32, 0),
       effectiveBalance: 32e9,
       slashed: false,
@@ -55,7 +54,7 @@ describe("validate voluntary exit", () => {
       stateEmpty.genesisValidatorsRoot
     );
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
-    signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
+    signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).serialize()};
     const _state = generateState(stateEmpty, config);
 
     state = createCachedBeaconStateTest(_state, createBeaconConfig(config, _state.genesisValidatorsRoot));

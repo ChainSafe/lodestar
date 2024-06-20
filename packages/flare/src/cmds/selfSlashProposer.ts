@@ -1,5 +1,5 @@
-import type {SecretKey} from "@chainsafe/bls/types";
 import {getClient} from "@lodestar/api";
+import {SecretKey} from "@chainsafe/blst";
 import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
@@ -136,5 +136,5 @@ function signHeaderBigint(config: BeaconConfig, sk: SecretKey, header: phase0.Be
   const slot = Number(header.slot as bigint);
   const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_PROPOSER);
   const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeaderBigint, header, proposerDomain);
-  return sk.sign(signingRoot).toBytes();
+  return sk.sign(signingRoot).serialize();
 }

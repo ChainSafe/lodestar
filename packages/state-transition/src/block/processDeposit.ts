@@ -1,7 +1,6 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {CoordType, PublicKey, verify} from "@chainsafe/blst";
 import {phase0, ssz} from "@lodestar/types";
-import {verifyMerkleBranch} from "@lodestar/utils";
+import {signatureFromBytes, verifyMerkleBranch} from "@lodestar/utils";
 
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
@@ -56,9 +55,10 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
     try {
       // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-      const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
-      const signature = bls.Signature.fromBytes(deposit.data.signature, CoordType.affine, true);
-      if (!signature.verify(publicKey, signingRoot)) {
+      const publicKey = PublicKey.deserialize(pubkey, CoordType.affine);
+      publicKey.keyValidate();
+      const signature = signatureFromBytes(deposit.data.signature);
+      if (!verify(signingRoot, publicKey, signature)) {
         return;
       }
     } catch (e) {

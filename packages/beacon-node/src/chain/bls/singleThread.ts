@@ -1,10 +1,9 @@
-import {PublicKey, Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
+import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
+import {signatureFromBytes} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
-import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
+import {verifySets} from "./verifySets.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
@@ -25,7 +24,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
 
     // Count time after aggregating
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
-    const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
+    const isValid = verifySets(setsAggregated);
 
     // Don't use a try/catch, only count run without exceptions
     if (timer) {
@@ -40,12 +39,12 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     message: Uint8Array
   ): Promise<boolean[]> {
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
-    const pubkey = bls.PublicKey.aggregate(sets.map((set) => set.publicKey));
+    const pubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
     let isAllValid = true;
     // validate signature = true
     const signatures = sets.map((set) => {
       try {
-        return bls.Signature.fromBytes(set.signature, CoordType.affine, true);
+        return signatureFromBytes(set.signature);
       } catch (_) {
         // at least one set has malformed signature
         isAllValid = false;
@@ -54,8 +53,8 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     });
 
     if (isAllValid) {
-      const signature = bls.Signature.aggregate(signatures as Signature[]);
-      isAllValid = signature.verify(pubkey, message);
+      const signature = aggregateSignatures(signatures as Signature[]);
+      isAllValid = verify(message, pubkey, signature);
     }
 
     let result: boolean[];
@@ -67,7 +66,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
         if (sig === null) {
           return false;
         }
-        return sig.verify(set.publicKey, message);
+        return verify(message, set.publicKey, sig);
       });
     }
 

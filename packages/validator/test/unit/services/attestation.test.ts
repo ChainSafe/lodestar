@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -28,8 +28,8 @@ describe("AttestationService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   beforeAll(() => {
-    const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.deserialize(Buffer.alloc(32, i + 1)));
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
     validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.mockReturnValue(true);
     validatorStore.hasSomeValidators.mockReturnValue(true);

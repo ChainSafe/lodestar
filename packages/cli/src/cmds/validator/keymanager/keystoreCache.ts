@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {PointFormat} from "@chainsafe/bls/types";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {fromHex, toHex} from "@lodestar/utils";
 import {writeFile600Perm} from "../../../util/file.js";
@@ -40,8 +39,8 @@ export async function loadKeystoreCache(
   const result: SignerLocal[] = [];
   for (const [index, k] of keystores.entries()) {
     const secretKeyBytes = Uint8Array.prototype.slice.call(secretKeyConcatenatedBytes, index * 32, (index + 1) * 32);
-    const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
-    const publicKey = secretKey.toPublicKey().toBytes(PointFormat.compressed);
+    const secretKey = SecretKey.deserialize(secretKeyBytes);
+    const publicKey = secretKey.toPublicKey().serialize();
 
     if (toHex(publicKey) !== toHex(fromHex(k.pubkey))) {
       throw new Error(
@@ -72,8 +71,8 @@ export async function writeKeystoreCache(
       `Number of signers and passwords must be equal. signers=${signers.length}, passwords=${passwords.length}`
     );
   }
-  const secretKeys = signers.map((s) => s.secretKey.toBytes());
-  const publicKeys = signers.map((s) => s.secretKey.toPublicKey().toBytes());
+  const secretKeys = signers.map((s) => s.secretKey.serialize());
+  const publicKeys = signers.map((s) => s.secretKey.toPublicKey().serialize());
   const password = passwords.join("");
   const secretKeyConcatenatedBytes = Buffer.concat(secretKeys);
   const publicConcatenatedBytes = Buffer.concat(publicKeys);

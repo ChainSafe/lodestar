@@ -1,4 +1,4 @@
-import type {SecretKey} from "@chainsafe/bls/types";
+import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 
 export function memoOnce<R>(fn: () => R): () => R {
@@ -32,7 +32,7 @@ export function signCached(sk: SecretKey, message: Uint8Array): Uint8Array {
     return prevSig;
   }
 
-  const sig = sk.sign(message).toBytes();
+  const sig = sk.sign(message).serialize();
   cache.set(messageHex, sig);
 
   return sig;

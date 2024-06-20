@@ -3,7 +3,7 @@ import {defineConfig} from "vitest/config";
 const __dirname = new URL(".", import.meta.url).pathname;
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import topLevelAwait from "vite-plugin-top-level-await";
-import { blsBrowserPlugin } from "./scripts/vite/plugins/blsBrowserPlugin";
+import {blsBrowserPlugin} from "./scripts/vite/plugins/blsBrowserPlugin.js";
 
 export default defineConfig({
   plugins: [
