@@ -31,10 +31,6 @@ const validatorResponse: ValidatorResponse = {
 export const testData: GenericServerTestCases<Endpoints> = {
   // block
 
-  getBlock: {
-    args: {blockId: "head"},
-    res: {data: ssz.phase0.SignedBeaconBlock.defaultValue()},
-  },
   getBlockV2: {
     args: {blockId: "head"},
     res: {

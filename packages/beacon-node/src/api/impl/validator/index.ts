@@ -739,17 +739,6 @@ export function getValidatorApi({
   }
 
   return {
-    async produceBlock({slot, randaoReveal, graffiti}) {
-      const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti);
-      if (isForkBlobs(meta.version)) {
-        throw Error(`Invalid call to produceBlock for deneb+ fork=${meta.version}`);
-      } else {
-        // TODO: need to figure out why typescript requires typecasting here
-        // by typing of produceFullBlockOrContents respose it should have figured this out itself
-        return {data: data as allForks.BeaconBlock, meta};
-      }
-    },
-
     async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
       const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
       return {data, meta};

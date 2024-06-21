@@ -366,11 +366,6 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlock({blockId}) {
-      const {block} = await resolveBlockId(chain, blockId);
-      return {data: block};
-    },
-
     async getBlockV2({blockId}) {
       const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       return {

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks, ssz, StringType, phase0} from "@lodestar/types";
+import {allForks, ssz, StringType} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -14,8 +14,6 @@ import {
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
-  ExecutionOptimisticAndFinalizedCodec,
-  ExecutionOptimisticAndFinalizedMeta,
 } from "../../utils/metadata.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
 import {WireFormat} from "../../utils/wireFormat.js";
@@ -25,7 +23,7 @@ import {StateArgs} from "./beacon/state.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 const stringType = new StringType();
-const ProtoNodeResponseType = new ContainerType(
+const ProtoNodeType = new ContainerType(
   {
     executionPayloadBlockHash: stringType,
     executionPayloadNumber: ssz.UintNum64,
@@ -51,14 +49,7 @@ const ProtoNodeResponseType = new ContainerType(
   },
   {jsonCase: "eth2"}
 );
-const SlotRootType = new ContainerType(
-  {
-    slot: ssz.Slot,
-    root: stringType,
-  },
-  {jsonCase: "eth2"}
-);
-const SlotRootExecutionOptimisticType = new ContainerType(
+const DebugChainHeadType = new ContainerType(
   {
     slot: ssz.Slot,
     root: stringType,
@@ -67,27 +58,13 @@ const SlotRootExecutionOptimisticType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
-const ProtoNodeResponseListType = ArrayOf(ProtoNodeResponseType);
-const SlotRootListType = ArrayOf(SlotRootType);
-const SlotRootExecutionOptimisticListType = ArrayOf(SlotRootExecutionOptimisticType);
+const ProtoNodeListType = ArrayOf(ProtoNodeType);
+const DebugChainHeadListType = ArrayOf(DebugChainHeadType);
 
-type ProtoNodeResponseList = ValueOf<typeof ProtoNodeResponseListType>;
-type SlotRootList = ValueOf<typeof SlotRootListType>;
-type SlotRootExecutionOptimisticList = ValueOf<typeof SlotRootExecutionOptimisticListType>;
+type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
+type DebugChainHeadList = ValueOf<typeof DebugChainHeadListType>;
 
 export type Endpoints = {
-  /**
-   * Retrieves all possible chain heads (leaves of fork choice tree).
-   */
-  getDebugChainHeads: Endpoint<
-    // ⏎
-    "GET",
-    EmptyArgs,
-    EmptyRequest,
-    SlotRootList,
-    EmptyMeta
-  >;
-
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
@@ -96,7 +73,7 @@ export type Endpoints = {
     "GET",
     EmptyArgs,
     EmptyRequest,
-    SlotRootExecutionOptimisticList,
+    DebugChainHeadList,
     EmptyMeta
   >;
 
@@ -108,21 +85,8 @@ export type Endpoints = {
     "GET",
     EmptyArgs,
     EmptyRequest,
-    ProtoNodeResponseList,
+    ProtoNodeList,
     EmptyMeta
-  >;
-
-  /**
-   * Get full BeaconState object
-   * Returns full BeaconState object for given stateId.
-   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
-   */
-  getState: Endpoint<
-    "GET",
-    StateArgs,
-    {params: {state_id: string}},
-    phase0.BeaconState,
-    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -139,27 +103,14 @@ export type Endpoints = {
   >;
 };
 
-// Default timeout is not sufficient to download state as JSON
-const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
-
 export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    getDebugChainHeads: {
-      url: "/eth/v1/debug/beacon/heads",
-      method: "GET",
-      req: EmptyRequestCodec,
-      resp: {
-        data: SlotRootListType,
-        meta: EmptyMetaCodec,
-        onlySupport: WireFormat.json,
-      },
-    },
     getDebugChainHeadsV2: {
       url: "/eth/v2/debug/beacon/heads",
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: SlotRootExecutionOptimisticListType,
+        data: DebugChainHeadListType,
         meta: EmptyMetaCodec,
         onlySupport: WireFormat.json,
       },
@@ -169,27 +120,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: ProtoNodeResponseListType,
+        data: ProtoNodeListType,
         meta: EmptyMetaCodec,
         onlySupport: WireFormat.json,
-      },
-    },
-    getState: {
-      url: "/eth/v1/debug/beacon/states/{state_id}",
-      method: "GET",
-      req: {
-        writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
-        parseReq: ({params}) => ({stateId: params.state_id}),
-        schema: {
-          params: {state_id: Schema.StringRequired},
-        },
-      },
-      resp: {
-        data: ssz.phase0.BeaconState,
-        meta: ExecutionOptimisticAndFinalizedCodec,
-      },
-      init: {
-        timeoutMs: GET_STATE_TIMEOUT_MS,
       },
     },
     getStateV2: {
@@ -207,7 +140,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
       init: {
-        timeoutMs: GET_STATE_TIMEOUT_MS,
+        // Default timeout is not sufficient to download state as JSON
+        timeoutMs: 5 * 60 * 1000,
       },
     },
   };
