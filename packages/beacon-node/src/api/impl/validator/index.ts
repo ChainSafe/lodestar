@@ -110,7 +110,7 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
  */
-export function getValidatorApi({
+export function getValidatorApi(opts: ApiOptions, {
   chain,
   config,
   logger,
@@ -129,7 +129,9 @@ export function getValidatorApi({
   const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
-  const defaultGraffiti = getDefaultGraffiti();
+  let defaultGraffiti: string;
+  updateDefaultGraffiti();
+  chain.emitter.on(routes.events.EventType.payloadAttributes, updateDefaultGraffiti);
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -337,29 +339,8 @@ export function getValidatorApi({
       );
   }
 
-  async function getDefaultGraffiti(): Promise<string> {
-    const consensusCode = ClientCode.LS;
-    const consensusCommit = opts.version ?? "";
-
-    const lodestarClientVersion = {
-      code: consensusCode,
-      name: "Lodestar",
-      version: opts.version ?? "",
-      commit: consensusCommit,
-    };
-
-    const executionClientVersions = await chain.executionEngine
-      .getClientVersion(lodestarClientVersion)
-      .catch((_) => []);
-
-    if (executionClientVersions.length !== 0) {
-      const executionCode = executionClientVersions[0].code;
-      const executionCommit = executionClientVersions[0].commit;
-
-      return `${executionCode}|${executionCommit.slice(0, 2)}|${consensusCode}|${consensusCommit.slice(0, 2)}`;
-    }
-
-    return "";
+  async function updateDefaultGraffiti(): Promise<void> {
+    defaultGraffiti = await getDefaultGraffiti();
   }
 
   async function getDefaultGraffiti(): Promise<string> {
