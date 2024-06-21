@@ -92,20 +92,14 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processWithdrawals(ForkSeq.capella, state as CachedBeaconStateCapella, testCase.execution_payload);
   },
 
-  consolidation: (state, testCase: {consolidation: electra.SignedConsolidation}) => {
-    blockFns.processConsolidation(state as CachedBeaconStateElectra, testCase.consolidation);
+  withdrawal_request: (state, testCase: {withdrawal_request: electra.WithdrawalRequest}) => {
+    blockFns.processWithdrawalRequest(ForkSeq.electra, state as CachedBeaconStateElectra, testCase.withdrawal_request);
   },
 
-  execution_layer_withdrawal_request: (
-    state,
-    testCase: {execution_layer_withdrawal_request: electra.ExecutionLayerWithdrawalRequest}
-  ) => {
-    blockFns.processExecutionLayerWithdrawalRequest(
-      ForkSeq.electra,
-      state as CachedBeaconStateElectra,
-      testCase.execution_layer_withdrawal_request
-    );
+  consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
+    blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
   },
+
 };
 
 export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => void;
@@ -156,8 +150,8 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         // Capella
         address_change: ssz.capella.SignedBLSToExecutionChange,
         // Electra
-        consolidation: ssz.electra.SignedConsolidation,
-        execution_layer_withdrawal_request: ssz.electra.ExecutionLayerWithdrawalRequest,
+        withdrawal_request: ssz.electra.WithdrawalRequest,
+        consolidation_request: ssz.electra.ConsolidationRequest,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
