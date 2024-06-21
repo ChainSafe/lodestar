@@ -15,7 +15,6 @@ import {
   ValidatorIndex,
   ProducedBlockSource,
   stringType,
-  BeaconBlock,
   BeaconBlockOrContents,
   BlindedBeaconBlock,
 } from "@lodestar/types";
@@ -290,25 +289,6 @@ export type Endpoints = {
     {params: {epoch: Epoch}; body: unknown},
     SyncDutyList,
     ExecutionOptimisticMeta
-  >;
-
-  /**
-   * Produce a new block, without signature.
-   * Requests a beacon node to produce a valid block, which can then be signed by a validator.
-   */
-  produceBlock: Endpoint<
-    "GET",
-    {
-      /** The slot for which the block should be proposed. */
-      slot: Slot;
-      /** The validator's randao reveal value */
-      randaoReveal: BLSSignature;
-      /** Arbitrary data validator wants to include in block */
-      graffiti: string;
-    },
-    {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
-    BeaconBlock,
-    VersionMeta
   >;
 
   /**
@@ -607,32 +587,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: {
         data: SyncDutyListType,
         meta: ExecutionOptimisticCodec,
-      },
-    },
-    produceBlock: {
-      url: "/eth/v1/validator/blocks/{slot}",
-      method: "GET",
-      req: {
-        writeReq: ({slot, randaoReveal, graffiti}) => ({
-          params: {slot},
-          query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
-        }),
-        parseReq: ({params, query}) => ({
-          slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
-          graffiti: fromGraffitiHex(query.graffiti),
-        }),
-        schema: {
-          params: {slot: Schema.UintRequired},
-          query: {
-            randao_reveal: Schema.StringRequired,
-            graffiti: Schema.String,
-          },
-        },
-      },
-      resp: {
-        data: WithVersion((fork) => ssz[fork].BeaconBlock),
-        meta: VersionCodec,
       },
     },
     produceBlockV2: {

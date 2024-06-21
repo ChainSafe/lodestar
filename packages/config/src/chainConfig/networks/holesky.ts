@@ -4,7 +4,7 @@ import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
 
 // Holesky beacon chain config:
-// https://github.com/eth-clients/holesky/blob/main/custom_config_data/config.yaml
+// https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml
 
 export const holeskyChainConfig: ChainConfig = {
   ...mainnet,
