@@ -14,12 +14,12 @@ import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
-export function processExecutionLayerWithdrawalRequest(
+export function processWithdrawalRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra,
-  executionLayerWithdrawalRequest: electra.ExecutionLayerWithdrawalRequest
+  withdrawalRequest: electra.WithdrawalRequest
 ): void {
-  const amount = Number(executionLayerWithdrawalRequest.amount);
+  const amount = Number(withdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
   // no need to use unfinalized pubkey cache from 6110 as validator won't be active anyway
   const {pubkey2index, config} = epochCtx;
@@ -32,13 +32,13 @@ export function processExecutionLayerWithdrawalRequest(
 
   // bail out if validator is not in beacon state
   // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
-  const validatorIndex = pubkey2index.get(executionLayerWithdrawalRequest.validatorPubkey);
+  const validatorIndex = pubkey2index.get(withdrawalRequest.validatorPubkey);
   if (validatorIndex === undefined) {
     return;
   }
 
   const validator = validators.get(validatorIndex);
-  if (!isValidatorEligibleForWithdrawOrExit(validator, executionLayerWithdrawalRequest.sourceAddress, state)) {
+  if (!isValidatorEligibleForWithdrawOrExit(validator, withdrawalRequest.sourceAddress, state)) {
     return;
   }
 
