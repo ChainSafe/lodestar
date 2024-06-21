@@ -31,6 +31,14 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
+    /*
+     * This is the window size for the windowed multiplication in proof
+     * generation. The larger wbits is, the faster the MSM will be, but the
+     * size of the precomputed table will grow exponentially. With 8 bits, the
+     * tables are 96 MiB; with 9 bits, the tables are 192 MiB and so forth.
+     * From our testing, there are diminishing returns after 8 bits.
+     */
+    trustedSetupPrecompute?: number;
     /** Option to load a custom kzg trusted setup in txt format */
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
@@ -106,6 +114,9 @@ export const defaultChainOptions: IChainOptions = {
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
+  // TODO: (@matthewkeil) this is a plug number and directly affects memory size
+  // but also has security implications.  Needs to be sorted out.
+  trustedSetupPrecompute: 8,
   broadcastValidationStrictness: "warn",
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32

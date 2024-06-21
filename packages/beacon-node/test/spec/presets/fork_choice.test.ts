@@ -1,4 +1,5 @@
 import path from "node:path";
+import crypto from "node:crypto";
 import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -101,6 +102,7 @@ const forkChoiceTest =
             proposerBoostReorg: true,
           },
           {
+            nodeId: Buffer.alloc(32, crypto.randomBytes(32)),
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
             logger,

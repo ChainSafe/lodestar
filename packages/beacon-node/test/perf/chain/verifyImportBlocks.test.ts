@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {config} from "@lodestar/config/default";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -95,6 +96,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           minSameMessageSignatureSetsToBatch: 32,
         },
         {
+          nodeId: Buffer.alloc(32, crypto.randomBytes(32)),
           config: state.config,
           db,
           logger,

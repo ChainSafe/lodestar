@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import {fromHexString} from "@chainsafe/ssz";
 import {itBench} from "@dapplion/benchmark";
 import {config} from "@lodestar/config/default";
@@ -39,6 +40,7 @@ describe("produceBlockBody", () => {
         minSameMessageSignatureSetsToBatch: 32,
       },
       {
+        nodeId: Buffer.alloc(32, crypto.randomBytes(32)),
         config: state.config,
         db,
         logger,
