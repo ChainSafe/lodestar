@@ -10,7 +10,6 @@ import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
-import {getConsolidationSignatureSets} from "./consolidation.js";
 
 export * from "./attesterSlashings.js";
 export * from "./indexedAttestation.js";
@@ -19,7 +18,6 @@ export * from "./proposerSlashings.js";
 export * from "./randao.js";
 export * from "./voluntaryExits.js";
 export * from "./blsToExecutionChange.js";
-export * from "./consolidation.js";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.
@@ -68,16 +66,6 @@ export function getBlockSignatureSets(
     );
     if (blsToExecutionChangeSignatureSets.length > 0) {
       signatureSets.push(...blsToExecutionChangeSignatureSets);
-    }
-  }
-
-  if (fork >= ForkSeq.electra) {
-    const consolidationSignatureSets = getConsolidationSignatureSets(
-      state as CachedBeaconStateElectra,
-      signedBlock as electra.SignedBeaconBlock
-    );
-    if (consolidationSignatureSets.length > 0) {
-      signatureSets.push(...consolidationSignatureSets);
     }
   }
 

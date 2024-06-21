@@ -17,7 +17,7 @@ import {
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
 import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
-import {WithdrawalV1, DepositRequestV1, ExecutionLayerWithdrawalRequestV1} from "./payloadIdCache.js";
+import {WithdrawalV1, DepositRequestV1, WithdrawalRequestV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -125,14 +125,14 @@ export type ExecutionPayloadBodyRpc = {
   // currently there is a discepancy between EL and CL field name references for deposit requests
   // its likely CL receipt will be renamed to requests
   depositRequests: DepositRequestV1[] | null | undefined;
-  withdrawalRequests: ExecutionLayerWithdrawalRequestV1[] | null | undefined;
+  withdrawalRequests: WithdrawalRequestV1[] | null | undefined;
 };
 
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
   depositRequests: electra.DepositRequests | null;
-  withdrawalRequests: electra.ExecutionLayerWithdrawalRequests | null;
+  withdrawalRequests: electra.WithdrawalRequests | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -155,7 +155,7 @@ export type ExecutionPayloadRpc = {
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
   depositRequests?: DepositRequestRpc[]; // ELECTRA
-  withdrawalRequests?: ExecutionLayerWithdrawalRequestRpc[]; // ELECTRA
+  withdrawalRequests?: WithdrawalRequestRpc[]; // ELECTRA
 };
 
 export type WithdrawalRpc = {
@@ -166,7 +166,7 @@ export type WithdrawalRpc = {
 };
 
 export type DepositRequestRpc = DepositRequestV1;
-export type ExecutionLayerWithdrawalRequestRpc = ExecutionLayerWithdrawalRequestV1;
+export type WithdrawalRequestRpc = WithdrawalRequestV1;
 
 export type VersionedHashesRpc = DATA[];
 
@@ -223,7 +223,7 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
   if (ForkSeq[fork] >= ForkSeq.electra) {
     const {depositRequests, withdrawalRequests} = data as electra.ExecutionPayload;
     payload.depositRequests = depositRequests.map(serializeDepositRequest);
-    payload.withdrawalRequests = withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest);
+    payload.withdrawalRequests = withdrawalRequests.map(serializeWithdrawalRequest);
   }
 
   return payload;
@@ -327,9 +327,8 @@ export function parseExecutionPayload(
         `withdrawalRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).withdrawalRequests = withdrawalRequests.map(
-      deserializeExecutionLayerWithdrawalRequest
-    );
+    (executionPayload as electra.ExecutionPayload).withdrawalRequests =
+      withdrawalRequests.map(deserializeWithdrawalRequest);
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
@@ -418,9 +417,7 @@ export function deserializeDepositRequest(serialized: DepositRequestRpc): electr
   } as electra.DepositRequest;
 }
 
-export function serializeExecutionLayerWithdrawalRequest(
-  withdrawalRequest: electra.ExecutionLayerWithdrawalRequest
-): ExecutionLayerWithdrawalRequestRpc {
+export function serializeWithdrawalRequest(withdrawalRequest: electra.WithdrawalRequest): WithdrawalRequestRpc {
   return {
     sourceAddress: bytesToData(withdrawalRequest.sourceAddress),
     validatorPubkey: bytesToData(withdrawalRequest.validatorPubkey),
@@ -428,9 +425,7 @@ export function serializeExecutionLayerWithdrawalRequest(
   };
 }
 
-export function deserializeExecutionLayerWithdrawalRequest(
-  withdrawalRequest: ExecutionLayerWithdrawalRequestRpc
-): electra.ExecutionLayerWithdrawalRequest {
+export function deserializeWithdrawalRequest(withdrawalRequest: WithdrawalRequestRpc): electra.WithdrawalRequest {
   return {
     sourceAddress: dataToBytes(withdrawalRequest.sourceAddress, 20),
     validatorPubkey: dataToBytes(withdrawalRequest.validatorPubkey, 48),
@@ -444,9 +439,7 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
         depositRequests: data.depositRequests ? data.depositRequests.map(deserializeDepositRequest) : null,
-        withdrawalRequests: data.withdrawalRequests
-          ? data.withdrawalRequests.map(deserializeExecutionLayerWithdrawalRequest)
-          : null,
+        withdrawalRequests: data.withdrawalRequests ? data.withdrawalRequests.map(deserializeWithdrawalRequest) : null,
       }
     : null;
 }
@@ -457,9 +450,7 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
         depositRequests: data.depositRequests ? data.depositRequests.map(serializeDepositRequest) : null,
-        withdrawalRequests: data.withdrawalRequests
-          ? data.withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest)
-          : null,
+        withdrawalRequests: data.withdrawalRequests ? data.withdrawalRequests.map(serializeWithdrawalRequest) : null,
       }
     : null;
 }

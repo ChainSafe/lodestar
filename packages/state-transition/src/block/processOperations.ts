@@ -9,10 +9,10 @@ import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
-import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
+import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
 import {ProcessBlockOpts} from "./types.js";
-import {processConsolidation} from "./processConsolidation.js";
+import {processConsolidationRequest} from "./processConsolidationRequest.js";
 
 export {
   processProposerSlashing,
@@ -20,10 +20,10 @@ export {
   processAttestations,
   processDeposit,
   processVoluntaryExit,
-  processExecutionLayerWithdrawalRequest,
+  processWithdrawalRequest,
   processBlsToExecutionChange,
   processDepositRequest,
-  processConsolidation,
+  processConsolidationRequest,
 };
 
 export function processOperations(
@@ -67,16 +67,16 @@ export function processOperations(
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
 
-    for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
-    }
-
-    for (const depositRequest of bodyElectra.executionPayload.depositRequests) {
+    for (const depositRequest of bodyElectra.executionPayload.depositReceipts) {
       processDepositRequest(fork, stateElectra, depositRequest);
     }
 
-    for (const consolidation of bodyElectra.consolidations) {
-      processConsolidation(stateElectra, consolidation);
+    for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
+      processWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
+    }
+
+    for (const elConsolidationRequest of bodyElectra.executionPayload.consolidationRequests) {
+      processConsolidationRequest(stateElectra, elConsolidationRequest);
     }
   }
 }

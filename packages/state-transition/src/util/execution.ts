@@ -174,9 +174,7 @@ export function executionPayloadToPayloadHeader(
     (bellatrixPayloadFields as electra.ExecutionPayloadHeader).depositRequestsRoot =
       ssz.electra.DepositRequests.hashTreeRoot((payload as electra.ExecutionPayload).depositRequests);
     (bellatrixPayloadFields as electra.ExecutionPayloadHeader).withdrawalRequestsRoot =
-      ssz.electra.ExecutionLayerWithdrawalRequests.hashTreeRoot(
-        (payload as electra.ExecutionPayload).withdrawalRequests
-      );
+      ssz.electra.WithdrawalRequests.hashTreeRoot((payload as electra.ExecutionPayload).withdrawalRequests);
   }
 
   return bellatrixPayloadFields;
