@@ -18,9 +18,6 @@ import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
 
-// Max number of iterations over validator set when computing proposer index
-const MAX_ITERATION_OVER_VALIDATORS = 10;
-
 /**
  * Compute proposer indices for an epoch
  */
@@ -83,11 +80,6 @@ export function computeProposerIndex(
       return candidateIndex;
     }
     i += 1;
-    // Spec does not have this condition to end infinite loop. Spec test won't pass if we
-    // only loop the validator indices once. Electra spec test requires MAX_ITERATION_OVER_VALIDATORS >= 6
-    if (i === indices.length * MAX_ITERATION_OVER_VALIDATORS) {
-      return -1;
-    }
   }
 }
 
