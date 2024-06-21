@@ -11,7 +11,6 @@ import {
   capella,
   deneb,
   Wei,
-  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,

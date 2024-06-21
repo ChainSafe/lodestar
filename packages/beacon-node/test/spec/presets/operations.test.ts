@@ -103,7 +103,6 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
     blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
   },
-
 };
 
 export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => void;

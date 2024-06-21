@@ -10,7 +10,6 @@ export function processConsolidationRequest(
   state: CachedBeaconStateElectra,
   consolidationRequest: electra.ConsolidationRequest
 ): void {
-
   // If the pending consolidations queue is full, consolidation requests are ignored
   if (state.pendingConsolidations.length >= PENDING_CONSOLIDATIONS_LIMIT) {
     return;
@@ -30,7 +29,7 @@ export function processConsolidationRequest(
   }
 
   // Verify that source != target, so a consolidation cannot be used as an exit.
-  if (sourceIndex === targetIndex){
+  if (sourceIndex === targetIndex) {
     return;
   }
 
