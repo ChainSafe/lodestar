@@ -12,6 +12,7 @@ import {
   SignedBlindedBeaconBlock,
   BlindedBeaconBlockBody,
   SignedBlockContents,
+  BeaconBlock,
 } from "../types.js";
 
 export function isExecutionPayload<F extends ForkExecution>(
@@ -39,7 +40,7 @@ export function isExecutionPayloadAndBlobsBundle<F extends ForkBlobs>(
 export function isBlindedBeaconBlock<F extends ForkExecution>(
   block: BeaconBlockOrContents | SignedBeaconBlockOrContents
 ): block is BlindedBeaconBlock<F> {
-  return "body" in block && block.body !== undefined && block.body !== null && isBlindedBeaconBlockBody(block.body);
+  return (block as BeaconBlock).body !== null && isBlindedBeaconBlockBody((block as BeaconBlock).body);
 }
 
 export function isBlindedSignedBeaconBlock<F extends ForkExecution>(
@@ -51,7 +52,7 @@ export function isBlindedSignedBeaconBlock<F extends ForkExecution>(
 export function isBlindedBeaconBlockBody<F extends ForkExecution>(
   body: BeaconBlockBody | BlindedBeaconBlockBody
 ): body is BlindedBeaconBlockBody<F> {
-  return "executionPayloadHeader" in body && body.executionPayloadHeader !== undefined;
+  return (body as BlindedBeaconBlockBody).executionPayloadHeader !== undefined;
 }
 
 export function isBlockContents<F extends ForkBlobs>(
