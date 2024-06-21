@@ -52,6 +52,7 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
     ...stateElectraCloned.latestExecutionPayloadHeader.toValue(),
     depositRequestsRoot: ssz.Root.defaultValue(),
     withdrawalRequestsRoot: ssz.Root.defaultValue(),
+    consolidationRequestsRoot: ssz.Root.defaultValue(),
   });
   stateElectraView.nextWithdrawalIndex = stateDeneb.nextWithdrawalIndex;
   stateElectraView.nextWithdrawalValidatorIndex = stateDeneb.nextWithdrawalValidatorIndex;

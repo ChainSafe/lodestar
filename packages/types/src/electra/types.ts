@@ -12,8 +12,11 @@ export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof
 export type DepositRequest = ValueOf<typeof ssz.DepositRequest>;
 export type DepositRequests = ValueOf<typeof ssz.DepositRequests>;
 
-export type ExecutionLayerWithdrawalRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequest>;
-export type ExecutionLayerWithdrawalRequests = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequests>;
+export type WithdrawalRequest = ValueOf<typeof ssz.WithdrawalRequest>;
+export type WithdrawalRequests = ValueOf<typeof ssz.WithdrawalRequests>;
+
+export type ConsolidationRequest = ValueOf<typeof ssz.ConsolidationRequest>;
+export type ConsolidationRequests = ValueOf<typeof ssz.ConsolidationRequests>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
@@ -42,9 +45,6 @@ export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;
 export type LightClientFinalityUpdate = ValueOf<typeof ssz.LightClientFinalityUpdate>;
 export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimisticUpdate>;
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
-
-export type Consolidation = ValueOf<typeof ssz.Consolidation>;
-export type SignedConsolidation = ValueOf<typeof ssz.SignedConsolidation>;
 
 export type PendingBalanceDeposit = ValueOf<typeof ssz.PendingBalanceDeposit>;
 export type PendingPartialWithdrawal = ValueOf<typeof ssz.PendingPartialWithdrawal>;

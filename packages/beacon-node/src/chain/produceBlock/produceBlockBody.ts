@@ -343,10 +343,6 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  if (ForkSeq[fork] >= ForkSeq.electra) {
-    (blockBody as electra.BeaconBlockBody).consolidations = [];
-  }
-
   Object.assign(logMeta, {executionPayloadValue});
   this.logger.verbose("Produced beacon block body", logMeta);
 
