@@ -86,7 +86,7 @@ describe.skip("mdns", function () {
 
     const opts = await getOpts(peerId);
 
-    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
+    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger" | "nodeId"> = {
       config,
       chain,
       db,

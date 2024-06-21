@@ -15,7 +15,11 @@ describe("SeenGossipBlockInput", () => {
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
-  const seenGossipBlockInput = new SeenGossipBlockInput();
+  const seenGossipBlockInput = new SeenGossipBlockInput({
+    custodyColumns: [],
+    custodyColumnsIndex: [],
+    custodyColumnsLen: 0,
+  });
 
   // array of numBlobs, events where events are array of
   // [block|blob11|blob2, pd | bp | null | error string reflecting the expected result]

@@ -53,7 +53,10 @@ describe("block archive repository", function () {
     singedBlock.message.body.blobKzgCommitments.push(commitment);
     singedBlock.message.body.blobKzgCommitments.push(commitment);
     singedBlock.message.body.blobKzgCommitments.push(commitment);
-    const dataColumnSidecars = computeDataColumnSidecars(config, singedBlock, {blobs: [blob, blob, blob]});
+    const dataColumnSidecars = computeDataColumnSidecars(config, singedBlock, {
+      blobs: [blob, blob, blob],
+      kzgProofs: [commitment, commitment, commitment],
+    });
     for (let j = 0; j < dataColumnSidecars.length; j++) {
       dataColumnSidecars[j].index = j;
     }

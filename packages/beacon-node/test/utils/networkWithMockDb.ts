@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
@@ -56,6 +57,7 @@ export async function getNetworkForTest(
       minSameMessageSignatureSetsToBatch: 32,
     },
     {
+      nodeId: Buffer.alloc(32, crypto.randomBytes(32)),
       config: beaconConfig,
       db,
       logger,

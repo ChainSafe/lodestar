@@ -8,6 +8,8 @@ RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /
 
 COPY . .
 
+RUN chmod +x ./scripts/build_c_kzg.sh
+
 RUN yarn install --non-interactive --frozen-lockfile && \
   yarn build && \
   yarn install --non-interactive --frozen-lockfile --production
