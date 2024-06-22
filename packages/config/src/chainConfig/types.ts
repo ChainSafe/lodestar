@@ -40,6 +40,9 @@ export type ChainConfig = {
   // DENEB
   DENEB_FORK_VERSION: Uint8Array;
   DENEB_FORK_EPOCH: number;
+  // EIP-7716
+  EIP7716_FORK_VERSION: Uint8Array;
+  EIP7716_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -69,6 +72,11 @@ export type ChainConfig = {
 
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
+
+  // EIP-7716
+  PENALTY_ADJUSTMENT_FACTOR: number;
+  MAX_PENALTY_FACTOR: number;
+  PENALTY_RECOVERY_RATE: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -99,6 +107,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // DENEB
   DENEB_FORK_VERSION: "bytes",
   DENEB_FORK_EPOCH: "number",
+  // EIP-7716
+  EIP7716_FORK_VERSION: "bytes",
+  EIP7716_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -128,6 +139,11 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
+
+  // EIP-7716
+  PENALTY_ADJUSTMENT_FACTOR: "number",
+  MAX_PENALTY_FACTOR: "number",
+  PENALTY_RECOVERY_RATE: "number",
 };
 
 /** Allows values in a Spec file */
