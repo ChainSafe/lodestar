@@ -13,7 +13,7 @@ import {
   SSEPayloadAttributes,
   BeaconBlock,
   BeaconBlockBody,
-  BlindedExecutionPayload,
+  ExecutionPayloadHeader,
   BlindedBeaconBlockBody,
   BlindedBeaconBlock,
 } from "@lodestar/types";
@@ -443,7 +443,7 @@ async function prepareExecutionPayloadHeader(
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
-  header: BlindedExecutionPayload;
+  header: ExecutionPayloadHeader;
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
 }> {

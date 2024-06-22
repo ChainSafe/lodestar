@@ -7,7 +7,7 @@ import {
   Wei,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
-  BlindedExecutionPayload,
+  ExecutionPayloadHeader,
 } from "@lodestar/types";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
@@ -111,7 +111,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     parentHash: Root,
     proposerPubkey: BLSPubkey
   ): Promise<{
-    header: BlindedExecutionPayload;
+    header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }> {

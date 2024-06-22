@@ -14,7 +14,7 @@ import {
   Contents,
   SignedBlindedBeaconBlock,
   BlindedBeaconBlock,
-  BlindedExecutionPayload,
+  ExecutionPayloadHeader,
 } from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
@@ -74,7 +74,7 @@ export function signedBlindedBlockToFull(
 
   // state transition can't seem to handle executionPayloadHeader presense in merge block
   // so just delete the extra field we don't require
-  delete (signedBlock.message.body as {executionPayloadHeader?: BlindedExecutionPayload}).executionPayloadHeader;
+  delete (signedBlock.message.body as {executionPayloadHeader?: ExecutionPayloadHeader}).executionPayloadHeader;
   return signedBlock;
 }
 

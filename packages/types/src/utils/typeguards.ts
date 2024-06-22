@@ -7,7 +7,7 @@ import {
   BeaconBlockBody,
   BeaconBlockOrContents,
   SignedBeaconBlockOrContents,
-  BlindedExecutionPayload,
+  ExecutionPayloadHeader,
   BlindedBeaconBlock,
   SignedBlindedBeaconBlock,
   BlindedBeaconBlockBody,
@@ -16,7 +16,7 @@ import {
 } from "../types.js";
 
 export function isExecutionPayload<F extends ForkExecution>(
-  payload: ExecutionPayload<F> | BlindedExecutionPayload<F>
+  payload: ExecutionPayload<F> | ExecutionPayloadHeader<F>
 ): payload is ExecutionPayload<F> {
   // we just check transactionsRoot for determining as it the base field
   // that is present and differs from ExecutionPayload for all forks
@@ -24,11 +24,11 @@ export function isExecutionPayload<F extends ForkExecution>(
 }
 
 export function isBlindedExecutionPayload<F extends ForkExecution>(
-  payload: ExecutionPayload<F> | BlindedExecutionPayload<F>
-): payload is BlindedExecutionPayload<F> {
+  payload: ExecutionPayload<F> | ExecutionPayloadHeader<F>
+): payload is ExecutionPayloadHeader<F> {
   // we just check transactionsRoot for determining as it the base field
   // that is present and differs from ExecutionPayload for all forks
-  return (payload as BlindedExecutionPayload<F>).transactionsRoot !== undefined;
+  return (payload as ExecutionPayloadHeader<F>).transactionsRoot !== undefined;
 }
 
 export function isExecutionPayloadAndBlobsBundle<F extends ForkBlobs>(

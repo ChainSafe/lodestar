@@ -168,7 +168,7 @@ export type SignedBeaconBlockOrContents<FB extends ForkAll = ForkAll, FC extends
   | SignedBlockContents<FC>;
 
 export type ExecutionPayload<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayload"];
-export type BlindedExecutionPayload<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayloadHeader"];
+export type ExecutionPayloadHeader<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayloadHeader"];
 
 export type BlobsBundle<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlobsBundle"];
 export type Contents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["Contents"];
