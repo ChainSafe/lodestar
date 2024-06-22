@@ -143,17 +143,17 @@ export type SSZBlindedTypesFor<
   ? // It compiles fine, need to debug the error
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    {[K2 in keyof SSZBlindedTypesByFork[F]]: UnionForksTypeOf<SSZBlindedTypesByFork[F][K2]>}
+    {[K2 in keyof SSZBlindedTypesByFork[F]]: UnionSSZForksTypeOf<SSZBlindedTypesByFork[F][K2]>}
   : // It compiles fine, need to debug the error
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    UnionForksTypeOf<SSZBlindedTypesByFork[F][Exclude<K, void>]>;
+    UnionSSZForksTypeOf<SSZBlindedTypesByFork[F][Exclude<K, void>]>;
 
 /**
  * A type of union of forks must accept as any parameter the UNION of all fork types.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UnionForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType<
+type UnionSSZForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType<
   ValueOf<UnionOfForkTypes>,
   CompositeView<UnionOfForkTypes>,
   CompositeViewDU<UnionOfForkTypes>
@@ -169,11 +169,11 @@ export type SSZTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F] | 
   ? // It compiles fine, need to debug the error
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    {[K2 in keyof SSZTypesByFork[F]]: UnionForksTypeOf<SSZTypesByFork[F][K2]>}
+    {[K2 in keyof SSZTypesByFork[F]]: UnionSSZForksTypeOf<SSZTypesByFork[F][K2]>}
   : // It compiles fine, need to debug the error
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    UnionForksTypeOf<SSZTypesByFork[F][Exclude<K, void>]>;
+    UnionSSZForksTypeOf<SSZTypesByFork[F][Exclude<K, void>]>;
 
 export function sszTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F] | void = void>(
   fork: F,

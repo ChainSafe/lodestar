@@ -1,4 +1,4 @@
-import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName} from "@lodestar/params";
+import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName, ForkPreBlobs} from "@lodestar/params";
 import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
@@ -159,11 +159,11 @@ export type BlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["Blo
 export type SignedBlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["SignedBlockContents"];
 export type SignedOrUnsignedBlockContents<F extends ForkBlobs = ForkBlobs> = BlockContents<F> | SignedBlockContents<F>;
 
-export type BeaconBlockOrContents<FB extends ForkAll = ForkAll, FC extends ForkBlobs = ForkBlobs> =
+export type BeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, FC extends ForkBlobs = ForkBlobs> =
   | BeaconBlock<FB>
   | BlockContents<FC>;
 
-export type SignedBeaconBlockOrContents<FB extends ForkAll = ForkAll, FC extends ForkBlobs = ForkBlobs> =
+export type SignedBeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, FC extends ForkBlobs = ForkBlobs> =
   | SignedBeaconBlock<FB>
   | SignedBlockContents<FC>;
 
