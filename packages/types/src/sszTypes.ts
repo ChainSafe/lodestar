@@ -183,10 +183,3 @@ export function sszTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F
     typeName === undefined ? typesByFork[fork] : typesByFork[fork][typeName as keyof SSZTypesByFork[F]]
   ) as SSZTypesFor<F, K>;
 }
-
-export type SSZInstanceTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F]> = CompositeViewDU<
-  // It compiles fine, need to debug the error
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  SSZTypesByFork[F][K]
->;

@@ -1,14 +1,15 @@
-import {Epoch, RootHex, SSZInstanceTypesFor} from "@lodestar/types";
+import {CompositeViewDU} from "@chainsafe/ssz";
+import {Epoch, RootHex, SSZTypesFor} from "@lodestar/types";
 import {ForkAll, ForkExecution, ForkName} from "@lodestar/params";
 import {EpochShuffling} from "../util/epochShuffling.js";
 
-export type BeaconStatePhase0 = SSZInstanceTypesFor<ForkName.phase0, "BeaconState">;
-export type BeaconStateAltair = SSZInstanceTypesFor<ForkName.altair, "BeaconState">;
-export type BeaconStateBellatrix = SSZInstanceTypesFor<ForkName.bellatrix, "BeaconState">;
-export type BeaconStateCapella = SSZInstanceTypesFor<ForkName.capella, "BeaconState">;
-export type BeaconStateDeneb = SSZInstanceTypesFor<ForkName.deneb, "BeaconState">;
+export type BeaconStatePhase0 = CompositeViewDU<SSZTypesFor<ForkName.phase0, "BeaconState">>;
+export type BeaconStateAltair = CompositeViewDU<SSZTypesFor<ForkName.altair, "BeaconState">>;
+export type BeaconStateBellatrix = CompositeViewDU<SSZTypesFor<ForkName.bellatrix, "BeaconState">>;
+export type BeaconStateCapella = CompositeViewDU<SSZTypesFor<ForkName.capella, "BeaconState">>;
+export type BeaconStateDeneb = CompositeViewDU<SSZTypesFor<ForkName.deneb, "BeaconState">>;
 
-export type BeaconStateAllForks = SSZInstanceTypesFor<ForkAll, "BeaconState">;
-export type BeaconStateExecutions = SSZInstanceTypesFor<ForkExecution, "BeaconState">;
+export type BeaconStateAllForks = CompositeViewDU<SSZTypesFor<ForkAll, "BeaconState">>;
+export type BeaconStateExecutions = CompositeViewDU<SSZTypesFor<ForkExecution, "BeaconState">>;
 
 export type ShufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex) => EpochShuffling | null;
