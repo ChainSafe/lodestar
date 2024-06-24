@@ -10,6 +10,7 @@ import {SyncState} from "../../../../../src/sync/interface.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 import {zeroProtoBlock} from "../../../../utils/state.js";
+import {defaultApiOptions} from "../../../../../src/api/options.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
@@ -26,7 +27,7 @@ describe("api/validator - produceBlockV3", function () {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getValidatorApi({...modules, config});
+    api = getValidatorApi(defaultApiOptions, {...modules, config});
 
     modules.chain.executionBuilder.status = true;
   });

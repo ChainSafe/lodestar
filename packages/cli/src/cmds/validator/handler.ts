@@ -19,7 +19,7 @@ import {
 import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, cleanOldLogFiles, getDefaultGraffiti, mkdir, parseLoggerArgs} from "../../util/index.js";
+import {YargsError, cleanOldLogFiles, mkdir, parseLoggerArgs} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/proposerConfig.js";
@@ -226,7 +226,7 @@ function getProposerConfigFromArgs(
   }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
 ): ValidatorProposerConfig {
   const defaultConfig = {
-    graffiti: args.graffiti ?? "",
+    graffiti: args.graffiti,
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
     builder: {

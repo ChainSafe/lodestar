@@ -63,6 +63,7 @@ import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {ClientCode} from "../../../execution/index.js";
 import {ApiOptions} from "../../options.js";
+import {ClockEvent} from "../../../util/clock.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
@@ -110,14 +111,10 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
  */
-export function getValidatorApi(opts: ApiOptions, {
-  chain,
-  config,
-  logger,
-  metrics,
-  network,
-  sync,
-}: ApiModules): ApplicationMethods<routes.validator.Endpoints> {
+export function getValidatorApi(
+  opts: ApiOptions,
+  {chain, config, logger, metrics, network, sync}: ApiModules
+): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
 
   /**
@@ -129,9 +126,9 @@ export function getValidatorApi(opts: ApiOptions, {
   const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
-  let defaultGraffiti: string;
-  updateDefaultGraffiti();
-  chain.emitter.on(routes.events.EventType.payloadAttributes, updateDefaultGraffiti);
+  let defaultGraffiti: string = "";
+  void updateDefaultGraffiti();
+  chain.clock.on(ClockEvent.epoch, updateDefaultGraffiti);
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -381,7 +378,7 @@ export function getValidatorApi(opts: ApiOptions, {
   async function produceBuilderBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti?: string,
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
       skipHeadChecksAndUpdate,
@@ -439,7 +436,7 @@ export function getValidatorApi(opts: ApiOptions, {
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? (await defaultGraffiti)),
+        graffiti: toGraffitiBuffer(graffiti ?? defaultGraffiti),
         commonBlockBody,
       });
 
@@ -465,7 +462,7 @@ export function getValidatorApi(opts: ApiOptions, {
   async function produceEngineFullBlockOrContents(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti?: string,
     {
       feeRecipient,
       strictFeeRecipientCheck,
@@ -507,7 +504,7 @@ export function getValidatorApi(opts: ApiOptions, {
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || (await defaultGraffiti)),
+        graffiti: toGraffitiBuffer(graffiti ?? defaultGraffiti),
         feeRecipient,
         commonBlockBody,
       });
@@ -555,7 +552,7 @@ export function getValidatorApi(opts: ApiOptions, {
   async function produceEngineOrBuilderBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti?: string,
     // TODO deneb: skip randao verification
     _skipRandaoVerification?: boolean,
     builderBoostFactor?: bigint,
@@ -613,14 +610,14 @@ export function getValidatorApi(opts: ApiOptions, {
       builderBoostFactor: `${builderBoostFactor}`,
     };
 
-      logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-      const commonBlockBody = await chain.produceCommonBlockBody({
-        slot,
-        parentBlockRoot,
-        randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || (await defaultGraffiti)),
-      });
-      logger.debug("Produced common block body", loggerContext);
+    logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
+    const commonBlockBody = await chain.produceCommonBlockBody({
+      slot,
+      parentBlockRoot,
+      randaoReveal,
+      graffiti: toGraffitiBuffer(graffiti ?? defaultGraffiti),
+    });
+    logger.debug("Produced common block body", loggerContext);
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,

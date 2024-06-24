@@ -198,7 +198,7 @@ export class BlockProposingService {
     _config: ChainForkConfig,
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti: string | undefined,
     builderBoostFactor: bigint,
     {feeRecipient, strictFeeRecipientCheck, blindedLocal}: routes.validator.ExtraProduceBlockOpts,
     builderSelection: routes.validator.BuilderSelection
@@ -236,7 +236,7 @@ export class BlockProposingService {
     config: ChainForkConfig,
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti: string | undefined,
     _builderBoostFactor: bigint,
     _opts: routes.validator.ExtraProduceBlockOpts,
     builderSelection: routes.validator.BuilderSelection
