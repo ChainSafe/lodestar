@@ -52,8 +52,18 @@ export function blindedOrFullBlockToHeader(
 export function beaconBlockToBlinded(config: ChainForkConfig, block: BeaconBlock<ForkExecution>): BlindedBeaconBlock {
   const fork = config.getForkName(block.slot);
   const executionPayloadHeader = executionPayloadToPayloadHeader(ForkSeq[fork], block.body.executionPayload);
-  const blindedBlock = {...block, body: {...block.body, executionPayloadHeader}} as BlindedBeaconBlock;
+  const blindedBlock: BlindedBeaconBlock = {...block, body: {...block.body, executionPayloadHeader}};
   return blindedBlock;
+}
+
+export function signedBeaconBlockToBlinded(
+  config: ChainForkConfig,
+  signedBlock: SignedBeaconBlock<ForkExecution>
+): SignedBlindedBeaconBlock {
+  return {
+    message: beaconBlockToBlinded(config, signedBlock.message),
+    signature: signedBlock.signature,
+  };
 }
 
 export function signedBlindedBlockToFull(
