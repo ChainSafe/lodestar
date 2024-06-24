@@ -3,7 +3,7 @@ import {when} from "vitest-when";
 import {ApiClient, ApiResponse, HttpStatusCode, routes} from "@lodestar/api";
 import {hash} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
-import {allForks, capella} from "@lodestar/types";
+import {ExecutionPayload, SignedBeaconBlock, capella} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
@@ -12,12 +12,12 @@ import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
 const slotNumber = 10;
 const createHash = (input: string): Uint8Array => hash(Buffer.from(input, "utf8"));
 
-const buildPayload = ({blockNumber}: {blockNumber: number}): allForks.ExecutionPayload =>
+const buildPayload = ({blockNumber}: {blockNumber: number}): ExecutionPayload =>
   ({
     blockNumber,
     blockHash: createHash(`"block-hash-${blockNumber}`),
     parentHash: createHash(`"parent-hash-${blockNumber}`),
-  }) as unknown as allForks.ExecutionPayload;
+  }) as unknown as ExecutionPayload;
 
 const buildLCHeader = ({slot, blockNumber}: {slot: number; blockNumber: number}): capella.LightClientHeader =>
   ({
@@ -25,7 +25,7 @@ const buildLCHeader = ({slot, blockNumber}: {slot: number; blockNumber: number})
     execution: buildPayload({blockNumber}),
   }) as unknown as capella.LightClientHeader;
 
-const buildBlock = ({slot, blockNumber}: {slot: number; blockNumber: number}): allForks.SignedBeaconBlock =>
+const buildBlock = ({slot, blockNumber}: {slot: number; blockNumber: number}): SignedBeaconBlock =>
   ({
     signature: createHash(`"beacon-block-signature-${slot}`),
     message: {
@@ -37,7 +37,7 @@ const buildBlock = ({slot, blockNumber}: {slot: number; blockNumber: number}): a
         executionPayload: buildPayload({blockNumber}),
       },
     },
-  }) as unknown as allForks.SignedBeaconBlock;
+  }) as unknown as SignedBeaconBlock;
 
 const buildBlockResponse = ({
   slot,

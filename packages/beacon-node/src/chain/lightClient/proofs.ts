@@ -1,7 +1,7 @@
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {FINALIZED_ROOT_GINDEX, BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX, ForkExecution} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
 
 import {SyncCommitteeWitness} from "./types.js";
 
@@ -47,8 +47,8 @@ export function getFinalizedRootProof(state: BeaconStateAllForks): Uint8Array[] 
 
 export function getBlockBodyExecutionHeaderProof(
   fork: ForkExecution,
-  body: allForks.AllForksExecution["BeaconBlockBody"]
+  body: BeaconBlockBody<ForkExecution>
 ): Uint8Array[] {
-  const bodyView = (ssz[fork].BeaconBlockBody as allForks.AllForksExecutionSSZTypes["BeaconBlockBody"]).toView(body);
+  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkExecution, "BeaconBlockBody">).toView(body);
   return new Tree(bodyView.node).getSingleProof(BigInt(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX));
 }

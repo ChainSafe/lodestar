@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {Slot, allForks, ssz} from "@lodestar/types";
+import {SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {
   BlockHeaderResponse,
   BroadcastValidation,
@@ -242,7 +242,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
 };
 
-function getDefaultBlindedBlock(slot: Slot): allForks.SignedBlindedBeaconBlock {
+function getDefaultBlindedBlock(slot: Slot): SignedBlindedBeaconBlock {
   const block = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
   block.message.slot = slot;
   return block;

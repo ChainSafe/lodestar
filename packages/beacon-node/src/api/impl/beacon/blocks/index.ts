@@ -3,7 +3,14 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, fromHex, toHex} from "@lodestar/utils";
-import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
+import {
+  deneb,
+  isSignedBlockContents,
+  ProducedBlockSource,
+  SignedBeaconBlock,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+} from "@lodestar/types";
 import {
   BlockSource,
   getBlockInput,
@@ -53,7 +60,7 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
-    let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, blobSidecars: deneb.BlobSidecars;
+    let blockForImport: BlockInput, signedBlock: SignedBeaconBlock, blobSidecars: deneb.BlobSidecars;
 
     if (isSignedBlockContents(signedBlockOrContents)) {
       ({signedBlock} = signedBlockOrContents);
@@ -463,8 +470,8 @@ export function getBeaconBlockApi({
 
 async function reconstructBuilderBlockOrContents(
   chain: ApiModules["chain"],
-  signedBlindedBlock: allForks.SignedBlindedBeaconBlock
-): Promise<allForks.SignedBeaconBlockOrContents> {
+  signedBlindedBlock: SignedBlindedBeaconBlock
+): Promise<SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
     throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");

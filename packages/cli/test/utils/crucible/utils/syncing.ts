@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
-import {Slot} from "@lodestar/types";
+import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
+import {ForkBlobs} from "@lodestar/params";
 import type {Simulation} from "../simulation.js";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
 import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitForSlot} from "./network.js";
@@ -131,7 +132,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     (
       await unknownBlockSync.beacon.api.beacon.publishBlockV2({
         signedBlockOrContents: {
-          signedBlock: currentHead,
+          signedBlock: currentHead as SignedBeaconBlock<ForkBlobs>,
           blobs: currentSidecars.map((b) => b.blob),
           kzgProofs: currentSidecars.map((b) => b.kzgProof),
         },

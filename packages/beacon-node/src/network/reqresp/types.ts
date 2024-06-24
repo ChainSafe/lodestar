@@ -1,7 +1,7 @@
 import {Type} from "@chainsafe/ssz";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
-import {Root, allForks, altair, deneb, phase0, ssz} from "@lodestar/types";
+import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz} from "@lodestar/types";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -42,10 +42,10 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.Status]: phase0.Status;
   [ReqRespMethod.Goodbye]: phase0.Goodbye;
   [ReqRespMethod.Ping]: phase0.Ping;
-  [ReqRespMethod.Metadata]: allForks.Metadata;
+  [ReqRespMethod.Metadata]: Metadata;
   // Do not matter
-  [ReqRespMethod.BeaconBlocksByRange]: allForks.SignedBeaconBlock;
-  [ReqRespMethod.BeaconBlocksByRoot]: allForks.SignedBeaconBlock;
+  [ReqRespMethod.BeaconBlocksByRange]: SignedBeaconBlock;
+  [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
   [ReqRespMethod.LightClientBootstrap]: altair.LightClientBootstrap;
@@ -74,7 +74,7 @@ export const requestSszTypeByMethod: {
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
 
-const blocksResponseType: ResponseTypeGetter<allForks.SignedBeaconBlock> = (fork, version) => {
+const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version) => {
   if (version === Version.V1) {
     return ssz.phase0.SignedBeaconBlock;
   } else {

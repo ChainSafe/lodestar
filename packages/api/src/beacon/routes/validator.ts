@@ -3,7 +3,6 @@ import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsa
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkBlobs} from "@lodestar/params";
 import {
-  allForks,
   altair,
   BLSSignature,
   CommitteeIndex,
@@ -16,6 +15,8 @@ import {
   ValidatorIndex,
   ProducedBlockSource,
   stringType,
+  BeaconBlockOrContents,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
@@ -315,7 +316,7 @@ export type Endpoints = {
         strict_fee_recipient_check?: boolean;
       };
     },
-    allForks.BeaconBlockOrContents,
+    BeaconBlockOrContents,
     VersionMeta
   >;
 
@@ -349,7 +350,7 @@ export type Endpoints = {
         blinded_local?: boolean;
       };
     },
-    allForks.FullOrBlindedBeaconBlockOrContents,
+    BeaconBlockOrContents | BlindedBeaconBlock,
     ProduceBlockV3Meta
   >;
 
@@ -361,7 +362,7 @@ export type Endpoints = {
       graffiti: string;
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
-    allForks.BlindedBeaconBlock,
+    BlindedBeaconBlock,
     VersionMeta
   >;
 
@@ -623,8 +624,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: {
         data: WithVersion(
-          (fork) =>
-            (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<allForks.BeaconBlockOrContents>
+          (fork) => (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
       },
@@ -688,7 +688,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
               ? getBlindedForkTypes(version).BeaconBlock
               : isForkBlobs(version)
                 ? BlockContentsType
-                : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
+                : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
         ),
         meta: {
           toJson: (meta) => ({

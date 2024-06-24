@@ -1,6 +1,6 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
+import {Epoch, Slot, ValidatorIndex, phase0, Root, RootHex, BeaconBlock} from "@lodestar/types";
 import {
   ProtoBlock,
   MaybeValidExecutionStatus,
@@ -131,7 +131,7 @@ export interface IForkChoice {
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
    */
   onBlock(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,

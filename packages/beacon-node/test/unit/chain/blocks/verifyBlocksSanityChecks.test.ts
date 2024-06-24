@@ -4,7 +4,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks, Slot, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
@@ -17,7 +17,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let clock: ClockStopped;
   let modules: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};
-  let block: allForks.SignedBeaconBlock;
+  let block: SignedBeaconBlock;
   const currentSlot = 1;
 
   beforeEach(() => {
@@ -121,9 +121,9 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
  */
 function verifyBlocksSanityChecks(
   modules: Parameters<typeof verifyBlocksImportSanityChecks>[0],
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: SignedBeaconBlock[],
   opts: Parameters<typeof verifyBlocksImportSanityChecks>[2]
-): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
+): {relevantBlocks: SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
     blocks.map((block) => getBlockInput.preData(config, block, BlockSource.byRange, null)),
@@ -136,8 +136,8 @@ function verifyBlocksSanityChecks(
   };
 }
 
-function getValidChain(count: number, initialSlot = 0): allForks.SignedBeaconBlock[] {
-  const blocks: allForks.SignedBeaconBlock[] = [];
+function getValidChain(count: number, initialSlot = 0): SignedBeaconBlock[] {
+  const blocks: SignedBeaconBlock[] = [];
 
   for (let i = 0; i < count; i++) {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -154,7 +154,7 @@ function getValidChain(count: number, initialSlot = 0): allForks.SignedBeaconBlo
   return blocks;
 }
 
-function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch = 0): IForkChoice {
+function getForkChoice(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IForkChoice {
   const blocks = new Map<string, ProtoBlock>();
   for (const block of knownBlocks) {
     const protoBlock = toProtoBlock(block);
@@ -174,7 +174,7 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
   } as Partial<IForkChoice> as IForkChoice;
 }
 
-function toProtoBlock(block: allForks.SignedBeaconBlock): ProtoBlock {
+function toProtoBlock(block: SignedBeaconBlock): ProtoBlock {
   return {
     slot: block.message.slot,
     blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
@@ -183,17 +183,17 @@ function toProtoBlock(block: allForks.SignedBeaconBlock): ProtoBlock {
   } as Partial<ProtoBlock> as ProtoBlock;
 }
 
-function slots(blocks: allForks.SignedBeaconBlock[]): Slot[] {
+function slots(blocks: SignedBeaconBlock[]): Slot[] {
   return blocks.map((block) => block.message.slot);
 }
 
 /** Since blocks have no meaning compare the indexes against `allBlocks` */
 function expectBlocks(
-  expectedBlocks: allForks.SignedBeaconBlock[],
-  actualBlocks: allForks.SignedBeaconBlock[],
-  allBlocks: allForks.SignedBeaconBlock[]
+  expectedBlocks: SignedBeaconBlock[],
+  actualBlocks: SignedBeaconBlock[],
+  allBlocks: SignedBeaconBlock[]
 ): void {
-  function indexOfBlocks(blocks: allForks.SignedBeaconBlock[]): number[] {
+  function indexOfBlocks(blocks: SignedBeaconBlock[]): number[] {
     return blocks.map((block) => allBlocks.indexOf(block));
   }
 

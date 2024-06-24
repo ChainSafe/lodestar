@@ -1,4 +1,4 @@
-import {allForks} from "@lodestar/types";
+import {LightClientHeader} from "@lodestar/types";
 import {RunStatusCode} from "./index.js";
 
 export enum LightclientEvent {
@@ -8,8 +8,8 @@ export enum LightclientEvent {
 }
 
 export type LightclientEmitterEvents = {
-  [LightclientEvent.lightClientOptimisticHeader]: (newHeader: allForks.LightClientHeader) => void;
-  [LightclientEvent.lightClientFinalityHeader]: (newHeader: allForks.LightClientHeader) => void;
+  [LightclientEvent.lightClientOptimisticHeader]: (newHeader: LightClientHeader) => void;
+  [LightclientEvent.lightClientFinalityHeader]: (newHeader: LightClientHeader) => void;
   [LightclientEvent.statusChange]: (code: RunStatusCode) => void;
 };
 
