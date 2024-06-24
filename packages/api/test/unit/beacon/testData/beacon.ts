@@ -38,6 +38,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.bellatrix},
     },
   },
+  getBlindedBlock: {
+    args: {blockId: "head"},
+    res: {
+      data: ssz.deneb.SignedBlindedBeaconBlock.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.deneb},
+    },
+  },
   getBlockAttestations: {
     args: {blockId: "head"},
     res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {executionOptimistic: true, finalized: false}},
