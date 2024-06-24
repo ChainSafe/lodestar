@@ -98,10 +98,10 @@ export function toGraffitiHex(utf8?: string): string | undefined {
 }
 
 export function fromGraffitiHex(hex?: string): string | undefined {
+  if (hex === undefined) {
+    return undefined;
+  }
   try {
-    if (hex === undefined) {
-      return undefined;
-    }
     return new TextDecoder("utf8").decode(fromHexString(hex));
   } catch {
     // allow malformed graffiti hex string

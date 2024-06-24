@@ -364,7 +364,8 @@ export function getValidatorApi(
       const executionCode = executionClientVersions[0].code;
       const executionCommit = executionClientVersions[0].commit;
 
-      return `${executionCode}|${executionCommit.slice(0, 2)}|${consensusCode}|${consensusCommit.slice(0, 2)}`;
+      // Follow the 2-byte commit format in https://github.com/ethereum/execution-apis/pull/517#issuecomment-1918512560
+      return `${executionCode}${executionCommit.slice(0, 2)}${consensusCode}${consensusCommit.slice(0, 2)}`;
     }
 
     // No EL client info available. We still want to include CL info albeit not spec compliant
