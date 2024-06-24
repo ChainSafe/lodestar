@@ -340,6 +340,7 @@ export function getValidatorApi(
 
   async function updateDefaultGraffiti(): Promise<void> {
     defaultGraffiti = await getDefaultGraffiti();
+    logger.debug(`default graffiti is set to ${defaultGraffiti}`);
   }
 
   async function getDefaultGraffiti(): Promise<string> {
@@ -356,6 +357,8 @@ export function getValidatorApi(
     const executionClientVersions = await chain.executionEngine
       .getClientVersion(lodestarClientVersion)
       .catch((_) => []);
+
+    logger.debug(`Receive executionClientVersions ${executionClientVersions}`);
 
     if (executionClientVersions.length !== 0) {
       const executionCode = executionClientVersions[0].code;
