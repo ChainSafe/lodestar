@@ -364,7 +364,8 @@ export function getValidatorApi(
       return `${executionCode}|${executionCommit.slice(0, 2)}|${consensusCode}|${consensusCommit.slice(0, 2)}`;
     }
 
-    return "";
+    // No EL client info available. We still want to include CL info albeit not spec compliant
+    return `${consensusCode}|${consensusCommit.slice(0, 2)}`;
   }
 
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {

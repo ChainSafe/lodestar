@@ -38,6 +38,10 @@ export enum ExecutionEngineState {
   AUTH_FAILED = "AUTH_FAILED",
 }
 
+/**
+ * Client code as defined in https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#clientcode
+ * ClientCode.XX is dedicated to other clients which do not have their own code
+ */
 export enum ClientCode {
   BU = "besu",
   EJ = "ethereumJS",
