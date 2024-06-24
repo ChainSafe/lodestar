@@ -171,7 +171,7 @@ export type ClientVersionRpc = {
   name: string;
   /** string, the version string of the current implementation */
   version: string;
-  /** DATA, 4 bytes - first four bytes of the latest commit hash of this Lodestar build  */
+  /** DATA, 4 bytes - first four bytes of the latest commit hash of this build  */
   commit: DATA;
 };
 
