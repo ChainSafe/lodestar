@@ -1,5 +1,13 @@
-import {ForkName, isForkBlobs, isForkExecution, isForkLightClient} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
+import {
+  ForkBlobs,
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  isForkBlobs,
+  isForkExecution,
+  isForkLightClient,
+} from "@lodestar/params";
+import {SSZTypesFor, sszTypesFor} from "@lodestar/types";
 
 export function toForkName(version: string): ForkName {
   // Teku returns fork as UPPERCASE
@@ -11,30 +19,26 @@ export function toForkName(version: string): ForkName {
   return version as ForkName;
 }
 
-export function getLightClientForkTypes(fork: ForkName): allForks.AllForksLightClientSSZTypes {
+export function getLightClientForkTypes(fork: ForkName): SSZTypesFor<ForkLightClient> {
   if (!isForkLightClient(fork)) {
     throw Error(`Invalid fork=${fork} for lightclient fork types`);
   }
-  return ssz.allForksLightClient[fork];
+
+  return sszTypesFor(fork);
 }
 
-export function getExecutionForkTypes(fork: ForkName): allForks.AllForksExecutionSSZTypes {
+export function getExecutionForkTypes(fork: ForkName): SSZTypesFor<ForkExecution> {
   if (!isForkExecution(fork)) {
     throw Error(`Invalid fork=${fork} for execution fork types`);
   }
-  return ssz.allForksExecution[fork];
+
+  return sszTypesFor(fork);
 }
 
-export function getBlindedForkTypes(fork: ForkName): allForks.AllForksBlindedSSZTypes {
-  if (!isForkExecution(fork)) {
-    throw Error(`Invalid fork=${fork} for blinded fork types`);
-  }
-  return ssz.allForksBlinded[fork] as allForks.AllForksBlindedSSZTypes;
-}
-
-export function getBlobsForkTypes(fork: ForkName): allForks.AllForksBlobsSSZTypes {
+export function getBlobsForkTypes(fork: ForkName): SSZTypesFor<ForkBlobs> {
   if (!isForkBlobs(fork)) {
     throw Error(`Invalid fork=${fork} for blobs fork types`);
   }
-  return ssz.allForksBlobs[fork];
+
+  return sszTypesFor(fork);
 }

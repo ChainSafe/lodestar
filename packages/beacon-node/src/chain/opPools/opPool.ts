@@ -15,7 +15,7 @@ import {
   MAX_ATTESTER_SLASHINGS,
   ForkSeq,
 } from "@lodestar/params";
-import {Epoch, phase0, capella, ssz, ValidatorIndex, allForks} from "@lodestar/types";
+import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
@@ -304,7 +304,7 @@ export class OpPool {
   /**
    * Prune all types of transactions given the latest head state
    */
-  pruneAll(headBlock: allForks.SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
+  pruneAll(headBlock: SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
@@ -377,10 +377,7 @@ export class OpPool {
    * In the worse case where head block is reorged, the same BlsToExecutionChange message can be re-added
    * to opPool once gossipsub seen cache TTL passes.
    */
-  private pruneBlsToExecutionChanges(
-    headBlock: allForks.SignedBeaconBlock,
-    headState: CachedBeaconStateAllForks
-  ): void {
+  private pruneBlsToExecutionChanges(headBlock: SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
     const {config} = headState;
     const recentBlsToExecutionChanges =
       config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella

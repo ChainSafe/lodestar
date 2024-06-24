@@ -1,11 +1,11 @@
 import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
 import {fetch} from "@lodestar/api";
-import {phase0, altair, capella} from "@lodestar/types";
+import {phase0, altair, capella, BeaconBlock, BlindedBeaconBlock} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
-import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
+import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {PubkeyHex} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -63,7 +63,7 @@ export type SignableMessage =
   | {type: SignableMessageType.AGGREGATION_SLOT; data: {slot: Slot}}
   | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
   | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
-  | {type: SignableMessageType.BLOCK_V2; data: allForks.FullOrBlindedBeaconBlock}
+  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock | BlindedBeaconBlock}
   | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
   | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
   | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}

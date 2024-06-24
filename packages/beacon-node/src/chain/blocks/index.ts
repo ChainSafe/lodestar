@@ -1,5 +1,5 @@
-import {allForks} from "@lodestar/types";
 import {toHex, isErrorAborted} from "@lodestar/utils";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
@@ -158,7 +158,7 @@ export async function processBlocks(
   }
 }
 
-function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockError {
+function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError {
   if (e instanceof BlockError) {
     return e;
   } else if (e instanceof Error) {

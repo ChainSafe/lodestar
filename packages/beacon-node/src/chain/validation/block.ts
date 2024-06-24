@@ -1,6 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks} from "@lodestar/types";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
@@ -11,6 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {IBeaconChain} from "../interface.js";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";
@@ -19,7 +19,7 @@ import {RegenCaller} from "../regen/index.js";
 export async function validateGossipBlock(
   config: ChainForkConfig,
   chain: IBeaconChain,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock,
   fork: ForkName
 ): Promise<void> {
   const block = signedBlock.message;

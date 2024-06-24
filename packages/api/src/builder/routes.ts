@@ -1,6 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
+import {
+  ssz,
+  bellatrix,
+  Slot,
+  Root,
+  BLSPubkey,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
+  SignedBlindedBeaconBlock,
+  SignedBuilderBid,
+} from "@lodestar/types";
 import {ForkName, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
@@ -17,7 +27,7 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
-import {getBlindedForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
+import {getExecutionForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -26,7 +36,7 @@ import {fromHeaders} from "../utils/headers.js";
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
 // handler already checks the status code and will not attempt to parse the body, but it will return no value.
 // It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
-export type MaybeSignedBuilderBid = allForks.SignedBuilderBid | undefined;
+export type MaybeSignedBuilderBid = SignedBuilderBid | undefined;
 
 const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
 
@@ -62,9 +72,9 @@ export type Endpoints = {
 
   submitBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: allForks.SignedBlindedBeaconBlock},
+    {signedBlindedBlock: SignedBlindedBeaconBlock},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
-    allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle,
+    ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta
   >;
 };
@@ -120,7 +130,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedBlindedBlock}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: getBlindedForkTypes(fork).SignedBeaconBlock.toJson(signedBlindedBlock),
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -129,7 +139,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.fromJson(body),
+            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
           };
         },
         schema: {
@@ -138,13 +148,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       }),
       resp: {
-        data: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle, VersionMeta>(
-          (fork: ForkName) => {
-            return isForkBlobs(fork)
-              ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
-              : getExecutionForkTypes(fork).ExecutionPayload;
-          }
-        ),
+        data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
+          return isForkBlobs(fork)
+            ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
+            : getExecutionForkTypes(fork).ExecutionPayload;
+        }),
         meta: VersionCodec,
       },
     },

@@ -1,6 +1,5 @@
 import {
   Bytes32,
-  allForks,
   Root,
   RootHex,
   Slot,
@@ -11,6 +10,12 @@ import {
   capella,
   deneb,
   Wei,
+  SSEPayloadAttributes,
+  BeaconBlock,
+  BeaconBlockBody,
+  ExecutionPayloadHeader,
+  BlindedBeaconBlockBody,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -27,7 +32,6 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
 import {toHex, sleep, Logger} from "@lodestar/utils";
-
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
@@ -73,11 +77,9 @@ export enum BlockType {
   Blinded = "Blinded",
 }
 export type AssembledBodyType<T extends BlockType> = T extends BlockType.Full
-  ? allForks.BeaconBlockBody
-  : allForks.BlindedBeaconBlockBody;
-export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
-  ? allForks.BeaconBlock
-  : allForks.BlindedBeaconBlock;
+  ? BeaconBlockBody
+  : BlindedBeaconBlockBody;
+export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full ? BeaconBlock : BlindedBeaconBlock;
 
 export enum BlobsResultType {
   preDeneb,
@@ -191,7 +193,7 @@ export async function produceBlockBody<T extends BlockType>(
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
-      (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
+      (blockBody as BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
       executionPayloadValue = builderRes.executionPayloadValue;
 
       const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
@@ -237,7 +239,7 @@ export async function produceBlockBody<T extends BlockType>(
         );
 
         if (prepareRes.isPremerge) {
-          (blockBody as allForks.ExecutionBlockBody).executionPayload =
+          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
             ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
@@ -258,7 +260,7 @@ export async function produceBlockBody<T extends BlockType>(
           const {executionPayload, blobsBundle} = engineRes;
           shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
+          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload = executionPayload;
           executionPayloadValue = engineRes.executionPayloadValue;
           Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
 
@@ -307,7 +309,7 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as allForks.ExecutionBlockBody).executionPayload =
+          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
             ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
@@ -441,7 +443,7 @@ async function prepareExecutionPayloadHeader(
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
-  header: allForks.ExecutionPayloadHeader;
+  header: ExecutionPayloadHeader;
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
 }> {
@@ -504,7 +506,7 @@ export async function getPayloadAttributesForSSE(
     parentBlockRoot,
     feeRecipient,
   }: {prepareState: CachedBeaconStateExecutions; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
-): Promise<allForks.SSEPayloadAttributes> {
+): Promise<SSEPayloadAttributes> {
   const parentHashRes = await getExecutionPayloadParentHash(chain, prepareState);
 
   if (!parentHashRes.isPremerge) {
@@ -516,7 +518,7 @@ export async function getPayloadAttributesForSSE(
       feeRecipient,
     });
 
-    const ssePayloadAttributes: allForks.SSEPayloadAttributes = {
+    const ssePayloadAttributes: SSEPayloadAttributes = {
       proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
       proposalSlot: prepareSlot,
       parentBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber,
@@ -546,7 +548,7 @@ function preparePayloadAttributes(
     parentBlockRoot: Root;
     feeRecipient: string;
   }
-): allForks.SSEPayloadAttributes["payloadAttributes"] {
+): SSEPayloadAttributes["payloadAttributes"] {
   const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
   const prevRandao = getRandaoMix(prepareState, prepareState.epochCtx.epoch);
   const payloadAttributes = {

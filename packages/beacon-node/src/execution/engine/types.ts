@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
+import {capella, deneb, Wei, bellatrix, Root, ExecutionPayload} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -181,7 +181,7 @@ export interface BlobsBundleRpc {
   proofs: DATA[]; // some ELs could also provide proofs, each 48 bytes
 }
 
-export function serializeExecutionPayload(fork: ForkName, data: allForks.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -227,7 +227,7 @@ export function parseExecutionPayload(
   fork: ForkName,
   response: ExecutionPayloadResponse
 ): {
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   executionPayloadValue: Wei;
   blobsBundle?: BlobsBundle;
   shouldOverrideBuilder?: boolean;

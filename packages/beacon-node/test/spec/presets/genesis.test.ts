@@ -1,6 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
-import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";
+import {phase0, Root, ssz, TimeSeconds, ExecutionPayloadHeader} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -60,7 +60,9 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         deposits,
         undefined,
         testcase["execution_payload_header"] &&
-          executionPayloadHeaderType.toViewDU(testcase["execution_payload_header"] as deneb.ExecutionPayloadHeader)
+          executionPayloadHeaderType.toViewDU(
+            testcase["execution_payload_header"] as ExecutionPayloadHeader<ForkName.deneb>
+          )
       );
     },
     // eth1.yaml
@@ -141,7 +143,7 @@ type GenesisInitSpecTest = {
   meta: {
     deposits_count: number;
   };
-  execution_payload_header?: allForks.ExecutionPayloadHeader;
+  execution_payload_header?: ExecutionPayloadHeader;
   state: BeaconStateAllForks;
 };
 

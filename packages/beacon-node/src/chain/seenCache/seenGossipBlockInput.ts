@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {deneb, RootHex, ssz, allForks} from "@lodestar/types";
+import {deneb, RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
 import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName} from "@lodestar/params";
@@ -23,12 +23,12 @@ export enum BlockInputAvailabilitySource {
 }
 
 type GossipedBlockInput =
-  | {type: GossipedInputType.block; signedBlock: allForks.SignedBeaconBlock; blockBytes: Uint8Array | null}
+  | {type: GossipedInputType.block; signedBlock: SignedBeaconBlock; blockBytes: Uint8Array | null}
   | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null};
 
 type BlockInputCacheType = {
   fork: ForkName;
-  block?: allForks.SignedBeaconBlock;
+  block?: SignedBeaconBlock;
   blockBytes?: Uint8Array | null;
   cachedData?: CachedData;
   // block promise and its callback cached for delayed resolution

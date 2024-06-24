@@ -1,27 +1,42 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {allForks, phase0, Root, deneb, isBlindedBeaconBlock, isExecutionPayloadAndBlobsBundle} from "@lodestar/types";
+import {ForkExecution, ForkSeq} from "@lodestar/params";
+import {
+  Root,
+  isBlindedBeaconBlock,
+  isExecutionPayloadAndBlobsBundle,
+  BeaconBlock,
+  BeaconBlockHeader,
+  SignedBeaconBlock,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
+  BlobsBundle,
+  SignedBeaconBlockOrContents,
+  Contents,
+  SignedBlindedBeaconBlock,
+  BlindedBeaconBlock,
+  ExecutionPayloadHeader,
+} from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
 
 export function blindedOrFullBlockHashTreeRoot(
   config: ChainForkConfig,
-  blindedOrFull: allForks.FullOrBlindedBeaconBlock
+  blindedOrFull: BeaconBlock | BlindedBeaconBlock
 ): Root {
   return isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull)
+      config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
       config.getForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull);
 }
 
 export function blindedOrFullBlockToHeader(
   config: ChainForkConfig,
-  blindedOrFull: allForks.FullOrBlindedBeaconBlock
-): phase0.BeaconBlockHeader {
+  blindedOrFull: BeaconBlock | BlindedBeaconBlock
+): BeaconBlockHeader {
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body)
+      config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
       config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
 
@@ -34,20 +49,17 @@ export function blindedOrFullBlockToHeader(
   };
 }
 
-export function beaconBlockToBlinded(
-  config: ChainForkConfig,
-  block: allForks.AllForksExecution["BeaconBlock"]
-): allForks.BlindedBeaconBlock {
+export function beaconBlockToBlinded(config: ChainForkConfig, block: BeaconBlock<ForkExecution>): BlindedBeaconBlock {
   const fork = config.getForkName(block.slot);
   const executionPayloadHeader = executionPayloadToPayloadHeader(ForkSeq[fork], block.body.executionPayload);
-  const blindedBlock = {...block, body: {...block.body, executionPayloadHeader}} as allForks.BlindedBeaconBlock;
+  const blindedBlock = {...block, body: {...block.body, executionPayloadHeader}} as BlindedBeaconBlock;
   return blindedBlock;
 }
 
 export function signedBlindedBlockToFull(
-  signedBlindedBlock: allForks.SignedBlindedBeaconBlock,
-  executionPayload: allForks.ExecutionPayload | null
-): allForks.SignedBeaconBlock {
+  signedBlindedBlock: SignedBlindedBeaconBlock,
+  executionPayload: ExecutionPayload | null
+): SignedBeaconBlock {
   const signedBlock = {
     ...signedBlindedBlock,
     message: {
@@ -58,18 +70,18 @@ export function signedBlindedBlockToFull(
         executionPayload: executionPayload ?? undefined,
       },
     },
-  } as allForks.SignedBeaconBlock;
+  } as SignedBeaconBlock;
 
   // state transition can't seem to handle executionPayloadHeader presense in merge block
   // so just delete the extra field we don't require
-  delete (signedBlock.message.body as {executionPayloadHeader?: allForks.ExecutionPayloadHeader})
-    .executionPayloadHeader;
+  delete (signedBlock.message.body as {executionPayloadHeader?: ExecutionPayloadHeader}).executionPayloadHeader;
   return signedBlock;
 }
 
-export function parseExecutionPayloadAndBlobsBundle(
-  data: allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle
-): {executionPayload: allForks.ExecutionPayload; blobsBundle: deneb.BlobsBundle | null} {
+export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | ExecutionPayloadAndBlobsBundle): {
+  executionPayload: ExecutionPayload;
+  blobsBundle: BlobsBundle | null;
+} {
   if (isExecutionPayloadAndBlobsBundle(data)) {
     return data;
   } else {
@@ -81,15 +93,15 @@ export function parseExecutionPayloadAndBlobsBundle(
 }
 
 export function reconstructFullBlockOrContents(
-  signedBlindedBlock: allForks.SignedBlindedBeaconBlock,
+  signedBlindedBlock: SignedBlindedBeaconBlock,
   {
     executionPayload,
     contents,
   }: {
-    executionPayload: allForks.ExecutionPayload | null;
-    contents: deneb.Contents | null;
+    executionPayload: ExecutionPayload | null;
+    contents: Contents | null;
   }
-): allForks.SignedBeaconBlockOrContents {
+): SignedBeaconBlockOrContents {
   const signedBlock = signedBlindedBlockToFull(signedBlindedBlock, executionPayload);
 
   if (contents !== null) {
@@ -97,8 +109,8 @@ export function reconstructFullBlockOrContents(
       throw Error("Missing locally produced executionPayload for deneb+ publishBlindedBlock");
     }
 
-    return {signedBlock, ...contents} as allForks.SignedBeaconBlockOrContents;
+    return {signedBlock, ...contents} as SignedBeaconBlockOrContents;
   } else {
-    return signedBlock as allForks.SignedBeaconBlockOrContents;
+    return signedBlock as SignedBeaconBlockOrContents;
   }
 }

@@ -21,14 +21,17 @@ import {
   DOMAIN_APPLICATION_BUILDER,
 } from "@lodestar/params";
 import {
-  allForks,
   altair,
+  BeaconBlock,
   bellatrix,
+  BlindedBeaconBlock,
   BLSPubkey,
   BLSSignature,
   Epoch,
   phase0,
   Root,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
   Slot,
   ssz,
   ValidatorIndex,
@@ -430,10 +433,10 @@ export class ValidatorStore {
 
   async signBlock(
     pubkey: BLSPubkey,
-    blindedOrFull: allForks.FullOrBlindedBeaconBlock,
+    blindedOrFull: BeaconBlock | BlindedBeaconBlock,
     currentSlot: Slot,
     logger?: LoggerVc
-  ): Promise<allForks.FullOrBlindedSignedBeaconBlock> {
+  ): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock> {
     // Make sure the block slot is not higher than the current slot to avoid potential attacks.
     if (blindedOrFull.slot > currentSlot) {
       throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
@@ -469,7 +472,7 @@ export class ValidatorStore {
     return {
       message: blindedOrFull,
       signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
-    } as allForks.FullOrBlindedSignedBeaconBlock;
+    } as SignedBeaconBlock | SignedBlindedBeaconBlock;
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {

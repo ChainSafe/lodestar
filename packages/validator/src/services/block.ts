@@ -3,11 +3,15 @@ import {
   BLSPubkey,
   Slot,
   BLSSignature,
-  allForks,
-  isBlindedSignedBeaconBlock,
   ProducedBlockSource,
   deneb,
   isBlockContents,
+  BeaconBlock,
+  BeaconBlockOrContents,
+  isBlindedSignedBeaconBlock,
+  BlindedBeaconBlock,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
@@ -26,14 +30,14 @@ import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 type FullOrBlindedBlockWithContents =
   | {
       version: ForkPreBlobs;
-      block: allForks.BeaconBlock;
+      block: BeaconBlock<ForkPreBlobs>;
       contents: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkBlobs;
-      block: allForks.BeaconBlock;
+      block: BeaconBlock<ForkBlobs>;
       contents: {
         kzgProofs: deneb.KZGProofs;
         blobs: deneb.Blobs;
@@ -43,7 +47,7 @@ type FullOrBlindedBlockWithContents =
     }
   | {
       version: ForkExecution;
-      block: allForks.BlindedBeaconBlock;
+      block: BlindedBeaconBlock;
       contents: null;
       executionPayloadBlinded: true;
       executionPayloadSource: ProducedBlockSource;
@@ -174,7 +178,7 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (
-    signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     contents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
@@ -189,7 +193,12 @@ export class BlockProposingService {
       if (contents === null) {
         (await this.api.beacon.publishBlockV2({signedBlockOrContents: signedBlock, ...opts})).assertOk();
       } else {
-        (await this.api.beacon.publishBlockV2({signedBlockOrContents: {...contents, signedBlock}, ...opts})).assertOk();
+        (
+          await this.api.beacon.publishBlockV2({
+            signedBlockOrContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkBlobs>},
+            ...opts,
+          })
+        ).assertOk();
       }
     }
   };
@@ -273,7 +282,7 @@ export class BlockProposingService {
 }
 
 function parseProduceBlockResponse(
-  response: {data: allForks.FullOrBlindedBeaconBlockOrContents} & {
+  response: {data: BeaconBlockOrContents | BlindedBeaconBlock} & {
     executionPayloadSource: ProducedBlockSource;
     executionPayloadBlinded: boolean;
     version: ForkName;
@@ -304,10 +313,11 @@ function parseProduceBlockResponse(
       debugLogCtx,
     } as FullOrBlindedBlockWithContents & DebugLogCtx;
   } else {
-    if (isBlockContents(response.data)) {
+    const data = response.data;
+    if (isBlockContents(data)) {
       return {
-        block: response.data.block,
-        contents: {blobs: response.data.blobs, kzgProofs: response.data.kzgProofs},
+        block: data.block,
+        contents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
         version: response.version,
         executionPayloadBlinded: false,
         executionPayloadSource,

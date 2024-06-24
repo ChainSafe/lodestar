@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {allForks, deneb, Slot, RootHex} from "@lodestar/types";
+import {deneb, Slot, RootHex, SignedBeaconBlock} from "@lodestar/types";
 import {ForkSeq, ForkName} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
@@ -47,7 +47,7 @@ type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (d
 type CachedBlobs = {blobsCache: BlobsCacheMap} & Availability<BlockInputDataBlobs>;
 export type CachedData = ForkBlobsInfo & CachedBlobs;
 
-export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
+export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preData | BlockInputType.outOfRangeData}
   | ({type: BlockInputType.availableData} & {blockData: BlockInputData})
   // the blobsSource here is added to BlockInputBlobs when availability is resolved
@@ -68,7 +68,7 @@ export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clo
 export const getBlockInput = {
   preData(
     config: ChainForkConfig,
-    block: allForks.SignedBeaconBlock,
+    block: SignedBeaconBlock,
     source: BlockSource,
     blockBytes: Uint8Array | null
   ): BlockInput {
@@ -91,7 +91,7 @@ export const getBlockInput = {
   // building states or where importing data isn't important if valid child exists like ILs
   outOfRangeData(
     config: ChainForkConfig,
-    block: allForks.SignedBeaconBlock,
+    block: SignedBeaconBlock,
     source: BlockSource,
     blockBytes: Uint8Array | null
   ): BlockInput {
@@ -108,7 +108,7 @@ export const getBlockInput = {
 
   availableData(
     config: ChainForkConfig,
-    block: allForks.SignedBeaconBlock,
+    block: SignedBeaconBlock,
     source: BlockSource,
     blockBytes: Uint8Array | null,
     blockData: BlockInputData
@@ -127,7 +127,7 @@ export const getBlockInput = {
 
   dataPromise(
     config: ChainForkConfig,
-    block: allForks.SignedBeaconBlock,
+    block: SignedBeaconBlock,
     source: BlockSource,
     blockBytes: Uint8Array | null,
     cachedData: CachedData

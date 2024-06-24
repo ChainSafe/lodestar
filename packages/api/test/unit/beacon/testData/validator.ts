@@ -42,10 +42,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true},
     },
   },
-  produceBlock: {
-    args: {slot: 32000, randaoReveal, graffiti},
-    res: {data: ssz.phase0.BeaconBlock.defaultValue(), meta: {version: ForkName.phase0}},
-  },
   produceBlockV2: {
     args: {
       slot: 32000,

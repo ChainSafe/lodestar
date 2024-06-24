@@ -7,10 +7,6 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 const rootHex = toHexString(Buffer.alloc(32, 1));
 
 export const testData: GenericServerTestCases<Endpoints> = {
-  getDebugChainHeads: {
-    args: undefined,
-    res: {data: [{slot: 1, root: rootHex}]},
-  },
   getDebugChainHeadsV2: {
     args: undefined,
     res: {data: [{slot: 1, root: rootHex, executionOptimistic: true}]},
@@ -44,10 +40,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
         },
       ],
     },
-  },
-  getState: {
-    args: {stateId: "head"},
-    res: {data: ssz.phase0.BeaconState.defaultValue(), meta: {executionOptimistic: true, finalized: false}},
   },
   getStateV2: {
     args: {stateId: "head"},

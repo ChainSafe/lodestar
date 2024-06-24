@@ -1,4 +1,4 @@
-import {Root, RootHex, allForks, Wei} from "@lodestar/types";
+import {ExecutionPayload, Root, RootHex, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
@@ -173,7 +173,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(
     fork: ForkName,
-    executionPayload: allForks.ExecutionPayload,
+    executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root
   ): Promise<ExecutePayloadResponse> {
@@ -366,7 +366,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fork: ForkName,
     payloadId: PayloadId
   ): Promise<{
-    executionPayload: allForks.ExecutionPayload;
+    executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
     shouldOverrideBuilder?: boolean;

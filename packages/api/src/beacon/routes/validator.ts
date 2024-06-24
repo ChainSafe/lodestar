@@ -3,7 +3,6 @@ import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsa
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkBlobs} from "@lodestar/params";
 import {
-  allForks,
   altair,
   BLSSignature,
   CommitteeIndex,
@@ -16,10 +15,12 @@ import {
   ValidatorIndex,
   ProducedBlockSource,
   stringType,
+  BeaconBlockOrContents,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
-import {getBlindedForkTypes, toForkName} from "../../utils/fork.js";
+import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
 import {
   ArrayOf,
   EmptyMeta,
@@ -291,25 +292,6 @@ export type Endpoints = {
   >;
 
   /**
-   * Produce a new block, without signature.
-   * Requests a beacon node to produce a valid block, which can then be signed by a validator.
-   */
-  produceBlock: Endpoint<
-    "GET",
-    {
-      /** The slot for which the block should be proposed. */
-      slot: Slot;
-      /** The validator's randao reveal value */
-      randaoReveal: BLSSignature;
-      /** Arbitrary data validator wants to include in block */
-      graffiti?: string;
-    },
-    {params: {slot: number}; query: {randao_reveal: string; graffiti?: string}},
-    allForks.BeaconBlock,
-    VersionMeta
-  >;
-
-  /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
    * Metadata in the response indicates the type of block produced, and the supported types of block
    * will be added to as forks progress.
@@ -334,7 +316,7 @@ export type Endpoints = {
         strict_fee_recipient_check?: boolean;
       };
     },
-    allForks.BeaconBlockOrContents,
+    BeaconBlockOrContents,
     VersionMeta
   >;
 
@@ -368,7 +350,7 @@ export type Endpoints = {
         blinded_local?: boolean;
       };
     },
-    allForks.FullOrBlindedBeaconBlockOrContents,
+    BeaconBlockOrContents | BlindedBeaconBlock,
     ProduceBlockV3Meta
   >;
 
@@ -380,7 +362,7 @@ export type Endpoints = {
       graffiti?: string;
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti?: string}},
-    allForks.BlindedBeaconBlock,
+    BlindedBeaconBlock,
     VersionMeta
   >;
 
@@ -607,32 +589,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         meta: ExecutionOptimisticCodec,
       },
     },
-    produceBlock: {
-      url: "/eth/v1/validator/blocks/{slot}",
-      method: "GET",
-      req: {
-        writeReq: ({slot, randaoReveal, graffiti}) => ({
-          params: {slot},
-          query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
-        }),
-        parseReq: ({params, query}) => ({
-          slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
-          graffiti: fromGraffitiHex(query.graffiti),
-        }),
-        schema: {
-          params: {slot: Schema.UintRequired},
-          query: {
-            randao_reveal: Schema.StringRequired,
-            graffiti: Schema.String,
-          },
-        },
-      },
-      resp: {
-        data: WithVersion((fork) => ssz[fork].BeaconBlock),
-        meta: VersionCodec,
-      },
-    },
     produceBlockV2: {
       url: "/eth/v2/validator/blocks/{slot}",
       method: "GET",
@@ -668,8 +624,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: {
         data: WithVersion(
-          (fork) =>
-            (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<allForks.BeaconBlockOrContents>
+          (fork) => (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
       },
@@ -730,10 +685,10 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         data: WithMeta(
           ({version, executionPayloadBlinded}) =>
             (executionPayloadBlinded
-              ? getBlindedForkTypes(version).BeaconBlock
+              ? getExecutionForkTypes(version).BlindedBeaconBlock
               : isForkBlobs(version)
                 ? BlockContentsType
-                : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
+                : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
         ),
         meta: {
           toJson: (meta) => ({
@@ -798,7 +753,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       },
       resp: {
-        data: WithVersion((fork) => getBlindedForkTypes(fork).BeaconBlock),
+        data: WithVersion((fork) => getExecutionForkTypes(fork).BlindedBeaconBlock),
         meta: VersionCodec,
       },
     },

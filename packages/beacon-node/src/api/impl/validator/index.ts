@@ -31,12 +31,14 @@ import {
   Epoch,
   ProducedBlockSource,
   bellatrix,
-  allForks,
   BLSSignature,
   isBlindedBeaconBlock,
   isBlockContents,
   phase0,
   Wei,
+  BeaconBlock,
+  BlockContents,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
@@ -94,11 +96,11 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
-  | {data: allForks.BeaconBlock; version: ForkPreBlobs}
-  | {data: allForks.BlockContents; version: ForkBlobs}
+  | {data: BeaconBlock<ForkPreBlobs>; version: ForkPreBlobs}
+  | {data: BlockContents; version: ForkBlobs}
 );
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: allForks.BlindedBeaconBlock;
+  data: BlindedBeaconBlock;
   version: ForkExecution;
 };
 
@@ -446,7 +448,7 @@ export function getValidatorApi(
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toHex(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+        root: toHex(config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
       });
 
       if (chain.opts.persistProducedBlocks) {
@@ -535,7 +537,7 @@ export function getValidatorApi(
         }
 
         return {
-          data: {block, ...contents} as allForks.BlockContents,
+          data: {block, ...contents} as BlockContents,
           version,
           executionPayloadValue,
           consensusBlockValue,
@@ -771,17 +773,6 @@ export function getValidatorApi(
   }
 
   return {
-    async produceBlock({slot, randaoReveal, graffiti}) {
-      const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti);
-      if (isForkBlobs(meta.version)) {
-        throw Error(`Invalid call to produceBlock for deneb+ fork=${meta.version}`);
-      } else {
-        // TODO: need to figure out why typescript requires typecasting here
-        // by typing of produceFullBlockOrContents respose it should have figured this out itself
-        return {data: data as allForks.BeaconBlock, meta};
-      }
-    },
-
     async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
       const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
       return {data, meta};
@@ -803,13 +794,13 @@ export function getValidatorApi(
         } else {
           if (isBlockContents(data)) {
             const {block} = data;
-            const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
+            const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
             return {
               data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
             };
           } else {
-            const blindedBlock = beaconBlockToBlinded(config, data as allForks.AllForksExecution["BeaconBlock"]);
+            const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
             return {
               data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
@@ -829,12 +820,12 @@ export function getValidatorApi(
 
       if (isBlockContents(data)) {
         const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
         return {data: blindedBlock, meta: {version}};
       } else if (isBlindedBeaconBlock(data)) {
         return {data, meta: {version}};
       } else {
-        const blindedBlock = beaconBlockToBlinded(config, data as allForks.AllForksExecution["BeaconBlock"]);
+        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
         return {data: blindedBlock, meta: {version}};
       }
     },
