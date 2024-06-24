@@ -27,7 +27,7 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
-import {getBlindedForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
+import {getExecutionForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -130,7 +130,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedBlindedBlock}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: getBlindedForkTypes(fork).SignedBeaconBlock.toJson(signedBlindedBlock),
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -139,7 +139,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.fromJson(body),
+            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
           };
         },
         schema: {

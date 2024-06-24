@@ -101,13 +101,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return ssz.allForksExecution[forkName];
     },
-    getBlindedForkTypes(slot: Slot): (typeof ssz.allForksBlinded)[ForkExecution] {
-      const forkName = this.getForkName(slot);
-      if (!isForkExecution(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
-      }
-      return ssz.allForksBlinded[forkName];
-    },
     getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
       const forkName = this.getForkName(slot);
       if (!isForkLightClient(forkName)) {

@@ -25,7 +25,7 @@ export function blindedOrFullBlockHashTreeRoot(
 ): Root {
   return isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull)
+      config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
       config.getForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull);
 }
@@ -36,7 +36,7 @@ export function blindedOrFullBlockToHeader(
 ): BeaconBlockHeader {
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body)
+      config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
       config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
 

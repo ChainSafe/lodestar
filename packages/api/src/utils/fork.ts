@@ -7,7 +7,7 @@ import {
   isForkExecution,
   isForkLightClient,
 } from "@lodestar/params";
-import {SSZBlindedTypesFor, SSZTypesFor, ssz, sszTypesFor} from "@lodestar/types";
+import {SSZTypesFor, ssz, sszTypesFor} from "@lodestar/types";
 
 export function toForkName(version: string): ForkName {
   // Teku returns fork as UPPERCASE
@@ -33,13 +33,6 @@ export function getExecutionForkTypes(fork: ForkName): SSZTypesFor<ForkExecution
   }
 
   return sszTypesFor(fork);
-}
-
-export function getBlindedForkTypes(fork: ForkName): SSZBlindedTypesFor<ForkExecution> {
-  if (!isForkExecution(fork)) {
-    throw Error(`Invalid fork=${fork} for blinded fork types`);
-  }
-  return ssz.allForksBlinded[fork];
 }
 
 export function getBlobsForkTypes(fork: ForkName): SSZTypesFor<ForkBlobs> {

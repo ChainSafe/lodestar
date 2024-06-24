@@ -22,7 +22,7 @@ import {
   ExecutionOptimisticFinalizedAndVersionMeta,
   MetaHeader,
 } from "../../../utils/metadata.js";
-import {getBlindedForkTypes, toForkName} from "../../../utils/fork.js";
+import {getExecutionForkTypes, toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 
@@ -414,7 +414,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedBlindedBlock}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: getBlindedForkTypes(fork).SignedBeaconBlock.toJson(signedBlindedBlock),
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -423,13 +423,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.fromJson(body),
+            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
           };
         },
         writeReqSsz: ({signedBlindedBlock}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: getBlindedForkTypes(fork).SignedBeaconBlock.serialize(signedBlindedBlock),
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -438,7 +438,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.deserialize(body),
+            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body),
           };
         },
         schema: {
@@ -458,7 +458,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedBlindedBlock, broadcastValidation}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: getBlindedForkTypes(fork).SignedBeaconBlock.toJson(signedBlindedBlock),
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
 
             headers: {
               [MetaHeader.Version]: fork,
@@ -469,14 +469,14 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.fromJson(body),
+            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },
         writeReqSsz: ({signedBlindedBlock, broadcastValidation}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: getBlindedForkTypes(fork).SignedBeaconBlock.serialize(signedBlindedBlock),
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -486,7 +486,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.deserialize(body),
+            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },

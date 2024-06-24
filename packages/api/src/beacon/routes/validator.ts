@@ -20,7 +20,7 @@ import {
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
-import {getBlindedForkTypes, toForkName} from "../../utils/fork.js";
+import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
 import {
   ArrayOf,
   EmptyMeta,
@@ -685,7 +685,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         data: WithMeta(
           ({version, executionPayloadBlinded}) =>
             (executionPayloadBlinded
-              ? getBlindedForkTypes(version).BeaconBlock
+              ? getExecutionForkTypes(version).BlindedBeaconBlock
               : isForkBlobs(version)
                 ? BlockContentsType
                 : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
@@ -753,7 +753,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       },
       resp: {
-        data: WithVersion((fork) => getBlindedForkTypes(fork).BeaconBlock),
+        data: WithVersion((fork) => getExecutionForkTypes(fork).BlindedBeaconBlock),
         meta: VersionCodec,
       },
     },
