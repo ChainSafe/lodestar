@@ -20,7 +20,7 @@ export function getBlockProposerSignatureSet(
   const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
 
   const blockType = isBlindedBeaconBlock(signedBlock.message)
-    ? config.getBlindedForkTypes(signedBlock.message.slot).BeaconBlock
+    ? config.getExecutionForkTypes(signedBlock.message.slot).BlindedBeaconBlock
     : config.getForkTypes(signedBlock.message.slot).BeaconBlock;
 
   return {

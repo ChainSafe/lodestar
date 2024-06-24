@@ -240,8 +240,8 @@ export function getBeaconBlockApi({
     const slot = signedBlindedBlock.message.slot;
     const blockRoot = toHex(
       chain.config
-        .getBlindedForkTypes(signedBlindedBlock.message.slot)
-        .BeaconBlock.hashTreeRoot(signedBlindedBlock.message)
+        .getExecutionForkTypes(signedBlindedBlock.message.slot)
+        .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
