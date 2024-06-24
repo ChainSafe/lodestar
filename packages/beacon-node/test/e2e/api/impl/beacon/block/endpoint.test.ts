@@ -52,10 +52,11 @@ describe("beacon block api", function () {
   describe("getBlockV2", () => {
     it("should return signed beacon block", async () => {
       const res = await client.getBlockV2({blockId: "head"});
-      const beaconBlock = res.value() as SignedBeaconBlock<typeof fork>;
 
       expect(res.meta().version).toBe(fork);
       expect(res.wireFormat()).toBe(WireFormat.ssz);
+
+      const beaconBlock = res.value() as SignedBeaconBlock<typeof fork>;
 
       expect(isBlindedSignedBeaconBlock(beaconBlock)).toBe(false);
       expect(isExecutionPayload(beaconBlock.message.body.executionPayload)).toBe(true);
@@ -76,10 +77,11 @@ describe("beacon block api", function () {
   describe("getBlindedBlock", () => {
     it("should return signed blinded block", async () => {
       const res = await client.getBlindedBlock({blockId: "head"});
-      const blindedBlock = res.value() as SignedBlindedBeaconBlock<typeof fork>;
 
       expect(res.meta().version).toBe(fork);
       expect(res.wireFormat()).toBe(WireFormat.ssz);
+
+      const blindedBlock = res.value() as SignedBlindedBeaconBlock<typeof fork>;
 
       expect(isBlindedSignedBeaconBlock(blindedBlock)).toBe(true);
       expect(isBlindedExecutionPayload(blindedBlock.message.body.executionPayloadHeader)).toBe(true);
