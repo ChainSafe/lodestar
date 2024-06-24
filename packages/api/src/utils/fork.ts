@@ -7,7 +7,7 @@ import {
   isForkExecution,
   isForkLightClient,
 } from "@lodestar/params";
-import {SSZTypesFor, ssz, sszTypesFor} from "@lodestar/types";
+import {SSZTypesFor, sszTypesFor} from "@lodestar/types";
 
 export function toForkName(version: string): ForkName {
   // Teku returns fork as UPPERCASE
