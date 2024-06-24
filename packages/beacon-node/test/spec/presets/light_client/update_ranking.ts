@@ -1,6 +1,6 @@
 import {expect} from "vitest";
-import {LightClientUpdate, altair, ssz} from "@lodestar/types";
-import {isForkLightClient} from "@lodestar/params";
+import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
+import {ForkLightClient, isForkLightClient} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {TestRunnerFn} from "../../utils/types.js";
@@ -54,7 +54,7 @@ newUpdate = ${renderUpdate(newUpdate)}
       },
       sszTypes: {
         [UPDATES_FILE_NAME]: isForkLightClient(fork)
-          ? ssz.allForksLightClient[fork].LightClientUpdate
+          ? sszTypesFor(fork as ForkLightClient).LightClientUpdate
           : ssz.altair.LightClientUpdate,
       },
       expectFunc: () => {},

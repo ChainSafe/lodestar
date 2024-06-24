@@ -99,21 +99,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       if (!isForkExecution(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
       }
-      return ssz.allForksExecution[forkName];
+      return sszTypesFor(forkName);
     },
     getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
       const forkName = this.getForkName(slot);
       if (!isForkLightClient(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
       }
-      return ssz.allForksLightClient[forkName];
+      return sszTypesFor(forkName);
     },
     getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
       const forkName = this.getForkName(slot);
       if (!isForkBlobs(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
       }
-      return ssz.allForksBlobs[forkName];
+      return sszTypesFor(forkName);
     },
   };
 }

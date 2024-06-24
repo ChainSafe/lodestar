@@ -1,7 +1,7 @@
 import {expect} from "vitest";
 import {init} from "@chainsafe/bls/switchable";
-import {isForkLightClient} from "@lodestar/params";
-import {altair, phase0, RootHex, Slot, ssz} from "@lodestar/types";
+import {ForkLightClient, isForkLightClient} from "@lodestar/params";
+import {altair, phase0, RootHex, Slot, ssz, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {fromHex, toHex} from "@lodestar/utils";
@@ -171,7 +171,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       },
       sszTypes: {
         bootstrap: isForkLightClient(fork)
-          ? ssz.allForksLightClient[fork].LightClientBootstrap
+          ? sszTypesFor(fork as ForkLightClient).LightClientBootstrap
           : ssz.altair.LightClientBootstrap,
         // The updates are multifork and need config and step info to be deserialized within the test
         [UPDATE_FILE_NAME]: {typeName: "LightClientUpdate", deserialize: (bytes: Uint8Array) => bytes},
