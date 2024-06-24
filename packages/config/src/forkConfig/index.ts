@@ -7,7 +7,7 @@ import {
   isForkExecution,
   isForkBlobs,
 } from "@lodestar/params";
-import {Slot, allForks, Version, ssz} from "@lodestar/types";
+import {Slot, allForks, Version, ssz, Epoch} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
@@ -80,6 +80,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     // Fork convenience methods
     getForkInfo(slot: Slot): ForkInfo {
       const epoch = Math.floor(Math.max(slot, 0) / SLOTS_PER_EPOCH);
+      return this.getForkInfoFromEpoch(epoch);
+    },
+    getForkInfoFromEpoch(epoch: Epoch): ForkInfo {
       // NOTE: forks must be sorted by descending epoch, latest fork first
       for (const fork of forksDescendingEpochOrder) {
         if (epoch >= fork.epoch) return fork;
@@ -91,6 +94,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getForkSeq(slot: Slot): ForkSeq {
       return this.getForkInfo(slot).seq;
+    },
+    getForkSeqFromEpoch(epoch: Epoch): ForkSeq {
+      return this.getForkInfoFromEpoch(epoch).seq;
     },
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;

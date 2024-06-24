@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 import {Epoch} from "@lodestar/types";
-import {DOMAIN_BEACON_PROPOSER, ForkSeq} from "@lodestar/params";
+import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
@@ -29,12 +29,7 @@ describe("epoch shufflings", () => {
     fn: () => {
       const epochSeed = getSeed(state, state.epochCtx.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
       const fork = state.config.getForkSeq(state.slot);
-      computeProposers(
-        epochSeed,
-        state.epochCtx.nextShuffling,
-        state.epochCtx.effectiveBalanceIncrements,
-        fork >= ForkSeq.electra
-      );
+      computeProposers(fork, epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
     },
   });
 

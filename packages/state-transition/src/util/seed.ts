@@ -22,20 +22,20 @@ import {computeEpochAtSlot} from "./epoch.js";
  * Compute proposer indices for an epoch
  */
 export function computeProposers(
+  fork: ForkSeq,
   epochSeed: Uint8Array,
   shuffling: {epoch: Epoch; activeIndices: ArrayLike<ValidatorIndex>},
-  effectiveBalanceIncrements: EffectiveBalanceIncrements,
-  isAfterElectra: boolean
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): number[] {
   const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
   const proposers = [];
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
       computeProposerIndex(
+        fork,
         effectiveBalanceIncrements,
         shuffling.activeIndices,
-        digest(Buffer.concat([epochSeed, intToBytes(slot, 8)])),
-        isAfterElectra
+        digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
       )
     );
   }
@@ -48,10 +48,10 @@ export function computeProposers(
  * SLOW CODE - 🐢
  */
 export function computeProposerIndex(
+  fork: ForkSeq,
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ArrayLike<ValidatorIndex>,
-  seed: Uint8Array,
-  isAfterElectra: boolean
+  seed: Uint8Array
 ): ValidatorIndex {
   if (indices.length === 0) {
     throw Error("Validator indices must not be empty");
@@ -59,9 +59,10 @@ export function computeProposerIndex(
 
   // TODO: Inline outside this function
   const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-  const MAX_EFFECTIVE_BALANCE_INCREMENT = isAfterElectra
-    ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
-    : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+  const MAX_EFFECTIVE_BALANCE_INCREMENT =
+    fork >= ForkSeq.electra
+      ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
+      : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
