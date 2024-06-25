@@ -239,7 +239,11 @@ export class BeaconChain implements IBeaconChain {
 
       if (delay > 1000) {
         const {currentSlot} = clock as Clock;
-        logger.warn("Event loop delay over 1s", {slot: currentSlot, secFromSlot: clock?.secFromSlot(currentSlot + 1)});
+        logger.warn("Event loop lag detected", {
+          slot: currentSlot,
+          slotSec: config.SECONDS_PER_SLOT - (clock as Clock).secFromSlot(currentSlot + 1),
+          delay,
+        });
       }
     }
 
