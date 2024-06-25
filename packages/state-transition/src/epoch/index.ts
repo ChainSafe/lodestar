@@ -178,7 +178,7 @@ export function processEpoch(
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processSyncCommitteeUpdates,
       });
-      processSyncCommitteeUpdates(state as CachedBeaconStateAltair);
+      processSyncCommitteeUpdates(fork, state as CachedBeaconStateAltair);
       timer?.();
     }
   }

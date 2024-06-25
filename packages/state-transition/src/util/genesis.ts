@@ -18,7 +18,7 @@ import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {processDeposit} from "../block/processDeposit.js";
 import {increaseBalance} from "../index.js";
 import {computeEpochAtSlot} from "./epoch.js";
-import {getActiveValidatorIndices} from "./validator.js";
+import {getActiveValidatorIndices, getValidatorMaxEffectiveBalance} from "./validator.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {newFilledArray} from "./array.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
@@ -193,7 +193,10 @@ export function applyDeposits(
     }
 
     const balance = balancesArr[i];
-    const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    const effectiveBalance = Math.min(
+      balance - (balance % EFFECTIVE_BALANCE_INCREMENT),
+      getValidatorMaxEffectiveBalance(validator.withdrawalCredentials)
+    );
 
     validator.effectiveBalance = effectiveBalance;
     epochCtx.effectiveBalanceIncrementsSet(i, effectiveBalance);
@@ -263,6 +266,7 @@ export function initializeBeaconStateFromEth1(
 
   if (fork >= ForkSeq.altair) {
     const {syncCommittee} = getNextSyncCommittee(
+      fork,
       state,
       activeValidatorIndices,
       state.epochCtx.effectiveBalanceIncrements
