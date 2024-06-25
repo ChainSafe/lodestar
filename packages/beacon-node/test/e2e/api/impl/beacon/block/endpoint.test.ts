@@ -4,9 +4,9 @@ import {ApiClient, WireFormat, getClient} from "@lodestar/api";
 import {
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
-  isExecutionPayloadHeader,
   isBlindedSignedBeaconBlock,
   isExecutionPayload,
+  isExecutionPayloadHeader,
 } from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
