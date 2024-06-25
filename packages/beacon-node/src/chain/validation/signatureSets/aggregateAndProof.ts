@@ -1,6 +1,6 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import {DOMAIN_AGGREGATE_AND_PROOF, ForkSeq} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
+import {ssz, SignedAggregateAndProof} from "@lodestar/types";
 import {Epoch} from "@lodestar/types";
 import {
   computeSigningRoot,
@@ -13,7 +13,7 @@ import {BeaconConfig} from "@lodestar/config";
 export function getAggregateAndProofSigningRoot(
   config: BeaconConfig,
   epoch: Epoch,
-  aggregateAndProof: allForks.SignedAggregateAndProof
+  aggregateAndProof: SignedAggregateAndProof
 ): Uint8Array {
   // previously, we call `const aggregatorDomain = state.config.getDomain(state.slot, DOMAIN_AGGREGATE_AND_PROOF, slot);`
   // at fork boundary, it's required to dial to target epoch https://github.com/ChainSafe/lodestar/blob/v1.11.3/packages/beacon-node/src/chain/validation/attestation.ts#L573
@@ -29,7 +29,7 @@ export function getAggregateAndProofSignatureSet(
   config: BeaconConfig,
   epoch: Epoch,
   aggregator: PublicKey,
-  aggregateAndProof: allForks.SignedAggregateAndProof
+  aggregateAndProof: SignedAggregateAndProof
 ): ISignatureSet {
   return createSingleSignatureSetFromComponents(
     aggregator,

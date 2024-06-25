@@ -37,6 +37,9 @@ import {
   Slot,
   ssz,
   ValidatorIndex,
+  Attestation,
+  AggregateAndProof,
+  SignedAggregateAndProof,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {ISlashingProtection} from "../slashingProtection/index.js";
@@ -495,7 +498,7 @@ export class ValidatorStore {
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<allForks.Attestation> {
+  ): Promise<Attestation> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -546,11 +549,11 @@ export class ValidatorStore {
   async signAggregateAndProof(
     duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
-    aggregate: allForks.Attestation
-  ): Promise<allForks.SignedAggregateAndProof> {
+    aggregate: Attestation
+  ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
-    const aggregateAndProof: allForks.AggregateAndProof = {
+    const aggregateAndProof: AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
       selectionProof,

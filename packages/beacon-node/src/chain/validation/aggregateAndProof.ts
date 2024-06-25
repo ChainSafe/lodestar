@@ -1,5 +1,5 @@
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {allForks, electra, phase0, RootHex, ssz} from "@lodestar/types";
+import {electra, phase0, RootHex, ssz, IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
@@ -20,7 +20,7 @@ import {
 } from "./attestation.js";
 
 export type AggregateAndProofValidationResult = {
-  indexedAttestation: allForks.IndexedAttestation;
+  indexedAttestation: IndexedAttestation;
   committeeIndices: Uint32Array;
   attDataRootHex: RootHex;
 };
@@ -41,7 +41,7 @@ export async function validateApiAggregateAndProof(
 export async function validateGossipAggregateAndProof(
   fork: ForkName,
   chain: IBeaconChain,
-  signedAggregateAndProof: allForks.SignedAggregateAndProof,
+  signedAggregateAndProof: SignedAggregateAndProof,
   serializedData: Uint8Array
 ): Promise<AggregateAndProofValidationResult> {
   return validateAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
@@ -50,7 +50,7 @@ export async function validateGossipAggregateAndProof(
 async function validateAggregateAndProof(
   fork: ForkName,
   chain: IBeaconChain,
-  signedAggregateAndProof: allForks.SignedAggregateAndProof,
+  signedAggregateAndProof: SignedAggregateAndProof,
   serializedData: Uint8Array | null = null,
   opts: {skipValidationKnownAttesters: boolean; prioritizeBls: boolean} = {
     skipValidationKnownAttesters: false,
