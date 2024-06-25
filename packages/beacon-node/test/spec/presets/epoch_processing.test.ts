@@ -5,6 +5,7 @@ import {
   EpochTransitionCache,
   BeaconStateAllForks,
   beforeProcessEpoch,
+  CachedBeaconStateAltair,
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
@@ -40,7 +41,10 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   rewards_and_penalties: epochFns.processRewardsAndPenalties,
   slashings: epochFns.processSlashings,
   slashings_reset: epochFns.processSlashingsReset,
-  sync_committee_updates: epochFns.processSyncCommitteeUpdates as EpochTransitionFn,
+  sync_committee_updates: (state, _) => {
+    const fork = state.config.getForkSeq(state.slot);
+    epochFns.processSyncCommitteeUpdates(fork, state as CachedBeaconStateAltair);
+  },
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
   pending_balance_deposits: epochFns.processPendingBalanceDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
