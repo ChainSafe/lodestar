@@ -10,7 +10,8 @@ import {
   ValidatorIndex,
   phase0,
   SyncPeriod,
-  allForks,
+  Attestation,
+  IndexedAttestation,
   electra,
 } from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
@@ -792,7 +793,7 @@ export class EpochCache {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  getIndexedAttestation(fork: ForkSeq, attestation: allForks.Attestation): allForks.IndexedAttestation {
+  getIndexedAttestation(fork: ForkSeq, attestation: Attestation): IndexedAttestation {
     const {data} = attestation;
     const attestingIndices = this.getAttestingIndices(fork, attestation);
 
@@ -808,7 +809,7 @@ export class EpochCache {
   /**
    * Return indices of validators who attestested in `attestation`
    */
-  getAttestingIndices(fork: ForkSeq, attestation: allForks.Attestation): number[] {
+  getAttestingIndices(fork: ForkSeq, attestation: Attestation): number[] {
     if (fork < ForkSeq.electra) {
       const {aggregationBits, data} = attestation;
       const validatorIndices = this.getBeaconCommittee(data.slot, data.index);

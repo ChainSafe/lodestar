@@ -1,4 +1,4 @@
-import {ssz, sszTypesFor} from "@lodestar/types";
+import {ssz, Attestation, sszTypesFor} from "@lodestar/types";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -128,7 +128,7 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 /**
  * Deserialize a gossip serialized data into an Attestation object.
  */
-export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): allForks.Attestation {
+export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   const sszType = ssz.allForks[fork].Attestation;
   try {
     return sszType.deserialize(serializedData);
