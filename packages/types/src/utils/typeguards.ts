@@ -23,7 +23,7 @@ export function isExecutionPayload<F extends ForkExecution>(
   return (payload as ExecutionPayload<F>).transactions !== undefined;
 }
 
-export function isBlindedExecutionPayload<F extends ForkExecution>(
+export function isExecutionPayloadHeader<F extends ForkExecution>(
   payload: ExecutionPayload<F> | ExecutionPayloadHeader<F>
 ): payload is ExecutionPayloadHeader<F> {
   // we just check transactionsRoot for determining as it the base field
