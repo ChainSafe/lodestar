@@ -109,6 +109,10 @@ import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attesta
  */
 const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
 
+function now(): bigint {
+  return process.hrtime.bigint() / 1000000n;
+}
+
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
@@ -224,6 +228,20 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
+
+    setInterval(checkEventLoopDelay, 1000).unref();
+
+    let last = now();
+    function checkEventLoopDelay(): void {
+      const toCheck = now();
+      const delay = Number(toCheck - last - BigInt(1000));
+      last = toCheck;
+
+      if (delay > 1000) {
+        const {currentSlot} = clock as Clock;
+        logger.warn("Event loop delay over 1s", {slot: currentSlot, secFromSlot: clock?.secFromSlot(currentSlot + 1)});
+      }
+    }
 
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(clock, preAggregateCutOffTime, this.opts?.preaggregateSlotDistance);
