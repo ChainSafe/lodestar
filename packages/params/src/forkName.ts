@@ -24,7 +24,7 @@ function exclude<T>(coll: T[], val: T[]): T[] {
   return coll.filter((f) => !val.includes(f));
 }
 
-export function highestFork(forkNames: ForkName[]): ForkName {
+export function highestFork<F extends ForkName>(forkNames: F[]): F {
   let highest = forkNames[0];
 
   for (const forkName of forkNames) {
@@ -36,7 +36,7 @@ export function highestFork(forkNames: ForkName[]): ForkName {
   return highest;
 }
 
-export function lowestFork(forkNames: ForkName[]): ForkName {
+export function lowestFork<F extends ForkName>(forkNames: F[]): F {
   let lowest = forkNames[0];
 
   for (const forkName of forkNames) {
@@ -53,28 +53,37 @@ export const forkAll = Object.keys(ForkName) as ForkName[];
 
 export type ForkPreLightClient = ForkName.phase0;
 export type ForkLightClient = Exclude<ForkName, ForkPreLightClient>;
-export const forkLightClient = exclude(forkAll, [ForkName.phase0]);
+export const forkLightClient = exclude(forkAll, [ForkName.phase0]) as ForkLightClient[];
 export function isForkLightClient(fork: ForkName): fork is ForkLightClient {
   return fork !== ForkName.phase0;
 }
 
 export type ForkPreExecution = ForkPreLightClient | ForkName.altair;
 export type ForkExecution = Exclude<ForkName, ForkPreExecution>;
-export const forkExecution = exclude(forkAll, [ForkName.phase0, ForkName.altair]);
+export const forkExecution = exclude(forkAll, [ForkName.phase0, ForkName.altair]) as ForkExecution[];
 export function isForkExecution(fork: ForkName): fork is ForkExecution {
   return isForkLightClient(fork) && fork !== ForkName.altair;
 }
 
 export type ForkPreWithdrawals = ForkPreExecution | ForkName.bellatrix;
 export type ForkWithdrawals = Exclude<ForkName, ForkPreWithdrawals>;
-export const forkWithdrawals = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix]);
+export const forkWithdrawals = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+]) as ForkWithdrawals[];
 export function isForkWithdrawals(fork: ForkName): fork is ForkWithdrawals {
   return isForkExecution(fork) && fork !== ForkName.bellatrix;
 }
 
 export type ForkPreBlobs = ForkPreWithdrawals | ForkName.capella;
 export type ForkBlobs = Exclude<ForkName, ForkPreBlobs>;
-export const forkBlobs = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix, ForkName.capella]);
+export const forkBlobs = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+]) as ForkBlobs[];
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
   return isForkWithdrawals(fork) && fork !== ForkName.capella;
 }
