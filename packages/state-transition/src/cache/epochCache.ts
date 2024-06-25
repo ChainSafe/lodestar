@@ -394,7 +394,12 @@ export class EpochCache {
     // Allow to create CachedBeaconState for empty states, or no active validators
     const proposers =
       currentShuffling.activeIndices.length > 0
-        ? computeProposers(currentProposerSeed, currentShuffling, effectiveBalanceIncrements)
+        ? computeProposers(
+            config.getForkSeqFromEpoch(currentEpoch),
+            currentProposerSeed,
+            currentShuffling,
+            effectiveBalanceIncrements
+          )
         : [];
 
     const proposersNextEpoch: ProposersDeferred = {
@@ -571,7 +576,12 @@ export class EpochCache {
     this.proposersPrevEpoch = this.proposers;
 
     const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-    this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
+    this.proposers = computeProposers(
+      this.config.getForkSeqFromEpoch(currEpoch),
+      currentProposerSeed,
+      this.currentShuffling,
+      this.effectiveBalanceIncrements
+    );
 
     // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
     this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)};
@@ -768,6 +778,7 @@ export class EpochCache {
   getBeaconProposersNextEpoch(): ValidatorIndex[] {
     if (!this.proposersNextEpoch.computed) {
       const indexes = computeProposers(
+        this.config.getForkSeqFromEpoch(this.epoch + 1),
         this.proposersNextEpoch.seed,
         this.nextShuffling,
         this.effectiveBalanceIncrements

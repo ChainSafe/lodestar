@@ -28,7 +28,8 @@ describe("epoch shufflings", () => {
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
       const epochSeed = getSeed(state, state.epochCtx.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-      computeProposers(epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
+      const fork = state.config.getForkSeq(state.slot);
+      computeProposers(fork, epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
     },
   });
 
@@ -42,7 +43,9 @@ describe("epoch shufflings", () => {
   itBench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
+      const fork = state.config.getForkSeq(state.slot);
       getNextSyncCommittee(
+        fork,
         state,
         state.epochCtx.nextShuffling.activeIndices,
         state.epochCtx.effectiveBalanceIncrements

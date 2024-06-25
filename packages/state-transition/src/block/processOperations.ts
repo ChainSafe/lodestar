@@ -67,7 +67,7 @@ export function processOperations(
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
 
-    for (const depositRequest of bodyElectra.executionPayload.depositReceipts) {
+    for (const depositRequest of bodyElectra.executionPayload.depositRequests) {
       processDepositRequest(fork, stateElectra, depositRequest);
     }
 
