@@ -16,7 +16,6 @@ import {
   ExecutionPayloadHeader,
   BlindedBeaconBlockBody,
   BlindedBeaconBlock,
-  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,

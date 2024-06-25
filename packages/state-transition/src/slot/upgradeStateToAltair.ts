@@ -70,6 +70,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   stateAltair.inactivityScores = ssz.altair.InactivityScores.toViewDU(newZeroedArray(validatorCount));
 
   const {syncCommittee, indices} = getNextSyncCommittee(
+    ForkSeq.altair,
     stateAltair,
     stateAltair.epochCtx.nextShuffling.activeIndices,
     stateAltair.epochCtx.effectiveBalanceIncrements
