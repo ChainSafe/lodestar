@@ -7,7 +7,6 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkLightClient,
   MAX_BLOBS_PER_BLOCK,
-  ForkLightClient,
 } from "@lodestar/params";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
