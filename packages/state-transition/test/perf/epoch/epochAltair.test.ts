@@ -172,7 +172,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     id: `${stateId} - altair processSyncCommitteeUpdates`,
     convergeFactor: 1 / 100, // Very unstable make it converge faster
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
-    fn: (state) => processSyncCommitteeUpdates(state),
+    fn: (state) => processSyncCommitteeUpdates(ForkSeq.altair, state),
   });
 
   itBench<StateEpoch, StateEpoch>({

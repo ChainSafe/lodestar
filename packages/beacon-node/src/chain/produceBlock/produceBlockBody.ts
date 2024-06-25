@@ -17,7 +17,6 @@ import {
   BlindedBeaconBlockBody,
   BlindedBeaconBlock,
   sszTypesFor,
-  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
