@@ -16,8 +16,8 @@ import {
   ForkSeq,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
 } from "@lodestar/params";
-import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock, AttesterSlashing} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
@@ -175,7 +175,7 @@ export class OpPool {
     blockType: BlockType,
     metrics: Metrics | null
   ): [
-    allForks.AttesterSlashing[],
+    AttesterSlashing[],
     phase0.ProposerSlashing[],
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[],
@@ -209,7 +209,7 @@ export class OpPool {
     });
 
     const endAttesterSlashings = stepsMetrics?.startTimer();
-    const attesterSlashings: allForks.AttesterSlashing[] = [];
+    const attesterSlashings: AttesterSlashing[] = [];
     const maxAttesterSlashing = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
     attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
       /** Indices slashable in this attester slashing */

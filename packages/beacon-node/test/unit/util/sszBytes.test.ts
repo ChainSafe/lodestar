@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {allForks, deneb, electra, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz} from "@lodestar/types";
+import {deneb, electra, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {
@@ -19,7 +19,7 @@ import {
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
-  const testCases: allForks.Attestation[] = [
+  const testCases: (phase0.Attestation | electra.Attestation)[] = [
     ssz.phase0.Attestation.defaultValue(),
     attestationFromValues(
       4_000_000,

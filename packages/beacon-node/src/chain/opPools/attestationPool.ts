@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
-import {Slot, RootHex, allForks, isElectraAttestation} from "@lodestar/types";
+import {Slot, RootHex, isElectraAttestation, Attestation} from "@lodestar/types";
 import {MapDef, assert} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -23,7 +23,7 @@ const SLOTS_RETAINED = 3;
 const MAX_ATTESTATIONS_PER_SLOT = 16_384;
 
 type AggregateFastPhase0 = {
-  data: allForks.Attestation["data"];
+  data: Attestation["data"];
   aggregationBits: BitArray;
   signature: Signature;
 };
@@ -101,7 +101,7 @@ export class AttestationPool {
    * - Valid committeeIndex
    * - Valid data
    */
-  add(committeeIndex: CommitteeIndex, attestation: allForks.Attestation, attDataRootHex: RootHex): InsertOutcome {
+  add(committeeIndex: CommitteeIndex, attestation: Attestation, attDataRootHex: RootHex): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -144,7 +144,7 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
-  getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): allForks.Attestation | null {
+  getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): Attestation | null {
     const aggregate = this.aggregateByIndexByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
       // TODO: Add metric for missing aggregates
@@ -168,8 +168,8 @@ export class AttestationPool {
    * Get all attestations optionally filtered by `attestation.data.slot`
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
-  getAll(bySlot?: Slot): allForks.Attestation[] {
-    const attestations: allForks.Attestation[] = [];
+  getAll(bySlot?: Slot): Attestation[] {
+    const attestations: Attestation[] = [];
 
     const aggregateByRoots =
       bySlot === undefined
@@ -196,7 +196,7 @@ export class AttestationPool {
 /**
  * Aggregate a new attestation into `aggregate` mutating it
  */
-function aggregateAttestationInto(aggregate: AggregateFast, attestation: allForks.Attestation): InsertOutcome {
+function aggregateAttestationInto(aggregate: AggregateFast, attestation: Attestation): InsertOutcome {
   const bitIndex = attestation.aggregationBits.getSingleTrueBit();
 
   // Should never happen, attestations are verified against this exact condition before
@@ -214,7 +214,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: allFork
 /**
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
-function attestationToAggregate(attestation: allForks.Attestation): AggregateFast {
+function attestationToAggregate(attestation: Attestation): AggregateFast {
   if (isElectraAttestation(attestation)) {
     return {
       data: attestation.data,
@@ -235,6 +235,6 @@ function attestationToAggregate(attestation: allForks.Attestation): AggregateFas
 /**
  * Unwrap AggregateFast to phase0.Attestation
  */
-function fastToAttestation(aggFast: AggregateFast): allForks.Attestation {
+function fastToAttestation(aggFast: AggregateFast): Attestation {
   return {...aggFast, signature: aggFast.signature.toBytes()};
 }

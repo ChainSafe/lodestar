@@ -1,5 +1,5 @@
 import {toRootHex} from "@lodestar/utils";
-import {Slot, allForks, electra, phase0, ssz} from "@lodestar/types";
+import {Slot, Attestation, electra, phase0, ssz} from "@lodestar/types";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
 import {assert} from "@lodestar/utils";
 import {computeEpochAtSlot} from "../util/index.js";
@@ -56,11 +56,7 @@ export function processAttestationPhase0(
   }
 }
 
-export function validateAttestation(
-  fork: ForkSeq,
-  state: CachedBeaconStateAllForks,
-  attestation: allForks.Attestation
-): void {
+export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllForks, attestation: Attestation): void {
   const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
