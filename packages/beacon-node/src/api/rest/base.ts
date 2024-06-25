@@ -118,6 +118,9 @@ export class RestApiServer {
       const operationId = getOperationId(req);
       this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
       metrics?.responseTime.observe({operationId}, res.elapsedTime / 1000);
+      if (res.elapsedTime > 1000) {
+        this.logger.warn("Response time too high", {operationId, elapsedTime: res.elapsedTime});
+      }
     });
 
     server.addHook("onError", async (req, _res, err) => {
