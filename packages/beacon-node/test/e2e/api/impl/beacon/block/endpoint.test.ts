@@ -4,7 +4,7 @@ import {ApiClient, WireFormat, getClient} from "@lodestar/api";
 import {
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
-  isBlindedExecutionPayload,
+  isExecutionPayloadHeader,
   isBlindedSignedBeaconBlock,
   isExecutionPayload,
 } from "@lodestar/types";
@@ -84,7 +84,7 @@ describe("beacon block api", function () {
       const blindedBlock = res.value() as SignedBlindedBeaconBlock<typeof fork>;
 
       expect(isBlindedSignedBeaconBlock(blindedBlock)).toBe(true);
-      expect(isBlindedExecutionPayload(blindedBlock.message.body.executionPayloadHeader)).toBe(true);
+      expect(isExecutionPayloadHeader(blindedBlock.message.body.executionPayloadHeader)).toBe(true);
       expect(blindedBlock.message.body).not.toHaveProperty("executionPayload");
     });
 
