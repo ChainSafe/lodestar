@@ -11,7 +11,7 @@ import {
   ForkLightClient,
   ForkBlobs,
 } from "@lodestar/params";
-import {Slot, Version, ssz, SSZTypesFor, sszTypesFor} from "@lodestar/types";
+import {Slot, Version, SSZTypesFor, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 

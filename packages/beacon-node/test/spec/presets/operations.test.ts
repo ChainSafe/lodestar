@@ -143,8 +143,6 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
   };
 };
 
-type ExecutionFork = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
-
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   operations: {type: RunnerType.default, fn: operations},
 });
