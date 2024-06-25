@@ -26,6 +26,7 @@ import {
   capella,
   deneb,
   phase0,
+  SignedAggregateAndProof,
 } from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
@@ -71,7 +72,7 @@ export interface INetwork extends INetworkCorePublic {
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
-  publishBeaconAggregateAndProof(aggregateAndProof: allForks.SignedAggregateAndProof): Promise<number>;
+  publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;

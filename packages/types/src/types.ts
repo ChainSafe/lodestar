@@ -37,6 +37,11 @@ type TypesByFork = {
     SignedBeaconBlock: phase0.SignedBeaconBlock;
     Metadata: phase0.Metadata;
     Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.altair]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -55,6 +60,11 @@ type TypesByFork = {
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.bellatrix]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -81,6 +91,11 @@ type TypesByFork = {
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.capella]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -107,6 +122,11 @@ type TypesByFork = {
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.deneb]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -138,6 +158,11 @@ type TypesByFork = {
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.electra]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -173,6 +198,11 @@ type TypesByFork = {
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
   };
 };
 
@@ -233,3 +263,8 @@ export type SignedBuilderBid<F extends ForkExecution = ForkExecution> = TypesByF
 export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
 
 export type Attestation<F extends ForkName = ForkAll> = TypesByFork[F]["Attestation"];
+export type IndexedAttestation<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestation"];
+export type IndexedAttestationBigint<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestationBigint"];
+export type AttesterSlashing<F extends ForkName = ForkAll> = TypesByFork[F]["AttesterSlashing"];
+export type AggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["AggregateAndProof"];
+export type SignedAggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["SignedAggregateAndProof"];

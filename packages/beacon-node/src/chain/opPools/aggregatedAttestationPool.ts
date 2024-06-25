@@ -17,9 +17,9 @@ import {
   ssz,
   ValidatorIndex,
   RootHex,
-  allForks,
   electra,
   isElectraAttestation,
+  Attestation,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -40,7 +40,7 @@ type DataRootHex = string;
 type CommitteeIndex = number;
 
 // for pre-electra
-type AttestationWithScore = {attestation: allForks.Attestation; score: number};
+type AttestationWithScore = {attestation: Attestation; score: number};
 /**
  * for electra, this is to consolidate aggregated attestations of the same attestation data into a single attestation to be included in block
  * note that this is local definition in this file and it's NOT validator consolidation
@@ -118,7 +118,7 @@ export class AggregatedAttestationPool {
   }
 
   add(
-    attestation: allForks.Attestation,
+    attestation: Attestation,
     dataRootHex: RootHex,
     attestingIndicesCount: number,
     committee: Uint32Array
@@ -162,11 +162,7 @@ export class AggregatedAttestationPool {
     this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_PER_EPOCH, 0);
   }
 
-  getAttestationsForBlock(
-    fork: ForkName,
-    forkChoice: IForkChoice,
-    state: CachedBeaconStateAllForks
-  ): allForks.Attestation[] {
+  getAttestationsForBlock(fork: ForkName, forkChoice: IForkChoice, state: CachedBeaconStateAllForks): Attestation[] {
     const forkSeq = ForkSeq[fork];
     return forkSeq >= ForkSeq.electra
       ? this.getAttestationsForBlockElectra(fork, forkChoice, state)
@@ -397,7 +393,7 @@ export class AggregatedAttestationPool {
    * Get all attestations optionally filtered by `attestation.data.slot`
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
-  getAll(bySlot?: Slot): allForks.Attestation[] {
+  getAll(bySlot?: Slot): Attestation[] {
     let attestationGroupsArr: Map<CommitteeIndex, MatchingDataAttestationGroup>[];
     if (bySlot === undefined) {
       attestationGroupsArr = Array.from(this.attestationGroupByIndexByDataHexBySlot.values()).flatMap((byIndex) =>
@@ -409,7 +405,7 @@ export class AggregatedAttestationPool {
       attestationGroupsArr = Array.from(attestationGroupsByIndex.values());
     }
 
-    const attestations: allForks.Attestation[] = [];
+    const attestations: Attestation[] = [];
     for (const attestationGroups of attestationGroupsArr) {
       for (const attestationGroup of attestationGroups.values()) {
         attestations.push(...attestationGroup.getAttestations());
@@ -420,12 +416,12 @@ export class AggregatedAttestationPool {
 }
 
 interface AttestationWithIndex {
-  attestation: allForks.Attestation;
+  attestation: Attestation;
   trueBitsCount: number;
 }
 
 type AttestationNonParticipant = {
-  attestation: allForks.Attestation;
+  attestation: Attestation;
   // this is <= attestingIndices.count since some attesters may be seen by the chain
   // this is only updated and used in removeBySeenValidators function
   notSeenAttesterCount: number;
@@ -534,7 +530,7 @@ export class MatchingDataAttestationGroup {
   }
 
   /** Get attestations for API. */
-  getAttestations(): allForks.Attestation[] {
+  getAttestations(): Attestation[] {
     return this.attestations.map((attestation) => attestation.attestation);
   }
 }

@@ -1,6 +1,6 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch, Slot, ValidatorIndex, phase0, Root, RootHex, BeaconBlock} from "@lodestar/types";
+import {Epoch, Slot, ValidatorIndex, phase0, Root, RootHex, BeaconBlock, IndexedAttestation} from "@lodestar/types";
 import {
   ProtoBlock,
   MaybeValidExecutionStatus,
@@ -156,7 +156,7 @@ export interface IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: allForks.IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
   /**
    * Register attester slashing in order not to consider their votes in `getHead`
    *

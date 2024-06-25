@@ -17,6 +17,7 @@ import {
   stringType,
   BeaconBlockOrContents,
   BlindedBeaconBlock,
+  Attestation,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
@@ -413,7 +414,7 @@ export type Endpoints = {
       committeeIndex: number;
     },
     {query: {attestation_data_root: string; slot: number; committeeIndex: number}},
-    allForks.Attestation,
+    Attestation,
     VersionMeta
   >;
 

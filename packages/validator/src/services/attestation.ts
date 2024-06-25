@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
+import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
@@ -193,7 +193,7 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: allForks.Attestation[] = [];
+    const signedAttestations: Attestation[] = [];
     const headRootHex = toHexString(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
     const isAfterElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
@@ -277,7 +277,7 @@ export class AttestationService {
     const aggregate = res.value();
     this.metrics?.numParticipantsInAggregate.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
 
-    const signedAggregateAndProofs: allForks.SignedAggregateAndProof[] = [];
+    const signedAggregateAndProofs: SignedAggregateAndProof[] = [];
 
     await Promise.all(
       duties.map(async ({duty, selectionProof}) => {
