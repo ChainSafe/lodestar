@@ -6,10 +6,11 @@ import {
   Slot,
   RootHex,
   ssz,
-  allForks,
   electra,
   isElectraAttestation,
   CommitteeIndex,
+  Attestation,
+  IndexedAttestation,
 } from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq, DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
@@ -45,8 +46,8 @@ export type BatchResult = {
 };
 
 export type AttestationValidationResult = {
-  attestation: allForks.Attestation;
-  indexedAttestation: allForks.IndexedAttestation;
+  attestation: Attestation;
+  indexedAttestation: IndexedAttestation;
   subnet: number;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
@@ -55,7 +56,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: allForks.Attestation; serializedData: null};
+export type ApiAttestation = {attestation: Attestation; serializedData: null};
 
 /** attestation from gossip */
 export type GossipAttestation = {
@@ -262,7 +263,7 @@ async function validateGossipAttestationNoSignatureCheck(
   // Run the checks that happen before an indexed attestation is constructed.
 
   let attestationOrCache:
-    | {attestation: allForks.Attestation; cache: null}
+    | {attestation: Attestation; cache: null}
     | {attestation: null; cache: AttestationDataCacheEntry; serializedData: Uint8Array};
   let attDataKey: SeenAttDataKey | null = null;
   if (attestationOrBytes.serializedData) {
@@ -512,7 +513,7 @@ async function validateGossipAttestationNoSignatureCheck(
       ? (indexedAttestationContent as electra.IndexedAttestation)
       : (indexedAttestationContent as phase0.IndexedAttestation);
 
-  const attestation: allForks.Attestation = attestationOrCache.attestation ?? {
+  const attestation: Attestation = attestationOrCache.attestation ?? {
     aggregationBits,
     data: attData,
     committeeBits,

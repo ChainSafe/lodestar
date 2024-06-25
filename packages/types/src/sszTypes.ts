@@ -22,6 +22,10 @@ const typesByFork = {
     SignedBeaconBlock: phase0.SignedBeaconBlock,
     Metadata: phase0.Metadata,
     Attestation: phase0.Attestation,
+    IndexedAttestation: phase0.IndexedAttestation,
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint,
+    AttesterSlashing: phase0.AttesterSlashing,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
   },
   [ForkName.altair]: {
     BeaconBlock: altair.BeaconBlock,
@@ -36,6 +40,10 @@ const typesByFork = {
     LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
     LightClientStore: altair.LightClientStore,
     Attestation: phase0.Attestation,
+    IndexedAttestation: phase0.IndexedAttestation,
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint,
+    AttesterSlashing: phase0.AttesterSlashing,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
   },
   [ForkName.bellatrix]: {
     BeaconBlock: bellatrix.BeaconBlock,
@@ -58,6 +66,10 @@ const typesByFork = {
     SignedBuilderBid: bellatrix.SignedBuilderBid,
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes,
     Attestation: phase0.Attestation,
+    IndexedAttestation: phase0.IndexedAttestation,
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint,
+    AttesterSlashing: phase0.AttesterSlashing,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
   },
   [ForkName.capella]: {
     BeaconBlock: capella.BeaconBlock,
@@ -80,6 +92,10 @@ const typesByFork = {
     SignedBuilderBid: capella.SignedBuilderBid,
     SSEPayloadAttributes: capella.SSEPayloadAttributes,
     Attestation: phase0.Attestation,
+    IndexedAttestation: phase0.IndexedAttestation,
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint,
+    AttesterSlashing: phase0.AttesterSlashing,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
   },
   [ForkName.deneb]: {
     BeaconBlock: deneb.BeaconBlock,
@@ -103,6 +119,10 @@ const typesByFork = {
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
     Attestation: phase0.Attestation,
+    IndexedAttestation: phase0.IndexedAttestation,
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint,
+    AttesterSlashing: phase0.AttesterSlashing,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
   },
   [ForkName.electra]: {
     BeaconBlock: electra.BeaconBlock,
@@ -126,12 +146,24 @@ const typesByFork = {
     SSEPayloadAttributes: electra.SSEPayloadAttributes,
     ExecutionPayloadAndBlobsBundle: electra.ExecutionPayloadAndBlobsBundle,
     Attestation: electra.Attestation,
+    IndexedAttestation: electra.IndexedAttestation,
+    IndexedAttestationBigint: electra.IndexedAttestationBigint,
+    AttesterSlashing: electra.AttesterSlashing,
+    SignedAggregateAndProof: electra.SignedAggregateAndProof,
   },
 };
 
 const pick = <T extends Record<ForkName, unknown>, K extends keyof T>(obj: T, ...keys: K[]): Pick<T, K> =>
   Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
 
+const forks: ForkName[] = [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+];
 const executionForks: ForkExecution[] = [ForkName.bellatrix, ForkName.capella, ForkName.deneb, ForkName.electra];
 const lightCLientForks: ForkLightClient[] = [
   ForkName.altair,
@@ -142,6 +174,7 @@ const lightCLientForks: ForkLightClient[] = [
 ];
 const blobsForks: ForkBlobs[] = [ForkName.deneb, ForkName.electra];
 
+export const allForks = pick(typesByFork, ...forks);
 export const allForksExecution = pick(typesByFork, ...executionForks);
 export const allForksLightClient = pick(typesByFork, ...lightCLientForks);
 export const allForksBlobs = pick(typesByFork, ...blobsForks);

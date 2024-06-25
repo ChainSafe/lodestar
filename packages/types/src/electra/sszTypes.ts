@@ -17,7 +17,7 @@ import {
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATIONS,
   PENDING_BALANCE_DEPOSITS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PENDING_CONSOLIDATIONS_LIMIT,
@@ -142,10 +142,7 @@ export const ConsolidationRequest = new ContainerType(
   },
   {typeName: "ConsolidationRequest", jsonCase: "eth2"}
 );
-export const ConsolidationRequests = new ListCompositeType(
-  ConsolidationRequest,
-  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
-);
+export const ConsolidationRequests = new ListCompositeType(ConsolidationRequest, MAX_CONSOLIDATIONS);
 
 export const ExecutionPayload = new ContainerType(
   {
