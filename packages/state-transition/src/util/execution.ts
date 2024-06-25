@@ -176,6 +176,8 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
       ssz.electra.DepositRequests.hashTreeRoot((payload as electra.ExecutionPayload).depositRequests);
     (bellatrixPayloadFields as electra.ExecutionPayloadHeader).withdrawalRequestsRoot =
       ssz.electra.WithdrawalRequests.hashTreeRoot((payload as electra.ExecutionPayload).withdrawalRequests);
+    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).consolidationRequestsRoot =
+      ssz.electra.ConsolidationRequests.hashTreeRoot((payload as electra.ExecutionPayload).consolidationRequests);
   }
 
   return bellatrixPayloadFields;
