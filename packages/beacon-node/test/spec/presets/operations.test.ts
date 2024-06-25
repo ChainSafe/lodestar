@@ -8,9 +8,9 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {ssz, phase0, altair, bellatrix, capella} from "@lodestar/types";
+import {ssz, phase0, altair, bellatrix, capella, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkExecution, ForkName} from "@lodestar/params";
 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -128,7 +128,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         // Bellatrix
         execution_payload:
           fork !== ForkName.phase0 && fork !== ForkName.altair
-            ? ssz[fork].ExecutionPayload
+            ? sszTypesFor(fork as ForkExecution).ExecutionPayload
             : ssz.bellatrix.ExecutionPayload,
         // Capella
         address_change: ssz.capella.SignedBLSToExecutionChange,
