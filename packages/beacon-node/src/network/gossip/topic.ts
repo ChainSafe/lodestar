@@ -103,11 +103,11 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.altair.SyncCommitteeMessage;
     case GossipType.light_client_optimistic_update:
       return isForkLightClient(topic.fork)
-        ? sszTypesFor<ForkLightClient>(topic.fork).LightClientOptimisticUpdate
+        ? sszTypesFor(topic.fork).LightClientOptimisticUpdate
         : ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
       return isForkLightClient(topic.fork)
-        ? sszTypesFor<ForkLightClient>(topic.fork).LightClientFinalityUpdate
+        ? sszTypesFor(topic.fork).LightClientFinalityUpdate
         : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;

@@ -241,7 +241,7 @@ export async function produceBlockBody<T extends BlockType>(
 
         if (prepareRes.isPremerge) {
           (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
-            sszTypesFor<ForkExecution>(fork).ExecutionPayload.defaultValue();
+            sszTypesFor(fork).ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
         } else {
@@ -311,7 +311,7 @@ export async function produceBlockBody<T extends BlockType>(
             e as Error
           );
           (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
-            sszTypesFor<ForkExecution>(fork).ExecutionPayload.defaultValue();
+            sszTypesFor(fork).ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
         } else {

@@ -91,14 +91,11 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
-  [ReqRespMethod.LightClientBootstrap]: (fork) =>
-    sszTypesFor<ForkLightClient>(onlyLightclientFork(fork)).LightClientBootstrap,
-  [ReqRespMethod.LightClientUpdatesByRange]: (fork) =>
-    sszTypesFor<ForkLightClient>(onlyLightclientFork(fork)).LightClientUpdate,
-  [ReqRespMethod.LightClientFinalityUpdate]: (fork) =>
-    sszTypesFor<ForkLightClient>(onlyLightclientFork(fork)).LightClientFinalityUpdate,
+  [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientBootstrap,
+  [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientUpdate,
+  [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
-    sszTypesFor<ForkLightClient>(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
+    sszTypesFor(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
 };
 
 function onlyLightclientFork(fork: ForkName): ForkLightClient {
