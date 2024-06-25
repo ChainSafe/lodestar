@@ -359,10 +359,10 @@ export function createValidatorMonitor(
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
           log("Failed attestation in previous epoch", {
             validator: index,
-            prevEpoch: currentEpoch - 1,
-            isPrevSourceAttester: summary.isPrevSourceAttester,
-            isPrevHeadAttester: summary.isPrevHeadAttester,
-            isPrevTargetAttester: summary.isPrevTargetAttester,
+            epoch: currentEpoch - 1,
+            source: summary.isPrevSourceAttester,
+            target: summary.isPrevTargetAttester,
+            head: summary.isPrevHeadAttester,
             // inclusionDistance is not available in summary since altair
             inclusionDistance,
           });
