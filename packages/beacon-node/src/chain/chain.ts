@@ -241,7 +241,7 @@ export class BeaconChain implements IBeaconChain {
         const {currentSlot} = clock as Clock;
         logger.warn("Event loop lag detected", {
           slot: currentSlot,
-          slotSec: config.SECONDS_PER_SLOT - (clock as Clock).secFromSlot(currentSlot + 1),
+          slotSec: config.SECONDS_PER_SLOT + (clock as Clock).secFromSlot(currentSlot + 1),
           delay,
         });
       }
