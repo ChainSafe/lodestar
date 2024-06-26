@@ -174,7 +174,13 @@ export interface IExecutionEngine {
 
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
-  getState(): ExecutionEngineState;
+  getClientVersion(clientVersion?: ClientVersion): Promise<ClientVersion[]>;
 
-  getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]>;
+  getState(): ExecutionEngineState;
+  /**
+   * Not to be confused with `getClientVersion`. This method returns cached client version
+   * from `getClientVersion` which is a rpc call to EL client
+   */
+  getExecutionClientVersion(): ClientVersion[];
+  getConsensusClientVersion(): ClientVersion;
 }

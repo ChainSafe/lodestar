@@ -27,11 +27,19 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
+  getClientVersion(): Promise<ClientVersion[]> {
+    throw Error("Execution engine disabled");
+  }
+
   getState(): ExecutionEngineState {
     throw Error("Execution engine disabled");
   }
 
-  getClientVersion(): Promise<ClientVersion[]> {
+  getExecutionClientVersion(): ClientVersion[] {
+    throw Error("Execution engine disabled");
+  }
+
+  getConsensusClientVersion(): ClientVersion {
     throw Error("Execution engine disabled");
   }
 }

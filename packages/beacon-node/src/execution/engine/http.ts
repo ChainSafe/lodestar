@@ -65,6 +65,14 @@ export type ExecutionEngineHttpOpts = {
    * A version string that will be set in `clv` field of jwt claims
    */
   jwtVersion?: string;
+  /**
+   * Lodestar version to be used for `ClientVersion`
+   */
+  version?: string;
+  /**
+   * Lodestar commit to be used for `ClientVersion`
+   */
+  commit?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -107,6 +115,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
   private state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
+  // Cache EL client version from the latest getClientVersion call
+  private executionClientVersion: ClientVersion[] = [];
+
   readonly payloadIdCache = new PayloadIdCache();
   /**
    * A queue to serialize the fcUs and newPayloads calls:
@@ -128,7 +139,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   constructor(
     private readonly rpc: IJsonRpcHttpClient,
-    {metrics, signal, logger}: ExecutionEngineModules
+    {metrics, signal, logger}: ExecutionEngineModules,
+    private readonly opts?: ExecutionEngineHttpOpts
   ) {
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
@@ -423,18 +435,35 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.state;
   }
 
-  async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
+  async getClientVersion(clientVersion?: ClientVersion): Promise<ClientVersion[]> {
     const method = "engine_getClientVersionV1";
 
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [clientVersion]});
+    >({method, params: [clientVersion ?? this.getConsensusClientVersion()]});
 
-    return response.map((cv) => {
+    this.executionClientVersion = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
       return {code, name: cv.name, version: cv.version, commit: cv.commit};
     });
+
+    this.logger.debug(`executionClientVersion is set to ${JSON.stringify(this.executionClientVersion)}`);
+
+    return this.executionClientVersion;
+  }
+
+  getExecutionClientVersion(): ClientVersion[] {
+    return this.executionClientVersion;
+  }
+
+  getConsensusClientVersion(): ClientVersion {
+    return {
+      code: ClientCode.LS,
+      name: "Lodestar",
+      version: this.opts?.version ?? "",
+      commit: this.opts?.commit?.slice(0, 2) ?? "",
+    };
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {
@@ -445,6 +474,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
+        this.getClientVersion().catch((e) => {
+          this.logger.error("Unable to get client version", {caller: "updateEngineState"}, e);
+        });
         break;
       case ExecutionEngineState.OFFLINE:
         this.logger.error("Execution client went offline", {oldState, newState});

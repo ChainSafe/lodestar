@@ -40,7 +40,7 @@ export function getExecutionEngineHttp(
     jwtVersion: opts.jwtVersion,
   });
   modules.logger.info("Execution client", {urls: opts.urls.map(toSafePrintableUrl).toString()});
-  return new ExecutionEngineHttp(rpc, modules);
+  return new ExecutionEngineHttp(rpc, modules, opts);
 }
 
 export function initializeExecutionEngine(

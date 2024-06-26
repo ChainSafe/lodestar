@@ -196,6 +196,10 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
+
+          this.chain.executionEngine.getClientVersion().catch((e) => {
+            this.logger.error("Unable to get client version", {caller: "prepareNextSlot"}, e);
+          });
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState);

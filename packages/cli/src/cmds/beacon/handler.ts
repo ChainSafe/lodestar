@@ -218,6 +218,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
+  const executionEngineMode = options.executionEngine.mode;
+  if (executionEngineMode === undefined || executionEngineMode === "http") {
+    options.executionEngine = {...options.executionEngine, version, commit};
+  }
 
   return {config, options, beaconPaths, network, version, commit, peerId, logger};
 }

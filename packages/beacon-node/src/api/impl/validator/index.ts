@@ -63,9 +63,6 @@ import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
-import {ClientCode} from "../../../execution/index.js";
-import {ApiOptions} from "../../options.js";
-import {ClockEvent} from "../../../util/clock.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
@@ -113,10 +110,14 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
  */
-export function getValidatorApi(
-  opts: ApiOptions,
-  {chain, config, logger, metrics, network, sync}: ApiModules
-): ApplicationMethods<routes.validator.Endpoints> {
+export function getValidatorApi({
+  chain,
+  config,
+  logger,
+  metrics,
+  network,
+  sync,
+}: ApiModules): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
 
   /**
@@ -127,10 +128,6 @@ export function getValidatorApi(
    */
   const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
-
-  let defaultGraffiti: string = "";
-  void updateDefaultGraffiti();
-  chain.clock.on(ClockEvent.epoch, updateDefaultGraffiti);
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -338,38 +335,20 @@ export function getValidatorApi(
       );
   }
 
-  async function updateDefaultGraffiti(): Promise<void> {
-    defaultGraffiti = await getDefaultGraffiti();
-    logger.debug(`default graffiti is set to ${defaultGraffiti}`);
-  }
+  function getDefaultGraffiti(): string {
+    const executionClientVersion = chain.executionEngine.getExecutionClientVersion();
+    const consensusClientVersion = chain.executionEngine.getConsensusClientVersion();
 
-  async function getDefaultGraffiti(): Promise<string> {
-    const consensusCode = ClientCode.LS;
-    const consensusCommit = opts.version ?? "";
-
-    const lodestarClientVersion = {
-      code: consensusCode,
-      name: "Lodestar",
-      version: opts.version ?? "",
-      commit: consensusCommit,
-    };
-
-    const executionClientVersions = await chain.executionEngine
-      .getClientVersion(lodestarClientVersion)
-      .catch((_) => []);
-
-    logger.debug(`Receive executionClientVersions ${executionClientVersions}`);
-
-    if (executionClientVersions.length !== 0) {
-      const executionCode = executionClientVersions[0].code;
-      const executionCommit = executionClientVersions[0].commit;
+    if (executionClientVersion.length > 0) {
+      const executionCode = executionClientVersion[0].code;
+      const executionCommit = executionClientVersion[0].commit;
 
       // Follow the 2-byte commit format in https://github.com/ethereum/execution-apis/pull/517#issuecomment-1918512560
-      return `${executionCode}${executionCommit.slice(0, 2)}${consensusCode}${consensusCommit.slice(0, 2)}`;
+      return `${executionCode}${executionCommit.slice(0, 2)}${consensusClientVersion.code}${consensusClientVersion.commit}`;
     }
 
     // No EL client info available. We still want to include CL info albeit not spec compliant
-    return `${consensusCode}|${consensusCommit.slice(0, 2)}`;
+    return `${consensusClientVersion.code}${consensusClientVersion.commit}`;
   }
 
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
@@ -443,7 +422,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? defaultGraffiti),
+        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
         commonBlockBody,
       });
 
@@ -511,7 +490,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? defaultGraffiti),
+        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
         feeRecipient,
         commonBlockBody,
       });
@@ -622,7 +601,7 @@ export function getValidatorApi(
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti ?? defaultGraffiti),
+      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
     });
     logger.debug("Produced common block body", loggerContext);
 
