@@ -19,6 +19,7 @@
     "lint:fix": "yarn lint --fix",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
     "check-build": "lerna run check-build",
+    "check-bundle": "lerna run check-bundle",
     "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types",
     "check-spelling": "pyspelling -c .pyspelling.yml -v",
