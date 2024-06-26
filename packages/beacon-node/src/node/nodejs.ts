@@ -163,7 +163,7 @@ export class BeaconNode {
     // If deneb is configured, load the trusted setup
     if (config.DENEB_FORK_EPOCH < Infinity) {
       await initCKZG();
-      loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
+      loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetupPrecompute, opts.chain.trustedSetup);
     }
 
     // Prune hot db repos

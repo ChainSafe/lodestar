@@ -14,7 +14,7 @@ function ckzgNotLoaded(): never {
 
 export let ckzg: {
   freeTrustedSetup(): void;
-  loadTrustedSetup(filePath: string): void;
+  loadTrustedSetup(precompute: number, filePath: string): void;
   blobToKzgCommitment(blob: Uint8Array): Uint8Array;
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
@@ -77,7 +77,11 @@ export enum TrustedFileMode {
  * We persist the trusted setup as serialized bytes to save space over TXT or JSON formats.
  * However the current c-kzg API **requires** to read from a file with a specific .txt format
  */
-export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode.Txt, filePath?: string): void {
+export function loadEthereumTrustedSetup(
+  mode: TrustedFileMode = TrustedFileMode.Txt,
+  precompute = 0, // default to 0 for testing
+  filePath?: string
+): void {
   try {
     let setupFilePath;
     if (mode === TrustedFileMode.Bin) {
@@ -93,7 +97,7 @@ export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode
 
     try {
       // in unit tests, calling loadTrustedSetup() twice has error so we have to free and retry
-      ckzg.loadTrustedSetup(setupFilePath);
+      ckzg.loadTrustedSetup(precompute, setupFilePath);
     } catch (e) {
       if ((e as Error).message !== "Error trusted setup is already loaded") {
         throw e;
