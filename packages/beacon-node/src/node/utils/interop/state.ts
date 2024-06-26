@@ -2,7 +2,7 @@ import {Bytes32, phase0, ssz, sszTypesFor, TimeSeconds} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";
 import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
-import {ForkExecution, ForkName, GENESIS_SLOT} from "@lodestar/params";
+import {ForkName, GENESIS_SLOT} from "@lodestar/params";
 
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
