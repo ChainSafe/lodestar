@@ -1,7 +1,7 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {VERSIONED_HASH_VERSION_KZG, KZG_COMMITMENT_GINDEX0, KZG_COMMITMENTS_GINDEX, ForkName, ForkAll, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor} from "@lodestar/types";
+import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, electra} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {ckzg} from "./kzg.js";

@@ -163,7 +163,7 @@ export function matchBlockWithDataColumns(
   peerId: PeerIdStr,
   config: ChainForkConfig,
   custodyConfig: CustodyConfig,
-  allBlocks: WithBytes<allForks.SignedBeaconBlock>[],
+  allBlocks: WithBytes<SignedBeaconBlock>[],
   allDataColumnSidecars: electra.DataColumnSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,

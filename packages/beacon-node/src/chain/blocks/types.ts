@@ -48,7 +48,7 @@ export type DataColumnsCacheMap = Map<
   {dataColumnSidecar: electra.DataColumnSidecar; dataColumnBytes: Uint8Array | null}
 >;
 
-type ForkBlobsInfo = {fork: ForkName.deneb | ForkName.electra};
+type ForkBlobsInfo = {fork: ForkName.deneb};
 type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
 
