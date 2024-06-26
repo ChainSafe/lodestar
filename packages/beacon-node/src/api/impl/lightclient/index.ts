@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
 import {ApiModules} from "../types.js";
-
+import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 // TODO: Import from lightclient/server package
 
 export function getLightclientApi({
@@ -12,9 +12,12 @@ export function getLightclientApi({
 }: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.lightclient.Endpoints> {
   return {
     async getLightClientUpdatesByRange({startPeriod, count}) {
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
-      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
+      const updates = await Promise.all(periods.map((period) => lightClientServer.getUpdate(period)));
       return {
         data: updates,
         meta: {versions: updates.map((update) => config.getForkName(update.attestedHeader.beacon.slot))},
@@ -22,7 +25,10 @@ export function getLightclientApi({
     },
 
     async getLightClientOptimisticUpdate() {
-      const update = chain.lightClientServer.getOptimisticUpdate();
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
+      const update = lightClientServer.getOptimisticUpdate();
       if (update === null) {
         throw Error("No optimistic update available");
       }
@@ -30,7 +36,10 @@ export function getLightclientApi({
     },
 
     async getLightClientFinalityUpdate() {
-      const update = chain.lightClientServer.getFinalityUpdate();
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
+      const update = lightClientServer.getFinalityUpdate();
       if (update === null) {
         throw Error("No finality update available");
       }
@@ -38,16 +47,20 @@ export function getLightclientApi({
     },
 
     async getLightClientBootstrap({blockRoot}) {
-      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHex(blockRoot));
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
+      const bootstrapProof = await lightClientServer.getBootstrap(fromHex(blockRoot));
       return {data: bootstrapProof, meta: {version: config.getForkName(bootstrapProof.header.beacon.slot)}};
     },
 
     async getLightClientCommitteeRoot({startPeriod, count}) {
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
-      const committeeHashes = await Promise.all(
-        periods.map((period) => chain.lightClientServer.getCommitteeRoot(period))
-      );
+      const committeeHashes = await Promise.all(periods.map((period) => lightClientServer.getCommitteeRoot(period)));
       return {data: committeeHashes};
     },
   };
