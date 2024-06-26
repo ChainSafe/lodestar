@@ -14,6 +14,7 @@ import {toGraffitiBuffer} from "../../../../../src/util/graffiti.js";
 import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
+import {defaultApiOptions} from "../../../../../src/api/options.js";
 
 describe("api/validator - produceBlockV2", function () {
   let api: ReturnType<typeof getValidatorApi>;
@@ -22,7 +23,7 @@ describe("api/validator - produceBlockV2", function () {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getValidatorApi(modules);
+    api = getValidatorApi(defaultApiOptions, modules);
 
     state = generateCachedBellatrixState();
   });

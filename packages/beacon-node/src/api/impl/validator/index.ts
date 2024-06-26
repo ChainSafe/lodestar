@@ -63,6 +63,7 @@ import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
+import {ApiOptions} from "../../options.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
@@ -110,14 +111,10 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
  */
-export function getValidatorApi({
-  chain,
-  config,
-  logger,
-  metrics,
-  network,
-  sync,
-}: ApiModules): ApplicationMethods<routes.validator.Endpoints> {
+export function getValidatorApi(
+  opts: ApiOptions,
+  {chain, config, logger, metrics, network, sync}: ApiModules
+): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
 
   /**
@@ -422,7 +419,7 @@ export function getValidatorApi({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
+        graffiti: toGraffitiBuffer(opts.private ? "" : graffiti ?? getDefaultGraffiti()),
         commonBlockBody,
       });
 
@@ -490,7 +487,7 @@ export function getValidatorApi({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
+        graffiti: toGraffitiBuffer(opts.private ? "" : graffiti ?? getDefaultGraffiti()),
         feeRecipient,
         commonBlockBody,
       });
@@ -601,7 +598,7 @@ export function getValidatorApi({
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
+      graffiti: toGraffitiBuffer(opts.private ? "" : graffiti ?? getDefaultGraffiti()),
     });
     logger.debug("Produced common block body", loggerContext);
 

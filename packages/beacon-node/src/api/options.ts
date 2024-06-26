@@ -4,6 +4,7 @@ export type ApiOptions = {
   maxGindicesInProof?: number;
   rest: BeaconRestApiServerOpts;
   version?: string;
+  private?: boolean;
 };
 
 export const defaultApiOptions: ApiOptions = {
