@@ -22,6 +22,7 @@ type BeaconExtraArgs = {
   private?: boolean;
   validatorMonitorLogs?: boolean;
   attachToGlobalThis?: boolean;
+  disableLightClientServer?: boolean;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -138,6 +139,11 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   attachToGlobalThis: {
     hidden: true,
     description: "Attach the beacon node to `globalThis`. Useful to inspect a running beacon node.",
+    type: "boolean",
+  },
+
+  disableLightClientServer: {
+    description: "Disable lightclient server.",
     type: "boolean",
   },
 };
