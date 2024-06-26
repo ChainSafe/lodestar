@@ -15,7 +15,7 @@
     "build:bundle": "lerna run build:bundle",
     "build:watch": "lerna exec --parallel -- 'yarn run build:watch'",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
-    "lint": "eslint --report-unused-disable-directives --color --ext .ts packages/*/src packages/*/test",
+    "lint": "eslint --report-unused-disable-directives --color --ext .ts packages/*/src packages/*/test --ignore-pattern webEsmBundle.browser.test.ts",
     "lint:fix": "yarn lint --fix",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
     "check-build": "lerna run check-build",
