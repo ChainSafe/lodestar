@@ -22,7 +22,6 @@ import {IPeerRpcScoreStore, PeerAction} from "../peers/score/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {StatusCache} from "../statusCache.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {IBeaconChain} from "../../chain/interface.js";
 import {onOutgoingReqRespError} from "./score.js";
 import {
   GetReqRespHandlerFn,

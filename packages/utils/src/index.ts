@@ -16,7 +16,7 @@ export * from "./notNullish.js";
 export * from "./sleep.js";
 export * from "./sort.js";
 export * from "./timeout.js";
-export {type RecursivePartial, bnToNum} from "./types.js";
+export {type RecursivePartial, bnToNum, type RequiredSelective} from "./types.js";
 export * from "./url.js";
 export * from "./verifyMerkleBranch.js";
 export * from "./promise.js";
