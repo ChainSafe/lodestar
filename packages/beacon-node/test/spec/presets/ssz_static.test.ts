@@ -44,9 +44,6 @@ const sszStatic =
 
     /* eslint-disable @typescript-eslint/strict-boolean-expressions */
     const sszType =
-      // Since lightclient types are not updated/declared at all forks, this allForksLightClient
-      // will help us get the right type for lightclient objects
-      ((sszTypesFor(fork as ForkLightClient) || {}) as Types)[typeName] ||
       (sszTypesFor(fork) as Types)[typeName] ||
       (ssz.capella as Types)[typeName] ||
       (ssz.bellatrix as Types)[typeName] ||

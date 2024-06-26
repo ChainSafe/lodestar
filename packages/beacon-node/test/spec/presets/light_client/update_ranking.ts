@@ -54,7 +54,7 @@ newUpdate = ${renderUpdate(newUpdate)}
       },
       sszTypes: {
         [UPDATES_FILE_NAME]: isForkLightClient(fork)
-          ? sszTypesFor(fork as ForkLightClient).LightClientUpdate
+          ? sszTypesFor(fork).LightClientUpdate
           : ssz.altair.LightClientUpdate,
       },
       expectFunc: () => {},

@@ -170,9 +170,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         config: InputType.YAML,
       },
       sszTypes: {
-        bootstrap: isForkLightClient(fork)
-          ? sszTypesFor(fork as ForkLightClient).LightClientBootstrap
-          : ssz.altair.LightClientBootstrap,
+        bootstrap: isForkLightClient(fork) ? sszTypesFor(fork).LightClientBootstrap : ssz.altair.LightClientBootstrap,
         // The updates are multifork and need config and step info to be deserialized within the test
         [UPDATE_FILE_NAME]: {typeName: "LightClientUpdate", deserialize: (bytes: Uint8Array) => bytes},
       },

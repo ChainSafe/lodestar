@@ -128,7 +128,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         // Bellatrix
         execution_payload:
           fork !== ForkName.phase0 && fork !== ForkName.altair
-            ? sszTypesFor(fork as ForkExecution).ExecutionPayload
+            ? sszTypesFor(fork).ExecutionPayload
             : ssz.bellatrix.ExecutionPayload,
         // Capella
         address_change: ssz.capella.SignedBLSToExecutionChange,

@@ -49,7 +49,7 @@ export function lowestFork<F extends ForkName>(forkNames: F[]): F {
 }
 
 export type ForkAll = ForkName;
-export const forkAll = Object.keys(ForkName) as ForkName[];
+export const forkAll = Object.values(ForkName);
 
 export type ForkPreLightClient = ForkName.phase0;
 export type ForkLightClient = Exclude<ForkName, ForkPreLightClient>;

@@ -49,7 +49,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
 
       const executionPayloadHeaderType =
         fork !== ForkName.phase0 && fork !== ForkName.altair
-          ? sszTypesFor(fork as ForkExecution).ExecutionPayloadHeader
+          ? sszTypesFor(fork).ExecutionPayloadHeader
           : ssz.bellatrix.ExecutionPayloadHeader;
 
       return initializeBeaconStateFromEth1(
@@ -82,7 +82,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         // for merge/post merge genesis, no affect on other phases
         execution_payload_header:
           fork !== ForkName.phase0 && fork !== ForkName.altair
-            ? sszTypesFor(fork as ForkExecution).ExecutionPayloadHeader
+            ? sszTypesFor(fork).ExecutionPayloadHeader
             : ssz.bellatrix.ExecutionPayloadHeader,
         ...generateDepositSSZTypeMapping(192),
       },
