@@ -9,7 +9,7 @@ import {
   isValidGenesisState,
 } from "@lodestar/state-transition";
 import {bnToNum} from "@lodestar/utils";
-import {ForkExecution, ForkName} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";

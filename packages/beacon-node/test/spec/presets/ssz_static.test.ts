@@ -3,7 +3,7 @@ import path from "node:path";
 import {it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";

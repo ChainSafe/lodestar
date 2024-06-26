@@ -1,6 +1,6 @@
 import {expect} from "vitest";
 import {init} from "@chainsafe/bls/switchable";
-import {ForkLightClient, isForkLightClient} from "@lodestar/params";
+import {isForkLightClient} from "@lodestar/params";
 import {altair, phase0, RootHex, Slot, ssz, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";

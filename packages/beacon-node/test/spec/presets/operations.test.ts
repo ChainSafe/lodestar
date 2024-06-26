@@ -10,7 +10,7 @@ import {
 import * as blockFns from "@lodestar/state-transition/block";
 import {ssz, phase0, altair, bellatrix, capella, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
-import {ACTIVE_PRESET, ForkExecution, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
