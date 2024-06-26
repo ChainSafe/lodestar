@@ -214,6 +214,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string
     beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr, commit, version}, eth1: {jwtVersion: versionStr}});
+    // Set commit and version for ClientVersion
+    beaconNodeOptions.set({executionEngine: {commit, version}});
   }
 
   // Render final options
