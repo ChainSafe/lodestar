@@ -366,6 +366,18 @@
   optionalDependencies:
     "@node-rs/crc32" "^1.6.0"
 
+"@chainsafe/hashtree-linux-arm64-gnu@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/hashtree-linux-arm64-gnu/-/hashtree-linux-arm64-gnu-1.0.0.tgz#168db259636261d9f3612354cad9f730a4be7110"
+  integrity sha512-XdYEV6z503Oxa7+mPtUEq9KoKfBAs0BcxGaRiDttCbZK2/J7CcTlobBGd7KMxJ/dQ4IUonaXsob0BnXBcrlwuw==
+
+"@chainsafe/hashtree@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/hashtree/-/hashtree-1.0.0.tgz#529439fb07299758ca5bbe69a00d1dc4ad83a949"
+  integrity sha512-qft0MZiLl5jbe8omZaSp1vQ2YCO9qCb262+5qD1vsgN6l1ga3ZFKLyNI6xvwbhC7ZnzZd46vr+p+KvdUIgruOw==
+  optionalDependencies:
+    "@chainsafe/hashtree-linux-arm64-gnu" "1.0.0"
+
 "@chainsafe/is-ip@^2.0.1":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.1.tgz#62cb285669d91f88fd9fa285048dde3882f0993b"
