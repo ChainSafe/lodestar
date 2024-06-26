@@ -33,7 +33,7 @@ export function getInteropState(
   const fork = config.getForkName(GENESIS_SLOT);
   const executionPayloadHeaderType =
     fork !== ForkName.phase0 && fork !== ForkName.altair
-      ? sszTypesFor<ForkExecution>(fork).ExecutionPayloadHeader
+      ? sszTypesFor(fork).ExecutionPayloadHeader
       : ssz.bellatrix.ExecutionPayloadHeader;
   const latestPayloadHeader = executionPayloadHeaderType.defaultViewDU();
   // TODO: when having different test options, consider modifying these values
