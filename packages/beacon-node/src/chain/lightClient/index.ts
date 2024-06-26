@@ -57,6 +57,7 @@ import {
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;
+  disableLightClientServer?: boolean;
 };
 
 type DependentRootHex = RootHex;
