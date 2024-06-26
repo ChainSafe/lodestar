@@ -4,7 +4,7 @@
 FROM --platform=${BUILDPLATFORM:-amd64} node:22-alpine as build_src
 ARG COMMIT
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache git sudo g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache git g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
 
 COPY . .
 
@@ -23,7 +23,7 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 # Note: This step is redundant for the host arch
 FROM node:22-alpine as build_deps
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache git sudo g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache git g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
 
 COPY --from=build_src /usr/app .
 
