@@ -23,7 +23,7 @@ describe("beacon / debug", () => {
 
   // Get state by SSZ
 
-  describe("getState() in SSZ format", () => {
+  describe("get state in SSZ format", () => {
     const mockApi = getMockApi<Endpoints>(getDefinitions(config));
     let baseUrl: string;
     let server: FastifyInstance;
@@ -41,26 +41,22 @@ describe("beacon / debug", () => {
       if (server !== undefined) await server.close();
     });
 
-    for (const method of ["getState" as const, "getStateV2" as const]) {
-      it(method, async () => {
-        const state = ssz.phase0.BeaconState.defaultValue();
-        const stateSerialized = ssz.phase0.BeaconState.serialize(state);
-        mockApi[method].mockResolvedValue({
-          data: stateSerialized,
-          meta: {version: ForkName.phase0, executionOptimistic: false, finalized: false},
-        });
-
-        const httpClient = new HttpClient({baseUrl});
-        const client = getClient(config, httpClient);
-
-        const res = await client[method]({stateId: "head"}, {responseWireFormat: WireFormat.ssz});
-
-        expect(res.ok).toBe(true);
-
-        if (res.ok) {
-          expect(toHexString(res.ssz())).toBe(toHexString(stateSerialized));
-        }
+    it("getStateV2", async () => {
+      const state = ssz.deneb.BeaconState.defaultValue();
+      const stateSerialized = ssz.deneb.BeaconState.serialize(state);
+      mockApi.getStateV2.mockResolvedValue({
+        data: stateSerialized,
+        meta: {version: ForkName.deneb, executionOptimistic: false, finalized: false},
       });
-    }
+
+      const httpClient = new HttpClient({baseUrl});
+      const client = getClient(config, httpClient);
+
+      const res = await client.getStateV2({stateId: "head"}, {responseWireFormat: WireFormat.ssz});
+
+      expect(res.ok).toBe(true);
+      expect(res.wireFormat()).toBe(WireFormat.ssz);
+      expect(toHexString(res.ssz())).toBe(toHexString(stateSerialized));
+    });
   });
 });

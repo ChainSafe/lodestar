@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Logger, fromHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
+import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -464,7 +464,7 @@ export class ForkChoice implements IForkChoice {
    * This ensures that the forkchoice is never out of sync.
    */
   onBlock(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
@@ -1088,7 +1088,7 @@ export class ForkChoice implements IForkChoice {
    * Return true if the block is timely for the current slot.
    * Child class can overwrite this for testing purpose.
    */
-  protected isBlockTimely(block: allForks.BeaconBlock, blockDelaySec: number): boolean {
+  protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
     return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
   }

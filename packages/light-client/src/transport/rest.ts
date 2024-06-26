@@ -1,13 +1,19 @@
 import mitt from "mitt";
-import {type allForks, type SyncPeriod} from "@lodestar/types";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  type SyncPeriod,
+} from "@lodestar/types";
 import {type ApiClient, routes} from "@lodestar/api";
 import {type ForkName} from "@lodestar/params";
 import {MittEmitter} from "../events.js";
 import {type LightClientTransport} from "./interface.js";
 
 export type LightClientRestEvents = {
-  [routes.events.EventType.lightClientFinalityUpdate]: (update: allForks.LightClientFinalityUpdate) => void;
-  [routes.events.EventType.lightClientOptimisticUpdate]: (update: allForks.LightClientOptimisticUpdate) => void;
+  [routes.events.EventType.lightClientFinalityUpdate]: (update: LightClientFinalityUpdate) => void;
+  [routes.events.EventType.lightClientOptimisticUpdate]: (update: LightClientOptimisticUpdate) => void;
 };
 
 export type LightClientRestEmitter = MittEmitter<LightClientRestEvents>;
@@ -25,7 +31,7 @@ export class LightClientRestTransport implements LightClientTransport {
   ): Promise<
     {
       version: ForkName;
-      data: allForks.LightClientUpdate;
+      data: LightClientUpdate;
     }[]
   > {
     const res = await this.api.lightclient.getLightClientUpdatesByRange({startPeriod, count});
@@ -34,27 +40,27 @@ export class LightClientRestTransport implements LightClientTransport {
     return updates.map((data, i) => ({data, version: versions[i]}));
   }
 
-  async getOptimisticUpdate(): Promise<{version: ForkName; data: allForks.LightClientOptimisticUpdate}> {
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: LightClientOptimisticUpdate}> {
     const res = await this.api.lightclient.getLightClientOptimisticUpdate();
     return {version: res.meta().version, data: res.value()};
   }
 
-  async getFinalityUpdate(): Promise<{version: ForkName; data: allForks.LightClientFinalityUpdate}> {
+  async getFinalityUpdate(): Promise<{version: ForkName; data: LightClientFinalityUpdate}> {
     const res = await this.api.lightclient.getLightClientFinalityUpdate();
     return {version: res.meta().version, data: res.value()};
   }
 
-  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: allForks.LightClientBootstrap}> {
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: LightClientBootstrap}> {
     const res = await this.api.lightclient.getLightClientBootstrap({blockRoot});
     return {version: res.meta().version, data: res.value()};
   }
 
-  onOptimisticUpdate(handler: (optimisticUpdate: allForks.LightClientOptimisticUpdate) => void): void {
+  onOptimisticUpdate(handler: (optimisticUpdate: LightClientOptimisticUpdate) => void): void {
     this.subscribeEventstream();
     this.eventEmitter.on(routes.events.EventType.lightClientOptimisticUpdate, handler);
   }
 
-  onFinalityUpdate(handler: (finalityUpdate: allForks.LightClientFinalityUpdate) => void): void {
+  onFinalityUpdate(handler: (finalityUpdate: LightClientFinalityUpdate) => void): void {
     this.subscribeEventstream();
     this.eventEmitter.on(routes.events.EventType.lightClientFinalityUpdate, handler);
   }

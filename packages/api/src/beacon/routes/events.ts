@@ -1,6 +1,19 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
+import {
+  Epoch,
+  phase0,
+  capella,
+  Slot,
+  ssz,
+  StringType,
+  RootHex,
+  altair,
+  UintNum64,
+  LightClientOptimisticUpdate,
+  LightClientFinalityUpdate,
+  SSEPayloadAttributes,
+} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
@@ -113,9 +126,9 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: allForks.LightClientOptimisticUpdate};
-  [EventType.lightClientFinalityUpdate]: {version: ForkName; data: allForks.LightClientFinalityUpdate};
-  [EventType.payloadAttributes]: {version: ForkName; data: allForks.SSEPayloadAttributes};
+  [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: LightClientOptimisticUpdate};
+  [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
+  [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
 };
 

@@ -1,7 +1,7 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {VERSIONED_HASH_VERSION_KZG, KZG_COMMITMENT_GINDEX0, ForkName} from "@lodestar/params";
-import {deneb, ssz, allForks} from "@lodestar/types";
+import {VERSIONED_HASH_VERSION_KZG, KZG_COMMITMENT_GINDEX0, ForkName, ForkAll} from "@lodestar/params";
+import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 
@@ -16,17 +16,17 @@ export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment)
 
 export function computeInclusionProof(
   fork: ForkName,
-  body: allForks.BeaconBlockBody,
+  body: BeaconBlockBody,
   index: number
 ): deneb.KzgCommitmentInclusionProof {
-  const bodyView = (ssz[fork].BeaconBlockBody as allForks.AllForksSSZTypes["BeaconBlockBody"]).toView(body);
+  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(body);
   const commitmentGindex = KZG_COMMITMENT_GINDEX0 + index;
   return new Tree(bodyView.node).getSingleProof(BigInt(commitmentGindex));
 }
 
 export function computeBlobSidecars(
   config: ChainForkConfig,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock,
   contents: deneb.Contents & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
 ): deneb.BlobSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;

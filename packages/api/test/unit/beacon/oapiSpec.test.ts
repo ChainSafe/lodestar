@@ -56,7 +56,6 @@ const testDatas = {
 const ignoredOperations = [
   /* missing route */
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
-  "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
   /* Must support ssz response body */

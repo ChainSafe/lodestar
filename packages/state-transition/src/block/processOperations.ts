@@ -1,4 +1,4 @@
-import {allForks, capella} from "@lodestar/types";
+import {BeaconBlockBody, capella} from "@lodestar/types";
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella} from "../types.js";
@@ -22,7 +22,7 @@ export {
 export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  body: allForks.BeaconBlockBody,
+  body: BeaconBlockBody,
   opts: ProcessBlockOpts = {verifySignatures: true}
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits

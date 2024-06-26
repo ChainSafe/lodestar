@@ -8,7 +8,16 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
 } from "@lodestar/params";
-import {altair, phase0, ssz, allForks, capella, deneb, Slot} from "@lodestar/types";
+import {
+  ssz,
+  Slot,
+  LightClientFinalityUpdate,
+  LightClientHeader,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  BeaconBlockHeader,
+  SyncCommittee,
+} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {isValidMerkleBranch, computeEpochAtSlot, computeSyncPeriodAtSlot} from "../utils/index.js";
@@ -32,7 +41,7 @@ export function getSafetyThreshold(maxActiveParticipants: number): number {
   return Math.floor(maxActiveParticipants / SAFETY_THRESHOLD_FACTOR);
 }
 
-export function isSyncCommitteeUpdate(update: allForks.LightClientUpdate): boolean {
+export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
     update.nextSyncCommitteeBranch !== ZERO_NEXT_SYNC_COMMITTEE_BRANCH &&
@@ -40,7 +49,7 @@ export function isSyncCommitteeUpdate(update: allForks.LightClientUpdate): boole
   );
 }
 
-export function isFinalityUpdate(update: allForks.LightClientUpdate): boolean {
+export function isFinalityUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
     update.finalityBranch !== ZERO_FINALITY_BRANCH &&
@@ -48,12 +57,12 @@ export function isFinalityUpdate(update: allForks.LightClientUpdate): boolean {
   );
 }
 
-export function isZeroedHeader(header: phase0.BeaconBlockHeader): boolean {
+export function isZeroedHeader(header: BeaconBlockHeader): boolean {
   // Fast return for when constructing full LightClientUpdate from partial updates
   return header === ZERO_HEADER || byteArrayEquals(header.bodyRoot, ZERO_HASH);
 }
 
-export function isZeroedSyncCommittee(syncCommittee: altair.SyncCommittee): boolean {
+export function isZeroedSyncCommittee(syncCommittee: SyncCommittee): boolean {
   // Fast return for when constructing full LightClientUpdate from partial updates
   return syncCommittee === ZERO_SYNC_COMMITTEE || byteArrayEquals(syncCommittee.pubkeys[0], ZERO_PUBKEY);
 }
@@ -61,8 +70,8 @@ export function isZeroedSyncCommittee(syncCommittee: altair.SyncCommittee): bool
 export function upgradeLightClientHeader(
   config: ChainForkConfig,
   targetFork: ForkName,
-  header: altair.LightClientHeader
-): allForks.LightClientHeader {
+  header: LightClientHeader
+): LightClientHeader {
   const headerFork = config.getForkName(header.beacon.slot);
   if (ForkSeq[headerFork] >= ForkSeq[targetFork]) {
     throw Error(`Invalid upgrade request from headerFork=${headerFork} to targetFork=${targetFork}`);
@@ -70,7 +79,7 @@ export function upgradeLightClientHeader(
 
   // We are modifying the same header object, may be we could create a copy, but its
   // not required as of now
-  const upgradedHeader = header as allForks.LightClientHeader;
+  const upgradedHeader = header;
   const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork] + 1];
 
   switch (startUpgradeFromFork) {
@@ -86,9 +95,9 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.capella:
-      (upgradedHeader as capella.LightClientHeader).execution =
+      (upgradedHeader as LightClientHeader<ForkName.capella>).execution =
         ssz.capella.LightClientHeader.fields.execution.defaultValue();
-      (upgradedHeader as capella.LightClientHeader).executionBranch =
+      (upgradedHeader as LightClientHeader<ForkName.capella>).executionBranch =
         ssz.capella.LightClientHeader.fields.executionBranch.defaultValue();
 
       // Break if no further upgradation is required else fall through
@@ -96,9 +105,9 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.deneb:
-      (upgradedHeader as deneb.LightClientHeader).execution.blobGasUsed =
+      (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.blobGasUsed =
         ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
-      (upgradedHeader as deneb.LightClientHeader).execution.excessBlobGas =
+      (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.excessBlobGas =
         ssz.deneb.LightClientHeader.fields.execution.fields.excessBlobGas.defaultValue();
 
       // Break if no further upgradation is required else fall through
@@ -107,30 +116,30 @@ export function upgradeLightClientHeader(
   return upgradedHeader;
 }
 
-export function isValidLightClientHeader(config: ChainForkConfig, header: allForks.LightClientHeader): boolean {
+export function isValidLightClientHeader(config: ChainForkConfig, header: LightClientHeader): boolean {
   const epoch = computeEpochAtSlot(header.beacon.slot);
 
   if (epoch < config.CAPELLA_FORK_EPOCH) {
     return (
-      ((header as capella.LightClientHeader).execution === undefined ||
+      ((header as LightClientHeader<ForkName.capella>).execution === undefined ||
         ssz.capella.ExecutionPayloadHeader.equals(
-          (header as capella.LightClientHeader).execution,
+          (header as LightClientHeader<ForkName.capella>).execution,
           ssz.capella.LightClientHeader.fields.execution.defaultValue()
         )) &&
-      ((header as capella.LightClientHeader).executionBranch === undefined ||
+      ((header as LightClientHeader<ForkName.capella>).executionBranch === undefined ||
         ssz.capella.LightClientHeader.fields.executionBranch.equals(
           ssz.capella.LightClientHeader.fields.executionBranch.defaultValue(),
-          (header as capella.LightClientHeader).executionBranch
+          (header as LightClientHeader<ForkName.capella>).executionBranch
         ))
     );
   }
 
   if (epoch < config.DENEB_FORK_EPOCH) {
     if (
-      ((header as deneb.LightClientHeader).execution.blobGasUsed &&
-        (header as deneb.LightClientHeader).execution.blobGasUsed !== BigInt(0)) ||
-      ((header as deneb.LightClientHeader).execution.excessBlobGas &&
-        (header as deneb.LightClientHeader).execution.excessBlobGas !== BigInt(0))
+      ((header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed &&
+        (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
+      ((header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas &&
+        (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0))
     ) {
       return false;
     }
@@ -139,8 +148,8 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
   return isValidMerkleBranch(
     config
       .getExecutionForkTypes(header.beacon.slot)
-      .ExecutionPayloadHeader.hashTreeRoot((header as capella.LightClientHeader).execution),
-    (header as capella.LightClientHeader).executionBranch,
+      .ExecutionPayloadHeader.hashTreeRoot((header as LightClientHeader<ForkName.capella>).execution),
+    (header as LightClientHeader<ForkName.capella>).executionBranch,
     EXECUTION_PAYLOAD_DEPTH,
     EXECUTION_PAYLOAD_INDEX,
     header.beacon.bodyRoot
@@ -150,8 +159,8 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
 export function upgradeLightClientUpdate(
   config: ChainForkConfig,
   targetFork: ForkName,
-  update: allForks.LightClientUpdate
-): allForks.LightClientUpdate {
+  update: LightClientUpdate
+): LightClientUpdate {
   update.attestedHeader = upgradeLightClientHeader(config, targetFork, update.attestedHeader);
   update.finalizedHeader = upgradeLightClientHeader(config, targetFork, update.finalizedHeader);
 
@@ -161,8 +170,8 @@ export function upgradeLightClientUpdate(
 export function upgradeLightClientFinalityUpdate(
   config: ChainForkConfig,
   targetFork: ForkName,
-  finalityUpdate: allForks.LightClientFinalityUpdate
-): allForks.LightClientFinalityUpdate {
+  finalityUpdate: LightClientFinalityUpdate
+): LightClientFinalityUpdate {
   finalityUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader);
   finalityUpdate.finalizedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader);
 
@@ -172,8 +181,8 @@ export function upgradeLightClientFinalityUpdate(
 export function upgradeLightClientOptimisticUpdate(
   config: ChainForkConfig,
   targetFork: ForkName,
-  optimisticUpdate: allForks.LightClientOptimisticUpdate
-): allForks.LightClientOptimisticUpdate {
+  optimisticUpdate: LightClientOptimisticUpdate
+): LightClientOptimisticUpdate {
   optimisticUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, optimisticUpdate.attestedHeader);
 
   return optimisticUpdate;

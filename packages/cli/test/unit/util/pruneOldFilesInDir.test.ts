@@ -43,7 +43,7 @@ describe("pruneOldFilesInDir", () => {
 
     pruneOldFilesInDir(dataDir, DAYS_TO_MS);
 
-    expect(fs.readdirSync(nestedDir)).toHaveLength(0);
+    expect(fs.existsSync(nestedDir)).toBe(false);
   });
 
   it("should handle empty directories", () => {
@@ -52,7 +52,7 @@ describe("pruneOldFilesInDir", () => {
 
     pruneOldFilesInDir(emptyDir, DAYS_TO_MS);
 
-    expect(fs.readdirSync(emptyDir)).toHaveLength(0);
+    expect(fs.existsSync(emptyDir)).toBe(false);
   });
 
   function createFileWithAge(path: string, ageInDays: number): void {

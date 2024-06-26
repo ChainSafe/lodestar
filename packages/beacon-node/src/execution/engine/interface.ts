@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {Root, RootHex, allForks, capella, Wei} from "@lodestar/types";
+import {Root, RootHex, capella, Wei, ExecutionPayload} from "@lodestar/types";
 
 import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
@@ -101,7 +101,7 @@ export interface IExecutionEngine {
    */
   notifyNewPayload(
     fork: ForkName,
-    executionPayload: allForks.ExecutionPayload,
+    executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root
   ): Promise<ExecutePayloadResponse>;
@@ -137,7 +137,7 @@ export interface IExecutionEngine {
     fork: ForkName,
     payloadId: PayloadId
   ): Promise<{
-    executionPayload: allForks.ExecutionPayload;
+    executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
     shouldOverrideBuilder?: boolean;
