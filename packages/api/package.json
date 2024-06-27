@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/api",
-  "description": "A Typescript implementation of the Ethereum Consensus light client",
+  "description": "A Typescript REST client for the Ethereum Consensus API",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
