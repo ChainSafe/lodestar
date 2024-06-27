@@ -13,6 +13,7 @@ import {
   RootHex,
   Slot,
   ssz,
+  sszTypesFor,
   SSZTypesFor,
   SyncPeriod,
 } from "@lodestar/types";
@@ -39,6 +40,8 @@ import {
   ForkSeq,
   ForkExecution,
   ForkLightClient,
+  highestFork,
+  forkLightClient,
 } from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
@@ -220,7 +223,7 @@ export class LightClientServer {
 
     this.zero = {
       // Assign the hightest fork's default value because it can always be typecasted down to correct fork
-      finalizedHeader: Object.values(ssz.allForksLightClient).slice(-1)[0].LightClientHeader.defaultValue(),
+      finalizedHeader: sszTypesFor(highestFork(forkLightClient)).LightClientHeader.defaultValue(),
       finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
     };
 

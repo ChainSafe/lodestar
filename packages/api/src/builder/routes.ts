@@ -27,7 +27,7 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
-import {getExecutionForkTypes, toForkName} from "../utils/fork.js";
+import {getBlobsForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -150,7 +150,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
           return isForkBlobs(fork)
-            ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
+            ? getBlobsForkTypes(fork).ExecutionPayloadAndBlobsBundle
             : getExecutionForkTypes(fork).ExecutionPayload;
         }),
         meta: VersionCodec,
