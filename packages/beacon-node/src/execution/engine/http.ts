@@ -116,7 +116,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
   // Cache EL client version from the latest getClientVersion call
-  private executionClientVersion: ClientVersion[] = [];
+  private clientVersion?: ClientVersion;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -443,18 +443,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [clientVersion ?? this.getConsensusClientVersion()]});
 
-    this.executionClientVersion = response.map((cv) => {
+    const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
       return {code, name: cv.name, version: cv.version, commit: cv.commit};
     });
 
-    this.logger.debug(`executionClientVersion is set to ${JSON.stringify(this.executionClientVersion)}`);
+    if (clientVersions.length > 0) {
+      this.clientVersion = clientVersions[0];
+      this.logger.info(`executionClientVersion is set to ${JSON.stringify(this.clientVersion)}`);
+    }
 
-    return this.executionClientVersion;
+    return clientVersions;
   }
 
-  getExecutionClientVersion(): ClientVersion[] {
-    return this.executionClientVersion;
+  get executionClientVersion(): ClientVersion | undefined {
+    return this.clientVersion;
   }
 
   getConsensusClientVersion(): ClientVersion {

@@ -181,6 +181,6 @@ export interface IExecutionEngine {
    * Not to be confused with `getClientVersion`. This method returns cached client version
    * from `getClientVersion` which is a rpc call to EL client
    */
-  getExecutionClientVersion(): ClientVersion[];
+  getExecutionClientVersion(): ClientVersion;
   getConsensusClientVersion(): ClientVersion;
 }

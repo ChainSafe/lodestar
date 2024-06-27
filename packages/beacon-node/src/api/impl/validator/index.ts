@@ -333,12 +333,16 @@ export function getValidatorApi(
   }
 
   function getDefaultGraffiti(): string {
+
+    if (opts.private) {
+      return "";
+    }
+
     const executionClientVersion = chain.executionEngine.getExecutionClientVersion();
     const consensusClientVersion = chain.executionEngine.getConsensusClientVersion();
 
-    if (executionClientVersion.length > 0) {
-      const executionCode = executionClientVersion[0].code;
-      const executionCommit = executionClientVersion[0].commit;
+    if (executionClientVersion != undefined) {
+      const {code: executionCode, commit: executionCommit} = executionClientVersion;
 
       // Follow the 2-byte commit format in https://github.com/ethereum/execution-apis/pull/517#issuecomment-1918512560
       return `${executionCode}${executionCommit.slice(0, 2)}${consensusClientVersion.code}${consensusClientVersion.commit}`;
@@ -419,7 +423,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(opts.private ? "" : graffiti ?? getDefaultGraffiti()),
+        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
         commonBlockBody,
       });
 
@@ -487,7 +491,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(opts.private ? "" : graffiti ?? getDefaultGraffiti()),
+        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
         feeRecipient,
         commonBlockBody,
       });
@@ -598,7 +602,7 @@ export function getValidatorApi(
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(opts.private ? "" : graffiti ?? getDefaultGraffiti()),
+      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
     });
     logger.debug("Produced common block body", loggerContext);
 

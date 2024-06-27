@@ -35,7 +35,7 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
-  getExecutionClientVersion(): ClientVersion[] {
+  getExecutionClientVersion(): ClientVersion {
     throw Error("Execution engine disabled");
   }
 
