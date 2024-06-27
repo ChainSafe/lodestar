@@ -238,7 +238,7 @@ export class BeaconChain implements IBeaconChain {
       const delayMs = Number(toCheck - last - BigInt(checkIntervalMs));
       last = toCheck;
 
-      if (delayMs > 500) {
+      if (delayMs > 1000) {
         const {currentSlot} = clock as Clock;
         const endSlotSec = config.SECONDS_PER_SLOT + (clock as Clock).secFromSlot(currentSlot + 1);
         logger.warn("Event loop lag detected", {
