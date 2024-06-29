@@ -1,7 +1,11 @@
 import {vi, Mocked} from "vitest";
-import {ApiClientMethods, ApiResponse, Endpoint, Endpoints, HttpStatusCode} from "@lodestar/api";
+import {ApiClientMethods, ApiResponse, Endpoint, Endpoints, HttpClient, HttpStatusCode} from "@lodestar/api";
 
-export function getApiClientStub(): {[K in keyof Endpoints]: Mocked<ApiClientMethods<Endpoints[K]>>} {
+type ApiClientStub = {[K in keyof Endpoints]: Mocked<ApiClientMethods<Endpoints[K]>>} & {
+  httpClient: Mocked<HttpClient>;
+};
+
+export function getApiClientStub(): ApiClientStub {
   return {
     beacon: {
       getStateValidators: vi.fn(),
@@ -25,7 +29,8 @@ export function getApiClientStub(): {[K in keyof Endpoints]: Mocked<ApiClientMet
       publishAggregateAndProofs: vi.fn(),
       submitBeaconCommitteeSelections: vi.fn(),
     },
-  } as unknown as {[K in keyof Endpoints]: Mocked<ApiClientMethods<Endpoints[K]>>};
+    httpClient: {},
+  } as unknown as ApiClientStub;
 }
 
 export function mockApiResponse<T, M, E extends Endpoint<any, any, any, T, M>>({
