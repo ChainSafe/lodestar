@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Logger, fromHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
+import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -26,6 +26,7 @@ import {
   MaybeValidExecutionStatus,
   LVHExecResponse,
   ProtoNode,
+  DataAvailabilityStatus,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -463,11 +464,12 @@ export class ForkChoice implements IForkChoice {
    * This ensures that the forkchoice is never out of sync.
    */
   onBlock(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
+    executionStatus: MaybeValidExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
@@ -644,8 +646,13 @@ export class ForkChoice implements IForkChoice {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionPayloadNumber: block.body.executionPayload.blockNumber,
             executionStatus: this.getPostMergeExecStatus(executionStatus),
+            dataAvailabilityStatus,
           }
-        : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
+        : {
+            executionPayloadBlockHash: null,
+            executionStatus: this.getPreMergeExecStatus(executionStatus),
+            dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+          }),
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -1081,7 +1088,7 @@ export class ForkChoice implements IForkChoice {
    * Return true if the block is timely for the current slot.
    * Child class can overwrite this for testing purpose.
    */
-  protected isBlockTimely(block: allForks.BeaconBlock, blockDelaySec: number): boolean {
+  protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
     return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
   }
@@ -1090,6 +1097,14 @@ export class ForkChoice implements IForkChoice {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
+  }
+
+  private getPreMergeDataStatus(dataAvailabilityStatus: DataAvailabilityStatus): DataAvailabilityStatus.PreData {
+    if (dataAvailabilityStatus !== DataAvailabilityStatus.PreData)
+      throw Error(
+        `Invalid pre-merge data status: expected: ${DataAvailabilityStatus.PreData}, got ${dataAvailabilityStatus}`
+      );
+    return dataAvailabilityStatus;
   }
 
   private getPostMergeExecStatus(

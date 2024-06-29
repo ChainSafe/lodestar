@@ -1,5 +1,5 @@
 ---
-title: Stake with a Validator Client
+title: Starting a Validator Client
 ---
 
 # Validator Configuration
@@ -30,7 +30,7 @@ You will also need the passphrase used the encrypt the keystore. This can be spe
 
 #### Option 1: Import Keys To Lodestar's Keystores Folder
 
-You can load the keys into the keystore folder using the `validator import` command. There are two methods for importing keystores:
+You can load the keys into the keystore folder using the [`validator import`](../validator-management/validator-cli.md#validator-import) command. There are two methods for importing keystores:
 
 _Interactive passphrase import_
 
@@ -50,13 +50,13 @@ The interactive passphrase import method will prompt every keystore in the `vali
 The plaintext passphrase file import method will allow you to import all keystores in the `validator_keys` folder encrypted with the same password contained in `password.txt` for efficiency.
 :::
 
-Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the `validator list` command.
+Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the [`validator list`](./validator-cli.md#validator-list) command.
 
 ---
 
 #### Option 2: Import Keys When Starting the Validator
 
-To import keys when you start the validator specify the `--importKeystores` and `--importKeystoresPassword` flags with the `validator` command:
+To import keys when you start the validator specify the [`--importKeystores`](./validator-cli.md#--importkeystores) and [`--importKeystoresPassword`](./validator-cli.md#--importkeystorespassword) flags with the [`validator`](./validator-cli.md#base-validator-command) command:
 
 ```bash
 ./lodestar validator --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
@@ -70,17 +70,17 @@ If you import keys using `--importKeystores` at runtime (Option 2) any keys load
 
 Post-Merge Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees when proposing blocks. If you do not set this address, your priority fees will be sent to the [burn address](https://etherscan.io/address/0x0000000000000000000000000000000000000000).
 
-Configure your validator client's fee recipient address by using the `--suggestedFeeRecipient` flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address `0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d` would add the following flag to their configuration: `--suggestedFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d`.
+Configure your validator client's fee recipient address by using the [`--suggestedFeeRecipient`](./validator-cli.md#--suggestedfeerecipient) flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address `0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d` would add the following flag to their configuration: `--suggestedFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d`.
 
-You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.
+You may choose to use the [`--strictFeeRecipientCheck`](./validator-cli.md#--strictfeerecipientcheck) flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.
 
 ### Configure your builder selection and/or builder boost factor
 
 If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
 
-With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+With produceBlockV3 (enabled automatically after the Deneb hard fork), the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
-With Lodestar's `--builder.selection` validator options, you can select:
+With Lodestar's [`--builder.selection`](./validator-cli.md#--builderselection) validator options, you can select:
 
 - `default`: Default setting for Lodestar set at `--builder.boostFactor=90`. This default setting will have a local block boost of ~10%. Note that this value might change in the future depending on what we think is the most appropriate value to help improve censorship resistance of Ethereum.
 - `maxprofit`: An alias of `--builder.boostFactor=100`, which will always choose the more profitable block. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
@@ -91,7 +91,7 @@ With Lodestar's `--builder.selection` validator options, you can select:
 
 #### Calculating builder boost factor with examples
 
-To calculate the builder boost factor setting, you need to know what percentage you will accept a builder block for against a local execution block using the following formula: `100*100/(100+percentage)`. The value passed to `--builder.boostFactor` must be a valid number without decimals.
+To calculate the builder boost factor setting, you need to know what percentage you will accept a builder block for against a local execution block using the following formula: `100*100/(100+percentage)`. The value passed to [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) must be a valid number without decimals.
 
 Example 1: I will only accept a builder block with 25% more value than the local execution block.
 

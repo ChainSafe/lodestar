@@ -1,9 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access */
-import {expect, describe, it, vi} from "vitest";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
+import {expect, describe, it, vi, beforeAll} from "vitest";
+import {sleep} from "@lodestar/utils";
 import {Lightclient, LightclientEvent, utils, transport} from "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
   vi.setConfig({testTimeout: 20_000});
+
+  // Sometimes bundle takes some time to load in the browser
+  beforeAll(async () => {
+    await sleep(2000);
+  });
 
   it("should have a global interface", () => {
     expect((window as any)["lodestar"]["lightclient"]).toBeDefined();

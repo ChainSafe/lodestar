@@ -7,30 +7,23 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Typescript REST client for the [Ethereum Consensus API spec](https://github.com/ethereum/beacon-apis)
+Typescript REST client for the [Ethereum Consensus API](https://github.com/ethereum/beacon-apis)
 
 ## Usage
 
-We use more typesafe approach for the API client, where all the errors are returned not thrown. This approach is more easy to document and better to handle all possible error cases.
+The REST client extends the native [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), it behaves very similar in terms of error and response handling. It returns the same [Response object](https://developer.mozilla.org/en-US/docs/Web/API/Response) with additional methods to simplify usage and it allows to override all [Request options](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request#options) if needed.
 
 ```typescript
-import {getClient, HttpError} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 
 const api = getClient({baseUrl: "http://localhost:9596"}, {config});
 
-api.beacon
-  .getStateValidator(
-    "head",
-    "0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95"
-  )
-  .then((res) => {
-    if (res.ok) {
-      console.log("Your balance is:", res.response.data.balance, res.ok, res.status);
-    } else {
-      console.error(res.status, res.error.code, res.error.message);
-    }
-  });
+const res = await api.beacon.getStateValidator({stateId: "head", validatorId: 0});
+
+const validator = res.value();
+
+console.log("The validator balance is: ", validator.balance);
 ```
 
 ## Prerequisites
@@ -45,7 +38,7 @@ You will need to go over the [specification](https://github.com/ethereum/beacon-
 ## Getting started
 
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet/).
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
 
 ## Contributors
 

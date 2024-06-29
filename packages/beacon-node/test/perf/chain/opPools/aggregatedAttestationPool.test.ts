@@ -8,7 +8,7 @@ import {
   newFilledArray,
 } from "@lodestar/state-transition";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 // eslint-disable-next-line import/no-relative-packages
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
@@ -66,6 +66,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         executionStatus: ExecutionStatus.PreMerge,
 
         timeliness: false,
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       originalState.slot
     );
@@ -90,6 +91,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           executionPayloadBlockHash: null,
           executionStatus: ExecutionStatus.PreMerge,
           timeliness: false,
+          dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         },
         slot
       );

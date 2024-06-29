@@ -1,5 +1,5 @@
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {computeSigningRoot, ISignatureSet, SignatureSetType} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
@@ -33,7 +33,7 @@ export function getProposerSlashingSignatureSets(
 
 export function getProposerSlashingsSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock
+  signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.proposerSlashings
     .map((proposerSlashing) => getProposerSlashingSignatureSets(state, proposerSlashing))

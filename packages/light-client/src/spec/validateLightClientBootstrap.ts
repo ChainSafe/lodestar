@@ -1,5 +1,5 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {Root, ssz, allForks} from "@lodestar/types";
+import {LightClientBootstrap, Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {toHex} from "@lodestar/utils";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch.js";
@@ -11,7 +11,7 @@ const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 export function validateLightClientBootstrap(
   config: ChainForkConfig,
   trustedBlockRoot: Root,
-  bootstrap: allForks.LightClientBootstrap
+  bootstrap: LightClientBootstrap
 ): void {
   const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(bootstrap.header.beacon);
 

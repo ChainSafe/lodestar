@@ -1,4 +1,4 @@
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
@@ -36,7 +36,7 @@ export function getVoluntaryExitSignatureSet(
 
 export function getVoluntaryExitsSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock
+  signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
     getVoluntaryExitSignatureSet(state, voluntaryExit)

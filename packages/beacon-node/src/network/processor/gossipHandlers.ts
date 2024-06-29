@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, allForks, deneb, UintNum64} from "@lodestar/types";
+import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -113,7 +113,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
 
   async function validateBeaconBlock(
-    signedBlock: allForks.SignedBeaconBlock,
+    signedBlock: SignedBeaconBlock,
     blockBytes: Uint8Array,
     fork: ForkName,
     peerIdStr: string,
@@ -259,7 +259,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
     // if blobs are not yet fully available start an aggressive blob pull
-    if (blockInput.type === BlockInputType.blobsPromise) {
+    if (blockInput.type === BlockInputType.dataPromise) {
       events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
     }
 
@@ -398,7 +398,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
           //
           // however we can emit the event which will atleast add the peer to the list of peers to pull
           // data from
-          if (normalBlockInput.type === BlockInputType.blobsPromise) {
+          if (normalBlockInput.type === BlockInputType.dataPromise) {
             events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
           }
         } else {

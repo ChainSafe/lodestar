@@ -143,7 +143,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
       currentEpochAttestationsBits: countAttBits(currentEpochAttestations as phase0.PendingAttestation[]),
     });
 
-    // -- allForks
+    // -- all forks
     // processEffectiveBalanceUpdates: function of effectiveBalance changes
     // processEth1DataReset: free
     // processHistoricalRootsUpdate: free

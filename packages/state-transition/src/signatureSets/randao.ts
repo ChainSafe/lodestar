@@ -1,5 +1,5 @@
 import {DOMAIN_RANDAO} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
+import {BeaconBlock, ssz} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -9,17 +9,14 @@ import {
 } from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
-export function verifyRandaoSignature(state: CachedBeaconStateAllForks, block: allForks.BeaconBlock): boolean {
+export function verifyRandaoSignature(state: CachedBeaconStateAllForks, block: BeaconBlock): boolean {
   return verifySignatureSet(getRandaoRevealSignatureSet(state, block));
 }
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
-export function getRandaoRevealSignatureSet(
-  state: CachedBeaconStateAllForks,
-  block: allForks.BeaconBlock
-): ISignatureSet {
+export function getRandaoRevealSignatureSet(state: CachedBeaconStateAllForks, block: BeaconBlock): ISignatureSet {
   const {epochCtx} = state;
   // should not get epoch from epochCtx
   const epoch = computeEpochAtSlot(block.slot);

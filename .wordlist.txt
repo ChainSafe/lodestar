@@ -78,6 +78,8 @@ PoS
 Prysm
 Quickstart
 RPC
+Reth
+Ryzen
 SHA
 SSD
 SSZ

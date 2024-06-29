@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, Slot, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochTransitionCache, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
@@ -59,7 +59,7 @@ export enum StateHashTreeRootSource {
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
   options: StateTransitionOpts = {
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,

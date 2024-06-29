@@ -24,12 +24,12 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
       root: blockRootHex,
     });
 
-    if (blockInput.type === BlockInputType.postDeneb || blockInput.type === BlockInputType.blobsPromise) {
+    if (blockInput.type === BlockInputType.availableData || blockInput.type === BlockInputType.dataPromise) {
       const blobSidecars =
-        blockInput.type == BlockInputType.postDeneb
-          ? blockInput.blobs
+        blockInput.type == BlockInputType.availableData
+          ? blockInput.blockData.blobs
           : // At this point of import blobs are available and can be safely awaited
-            (await blockInput.availabilityPromise).blobs;
+            (await blockInput.cachedData.availabilityPromise).blobs;
 
       // NOTE: Old blobs are pruned on archive
       fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
@@ -58,8 +58,8 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
     if (!this.forkChoice.hasBlockHex(blockRootHex)) {
       blockToRemove.push(block);
 
-      if (type === BlockInputType.postDeneb) {
-        const blobSidecars = blockInput.blobs;
+      if (type === BlockInputType.availableData) {
+        const blobSidecars = blockInput.blockData.blobs;
         blobsToRemove.push({blockRoot, slot: block.message.slot, blobSidecars});
       }
     }

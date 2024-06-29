@@ -2,7 +2,7 @@
 
 ## Binaries
 
-Binaries can be downloaded from [this page](https://github.com/ChainSafe/lodestar/releases/) under the `Assets` section.
+Binaries can be downloaded from [the release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
 
 ## Docker Installation
 
@@ -85,7 +85,7 @@ Lodestar should now be ready for use.
 ./lodestar --help
 ```
 
-See [Command Line Reference](./../../reference/cli.md) for further information.
+See [Command Line Reference](./../beacon-management/beacon-cli.md) for further information.
 
 ### Known Issues
 

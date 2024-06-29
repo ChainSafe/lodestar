@@ -8,7 +8,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {ssz, phase0, altair, bellatrix, capella} from "@lodestar/types";
+import {ssz, phase0, altair, bellatrix, capella, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 
@@ -128,7 +128,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         // Bellatrix
         execution_payload:
           fork !== ForkName.phase0 && fork !== ForkName.altair
-            ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayload
+            ? sszTypesFor(fork).ExecutionPayload
             : ssz.bellatrix.ExecutionPayload,
         // Capella
         address_change: ssz.capella.SignedBLSToExecutionChange,
@@ -142,8 +142,6 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
     },
   };
 };
-
-type ExecutionFork = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   operations: {type: RunnerType.default, fn: operations},

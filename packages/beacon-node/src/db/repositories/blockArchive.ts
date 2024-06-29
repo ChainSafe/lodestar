@@ -1,7 +1,7 @@
 import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
-import {Slot, Root, allForks, ssz} from "@lodestar/types";
+import {Slot, Root, ssz, FullOrBlindedSignedBeaconBlock} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {
@@ -25,7 +25,7 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
-export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlindedSignedBeaconBlock> {
+export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSignedBeaconBlock> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_blockArchive;
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
@@ -34,17 +34,17 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
 
   // Overrides for multi-fork
 
-  encodeValue(value: allForks.FullOrBlindedSignedBeaconBlock): Uint8Array {
+  encodeValue(value: FullOrBlindedSignedBeaconBlock): Uint8Array {
     return serializeFullOrBlindedSignedBeaconBlock(this.config, value);
   }
 
-  decodeValue(data: Uint8Array): allForks.FullOrBlindedSignedBeaconBlock {
+  decodeValue(data: Uint8Array): FullOrBlindedSignedBeaconBlock {
     return deserializeFullOrBlindedSignedBeaconBlock(this.config, data);
   }
 
   // Handle key as slot
 
-  getId(value: allForks.FullOrBlindedSignedBeaconBlock): Slot {
+  getId(value: FullOrBlindedSignedBeaconBlock): Slot {
     return value.message.slot;
   }
 
@@ -54,7 +54,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
 
   // Overrides to index
 
-  async put(key: Slot, value: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> {
+  async put(key: Slot, value: FullOrBlindedSignedBeaconBlock): Promise<void> {
     const blockRoot = blindedOrFullBlockHashTreeRoot(this.config, value.message);
     const slot = value.message.slot;
     await Promise.all([
@@ -64,7 +64,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
     ]);
   }
 
-  async batchPut(items: KeyValue<Slot, allForks.FullOrBlindedSignedBeaconBlock>[]): Promise<void> {
+  async batchPut(items: KeyValue<Slot, FullOrBlindedSignedBeaconBlock>[]): Promise<void> {
     await Promise.all([
       super.batchPut(items),
       Array.from(items).map((item) => {
@@ -88,7 +88,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
     ]);
   }
 
-  async remove(value: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> {
+  async remove(value: FullOrBlindedSignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
       deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).BeaconBlock, value),
@@ -96,7 +96,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
     ]);
   }
 
-  async batchRemove(values: allForks.FullOrBlindedSignedBeaconBlock[]): Promise<void> {
+  async batchRemove(values: FullOrBlindedSignedBeaconBlock[]): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) =>
@@ -106,7 +106,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
     ]);
   }
 
-  async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<allForks.FullOrBlindedSignedBeaconBlock> {
+  async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<FullOrBlindedSignedBeaconBlock> {
     const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
     const step = (opts && opts.step) ?? 1;
@@ -118,13 +118,13 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
     }
   }
 
-  async values(opts?: BlockFilterOptions): Promise<allForks.FullOrBlindedSignedBeaconBlock[]> {
+  async values(opts?: BlockFilterOptions): Promise<FullOrBlindedSignedBeaconBlock[]> {
     return all(this.valuesStream(opts));
   }
 
   // INDEX
 
-  async getByRoot(root: Root): Promise<allForks.FullOrBlindedSignedBeaconBlock | null> {
+  async getByRoot(root: Root): Promise<FullOrBlindedSignedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
     return slot !== null ? this.get(slot) : null;
   }
@@ -134,7 +134,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
     return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as KeyValue<Slot, Buffer>) : null;
   }
 
-  async getByParentRoot(root: Root): Promise<allForks.FullOrBlindedSignedBeaconBlock | null> {
+  async getByParentRoot(root: Root): Promise<FullOrBlindedSignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
     return slot !== null ? this.get(slot) : null;
   }

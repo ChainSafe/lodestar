@@ -39,16 +39,19 @@ When starting up a Lodestar beacon node in any configuration, ensure you add the
 ### Ensure JWT is configured with your execution node
 
 **For Go Ethereum:**
-Use the `--authrpc.jwtsecret /data/jwtsecret` flag to configure the secret. Use their documentation [here](https://geth.ethereum.org/docs/interface/merge).
+Use the `--authrpc.jwtsecret /path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://geth.ethereum.org/docs/getting-started#start-geth).
 
 **For Nethermind:**
-Use the `--JsonRpc.JwtSecretFile /data/jwtsecret` flag to configure the secret. Use their documentation [here](https://docs.nethermind.io/nethermind/first-steps-with-nethermind/running-nethermind-post-merge#jwtsecretfile).
+Use the `--JsonRpc.JwtSecretFile /path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://docs.nethermind.io/get-started/consensus-clients/#configuring-json-rpc-interface).
 
 **For Besu:**
-Use the `--engine-jwt-secret=<FILE>` flag to configure the secret. Use their documentation [here](https://besu.hyperledger.org/en/stable/Reference/CLI/CLI-Syntax/#engine-jwt-secret).
+Use the `--engine-jwt-secret=/path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://besu.hyperledger.org/public-networks/how-to/use-besu-api/authenticate#2-create-the-jwt).
 
 **For Erigon:**
-Use the `--authrpc.jwtsecret` flag to configure the secret. Use their documentation [here](https://github.com/ledgerwatch/erigon?tab=readme-ov-file#beacon-chain-consensus-layer).
+Use the `--authrpc.jwtsecret /path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://github.com/ledgerwatch/erigon?tab=readme-ov-file#beacon-chain-consensus-layer).
+
+**For Reth:**
+Use the `--authrpc.jwtsecret /path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://reth.rs/run/mainnet.html?highlight=jwt#running-the-reth-node).
 
 ## Run a beacon node
 
@@ -92,7 +95,7 @@ If your node is stuck with `Searching for peers` review your network configurati
 
 By default, Lodestar stores all configuration and chain data at the path `$XDG_DATA_HOME/lodestar/$NETWORK_NAME`.
 
-A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalies you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
+A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalies you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
 :::warning
 It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network.

@@ -1,5 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {allForks, phase0, Slot, RootHex} from "@lodestar/types";
+import {phase0, Slot, RootHex, BeaconBlock} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -50,7 +50,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    * - reload state if needed in this flow
    */
   async getPreState(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts,
     regenCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {

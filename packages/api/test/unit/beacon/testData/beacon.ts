@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {Slot, allForks, ssz} from "@lodestar/types";
+import {SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {
   BlockHeaderResponse,
   BroadcastValidation,
@@ -31,15 +31,18 @@ const validatorResponse: ValidatorResponse = {
 export const testData: GenericServerTestCases<Endpoints> = {
   // block
 
-  getBlock: {
-    args: {blockId: "head"},
-    res: {data: ssz.phase0.SignedBeaconBlock.defaultValue()},
-  },
   getBlockV2: {
     args: {blockId: "head"},
     res: {
       data: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
       meta: {executionOptimistic: true, finalized: false, version: ForkName.bellatrix},
+    },
+  },
+  getBlindedBlock: {
+    args: {blockId: "head"},
+    res: {
+      data: ssz.deneb.SignedBlindedBeaconBlock.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.deneb},
     },
   },
   getBlockAttestations: {
@@ -246,7 +249,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
 };
 
-function getDefaultBlindedBlock(slot: Slot): allForks.SignedBlindedBeaconBlock {
+function getDefaultBlindedBlock(slot: Slot): SignedBlindedBeaconBlock {
   const block = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
   block.message.slot = slot;
   return block;

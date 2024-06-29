@@ -11,10 +11,11 @@ import {
   SszRequestData,
   SszRequestMethods,
   isRequestWithoutBody,
+  RequestWithoutBodyCodec,
 } from "../types.js";
 import {WireFormat, fromWireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError} from "./error.js";
-import {ApplicationMethod, ApplicationResponse} from "./method.js";
+import {ApplicationMethod} from "./method.js";
 
 export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
   fastify.RawServerDefault,
@@ -57,15 +58,16 @@ export function createFastifyHandler<E extends Endpoint>(
     }
     const responseWireFormat = responseMediaType !== null ? getWireFormat(responseMediaType) : null;
 
-    let response: ApplicationResponse<E>;
-    try {
-      if (isRequestWithoutBody(definition)) {
-        response = await method(definition.req.parseReq(req as RequestData), {
-          sszBytes: null,
-          returnBytes: responseWireFormat === WireFormat.ssz,
-        });
+    let requestWireFormat: WireFormat | null;
+    if (isRequestWithoutBody(definition)) {
+      requestWireFormat = null;
+    } else {
+      const contentType = req.headers[HttpHeader.ContentType];
+      if (contentType === undefined && req.body === undefined) {
+        // Default to json parser if body is omitted. This is not possible for most
+        // routes as request will fail schema validation before this handler is called
+        requestWireFormat = WireFormat.json;
       } else {
-        const contentType = req.headers[HttpHeader.ContentType];
         if (contentType === undefined) {
           throw new ApiError(400, "Content-Type header is required");
         }
@@ -73,36 +75,38 @@ export function createFastifyHandler<E extends Endpoint>(
         if (requestMediaType === null) {
           throw new ApiError(415, `Unsupported media type: ${contentType.split(";", 1)[0]}`);
         }
-        const requestWireFormat = getWireFormat(requestMediaType);
+        requestWireFormat = getWireFormat(requestMediaType);
+      }
 
-        const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
-        if (onlySupport !== undefined && onlySupport !== requestWireFormat) {
-          throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
-        }
+      const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
+      if (onlySupport !== undefined && onlySupport !== requestWireFormat) {
+        throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
+      }
+    }
 
-        switch (requestWireFormat) {
-          case WireFormat.json:
-            response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonRequestData), {
-              sszBytes: null,
-              returnBytes: responseWireFormat === WireFormat.ssz,
-            });
-            break;
-          case WireFormat.ssz:
-            response = await method(
-              (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszRequestData<E["request"]>),
-              {
-                sszBytes: req.body as Uint8Array,
-                returnBytes: responseWireFormat === WireFormat.ssz,
-              }
-            );
-            break;
-        }
+    let args: E["args"];
+    try {
+      switch (requestWireFormat) {
+        case WireFormat.json:
+          args = (definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonRequestData);
+          break;
+        case WireFormat.ssz:
+          args = (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszRequestData<E["request"]>);
+          break;
+        case null:
+          args = (definition.req as RequestWithoutBodyCodec<E>).parseReq(req as RequestData);
+          break;
       }
     } catch (e) {
       if (e instanceof ApiError) throw e;
       // Errors related to parsing should return 400 status code
       throw new ApiError(400, (e as Error).message);
     }
+
+    const response = await method(args, {
+      sszBytes: requestWireFormat === WireFormat.ssz ? (req.body as Uint8Array) : null,
+      returnBytes: responseWireFormat === WireFormat.ssz,
+    });
 
     if (response?.status !== undefined) {
       resp.statusCode = response.status;

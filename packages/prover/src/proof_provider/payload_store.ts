@@ -1,6 +1,7 @@
 import {ApiClient} from "@lodestar/api";
-import {allForks, capella} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {ExecutionPayload, LightClientHeader} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {fetchBlock, getExecutionPayloadForBlockNumber} from "../utils/consensus.js";
 import {bufferToHex, hexToNumber} from "../utils/conversion.js";
@@ -28,13 +29,13 @@ export class PayloadStore {
   private unfinalizedRoots = new Map<BlockCLRoot, BlockELRoot>();
 
   // Payloads store with BlockELRoot as key
-  private payloads = new Map<BlockELRoot, allForks.ExecutionPayload>();
+  private payloads = new Map<BlockELRoot, ExecutionPayload>();
 
   private latestBlockRoot: BlockELRoot | null = null;
 
   constructor(private opts: {api: ApiClient; logger: Logger}) {}
 
-  get finalized(): allForks.ExecutionPayload | undefined {
+  get finalized(): ExecutionPayload | undefined {
     const maxBlockNumberForFinalized = this.finalizedRoots.max;
 
     if (maxBlockNumberForFinalized === undefined) {
@@ -49,7 +50,7 @@ export class PayloadStore {
     return undefined;
   }
 
-  get latest(): allForks.ExecutionPayload | undefined {
+  get latest(): ExecutionPayload | undefined {
     if (this.latestBlockRoot) {
       return this.payloads.get(this.latestBlockRoot);
     }
@@ -57,7 +58,7 @@ export class PayloadStore {
     return undefined;
   }
 
-  async get(blockId: number | string): Promise<allForks.ExecutionPayload | undefined> {
+  async get(blockId: number | string): Promise<ExecutionPayload | undefined> {
     // Given block id is a block hash in hex (32 bytes root takes 64 hex chars + 2 for 0x prefix)
     if (typeof blockId === "string" && blockId.startsWith("0x") && blockId.length === 64 + 2) {
       return this.payloads.get(blockId);
@@ -81,7 +82,7 @@ export class PayloadStore {
     return undefined;
   }
 
-  protected async getOrFetchFinalizedPayload(blockNumber: number): Promise<allForks.ExecutionPayload | undefined> {
+  protected async getOrFetchFinalizedPayload(blockNumber: number): Promise<ExecutionPayload | undefined> {
     const maxBlockNumberForFinalized = this.finalizedRoots.max;
     const minBlockNumberForFinalized = this.finalizedRoots.min;
 
@@ -116,7 +117,7 @@ export class PayloadStore {
     return undefined;
   }
 
-  set(payload: allForks.ExecutionPayload, slot: number, finalized: boolean): void {
+  set(payload: ExecutionPayload, slot: number, finalized: boolean): void {
     const blockELRoot = bufferToHex(payload.blockHash);
     this.payloads.set(blockELRoot, payload);
 
@@ -134,7 +135,7 @@ export class PayloadStore {
     }
   }
 
-  async processLCHeader(header: capella.LightClientHeader, finalized = false): Promise<void> {
+  async processLCHeader(header: LightClientHeader<ForkName.capella>, finalized = false): Promise<void> {
     const blockSlot = header.beacon.slot;
     const blockNumber = header.execution.blockNumber;
     const blockELRoot = bufferToHex(header.execution.blockHash);

@@ -88,7 +88,7 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
-    const beaconBlock = ssz.allForks.phase0.BeaconBlock.defaultValue();
+    const beaconBlock = ssz.phase0.BeaconBlock.defaultValue();
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
@@ -241,7 +241,7 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
-    const beaconBlock = ssz.allForks.phase0.BeaconBlock.defaultValue();
+    const beaconBlock = ssz.phase0.BeaconBlock.defaultValue();
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)

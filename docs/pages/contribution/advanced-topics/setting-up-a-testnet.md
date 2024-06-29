@@ -4,7 +4,7 @@ title: Setting Up a Testnet
 
 # Setting-Up a Testnet
 
-To quickly test and run Lodestar we recommend starting a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators
+To quickly test and run Lodestar we recommend starting a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators. The [dev scripts](https://github.com/ChainSafe/lodestar/tree/unstable/scripts/dev) can used for simplicity but below instructions provide more insights on how it works and include details about different configurations.
 
 **Terminal 1**
 
@@ -21,10 +21,10 @@ Run a beacon node as a **bootnode**, with 8 validators with the following comman
   --reset
 ```
 
-`--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--dataDir` defines a path where
-lodestar should store the beacon state.
-`--enr.ip` sets the ENR IP entry for the node (essential for second node to connect via `enr`) and `--enr.udp` exposes the `discv5` discovery service (if you want to connect more than 1 node and enable discovery amongst them via _bootnode_).
-Lastly the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
+[`--genesisValidators`](../dev-cli.md#--genesisvalidators) and [`--genesisTime`](../dev-cli.md#--genesistime) define the genesis state of the beacon chain. [`--dataDir`](../dev-cli.md#--datadir) defines a path where
+Lodestar should store the beacon state.
+[`--enr.ip`](../dev-cli.md#--enrip) sets the ENR IP entry for the node (essential for second node to connect via `enr`) and [`--enr.udp`](../dev-cli.md#--enrudp) exposes the Discv5 discovery service (if you want to connect more than 1 node and enable discovery amongst them via _bootnode_).
+Lastly the [`--reset`](../dev-cli.md#--reset) flag ensures the state is cleared on each restart - which is useful when testing locally.
 
 Once the node has started, make a request to `curl http://localhost:9596/eth/v1/node/identity` and copy the `enr` value.
 
@@ -49,16 +49,16 @@ Start the second node without starting any validators and connect to the first n
   --reset
 ```
 
-By default, lodestar starts as many validators as the number supplied by `--genesisValidators`. In order to not start any validator, this is overridden by
-the `--startValidators` option. Passing a value of `0..0` means no validators should be started.
+By default, Lodestar starts as many validators as the number supplied by [`--genesisValidators`](../dev-cli.md#--genesisvalidators). In order to not start any validator, this is overridden by
+the [`--startValidators`](../dev-cli.md#--startvalidators) option. Passing a value of `0..0` means no validators should be started.
 
-Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in order for the two nodes
+Also, take note that the values of [`--genesisValidators`](../dev-cli.md#--genesisvalidators) and [`--genesisTime`](../dev-cli.md#--genesistime) must be the same as the ones passed to the first node in order for the two nodes
 to have the same beacon chain.
 
-Also `--port` and `--rest.port` are supplied since the default values will already be in use by the first node.
+Also [`--port`](../dev-cli.md#--port) and [`--rest.port`](../dev-cli.md#--restport) are supplied since the default values will already be in use by the first node.
 
 The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot ENRs on local devnet.
-The exact ENR of node to connect to is then supplied via the `--bootnodes` flag.
+The exact ENR of node to connect to is then supplied via the [`--bootnodes`](../dev-cli.md#--bootnodes) flag.
 
 Once the second node starts, you should see an output similar to the following in either of the terminals:
 
@@ -93,7 +93,7 @@ will give a result similar to the following:
 
 ## Post-Merge local testnet
 
-To set up a local testnet with a Post-Merge configuration, you may need to add the following parameters (in addition to the parameters described above) to your `lodestar dev` command:
+To set up a local testnet with a Post-Merge configuration, you may need to add the following parameters (in addition to the parameters described above) to your [`lodestar dev`](../dev-cli.md#dev-options) command:
 
 - `--params.ALTAIR_FORK_EPOCH 0`
 - `--params.BELLATRIX_FORK_EPOCH 0`

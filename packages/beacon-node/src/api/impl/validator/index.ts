@@ -31,14 +31,16 @@ import {
   Epoch,
   ProducedBlockSource,
   bellatrix,
-  allForks,
   BLSSignature,
   isBlindedBeaconBlock,
   isBlockContents,
   phase0,
   Wei,
+  BeaconBlock,
+  BlockContents,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
 import {
   AttestationError,
@@ -91,11 +93,11 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
-  | {data: allForks.BeaconBlock; version: ForkPreBlobs}
-  | {data: allForks.BlockContents; version: ForkBlobs}
+  | {data: BeaconBlock<ForkPreBlobs>; version: ForkPreBlobs}
+  | {data: BlockContents; version: ForkBlobs}
 );
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: allForks.BlindedBeaconBlock;
+  data: BlindedBeaconBlock;
   version: ForkExecution;
 };
 
@@ -324,13 +326,23 @@ export function getValidatorApi({
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {
-      throw new ApiError(400, "Block not in forkChoice");
+      throw new ApiError(400, `Block not in forkChoice, beaconBlockRoot=${toHex(beaconBlockRoot)}`);
     }
 
     if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
       throw new NodeIsSyncing(
         `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash} number=${protoBeaconBlock.executionPayloadNumber}`
       );
+  }
+
+  function notOnOutOfRangeData(beaconBlockRoot: Root): void {
+    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    if (!protoBeaconBlock) {
+      throw new ApiError(400, `Block not in forkChoice, beaconBlockRoot=${toHex(beaconBlockRoot)}`);
+    }
+
+    if (protoBeaconBlock.dataAvailabilityStatus === DataAvailabilityStatus.OutOfRange)
+      throw new NodeIsSyncing("Block's data is out of range and not validated");
   }
 
   async function produceBuilderBlindedBlock(
@@ -385,6 +397,7 @@ export function getValidatorApi({
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
+    notOnOutOfRangeData(parentBlockRoot);
 
     let timer;
     try {
@@ -403,7 +416,7 @@ export function getValidatorApi({
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toHex(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+        root: toHex(config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
       });
 
       if (chain.opts.persistProducedBlocks) {
@@ -452,6 +465,7 @@ export function getValidatorApi({
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
+    notOnOutOfRangeData(parentBlockRoot);
 
     let timer;
     try {
@@ -491,7 +505,7 @@ export function getValidatorApi({
         }
 
         return {
-          data: {block, ...contents} as allForks.BlockContents,
+          data: {block, ...contents} as BlockContents,
           version,
           executionPayloadValue,
           consensusBlockValue,
@@ -522,6 +536,7 @@ export function getValidatorApi({
     // handler, in which case this should just return.
     chain.forkChoice.updateTime(slot);
     const parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
+    notOnOutOfRangeData(parentBlockRoot);
 
     const fork = config.getForkName(slot);
     // set some sensible opts
@@ -726,17 +741,6 @@ export function getValidatorApi({
   }
 
   return {
-    async produceBlock({slot, randaoReveal, graffiti}) {
-      const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti);
-      if (isForkBlobs(meta.version)) {
-        throw Error(`Invalid call to produceBlock for deneb+ fork=${meta.version}`);
-      } else {
-        // TODO: need to figure out why typescript requires typecasting here
-        // by typing of produceFullBlockOrContents respose it should have figured this out itself
-        return {data: data as allForks.BeaconBlock, meta};
-      }
-    },
-
     async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
       const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
       return {data, meta};
@@ -758,13 +762,13 @@ export function getValidatorApi({
         } else {
           if (isBlockContents(data)) {
             const {block} = data;
-            const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
+            const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
             return {
               data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
             };
           } else {
-            const blindedBlock = beaconBlockToBlinded(config, data as allForks.AllForksExecution["BeaconBlock"]);
+            const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
             return {
               data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
@@ -784,12 +788,12 @@ export function getValidatorApi({
 
       if (isBlockContents(data)) {
         const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
         return {data: blindedBlock, meta: {version}};
       } else if (isBlindedBeaconBlock(data)) {
         return {data, meta: {version}};
       } else {
-        const blindedBlock = beaconBlockToBlinded(config, data as allForks.AllForksExecution["BeaconBlock"]);
+        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
         return {data: blindedBlock, meta: {version}};
       }
     },
@@ -825,10 +829,14 @@ export function getValidatorApi({
       // Check the execution status as validator shouldn't vote on an optimistic head
       // Check on target is sufficient as a valid target would imply a valid source
       notOnOptimisticBlockRoot(targetRoot);
+      notOnOutOfRangeData(targetRoot);
 
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
       // An epoch transition may change state.currentJustifiedCheckpoint
       const attEpochState = await chain.getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
+
+      // TODO confirm if the below is correct assertion
+      // notOnOutOfRangeData(attEpochState.currentJustifiedCheckpoint.root);
 
       return {
         data: {
@@ -865,6 +873,7 @@ export function getValidatorApi({
 
       // Check the execution status as validator shouldn't contribute on an optimistic head
       notOnOptimisticBlockRoot(beaconBlockRoot);
+      notOnOutOfRangeData(beaconBlockRoot);
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");

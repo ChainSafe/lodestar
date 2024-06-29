@@ -1,11 +1,12 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
-import {allForks, ssz} from "@lodestar/types";
+import {ssz, SignedBeaconBlock, FullOrBlindedSignedBeaconBlock} from "@lodestar/types";
 import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {
   deserializeFullOrBlindedSignedBeaconBlock,
   serializeFullOrBlindedSignedBeaconBlock,
 } from "../../util/fullOrBlindedBlock.js";
+import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
@@ -23,15 +24,15 @@ export class BlockRepository extends Repository<Uint8Array, allForks.FullOrBlind
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: allForks.FullOrBlindedSignedBeaconBlock): Uint8Array {
+  getId(value: FullOrBlindedSignedBeaconBlock): Uint8Array {
     return blindedOrFullBlockHashTreeRoot(this.config, value.message);
   }
 
-  encodeValue(value: allForks.FullOrBlindedSignedBeaconBlock): Buffer {
+  encodeValue(value: FullOrBlindedSignedBeaconBlock): Buffer {
     return serializeFullOrBlindedSignedBeaconBlock(this.config, value) as Buffer;
   }
 
-  decodeValue(data: Buffer): allForks.FullOrBlindedSignedBeaconBlock {
+  decodeValue(data: Buffer): FullOrBlindedSignedBeaconBlock {
     return deserializeFullOrBlindedSignedBeaconBlock(this.config, data);
   }
 }

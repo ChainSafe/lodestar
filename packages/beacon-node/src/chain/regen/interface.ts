@@ -1,4 +1,4 @@
-import {allForks, phase0, Slot, RootHex, Epoch} from "@lodestar/types";
+import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -36,7 +36,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   dropCache(): void;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
-  getPreStateSync(block: allForks.BeaconBlock): CachedBeaconStateAllForks | null;
+  getPreStateSync(block: BeaconBlock): CachedBeaconStateAllForks | null;
   getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
@@ -56,11 +56,7 @@ export interface IStateRegeneratorInternal {
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
    */
-  getPreState(
-    block: allForks.BeaconBlock,
-    opts: StateCloneOpts,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks>;
+  getPreState(block: BeaconBlock, opts: StateCloneOpts, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 
   /**
    * Return a valid checkpoint state

@@ -509,8 +509,8 @@ export class UnknownBlockSync {
     unavailableBlockInput: BlockInput | NullBlockInput,
     connectedPeers: PeerIdStr[]
   ): Promise<{blockInput: BlockInput; peerIdStr: string}> {
-    if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.blobsPromise) {
-      return {blockInput: unavailableBlockInput as BlockInput, peerIdStr: ""};
+    if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
+      return {blockInput: unavailableBlockInput, peerIdStr: ""};
     }
 
     const shuffledPeers = shuffle(connectedPeers);
@@ -529,7 +529,7 @@ export class UnknownBlockSync {
         .BeaconBlock.hashTreeRoot(unavailableBlock.message);
       blockRootHex = toHexString(blockRoot);
       blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.blobsCache.size;
+      pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.cachedData.blobsCache.size;
     }
 
     let lastError: Error | null = null;

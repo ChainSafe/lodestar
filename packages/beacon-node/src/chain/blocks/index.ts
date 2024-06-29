@@ -1,5 +1,5 @@
-import {allForks} from "@lodestar/types";
 import {toHex, isErrorAborted} from "@lodestar/utils";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
@@ -87,9 +87,8 @@ export async function processBlocks(
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
-        // Currently dataAvailableStatus is not used upstream but that can change if we
         // start supporting optimistic syncing/processing
-        dataAvailableStatus: dataAvailabilityStatuses[i],
+        dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
@@ -159,7 +158,7 @@ export async function processBlocks(
   }
 }
 
-function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockError {
+function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError {
   if (e instanceof BlockError) {
     return e;
   } else if (e instanceof Error) {
