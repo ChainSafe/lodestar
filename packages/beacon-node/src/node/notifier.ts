@@ -57,7 +57,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       if (
         clockEpoch >= config.BELLATRIX_FORK_EPOCH &&
         computeStartSlotAtEpoch(clockEpoch) === clockSlot &&
-        chain.executionEngine.getState() === ExecutionEngineState.OFFLINE
+        chain.executionEngine.state === ExecutionEngineState.OFFLINE
       ) {
         logger.warn("Execution client is offline");
       }

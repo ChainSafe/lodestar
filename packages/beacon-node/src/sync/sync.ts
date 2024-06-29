@@ -88,7 +88,7 @@ export class BeaconSync implements IBeaconSync {
 
   getSyncStatus(): SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
-    const elOffline = this.chain.executionEngine.getState() === ExecutionEngineState.OFFLINE;
+    const elOffline = this.chain.executionEngine.state === ExecutionEngineState.OFFLINE;
 
     // If we are pre/at genesis, signal ready
     if (currentSlot <= GENESIS_SLOT) {
