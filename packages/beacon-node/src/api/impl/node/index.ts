@@ -71,9 +71,9 @@ export function getNodeApi(
         throw new ApiError(400, `Invalid syncing status code: ${syncingStatus}`);
       }
 
-      const {isSyncing, isOptimistic} = sync.getSyncStatus();
+      const {isSyncing, isOptimistic, elOffline} = sync.getSyncStatus();
 
-      if (isSyncing || isOptimistic) {
+      if (isSyncing || isOptimistic || elOffline) {
         // 206: Node is syncing but can serve incomplete data
         return {status: syncingStatus ?? routes.node.NodeHealth.SYNCING};
       } else {
