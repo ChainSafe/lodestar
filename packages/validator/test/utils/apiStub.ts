@@ -1,8 +1,15 @@
 import {vi, Mocked} from "vitest";
-import {ApiClientMethods, ApiResponse, Endpoint, Endpoints, HttpClient, HttpStatusCode} from "@lodestar/api";
+import {ApiClientMethods, ApiResponse, Endpoint, Endpoints, HttpStatusCode, IHttpClient} from "@lodestar/api";
 
 type ApiClientStub = {[K in keyof Endpoints]: Mocked<ApiClientMethods<Endpoints[K]>>} & {
-  httpClient: Mocked<HttpClient>;
+  httpClient: Mocked<IHttpClient>;
+};
+
+const httpClientStub: IHttpClient = {
+  baseUrl: "",
+  request: vi.fn(),
+  urlsInits: [],
+  urlsScore: [],
 };
 
 export function getApiClientStub(): ApiClientStub {
@@ -29,7 +36,7 @@ export function getApiClientStub(): ApiClientStub {
       publishAggregateAndProofs: vi.fn(),
       submitBeaconCommitteeSelections: vi.fn(),
     },
-    httpClient: {},
+    httpClient: httpClientStub,
   } as unknown as ApiClientStub;
 }
 
