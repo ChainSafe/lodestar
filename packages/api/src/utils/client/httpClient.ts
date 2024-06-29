@@ -50,6 +50,8 @@ export const defaultInit: Required<ExtraRequestInit> = {
 
 export interface IHttpClient {
   readonly baseUrl: string;
+  readonly urlsInits: UrlInitRequired[];
+  readonly urlsScore: number[];
 
   request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
@@ -71,13 +73,12 @@ export type HttpClientModules = {
 
 export class HttpClient implements IHttpClient {
   readonly urlsInits: UrlInitRequired[] = [];
+  readonly urlsScore: number[];
 
   private readonly signal: null | AbortSignal;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
   private readonly logger: null | Logger;
-
-  private readonly urlsScore: number[];
 
   /**
    * Cache to keep track of routes per server that do not support SSZ. This cache will only be
