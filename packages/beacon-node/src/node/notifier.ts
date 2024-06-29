@@ -92,7 +92,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       switch (sync.state) {
         case SyncState.SyncingFinalized:
         case SyncState.SyncingHead: {
-          const slotsPerSecond = headSlotTimeSeries.computeLinearSpeed();
+          const slotsPerSecond = Math.max(headSlotTimeSeries.computeLinearSpeed(), 0);
           const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
           const timeLeft = isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
