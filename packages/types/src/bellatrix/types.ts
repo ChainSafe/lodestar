@@ -22,3 +22,4 @@ export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
 export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;
 
 export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
+export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;

@@ -20,6 +20,7 @@ export type BlindedBeaconBlock = ValueOf<typeof ssz.BlindedBeaconBlock>;
 export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlock>;
 
 export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
+export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
 
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
