@@ -106,6 +106,7 @@
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/ssz": "^0.15.1",
     "@chainsafe/threads": "^1.11.1",
+    "@crate-crypto/peerdas-kzg": "0.2.2-5e5d075.0",
     "@ethersproject/abi": "^5.7.0",
     "@fastify/bearer-auth": "^9.0.0",
     "@fastify/cors": "^8.2.1",
