@@ -9,7 +9,7 @@ import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
  * PERF: Very low (constant) cost. Most of the HistoricalBatch should already be hashed.
  */
 export function processHistoricalRootsUpdate(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
-  const nextEpoch = cache.currentEpoch + 1;
+  const nextEpoch = cache.nextEpoch;
 
   // set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {

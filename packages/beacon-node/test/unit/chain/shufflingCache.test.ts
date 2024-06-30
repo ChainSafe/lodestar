@@ -9,7 +9,8 @@ describe("ShufflingCache", function () {
   const vc = 64;
   const stateSlot = 100;
   const state = generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot});
-  const currentEpoch = state.epochCtx.currentShuffling.epoch;
+  const currentEpoch = state.epochCtx.epoch;
+  const nextEpoch = state.epochCtx.nextEpoch;
   let shufflingCache: ShufflingCache;
 
   beforeEach(() => {
@@ -29,17 +30,17 @@ describe("ShufflingCache", function () {
     shufflingCache.insertPromise(currentEpoch, "0x00");
     expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
     // insert shufflings at other epochs does prune the cache
-    shufflingCache.processState(state, currentEpoch + 1);
+    shufflingCache.processState(state, nextEpoch);
     // the current shuffling is not available anymore
     expect(await shufflingCache.get(currentEpoch, decisionRoot)).toBeNull();
   });
 
   it("should return shuffling from promise", async function () {
-    const nextDecisionRoot = getShufflingDecisionBlock(state, currentEpoch + 1);
-    shufflingCache.insertPromise(currentEpoch + 1, nextDecisionRoot);
-    const shufflingRequest0 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
-    const shufflingRequest1 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
-    shufflingCache.processState(state, currentEpoch + 1);
+    const nextDecisionRoot = getShufflingDecisionBlock(state, nextEpoch);
+    shufflingCache.insertPromise(nextEpoch, nextDecisionRoot);
+    const shufflingRequest0 = shufflingCache.get(nextEpoch, nextDecisionRoot);
+    const shufflingRequest1 = shufflingCache.get(nextEpoch, nextDecisionRoot);
+    shufflingCache.processState(state, nextEpoch);
     expect(await shufflingRequest0).toEqual(state.epochCtx.nextShuffling);
     expect(await shufflingRequest1).toEqual(state.epochCtx.nextShuffling);
   });

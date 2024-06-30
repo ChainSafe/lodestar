@@ -8,7 +8,7 @@ import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
  * PERF: Almost no (constant) cost
  */
 export function processEth1DataReset(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
-  const nextEpoch = cache.currentEpoch + 1;
+  const nextEpoch = cache.nextEpoch;
 
   // reset eth1 data votes
   if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {

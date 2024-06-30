@@ -135,7 +135,7 @@ describe("CachedBeaconState", () => {
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
         const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
           if (
-            shufflingEpoch === seedState.epochCtx.epoch - 1 &&
+            shufflingEpoch === seedState.epochCtx.previousEpoch &&
             dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
           ) {
             return seedState.epochCtx.previousShuffling;
@@ -149,7 +149,7 @@ describe("CachedBeaconState", () => {
           }
 
           if (
-            shufflingEpoch === seedState.epochCtx.epoch + 1 &&
+            shufflingEpoch === seedState.epochCtx.nextEpoch &&
             dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
           ) {
             return seedState.epochCtx.nextShuffling;

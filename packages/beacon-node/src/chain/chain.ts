@@ -249,9 +249,9 @@ export class BeaconChain implements IBeaconChain {
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousShuffling.epoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.currentShuffling.epoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextShuffling.epoch);
+    this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousEpoch);
+    this.shufflingCache.processState(cachedState, cachedState.epochCtx.epoch);
+    this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextEpoch);
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
@@ -807,7 +807,7 @@ export class BeaconChain implements IBeaconChain {
    * Regenerate state for attestation verification, this does not happen with default chain option of maxSkipSlots = 32 .
    * However, need to handle just in case. Lodestar doesn't support multiple regen state requests for attestation verification
    * at the same time, bounded inside "ShufflingCache.insertPromise()" function.
-   * Leave this function in chain instead of attestatation verification code to make sure we're aware of its performance impact.
+   * Leave this function in chain instead of attestation verification code to make sure we're aware of its performance impact.
    */
   async regenStateForAttestationVerification(
     attEpoch: Epoch,

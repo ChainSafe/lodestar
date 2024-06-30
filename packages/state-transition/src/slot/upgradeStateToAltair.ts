@@ -105,10 +105,9 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   // epochCtx.afterProcessEpoch()
   // if (...) upgradeStateToAltair()
   // ```
-  const previousEpoch = stateAltair.epochCtx.epoch - 1;
   stateAltair.epochCtx.previousTargetUnslashedBalanceIncrements = sumTargetUnslashedBalanceIncrements(
     stateAltair.previousEpochParticipation.getAll(),
-    previousEpoch,
+    stateAltair.epochCtx.previousEpoch,
     stateAltair.validators.getAllReadonlyValues()
   );
 

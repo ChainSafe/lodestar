@@ -9,7 +9,7 @@ import {EpochTransitionCache, CachedBeaconStateCapella} from "../types.js";
  * PERF: Very low (constant) cost. Most of the HistoricalSummaries should already be hashed.
  */
 export function processHistoricalSummariesUpdate(state: CachedBeaconStateCapella, cache: EpochTransitionCache): void {
-  const nextEpoch = cache.currentEpoch + 1;
+  const nextEpoch = cache.nextEpoch;
 
   // set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {

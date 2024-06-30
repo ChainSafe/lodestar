@@ -64,14 +64,15 @@ function attesterShufflingDecisionSlot(state: CachedBeaconStateAllForks, request
  * - `EpochTooHigh` when `requestedEpoch` is more than 1 after `currentEpoch`.
  */
 function attesterShufflingDecisionEpoch(state: CachedBeaconStateAllForks, requestedEpoch: Epoch): Epoch {
+  const previousEpoch = state.epochCtx.previousEpoch;
   const currentEpoch = state.epochCtx.epoch;
 
   // Next
-  if (requestedEpoch === currentEpoch + 1) return currentEpoch;
+  if (requestedEpoch === state.epochCtx.nextEpoch) return currentEpoch;
   // Current
-  if (requestedEpoch === currentEpoch) return Math.max(currentEpoch - 1, 0);
+  if (requestedEpoch === currentEpoch) return Math.max(previousEpoch, 0);
   // Previous
-  if (requestedEpoch === currentEpoch - 1) return Math.max(currentEpoch - 2, 0);
+  if (requestedEpoch === previousEpoch) return Math.max(previousEpoch - 1, 0);
 
   if (requestedEpoch < currentEpoch) {
     throw Error(`EpochTooLow: current ${currentEpoch} requested ${requestedEpoch}`);

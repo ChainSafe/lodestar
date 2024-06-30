@@ -72,7 +72,7 @@ export function validateAttestation(
         `committeeIndex=${data.index} committeeCount=${committeeCount}`
     );
   }
-  if (!(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.epoch)) {
+  if (!(data.target.epoch === epochCtx.previousEpoch || data.target.epoch === epochCtx.epoch)) {
     throw new Error(
       "Attestation target epoch not in previous or current epoch: " +
         `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.epoch}`

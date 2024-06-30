@@ -11,7 +11,7 @@ import {CachedBeaconStateAltair} from "../types.js";
  * Calculating the next sync committee has a proportional cost to $VALIDATOR_COUNT
  */
 export function processSyncCommitteeUpdates(state: CachedBeaconStateAltair): void {
-  const nextEpoch = state.epochCtx.epoch + 1;
+  const nextEpoch = state.epochCtx.nextEpoch;
 
   if (nextEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
     const activeValidatorIndices = state.epochCtx.nextShuffling.activeIndices;

@@ -7,7 +7,7 @@ import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
  * PERF: Almost no (constant) cost
  */
 export function processSlashingsReset(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
-  const nextEpoch = cache.currentEpoch + 1;
+  const nextEpoch = cache.nextEpoch;
 
   // reset slashings
   const slashIndex = nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR;

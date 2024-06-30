@@ -124,7 +124,7 @@ export class AggregatedAttestationPool {
   ): phase0.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
-    const statePrevEpoch = stateEpoch - 1;
+    const statePrevEpoch = state.epochCtx.previousEpoch;
 
     const notSeenValidatorsFn = getNotSeenValidatorsFn(state);
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
@@ -500,7 +500,7 @@ export function getValidateAttestationDataFn(
     // simple check first
     if (targetEpoch === stateEpoch) {
       justifiedCheckpoint = currentJustifiedCheckpoint;
-    } else if (targetEpoch === stateEpoch - 1) {
+    } else if (targetEpoch === state.epochCtx.previousEpoch) {
       justifiedCheckpoint = previousJustifiedCheckpoint;
     } else {
       return false;
@@ -547,7 +547,7 @@ export function isValidAttestationData(
 
   if (targetEpoch === stateEpoch) {
     justifiedCheckpoint = currentJustifiedCheckpoint;
-  } else if (targetEpoch === stateEpoch - 1) {
+  } else if (targetEpoch === state.epochCtx.previousEpoch) {
     justifiedCheckpoint = previousJustifiedCheckpoint;
   } else {
     return false;
