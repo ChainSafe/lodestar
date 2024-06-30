@@ -196,9 +196,18 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
+  syncPeriod: SyncPeriod;
+
   // TODO: Helper stats
   epoch: Epoch;
-  syncPeriod: SyncPeriod;
+
+  get previousEpoch(): Epoch {
+    return this.epoch - 1;
+  }
+
+  get nextEpoch(): Epoch {
+    return this.epoch + 1;
+  }
 
   constructor(data: {
     config: BeaconConfig;
@@ -507,8 +516,8 @@ export class EpochCache {
   ): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
-    const currEpoch = this.currentShuffling.epoch;
-    const nextEpoch = currEpoch + 1;
+    const currEpoch = this.epoch;
+    const nextEpoch = this.nextEpoch;
 
     this.nextShuffling = computeEpochShuffling(
       state,
@@ -519,11 +528,11 @@ export class EpochCache {
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;
 
-    const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
+    const currentProposerSeed = getSeed(state, this.epoch, DOMAIN_BEACON_PROPOSER);
     this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
 
     // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
-    this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)};
+    this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextEpoch, DOMAIN_BEACON_PROPOSER)};
 
     // TODO: DEDUPLICATE from createEpochCache
     //
@@ -612,10 +621,10 @@ export class EpochCache {
 
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
-    if (epoch !== this.currentShuffling.epoch) {
+    if (epoch !== this.epoch) {
       throw new EpochCacheError({
         code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
-        currentEpoch: this.currentShuffling.epoch,
+        currentEpoch: this.epoch,
         requestedEpoch: epoch,
       });
     }
@@ -732,10 +741,8 @@ export class EpochCache {
    * Return null if no assignment..
    */
   getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
-    if (epoch > this.currentShuffling.epoch + 1) {
-      throw Error(
-        `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
-      );
+    if (epoch > this.nextEpoch) {
+      throw Error(`Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.epoch} + 1`);
     }
 
     const epochStartSlot = computeStartSlotAtEpoch(epoch);
@@ -780,7 +787,7 @@ export class EpochCache {
     if (shuffling === null) {
       throw new EpochCacheError({
         code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE,
-        currentEpoch: this.currentShuffling.epoch,
+        currentEpoch: this.epoch,
         requestedEpoch: epoch,
       });
     }
@@ -789,11 +796,11 @@ export class EpochCache {
   }
 
   getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
-    if (epoch === this.previousShuffling.epoch) {
+    if (epoch === this.previousEpoch) {
       return this.previousShuffling;
-    } else if (epoch === this.currentShuffling.epoch) {
+    } else if (epoch === this.epoch) {
       return this.currentShuffling;
-    } else if (epoch === this.nextShuffling.epoch) {
+    } else if (epoch === this.nextEpoch) {
       return this.nextShuffling;
     } else {
       return null;
