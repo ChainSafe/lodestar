@@ -194,6 +194,7 @@ function strip0xPrefix(hex: string): string {
   }
 }
 
+// TODO: Could use a env variable or a constant for switching libraries
 export function computeCellsAndKzgProofs(usePeerDASKZG: boolean, blob: Uint8Array): [Uint8Array[], Uint8Array[]] {
   if (usePeerDASKZG) {
     const cellsAndProofs = proverContext.computeCellsAndKzgProofs(blob);
