@@ -4,7 +4,7 @@ import {VERSIONED_HASH_VERSION_KZG, KZG_COMMITMENT_GINDEX0, KZG_COMMITMENTS_GIND
 import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, electra} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {ckzg} from "./kzg.js";
+import {computeCellsAndKzgProofs} from "./kzg.js";
 
 type VersionHash = Uint8Array;
 
@@ -73,7 +73,7 @@ export function computeDataColumnSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
   const kzgCommitmentsInclusionProof =
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const cellsAndProofs = contents.blobs.map((blob) => ckzg.computeCellsAndKzgProofs(blob));
+  const cellsAndProofs = contents.blobs.map((blob) => computeCellsAndKzgProofs(blob));
   const dataColumnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, j) => {
     // j'th column
     const column = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][0][j]);
