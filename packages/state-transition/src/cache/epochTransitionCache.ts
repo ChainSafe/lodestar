@@ -41,6 +41,7 @@ export type EpochTransitionCacheOpts = {
 export interface EpochTransitionCache {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
+  nextEpoch: Epoch;
   /**
    * This is sum of active validators' balance in eth.
    */
@@ -174,11 +175,11 @@ export function beforeProcessEpoch(
 ): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
+  const prevEpoch = epochCtx.previousEpoch;
   const currentEpoch = epochCtx.epoch;
-  const prevEpoch = epochCtx.previousShuffling.epoch;
-  const nextEpoch = currentEpoch + 1;
+  const nextEpoch = epochCtx.nextEpoch;
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
-  const nextEpoch2 = currentEpoch + 2;
+  const nextEpoch2 = nextEpoch + 1;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
@@ -228,7 +229,7 @@ export function beforeProcessEpoch(
     // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
-    if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
+    if (isActivePrev || (validator.slashed && currentEpoch < validator.withdrawableEpoch)) {
       eligibleValidatorIndices.push(i);
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
@@ -405,6 +406,7 @@ export function beforeProcessEpoch(
   return {
     prevEpoch,
     currentEpoch,
+    nextEpoch,
     totalActiveStakeByIncrement,
     baseRewardPerIncrement,
     prevEpochUnslashedStake: {
