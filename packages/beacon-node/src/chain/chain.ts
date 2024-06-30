@@ -29,6 +29,7 @@ import {
   isBlindedBeaconBlock,
   BeaconBlock,
   SignedBeaconBlock,
+  FullOrBlindedSignedBeaconBlock,
   ExecutionPayload,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
@@ -590,7 +591,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
-  async blindedOrFullBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
+  async blindedOrFullBlockToFull(block: FullOrBlindedSignedBeaconBlock): Promise<SignedBeaconBlock> {
     const info = this.config.getForkInfo(block.message.slot);
     return blindedOrFullBlockToFull(
       this.config,

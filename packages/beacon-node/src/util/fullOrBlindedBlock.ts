@@ -1,5 +1,16 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks, bellatrix, capella, deneb} from "@lodestar/types";
+import {
+  bellatrix,
+  capella,
+  deneb,
+  ExecutionPayload,
+  ExecutionPayloadHeader,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
+  FullOrBlindedSignedBeaconBlock,
+  FullOrBlindedSignedBeaconBlockExecution,
+  FullOrBlindedSignedBeaconBlockPreExecution,
+} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {executionPayloadToPayloadHeader} from "@lodestar/state-transition";
 import {ExecutionPayloadBody} from "../execution/engine/types.js";
@@ -118,42 +129,43 @@ export function isBlindedBytes(forkSeq: ForkSeq, blockBytes: Uint8Array): boolea
 }
 
 // same as isBlindedSignedBeaconBlock but without type narrowing
-export function isBlinded(block: allForks.FullOrBlindedSignedBeaconBlock): boolean {
+export function isBlinded(block: FullOrBlindedSignedBeaconBlock): boolean {
   return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
 }
 
 export function serializeFullOrBlindedSignedBeaconBlock(
   config: ChainForkConfig,
-  value: allForks.FullOrBlindedSignedBeaconBlock
+  value: FullOrBlindedSignedBeaconBlock
 ): Uint8Array {
-  return isBlinded(value)
-    ? config
-        .getBlindedForkTypes(value.message.slot)
-        .SignedBeaconBlock.serialize(value as allForks.SignedBlindedBeaconBlock)
-    : config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value as allForks.SignedBeaconBlock);
+  if (isBlinded(value)) {
+    const type = config.getExecutionForkTypes(value.message.slot).SignedBeaconBlock;
+    return type.serialize(value as SignedBeaconBlock);
+  }
+  const type = config.getForkTypes(value.message.slot).SignedBeaconBlock;
+  return type.serialize(value as FullOrBlindedSignedBeaconBlockPreExecution);
 }
 
 export function deserializeFullOrBlindedSignedBeaconBlock(
   config: ChainForkConfig,
   bytes: Buffer | Uint8Array
-): allForks.FullOrBlindedSignedBeaconBlock {
+): FullOrBlindedSignedBeaconBlock {
   const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
   if (slot === null) {
     throw Error("getSignedBlockTypeFromBytes: invalid bytes");
   }
 
   return isBlindedBytes(config.getForkSeq(slot), bytes)
-    ? config.getBlindedForkTypes(slot).SignedBeaconBlock.deserialize(bytes)
+    ? config.getExecutionForkTypes(slot).SignedBeaconBlock.deserialize(bytes)
     : config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes);
 }
 
 export function blindedOrFullBlockToBlinded(
   config: ChainForkConfig,
-  block: allForks.FullOrBlindedSignedBeaconBlock
-): allForks.SignedBlindedBeaconBlock {
+  block: FullOrBlindedSignedBeaconBlock
+): SignedBlindedBeaconBlock {
   const forkSeq = config.getForkSeq(block.message.slot);
   if (isBlinded(block) || forkSeq < ForkSeq.bellatrix) {
-    return block as allForks.SignedBlindedBeaconBlock;
+    return block as SignedBlindedBeaconBlock;
   }
 
   const blinded = {
@@ -195,10 +207,10 @@ export function blindedOrFullBlockToBlinded(
 
 function executionPayloadHeaderToPayload(
   forkSeq: ForkSeq,
-  header: allForks.ExecutionPayloadHeader,
+  header: ExecutionPayloadHeader,
   {transactions, withdrawals}: Partial<ExecutionPayloadBody>
-): allForks.ExecutionPayload {
-  const bellatrixPayloadFields: allForks.ExecutionPayload = {
+): ExecutionPayload {
+  const bellatrixPayloadFields: ExecutionPayload = {
     parentHash: header.parentHash,
     feeRecipient: header.feeRecipient,
     stateRoot: header.stateRoot,
@@ -235,9 +247,9 @@ function executionPayloadHeaderToPayload(
 export function blindedOrFullBlockToFull(
   config: ChainForkConfig,
   forkSeq: ForkSeq,
-  block: allForks.FullOrBlindedSignedBeaconBlock,
+  block: FullOrBlindedSignedBeaconBlock,
   transactionsAndWithdrawals: Partial<ExecutionPayloadBody>
-): allForks.SignedBeaconBlock {
+): SignedBeaconBlock {
   if (
     !isBlinded(block) || // already full
     forkSeq < ForkSeq.bellatrix || // no execution payload

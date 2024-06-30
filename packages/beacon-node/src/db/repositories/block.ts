@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
-import {ssz, SignedBeaconBlock, FullOrBlindedSignedBeaconBlock} from "@lodestar/types";
+import {ssz, FullOrBlindedSignedBeaconBlock} from "@lodestar/types";
 import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {
   deserializeFullOrBlindedSignedBeaconBlock,
@@ -14,7 +14,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
  *
  * Used to store unfinalized blocks
  */
-export class BlockRepository extends Repository<Uint8Array, allForks.FullOrBlindedSignedBeaconBlock> {
+export class BlockRepository extends Repository<Uint8Array, FullOrBlindedSignedBeaconBlock> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_block;
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used

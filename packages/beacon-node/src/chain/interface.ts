@@ -14,6 +14,7 @@ import {
   BeaconBlock,
   ExecutionPayload,
   SignedBeaconBlock,
+  FullOrBlindedSignedBeaconBlock,
   BlindedBeaconBlock,
 } from "@lodestar/types";
 import {
@@ -188,7 +189,7 @@ export interface IBeaconChain {
     consensusBlockValue: Wei;
   }>;
 
-  blindedOrFullBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock>;
+  blindedOrFullBlockToFull(block: FullOrBlindedSignedBeaconBlock): Promise<SignedBeaconBlock>;
   blindedOrFullBlockToFullBytes(forkSeq: ForkSeq, block: Uint8Array): Promise<Uint8Array>;
 
   /** Process a block until complete */

@@ -15,7 +15,7 @@ export function toBeaconHeaderResponse(
   // need to have ts-ignore below to pull type here so it only happens once and
   // gets used twice
   const types = isBlinded(block)
-    ? config.getBlindedForkTypes(block.message.slot)
+    ? config.getExecutionForkTypes(block.message.slot)
     : config.getForkTypes(block.message.slot);
   return {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment

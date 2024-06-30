@@ -17,7 +17,7 @@ export async function deleteRootIndex(
   signedBeaconBlockType: SSZTypesFor<ForkAll, "SignedBeaconBlock">,
   block: FullOrBlindedSignedBeaconBlock
 ): Promise<void> {
-  return db.delete(getRootIndexKey(signedBeaconBlockType.hashTreeRoot(block.message)));
+  return db.delete(getRootIndexKey(beaconBlockType.hashTreeRoot(block.message)));
 }
 
 export async function deleteParentRootIndex(db: Db, block: FullOrBlindedSignedBeaconBlock): Promise<void> {
