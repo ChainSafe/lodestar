@@ -21,16 +21,17 @@ import {computeEpochAtSlot} from "./epoch.js";
  */
 export function computeProposers(
   epochSeed: Uint8Array,
-  shuffling: {epoch: Epoch; activeIndices: ArrayLike<ValidatorIndex>},
+  epoch: Epoch,
+  activeIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): number[] {
-  const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
+  const startSlot = computeStartSlotAtEpoch(epoch);
   const proposers = [];
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
       computeProposerIndex(
         effectiveBalanceIncrements,
-        shuffling.activeIndices,
+        activeIndices,
         digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
       )
     );

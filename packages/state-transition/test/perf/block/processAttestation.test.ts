@@ -115,9 +115,7 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
       },
       fn: (state) => {
         const {currentEpochParticipation} = state;
-        const numAttesters = Math.floor(
-          (state.epochCtx.currentShuffling.activeIndices.length * ratio) / SLOTS_PER_EPOCH
-        );
+        const numAttesters = Math.floor((state.epochCtx.currentActiveIndices.length * ratio) / SLOTS_PER_EPOCH);
         // just get committees of slot 10
         let count = 0;
         for (const committees of state.epochCtx.currentShuffling.committees[10]) {
