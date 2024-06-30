@@ -1,4 +1,12 @@
-import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName, ForkPreBlobs} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkBlobs,
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkPreBlobs,
+  ForkPreExecution,
+} from "@lodestar/params";
 import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
@@ -95,7 +103,7 @@ type TypesByFork = {
     BlindedBeaconBlock: capella.BlindedBeaconBlock;
     BlindedBeaconBlockBody: capella.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: capella.SignedBlindedBeaconBlock;
-    FullOrBlindedSignedBeaconBlock: bellatrix.FullOrBlindedSignedBeaconBlock;
+    FullOrBlindedSignedBeaconBlock: capella.FullOrBlindedSignedBeaconBlock;
     ExecutionPayload: capella.ExecutionPayload;
     ExecutionPayloadHeader: capella.ExecutionPayloadHeader;
     BuilderBid: capella.BuilderBid;
@@ -121,7 +129,7 @@ type TypesByFork = {
     BlindedBeaconBlock: deneb.BlindedBeaconBlock;
     BlindedBeaconBlockBody: deneb.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: deneb.SignedBlindedBeaconBlock;
-    FullOrBlindedSignedBeaconBlock: bellatrix.FullOrBlindedSignedBeaconBlock;
+    FullOrBlindedSignedBeaconBlock: deneb.FullOrBlindedSignedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: deneb.BuilderBid;
@@ -154,8 +162,13 @@ export type BlindedBeaconBlock<F extends ForkExecution = ForkExecution> = TypesB
 export type SignedBeaconBlock<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBeaconBlock"];
 export type SignedBlindedBeaconBlock<F extends ForkExecution = ForkExecution> =
   TypesByFork[F]["SignedBlindedBeaconBlock"];
-export type FullOrBlindedSignedBeaconBlock<F extends ForkExecution = ForkExecution> =
+export type FullOrBlindedSignedBeaconBlockPreExecution<F extends ForkPreExecution = ForkPreExecution> =
+  TypesByFork[F]["SignedBeaconBlock"];
+export type FullOrBlindedSignedBeaconBlockExecution<F extends ForkExecution = ForkExecution> =
   TypesByFork[F]["FullOrBlindedSignedBeaconBlock"];
+export type FullOrBlindedSignedBeaconBlock =
+  | FullOrBlindedSignedBeaconBlockPreExecution
+  | FullOrBlindedSignedBeaconBlockExecution;
 
 export type BeaconBlockBody<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlockBody"];
 export type BlindedBeaconBlockBody<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BlindedBeaconBlockBody"];
