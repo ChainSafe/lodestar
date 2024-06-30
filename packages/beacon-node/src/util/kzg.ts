@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
+import {ProverContextJs, VerifierContextJs} from "@crate-crypto/peerdas-kzg";
 import {fromHex, toHex} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -19,9 +20,12 @@ export let ckzg: {
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
+  // TODO:This is deprecated
   computeCells(blob: Uint8Array): Uint8Array[];
   computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
+  // TODO:This is deprecated
   cellsToBlob(cells: Uint8Array[]): Uint8Array;
+  // TODO:This is deprecated
   recoverAllCells(cellIds: number[], cells: Uint8Array[]): Uint8Array[];
   verifyCellKzgProof(commitmentBytes: Uint8Array, cellId: number, cell: Uint8Array, proofBytes: Uint8Array): boolean;
   verifyCellKzgProofBatch(
@@ -60,6 +64,10 @@ const G1POINT_COUNT = FIELD_ELEMENTS_PER_BLOB_MAINNET;
 const G2POINT_COUNT = 65;
 const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POINT_BYTES * G2POINT_COUNT;
 
+// TODO: We can think of a better way to initialize this
+let proverContext: ProverContextJs;
+let verifierContext: VerifierContextJs;
+
 export async function initCKZG(): Promise<void> {
   /* eslint-disable @typescript-eslint/ban-ts-comment */
   // @ts-ignore
@@ -83,6 +91,8 @@ export function loadEthereumTrustedSetup(
   filePath?: string
 ): void {
   try {
+    proverContext = new ProverContextJs();
+    verifierContext = new VerifierContextJs();
     let setupFilePath;
     if (mode === TrustedFileMode.Bin) {
       const binPath = filePath ?? TRUSTED_SETUP_BIN_FILEPATH;
@@ -183,3 +193,29 @@ function strip0xPrefix(hex: string): string {
     return hex;
   }
 }
+
+export function computeCellsAndKzgProofs(usePeerDASKZG: boolean, blob: Uint8Array): [Uint8Array[], Uint8Array[]] {
+  if (usePeerDASKZG) {
+    const cellsAndProofs = proverContext.computeCellsAndKzgProofs(blob);
+    return [cellsAndProofs.cells, cellsAndProofs.proofs];
+  } else {
+    return ckzg.computeCellsAndKzgProofs(blob);
+  }
+}
+
+// This API is not correct imo, its concatenating all of the proofs and cells, which is a c-kzg 
+// specific thing.
+// export function verifyCellKzgProofBatch(
+//   usePeerDASKZG: boolean,
+//   commitmentsBytes: Uint8Array[],
+//   rowIndices: number[],
+//   columnIndices: number[],
+//   cells: Uint8Array[],
+//   proofsBytes: Uint8Array[]
+// ): boolean {
+//   if (usePeerDASKZG) {
+//      return verifierContext.verifyCellKzgProofBatch(commitmentsBytes, rowIndices, columnIndices, cells, proofsBytes)
+//   } else {
+//     return ckzg.verifyCellKzgProofBatch(commitmentsBytes, rowIndices, columnIndices, cells, proofsBytes);
+//   }
+// }
