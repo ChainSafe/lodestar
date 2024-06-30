@@ -9,6 +9,12 @@ import {fromHex, toHex} from "@lodestar/utils";
 // "c-kzg" has hardcoded the mainnet value, do not use params
 export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
 
+// A constant to switch between the two libraries at compile time
+declare let USE_PEERDAS_KZG: boolean | undefined;
+if (typeof USE_PEERDAS_KZG === "undefined") {
+  USE_PEERDAS_KZG = false; // use c-kzg by default, if the constant is not set
+}
+
 function ckzgNotLoaded(): never {
   throw Error("c-kzg library not loaded");
 }
@@ -194,9 +200,8 @@ function strip0xPrefix(hex: string): string {
   }
 }
 
-// TODO: Could use a env variable or a constant for switching libraries
-export function computeCellsAndKzgProofs(usePeerDASKZG: boolean, blob: Uint8Array): [Uint8Array[], Uint8Array[]] {
-  if (usePeerDASKZG) {
+export function computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]] {
+  if (USE_PEERDAS_KZG) {
     const cellsAndProofs = proverContext.computeCellsAndKzgProofs(blob);
     return [cellsAndProofs.cells, cellsAndProofs.proofs];
   } else {
@@ -207,14 +212,13 @@ export function computeCellsAndKzgProofs(usePeerDASKZG: boolean, blob: Uint8Arra
 // This API is not correct imo, its concatenating all of the proofs and cells, which is a c-kzg 
 // specific thing.
 // export function verifyCellKzgProofBatch(
-//   usePeerDASKZG: boolean,
 //   commitmentsBytes: Uint8Array[],
 //   rowIndices: number[],
 //   columnIndices: number[],
 //   cells: Uint8Array[],
 //   proofsBytes: Uint8Array[]
 // ): boolean {
-//   if (usePeerDASKZG) {
+//   if (USE_PEERDAS_KZG) {
 //      return verifierContext.verifyCellKzgProofBatch(commitmentsBytes, rowIndices, columnIndices, cells, proofsBytes)
 //   } else {
 //     return ckzg.verifyCellKzgProofBatch(commitmentsBytes, rowIndices, columnIndices, cells, proofsBytes);

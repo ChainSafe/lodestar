@@ -73,7 +73,7 @@ export function computeDataColumnSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
   const kzgCommitmentsInclusionProof =
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const cellsAndProofs = contents.blobs.map((blob) => computeCellsAndKzgProofs(false, blob));
+  const cellsAndProofs = contents.blobs.map((blob) => computeCellsAndKzgProofs(blob));
   const dataColumnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, j) => {
     // j'th column
     const column = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][0][j]);
