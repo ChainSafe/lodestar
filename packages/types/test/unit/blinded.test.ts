@@ -10,7 +10,7 @@ describe("blinded data structures", function () {
     ];
 
     for (const {a, b} of blindedTypes) {
-      for (const fork of Object.keys(ssz.allForks) as ForkName[]) {
+      for (const fork of Object.keys(ssz.sszTypesFor) as ForkName[]) {
         if (!isForkExecution(fork)) {
           continue;
         }
