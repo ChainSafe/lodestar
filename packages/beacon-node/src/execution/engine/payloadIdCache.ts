@@ -32,6 +32,12 @@ export type WithdrawalRequestV1 = {
   amount: QUANTITY;
 };
 
+export type ConsolidationRequestV1 = {
+  sourceAddress: DATA;
+  sourcePubkey: DATA;
+  targetPubkey: DATA;
+};
+
 type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
 
 export class PayloadIdCache {

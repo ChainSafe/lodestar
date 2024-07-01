@@ -160,7 +160,7 @@ export class BlockProposingService {
       this.logger.debug("Produced block", {...debugLogCtx, ...blockContents.debugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlock = await this.validatorStore.signBlock(pubkey, blockContents.block, slot);
+      const signedBlock = await this.validatorStore.signBlock(pubkey, blockContents.block, slot, this.logger);
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
