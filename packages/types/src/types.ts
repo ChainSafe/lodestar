@@ -186,12 +186,8 @@ type TypesByFork = {
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
-    BlockContents: {block: BeaconBlock<ForkName.electra>; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
-    SignedBlockContents: {
-      signedBlock: SignedBeaconBlock<ForkName.electra>;
-      kzgProofs: deneb.KZGProofs;
-      blobs: deneb.Blobs;
-    };
+    BlockContents: electra.BlockContents;
+    SignedBlockContents: electra.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: deneb.BlobsBundle;
     Contents: deneb.Contents;
