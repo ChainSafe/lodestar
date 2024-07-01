@@ -18,6 +18,7 @@ import {
   BeaconBlockOrContents,
   BlindedBeaconBlock,
   Attestation,
+  sszTypesFor,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
@@ -623,7 +624,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: WithVersion(
           (fork) =>
             (isForkBlobs(fork)
-              ? ssz.allForksBlobs[fork].BlockContents
+              ? sszTypesFor(fork).BlockContents
               : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
@@ -687,7 +688,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             (executionPayloadBlinded
               ? getExecutionForkTypes(version).BlindedBeaconBlock
               : isForkBlobs(version)
-                ? ssz.allForksBlobs[version].BlockContents
+                ? sszTypesFor(version).BlockContents
                 : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
         ),
         meta: {
