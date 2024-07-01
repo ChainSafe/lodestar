@@ -146,7 +146,14 @@ export interface EpochTransitionCache {
    * | beforeProcessEpoch               | calculate during the validator loop|
    * | afterEpochTransitionCache                | read it                            |
    */
-  nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+  epochAfterNextActiveIndices: ValidatorIndex[];
+
+  /**
+   * Pre-Calculated shuffling passed in from ShufflingCache for currentEpoch + 1. EpochAfterNextActiveIndices gets
+   * passed out of state-transition to beacon-node for calculating the nextEpochShuffling asynchronously for the following
+   * epoch transition
+   */
+  nextShuffling: EpochShuffling;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -170,6 +177,7 @@ export interface EpochTransitionCache {
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
+  nextShuffling: EpochShuffling,
   opts?: EpochTransitionCacheOpts
 ): EpochTransitionCache {
   const {config, epochCtx} = state;
@@ -187,7 +195,7 @@ export function beforeProcessEpoch(
   const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
-  const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
+  const epochAfterNextActiveIndices: ValidatorIndex[] = [];
   const isActivePrevEpoch: boolean[] = [];
   const isActiveNextEpoch: boolean[] = [];
   const statuses: AttesterStatus[] = [];
@@ -290,7 +298,7 @@ export function beforeProcessEpoch(
     isActiveNextEpoch.push(isActiveNext);
 
     if (isActiveNext2) {
-      nextEpochShufflingActiveValidatorIndices.push(i);
+      epochAfterNextActiveIndices.push(i);
     }
   }
 
@@ -418,7 +426,8 @@ export function beforeProcessEpoch(
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,
     indicesToEject,
-    nextEpochShufflingActiveValidatorIndices,
+    epochAfterNextActiveIndices,
+    nextShuffling,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActiveNextEpoch,

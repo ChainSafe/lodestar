@@ -501,20 +501,14 @@ export class EpochCache {
   afterProcessEpoch(
     state: BeaconStateAllForks,
     epochTransitionCache: {
-      nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+      nextEpochShuffling: EpochShuffling;
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
+    this.nextShuffling = epochTransitionCache.nextEpochShuffling;
     const currEpoch = this.currentShuffling.epoch;
-    const nextEpoch = currEpoch + 1;
-
-    this.nextShuffling = computeEpochShuffling(
-      state,
-      epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
-      nextEpoch
-    );
 
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;
