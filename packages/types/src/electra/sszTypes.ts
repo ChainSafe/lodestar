@@ -417,3 +417,21 @@ export const SSEPayloadAttributes = new ContainerType(
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );
+
+export const BlockContents = new ContainerType(
+  {
+    block: BeaconBlock,
+    kzgProofs: denebSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
+
+export const SignedBlockContents = new ContainerType(
+  {
+    signedBlock: SignedBeaconBlock,
+    kzgProofs: denebSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
