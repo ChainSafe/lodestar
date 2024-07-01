@@ -87,9 +87,9 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.beacon_aggregate_and_proof:
-      return ssz.allForks[topic.fork].SignedAggregateAndProof;
+      return sszTypesFor(topic.fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return ssz.allForks[topic.fork].Attestation;
+      return sszTypesFor(topic.fork).Attestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
@@ -129,7 +129,7 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
  * Deserialize a gossip serialized data into an Attestation object.
  */
 export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
-  const sszType = ssz.allForks[fork].Attestation;
+  const sszType = sszTypesFor(fork).Attestation;
   try {
     return sszType.deserialize(serializedData);
   } catch (e) {

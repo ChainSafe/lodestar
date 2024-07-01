@@ -119,6 +119,8 @@ export function upgradeLightClientHeader(
         ssz.electra.LightClientHeader.fields.execution.fields.depositRequestsRoot.defaultValue();
       (upgradedHeader as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot =
         ssz.electra.LightClientHeader.fields.execution.fields.withdrawalRequestsRoot.defaultValue();
+      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.consolidationRequestsRoot =
+        ssz.electra.LightClientHeader.fields.execution.fields.consolidationRequestsRoot.defaultValue();
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
