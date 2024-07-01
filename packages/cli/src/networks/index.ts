@@ -7,7 +7,7 @@ import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Slot} from "@lodestar/types";
-import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
+import {fromHex, callFnWhenAwait, Logger, toHex} from "@lodestar/utils";
 import {BeaconStateAllForks, getLatestBlockRoot, computeCheckpointEpochAtStateSlot} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
@@ -177,10 +177,12 @@ export async function fetchWeakSubjectivityState(
       return res.ssz();
     });
 
-    logger.info("Download completed", {stateId});
     // It should not be required to get fork type from bytes but Checkpointz does not return
     // Eth-Consensus-Version header, see https://github.com/ethpandaops/checkpointz/issues/164
     const wsState = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
+    // not possible to hash the full tree in batch, use the old way to create and drop validator tree one by one
+    // so use wsState.node.root instead of hashTreeRoot()
+    logger.info("Download completed", {stateId, root: toHex(wsState.node.root)});
 
     return {
       wsState,

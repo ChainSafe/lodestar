@@ -1,7 +1,7 @@
 // MUST import this file first before anything and not import any Lodestar code.
 
 // eslint-disable-next-line no-restricted-imports, import/no-extraneous-dependencies
-import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/as-sha256.js";
+import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/hashtree.js";
 // eslint-disable-next-line no-restricted-imports, import/no-extraneous-dependencies
 import {setHasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/index.js";
 

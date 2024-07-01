@@ -1,5 +1,7 @@
 import {ByteViews, ContainerNodeStructType, ValueOfFields} from "@chainsafe/ssz";
+import {Node} from "@chainsafe/persistent-merkle-tree";
 import * as primitiveSsz from "../primitive/sszTypes.js";
+import {ValidatorTreeViewDU} from "./viewDU/validator.js";
 
 const {Boolean, Bytes32, UintNum64, BLSPubkey, EpochInf} = primitiveSsz;
 
@@ -31,6 +33,10 @@ export const ValidatorType = {
 export class ValidatorNodeStructType extends ContainerNodeStructType<typeof ValidatorType> {
   constructor() {
     super(ValidatorType, {typeName: "Validator", jsonCase: "eth2"});
+  }
+
+  getViewDU(node: Node): ValidatorTreeViewDU {
+    return new ValidatorTreeViewDU(this, node);
   }
 
   value_serializeToBytes(
