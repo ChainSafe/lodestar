@@ -49,3 +49,6 @@ export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
 export type PendingBalanceDeposit = ValueOf<typeof ssz.PendingBalanceDeposit>;
 export type PendingPartialWithdrawal = ValueOf<typeof ssz.PendingPartialWithdrawal>;
 export type PendingConsolidation = ValueOf<typeof ssz.PendingConsolidation>;
+
+export type BlockContents = ValueOf<typeof ssz.BlockContents>;
+export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
