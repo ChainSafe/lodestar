@@ -97,6 +97,9 @@ export function getFastifySchema<T extends Endpoint["request"]>(schemaDef: Schem
         [MediaType.json]: {
           schema: getJsonSchemaItem(schemaDef.body),
         },
+        [MediaType.ssz]: {
+          schema: {},
+        },
       },
     };
   }
