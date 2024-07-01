@@ -28,6 +28,8 @@ import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
 
+// for api when requesting nextEpoch
+export {getCommitteeAssignments} from "./getCommitteeAssignments.js";
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 export {

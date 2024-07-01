@@ -159,6 +159,7 @@ export class AggregatedAttestationPool {
       }
 
       const slotDelta = stateSlot - slot;
+      // TODO: (@matthewkeil) potentially move to shuffling cache.get()
       const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
       const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
       for (const [committeeIndex, attestationGroupByData] of attestationGroupByDataHashByIndex.entries()) {

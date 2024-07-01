@@ -30,6 +30,7 @@ import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
+import {getCommitteeAssignments, AttesterDuty} from "../epoch/getCommitteeAssignments.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
@@ -552,13 +553,14 @@ export class EpochCache {
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
-    this.previousActiveIndices = this.currentActiveIndices;
-    this.currentActiveIndices = this.nextActiveIndices;
-    this.nextActiveIndices = new Uint32Array(epochTransitionCache.nextEpochShufflingActiveValidatorIndices);
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
     const currEpoch = this.epoch;
     const nextEpoch = this.nextEpoch;
+
+    this.previousActiveIndices = this.currentActiveIndices;
+    this.currentActiveIndices = this.nextActiveIndices;
+    this.nextActiveIndices = new Uint32Array(epochTransitionCache.nextEpochShufflingActiveValidatorIndices);
 
     this.previousDecisionRoot = this.currentDecisionRoot;
     this.currentDecisionRoot = this.nextDecisionRoot;
@@ -655,6 +657,16 @@ export class EpochCache {
     return this.getShufflingAtEpoch(epoch).committeesPerSlot;
   }
 
+  /**
+   * Compute the correct subnet for a slot/committee index
+   */
+  private computeSubnetForSlot(slot: number, committeeIndex: number): number {
+    const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
+    const committeesPerSlot = this.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
+    const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
+    return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+  }
+
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.epoch) {
@@ -743,35 +755,58 @@ export class EpochCache {
     epoch: Epoch,
     requestedValidatorIndices: ValidatorIndex[]
   ): Map<ValidatorIndex, AttesterDuty> {
-    const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
-    const duties = new Map<ValidatorIndex, AttesterDuty>();
-
     const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
-    for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
-      const slotCommittees = epochCommittees[epochSlot];
-      for (let i = 0, committeesAtSlot = slotCommittees.length; i < committeesAtSlot; i++) {
-        for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
-          const validatorIndex = slotCommittees[i][j];
-          if (requestedValidatorIndicesSet.has(validatorIndex)) {
-            duties.set(validatorIndex, {
-              validatorIndex,
-              committeeLength,
-              committeesAtSlot,
-              validatorCommitteeIndex: j,
-              committeeIndex: i,
-              slot: epoch * SLOTS_PER_EPOCH + epochSlot,
-            });
-          }
+    return getCommitteeAssignments(epoch, requestedValidatorIndices, epochCommittees);
+  }
+
+  /**
+   * Return the committee assignment in the ``epoch`` for ``validator_index``.
+   * ``assignment`` returned is a tuple of the following form:
+   * ``assignment[0]`` is the list of validators in the committee
+   * ``assignment[1]`` is the index to which the committee is assigned
+   * ``assignment[2]`` is the slot at which the committee is assigned
+   * Return null if no assignment..
+   */
+  private getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
+    if (epoch > this.nextEpoch) {
+      throw Error(`Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.epoch} + 1`);
+    }
+
+    const epochStartSlot = computeStartSlotAtEpoch(epoch);
+    const committeeCountPerSlot = this.getCommitteeCountPerSlot(epoch);
+    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
+      for (let i = 0; i < committeeCountPerSlot; i++) {
+        const committee = this.getBeaconCommittee(slot, i);
+        if (committee.includes(validatorIndex)) {
+          return {
+            validators: Array.from(committee),
+            committeeIndex: i,
+            slot,
+          };
         }
       }
     }
+    return null;
+  }
 
-    return duties;
+  isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
+    const committee = this.getBeaconCommittee(slot, index);
+    return isAggregatorFromCommitteeLength(committee.length, slotSignature);
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
     this.pubkey2index.set(pubkey, index);
     this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
+  }
+
+  private getShufflingAtSlot(slot: Slot): EpochShuffling {
+    const epoch = computeEpochAtSlot(slot);
+    return this.getShufflingAtEpoch(epoch);
+  }
+
+  private getShufflingAtSlotOrNull(slot: Slot): EpochShuffling | null {
+    const epoch = computeEpochAtSlot(slot);
+    return this.getShufflingAtEpochOrNull(epoch);
   }
 
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
@@ -786,6 +821,19 @@ export class EpochCache {
 
     return shuffling;
   }
+
+  private getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
+    if (epoch === this.previousEpoch) {
+      return this.previousShuffling;
+    } else if (epoch === this.epoch) {
+      return this.currentShuffling;
+    } else if (epoch === this.nextEpoch) {
+      return this.nextShuffling;
+    } else {
+      return null;
+    }
+  }
+
   /**
    * Note: The range of slots a validator has to perform duties is off by one.
    * The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
@@ -834,88 +882,12 @@ export class EpochCache {
 
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
-
-  // private isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
-  //   const committee = this.getBeaconCommittee(slot, index);
-  //   return isAggregatorFromCommitteeLength(committee.length, slotSignature);
-  // }
-
-  /**
-   * Compute the correct subnet for a slot/committee index
-   */
-  private computeSubnetForSlot(slot: number, committeeIndex: number): number {
-    const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
-    const committeesPerSlot = this.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
-    const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
-    return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
-  }
-  /**
-   * Return the committee assignment in the ``epoch`` for ``validator_index``.
-   * ``assignment`` returned is a tuple of the following form:
-   * ``assignment[0]`` is the list of validators in the committee
-   * ``assignment[1]`` is the index to which the committee is assigned
-   * ``assignment[2]`` is the slot at which the committee is assigned
-   * Return null if no assignment..
-   */
-  private getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
-    if (epoch > this.nextEpoch) {
-      throw Error(`Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.epoch} + 1`);
-    }
-
-    const epochStartSlot = computeStartSlotAtEpoch(epoch);
-    const committeeCountPerSlot = this.getCommitteeCountPerSlot(epoch);
-    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
-      for (let i = 0; i < committeeCountPerSlot; i++) {
-        const committee = this.getBeaconCommittee(slot, i);
-        if (committee.includes(validatorIndex)) {
-          return {
-            validators: Array.from(committee),
-            committeeIndex: i,
-            slot,
-          };
-        }
-      }
-    }
-    return null;
-  }
-
-  private getShufflingAtSlot(slot: Slot): EpochShuffling {
-    const epoch = computeEpochAtSlot(slot);
-    return this.getShufflingAtEpoch(epoch);
-  }
-
-  private getShufflingAtSlotOrNull(slot: Slot): EpochShuffling | null {
-    const epoch = computeEpochAtSlot(slot);
-    return this.getShufflingAtEpochOrNull(epoch);
-  }
-
-  private getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
-    if (epoch === this.previousEpoch) {
-      return this.previousShuffling;
-    } else if (epoch === this.epoch) {
-      return this.currentShuffling;
-    } else if (epoch === this.nextEpoch) {
-      return this.nextShuffling;
-    } else {
-      return null;
-    }
-  }
 }
 
 function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
   // TODO: Research what's the best number to minimize both memory cost and copy costs
   return 1024 * Math.ceil(validatorCount / 1024);
 }
-
-// Copied from lodestar-api package to avoid depending on the package
-type AttesterDuty = {
-  validatorIndex: ValidatorIndex;
-  committeeIndex: CommitteeIndex;
-  committeeLength: number;
-  committeesAtSlot: number;
-  validatorCommitteeIndex: number;
-  slot: Slot;
-};
 
 export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",

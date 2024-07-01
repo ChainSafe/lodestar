@@ -9,6 +9,7 @@ import {
   computeEpochAtSlot,
   getCurrentSlot,
   beaconBlockToBlinded,
+  // AttesterDuty,
 } from "@lodestar/state-transition";
 import {
   GENESIS_SLOT,
@@ -42,6 +43,7 @@ import {
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
+import {getCommitteeAssignments} from "@lodestar/state-transition/src/index.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -984,7 +986,14 @@ export function getValidatorApi({
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state.validators, indices);
-      const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, indices);
+      let committeeAssignments: Map<number, routes.validator.AttesterDuty>;
+      if (epoch === state.epochCtx.nextEpoch) {
+        // its possible that the nextEpoch has not be calculated yet so need to await calculation here
+        const epochShuffling = await chain.shufflingCache.getOrThrow(epoch, state.epochCtx.nextDecisionRoot);
+        committeeAssignments = getCommitteeAssignments(epoch, indices, epochShuffling.committees);
+      } else {
+        committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, indices);
+      }
       const duties: routes.validator.AttesterDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];

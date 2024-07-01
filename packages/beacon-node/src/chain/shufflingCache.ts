@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
-import {MapDef, pruneSetToMax} from "@lodestar/utils";
+import {LodestarError, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Metrics} from "../metrics/metrics.js";
 import {computeAnchorCheckpoint} from "./initState.js";
@@ -167,6 +167,18 @@ export class ShufflingCache {
     }
   }
 
+  async getOrThrow(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling> {
+    const shuffling = await this.get(shufflingEpoch, decisionRootHex);
+    if (!shuffling) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.EPOCH_SHUFFLING_NOT_CALCULATED,
+        epoch: shufflingEpoch,
+        decisionRoot: decisionRootHex,
+      });
+    }
+    return shuffling;
+  }
+
   /**
    * Same to get() function but synchronous.
    */
@@ -208,3 +220,15 @@ function getDecisionBlock(state: CachedBeaconStateAllForks, epoch: Epoch): RootH
     ? getShufflingDecisionBlock(state, epoch)
     : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(state.config, state).blockHeader));
 }
+
+export enum ShufflingCacheErrorCode {
+  EPOCH_SHUFFLING_NOT_CALCULATED = "EPOCH_SHUFFLING_NOT_CALCULATED",
+}
+
+type ShufflingCacheErrorType = {
+  code: ShufflingCacheErrorCode.EPOCH_SHUFFLING_NOT_CALCULATED;
+  epoch: number;
+  decisionRoot: RootHex;
+};
+
+export class ShufflingCacheError extends LodestarError<ShufflingCacheErrorType> {}
