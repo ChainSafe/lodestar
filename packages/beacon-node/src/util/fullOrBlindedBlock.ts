@@ -8,8 +8,6 @@ import {
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   FullOrBlindedSignedBeaconBlock,
-  FullOrBlindedSignedBeaconBlockExecution,
-  FullOrBlindedSignedBeaconBlockPreExecution,
 } from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {executionPayloadToPayloadHeader} from "@lodestar/state-transition";
@@ -129,7 +127,7 @@ export function isBlindedBytes(forkSeq: ForkSeq, blockBytes: Uint8Array): boolea
 }
 
 // same as isBlindedSignedBeaconBlock but without type narrowing
-export function isBlinded(block: FullOrBlindedSignedBeaconBlock): boolean {
+export function isBlinded(block: FullOrBlindedSignedBeaconBlock): block is SignedBlindedBeaconBlock {
   return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
 }
 
@@ -138,11 +136,11 @@ export function serializeFullOrBlindedSignedBeaconBlock(
   value: FullOrBlindedSignedBeaconBlock
 ): Uint8Array {
   if (isBlinded(value)) {
-    const type = config.getExecutionForkTypes(value.message.slot).SignedBeaconBlock;
-    return type.serialize(value as SignedBeaconBlock);
+    const type = config.getExecutionForkTypes(value.message.slot).SignedBlindedBeaconBlock;
+    return type.serialize(value);
   }
   const type = config.getForkTypes(value.message.slot).SignedBeaconBlock;
-  return type.serialize(value as FullOrBlindedSignedBeaconBlockPreExecution);
+  return type.serialize(value);
 }
 
 export function deserializeFullOrBlindedSignedBeaconBlock(
@@ -263,7 +261,7 @@ export function blindedOrFullBlockToFull(
     message: {
       ...block.message,
       body: {
-        ...(block.message.body as bellatrix.BeaconBlockBody),
+        ...block.message.body,
         executionPayload: executionPayloadHeaderToPayload(
           forkSeq,
           (block.message.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader,

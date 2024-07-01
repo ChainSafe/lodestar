@@ -91,7 +91,7 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
   async remove(value: FullOrBlindedSignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).BeaconBlock, value),
+      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value),
       deleteParentRootIndex(this.db, value),
     ]);
   }
@@ -100,7 +100,7 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) =>
-        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).BeaconBlock, value)
+        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value)
       ),
       Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);

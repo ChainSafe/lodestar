@@ -162,13 +162,9 @@ export type BlindedBeaconBlock<F extends ForkExecution = ForkExecution> = TypesB
 export type SignedBeaconBlock<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBeaconBlock"];
 export type SignedBlindedBeaconBlock<F extends ForkExecution = ForkExecution> =
   TypesByFork[F]["SignedBlindedBeaconBlock"];
-export type FullOrBlindedSignedBeaconBlockPreExecution<F extends ForkPreExecution = ForkPreExecution> =
-  TypesByFork[F]["SignedBeaconBlock"];
-export type FullOrBlindedSignedBeaconBlockExecution<F extends ForkExecution = ForkExecution> =
-  TypesByFork[F]["FullOrBlindedSignedBeaconBlock"];
-export type FullOrBlindedSignedBeaconBlock =
-  | FullOrBlindedSignedBeaconBlockPreExecution
-  | FullOrBlindedSignedBeaconBlockExecution;
+export type FullOrBlindedSignedBeaconBlock<F extends ForkAll = ForkAll, E extends ForkExecution = ForkExecution> =
+  | SignedBeaconBlock<F>
+  | SignedBlindedBeaconBlock<E>;
 
 export type BeaconBlockBody<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlockBody"];
 export type BlindedBeaconBlockBody<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BlindedBeaconBlockBody"];
