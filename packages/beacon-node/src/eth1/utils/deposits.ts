@@ -44,6 +44,7 @@ export function getDepositsWithProofs(
   eth1Data: phase0.Eth1Data
 ): phase0.Deposit[] {
   // Get tree at this particular depositCount to compute correct proofs
+  depositRootTree.commit();
   const viewAtDepositCount = depositRootTree.sliceTo(eth1Data.depositCount - 1);
 
   const depositRoot = viewAtDepositCount.hashTreeRoot();

@@ -20,7 +20,8 @@ export function processParticipationFlagUpdates(state: CachedBeaconStateAltair):
   const currentEpochParticipationNode = ssz.altair.EpochParticipation.tree_setChunksNode(
     state.currentEpochParticipation.node,
     zeroNode(ssz.altair.EpochParticipation.chunkDepth),
-    state.currentEpochParticipation.length
+    state.currentEpochParticipation.length,
+    null
   );
 
   state.currentEpochParticipation = ssz.altair.EpochParticipation.getViewDU(currentEpochParticipationNode);

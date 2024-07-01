@@ -154,6 +154,8 @@ export async function initBeaconState(
     if (genesisStateFile && !args.forceGenesis) {
       const stateBytes = await downloadOrLoadFile(genesisStateFile);
       let anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+      // not possible to hash the full tree in batch, use the old way to create and drop validator tree one by one
+      anchorState.node.root;
       const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
       const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
       anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
@@ -183,6 +185,8 @@ async function readWSState(
 
   const stateBytes = await downloadOrLoadFile(checkpointState);
   const wsState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+  // not possible to hash the full tree in batch, use the old way to create and drop validator tree one by one
+  wsState.node.root;
   const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const store = lastDbState ?? wsState;
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
