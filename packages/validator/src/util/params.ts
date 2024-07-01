@@ -223,7 +223,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
 
     // ELECTRA
-    MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: electraForkRelevant,
+    MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,
     MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: electraForkRelevant,
     MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
     MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
@@ -234,7 +234,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PENDING_BALANCE_DEPOSITS_LIMIT: electraForkRelevant,
     PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
     PENDING_CONSOLIDATIONS_LIMIT: electraForkRelevant,
-    MAX_CONSOLIDATIONS: electraForkRelevant,
+    MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: electraForkRelevant,
     WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,

@@ -195,6 +195,7 @@ describe("ExecutionEngine / http", () => {
           ],
           depositRequests: null, // depositRequests is null pre-electra
           withdrawalRequests: null,
+          consolidationRequests: null,
         },
         null, // null returned for missing blocks
         {
@@ -205,6 +206,7 @@ describe("ExecutionEngine / http", () => {
           withdrawals: null, // withdrawals is null pre-capella
           depositRequests: null, // depositRequests is null pre-electra
           withdrawalRequests: null,
+          consolidationRequests: null,
         },
       ],
     };
@@ -254,6 +256,7 @@ describe("ExecutionEngine / http", () => {
           ],
           depositRequests: null, // depositRequests is null pre-electra
           withdrawalRequests: null,
+          consolidationRequests: null,
         },
         null, // null returned for missing blocks
         {
@@ -264,6 +267,7 @@ describe("ExecutionEngine / http", () => {
           withdrawals: null, // withdrawals is null pre-capella
           depositRequests: null, // depositRequests is null pre-electra
           withdrawalRequests: null,
+          consolidationRequests: null,
         },
       ],
     };
