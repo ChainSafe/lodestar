@@ -1,10 +1,21 @@
-import {PublicKey, Signature} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/blst";
 import {VerifySignatureOpts} from "../interface.js";
 
 export type SignatureSet = {
-  publicKey: PublicKey;
   message: Uint8Array;
-  signature: Signature;
+  publicKey: PublicKey;
+  signature: Uint8Array;
+};
+
+export type SameMessageSignatureSet = {
+  message: Uint8Array;
+  publicKey: PublicKey[];
+  signature: Uint8Array[];
+};
+
+export type BlsSameMessageReq = {
+  opts: VerifySignatureOpts;
+  sets: SameMessageSignatureSet[];
 };
 
 export type BlsWorkReq = {

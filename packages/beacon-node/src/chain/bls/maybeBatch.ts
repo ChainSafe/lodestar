@@ -26,8 +26,10 @@ export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[]):
           pk: s.publicKey,
           msg: s.message,
           // true = validate signature
-          sig: Signature.fromBytes(s.signature, true),
-        }))
+          sig: s.signature,
+        })),
+        false,
+        true
       );
     }
 
@@ -58,8 +60,10 @@ export async function verifySignatureSetsMaybeBatchAsync(sets: SignatureSetDeser
           pk: s.publicKey,
           msg: s.message,
           // true = validate signature
-          sig: Signature.fromBytes(s.signature, true),
-        }))
+          sig: s.signature,
+        })),
+        false,
+        true
       );
     }
 

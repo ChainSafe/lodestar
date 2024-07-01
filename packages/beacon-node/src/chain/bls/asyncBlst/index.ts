@@ -1,25 +1,16 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import {PublicKey, Signature} from "@chainsafe/blst";
+import {PublicKey, verifyMultipleSignaturesSameMessagesWithRetriesAsync} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
-import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {Metrics} from "../../../metrics/index.js";
-import {callInNextEventLoop} from "../../../util/eventLoop.js";
-import {LinkedList} from "../../../util/array.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {chunkifyMaximizeChunkSize} from "../multithread/utils.js";
 import {defaultPoolSize} from "../multithread/poolSize.js";
 import {BlsWorkReq, BlsWorkResult, SignatureSet, WorkResult, WorkResultCode, WorkResultError} from "./types.js";
-import {
-  JobQueueItem,
-  JobQueueItemSameMessage,
-  JobQueueItemType,
-  jobItemSameMessageToMultiSet,
-  jobItemSigSets,
-  jobItemWorkReq,
-} from "./jobItem.js";
+import {JobQueueItemType} from "./jobItem.js";
 import {verifySignatureSetsMaybeBatch} from "./verifySignatures.js";
+import {BufferedJobQueue, JobItem} from "./jobQueue.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
@@ -37,6 +28,12 @@ export type {JobQueueItemType};
  * For 128, the extra time cost is about 0.3%. No specific reasoning for `128`, it's just good enough.
  */
 const MAX_SIGNATURE_SETS_PER_JOB = 128;
+
+/**
+ * Limit the number of same message signature sets that can be batched together.
+ * The real savings is within a single message, so it's better to keep this number low.
+ */
+const MAX_SAME_MSG_SETS_PER_JOB = 16;
 
 /**
  * If there are more than `MAX_BUFFERED_SIGS` buffered sigs, verify them immediately without waiting `MAX_BUFFER_WAIT_MS`.
@@ -70,6 +67,17 @@ const MAX_JOBS_CAN_ACCEPT_WORK = 512;
  */
 const BATCHABLE_MIN_PER_CHUNK = 16;
 
+type DefaultReq = {
+  sets: ISignatureSet[];
+};
+type DefaultRes = boolean;
+
+type SameMsgReq = {
+  sets: {publicKey: PublicKey; signature: Uint8Array}[];
+  message: Uint8Array;
+};
+type SameMsgRes = boolean[];
+
 /**
  */
 export class BlsAsyncBlstVerifier implements IBlsVerifier {
@@ -78,14 +86,9 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
   private readonly poolSize = defaultPoolSize;
   private workerId = 0;
 
-  private readonly jobs = new LinkedList<JobQueueItem>();
-  private bufferedJobs: {
-    jobs: LinkedList<JobQueueItem>;
-    prioritizedJobs: LinkedList<JobQueueItem>;
-    sigCount: number;
-    firstPush: number;
-    timeout: NodeJS.Timeout;
-  } | null = null;
+  private readonly defaultJobs: BufferedJobQueue<DefaultReq, DefaultRes>;
+  private readonly sameMsgJobs: BufferedJobQueue<SameMsgReq, SameMsgRes>;
+
   private closed = false;
   private workersBusy = 0;
 
@@ -94,9 +97,22 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
     this.logger = logger;
     this.metrics = metrics;
 
+    this.defaultJobs = new BufferedJobQueue({
+      itemWeight: (i) => i.sets.length,
+      executeJobs: this.executeDefaultJobs,
+      maxWeightPerBatch: MAX_SIGNATURE_SETS_PER_JOB,
+      maxBufferWaitMs: MAX_BUFFER_WAIT_MS,
+    });
+    this.sameMsgJobs = new BufferedJobQueue({
+      itemWeight: () => 1,
+      executeJobs: this.executeSameMsgJobs,
+      maxWeightPerBatch: MAX_SAME_MSG_SETS_PER_JOB,
+      maxBufferWaitMs: MAX_BUFFER_WAIT_MS,
+    });
+
     if (metrics) {
       metrics.blsThreadPool.queueLength.addCollect(() => {
-        metrics.blsThreadPool.queueLength.set(this.jobs.length);
+        metrics.blsThreadPool.queueLength.set(this.defaultJobs.pendingJobs() + this.sameMsgJobs.pendingJobs());
         metrics.blsThreadPool.workersBusy.set(this.workersBusy);
       });
     }
@@ -106,7 +122,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
     return (
       this.workersBusy < this.poolSize &&
       // TODO: Should also bound the jobs queue?
-      this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
+      this.defaultJobs.pendingJobs() + this.sameMsgJobs.pendingJobs() < MAX_JOBS_CAN_ACCEPT_WORK
     );
   }
 
@@ -128,7 +144,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
           sets.map((set) => ({
             publicKey: getAggregatedPubkey(set),
             message: set.signingRoot.valueOf(),
-            signature: Signature.fromBytes(set.signature, true),
+            signature: set.signature,
           }))
         );
       } finally {
@@ -142,8 +158,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map(
         (setsChunk) =>
           new Promise<boolean>((resolve, reject) => {
-            return this.queueBlsWork({
-              type: JobQueueItemType.default,
+            return this.defaultJobs.enqueueJob({
               resolve,
               reject,
               addedTimeMs: Date.now(),
@@ -170,96 +185,30 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
     message: Uint8Array,
     opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {
-    // chunkify so that it reduce the risk of retrying when there is at least one invalid signature
-    const results = await Promise.all(
-      chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map(
-        (setsChunk) =>
-          new Promise<boolean[]>((resolve, reject) => {
-            this.queueBlsWork({
-              type: JobQueueItemType.sameMessage,
-              resolve,
-              reject,
-              addedTimeMs: Date.now(),
-              opts,
-              sets: setsChunk,
-              message,
-            });
-          })
-      )
-    );
+    const results = await new Promise<boolean[]>((resolve, reject) => {
+      this.sameMsgJobs.enqueueJob({
+        resolve,
+        reject,
+        addedTimeMs: Date.now(),
+        opts,
+        sets,
+        message,
+      });
+    });
 
-    return results.flat();
+    return results;
   }
 
   async close(): Promise<void> {
-    if (this.bufferedJobs) {
-      clearTimeout(this.bufferedJobs.timeout);
-    }
-
-    // Abort all jobs
-    for (const job of this.jobs) {
-      job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
-    }
-    this.jobs.clear();
+    this.defaultJobs.close();
+    this.sameMsgJobs.close();
   }
 
   /**
-   * Register BLS work to be done eventually in a worker
+   * batch verify jobs
    */
-  private queueBlsWork(job: JobQueueItem): void {
-    if (this.closed) {
-      throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
-    }
-
-    // TODO: Consider if limiting queue size is necessary here.
-    // It would be bad to reject signatures because the node is slow.
-    // However, if the worker communication broke jobs won't ever finish
-
-    // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.
-    // Do not call `runJob()`, it is called from `runBufferedJobs()`
-    if (job.opts.batchable) {
-      if (!this.bufferedJobs) {
-        this.bufferedJobs = {
-          jobs: new LinkedList(),
-          prioritizedJobs: new LinkedList(),
-          sigCount: 0,
-          firstPush: Date.now(),
-          timeout: setTimeout(this.runBufferedJobs, MAX_BUFFER_WAIT_MS),
-        };
-      }
-      const jobs = job.opts.priority ? this.bufferedJobs.prioritizedJobs : this.bufferedJobs.jobs;
-      jobs.push(job);
-      this.bufferedJobs.sigCount += jobItemSigSets(job);
-      if (this.bufferedJobs.sigCount > MAX_BUFFERED_SIGS) {
-        clearTimeout(this.bufferedJobs.timeout);
-        this.runBufferedJobs();
-      }
-    }
-
-    // Push job and schedule to call `runJob` in the next macro event loop cycle.
-    // This is useful to allow batching job submitted from a synchronous for loop,
-    // and to prevent large stacks since runJob may be called recursively.
-    else {
-      if (job.opts.priority) {
-        this.jobs.unshift(job);
-      } else {
-        this.jobs.push(job);
-      }
-      callInNextEventLoop(this.runJob);
-    }
-  }
-
-  /**
-   * Potentially submit jobs to an idle worker, only if there's a worker and jobs
-   */
-  private runJob = async (): Promise<void> => {
-    if (this.closed) {
-      return;
-    }
-
-    // Prepare work package
-    const jobsInput = this.prepareWork();
-    if (jobsInput.length === 0) {
+  private executeDefaultJobs = async (jobs: JobItem<DefaultReq, DefaultRes>[]): Promise<void> => {
+    if (jobs.length === 0) {
       return;
     }
 
@@ -267,55 +216,40 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
 
     try {
       let startedJobsDefault = 0;
-      let startedJobsSameMessage = 0;
       let startedSetsDefault = 0;
-      let startedSetsSameMessage = 0;
       const workReqs: BlsWorkReq[] = [];
-      const jobsStarted: JobQueueItem[] = [];
+      const jobsStarted: JobItem<DefaultReq, DefaultRes>[] = [];
 
-      for (const job of jobsInput) {
+      for (const job of jobs) {
         this.metrics?.blsThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
 
         let workReq: BlsWorkReq;
         try {
           // Note: This can throw, must be handled per-job.
-          // Pubkey and signature aggregation is defered here
-          workReq = await jobItemWorkReq(job, this.metrics);
+          // Pubkey aggregation is deferred here
+          workReq = {
+            opts: job.opts,
+            sets: job.sets.map((set) => ({
+              // this can throw, handled in the consumer code
+              publicKey: getAggregatedPubkey(set, this.metrics),
+              signature: set.signature,
+              message: set.signingRoot,
+            })),
+          };
         } catch (e) {
-          this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
-
-          switch (job.type) {
-            case JobQueueItemType.default:
-              job.reject(e as Error);
-              break;
-
-            case JobQueueItemType.sameMessage:
-              // there could be an invalid pubkey/signature, retry each individually
-              this.retryJobItemSameMessage(job);
-              break;
-          }
-
+          this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: JobQueueItemType.default});
+          job.reject(e as Error);
           continue;
         }
         // Re-push all jobs with matching workReq for easier accounting of results
         workReqs.push(workReq);
         jobsStarted.push(job);
 
-        if (job.type === JobQueueItemType.sameMessage) {
-          startedJobsSameMessage += 1;
-          startedSetsSameMessage += job.sets.length;
-        } else {
-          startedJobsDefault += 1;
-          startedSetsDefault += job.sets.length;
-        }
+        startedJobsDefault += 1;
+        startedSetsDefault += job.sets.length;
       }
 
-      const startedSigSets = startedSetsDefault + startedSetsSameMessage;
-      this.metrics?.blsThreadPool.totalJobsGroupsStarted.inc(1);
-      this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.default}, startedJobsDefault);
-      this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.sameMessage}, startedJobsSameMessage);
-      this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type: JobQueueItemType.default}, startedSetsDefault);
-      this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type: JobQueueItemType.sameMessage}, startedSetsSameMessage);
+      this.metricsAddJobsStarted(JobQueueItemType.default, startedJobsDefault, startedSetsDefault);
 
       // Send work package to the worker
       // If the job, metrics or any code below throws: the job will reject never going stale.
@@ -336,36 +270,14 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       for (let i = 0; i < jobsStarted.length; i++) {
         const job = jobsStarted[i];
         const jobResult = results[i];
-        const sigSetCount = jobItemSigSets(job);
+        const sigSetCount = job.sets.length;
 
-        // TODO: enable exhaustive switch case checks lint rule
-        switch (job.type) {
-          case JobQueueItemType.default:
-            if (!jobResult || jobResult.code !== WorkResultCode.success) {
-              job.reject(getJobResultError(jobResult, i));
-              errorCount += sigSetCount;
-            } else {
-              job.resolve(jobResult.result);
-              successCount += sigSetCount;
-            }
-            break;
-
-          // handle result of the verification of aggregated signature against aggregated pubkeys
-          case JobQueueItemType.sameMessage:
-            if (!jobResult || jobResult.code !== WorkResultCode.success) {
-              job.reject(getJobResultError(jobResult, i));
-              errorCount += 1;
-            } else {
-              if (jobResult.result) {
-                // All are valid, most of the time it goes here
-                job.resolve(job.sets.map(() => true));
-              } else {
-                // Retry each individually
-                this.retryJobItemSameMessage(job);
-              }
-              successCount += 1;
-            }
-            break;
+        if (!jobResult || jobResult.code !== WorkResultCode.success) {
+          job.reject(getJobResultError(jobResult, i));
+          errorCount += sigSetCount;
+        } else {
+          job.resolve(jobResult.result);
+          successCount += sigSetCount;
         }
       }
 
@@ -374,82 +286,141 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
       const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
-      this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
-      this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
-      this.metrics?.blsThreadPool.latencyToWorker.observe(latencyToWorkerSec);
-      this.metrics?.blsThreadPool.latencyFromWorker.observe(latencyFromWorkerSec);
-      this.metrics?.blsThreadPool.successJobsSignatureSetsCount.inc(successCount);
-      this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
-      this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
-      this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
+      this.metricsAddJobsFinished(
+        startedSetsDefault,
+        successCount,
+        errorCount,
+        batchRetries,
+        batchSigsSuccess,
+        workerId,
+        workerJobTimeSec,
+        latencyToWorkerSec,
+        latencyFromWorkerSec
+      );
     } catch (e) {
       // Worker communications should never reject
       if (!this.closed) {
         this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
       }
       // Reject all
-      for (const job of jobsInput) {
+      for (const job of jobs) {
         job.reject(e as Error);
       }
     }
 
     this.workersBusy--;
-
-    // Potentially run a new job
-    callInNextEventLoop(this.runJob);
   };
 
   /**
-   * Grab pending work up to a max number of signatures
+   * Potentially submit jobs to an idle worker, only if there's a worker and jobs
    */
-  private prepareWork(): JobQueueItem[] {
-    const jobs: JobQueueItem[] = [];
-    let totalSigs = 0;
-
-    while (totalSigs < MAX_SIGNATURE_SETS_PER_JOB) {
-      const job = this.jobs.shift();
-      if (!job) {
-        break;
-      }
-
-      jobs.push(job);
-      totalSigs += jobItemSigSets(job);
+  private executeSameMsgJobs = async (jobs: JobItem<SameMsgReq, SameMsgRes>[]): Promise<void> => {
+    if (jobs.length === 0) {
+      return;
     }
 
-    return jobs;
-  }
+    this.workersBusy++;
 
-  /**
-   * Add all buffered jobs to the job queue and potentially run them immediately
-   */
-  private runBufferedJobs = (): void => {
-    if (this.bufferedJobs) {
-      for (const job of this.bufferedJobs.jobs) {
-        this.jobs.push(job);
+    try {
+      let startedJobsSameMessage = 0;
+      let startedSetsSameMessage = 0;
+
+      for (const job of jobs) {
+        this.metrics?.blsThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+        startedJobsSameMessage += 1;
+        startedSetsSameMessage += job.sets.length;
       }
-      for (const job of this.bufferedJobs.prioritizedJobs) {
-        this.jobs.unshift(job);
+
+      this.metricsAddJobsStarted(JobQueueItemType.sameMessage, startedJobsSameMessage, startedSetsSameMessage);
+
+      // Send work package to the worker
+      // If the job, metrics or any code below throws: the job will reject never going stale.
+      // Only downside is the job promise may be resolved twice, but that's not an issue
+
+      const [jobStartSec, jobStartNs] = process.hrtime();
+      const workResult = await verifyMultipleSignaturesSameMessagesWithRetriesAsync(
+        jobs.map((job) => ({
+          msg: job.message,
+          sets: job.sets.map((set) => ({pk: set.publicKey, sig: set.signature})),
+        }))
+      );
+      const [jobEndSec, jobEndNs] = process.hrtime();
+      const {
+        attempts,
+        startTimeSec: workerStartSec,
+        startTimeNs: workerStartNs,
+        endTimeSec: workerEndSec,
+        endTimeNs: workerEndNs,
+        results,
+      } = workResult;
+
+      const batchRetries = attempts - 1;
+      const batchSigsSuccess = startedSetsSameMessage;
+      let successCount = 0;
+      const errorCount = 0;
+
+      // Un-wrap work package
+      for (let i = 0; i < jobs.length; i++) {
+        jobs[i].resolve(results[i]);
+        successCount += 1;
       }
-      this.bufferedJobs = null;
-      callInNextEventLoop(this.runJob);
+
+      const workerId = this.workerId++ % this.poolSize;
+      const workerJobTimeSec = workerEndSec - workerStartSec + (workerEndNs - workerStartNs) / 1e9;
+      const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
+      const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
+
+      this.metricsAddJobsFinished(
+        startedSetsSameMessage,
+        successCount,
+        errorCount,
+        batchRetries,
+        batchSigsSuccess,
+        workerId,
+        workerJobTimeSec,
+        latencyToWorkerSec,
+        latencyFromWorkerSec
+      );
+    } catch (e) {
+      // Worker communications should never reject
+      if (!this.closed) {
+        this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
+      }
+      // Reject all
+      for (const job of jobs) {
+        job.reject(e as Error);
+      }
     }
+
+    this.workersBusy--;
   };
 
-  private retryJobItemSameMessage(job: JobQueueItemSameMessage): void {
-    // Create new jobs for each pubkey set, and Promise.all all the results
-    for (const j of jobItemSameMessageToMultiSet(job)) {
-      if (j.opts.priority) {
-        this.jobs.unshift(j);
-      } else {
-        this.jobs.push(j);
-      }
-    }
-    this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
-    this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
+  private metricsAddJobsStarted(type: JobQueueItemType, jobsCount: number, setsCount: number): void {
+    this.metrics?.blsThreadPool.totalJobsGroupsStarted.inc(1);
+    this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.default}, jobsCount);
+    this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type: JobQueueItemType.default}, setsCount);
   }
 
-  /** For testing */
-  private async waitTillInitialized(): Promise<void> {}
+  private metricsAddJobsFinished(
+    startedSets: number,
+    successCount: number,
+    errorCount: number,
+    batchRetries: number,
+    batchSigsSuccess: number,
+    workerId: number,
+    workerJobTimeSec: number,
+    latencyToWorkerSec: number,
+    latencyFromWorkerSec: number
+  ): void {
+    this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSets);
+    this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
+    this.metrics?.blsThreadPool.latencyToWorker.observe(latencyToWorkerSec);
+    this.metrics?.blsThreadPool.latencyFromWorker.observe(latencyFromWorkerSec);
+    this.metrics?.blsThreadPool.successJobsSignatureSetsCount.inc(successCount);
+    this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
+    this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
+    this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
+  }
 }
 
 function getJobResultError(jobResult: WorkResultError | null, i: number): Error {

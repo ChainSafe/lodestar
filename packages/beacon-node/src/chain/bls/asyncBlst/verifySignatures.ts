@@ -1,4 +1,4 @@
-import {verifyAsync, verifyMultipleAggregateSignaturesAsync} from "@chainsafe/blst";
+import {Signature, verifyAsync, verifyMultipleAggregateSignaturesAsync} from "@chainsafe/blst";
 import {SignatureSet} from "./types.js";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
@@ -26,7 +26,7 @@ export async function verifySignatureSetsMaybeBatch(sets: SignatureSet[]): Promi
 
     // If too few signature sets verify them without batching
     for (const set of sets) {
-      if (!(await verifyAsync(set.message, set.publicKey, set.signature))) {
+      if (!(await verifyAsync(set.message, set.publicKey, Signature.fromBytes(set.signature, true)))) {
         return false;
       }
     }
