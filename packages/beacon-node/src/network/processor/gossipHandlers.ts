@@ -1,6 +1,6 @@
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
-import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock} from "@lodestar/types";
+import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -422,7 +422,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(
-            ssz.allForks[fork].SignedAggregateAndProof,
+            sszTypesFor(fork).SignedAggregateAndProof,
             signedAggregateAndProof,
             "gossip_reject"
           );
