@@ -61,6 +61,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
 
   async getDepositRootTreeAtIndex(depositIndex: number): Promise<DepositTree> {
     const depositRootTree = await this.getDepositRootTree();
+    depositRootTree.commit();
     return depositRootTree.sliceTo(depositIndex);
   }
 

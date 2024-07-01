@@ -29,6 +29,7 @@ import {
 } from "@lodestar/params";
 import * as primitiveSsz from "../primitive/sszTypes.js";
 import {ValidatorNodeStruct} from "./validator.js";
+import {ListValidatorType} from "./listValidator.js";
 
 const {
   Bytes32,
@@ -228,7 +229,7 @@ export const HistoricalBatchRoots = new ContainerType(
 export const Validator = ValidatorNodeStruct;
 
 // Export as stand-alone for direct tree optimizations
-export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
+export const Validators = new ListValidatorType(VALIDATOR_REGISTRY_LIMIT);
 // this ListUintNum64Type is used to cache Leaf Nodes of BeaconState.balances after epoch transition
 export const Balances = new ListUintNum64Type(VALIDATOR_REGISTRY_LIMIT);
 export const RandaoMixes = new VectorCompositeType(Bytes32, EPOCHS_PER_HISTORICAL_VECTOR);

@@ -124,6 +124,7 @@ function loadInactivityScores(
     if (newValidator - 1 < 0) {
       migratedState.inactivityScores = ssz.altair.InactivityScores.defaultViewDU();
     } else {
+      migratedState.inactivityScores.commit();
       migratedState.inactivityScores = migratedState.inactivityScores.sliceTo(newValidator - 1);
     }
   }
@@ -200,6 +201,7 @@ function loadValidators(
       modifiedValidators.push(validatorIndex);
     }
   } else {
+    migratedState.validators.commit();
     migratedState.validators = migratedState.validators.sliceTo(newValidatorCount - 1);
   }
   return modifiedValidators;

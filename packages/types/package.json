@@ -70,7 +70,9 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.15.1",
+    "@chainsafe/ssz": "file:../../../ssz/packages/ssz",
+    "@chainsafe/persistent-merkle-tree": "file:../../../ssz/packages/persistent-merkle-tree",
+    "@chainsafe/as-sha256": "file:../../../ssz/packages/as-sha256",
     "@lodestar/params": "^1.20.1",
     "ethereum-cryptography": "^2.0.0"
   },
