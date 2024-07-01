@@ -83,15 +83,6 @@ export type ProduceBlockV3Meta = ValueOf<typeof ProduceBlockV3MetaType> & {
   executionPayloadSource: ProducedBlockSource;
 };
 
-export const BlockContentsType = new ContainerType(
-  {
-    block: ssz.deneb.BeaconBlock,
-    kzgProofs: ssz.deneb.KZGProofs,
-    blobs: ssz.deneb.Blobs,
-  },
-  {jsonCase: "eth2"}
-);
-
 export const AttesterDutyType = new ContainerType(
   {
     /** The validator's public key, uniquely identifying them */
@@ -630,7 +621,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: WithVersion(
-          (fork) => (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
+          (fork) =>
+            (isForkBlobs(fork)
+              ? ssz.allForksBlobs[fork].BlockContents
+              : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
       },
@@ -693,7 +687,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             (executionPayloadBlinded
               ? getExecutionForkTypes(version).BlindedBeaconBlock
               : isForkBlobs(version)
-                ? BlockContentsType
+                ? ssz.allForksBlobs[version].BlockContents
                 : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
         ),
         meta: {
