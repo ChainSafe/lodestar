@@ -11,8 +11,10 @@ import {
   BeaconBlockBody,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  SignedBlockContents,
+  sszTypesFor,
 } from "@lodestar/types";
-import {ForkName, ForkPreExecution, ForkSeq, isForkExecution} from "@lodestar/params";
+import {ForkName, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
@@ -37,19 +39,10 @@ export const BlockHeadersResponseType = new ListCompositeType(BlockHeaderRespons
 export const RootResponseType = new ContainerType({
   root: ssz.Root,
 });
-export const SignedBlockContentsType = new ContainerType(
-  {
-    signedBlock: ssz.deneb.SignedBeaconBlock,
-    kzgProofs: ssz.deneb.KZGProofs,
-    blobs: ssz.deneb.Blobs,
-  },
-  {jsonCase: "eth2"}
-);
 
 export type BlockHeaderResponse = ValueOf<typeof BlockHeaderResponseType>;
 export type BlockHeadersResponse = ValueOf<typeof BlockHeadersResponseType>;
 export type RootResponse = ValueOf<typeof RootResponseType>;
-export type SignedBlockContents = ValueOf<typeof SignedBlockContentsType>;
 
 export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 
@@ -297,11 +290,12 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const slot = isSignedBlockContents(signedBlockOrContents)
             ? signedBlockOrContents.signedBlock.message.slot
             : signedBlockOrContents.message.slot;
+          const fork = config.getForkName(slot);
+
           return {
-            body:
-              config.getForkSeq(slot) < ForkSeq.deneb
-                ? config.getForkTypes(slot).SignedBeaconBlock.toJson(signedBlockOrContents as SignedBeaconBlock)
-                : SignedBlockContentsType.toJson(signedBlockOrContents as SignedBlockContents),
+            body: isForkBlobs(fork)
+              ? ssz.allForksBlobs[fork].SignedBlockContents.toJson(signedBlockOrContents as SignedBlockContents)
+              : sszTypesFor(fork).SignedBeaconBlock.toJson(signedBlockOrContents as SignedBeaconBlock),
             headers: {
               [MetaHeader.Version]: config.getForkName(slot),
             },
@@ -321,23 +315,22 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                 : (body as SignedBeaconBlock).message.slot
             );
           }
-          const forkSeq = config.forks[forkName].seq;
           return {
-            signedBlockOrContents:
-              forkSeq < ForkSeq.deneb
-                ? ssz[forkName].SignedBeaconBlock.fromJson(body)
-                : SignedBlockContentsType.fromJson(body),
+            signedBlockOrContents: isForkBlobs(forkName)
+              ? ssz.allForksBlobs[forkName].SignedBlockContents.fromJson(body)
+              : ssz[forkName].SignedBeaconBlock.fromJson(body),
           };
         },
         writeReqSsz: ({signedBlockOrContents}) => {
           const slot = isSignedBlockContents(signedBlockOrContents)
             ? signedBlockOrContents.signedBlock.message.slot
             : signedBlockOrContents.message.slot;
+          const fork = config.getForkName(slot);
+
           return {
-            body:
-              config.getForkSeq(slot) < ForkSeq.deneb
-                ? config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlockOrContents as SignedBeaconBlock)
-                : SignedBlockContentsType.serialize(signedBlockOrContents as SignedBlockContents),
+            body: isForkBlobs(fork)
+              ? ssz.allForksBlobs[fork].SignedBlockContents.serialize(signedBlockOrContents as SignedBlockContents)
+              : sszTypesFor(fork).SignedBeaconBlock.serialize(signedBlockOrContents as SignedBeaconBlock),
             headers: {
               [MetaHeader.Version]: config.getForkName(slot),
             },
@@ -345,12 +338,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         parseReqSsz: ({body, headers}) => {
           const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const forkSeq = config.forks[forkName].seq;
           return {
-            signedBlockOrContents:
-              forkSeq < ForkSeq.deneb
-                ? ssz[forkName].SignedBeaconBlock.deserialize(body)
-                : SignedBlockContentsType.deserialize(body),
+            signedBlockOrContents: isForkBlobs(forkName)
+              ? ssz.allForksBlobs[forkName].SignedBlockContents.deserialize(body)
+              : ssz[forkName].SignedBeaconBlock.deserialize(body),
           };
         },
         schema: {
@@ -371,25 +362,23 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const slot = isSignedBlockContents(signedBlockOrContents)
             ? signedBlockOrContents.signedBlock.message.slot
             : signedBlockOrContents.message.slot;
+          const fork = config.getForkName(slot);
           return {
-            body:
-              config.getForkSeq(slot) < ForkSeq.deneb
-                ? config.getForkTypes(slot).SignedBeaconBlock.toJson(signedBlockOrContents as SignedBeaconBlock)
-                : SignedBlockContentsType.toJson(signedBlockOrContents as SignedBlockContents),
+            body: isForkBlobs(fork)
+              ? ssz.allForksBlobs[fork].SignedBlockContents.toJson(signedBlockOrContents as SignedBlockContents)
+              : sszTypesFor(fork).SignedBeaconBlock.toJson(signedBlockOrContents as SignedBeaconBlock),
             headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
+              [MetaHeader.Version]: fork,
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqJson: ({body, headers, query}) => {
           const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const forkSeq = config.forks[forkName].seq;
           return {
-            signedBlockOrContents:
-              forkSeq < ForkSeq.deneb
-                ? ssz[forkName].SignedBeaconBlock.fromJson(body)
-                : SignedBlockContentsType.fromJson(body),
+            signedBlockOrContents: isForkBlobs(forkName)
+              ? ssz.allForksBlobs[forkName].SignedBlockContents.fromJson(body)
+              : ssz[forkName].SignedBeaconBlock.fromJson(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },
@@ -397,25 +386,24 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const slot = isSignedBlockContents(signedBlockOrContents)
             ? signedBlockOrContents.signedBlock.message.slot
             : signedBlockOrContents.message.slot;
+          const fork = config.getForkName(slot);
+
           return {
-            body:
-              config.getForkSeq(slot) < ForkSeq.deneb
-                ? config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlockOrContents as SignedBeaconBlock)
-                : SignedBlockContentsType.serialize(signedBlockOrContents as SignedBlockContents),
+            body: isForkBlobs(fork)
+              ? ssz.allForksBlobs[fork].SignedBlockContents.serialize(signedBlockOrContents as SignedBlockContents)
+              : sszTypesFor(fork).SignedBeaconBlock.serialize(signedBlockOrContents as SignedBeaconBlock),
             headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
+              [MetaHeader.Version]: fork,
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqSsz: ({body, headers, query}) => {
           const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const forkSeq = config.forks[forkName].seq;
           return {
-            signedBlockOrContents:
-              forkSeq < ForkSeq.deneb
-                ? ssz[forkName].SignedBeaconBlock.deserialize(body)
-                : SignedBlockContentsType.deserialize(body),
+            signedBlockOrContents: isForkBlobs(forkName)
+              ? ssz.allForksBlobs[forkName].SignedBlockContents.deserialize(body)
+              : ssz[forkName].SignedBeaconBlock.deserialize(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },

@@ -123,6 +123,8 @@ const typesByFork = {
     IndexedAttestationBigint: phase0.IndexedAttestationBigint,
     AttesterSlashing: phase0.AttesterSlashing,
     SignedAggregateAndProof: phase0.SignedAggregateAndProof,
+    BlockContents: deneb.BlockContents,
+    SignedBlockContents: deneb.SignedBlockContents,
   },
   [ForkName.electra]: {
     BeaconBlock: electra.BeaconBlock,
@@ -150,6 +152,8 @@ const typesByFork = {
     IndexedAttestationBigint: electra.IndexedAttestationBigint,
     AttesterSlashing: electra.AttesterSlashing,
     SignedAggregateAndProof: electra.SignedAggregateAndProof,
+    BlockContents: electra.BlockContents,
+    SignedBlockContents: electra.SignedBlockContents,
   },
 };
 
