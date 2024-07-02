@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import {PublicKey, verifyMultipleSignaturesSameMessageAsync} from "@chainsafe/blst";
+import {PublicKey, Signature, verifyMultipleSignaturesSameMessageAsync} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/index.js";
@@ -8,16 +8,18 @@ import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {chunkifyMaximizeChunkSize} from "../multithread/utils.js";
 import {defaultPoolSize} from "../multithread/poolSize.js";
 import {BlsWorkReq, BlsWorkResult, SignatureSet, WorkResult, WorkResultCode, WorkResultError} from "./types.js";
-import {JobQueueItemType} from "./jobItem.js";
 import {verifySignatureSetsMaybeBatch} from "./verifySignatures.js";
 import {BufferedJobQueue, JobItem} from "./jobQueue.js";
+
+export enum JobQueueItemType {
+  default = "default",
+  sameMessage = "same_message",
+}
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
   metrics: Metrics | null;
 };
-
-export type {JobQueueItemType};
 
 /**
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
@@ -73,8 +75,9 @@ type DefaultReq = {
 type DefaultRes = boolean;
 
 type SameMsgReq = {
-  sets: {publicKey: PublicKey; signature: Uint8Array}[];
-  message: Uint8Array;
+  pks: PublicKey[];
+  sigs: Signature[];
+  msg: Uint8Array;
 };
 type SameMsgRes = boolean[];
 
@@ -146,7 +149,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
           sets.map((set) => ({
             publicKey: getAggregatedPubkey(set),
             message: set.signingRoot.valueOf(),
-            signature: set.signature,
+            signature: Signature.fromBytes(set.signature, true),
           }))
         );
       } finally {
@@ -184,17 +187,29 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
    */
   async verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
-    message: Uint8Array,
+    msg: Uint8Array,
     opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {
     const results = await new Promise<boolean[]>((resolve, reject) => {
+      const pks = sets.map((set) => set.publicKey);
+      // validate signature = true, this is slow code on main thread so should only run with network thread mode (useWorker=true)
+      // For a node subscribing to all subnets, with 1 signature per validator per epoch it takes around 80s
+      // to deserialize 750_000 signatures per epoch
+      // cpu profile on main thread has 250s idle so this only works until we reach 3M validators
+      // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
+      // and not a problem in the near future
+      // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
+      const timer = this.metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
+      const sigs = sets.map((set) => Signature.fromBytes(set.signature, true));
+      timer?.();
       this.sameMsgJobs.enqueueJob({
         resolve,
         reject,
         addedTimeMs: Date.now(),
         opts,
-        sets,
-        message,
+        msg,
+        pks,
+        sigs,
       });
     });
 
@@ -234,7 +249,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
             sets: job.sets.map((set) => ({
               // this can throw, handled in the consumer code
               publicKey: getAggregatedPubkey(set, this.metrics),
-              signature: set.signature,
+              signature: Signature.fromBytes(set.signature, true),
               message: set.signingRoot,
             })),
           };
@@ -331,7 +346,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       for (const job of jobs) {
         this.metrics?.blsThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
         startedJobsSameMessage += 1;
-        startedSetsSameMessage += job.sets.length;
+        startedSetsSameMessage += job.sigs.length;
       }
 
       this.metricsAddJobsStarted(JobQueueItemType.sameMessage, startedJobsSameMessage, startedSetsSameMessage);
@@ -353,7 +368,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       for (let i = 0; i < jobs.length; i++) {
         if (!results[i]) {
           batchRetries++;
-          if (jobs[i].sets.length > 1) {
+          if (jobs[i].sigs.length > 1) {
             const [j0, j1] = splitSameMsgJob(jobs[i]);
             this.sameMsgJobs.enqueueJob(j0);
             this.sameMsgJobs.enqueueJob(j1);
@@ -361,7 +376,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
             jobs[i].resolve([true]);
           }
         } else {
-          jobs[i].resolve(Array.from({length: jobs[i].sets.length}, () => true));
+          jobs[i].resolve(Array.from({length: jobs[i].sigs.length}, () => true));
           successCount += 1;
         }
       }
@@ -429,19 +444,35 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
 function splitSameMsgJob(
   job: JobItem<SameMsgReq, SameMsgRes>
 ): [JobItem<SameMsgReq, SameMsgRes>, JobItem<SameMsgReq, SameMsgRes>] {
-  const sets = job.sets;
-  const half = Math.floor(sets.length / 2);
+  const half = Math.floor(job.sigs.length / 2);
 
-  return [
-    {
-      ...job,
-      sets: sets.slice(0, half),
-    },
-    {
-      ...job,
-      sets: sets.slice(half),
-    },
-  ];
+  const promises: Promise<SameMsgRes>[] = [];
+  let job0 = {} as JobItem<SameMsgReq, SameMsgRes>;
+  let job1 = {} as JobItem<SameMsgReq, SameMsgRes>;
+  promises.push(
+    new Promise<SameMsgRes>((resolve, reject) => {
+      job0 = {
+        ...job,
+        pks: job.pks.slice(0, half),
+        sigs: job.sigs.slice(0, half),
+        resolve,
+        reject,
+      };
+    })
+  );
+  promises.push(
+    new Promise<SameMsgRes>((resolve, reject) => {
+      job1 = {
+        ...job,
+        pks: job.pks.slice(half),
+        sigs: job.sigs.slice(half),
+        resolve,
+        reject,
+      };
+    })
+  );
+
+  return [job0, job1];
 }
 
 function getJobResultError(jobResult: WorkResultError | null, i: number): Error {
@@ -453,13 +484,7 @@ function getJobResultError(jobResult: WorkResultError | null, i: number): Error 
 async function verifyMultipleSignaturesSameMessages(jobs: SameMsgReq[]): Promise<boolean[]> {
   const results: boolean[] = [];
   for (const job of jobs) {
-    results.push(
-      await verifyMultipleSignaturesSameMessageAsync({
-        msg: job.message,
-        pks: job.sets.map((set) => set.publicKey),
-        sigs: job.sets.map((set) => set.signature),
-      })
-    );
+    results.push(await verifyMultipleSignaturesSameMessageAsync(job.msg, job.pks, job.sigs));
   }
   return results;
 }
