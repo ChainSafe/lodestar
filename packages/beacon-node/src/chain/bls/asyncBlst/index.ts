@@ -356,7 +356,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       const workerStartNs = workResults[0].startTimeNs;
       const workerEndSec = workResults[0].endTimeSec;
       const workerEndNs = workResults[0].endTimeNs;
-      const results = workResults.map((res) => res.results);
+      const results = workResults.map((res) => res.results.slice());
 
       const batchRetries = attempts - 1;
       const batchSigsSuccess = startedSetsSameMessage;
