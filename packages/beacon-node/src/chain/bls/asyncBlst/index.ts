@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import {PublicKey, verifyMultipleSignaturesSameMessagesWithRetriesAsync} from "@chainsafe/blst";
+import {PublicKey, verifyMultipleSignaturesSameMessageWithRetriesAsync, verifyMultipleSignaturesSameMessagesWithRetriesAsync} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/index.js";
@@ -341,22 +341,22 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       // Only downside is the job promise may be resolved twice, but that's not an issue
 
       const [jobStartSec, jobStartNs] = process.hrtime();
-      const workResult = await verifyMultipleSignaturesSameMessagesWithRetriesAsync(
-        jobs.map((job) => ({
-          msg: job.message,
-          pks: job.sets.map((set) => set.publicKey),
-          sigs: job.sets.map((set) => set.signature),
-        }))
+      const workResults = await Promise.all(
+        jobs.map((job) =>
+          verifyMultipleSignaturesSameMessageWithRetriesAsync({
+            msg: job.message,
+            pks: job.sets.map((set) => set.publicKey),
+            sigs: job.sets.map((set) => set.signature),
+          })
+        )
       );
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const {
-        attempts,
-        startTimeSec: workerStartSec,
-        startTimeNs: workerStartNs,
-        endTimeSec: workerEndSec,
-        endTimeNs: workerEndNs,
-        results,
-      } = workResult;
+      const attempts = workResults.reduce((acc, res) => acc + res.attempts, 0);
+      const workerStartSec = workResults[0].startTimeSec;
+      const workerStartNs = workResults[0].startTimeNs;
+      const workerEndSec = workResults[0].endTimeSec;
+      const workerEndNs = workResults[0].endTimeNs;
+      const results = workResults.map((res) => res.results);
 
       const batchRetries = attempts - 1;
       const batchSigsSuccess = startedSetsSameMessage;
