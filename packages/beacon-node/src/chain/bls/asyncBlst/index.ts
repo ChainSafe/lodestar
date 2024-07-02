@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import {PublicKey, verifyMultipleSignaturesSameMessageWithRetriesAsync, verifyMultipleSignaturesSameMessagesWithRetriesAsync} from "@chainsafe/blst";
+import {PublicKey, verifyMultipleSignaturesSameMessageAsync} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/index.js";
@@ -33,7 +33,7 @@ const MAX_SIGNATURE_SETS_PER_JOB = 128;
  * Limit the number of same message signature sets that can be batched together.
  * The real savings is within a single message, so it's better to keep this number low.
  */
-const MAX_SAME_MSG_SETS_PER_JOB = 16;
+const MAX_SAME_MSG_SETS_PER_JOB = 8;
 
 /**
  * If there are more than `MAX_BUFFERED_SIGS` buffered sigs, verify them immediately without waiting `MAX_BUFFER_WAIT_MS`.
@@ -341,38 +341,35 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       // Only downside is the job promise may be resolved twice, but that's not an issue
 
       const [jobStartSec, jobStartNs] = process.hrtime();
-      const workResults = await Promise.all(
-        jobs.map((job) =>
-          verifyMultipleSignaturesSameMessageWithRetriesAsync({
-            msg: job.message,
-            pks: job.sets.map((set) => set.publicKey),
-            sigs: job.sets.map((set) => set.signature),
-          })
-        )
-      );
+      const results = await verifyMultipleSignaturesSameMessages(jobs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const attempts = workResults.reduce((acc, res) => acc + res.attempts, 0);
-      const workerStartSec = workResults[0].startTimeSec;
-      const workerStartNs = workResults[0].startTimeNs;
-      const workerEndSec = workResults[0].endTimeSec;
-      const workerEndNs = workResults[0].endTimeNs;
-      const results = workResults.map((res) => res.results.slice());
 
-      const batchRetries = attempts - 1;
+      let batchRetries = 0;
       const batchSigsSuccess = startedSetsSameMessage;
       let successCount = 0;
       const errorCount = 0;
 
       // Un-wrap work package
       for (let i = 0; i < jobs.length; i++) {
-        jobs[i].resolve(results[i]);
-        successCount += 1;
+        if (!results[i]) {
+          batchRetries++;
+          if (jobs[i].sets.length > 1) {
+            const [j0, j1] = splitSameMsgJob(jobs[i]);
+            this.sameMsgJobs.enqueueJob(j0);
+            this.sameMsgJobs.enqueueJob(j1);
+          } else {
+            jobs[i].resolve([true]);
+          }
+        } else {
+          jobs[i].resolve(Array.from({length: jobs[i].sets.length}, () => true));
+          successCount += 1;
+        }
       }
 
       const workerId = this.workerId++ % this.poolSize;
-      const workerJobTimeSec = workerEndSec - workerStartSec + (workerEndNs - workerStartNs) / 1e9;
-      const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
-      const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
+      const workerJobTimeSec = jobEndSec - jobStartSec + (jobEndNs - jobStartNs) / 1e9;
+      const latencyToWorkerSec = 0;
+      const latencyFromWorkerSec = 0;
 
       this.metricsAddJobsFinished(
         JobQueueItemType.sameMessage,
@@ -429,10 +426,42 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
   }
 }
 
+function splitSameMsgJob(
+  job: JobItem<SameMsgReq, SameMsgRes>
+): [JobItem<SameMsgReq, SameMsgRes>, JobItem<SameMsgReq, SameMsgRes>] {
+  const sets = job.sets;
+  const half = Math.floor(sets.length / 2);
+
+  return [
+    {
+      ...job,
+      sets: sets.slice(0, half),
+    },
+    {
+      ...job,
+      sets: sets.slice(half),
+    },
+  ];
+}
+
 function getJobResultError(jobResult: WorkResultError | null, i: number): Error {
   const workerError = jobResult ? Error(jobResult.error.message) : Error(`No jobResult for index ${i}`);
   if (jobResult?.error?.stack) workerError.stack = jobResult.error.stack;
   return workerError;
+}
+
+async function verifyMultipleSignaturesSameMessages(jobs: SameMsgReq[]): Promise<boolean[]> {
+  const results: boolean[] = [];
+  for (const job of jobs) {
+    results.push(
+      await verifyMultipleSignaturesSameMessageAsync({
+        msg: job.message,
+        pks: job.sets.map((set) => set.publicKey),
+        sigs: job.sets.map((set) => set.signature),
+      })
+    );
+  }
+  return results;
 }
 
 async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
