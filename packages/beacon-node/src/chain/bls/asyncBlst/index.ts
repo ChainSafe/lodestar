@@ -102,12 +102,14 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       executeJobs: this.executeDefaultJobs,
       maxWeightPerBatch: MAX_SIGNATURE_SETS_PER_JOB,
       maxBufferWaitMs: MAX_BUFFER_WAIT_MS,
+      maxBufferWeight: MAX_BUFFERED_SIGS,
     });
     this.sameMsgJobs = new BufferedJobQueue({
       itemWeight: () => 1,
       executeJobs: this.executeSameMsgJobs,
       maxWeightPerBatch: MAX_SAME_MSG_SETS_PER_JOB,
       maxBufferWaitMs: MAX_BUFFER_WAIT_MS,
+      maxBufferWeight: MAX_SAME_MSG_SETS_PER_JOB,
     });
 
     if (metrics) {
@@ -287,6 +289,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
       this.metricsAddJobsFinished(
+        JobQueueItemType.default,
         startedSetsDefault,
         successCount,
         errorCount,
@@ -371,6 +374,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
       this.metricsAddJobsFinished(
+        JobQueueItemType.sameMessage,
         startedSetsSameMessage,
         successCount,
         errorCount,
@@ -397,11 +401,12 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
 
   private metricsAddJobsStarted(type: JobQueueItemType, jobsCount: number, setsCount: number): void {
     this.metrics?.blsThreadPool.totalJobsGroupsStarted.inc(1);
-    this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.default}, jobsCount);
-    this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type: JobQueueItemType.default}, setsCount);
+    this.metrics?.blsThreadPool.totalJobsStarted.inc({type}, jobsCount);
+    this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type}, setsCount);
   }
 
   private metricsAddJobsFinished(
+    type: JobQueueItemType,
     startedSets: number,
     successCount: number,
     errorCount: number,

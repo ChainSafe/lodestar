@@ -31,6 +31,10 @@ interface JobQueueInit<Req, Res> {
   executeJobs: (items: JobItem<Req, Res>[]) => void;
   maxWeightPerBatch: number;
   maxBufferWaitMs: number;
+  /**
+   * If the buffer reaches `maxBufferWeight`, add buffered jobs without waiting `maxBufferWaitMs`
+   */
+  maxBufferWeight: number;
 }
 
 /**
@@ -121,7 +125,7 @@ export class BufferedJobQueue<Req, Res> {
       const jobs = job.opts.priority ? this.bufferedJobs.prioritizedJobs : this.bufferedJobs.jobs;
       jobs.push(job);
       this.bufferedJobs.weight += this.init.itemWeight(job);
-      if (this.bufferedJobs.weight > this.init.maxWeightPerBatch) {
+      if (this.bufferedJobs.weight > this.init.maxBufferWeight) {
         clearTimeout(this.bufferedJobs.timeout);
         this.runBufferedJobs();
       }
