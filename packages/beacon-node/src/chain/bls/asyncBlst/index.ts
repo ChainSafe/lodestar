@@ -344,7 +344,8 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       const workResult = await verifyMultipleSignaturesSameMessagesWithRetriesAsync(
         jobs.map((job) => ({
           msg: job.message,
-          sets: job.sets.map((set) => ({pk: set.publicKey, sig: set.signature})),
+          pks: job.sets.map((set) => set.publicKey),
+          sigs: job.sets.map((set) => set.signature),
         }))
       );
       const [jobEndSec, jobEndNs] = process.hrtime();
