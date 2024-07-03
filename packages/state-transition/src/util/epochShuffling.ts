@@ -13,6 +13,13 @@ import {unshuffleList} from "./shuffle.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 
+export interface IShufflingCache {
+  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null;
+  getOrBuild(epoch: Epoch, decisionRoot: RootHex, activeIndices: ValidatorIndex[]): EpochShuffling;
+  build(epoch: Epoch, decisionRoot: RootHex, activeIndices: ValidatorIndex[]): void;
+  set(shuffling: EpochShuffling, decisionRoot: RootHex): void;
+}
+
 /**
  * Readonly interface for EpochShuffling.
  */
