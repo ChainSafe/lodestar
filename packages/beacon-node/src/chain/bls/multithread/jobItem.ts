@@ -1,4 +1,4 @@
-import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures} from "@chainsafe/blst";
+import {PublicKey, aggregateWithRandomness} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
@@ -69,15 +69,15 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map((set) => Signature.fromBytes(set.signature, true));
+      const {pk, sig} = aggregateWithRandomness(job.sets.map((set) => ({pk: set.publicKey, sig: set.signature})));
       timer?.();
 
       return {
         opts: job.opts,
         sets: [
           {
-            publicKey: aggregatePublicKeys(job.sets.map((set) => set.publicKey)).toBytes(),
-            signature: aggregateSignatures(signatures).toBytes(),
+            publicKey: pk.toBytes(),
+            signature: sig.toBytes(),
             message: job.message,
           },
         ],
