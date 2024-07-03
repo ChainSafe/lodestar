@@ -147,7 +147,7 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       try {
         return await verifySignatureSetsMaybeBatch(
           sets.map((set) => ({
-            publicKey: getAggregatedPubkey(set),
+            publicKey: getAggregatedPubkey(set, this.metrics),
             message: set.signingRoot.valueOf(),
             signature: Signature.fromBytes(set.signature, true),
           }))
