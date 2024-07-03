@@ -72,53 +72,6 @@ export class ShufflingCache {
   }
 
   /**
-   * Extract shuffling from state and add to cache
-   */
-  processState(state: CachedBeaconStateAllForks, shufflingEpoch: Epoch): EpochShuffling {
-    const decisionBlockHex = getDecisionBlock(state, shufflingEpoch);
-    let shuffling: EpochShuffling;
-    switch (shufflingEpoch) {
-      case state.epochCtx.nextShuffling.epoch:
-        shuffling = state.epochCtx.nextShuffling;
-        break;
-      case state.epochCtx.currentShuffling.epoch:
-        shuffling = state.epochCtx.currentShuffling;
-        break;
-      case state.epochCtx.previousShuffling.epoch:
-        shuffling = state.epochCtx.previousShuffling;
-        break;
-      default:
-        throw new Error(`Shuffling not found from state ${state.slot} for epoch ${shufflingEpoch}`);
-    }
-
-    let cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionBlockHex);
-    if (cacheItem !== undefined) {
-      // update existing promise
-      if (isPromiseCacheItem(cacheItem)) {
-        // unblock consumers of this promise
-        cacheItem.resolveFn(shuffling);
-        // then update item type to shuffling
-        cacheItem = {
-          type: CacheItemType.shuffling,
-          shuffling,
-        };
-        this.add(shufflingEpoch, decisionBlockHex, cacheItem);
-        // we updated type to CacheItemType.shuffling so the above fields are not used anyway
-        this.metrics?.shufflingCache.processStateUpdatePromise.inc();
-      } else {
-        // ShufflingCacheItem, do nothing
-        this.metrics?.shufflingCache.processStateNoOp.inc();
-      }
-    } else {
-      // not found, new shuffling
-      this.add(shufflingEpoch, decisionBlockHex, {type: CacheItemType.shuffling, shuffling});
-      this.metrics?.shufflingCache.processStateInsertNew.inc();
-    }
-
-    return shuffling;
-  }
-
-  /**
    * Insert a promise to make sure we don't regen state for the same shuffling.
    * Bound by MAX_SHUFFLING_PROMISE to make sure our node does not blow up.
    */

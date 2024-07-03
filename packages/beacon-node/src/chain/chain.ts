@@ -254,9 +254,6 @@ export class BeaconChain implements IBeaconChain {
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousShuffling.epoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.currentShuffling.epoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextShuffling.epoch);
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
