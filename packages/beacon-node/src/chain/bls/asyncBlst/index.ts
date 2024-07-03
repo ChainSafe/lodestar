@@ -4,7 +4,7 @@ import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
-import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
+import {getAggregatedPubkeyAsync, getAggregatedPubkeysCount} from "../utils.js";
 import {chunkifyMaximizeChunkSize} from "../multithread/utils.js";
 import {defaultPoolSize} from "../multithread/poolSize.js";
 import {BlsWorkReq, BlsWorkResult, SignatureSet, WorkResult, WorkResultCode, WorkResultError} from "./types.js";
@@ -146,11 +146,13 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
       const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
       try {
         return await verifySignatureSetsMaybeBatch(
-          sets.map((set) => ({
-            publicKey: getAggregatedPubkey(set, this.metrics),
-            message: set.signingRoot.valueOf(),
-            signature: Signature.fromBytes(set.signature, true),
-          }))
+          await Promise.all(
+            sets.map(async (set) => ({
+              publicKey: await getAggregatedPubkeyAsync(set, this.metrics),
+              message: set.signingRoot.valueOf(),
+              signature: Signature.fromBytes(set.signature, true),
+            }))
+          )
         );
       } finally {
         if (timer) timer();
@@ -246,12 +248,14 @@ export class BlsAsyncBlstVerifier implements IBlsVerifier {
           // Pubkey aggregation is deferred here
           workReq = {
             opts: job.opts,
-            sets: job.sets.map((set) => ({
-              // this can throw, handled in the consumer code
-              publicKey: getAggregatedPubkey(set, this.metrics),
-              signature: Signature.fromBytes(set.signature, true),
-              message: set.signingRoot,
-            })),
+            sets: await Promise.all(
+              job.sets.map(async (set) => ({
+                // this can throw, handled in the consumer code
+                publicKey: await getAggregatedPubkeyAsync(set, this.metrics),
+                signature: Signature.fromBytes(set.signature, true),
+                message: set.signingRoot,
+              }))
+            ),
           };
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: JobQueueItemType.default});
