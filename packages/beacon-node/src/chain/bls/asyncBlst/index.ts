@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import {PublicKey, Signature, verifyMultipleSignaturesSameMessageAsync} from "@chainsafe/blst";
+import {PublicKey, Signature, verifyMultipleSignaturesSameMessage} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/index.js";
@@ -484,7 +484,7 @@ function getJobResultError(jobResult: WorkResultError | null, i: number): Error 
 async function verifyMultipleSignaturesSameMessages(jobs: SameMsgReq[]): Promise<boolean[]> {
   const results: boolean[] = [];
   for (const job of jobs) {
-    results.push(await verifyMultipleSignaturesSameMessageAsync(job.msg, job.pks, job.sigs));
+    results.push(verifyMultipleSignaturesSameMessage(job.msg, job.pks, job.sigs));
   }
   return results;
 }
