@@ -1,4 +1,4 @@
-import {verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
+import {verify, verifyMultipleAggregateSignaturesAsync} from "@chainsafe/blst";
 import {SignatureSet} from "./types.js";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
@@ -10,7 +10,7 @@ const MIN_SET_COUNT_TO_BATCH = 2;
 export async function verifySignatureSetsMaybeBatch(sets: SignatureSet[]): Promise<boolean> {
   try {
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return verifyMultipleAggregateSignatures(
+      return await verifyMultipleAggregateSignaturesAsync(
         sets.map((s) => ({
           pk: s.publicKey,
           msg: s.message,
