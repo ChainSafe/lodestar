@@ -13,6 +13,7 @@ import {
   PubkeyIndexMap,
   EpochShuffling,
   computeEndSlotAtEpoch,
+  getShufflingDecisionBlock,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -890,7 +891,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // resolve the promise to unblock other calls of the same epoch and dependent root
-    return this.shufflingCache.processState(state, attEpoch);
+    return this.shufflingCache.get(attEpoch, getShufflingDecisionBlock(state, attEpoch));
   }
 
   /**

@@ -1,10 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
-import {Epoch, RootHex, ssz} from "@lodestar/types";
-import {MapDef, pruneSetToMax} from "@lodestar/utils";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {BeaconStateAllForks, EpochShuffling, IShufflingCache, computeEpochShuffling} from "@lodestar/state-transition";
+import {Epoch, RootHex} from "@lodestar/types";
+import {LodestarError, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
-import {computeAnchorCheckpoint} from "./initState.js";
 
 /**
  * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
@@ -48,7 +45,7 @@ export type ShufflingCacheOpts = {
  * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
  * - skip computing shuffling when loading state bytes from disk
  */
-export class ShufflingCache {
+export class ShufflingCache implements IShufflingCache {
   /** LRU cache implemented as a map, pruned every time we add an item */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, CacheItem>> = new MapDef(
     () => new Map<RootHex, CacheItem>()
@@ -106,7 +103,7 @@ export class ShufflingCache {
    * If there's a promise, it means we are computing the same shuffling, so we wait for the promise to resolve.
    * Return null if we don't have a shuffling for this epoch and dependentRootHex.
    */
-  async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
+  async getShufflingOrNull(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
     if (cacheItem === undefined) {
       return null;
@@ -120,8 +117,20 @@ export class ShufflingCache {
     }
   }
 
+  async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling> {
+    const item = await this.getShufflingOrNull(shufflingEpoch, decisionRootHex);
+    if (!item) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
+        epoch: shufflingEpoch,
+        decisionRoot: decisionRootHex,
+      });
+    }
+    return item;
+  }
+
   /**
-   * Same to get() function but synchronous.
+   * Same to getShufflingOrNull() function but synchronous.
    */
   getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
@@ -135,6 +144,56 @@ export class ShufflingCache {
 
     // ignore promise
     return null;
+  }
+
+  getOrBuildSync(
+    epoch: number,
+    decisionRoot: string,
+    state: BeaconStateAllForks,
+    activeIndices: number[]
+  ): EpochShuffling {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
+    if (cacheItem && isShufflingCacheItem(cacheItem)) {
+      // this.metrics?.shufflingCache.cacheHitInEpochTransition();
+      return cacheItem.shuffling;
+    }
+    // if (cacheItem) {
+    //   this.metrics?.shufflingCache.cacheMissInEpochTransition();
+    // } else {
+    //   this.metrics?.shufflingCache.shufflingPromiseNotResolvedInEpochTransition();
+    // }
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    this.add(epoch, decisionRoot, {
+      type: CacheItemType.shuffling,
+      shuffling,
+    });
+    return shuffling;
+  }
+
+  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): void {
+    let resolveFn: (shuffling: EpochShuffling) => void = () => {};
+    this.add(epoch, decisionRoot, {
+      type: CacheItemType.promise,
+      resolveFn,
+      promise: new Promise<EpochShuffling>((resolve) => {
+        resolveFn = resolve;
+      }),
+    });
+    setTimeout(() => {
+      const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+      this.add(epoch, decisionRoot, {
+        type: CacheItemType.shuffling,
+        shuffling,
+      });
+    }, 100);
+  }
+
+  set(shuffling: EpochShuffling, decisionRoot: string): void {
+    const cacheItem: ShufflingCacheItem = {
+      shuffling,
+      type: CacheItemType.shuffling,
+    };
+    this.add(shuffling.epoch, decisionRoot, cacheItem);
   }
 
   private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
@@ -151,13 +210,14 @@ function isPromiseCacheItem(item: CacheItem): item is PromiseCacheItem {
   return item.type === CacheItemType.promise;
 }
 
-/**
- * Get the shuffling decision block root for the given epoch of given state
- *   - Special case close to genesis block, return the genesis block root
- *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
- */
-function getDecisionBlock(state: CachedBeaconStateAllForks, epoch: Epoch): RootHex {
-  return state.slot > GENESIS_SLOT
-    ? getShufflingDecisionBlock(state, epoch)
-    : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(state.config, state).blockHeader));
+export enum ShufflingCacheErrorCode {
+  NO_SHUFFLING_FOUND = "SHUFFLING_CACHE_ERROR_NO_SHUFFLING_FOUND",
 }
+
+type ShufflingCacheErrorType = {
+  code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND;
+  epoch: Epoch;
+  decisionRoot: RootHex;
+};
+
+export class ShufflingCacheError extends LodestarError<ShufflingCacheErrorType> {}

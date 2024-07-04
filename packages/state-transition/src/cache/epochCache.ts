@@ -36,7 +36,7 @@ import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalanc
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
-import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
@@ -577,14 +577,14 @@ export class EpochCache {
 
     this.currentDecisionRoot = this.nextDecisionRoot;
     this.currentShuffling = this.shufflingCache
-      ? this.shufflingCache.getOrBuild(this.nextEpoch, this.nextDecisionRoot, this.nextActiveIndices)
+      ? this.shufflingCache.getOrBuildSync(this.nextEpoch, this.nextDecisionRoot, state, this.nextActiveIndices)
       : computeEpochShuffling(state, this.nextActiveIndices, this.nextEpoch);
 
     const currentEpoch = this.nextEpoch;
     this.nextShuffling = null;
     this.nextDecisionRoot = getShufflingDecisionBlock(state, currentEpoch + 1);
     this.nextActiveIndices = epochTransitionCache.nextEpochShufflingActiveValidatorIndices;
-    this.shufflingCache?.build(currentEpoch + 1, this.nextDecisionRoot, this.nextActiveIndices);
+    this.shufflingCache?.build(currentEpoch + 1, this.nextDecisionRoot, state, this.nextActiveIndices);
 
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;

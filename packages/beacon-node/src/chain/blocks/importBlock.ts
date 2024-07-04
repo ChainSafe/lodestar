@@ -65,7 +65,6 @@ export async function importBlock(
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(blockSlot);
-  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);

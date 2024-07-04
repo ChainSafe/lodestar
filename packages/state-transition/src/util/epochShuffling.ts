@@ -15,8 +15,13 @@ import {getBlockRootAtSlot} from "./blockRoot.js";
 
 export interface IShufflingCache {
   getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null;
-  getOrBuild(epoch: Epoch, decisionRoot: RootHex, activeIndices: ValidatorIndex[]): EpochShuffling;
-  build(epoch: Epoch, decisionRoot: RootHex, activeIndices: ValidatorIndex[]): void;
+  getOrBuildSync(
+    epoch: Epoch,
+    decisionRoot: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ValidatorIndex[]
+  ): EpochShuffling;
+  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void;
   set(shuffling: EpochShuffling, decisionRoot: RootHex): void;
 }
 
