@@ -22,6 +22,7 @@ import {
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {EpochCacheOpts} from "../../src/cache/epochCache.js";
+import {MockShufflingCache} from "./mockShufflingCache.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -94,6 +95,7 @@ export function generateCachedState(
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
+    shufflingCache: undefined,
   });
 }
 
@@ -109,6 +111,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
       // This is a test state, there's no need to have a global shared cache of keys
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],
+      shufflingCache: new MockShufflingCache(),
     },
     opts
   );

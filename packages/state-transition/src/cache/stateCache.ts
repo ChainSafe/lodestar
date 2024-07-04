@@ -164,7 +164,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
 export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
-  shufflingCache: IShufflingCache,
+  shufflingCache: IShufflingCache, // should not be optional because this is used during node operation
   opts?: EpochCacheOpts,
   seedValidatorsBytes?: Uint8Array
 ): T {

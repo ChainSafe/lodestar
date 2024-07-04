@@ -12,6 +12,7 @@ describe("CachedBeaconState", () => {
       config: createBeaconConfig(config, emptyState.genesisValidatorsRoot),
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],
+      shufflingCache: undefined,
     });
   });
 });
