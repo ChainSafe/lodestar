@@ -149,8 +149,10 @@ export class HttpClient implements IHttpClient {
 
       if (init.retries > 0) {
         return this.requestWithRetries(definition, args, init);
-      } else {
+      } else if (init.requestWireFormat === WireFormat.ssz) {
         return this.requestFallbackToJson(definition, args, init);
+      } else {
+        return this._request(definition, args, init);
       }
     } else {
       return this.requestWithFallbacks(definition, args, localInit);
@@ -201,7 +203,14 @@ export class HttpClient implements IHttpClient {
             }
             const init = mergeInits(definition, urlInit, localInit);
 
-            const requestMethod = (init.retries > 0 ? this.requestWithRetries : this.requestFallbackToJson).bind(this);
+            const requestMethod =
+              init.retries > 0
+                ? this.requestWithRetries
+                : init.requestWireFormat === WireFormat.ssz
+                  ? this.requestFallbackToJson
+                  : this._request;
+
+            requestMethod.bind(this);
 
             requestMethod(definition, args, init).then(
               async (res) => {
@@ -270,12 +279,13 @@ export class HttpClient implements IHttpClient {
     args: E["args"],
     init: ApiRequestInitRequired
   ): Promise<ApiResponse<E>> {
-    const {retries, retryDelay, signal} = init;
+    const {requestWireFormat, retries, retryDelay, signal} = init;
     const routeId = definition.operationId;
+    const requestMethod = requestWireFormat === WireFormat.ssz ? this.requestFallbackToJson : this._request;
 
     return retry(
       async (attempt) => {
-        const res = await this.requestFallbackToJson(definition, args, init);
+        const res = await requestMethod.bind(this)(definition, args, init);
         if (!res.ok && attempt <= retries) {
           throw res.error();
         }
