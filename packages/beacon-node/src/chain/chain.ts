@@ -254,7 +254,20 @@ export class BeaconChain implements IBeaconChain {
             config,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
+            shufflingCache: this.shufflingCache,
           });
+    // If shufflingCache was not passed to EpochCache, add it now and cache shuffling from context. Happens in most
+    // situations including checkpoint sync
+    if (!cachedState.epochCtx.shufflingCache) {
+      cachedState.epochCtx.shufflingCache = this.shufflingCache;
+      this.shufflingCache.set(cachedState.epochCtx.currentShuffling, cachedState.epochCtx.currentDecisionRoot);
+      if (cachedState.epochCtx.currentShuffling !== cachedState.epochCtx.previousShuffling) {
+        this.shufflingCache.set(cachedState.epochCtx.previousShuffling, cachedState.epochCtx.previousDecisionRoot);
+      }
+      if (cachedState.epochCtx.nextShuffling) {
+        this.shufflingCache.set(cachedState.epochCtx.nextShuffling, cachedState.epochCtx.nextDecisionRoot);
+      }
+    }
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
