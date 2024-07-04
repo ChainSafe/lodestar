@@ -1,6 +1,7 @@
 import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
+import {IShufflingCache} from "../util/epochShuffling.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {
   BeaconStateAllForks,
@@ -163,6 +164,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
 export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
+  shufflingCache: IShufflingCache,
   opts?: EpochCacheOpts,
   seedValidatorsBytes?: Uint8Array
 ): T {
@@ -188,6 +190,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
       config: cachedSeedState.config,
       pubkey2index,
       index2pubkey,
+      shufflingCache,
     },
     {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;
