@@ -203,14 +203,13 @@ export class HttpClient implements IHttpClient {
             }
             const init = mergeInits(definition, urlInit, localInit);
 
-            const requestMethod =
+            const requestMethod = (
               init.retries > 0
                 ? this.requestWithRetries
                 : init.requestWireFormat === WireFormat.ssz
                   ? this.requestFallbackToJson
-                  : this._request;
-
-            requestMethod.bind(this);
+                  : this._request
+            ).bind(this);
 
             requestMethod(definition, args, init).then(
               async (res) => {
