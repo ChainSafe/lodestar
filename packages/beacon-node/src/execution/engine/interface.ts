@@ -89,6 +89,8 @@ export type VersionedHashes = Uint8Array[];
  * - Integrated code into the same binary
  */
 export interface IExecutionEngine {
+  readonly state: ExecutionEngineState;
+
   payloadIdCache: PayloadIdCache;
   /**
    * A state transition function which applies changes to the self.execution_state.
@@ -146,6 +148,4 @@ export interface IExecutionEngine {
   getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
-
-  getState(): ExecutionEngineState;
 }
