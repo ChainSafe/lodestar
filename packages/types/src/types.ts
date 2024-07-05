@@ -7,11 +7,7 @@ import {ts as deneb} from "./deneb/index.js";
 import {Slot} from "./primitive/types.js";
 
 export * from "./primitive/types.js";
-export {ts as phase0} from "./phase0/index.js";
-export {ts as altair} from "./altair/index.js";
-export {ts as bellatrix} from "./bellatrix/index.js";
-export {ts as capella} from "./capella/index.js";
-export {ts as deneb} from "./deneb/index.js";
+export type {phase0, altair, bellatrix, capella, deneb};
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
@@ -25,117 +21,22 @@ export enum ProducedBlockSource {
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
 
+type MergeTypes<D extends Record<string, unknown>, U extends Record<string, unknown>> = {
+  [K in keyof D | keyof U]: K extends keyof U ? U[K] : K extends keyof D ? D[K] : never;
+};
+
+type phase0Types = phase0;
+type altairFullTypes = MergeTypes<phase0, altair>;
+type bellatrixFullTypes = MergeTypes<altairFullTypes, bellatrix>;
+type capellaFullTypes = MergeTypes<bellatrixFullTypes, capella>;
+type denebFullTypes = MergeTypes<capellaFullTypes, deneb>;
+
 type TypesByFork = {
-  [ForkName.phase0]: {
-    BeaconBlockHeader: phase0.BeaconBlockHeader;
-    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: phase0.BeaconBlock;
-    BeaconBlockBody: phase0.BeaconBlockBody;
-    BeaconState: phase0.BeaconState;
-    SignedBeaconBlock: phase0.SignedBeaconBlock;
-    Metadata: phase0.Metadata;
-  };
-  [ForkName.altair]: {
-    BeaconBlockHeader: phase0.BeaconBlockHeader;
-    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: altair.BeaconBlock;
-    BeaconBlockBody: altair.BeaconBlockBody;
-    BeaconState: altair.BeaconState;
-    SignedBeaconBlock: altair.SignedBeaconBlock;
-    Metadata: altair.Metadata;
-    LightClientHeader: altair.LightClientHeader;
-    LightClientBootstrap: altair.LightClientBootstrap;
-    LightClientUpdate: altair.LightClientUpdate;
-    LightClientFinalityUpdate: altair.LightClientFinalityUpdate;
-    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate;
-    LightClientStore: altair.LightClientStore;
-    SyncCommittee: altair.SyncCommittee;
-    SyncAggregate: altair.SyncAggregate;
-  };
-  [ForkName.bellatrix]: {
-    BeaconBlockHeader: phase0.BeaconBlockHeader;
-    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: bellatrix.BeaconBlock;
-    BeaconBlockBody: bellatrix.BeaconBlockBody;
-    BeaconState: bellatrix.BeaconState;
-    SignedBeaconBlock: bellatrix.SignedBeaconBlock;
-    Metadata: altair.Metadata;
-    LightClientHeader: altair.LightClientHeader;
-    LightClientBootstrap: altair.LightClientBootstrap;
-    LightClientUpdate: altair.LightClientUpdate;
-    LightClientFinalityUpdate: altair.LightClientFinalityUpdate;
-    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate;
-    LightClientStore: altair.LightClientStore;
-    BlindedBeaconBlock: bellatrix.BlindedBeaconBlock;
-    BlindedBeaconBlockBody: bellatrix.BlindedBeaconBlockBody;
-    SignedBlindedBeaconBlock: bellatrix.SignedBlindedBeaconBlock;
-    ExecutionPayload: bellatrix.ExecutionPayload;
-    ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader;
-    BuilderBid: bellatrix.BuilderBid;
-    SignedBuilderBid: bellatrix.SignedBuilderBid;
-    SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
-    SyncCommittee: altair.SyncCommittee;
-    SyncAggregate: altair.SyncAggregate;
-  };
-  [ForkName.capella]: {
-    BeaconBlockHeader: phase0.BeaconBlockHeader;
-    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: capella.BeaconBlock;
-    BeaconBlockBody: capella.BeaconBlockBody;
-    BeaconState: capella.BeaconState;
-    SignedBeaconBlock: capella.SignedBeaconBlock;
-    Metadata: altair.Metadata;
-    LightClientHeader: capella.LightClientHeader;
-    LightClientBootstrap: capella.LightClientBootstrap;
-    LightClientUpdate: capella.LightClientUpdate;
-    LightClientFinalityUpdate: capella.LightClientFinalityUpdate;
-    LightClientOptimisticUpdate: capella.LightClientOptimisticUpdate;
-    LightClientStore: capella.LightClientStore;
-    BlindedBeaconBlock: capella.BlindedBeaconBlock;
-    BlindedBeaconBlockBody: capella.BlindedBeaconBlockBody;
-    SignedBlindedBeaconBlock: capella.SignedBlindedBeaconBlock;
-    ExecutionPayload: capella.ExecutionPayload;
-    ExecutionPayloadHeader: capella.ExecutionPayloadHeader;
-    BuilderBid: capella.BuilderBid;
-    SignedBuilderBid: capella.SignedBuilderBid;
-    SSEPayloadAttributes: capella.SSEPayloadAttributes;
-    SyncCommittee: altair.SyncCommittee;
-    SyncAggregate: altair.SyncAggregate;
-  };
-  [ForkName.deneb]: {
-    BeaconBlockHeader: phase0.BeaconBlockHeader;
-    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: deneb.BeaconBlock;
-    BeaconBlockBody: deneb.BeaconBlockBody;
-    BeaconState: deneb.BeaconState;
-    SignedBeaconBlock: deneb.SignedBeaconBlock;
-    Metadata: altair.Metadata;
-    LightClientHeader: deneb.LightClientHeader;
-    LightClientBootstrap: deneb.LightClientBootstrap;
-    LightClientUpdate: deneb.LightClientUpdate;
-    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate;
-    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate;
-    LightClientStore: deneb.LightClientStore;
-    BlindedBeaconBlock: deneb.BlindedBeaconBlock;
-    BlindedBeaconBlockBody: deneb.BlindedBeaconBlockBody;
-    SignedBlindedBeaconBlock: deneb.SignedBlindedBeaconBlock;
-    ExecutionPayload: deneb.ExecutionPayload;
-    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
-    BuilderBid: deneb.BuilderBid;
-    SignedBuilderBid: deneb.SignedBuilderBid;
-    SSEPayloadAttributes: deneb.SSEPayloadAttributes;
-    BlockContents: {block: BeaconBlock<ForkName.deneb>; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
-    SignedBlockContents: {
-      signedBlock: SignedBeaconBlock<ForkName.deneb>;
-      kzgProofs: deneb.KZGProofs;
-      blobs: deneb.Blobs;
-    };
-    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
-    BlobsBundle: deneb.BlobsBundle;
-    Contents: deneb.Contents;
-    SyncCommittee: altair.SyncCommittee;
-    SyncAggregate: altair.SyncAggregate;
-  };
+  [ForkName.phase0]: phase0Types;
+  [ForkName.altair]: altairFullTypes;
+  [ForkName.bellatrix]: bellatrixFullTypes;
+  [ForkName.capella]: capellaFullTypes;
+  [ForkName.deneb]: denebFullTypes;
 };
 
 export type TypesFor<F extends ForkName, K extends keyof TypesByFork[F] | void = void> = K extends void

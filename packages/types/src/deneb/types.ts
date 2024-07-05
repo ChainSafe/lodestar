@@ -51,4 +51,15 @@ export type ts = {
 
   ProducedBlobSidecars: Omit<ValueOf<typeof ssz.BlobSidecars>, "signedBlockHeader" | "kzgCommitmentInclusionProof">;
   Contents: Omit<BlockContents<ForkName.deneb>, "block">;
+
+  BlockContents: {
+    block: ValueOf<typeof ssz.BeaconBlock>;
+    kzgProofs: ValueOf<typeof ssz.KZGProofs>;
+    blobs: ValueOf<typeof ssz.Blobs>;
+  };
+  SignedBlockContents: {
+    signedBlock: ValueOf<typeof ssz.SignedBeaconBlock>;
+    kzgProofs: ValueOf<typeof ssz.KZGProofs>;
+    blobs: ValueOf<typeof ssz.Blobs>;
+  };
 };
