@@ -149,10 +149,8 @@ export class HttpClient implements IHttpClient {
 
       if (init.retries > 0) {
         return this.requestWithRetries(definition, args, init);
-      } else if (init.requestWireFormat === WireFormat.ssz) {
-        return this.requestFallbackToJson(definition, args, init);
       } else {
-        return this._request(definition, args, init);
+        return this.getRequestMethod(init.requestWireFormat)(definition, args, init);
       }
     } else {
       return this.requestWithFallbacks(definition, args, localInit);
@@ -203,13 +201,8 @@ export class HttpClient implements IHttpClient {
             }
             const init = mergeInits(definition, urlInit, localInit);
 
-            const requestMethod = (
-              init.retries > 0
-                ? this.requestWithRetries
-                : init.requestWireFormat === WireFormat.ssz
-                  ? this.requestFallbackToJson
-                  : this._request
-            ).bind(this);
+            const requestMethod =
+              init.retries > 0 ? this.requestWithRetries.bind(this) : this.getRequestMethod(init.requestWireFormat);
 
             requestMethod(definition, args, init).then(
               async (res) => {
@@ -280,11 +273,11 @@ export class HttpClient implements IHttpClient {
   ): Promise<ApiResponse<E>> {
     const {requestWireFormat, retries, retryDelay, signal} = init;
     const routeId = definition.operationId;
-    const requestMethod = requestWireFormat === WireFormat.ssz ? this.requestFallbackToJson : this._request;
+    const requestMethod = this.getRequestMethod(requestWireFormat);
 
     return retry(
       async (attempt) => {
-        const res = await requestMethod.bind(this)(definition, args, init);
+        const res = await requestMethod(definition, args, init);
         if (!res.ok && attempt <= retries) {
           throw res.error();
         }
@@ -402,6 +395,10 @@ export class HttpClient implements IHttpClient {
       clearTimeout(timeout);
       abortSignals.forEach((s) => s?.removeEventListener("abort", onSignalAbort));
     }
+  }
+
+  private getRequestMethod(requestFormat: `${WireFormat}`): typeof this._request {
+    return requestFormat === WireFormat.ssz ? this.requestFallbackToJson.bind(this) : this._request.bind(this);
   }
 }
 
