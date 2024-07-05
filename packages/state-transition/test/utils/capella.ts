@@ -46,7 +46,7 @@ export function getExpectedWithdrawalsTestData(vc: number, opts: WithdrawalOpts)
     const balance = isWithdrawn ? 0 : hasExcessBalance ? 33e9 : 30e9;
     state.balances.push(balance);
 
-    const activeValidator = ssz.phase0.Validator.toViewDU({
+    const activeValidator = ssz.phase0["Validator"].toViewDU({
       pubkey,
       withdrawalCredentials: hasEth1Credential ? withdrawalCredentialsEth1 : withdrawalCredentialsBls,
       effectiveBalance: 32e9,
@@ -77,7 +77,7 @@ export function newStateWithValidators(numValidator: number): BeaconStateCapella
   }
 
   for (let i = 0; i < numValidator; i++) {
-    const validator = ssz.phase0.Validator.defaultViewDU();
+    const validator = ssz.phase0["Validator"].defaultViewDU();
     validator.pubkey = pubkeys[i];
     // make all validators active
     validator.activationEpoch = 0;

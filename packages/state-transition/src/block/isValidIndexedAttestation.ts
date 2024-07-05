@@ -9,7 +9,7 @@ import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureS
  */
 export function isValidIndexedAttestation(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation,
+  indexedAttestation: phase0["IndexedAttestation"],
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
@@ -25,7 +25,7 @@ export function isValidIndexedAttestation(
 
 export function isValidIndexedAttestationBigint(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestationBigint,
+  indexedAttestation: phase0["IndexedAttestationBigint"],
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {

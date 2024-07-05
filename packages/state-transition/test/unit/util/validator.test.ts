@@ -39,7 +39,7 @@ describe("isActiveValidator", () => {
 
   for (const testValue of testValues) {
     it(`should be ${testValue.expected ? "" : "not "}active`, () => {
-      const v: phase0.Validator = generateValidator(testValue.validatorOpts);
+      const v: phase0["Validator"] = generateValidator(testValue.validatorOpts);
       const result: boolean = isActiveValidator(v, testValue.epoch);
       expect(result).toBe(testValue.expected);
     });
@@ -47,7 +47,7 @@ describe("isActiveValidator", () => {
 });
 
 describe("isSlashableValidator", () => {
-  let validator: phase0.Validator;
+  let validator: phase0["Validator"];
 
   beforeEach(function () {
     validator = generateValidator();

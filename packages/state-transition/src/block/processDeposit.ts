@@ -22,7 +22,7 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
  *
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
-export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
+export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, deposit: phase0["Deposit"]): void {
   const {config, validators, epochCtx} = state;
 
   // verify the merkle branch

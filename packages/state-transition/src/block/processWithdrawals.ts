@@ -1,9 +1,10 @@
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-import {ssz, capella} from "@lodestar/types";
+import {ssz, capella, ExecutionPayload, ExecutionPayloadHeader} from "@lodestar/types";
 import {
   MAX_EFFECTIVE_BALANCE,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
+  ForkName,
 } from "@lodestar/params";
 
 import {CachedBeaconStateCapella} from "../types.js";
@@ -11,7 +12,7 @@ import {decreaseBalance, hasEth1WithdrawalCredential, isCapellaPayloadHeader} fr
 
 export function processWithdrawals(
   state: CachedBeaconStateCapella,
-  payload: capella.FullOrBlindedExecutionPayload
+  payload: ExecutionPayload<ForkName.capella> | ExecutionPayloadHeader<ForkName.capella>
 ): void {
   const {withdrawals: expectedWithdrawals} = getExpectedWithdrawals(state);
   const numWithdrawals = expectedWithdrawals.length;
@@ -63,7 +64,7 @@ export function processWithdrawals(
 }
 
 export function getExpectedWithdrawals(state: CachedBeaconStateCapella): {
-  withdrawals: capella.Withdrawal[];
+  withdrawals: capella["Withdrawal"][];
   sampledValidators: number;
 } {
   const epoch = state.epochCtx.epoch;
@@ -73,7 +74,7 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): {
 
   let n = 0;
 
-  const withdrawals: capella.Withdrawal[] = [];
+  const withdrawals: capella["Withdrawal"][] = [];
   // Just run a bounded loop max iterating over all withdrawals
   // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
   for (n = 0; n < bound; n++) {

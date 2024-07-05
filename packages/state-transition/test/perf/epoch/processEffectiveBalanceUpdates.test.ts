@@ -53,8 +53,8 @@ function getEffectiveBalanceTestData(
   const stateTree = ssz.phase0.BeaconState.defaultViewDU();
   stateTree.slot = 1;
 
-  const activeValidator = ssz.phase0.Validator.toViewDU({
-    ...ssz.phase0.Validator.defaultValue(),
+  const activeValidator = ssz.phase0["Validator"].toViewDU({
+    ...ssz.phase0["Validator"].defaultValue(),
     exitEpoch: Infinity,
     withdrawableEpoch: Infinity,
     // Set current effective balance to max

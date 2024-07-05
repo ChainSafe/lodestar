@@ -69,8 +69,8 @@ describe("isSlashableAttestationData", () => {
   });
 });
 
-function getAttestationDataAt(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationDataBigint {
-  const data = ssz.phase0.AttestationDataBigint.defaultValue();
+function getAttestationDataAt(sourceEpoch: Epoch, targetEpoch: Epoch): phase0["AttestationDataBigint"] {
+  const data = ssz.phase0["AttestationDataBigint"].defaultValue();
   data.source.epoch = BigInt(sourceEpoch);
   data.target.epoch = BigInt(targetEpoch);
   return data;

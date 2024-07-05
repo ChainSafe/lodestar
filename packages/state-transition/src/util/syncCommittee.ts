@@ -22,7 +22,7 @@ export function getNextSyncCommittee(
   state: BeaconStateAllForks,
   activeValidatorIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
-): {indices: ValidatorIndex[]; syncCommittee: altair.SyncCommittee} {
+): {indices: ValidatorIndex[]; syncCommittee: altair["SyncCommittee"]} {
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalanceIncrements);
 
   // Using the index2pubkey cache is slower because it needs the serialized pubkey.

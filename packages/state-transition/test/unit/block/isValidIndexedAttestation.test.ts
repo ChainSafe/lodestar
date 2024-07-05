@@ -36,11 +36,11 @@ describe("validate indexed attestation", () => {
   ];
 
   it.each(testValues)("$name", ({indices, expectedValue}) => {
-    const attestationData = ssz.phase0.AttestationData.defaultValue();
+    const attestationData = ssz.phase0["AttestationData"].defaultValue();
     attestationData.source.epoch = 0;
     attestationData.target.epoch = 1;
 
-    const indexedAttestation: phase0.IndexedAttestation = {
+    const indexedAttestation: phase0["IndexedAttestation"] = {
       attestingIndices: indices,
       data: attestationData,
       signature: EMPTY_SIGNATURE,

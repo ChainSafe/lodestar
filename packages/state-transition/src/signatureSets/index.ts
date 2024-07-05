@@ -1,5 +1,5 @@
-import {ForkSeq} from "@lodestar/params";
-import {SignedBeaconBlock, altair, capella} from "@lodestar/types";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {ISignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
@@ -50,7 +50,7 @@ export function getBlockSignatureSets(
   if (fork >= ForkSeq.altair) {
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
       state as CachedBeaconStateAltair,
-      (signedBlock as altair.SignedBeaconBlock).message
+      (signedBlock as SignedBeaconBlock<ForkName.altair>).message
     );
     // There may be no participants in this syncCommitteeSignature, so it must not be validated
     if (syncCommitteeSignatureSet) {
@@ -62,7 +62,7 @@ export function getBlockSignatureSets(
   if (fork >= ForkSeq.capella) {
     const blsToExecutionChangeSignatureSets = getBlsToExecutionChangeSignatureSets(
       state.config,
-      signedBlock as capella.SignedBeaconBlock
+      signedBlock as SignedBeaconBlock<ForkName.capella>
     );
     if (blsToExecutionChangeSignatureSets.length > 0) {
       signatureSets.push(...blsToExecutionChangeSignatureSets);

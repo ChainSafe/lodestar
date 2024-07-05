@@ -19,7 +19,7 @@ describe("BeaconState hashTreeRoot", () => {
     unshuffleList(indicesShuffled, new Uint8Array([42, 32]));
   });
 
-  const validator = ssz.phase0.Validator.defaultViewDU();
+  const validator = ssz.phase0["Validator"].defaultViewDU();
   const balance = 31e9;
 
   const testCases: {id: string; noTrack?: boolean; fn: (state: typeof stateOg) => void}[] = [

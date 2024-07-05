@@ -12,7 +12,7 @@ import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
  * - Best case: Vote is already decided, zero work. See becomesNewEth1Data conditions
  * - Worst case: 1023 votes and no majority vote yet.
  */
-export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phase0.Eth1Data): void {
+export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phase0["Eth1Data"]): void {
   // Convert to view first to hash once and compare hashes
   const eth1DataView = ssz.phase0.Eth1Data.toViewDU(eth1Data);
 

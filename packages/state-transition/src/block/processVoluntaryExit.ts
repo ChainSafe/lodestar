@@ -12,7 +12,7 @@ import {initiateValidatorExit} from "./index.js";
  */
 export function processVoluntaryExit(
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  signedVoluntaryExit: phase0["SignedVoluntaryExit"],
   verifySignature = true
 ): void {
   if (!isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature)) {
@@ -25,7 +25,7 @@ export function processVoluntaryExit(
 
 export function isValidVoluntaryExit(
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  signedVoluntaryExit: phase0["SignedVoluntaryExit"],
   verifySignature = true
 ): boolean {
   const {config, epochCtx} = state;

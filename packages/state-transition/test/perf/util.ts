@@ -1,7 +1,7 @@
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {phase0, ssz, Slot, BeaconState} from "@lodestar/types";
+import {phase0, ssz, Slot, BeaconState, SignedBeaconBlock} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {
@@ -37,7 +37,7 @@ import {processSlots} from "../../src/index.js";
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
 let phase0CachedState23638: CachedBeaconStatePhase0 | null = null;
-let phase0SignedBlock: phase0.SignedBeaconBlock | null = null;
+let phase0SignedBlock: SignedBeaconBlock<ForkName.phase0> | null = null;
 let altairState: BeaconStateAltair | null = null;
 let altairCachedState23637: CachedBeaconStateAltair | null = null;
 let altairCachedState23638: CachedBeaconStateAltair | null = null;
@@ -146,7 +146,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(previousEpoch);
       const committee = shuffling.committees[slotInEpoch][index];
       phase0CachedState23637.previousEpochAttestations.push(
-        ssz.phase0.PendingAttestation.toViewDU({
+        ssz.phase0["PendingAttestation"].toViewDU({
           aggregationBits: BitArray.fromBoolArray(Array.from({length: committee.length}, () => true)),
           data: {
             beaconBlockRoot: phase0CachedState23637.blockRoots.get(slotInEpoch % SLOTS_PER_HISTORICAL_ROOT),
@@ -171,7 +171,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const committee = shuffling.committees[slotInEpoch][index];
 
       phase0CachedState23637.currentEpochAttestations.push(
-        ssz.phase0.PendingAttestation.toViewDU({
+        ssz.phase0["PendingAttestation"].toViewDU({
           aggregationBits: BitArray.fromBoolArray(Array.from({length: committee.length}, () => true)),
           data: {
             beaconBlockRoot: phase0CachedState23637.blockRoots.get(slotInEpoch % SLOTS_PER_HISTORICAL_ROOT),
@@ -288,7 +288,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
 /**
  * This is generated from Medalla block 756417
  */
-export function generatePerformanceBlockPhase0(): phase0.SignedBeaconBlock {
+export function generatePerformanceBlockPhase0(): SignedBeaconBlock<ForkName.phase0> {
   if (!phase0SignedBlock) {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const parentState = generatePerfTestCachedStatePhase0();
@@ -306,7 +306,7 @@ export function generatePerformanceBlockPhase0(): phase0.SignedBeaconBlock {
   return phase0SignedBlock;
 }
 
-function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconState {
+function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): BeaconState<ForkName.phase0> {
   const slot = epoch * SLOTS_PER_EPOCH;
   const pubkeys = pubkeysArg || getPubkeys().pubkeys;
   const currentEpoch = computeEpochAtSlot(slot - 1);
@@ -402,7 +402,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   const state = ssz.phase0.BeaconState.defaultViewDU();
   state.slot = slot;
 
-  const activeValidator = ssz.phase0.Validator.toViewDU({
+  const activeValidator = ssz.phase0["Validator"].toViewDU({
     pubkey: Buffer.alloc(48, 0),
     withdrawalCredentials: Buffer.alloc(32, 0),
     effectiveBalance: MAX_EFFECTIVE_BALANCE,

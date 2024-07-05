@@ -8,7 +8,7 @@ import {CachedBeaconStateAllForks} from "../types.js";
  */
 export function getProposerSlashingSignatureSets(
   state: CachedBeaconStateAllForks,
-  proposerSlashing: phase0.ProposerSlashing
+  proposerSlashing: phase0["ProposerSlashing"]
 ): ISignatureSet[] {
   const {epochCtx} = state;
   const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];

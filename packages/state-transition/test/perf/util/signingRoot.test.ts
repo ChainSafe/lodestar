@@ -20,8 +20,8 @@ describe("computeSigningRoot", function () {
     minMs: 10_000,
   });
 
-  const type = ssz.phase0.AttestationData;
-  const seedObject: phase0.AttestationData = {
+  const type = ssz.phase0["AttestationData"];
+  const seedObject: phase0["AttestationData"] = {
     slot: 6118259,
     index: 46,
     beaconBlockRoot: fromHexString("0x94cef26d543b20568a4bbb77ae2ba203826912065348613a437a9106142aff85"),
@@ -81,7 +81,7 @@ describe("computeSigningRoot", function () {
   });
 });
 
-function clone(sszObject: phase0.AttestationData): phase0.AttestationData {
+function clone(sszObject: phase0["AttestationData"]): phase0["AttestationData"] {
   return {
     slot: sszObject.slot,
     index: sszObject.index,

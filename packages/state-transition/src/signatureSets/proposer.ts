@@ -1,5 +1,11 @@
-import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {SignedBeaconBlock, SignedBlindedBeaconBlock, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {DOMAIN_BEACON_PROPOSER, ForkName} from "@lodestar/params";
+import {
+  SignedBeaconBlock,
+  SignedBeaconBlockHeader,
+  SignedBlindedBeaconBlock,
+  isBlindedBeaconBlock,
+  ssz,
+} from "@lodestar/types";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -33,7 +39,7 @@ export function getBlockProposerSignatureSet(
 
 export function getBlockHeaderProposerSignatureSet(
   state: CachedBeaconStateAllForks,
-  signedBlockHeader: phase0.SignedBeaconBlockHeader
+  signedBlockHeader: SignedBeaconBlockHeader<ForkName.phase0>
 ): ISignatureSet {
   const {config, epochCtx} = state;
   const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);

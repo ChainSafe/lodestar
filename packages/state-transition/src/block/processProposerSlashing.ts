@@ -15,7 +15,7 @@ import {slashValidator} from "./slashValidator.js";
 export function processProposerSlashing(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  proposerSlashing: phase0.ProposerSlashing,
+  proposerSlashing: phase0["ProposerSlashing"],
   verifySignatures = true
 ): void {
   assertValidProposerSlashing(state, proposerSlashing, verifySignatures);
@@ -25,7 +25,7 @@ export function processProposerSlashing(
 
 export function assertValidProposerSlashing(
   state: CachedBeaconStateAllForks,
-  proposerSlashing: phase0.ProposerSlashing,
+  proposerSlashing: phase0["ProposerSlashing"],
   verifySignatures = true
 ): void {
   const header1 = proposerSlashing.signedHeader1.message;

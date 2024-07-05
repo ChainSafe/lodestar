@@ -2,7 +2,8 @@ import fs from "node:fs";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {NetworkName} from "@lodestar/config/networks.js";
-import {phase0, ssz} from "@lodestar/types";
+import {BeaconState, phase0, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -59,7 +60,7 @@ const attesterFlagsCountZero: AttesterFlagsCount = {
   eligibleAttester: 0,
 };
 
-type ValidatorChangesCount = Record<keyof Omit<phase0.Validator, "pubkey" | "withdrawalCredentials">, number>;
+type ValidatorChangesCount = Record<keyof Omit<phase0["Validator"], "pubkey" | "withdrawalCredentials">, number>;
 const validatorChangesCountZero: ValidatorChangesCount = {
   effectiveBalance: 0,
   slashed: 0,
@@ -92,7 +93,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const preEpoch = computeEpochAtSlot(state.slot);
     const nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
-    const stateTB = ssz.phase0.BeaconState.toViewDU(state as phase0.BeaconState);
+    const stateTB = ssz.phase0.BeaconState.toViewDU(state as BeaconState<ForkName.phase0>);
     const postState = createCachedBeaconStateTest(stateTB, config);
 
     const cache = beforeProcessEpoch(postState);
@@ -121,7 +122,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
       }
     }
 
-    const {previousEpochAttestations, currentEpochAttestations} = state as phase0.BeaconState;
+    const {previousEpochAttestations, currentEpochAttestations} = state as BeaconState<ForkName.phase0>;
 
     // eslint-disable-next-line no-console
     console.log(`Processed epoch ${epoch}`);
@@ -139,8 +140,8 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
       previousEpochAttestations: previousEpochAttestations.length,
       currentEpochAttestations: currentEpochAttestations.length,
-      previousEpochAttestationsBits: countAttBits(previousEpochAttestations as phase0.PendingAttestation[]),
-      currentEpochAttestationsBits: countAttBits(currentEpochAttestations as phase0.PendingAttestation[]),
+      previousEpochAttestationsBits: countAttBits(previousEpochAttestations as phase0["PendingAttestation"][]),
+      currentEpochAttestationsBits: countAttBits(currentEpochAttestations as phase0["PendingAttestation"][]),
     });
 
     // -- all forks
@@ -164,7 +165,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
   }
 }
 
-function countAttBits(atts: phase0.PendingAttestation[]): number {
+function countAttBits(atts: phase0["PendingAttestation"][]): number {
   let totalBits = 0;
   for (const att of atts) {
     totalBits += att.aggregationBits.getTrueBitIndexes().length;

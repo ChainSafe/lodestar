@@ -17,7 +17,7 @@ export type ValidatorGeneratorOpts = {
  * @param {boolean} slashed
  * @returns {Validator}
  */
-export function generateValidator(opts: ValidatorGeneratorOpts = {}): phase0.Validator {
+export function generateValidator(opts: ValidatorGeneratorOpts = {}): phase0["Validator"] {
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
   const activationEpoch = opts.activation !== undefined || opts.activation === 0 ? opts.activation : FAR_FUTURE_EPOCH;
   return {
@@ -40,6 +40,6 @@ export function generateValidator(opts: ValidatorGeneratorOpts = {}): phase0.Val
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): phase0.Validator[] {
+export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): phase0["Validator"][] {
   return Array.from({length: n}, () => generateValidator(opts));
 }

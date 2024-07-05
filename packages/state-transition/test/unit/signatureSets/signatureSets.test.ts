@@ -3,8 +3,8 @@ import {describe, it, expect} from "vitest";
 import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {phase0, capella, ValidatorIndex, BLSSignature, ssz} from "@lodestar/types";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {phase0, capella, ValidatorIndex, BLSSignature, ssz, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
+import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
 import {generateCachedState} from "../../utils/state.js";
@@ -15,7 +15,7 @@ const EMPTY_SIGNATURE = Buffer.alloc(96);
 describe("signatureSets", () => {
   it("should aggregate all signatures from a block", () => {
     const emptyBlockBody = ssz.capella.BeaconBlockBody.defaultValue();
-    const block: capella.BeaconBlock = {
+    const block: BeaconBlock<ForkName.capella> = {
       slot: 0,
       proposerIndex: 0,
       parentRoot: crypto.randomBytes(32),
@@ -43,13 +43,13 @@ describe("signatureSets", () => {
         ],
         // Set to 1 since there's only one validator per committee
         attestations: [getMockAttestations(1)],
-        deposits: [] as phase0.Deposit[],
+        deposits: [] as phase0["Deposit"][],
         voluntaryExits: [getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
         blsToExecutionChanges: [getMockSignedBlsToExecutionChange({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
       },
     };
 
-    const signedBlock: capella.SignedBeaconBlock = {
+    const signedBlock: SignedBeaconBlock<ForkName.capella> = {
       message: block,
       signature: EMPTY_SIGNATURE,
     };
@@ -89,14 +89,14 @@ type BlockProposerData = {
   signature: BLSSignature;
 };
 
-function getMockProposerSlashings(data1: BlockProposerData, data2: BlockProposerData): phase0.ProposerSlashing {
+function getMockProposerSlashings(data1: BlockProposerData, data2: BlockProposerData): phase0["ProposerSlashing"] {
   return {
     signedHeader1: getMockSignedBeaconBlockHeaderBigint(data1),
     signedHeader2: getMockSignedBeaconBlockHeaderBigint(data2),
   };
 }
 
-function getMockSignedBeaconBlockHeaderBigint(data: BlockProposerData): phase0.SignedBeaconBlockHeaderBigint {
+function getMockSignedBeaconBlockHeaderBigint(data: BlockProposerData): phase0["SignedBeaconBlockHeaderBigint"] {
   return {
     message: {
       slot: BigInt(0),
@@ -114,14 +114,17 @@ type IndexAttestationData = {
   signature: BLSSignature;
 };
 
-function getMockAttesterSlashings(data1: IndexAttestationData, data2: IndexAttestationData): phase0.AttesterSlashing {
+function getMockAttesterSlashings(
+  data1: IndexAttestationData,
+  data2: IndexAttestationData
+): phase0["AttesterSlashing"] {
   return {
     attestation1: getMockIndexAttestationBn(data1),
     attestation2: getMockIndexAttestationBn(data2),
   };
 }
 
-function getMockIndexAttestationBn(data: IndexAttestationData): phase0.IndexedAttestationBigint {
+function getMockIndexAttestationBn(data: IndexAttestationData): phase0["IndexedAttestationBigint"] {
   return {
     attestingIndices: data.attestingIndices,
     data: getAttestationDataBigint(),
@@ -129,7 +132,7 @@ function getMockIndexAttestationBn(data: IndexAttestationData): phase0.IndexedAt
   };
 }
 
-function getAttestationData(): phase0.AttestationData {
+function getAttestationData(): phase0["AttestationData"] {
   return {
     slot: 0,
     index: 0,
@@ -139,7 +142,7 @@ function getAttestationData(): phase0.AttestationData {
   };
 }
 
-function getAttestationDataBigint(): phase0.AttestationDataBigint {
+function getAttestationDataBigint(): phase0["AttestationDataBigint"] {
   return {
     slot: BigInt(0),
     index: BigInt(0),
@@ -149,7 +152,7 @@ function getAttestationDataBigint(): phase0.AttestationDataBigint {
   };
 }
 
-function getMockAttestations(bitLen: number): phase0.Attestation {
+function getMockAttestations(bitLen: number): phase0["Attestation"] {
   return {
     aggregationBits: BitArray.fromSingleBit(bitLen, 0),
     data: getAttestationData(),
@@ -162,7 +165,7 @@ type SignedVoluntaryExitData = {
   validatorIndex: ValidatorIndex;
 };
 
-function getMockSignedVoluntaryExit(data: SignedVoluntaryExitData): phase0.SignedVoluntaryExit {
+function getMockSignedVoluntaryExit(data: SignedVoluntaryExitData): phase0["SignedVoluntaryExit"] {
   return {
     message: {
       epoch: 0,
@@ -177,7 +180,7 @@ type SignedBLStoExecutionChange = {
   validatorIndex: ValidatorIndex;
 };
 
-function getMockSignedBlsToExecutionChange(data: SignedBLStoExecutionChange): capella.SignedBLSToExecutionChange {
+function getMockSignedBlsToExecutionChange(data: SignedBLStoExecutionChange): capella["SignedBLSToExecutionChange"] {
   return {
     message: {
       validatorIndex: data.validatorIndex,

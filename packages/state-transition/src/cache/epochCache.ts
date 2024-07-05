@@ -679,7 +679,7 @@ export class EpochCache {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
+  getIndexedAttestation(attestation: phase0["Attestation"]): phase0["IndexedAttestation"] {
     const {aggregationBits, data} = attestation;
     const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
     const attestingIndices = aggregationBits.intersectValues(committeeIndices);
@@ -731,7 +731,7 @@ export class EpochCache {
    * ``assignment[2]`` is the slot at which the committee is assigned
    * Return null if no assignment..
    */
-  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
+  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0["CommitteeAssignment"] | null {
     if (epoch > this.currentShuffling.epoch + 1) {
       throw Error(
         `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`

@@ -15,7 +15,7 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 export function sumTargetUnslashedBalanceIncrements(
   participation: number[],
   epoch: Epoch,
-  validators: phase0.Validator[]
+  validators: phase0["Validator"][]
 ): number {
   let total = 0;
   for (let i = 0; i < participation.length; i++) {

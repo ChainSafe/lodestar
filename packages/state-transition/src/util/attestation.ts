@@ -5,8 +5,8 @@ import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
  */
 export function isSlashableAttestationData(
-  data1: phase0.AttestationDataBigint,
-  data2: phase0.AttestationDataBigint
+  data1: phase0["AttestationDataBigint"],
+  data2: phase0["AttestationDataBigint"]
 ): boolean {
   return (
     // Double vote
@@ -22,7 +22,7 @@ export function isValidAttestationSlot(attestationSlot: Slot, currentSlot: Slot)
   );
 }
 
-export function getAttesterSlashableIndices(attesterSlashing: phase0.AttesterSlashing): ValidatorIndex[] {
+export function getAttesterSlashableIndices(attesterSlashing: phase0["AttesterSlashing"]): ValidatorIndex[] {
   const indices: ValidatorIndex[] = [];
   const attSet1 = new Set(attesterSlashing.attestation1.attestingIndices);
   const attArr2 = attesterSlashing.attestation2.attestingIndices;

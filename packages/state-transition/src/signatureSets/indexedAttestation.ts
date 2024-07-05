@@ -10,7 +10,7 @@ import {CachedBeaconStateAllForks} from "../types.js";
 
 export function getAttestationDataSigningRoot(
   state: CachedBeaconStateAllForks,
-  data: phase0.AttestationData
+  data: phase0["AttestationData"]
 ): Uint8Array {
   const slot = computeStartSlotAtEpoch(data.target.epoch);
   const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
@@ -20,7 +20,7 @@ export function getAttestationDataSigningRoot(
 
 export function getAttestationWithIndicesSignatureSet(
   state: CachedBeaconStateAllForks,
-  attestation: Pick<phase0.Attestation, "data" | "signature">,
+  attestation: Pick<phase0["Attestation"], "data" | "signature">,
   attestingIndices: number[]
 ): ISignatureSet {
   return createAggregateSignatureSetFromComponents(
@@ -32,7 +32,7 @@ export function getAttestationWithIndicesSignatureSet(
 
 export function getIndexedAttestationSignatureSet(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation
+  indexedAttestation: phase0["IndexedAttestation"]
 ): ISignatureSet {
   return getAttestationWithIndicesSignatureSet(state, indexedAttestation, indexedAttestation.attestingIndices);
 }

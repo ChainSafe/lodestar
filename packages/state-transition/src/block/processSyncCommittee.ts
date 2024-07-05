@@ -1,6 +1,6 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {altair, ssz} from "@lodestar/types";
-import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {BeaconBlock, ssz} from "@lodestar/types";
+import {DOMAIN_SYNC_COMMITTEE, ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
@@ -8,7 +8,7 @@ import {decreaseBalance, increaseBalance} from "../util/index.js";
 
 export function processSyncAggregate(
   state: CachedBeaconStateAllForks,
-  block: altair.BeaconBlock,
+  block: BeaconBlock<ForkName.altair>,
   verifySignatures = true
 ): void {
   const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
@@ -58,7 +58,7 @@ export function processSyncAggregate(
 
 export function getSyncCommitteeSignatureSet(
   state: CachedBeaconStateAllForks,
-  block: altair.BeaconBlock,
+  block: BeaconBlock<ForkName.altair>,
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]
 ): ISignatureSet | null {

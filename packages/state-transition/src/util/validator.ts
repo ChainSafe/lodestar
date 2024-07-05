@@ -7,14 +7,14 @@ import {BeaconStateAllForks} from "../types.js";
 /**
  * Check if [[validator]] is active
  */
-export function isActiveValidator(validator: phase0.Validator, epoch: Epoch): boolean {
+export function isActiveValidator(validator: phase0["Validator"], epoch: Epoch): boolean {
   return validator.activationEpoch <= epoch && epoch < validator.exitEpoch;
 }
 
 /**
  * Check if [[validator]] is slashable
  */
-export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch): boolean {
+export function isSlashableValidator(validator: phase0["Validator"], epoch: Epoch): boolean {
   return !validator.slashed && validator.activationEpoch <= epoch && epoch < validator.withdrawableEpoch;
 }
 

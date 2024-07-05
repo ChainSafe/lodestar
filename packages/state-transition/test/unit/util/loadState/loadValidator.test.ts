@@ -4,7 +4,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {loadValidator} from "../../../../src/util/loadState/loadValidator.js";
 
 describe("loadValidator", () => {
-  const validatorValue: phase0.Validator = {
+  const validatorValue: phase0["Validator"] = {
     pubkey: Buffer.from(
       "0xb18e1737e1a1a76b8dff905ba7a4cb1ff5c526a4b7b0788188aade0488274c91e9c797e75f0f8452384ff53d44fad3df",
       "hex"
@@ -17,9 +17,9 @@ describe("loadValidator", () => {
     exitEpoch: 30,
     withdrawableEpoch: 40,
   };
-  const validator = ssz.phase0.Validator.toViewDU(validatorValue);
+  const validator = ssz.phase0["Validator"].toViewDU(validatorValue);
 
-  const testCases: {name: string; getValidator: () => CompositeViewDU<typeof ssz.phase0.Validator>}[] = [
+  const testCases: {name: string; getValidator: () => CompositeViewDU<(typeof ssz.phase0)["Validator"]>}[] = [
     {
       name: "diff pubkey",
       getValidator: () => {

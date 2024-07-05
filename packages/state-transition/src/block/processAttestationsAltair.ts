@@ -32,7 +32,7 @@ const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair,
-  attestations: phase0.Attestation[],
+  attestations: phase0["Attestation"][],
   verifySignature = true
 ): void {
   const {epochCtx} = state;
@@ -131,7 +131,7 @@ export function processAttestationsAltair(
  */
 export function getAttestationParticipationStatus(
   fork: ForkSeq,
-  data: phase0.AttestationData,
+  data: phase0["AttestationData"],
   inclusionDelay: number,
   currentEpoch: Epoch,
   rootCache: RootCache
@@ -168,6 +168,6 @@ export function getAttestationParticipationStatus(
   return flags;
 }
 
-export function checkpointValueEquals(cp1: phase0.Checkpoint, cp2: phase0.Checkpoint): boolean {
+export function checkpointValueEquals(cp1: phase0["Checkpoint"], cp2: phase0["Checkpoint"]): boolean {
   return cp1.epoch === cp2.epoch && byteArrayEquals(cp1.root, cp2.root);
 }

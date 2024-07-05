@@ -8,7 +8,7 @@ import {getBlockAltair} from "./util.js";
 
 type StateEth1Data = {
   state: CachedBeaconStateAllForks;
-  eth1Data: phase0.Eth1Data;
+  eth1Data: phase0["Eth1Data"];
 };
 
 // Most of the cost of processAttestation in altair is for updating participation flag tree

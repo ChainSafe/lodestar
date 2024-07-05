@@ -10,7 +10,7 @@ import {CachedBeaconStateAllForks} from "../types.js";
 
 export function verifyVoluntaryExitSignature(
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit
+  signedVoluntaryExit: phase0["SignedVoluntaryExit"]
 ): boolean {
   return verifySignatureSet(getVoluntaryExitSignatureSet(state, signedVoluntaryExit));
 }
@@ -20,7 +20,7 @@ export function verifyVoluntaryExitSignature(
  */
 export function getVoluntaryExitSignatureSet(
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit
+  signedVoluntaryExit: phase0["SignedVoluntaryExit"]
 ): ISignatureSet {
   const {epochCtx} = state;
   const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);

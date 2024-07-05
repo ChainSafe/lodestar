@@ -13,8 +13,8 @@ import {
  *   - For other forks, use the progressive balances inside EpochCache
  */
 export function computeUnrealizedCheckpoints(state: CachedBeaconStateAllForks): {
-  justifiedCheckpoint: phase0.Checkpoint;
-  finalizedCheckpoint: phase0.Checkpoint;
+  justifiedCheckpoint: phase0["Checkpoint"];
+  finalizedCheckpoint: phase0["Checkpoint"];
 } {
   let stateRealizedCheckpoints: CachedBeaconStateAllForks;
 

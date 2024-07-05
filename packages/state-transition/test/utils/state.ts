@@ -2,11 +2,12 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
+  ForkName,
   GENESIS_EPOCH,
   GENESIS_SLOT,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
+import {BeaconState, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -26,7 +27,7 @@ import {EpochCacheOpts} from "../../src/cache/epochCache.js";
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
  */
-type TestBeaconState = Partial<phase0.BeaconState>;
+type TestBeaconState = Partial<BeaconState<ForkName.phase0>>;
 
 /**
  * Generate beaconState, by default it will use the initial state defined when the `ChainStart` log is emitted.

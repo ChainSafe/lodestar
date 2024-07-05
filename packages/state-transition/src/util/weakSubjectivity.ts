@@ -1,9 +1,13 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {EFFECTIVE_BALANCE_INCREMENT, MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, Root} from "@lodestar/types";
-import {ssz} from "@lodestar/types";
-import {Checkpoint} from "@lodestar/types/phase0";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  ForkName,
+  MAX_DEPOSITS,
+  MAX_EFFECTIVE_BALANCE,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {type TypesFor, ssz, Epoch, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../constants/constants.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, getCurrentEpoch, computeCheckpointEpochAtStateSlot} from "./epoch.js";
@@ -109,7 +113,7 @@ export function getLatestBlockRoot(state: BeaconStateAllForks): Root {
 export function isWithinWeakSubjectivityPeriod(
   config: BeaconConfig,
   wsState: BeaconStateAllForks,
-  wsCheckpoint: Checkpoint
+  wsCheckpoint: TypesFor<ForkName.phase0, "Checkpoint">
 ): boolean {
   try {
     ensureWithinWeakSubjectivityPeriod(config, wsState, wsCheckpoint);
@@ -122,7 +126,7 @@ export function isWithinWeakSubjectivityPeriod(
 export function ensureWithinWeakSubjectivityPeriod(
   config: BeaconConfig,
   wsState: BeaconStateAllForks,
-  wsCheckpoint: Checkpoint
+  wsCheckpoint: TypesFor<ForkName.phase0, "Checkpoint">
 ): void {
   const wsStateEpoch = computeCheckpointEpochAtStateSlot(wsState.slot);
   const blockRoot = getLatestBlockRoot(wsState);

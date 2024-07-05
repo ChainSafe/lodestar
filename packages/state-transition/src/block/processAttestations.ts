@@ -10,7 +10,7 @@ import {processAttestationsAltair} from "./processAttestationsAltair.js";
 export function processAttestations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attestations: phase0.Attestation[],
+  attestations: phase0["Attestation"][],
   verifySignatures = true
 ): void {
   if (fork === ForkSeq.phase0) {

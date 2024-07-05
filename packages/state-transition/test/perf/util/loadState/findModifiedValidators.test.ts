@@ -87,7 +87,7 @@ describe("find modified validators by different ways", function () {
       const numValidator = state.validators.length;
       const validators = stateType.fields.validators.deserializeToViewDU(validatorsBytes);
       for (let i = 0; i < numValidator; i++) {
-        if (!ssz.phase0.Validator.equals(state.validators.get(i), validators.get(i))) {
+        if (!ssz.phase0["Validator"].equals(state.validators.get(i), validators.get(i))) {
           throw Error(`validator ${i} is not equal`);
         }
       }
@@ -98,7 +98,7 @@ describe("find modified validators by different ways", function () {
     const validators = state.validators.getAllReadonly();
     itBench("compare each validator Uint8Array", () => {
       for (let i = 0; i < state.validators.length; i++) {
-        const validatorBytes = ssz.phase0.Validator.serialize(validators[i]);
+        const validatorBytes = ssz.phase0["Validator"].serialize(validators[i]);
         if (
           Buffer.compare(
             validatorBytes,
@@ -134,7 +134,7 @@ describe("find modified validators by different ways", function () {
   });
 });
 
-function validatorDiff(validator: CompositeViewDU<typeof ssz.phase0.Validator>, bytes: Uint8Array): string | null {
+function validatorDiff(validator: CompositeViewDU<typeof ssz.phase0["Validator"]>, bytes: Uint8Array): string | null {
   const pubkey = bytes.subarray(0, 48);
   if (Buffer.compare(validator.pubkey, pubkey) !== 0) {
     return "pubkey";

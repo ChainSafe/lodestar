@@ -7,8 +7,8 @@ import {getBlockRoot, getBlockRootAtSlot} from "./blockRoot.js";
  * In normal network conditions the same root is read multiple times, specially the target.
  */
 export class RootCache {
-  readonly currentJustifiedCheckpoint: phase0.Checkpoint;
-  readonly previousJustifiedCheckpoint: phase0.Checkpoint;
+  readonly currentJustifiedCheckpoint: phase0["Checkpoint"];
+  readonly previousJustifiedCheckpoint: phase0["Checkpoint"];
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 

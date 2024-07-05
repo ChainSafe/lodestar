@@ -16,7 +16,7 @@ export function getAttesterSlashingsSignatureSets(
 /** Get signature sets from a single AttesterSlashing object */
 export function getAttesterSlashingSignatureSets(
   state: CachedBeaconStateAllForks,
-  attesterSlashing: phase0.AttesterSlashing
+  attesterSlashing: phase0["AttesterSlashing"]
 ): ISignatureSet[] {
   return [attesterSlashing.attestation1, attesterSlashing.attestation2].map((attestation) =>
     getIndexedAttestationBigintSignatureSet(state, attestation)
@@ -25,7 +25,7 @@ export function getAttesterSlashingSignatureSets(
 
 export function getIndexedAttestationBigintSignatureSet(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestationBigint
+  indexedAttestation: phase0["IndexedAttestationBigint"]
 ): ISignatureSet {
   const {index2pubkey} = state.epochCtx;
   const slot = computeStartSlotAtEpoch(Number(indexedAttestation.data.target.epoch as bigint));

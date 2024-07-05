@@ -15,7 +15,7 @@ export function computeDomain(domainType: DomainType, forkVersion: Version, gene
 /**
  * Return the ForkVersion at an epoch from a Fork type
  */
-export function getForkVersion(fork: phase0.Fork, epoch: Epoch): Version {
+export function getForkVersion(fork: phase0["Fork"], epoch: Epoch): Version {
   return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
 }
 
@@ -23,7 +23,7 @@ export function getForkVersion(fork: phase0.Fork, epoch: Epoch): Version {
  * Used primarily in signature domains to avoid collisions across forks/chains.
  */
 export function computeForkDataRoot(currentVersion: Version, genesisValidatorsRoot: Root): Uint8Array {
-  const forkData: phase0.ForkData = {
+  const forkData: phase0["ForkData"] = {
     currentVersion,
     genesisValidatorsRoot,
   };

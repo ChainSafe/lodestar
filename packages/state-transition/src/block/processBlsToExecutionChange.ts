@@ -8,7 +8,7 @@ import {CachedBeaconStateCapella} from "../types.js";
 
 export function processBlsToExecutionChange(
   state: CachedBeaconStateCapella,
-  signedBlsToExecutionChange: capella.SignedBLSToExecutionChange
+  signedBlsToExecutionChange: capella["SignedBLSToExecutionChange"]
 ): void {
   const addressChange = signedBlsToExecutionChange.message;
 
@@ -28,7 +28,7 @@ export function processBlsToExecutionChange(
 
 export function isValidBlsToExecutionChange(
   state: CachedBeaconStateCapella,
-  signedBLSToExecutionChange: capella.SignedBLSToExecutionChange,
+  signedBLSToExecutionChange: capella["SignedBLSToExecutionChange"],
   verifySignature = true
 ): {valid: true} | {valid: false; error: Error} {
   const addressChange = signedBLSToExecutionChange.message;

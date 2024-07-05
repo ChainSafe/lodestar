@@ -117,7 +117,7 @@ describe("CachedBeaconState", () => {
         } else {
           // more validators
           for (let i = 0; i < validatorCountDelta; i++) {
-            const validator = ssz.phase0.Validator.defaultViewDU();
+            const validator = ssz.phase0["Validator"].defaultViewDU();
             validator.pubkey = pubkeys[numValidator + i];
             state.validators.push(validator);
             state.inactivityScores.push(1);

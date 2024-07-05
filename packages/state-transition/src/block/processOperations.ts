@@ -1,5 +1,5 @@
-import {BeaconBlockBody, capella} from "@lodestar/types";
-import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
+import {BeaconBlockBody} from "@lodestar/types";
+import {ForkName, ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella} from "../types.js";
 import {processAttestations} from "./processAttestations.js";
@@ -50,7 +50,7 @@ export function processOperations(
   }
 
   if (fork >= ForkSeq.capella) {
-    for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
+    for (const blsToExecutionChange of (body as BeaconBlockBody<ForkName.capella>).blsToExecutionChanges) {
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
     }
   }

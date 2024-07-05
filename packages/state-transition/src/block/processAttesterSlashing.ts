@@ -15,7 +15,7 @@ import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
 export function processAttesterSlashing(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attesterSlashing: phase0.AttesterSlashing,
+  attesterSlashing: phase0["AttesterSlashing"],
   verifySignatures = true
 ): void {
   assertValidAttesterSlashing(state, attesterSlashing, verifySignatures);
@@ -39,7 +39,7 @@ export function processAttesterSlashing(
 
 export function assertValidAttesterSlashing(
   state: CachedBeaconStateAllForks,
-  attesterSlashing: phase0.AttesterSlashing,
+  attesterSlashing: phase0["AttesterSlashing"],
   verifySignatures = true
 ): void {
   const attestation1 = attesterSlashing.attestation1;

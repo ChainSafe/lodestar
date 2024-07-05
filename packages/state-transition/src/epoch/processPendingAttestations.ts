@@ -17,7 +17,7 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot, AttesterStatus} from "../ut
 export function processPendingAttestations(
   state: CachedBeaconStatePhase0,
   statuses: AttesterStatus[],
-  attestations: phase0.PendingAttestation[],
+  attestations: phase0["PendingAttestation"][],
   epoch: Epoch,
   sourceFlag: number,
   targetFlag: number,

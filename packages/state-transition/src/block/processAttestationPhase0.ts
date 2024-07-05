@@ -15,7 +15,7 @@ import {isValidIndexedAttestation} from "./index.js";
  */
 export function processAttestationPhase0(
   state: CachedBeaconStatePhase0,
-  attestation: phase0.Attestation,
+  attestation: phase0["Attestation"],
   verifySignature = true
 ): void {
   const {epochCtx} = state;
@@ -59,7 +59,7 @@ export function processAttestationPhase0(
 export function validateAttestation(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attestation: phase0.Attestation
+  attestation: phase0["Attestation"]
 ): void {
   const {epochCtx} = state;
   const slot = state.slot;
@@ -112,6 +112,6 @@ export function isTimelyTarget(fork: ForkSeq, inclusionDistance: Slot): boolean 
   }
 }
 
-export function checkpointToStr(checkpoint: phase0.Checkpoint): string {
+export function checkpointToStr(checkpoint: phase0["Checkpoint"]): string {
   return `${toHexString(checkpoint.root)}:${checkpoint.epoch}`;
 }

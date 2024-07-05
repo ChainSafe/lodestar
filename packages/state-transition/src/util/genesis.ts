@@ -8,7 +8,7 @@ import {
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@lodestar/params";
-import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
+import {BeaconBlockHeader, Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
@@ -53,8 +53,8 @@ export function isValidGenesisValidators(config: ChainForkConfig, state: BeaconS
  */
 export function getGenesisBeaconState(
   config: ChainForkConfig,
-  genesisEth1Data: phase0.Eth1Data,
-  latestBlockHeader: phase0.BeaconBlockHeader
+  genesisEth1Data: phase0["Eth1Data"],
+  latestBlockHeader: BeaconBlockHeader<ForkName.phase0>
 ): BeaconStateAllForks {
   // Seed RANDAO with Eth1 entropy
   const randaoMixes = newFilledArray(EPOCHS_PER_HISTORICAL_VECTOR, genesisEth1Data.blockHash);
@@ -128,7 +128,7 @@ export function applyTimestamp(config: ChainForkConfig, state: CachedBeaconState
 export function applyDeposits(
   config: ChainForkConfig,
   state: CachedBeaconStateAllForks,
-  newDeposits: phase0.Deposit[],
+  newDeposits: phase0["Deposit"][],
   fullDepositDataRootList?: DepositDataRootViewDU
 ): {activatedValidatorCount: number} {
   const depositDataRootList: Root[] = [];
@@ -208,7 +208,7 @@ export function initializeBeaconStateFromEth1(
   immutableData: EpochCacheImmutableData,
   eth1BlockHash: Bytes32,
   eth1Timestamp: TimeSeconds,
-  deposits: phase0.Deposit[],
+  deposits: phase0["Deposit"][],
   fullDepositDataRootList?: DepositDataRootViewDU,
   executionPayloadHeader?: CompositeViewDU<
     | typeof ssz.bellatrix.ExecutionPayloadHeader

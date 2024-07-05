@@ -18,7 +18,7 @@ import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 type StateAttestations = {
   state: CachedBeaconStateAllForks;
-  attestations: phase0.Attestation[];
+  attestations: phase0["Attestation"][];
 };
 
 // Most of the cost of processAttestation in altair is for updating participation flag tree
@@ -61,7 +61,7 @@ describe("altair processAttestation", () => {
       before: () => {
         const state = generatePerfTestCachedStateAltair();
         const block = getBlockAltair(state, opts);
-        return {state, attestations: block.message.body.attestations as phase0.Attestation[]};
+        return {state, attestations: block.message.body.attestations as phase0["Attestation"][]};
       },
       beforeEach: ({state, attestations}) => {
         const stateCloned = state.clone();

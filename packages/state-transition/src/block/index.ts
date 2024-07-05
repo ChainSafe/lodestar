@@ -1,5 +1,12 @@
-import {ForkSeq} from "@lodestar/params";
-import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {
+  BeaconBlock,
+  BlindedBeaconBlock,
+  ExecutionPayload,
+  ExecutionPayloadHeader,
+  altair,
+  capella,
+} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
@@ -48,7 +55,7 @@ export function processBlock(
     if (fork >= ForkSeq.capella) {
       processWithdrawals(
         state as CachedBeaconStateCapella,
-        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
+        fullOrBlindedPayload as ExecutionPayload<ForkName.capella> | ExecutionPayloadHeader<ForkName.capella>
       );
     }
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
@@ -58,7 +65,7 @@ export function processBlock(
   processEth1Data(state, block.body.eth1Data);
   processOperations(fork, state, block.body, opts);
   if (fork >= ForkSeq.altair) {
-    processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
+    processSyncAggregate(state, block as BeaconBlock<ForkName.altair>, verifySignatures);
   }
 
   if (fork >= ForkSeq.deneb) {
