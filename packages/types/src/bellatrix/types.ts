@@ -1,24 +1,26 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
-export type Transaction = ValueOf<typeof ssz.Transaction>;
-export type Transactions = ValueOf<typeof ssz.Transactions>;
-export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
-export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
-export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
-export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
-export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
-export type BeaconState = ValueOf<typeof ssz.BeaconState>;
-export type PowBlock = ValueOf<typeof ssz.PowBlock>;
+export type ts = {
+  Transaction: ValueOf<typeof ssz.Transaction>;
+  Transactions: ValueOf<typeof ssz.Transactions>;
+  ExecutionPayload: ValueOf<typeof ssz.ExecutionPayload>;
+  ExecutionPayloadHeader: ValueOf<typeof ssz.ExecutionPayloadHeader>;
+  BeaconBlockBody: ValueOf<typeof ssz.BeaconBlockBody>;
+  BeaconBlock: ValueOf<typeof ssz.BeaconBlock>;
+  SignedBeaconBlock: ValueOf<typeof ssz.SignedBeaconBlock>;
+  BeaconState: ValueOf<typeof ssz.BeaconState>;
+  PowBlock: ValueOf<typeof ssz.PowBlock>;
 
-export type BlindedBeaconBlockBody = ValueOf<typeof ssz.BlindedBeaconBlockBody>;
-export type BlindedBeaconBlock = ValueOf<typeof ssz.BlindedBeaconBlock>;
-export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlock>;
+  BlindedBeaconBlockBody: ValueOf<typeof ssz.BlindedBeaconBlockBody>;
+  BlindedBeaconBlock: ValueOf<typeof ssz.BlindedBeaconBlock>;
+  SignedBlindedBeaconBlock: ValueOf<typeof ssz.SignedBlindedBeaconBlock>;
 
-export type ValidatorRegistrationV1 = ValueOf<typeof ssz.ValidatorRegistrationV1>;
-export type SignedValidatorRegistrationV1 = ValueOf<typeof ssz.SignedValidatorRegistrationV1>;
-export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
-export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
-export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;
+  ValidatorRegistrationV1: ValueOf<typeof ssz.ValidatorRegistrationV1>;
+  SignedValidatorRegistrationV1: ValueOf<typeof ssz.SignedValidatorRegistrationV1>;
+  BuilderBid: ValueOf<typeof ssz.BuilderBid>;
+  SignedBuilderBid: ValueOf<typeof ssz.SignedBuilderBid>;
+  SSEPayloadAttributes: ValueOf<typeof ssz.SSEPayloadAttributes>;
 
-export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
+  FullOrBlindedExecutionPayload: ValueOf<typeof ssz.ExecutionPayload> | ValueOf<typeof ssz.ExecutionPayloadHeader>;
+};
