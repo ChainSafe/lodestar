@@ -1,13 +1,13 @@
-import {ListCompositeType, ArrayCompositeTreeViewDUCache, ListCompositeTreeViewDU, ByteViews} from "@chainsafe/ssz";
 import {
-  HashComputationGroup,
-  Node,
-  digestNLevel,
-  setNodesAtDepth,
-} from "@chainsafe/persistent-merkle-tree";
-import {ValidatorNodeStructType} from "../validator.js";
-import {ValidatorTreeViewDU} from "./validator.js";
-
+  ListCompositeType,
+  ArrayCompositeTreeViewDUCache,
+  ListCompositeTreeViewDU,
+  ByteViews,
+  ContainerNodeStructTreeViewDU,
+} from "@chainsafe/ssz";
+import {HashComputationGroup, Node, digestNLevel, setNodesAtDepth} from "@chainsafe/persistent-merkle-tree";
+import {byteArrayIntoHashObject} from "@chainsafe/as-sha256";
+import {ValidatorNodeStructType, ValidatorType, validatorToChunkBytes} from "../validator.js";
 
 /**
  * hashtree has a MAX_SIZE of 1024 bytes = 32 chunks
@@ -61,6 +61,10 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
     }
 
     // TODO - batch: remove this type cast
+    const viewsChanged = this.viewsChanged as unknown as Map<
+      number,
+      ContainerNodeStructTreeViewDU<typeof ValidatorType>
+    >;
     const indicesChanged = Array.from(this.viewsChanged.keys()).sort((a, b) => a - b);
     const endBatch = indicesChanged.length - (indicesChanged.length % PARALLEL_FACTOR);
     // nodesChanged is sorted by index
@@ -73,8 +77,10 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
       }
       const indexInBatch = i % PARALLEL_FACTOR;
       const viewIndex = indicesChanged[i];
-      const viewChanged = this.viewsChanged.get(viewIndex) as ValidatorTreeViewDU;
-      viewChanged.valueToChunkBytes(level3ByteViewsArr[indexInBatch], level4BytesArr[indexInBatch]);
+      const viewChanged = viewsChanged.get(viewIndex);
+      if (viewChanged) {
+        validatorToChunkBytes(level3ByteViewsArr[indexInBatch], level4BytesArr[indexInBatch], viewChanged.value);
+      }
 
       if (indexInBatch === PARALLEL_FACTOR - 1) {
         // hash level 4, this is populated to pubkeyRoots
@@ -88,11 +94,15 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
         for (let j = PARALLEL_FACTOR - 1; j >= 0; j--) {
           const viewIndex = indicesChanged[i - j];
           const indexInBatch = (i - j) % PARALLEL_FACTOR;
-          const viewChanged = this.viewsChanged.get(viewIndex) as ValidatorTreeViewDU;
-          viewChanged.commitToRoot(validatorRoots[indexInBatch]);
-          nodesChanged.push({index: viewIndex, node: viewChanged.node});
-          // Set new node in nodes array to ensure data represented in the tree and fast nodes access is equal
-          this.nodes[viewIndex] = viewChanged.node;
+          const viewChanged = viewsChanged.get(viewIndex);
+          if (viewChanged) {
+            viewChanged.commitNoHash();
+            const branchNodeStruct = viewChanged.node;
+            byteArrayIntoHashObject(validatorRoots[indexInBatch], 0, branchNodeStruct);
+            nodesChanged.push({index: viewIndex, node: viewChanged.node});
+            // Set new node in nodes array to ensure data represented in the tree and fast nodes access is equal
+            this.nodes[viewIndex] = viewChanged.node;
+          }
         }
       }
     }
@@ -101,11 +111,14 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
     // it's not much different to commit one by one
     for (let i = endBatch; i < indicesChanged.length; i++) {
       const viewIndex = indicesChanged[i];
-      const viewChanged = this.viewsChanged.get(viewIndex) as ValidatorTreeViewDU;
-      viewChanged.commit();
-      nodesChanged.push({index: viewIndex, node: viewChanged.node});
-      // Set new node in nodes array to ensure data represented in the tree and fast nodes access is equal
-      this.nodes[viewIndex] = viewChanged.node;
+      const viewChanged = viewsChanged.get(viewIndex);
+      if (viewChanged) {
+        // commit and hash
+        viewChanged.commit();
+        nodesChanged.push({index: viewIndex, node: viewChanged.node});
+        // Set new node in nodes array to ensure data represented in the tree and fast nodes access is equal
+        this.nodes[viewIndex] = viewChanged.node;
+      }
     }
 
     // do the remaining commit step the same to parent (ArrayCompositeTreeViewDU)
