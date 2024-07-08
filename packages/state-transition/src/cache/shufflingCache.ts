@@ -1,5 +1,5 @@
 import {Epoch, RootHex} from "@lodestar/types";
-import {GaugeExtra, LodestarError, MapDef, NoLabels, pruneSetToMax} from "@lodestar/utils";
+import {GaugeExtra, MapDef, NoLabels, pruneSetToMax} from "@lodestar/utils";
 import {EpochShuffling, computeEpochShuffling} from "../util/index.js";
 import {BeaconStateAllForks} from "./types.js";
 
@@ -41,19 +41,6 @@ export interface ShufflingCacheMetrics {
   };
 }
 
-export enum ShufflingCacheErrorCode {
-  NO_SHUFFLING_FOUND = "EPOCH_SHUFFLING_NO_SHUFFLING_FOUND",
-  REGEN_ERROR_NO_SHUFFLING_FOUND = "REGEN_ERROR_NO_SHUFFLING_FOUND",
-  SHUFFLING_PROMISE_NOT_RESOLVED = "EPOCH_SHUFFLING_SHUFFLING_PROMISE_NOT_RESOLVED",
-}
-
-type ShufflingCacheErrorType =
-  | {code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND; epoch: Epoch; shufflingDecisionRoot: RootHex}
-  | {code: ShufflingCacheErrorCode.REGEN_ERROR_NO_SHUFFLING_FOUND; epoch: Epoch; shufflingDecisionRoot: RootHex}
-  | {code: ShufflingCacheErrorCode.SHUFFLING_PROMISE_NOT_RESOLVED; epoch: Epoch; shufflingDecisionRoot: RootHex};
-
-export class ShufflingCacheError extends LodestarError<ShufflingCacheErrorType> {}
-
 export enum ShufflingCacheItemType {
   shuffling,
   promise,
@@ -79,7 +66,6 @@ export interface ShufflingCacheOptions {
 export interface IShufflingCache {
   addMetrics(metrics: ShufflingCacheMetrics | null): void;
   get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null>;
-  getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling;
   getSync(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null;
   add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void;
   buildSync(
@@ -154,21 +140,11 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   /**
-   * Will synchronously get a shuffling if it is available or will throw an error if not. Metrics are collected
-   * by this._get
-   */
-  getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling {
-    // Will throw for error case so always returns a value
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return this._get(shufflingEpoch, shufflingDecisionRoot, true, caller)!;
-  }
-
-  /**
    * Will synchronously get a shuffling if it is available or will return null if not. The consumer
    * will have to then submit for building the shuffling. Metrics are collected by this._get
    */
   getSync(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null {
-    return this._get(shufflingEpoch, shufflingDecisionRoot, false, caller);
+    return this._get(shufflingEpoch, shufflingDecisionRoot, caller);
   }
 
   add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void {
@@ -232,30 +208,15 @@ export class ShufflingCache implements IShufflingCache {
   private _get(
     shufflingEpoch: Epoch,
     shufflingDecisionRoot: RootHex,
-    shouldError: boolean,
     caller: ShufflingCacheCaller
   ): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
     if (cacheItem === undefined) {
       this.metrics?.shufflingCache.cacheMiss.inc({caller});
-      if (shouldError) {
-        throw new ShufflingCacheError({
-          code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
-          epoch: shufflingEpoch,
-          shufflingDecisionRoot,
-        });
-      }
       return null;
     }
     if (this.isPromiseCacheItem(cacheItem)) {
       this.metrics?.shufflingCache.cacheMissUnresolvedPromise.inc({caller});
-      if (shouldError) {
-        throw new ShufflingCacheError({
-          code: ShufflingCacheErrorCode.SHUFFLING_PROMISE_NOT_RESOLVED,
-          epoch: shufflingEpoch,
-          shufflingDecisionRoot,
-        });
-      }
       return null;
     }
     this.metrics?.shufflingCache.cacheHit.inc({caller});

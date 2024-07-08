@@ -14,8 +14,6 @@ import {
   EpochShuffling,
   ShufflingCache,
   IShufflingCache,
-  ShufflingCacheError,
-  ShufflingCacheErrorCode,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -738,11 +736,9 @@ export class BeaconChain implements IBeaconChain {
     // resolve the promise to unblock other calls of the same epoch and dependent root
     const shuffling = await this.shufflingCache.get(attEpoch, shufflingDependentRoot);
     if (!shuffling) {
-      throw new ShufflingCacheError({
-        code: ShufflingCacheErrorCode.REGEN_ERROR_NO_SHUFFLING_FOUND,
-        epoch: attEpoch,
-        shufflingDecisionRoot: shufflingDependentRoot,
-      });
+      // This will be essentially unreachable considering regen should build the shuffling for this epoch
+      // but need to handle anyhow
+      throw new Error("UNREACHABLE: Shuffling not found for attestation verification");
     }
     return shuffling;
   }

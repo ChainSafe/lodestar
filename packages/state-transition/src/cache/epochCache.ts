@@ -841,12 +841,22 @@ export class EpochCache {
   }
 
   getShufflingAtSlot(slot: Slot, caller: ShufflingCacheCaller): EpochShuffling {
-    const epoch = computeEpochAtSlot(slot);
-    return this.shufflingCache.getOrError(epoch, this.getShufflingDecisionRootAtEpoch(epoch), caller);
+    return this.getShufflingAtEpoch(computeEpochAtSlot(slot), caller);
   }
 
   getShufflingAtEpoch(epoch: Epoch, caller: ShufflingCacheCaller): EpochShuffling {
-    return this.shufflingCache.getOrError(epoch, this.getShufflingDecisionRootAtEpoch(epoch), caller);
+    const decisionRoot = this.getShufflingDecisionRootAtEpoch(epoch);
+    const shuffling = this.shufflingCache.getSync(epoch, decisionRoot, caller);
+    if (shuffling == null) {
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.NO_SHUFFLING_AVAILABLE,
+        currentEpoch: this.epoch,
+        requestedEpoch: epoch,
+        decisionRoot,
+      });
+    }
+
+    return shuffling;
   }
 
   /**
@@ -920,6 +930,7 @@ export enum EpochCacheErrorCode {
   NO_SYNC_COMMITTEE = "EPOCH_CONTEXT_ERROR_NO_SYNC_COMMITTEE",
   PROPOSER_EPOCH_MISMATCH = "EPOCH_CONTEXT_ERROR_PROPOSER_EPOCH_MISMATCH",
   NO_SHUFFLING_DECISION_ROOT = "EPOCH_CONTEXT_ERROR_NO_SHUFFLING_DECISION_ROOT",
+  NO_SHUFFLING_AVAILABLE = "EPOCH_CONTEXT_ERROR_NO_SHUFFLING_AVAILABLE",
 }
 
 type EpochCacheErrorType =
@@ -946,6 +957,12 @@ type EpochCacheErrorType =
       code: EpochCacheErrorCode.NO_SHUFFLING_DECISION_ROOT;
       currentEpoch: Epoch;
       requestedEpoch: Epoch;
+    }
+  | {
+      code: EpochCacheErrorCode.NO_SHUFFLING_AVAILABLE;
+      currentEpoch: Epoch;
+      requestedEpoch: Epoch;
+      decisionRoot: string;
     };
 
 export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
