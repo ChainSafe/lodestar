@@ -67,7 +67,6 @@ export interface IShufflingCache {
   addMetrics(metrics: ShufflingCacheMetrics | null): void;
   get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null>;
   getSync(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null;
-  add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void;
   buildSync(
     state: BeaconStateAllForks,
     shufflingEpoch: Epoch,
