@@ -45,7 +45,7 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
   // -                                | new   | next_withdrawal_validator_index
   // -                                | new   | historical_summaries
 
-  const stateBellatrixNode = ssz.bellatrix.BeaconState.commitViewDU(stateBellatrix);
+  const stateBellatrixNode = ssz.bellatrix.BeaconState.commitViewDU(stateBellatrix).node;
   const stateCapellaView = ssz.capella.BeaconState.getViewDU(stateBellatrixNode);
   // Attach existing BeaconStateCache from stateBellatrix to new stateCapellaView object
   const stateCapella = getCachedBeaconState(stateCapellaView, stateBellatrix);

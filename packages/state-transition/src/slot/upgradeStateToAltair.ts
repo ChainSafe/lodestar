@@ -49,7 +49,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   // -                             | new  | current_sync_committee
   // -                             | new  | next_sync_committee
 
-  const statePhase0Node = ssz.phase0.BeaconState.commitViewDU(statePhase0);
+  const statePhase0Node = ssz.phase0.BeaconState.commitViewDU(statePhase0).node;
   const stateAltairView = ssz.altair.BeaconState.getViewDU(statePhase0Node);
   // Attach existing BeaconStateCache from statePhase0 to new stateAltairView object
   const stateAltair = getCachedBeaconState(stateAltairView, statePhase0);
@@ -62,7 +62,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
 
   const validatorCount = statePhase0.validators.length;
   const emptyEpochParticipationView = ssz.altair.EpochParticipation.toViewDU(newZeroedArray(validatorCount));
-  const emptyEpochParticipationNode = ssz.altair.EpochParticipation.commitViewDU(emptyEpochParticipationView);
+  const emptyEpochParticipationNode = ssz.altair.EpochParticipation.commitViewDU(emptyEpochParticipationView).node;
   stateAltair.previousEpochParticipation = emptyEpochParticipationView;
   // Cloned instance with same immutable Node
   stateAltair.currentEpochParticipation = ssz.altair.EpochParticipation.getViewDU(emptyEpochParticipationNode);
