@@ -151,31 +151,23 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   add(epoch: Epoch, decisionRoot: RootHex, shuffling: EpochShuffling): void {
-    this.itemsByDecisionRootByEpoch
-      .getOrDefault(epoch)
-      .set(decisionRoot, {type: ShufflingCacheItemType.shuffling, shuffling});
+    const items = this.itemsByDecisionRootByEpoch.getOrDefault(epoch);
+    const item = items.get(decisionRoot);
+    if (item !== undefined && this.isPromiseCacheItem(item)) {
+      item.resolveFn(shuffling);
+    }
+    items.set(decisionRoot, {type: ShufflingCacheItemType.shuffling, shuffling});
     pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
   }
 
   buildSync(state: BeaconStateAllForks, epoch: Epoch, decisionRoot: RootHex, activeIndexes: number[]): EpochShuffling {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (cacheItem) {
-      if (this.isShufflingCacheItem(cacheItem)) {
-        this.metrics?.shufflingCache.cacheHit.inc({caller: ShufflingCacheCaller.synchronousBuildShuffling});
-        return cacheItem.shuffling;
-      }
-      // Add metric here for race condition recreating the shuffling because
-      // this sync call will finish first if its running on thread
-      //
-      // TODO: (matthewkeil) Perhaps we should throw an error instead. Should not happen ideally
-      this.metrics?.shufflingCache.cacheHitRebuildPromise.inc();
-      // add log statement here with epoch and decision root for this miss
-    } else {
-      this.metrics?.shufflingCache.cacheMiss.inc({caller: ShufflingCacheCaller.synchronousBuildShuffling});
+    const cachedShuffling = this.getSync(epoch, decisionRoot, ShufflingCacheCaller.synchronousBuildShuffling);
+    if (cachedShuffling !== null) {
+      return cachedShuffling;
     }
 
-    const shuffling = this._buildSync(state, epoch, decisionRoot, activeIndexes);
-    cacheItem?.resolveFn(shuffling);
+    const shuffling = computeEpochShuffling(state, activeIndexes, epoch);
+    this.add(epoch, decisionRoot, shuffling);
     return shuffling;
   }
 
@@ -185,41 +177,15 @@ export class ShufflingCache implements IShufflingCache {
     decisionRoot: RootHex,
     activeIndexes: number[]
   ): Promise<EpochShuffling> {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (cacheItem) {
-      if (this.isShufflingCacheItem(cacheItem)) {
-        this.metrics?.shufflingCache.cacheHit.inc({caller: ShufflingCacheCaller.buildShuffling});
-        return cacheItem.shuffling;
-      }
-      this.metrics?.shufflingCache.cacheHitUnresolvedPromise.inc({caller: ShufflingCacheCaller.buildShuffling});
-      return cacheItem.promise;
+    // will await any pending build already in progress
+    const cachedShuffling = await this.get(epoch, decisionRoot, ShufflingCacheCaller.buildShuffling);
+    if (cachedShuffling !== null) {
+      return cachedShuffling;
     }
 
-    // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
+    // this is to prevent multiple builds for the same epoch and dependent root
     // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
-    const item = this._insertShufflingPromise(epoch, decisionRoot);
-    const shuffling = await this._build(state, epoch, decisionRoot, activeIndexes);
-    item.resolveFn(shuffling);
-    return shuffling;
-  }
-
-  private _buildSync(
-    state: BeaconStateAllForks,
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    activeIndexes: number[]
-  ): EpochShuffling {
-    const shuffling = computeEpochShuffling(state, activeIndexes, epoch);
-    this.add(epoch, decisionRoot, shuffling);
-    return shuffling;
-  }
-
-  private async _build(
-    state: BeaconStateAllForks,
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    activeIndexes: number[]
-  ): Promise<EpochShuffling> {
+    this._insertShufflingPromise(epoch, decisionRoot);
     // TODO: (matthewkeil) replace this sync call with a worker and async build function that uses
     //       a nice'd thread to build in core idle time
     //
