@@ -1,11 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../perf/util.js";
-import {
-  ShufflingCache,
-  ShufflingCacheItem,
-  ShufflingCacheItemType,
-  ShufflingResolution,
-} from "../../src/cache/shufflingCache.js";
+import {ShufflingCache, ShufflingCacheItem, ShufflingCacheItemType} from "../../src/cache/shufflingCache.js";
 
 function allShufflingItems(c: ShufflingCache): ShufflingCacheItem[] {
   return Array.from(c["itemsByDecisionRootByEpoch"].values()).flatMap((innerMap) => Array.from(innerMap.values()));
@@ -65,12 +60,10 @@ describe("ShufflingCache", function () {
   it("should return shuffling from promise correctly", async function () {
     const shufflingCache = new ShufflingCache();
 
-    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-    const resolveFn: ShufflingResolution = (shufflingCache as any)._insertShufflingPromise(
+    const resolveFn = shufflingCache["_insertShufflingPromise"](
       state.epochCtx.epoch,
       state.epochCtx.currentShufflingDecisionRoot
     );
-    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
     expect(countPromises(shufflingCache)).toEqual(1);
     const shufflingRequest0 = shufflingCache.get(state.epochCtx.epoch, state.epochCtx.currentShufflingDecisionRoot);

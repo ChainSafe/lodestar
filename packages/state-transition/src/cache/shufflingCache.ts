@@ -73,7 +73,7 @@ export type ShufflingCachePromiseItem = {
 
 export type ShufflingCacheItem = ShufflingCacheShufflingItem | ShufflingCachePromiseItem;
 
-export type ShufflingResolution = (shuffling: EpochShuffling) => void;
+type ShufflingResolution = (shuffling: EpochShuffling) => void;
 
 export interface ShufflingCacheOptions {
   maxShufflingCacheEpochs?: number;
