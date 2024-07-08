@@ -19,16 +19,18 @@ export const SHUFFLING_CACHE_MAX_EPOCHS = 4;
 
 export enum ShufflingCacheCaller {
   testing = "testing",
+  // used here or epoch cache
   buildShuffling = "buildShuffling",
   synchronousBuildShuffling = "synchronousBuildShuffling",
-  attestationVerification = "attestationVerification",
   createFromState = "createFromState",
   reloadCreateFromState = "reloadCreateFromState",
   getBeaconCommittee = "getBeaconCommittee",
-  getEpochCommittees = "getEpochCommittees",
-  getAttestationsForBlock = "getAttestationsForBlock",
   getCommitteeCountPerSlot = "getCommitteeCountPerSlot",
   getCommitteeAssignments = "getCommitteeAssignments",
+  // used in beacon node
+  attestationVerification = "attestationVerification",
+  getEpochCommittees = "getEpochCommittees",
+  getAttestationsForBlock = "getAttestationsForBlock",
 }
 
 export interface ShufflingCacheMetrics {
