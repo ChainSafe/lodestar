@@ -116,12 +116,6 @@ export class ShufflingCache implements IShufflingCache {
   constructor(metrics: ShufflingCacheMetrics | null = null, opts: ShufflingCacheOptions = {}) {
     this.maxEpochs = opts.maxShufflingCacheEpochs ?? SHUFFLING_CACHE_MAX_EPOCHS;
     this.addMetrics(metrics);
-    // just used for testing and don't want to pollute the public api
-    Object.defineProperty(this, "allAsArray", {
-      enumerable: false,
-      value: () =>
-        Array.from(this.itemsByDecisionRootByEpoch.values()).flatMap((innerMap) => Array.from(innerMap.values())),
-    });
   }
 
   addMetrics(metrics: ShufflingCacheMetrics | null): void {

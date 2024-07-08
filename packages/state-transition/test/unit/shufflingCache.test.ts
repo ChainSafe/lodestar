@@ -1,15 +1,22 @@
 import {describe, it, expect} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../perf/util.js";
-import {ShufflingCache, ShufflingCacheItemType, ShufflingResolution} from "../../src/cache/shufflingCache.js";
+import {
+  ShufflingCache,
+  ShufflingCacheItem,
+  ShufflingCacheItemType,
+  ShufflingResolution,
+} from "../../src/cache/shufflingCache.js";
+
+function allShufflingItems(c: ShufflingCache): ShufflingCacheItem[] {
+  return Array.from(c["itemsByDecisionRootByEpoch"].values()).flatMap((innerMap) => Array.from(innerMap.values()));
+}
 
 function countPromises(cache: ShufflingCache): number {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
-  return (cache as any).allAsArray().filter((item: any) => item.type === ShufflingCacheItemType.promise).length;
+  return allShufflingItems(cache).filter((item) => item.type === ShufflingCacheItemType.promise).length;
 }
 
 function countShufflings(cache: ShufflingCache): number {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
-  return (cache as any).allAsArray().filter((item: any) => item.type === ShufflingCacheItemType.shuffling).length;
+  return allShufflingItems(cache).filter((item) => item.type === ShufflingCacheItemType.shuffling).length;
 }
 
 describe("ShufflingCache", function () {
