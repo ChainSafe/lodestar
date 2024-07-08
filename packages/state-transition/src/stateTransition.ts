@@ -102,25 +102,27 @@ export function stateTransition(
 
   processBlock(fork, postState, block, options, options);
 
-  const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
-  postState.commit();
-  processBlockCommitTimer?.();
+  // const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
+  // postState.commit();
+  // processBlockCommitTimer?.();
+
+  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+    source: StateHashTreeRootSource.stateTransition,
+  });
+  // commit() is inside hashTreeRoot()
+  const stateRoot = postState.hashTreeRoot();
+  hashTreeRootTimer?.();
 
   // Note: time only on success. Include processBlock and commit
   processBlockTimer?.();
 
-  if (metrics) {
-    onPostStateMetrics(postState, metrics);
-  }
+  // having metrics here caused changed views
+  // if (metrics) {
+  //   onPostStateMetrics(postState, metrics);
+  // }
 
   // Verify state root
   if (verifyStateRoot) {
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: StateHashTreeRootSource.stateTransition,
-    });
-    const stateRoot = postState.hashTreeRoot();
-    hashTreeRootTimer?.();
-
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
         `Invalid state root at slot ${block.slot}, expected=${toHexString(block.stateRoot)}, actual=${toHexString(
@@ -157,7 +159,8 @@ export function processSlots(
   postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, metrics);
 
   // Apply changes to state, must do before hashing
-  postState.commit();
+  // commit() is inside hashTreeRoot()
+  postState.hashTreeRoot();
 
   return postState;
 }
@@ -208,11 +211,11 @@ function processSlotsWithTransientCache(
 
       // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
       // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
-      {
-        const timer = metrics?.epochTransitionCommitTime.startTimer();
-        postState.commit();
-        timer?.();
-      }
+      // {
+      //   const timer = metrics?.epochTransitionCommitTime.startTimer();
+      //   postState.commit();
+      //   timer?.();
+      // }
 
       // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, commit
       epochTransitionTimer?.();
