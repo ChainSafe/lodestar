@@ -323,11 +323,11 @@ export class EpochCache {
     // in that case, we don't need to compute shufflings again
     const caller = opts?.isReload ? ShufflingCacheCaller.reloadCreateFromState : ShufflingCacheCaller.createFromState;
     const previousShufflingDecisionRoot = getShufflingDecisionBlock(state, previousEpoch);
-    const cachedPreviousShuffling = shufflingCache.getOrNull(previousEpoch, previousShufflingDecisionRoot, caller);
+    const cachedPreviousShuffling = shufflingCache.getSync(previousEpoch, previousShufflingDecisionRoot, caller);
     const currentShufflingDecisionRoot = getShufflingDecisionBlock(state, currentEpoch);
-    const cachedCurrentShuffling = shufflingCache.getOrNull(currentEpoch, currentShufflingDecisionRoot, caller);
+    const cachedCurrentShuffling = shufflingCache.getSync(currentEpoch, currentShufflingDecisionRoot, caller);
     const nextShufflingDecisionRoot = getShufflingDecisionBlock(state, nextEpoch);
-    const cachedNextShuffling = shufflingCache.getOrNull(nextEpoch, nextShufflingDecisionRoot, caller);
+    const cachedNextShuffling = shufflingCache.getSync(nextEpoch, nextShufflingDecisionRoot, caller);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];

@@ -80,7 +80,7 @@ export interface IShufflingCache {
   addMetrics(metrics: ShufflingCacheMetrics | null): void;
   get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null>;
   getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling;
-  getOrNull(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null;
+  getSync(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null;
   add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void;
   buildSync(
     state: BeaconStateAllForks,
@@ -167,11 +167,7 @@ export class ShufflingCache implements IShufflingCache {
    * Will synchronously get a shuffling if it is available or will return null if not. The consumer
    * will have to then submit for building the shuffling. Metrics are collected by this._get
    */
-  getOrNull(
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
-    caller: ShufflingCacheCaller
-  ): EpochShuffling | null {
+  getSync(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null {
     return this._get(shufflingEpoch, shufflingDecisionRoot, false, caller);
   }
 

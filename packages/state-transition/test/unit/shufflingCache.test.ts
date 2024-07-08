@@ -34,7 +34,7 @@ describe("ShufflingCache", function () {
       state.epochCtx.currentActiveIndices
     );
     expect(
-      shufflingCache.getOrNull(
+      shufflingCache.getSync(
         currentEpoch,
         state.epochCtx.currentShufflingDecisionRoot,
         ShufflingCacheCaller.createFromState
@@ -51,7 +51,7 @@ describe("ShufflingCache", function () {
       state.epochCtx.currentActiveIndices
     );
     expect(
-      shufflingCache.getOrNull(
+      shufflingCache.getSync(
         currentEpoch,
         state.epochCtx.currentShufflingDecisionRoot,
         ShufflingCacheCaller.createFromState
@@ -66,7 +66,7 @@ describe("ShufflingCache", function () {
     );
     // insert shuffling at another epoch to prune the cache
     expect(
-      shufflingCache.getOrNull(
+      shufflingCache.getSync(
         state.epochCtx.nextEpoch,
         state.epochCtx.nextShufflingDecisionRoot,
         ShufflingCacheCaller.createFromState
@@ -74,7 +74,7 @@ describe("ShufflingCache", function () {
     ).toEqual(nextShuffling);
     // the current shuffling is not available anymore
     expect(
-      shufflingCache.getOrNull(
+      shufflingCache.getSync(
         currentEpoch,
         state.epochCtx.currentShufflingDecisionRoot,
         ShufflingCacheCaller.createFromState
