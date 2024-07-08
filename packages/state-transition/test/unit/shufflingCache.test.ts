@@ -1,6 +1,11 @@
 import {describe, it, expect} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../perf/util.js";
-import {ShufflingCache, ShufflingCacheItem, ShufflingCacheItemType} from "../../src/cache/shufflingCache.js";
+import {
+  ShufflingCache,
+  ShufflingCacheCaller,
+  ShufflingCacheItem,
+  ShufflingCacheItemType,
+} from "../../src/cache/shufflingCache.js";
 
 function allShufflingItems(c: ShufflingCache): ShufflingCacheItem[] {
   return Array.from(c["itemsByDecisionRootByEpoch"].values()).flatMap((innerMap) => Array.from(innerMap.values()));
@@ -28,7 +33,13 @@ describe("ShufflingCache", function () {
       state.epochCtx.currentShufflingDecisionRoot,
       state.epochCtx.currentActiveIndices
     );
-    expect(shufflingCache.getOrNull(currentEpoch, state.epochCtx.currentShufflingDecisionRoot)).toEqual(shuffling);
+    expect(
+      shufflingCache.getOrNull(
+        currentEpoch,
+        state.epochCtx.currentShufflingDecisionRoot,
+        ShufflingCacheCaller.createFromState
+      )
+    ).toEqual(shuffling);
   });
 
   it("should bound by maxSize(=1)", async function () {
@@ -39,9 +50,13 @@ describe("ShufflingCache", function () {
       state.epochCtx.currentShufflingDecisionRoot,
       state.epochCtx.currentActiveIndices
     );
-    expect(shufflingCache.getOrNull(currentEpoch, state.epochCtx.currentShufflingDecisionRoot)).toEqual(
-      currentShuffling
-    );
+    expect(
+      shufflingCache.getOrNull(
+        currentEpoch,
+        state.epochCtx.currentShufflingDecisionRoot,
+        ShufflingCacheCaller.createFromState
+      )
+    ).toEqual(currentShuffling);
 
     const nextShuffling = shufflingCache.buildSync(
       state,
@@ -50,17 +65,27 @@ describe("ShufflingCache", function () {
       state.epochCtx.nextActiveIndices
     );
     // insert shuffling at another epoch to prune the cache
-    expect(shufflingCache.getOrNull(state.epochCtx.nextEpoch, state.epochCtx.nextShufflingDecisionRoot)).toEqual(
-      nextShuffling
-    );
+    expect(
+      shufflingCache.getOrNull(
+        state.epochCtx.nextEpoch,
+        state.epochCtx.nextShufflingDecisionRoot,
+        ShufflingCacheCaller.createFromState
+      )
+    ).toEqual(nextShuffling);
     // the current shuffling is not available anymore
-    expect(shufflingCache.getOrNull(currentEpoch, state.epochCtx.currentShufflingDecisionRoot)).toBeNull();
+    expect(
+      shufflingCache.getOrNull(
+        currentEpoch,
+        state.epochCtx.currentShufflingDecisionRoot,
+        ShufflingCacheCaller.createFromState
+      )
+    ).toBeNull();
   });
 
   it("should return shuffling from promise correctly", async function () {
     const shufflingCache = new ShufflingCache();
 
-    const resolveFn = shufflingCache["_insertShufflingPromise"](
+    const cacheItem = shufflingCache["_insertShufflingPromise"](
       state.epochCtx.epoch,
       state.epochCtx.currentShufflingDecisionRoot
     );
@@ -99,7 +124,7 @@ describe("ShufflingCache", function () {
     expect(countShufflings(shufflingCache)).toEqual(1);
 
     // double check that re-resolving for thrown away promises does not change the result
-    resolveFn("bad data" as any);
+    cacheItem.resolveFn("bad data" as any);
     expect(result1).toEqual(shuffling);
   });
 

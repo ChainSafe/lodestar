@@ -321,16 +321,13 @@ export class EpochCache {
 
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
+    const caller = opts?.isReload ? ShufflingCacheCaller.reloadCreateFromState : ShufflingCacheCaller.createFromState;
     const previousShufflingDecisionRoot = getShufflingDecisionBlock(state, previousEpoch);
-    const cachedPreviousShuffling = shufflingCache.getOrNull(
-      previousEpoch,
-      previousShufflingDecisionRoot,
-      opts?.isReload
-    );
+    const cachedPreviousShuffling = shufflingCache.getOrNull(previousEpoch, previousShufflingDecisionRoot, caller);
     const currentShufflingDecisionRoot = getShufflingDecisionBlock(state, currentEpoch);
-    const cachedCurrentShuffling = shufflingCache.getOrNull(currentEpoch, currentShufflingDecisionRoot, opts?.isReload);
+    const cachedCurrentShuffling = shufflingCache.getOrNull(currentEpoch, currentShufflingDecisionRoot, caller);
     const nextShufflingDecisionRoot = getShufflingDecisionBlock(state, nextEpoch);
-    const cachedNextShuffling = shufflingCache.getOrNull(nextEpoch, nextShufflingDecisionRoot, opts?.isReload);
+    const cachedNextShuffling = shufflingCache.getOrNull(nextEpoch, nextShufflingDecisionRoot, caller);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
