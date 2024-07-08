@@ -65,22 +65,13 @@ export interface ShufflingCacheOptions {
 
 export interface IShufflingCache {
   addMetrics(metrics: ShufflingCacheMetrics | null): void;
-  get(
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
-    caller: ShufflingCacheCaller
-  ): Promise<EpochShuffling | null>;
-  getSync(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null;
-  buildSync(
-    state: BeaconStateAllForks,
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
-    activeIndexes: number[]
-  ): EpochShuffling;
+  get(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): Promise<EpochShuffling | null>;
+  getSync(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null;
+  buildSync(state: BeaconStateAllForks, epoch: Epoch, decisionRoot: RootHex, activeIndexes: number[]): EpochShuffling;
   build(
     state: BeaconStateAllForks,
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
+    epoch: Epoch,
+    decisionRoot: RootHex,
     activeIndexes: number[]
   ): Promise<EpochShuffling>;
 }
@@ -123,12 +114,8 @@ export class ShufflingCache implements IShufflingCache {
    * it to be calculated.  Consumer await covers both cases.  If shuffling is not available returns
    * null and does not attempt to compute shuffling.
    */
-  async get(
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
-    caller: ShufflingCacheCaller
-  ): Promise<EpochShuffling | null> {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
+  async get(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): Promise<EpochShuffling | null> {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem === undefined) {
       this.metrics?.shufflingCache.cacheMiss.inc({caller});
       return null;
@@ -146,8 +133,8 @@ export class ShufflingCache implements IShufflingCache {
    * Will synchronously get a shuffling if it is available or will return null if not. The consumer
    * will have to then submit for building the shuffling. Metrics are collected by this._get
    */
-  getSync(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
+  getSync(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem === undefined) {
       this.metrics?.shufflingCache.cacheMiss.inc({caller});
       return null;
@@ -160,20 +147,15 @@ export class ShufflingCache implements IShufflingCache {
     return cacheItem.shuffling;
   }
 
-  add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void {
+  add(epoch: Epoch, decisionRoot: RootHex, shuffling: EpochShuffling): void {
     this.itemsByDecisionRootByEpoch
-      .getOrDefault(shufflingEpoch)
-      .set(shufflingDecisionRoot, {type: ShufflingCacheItemType.shuffling, shuffling});
+      .getOrDefault(epoch)
+      .set(decisionRoot, {type: ShufflingCacheItemType.shuffling, shuffling});
     pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
   }
 
-  buildSync(
-    state: BeaconStateAllForks,
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
-    activeIndexes: number[]
-  ): EpochShuffling {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
+  buildSync(state: BeaconStateAllForks, epoch: Epoch, decisionRoot: RootHex, activeIndexes: number[]): EpochShuffling {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem) {
       if (this.isShufflingCacheItem(cacheItem)) {
         this.metrics?.shufflingCache.cacheHit.inc({caller: ShufflingCacheCaller.synchronousBuildShuffling});
@@ -189,18 +171,18 @@ export class ShufflingCache implements IShufflingCache {
       this.metrics?.shufflingCache.cacheMiss.inc({caller: ShufflingCacheCaller.synchronousBuildShuffling});
     }
 
-    const shuffling = this._buildSync(state, shufflingEpoch, shufflingDecisionRoot, activeIndexes);
+    const shuffling = this._buildSync(state, epoch, decisionRoot, activeIndexes);
     cacheItem?.resolveFn(shuffling);
     return shuffling;
   }
 
   async build(
     state: BeaconStateAllForks,
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
+    epoch: Epoch,
+    decisionRoot: RootHex,
     activeIndexes: number[]
   ): Promise<EpochShuffling> {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem) {
       if (this.isShufflingCacheItem(cacheItem)) {
         this.metrics?.shufflingCache.cacheHit.inc({caller: ShufflingCacheCaller.buildShuffling});
@@ -212,35 +194,35 @@ export class ShufflingCache implements IShufflingCache {
 
     // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
     // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
-    const item = this._insertShufflingPromise(shufflingEpoch, shufflingDecisionRoot);
-    const shuffling = await this._build(state, shufflingEpoch, shufflingDecisionRoot, activeIndexes);
+    const item = this._insertShufflingPromise(epoch, decisionRoot);
+    const shuffling = await this._build(state, epoch, decisionRoot, activeIndexes);
     item.resolveFn(shuffling);
     return shuffling;
   }
 
   private _buildSync(
     state: BeaconStateAllForks,
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
+    epoch: Epoch,
+    decisionRoot: RootHex,
     activeIndexes: number[]
   ): EpochShuffling {
-    const shuffling = computeEpochShuffling(state, activeIndexes, shufflingEpoch);
-    this.add(shufflingEpoch, shufflingDecisionRoot, shuffling);
+    const shuffling = computeEpochShuffling(state, activeIndexes, epoch);
+    this.add(epoch, decisionRoot, shuffling);
     return shuffling;
   }
 
   private async _build(
     state: BeaconStateAllForks,
-    shufflingEpoch: Epoch,
-    shufflingDecisionRoot: RootHex,
+    epoch: Epoch,
+    decisionRoot: RootHex,
     activeIndexes: number[]
   ): Promise<EpochShuffling> {
     // TODO: (matthewkeil) replace this sync call with a worker and async build function that uses
     //       a nice'd thread to build in core idle time
     //
     // Building will overwrite the ShufflingCachePromiseItem with the ShufflingCacheShufflingItem
-    const shuffling = computeEpochShuffling(state, activeIndexes, shufflingEpoch);
-    this.add(shufflingEpoch, shufflingDecisionRoot, shuffling);
+    const shuffling = computeEpochShuffling(state, activeIndexes, epoch);
+    this.add(epoch, decisionRoot, shuffling);
     return shuffling;
   }
 
