@@ -91,9 +91,17 @@ describe("ShufflingCache", function () {
     );
 
     expect(countPromises(shufflingCache)).toEqual(1);
-    const shufflingRequest0 = shufflingCache.get(state.epochCtx.epoch, state.epochCtx.currentShufflingDecisionRoot);
+    const shufflingRequest0 = shufflingCache.get(
+      state.epochCtx.epoch,
+      state.epochCtx.currentShufflingDecisionRoot,
+      ShufflingCacheCaller.attestationVerification
+    );
     expect(shufflingRequest0).toBeInstanceOf(Promise);
-    const shufflingRequest1 = shufflingCache.get(state.epochCtx.epoch, state.epochCtx.currentShufflingDecisionRoot);
+    const shufflingRequest1 = shufflingCache.get(
+      state.epochCtx.epoch,
+      state.epochCtx.currentShufflingDecisionRoot,
+      ShufflingCacheCaller.attestationVerification
+    );
     expect(shufflingRequest1).toBeInstanceOf(Promise);
 
     const DELAY_WAIT_TIME = 2000;

@@ -14,6 +14,7 @@ import {
   EpochShuffling,
   ShufflingCache,
   IShufflingCache,
+  ShufflingCacheCaller,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -734,7 +735,11 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // resolve the promise to unblock other calls of the same epoch and dependent root
-    const shuffling = await this.shufflingCache.get(attEpoch, shufflingDependentRoot);
+    const shuffling = await this.shufflingCache.get(
+      attEpoch,
+      shufflingDependentRoot,
+      ShufflingCacheCaller.attestationVerification
+    );
     if (!shuffling) {
       // This will be essentially unreachable considering regen should build the shuffling for this epoch
       // but need to handle anyhow

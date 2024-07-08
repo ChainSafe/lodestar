@@ -11,6 +11,7 @@ import {
   EpochShuffling,
   computeStartSlotAtEpoch,
   computeSigningRoot,
+  ShufflingCacheCaller,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -584,7 +585,11 @@ export async function getShufflingForAttestationVerification(
   const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
   const shufflingDependentRoot = getShufflingDependentRoot(chain.forkChoice, attEpoch, blockEpoch, attHeadBlock);
 
-  const shuffling = await chain.shufflingCache.get(attEpoch, shufflingDependentRoot);
+  const shuffling = await chain.shufflingCache.get(
+    attEpoch,
+    shufflingDependentRoot,
+    ShufflingCacheCaller.attestationVerification
+  );
   if (shuffling) {
     // most of the time, we should get the shuffling from cache
     chain.metrics?.gossipAttestation.shufflingCacheHit.inc({caller: regenCaller});
