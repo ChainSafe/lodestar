@@ -18,6 +18,7 @@ export const SHUFFLING_CACHE_MAX_PROMISES = 2;
 export const SHUFFLING_CACHE_MAX_EPOCHS = 4;
 
 export enum ShufflingCacheCaller {
+  testing = "testing",
   buildShuffling = "buildShuffling",
   synchronousBuildShuffling = "synchronousBuildShuffling",
   attestationVerification = "attestationVerification",

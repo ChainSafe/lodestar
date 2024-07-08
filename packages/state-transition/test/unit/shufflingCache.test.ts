@@ -34,11 +34,7 @@ describe("ShufflingCache", function () {
       state.epochCtx.currentActiveIndices
     );
     expect(
-      shufflingCache.getSync(
-        currentEpoch,
-        state.epochCtx.currentShufflingDecisionRoot,
-        ShufflingCacheCaller.createFromState
-      )
+      shufflingCache.getSync(currentEpoch, state.epochCtx.currentShufflingDecisionRoot, ShufflingCacheCaller.testing)
     ).toEqual(shuffling);
   });
 
@@ -51,11 +47,7 @@ describe("ShufflingCache", function () {
       state.epochCtx.currentActiveIndices
     );
     expect(
-      shufflingCache.getSync(
-        currentEpoch,
-        state.epochCtx.currentShufflingDecisionRoot,
-        ShufflingCacheCaller.createFromState
-      )
+      shufflingCache.getSync(currentEpoch, state.epochCtx.currentShufflingDecisionRoot, ShufflingCacheCaller.testing)
     ).toEqual(currentShuffling);
 
     const nextShuffling = shufflingCache.buildSync(
@@ -69,16 +61,12 @@ describe("ShufflingCache", function () {
       shufflingCache.getSync(
         state.epochCtx.nextEpoch,
         state.epochCtx.nextShufflingDecisionRoot,
-        ShufflingCacheCaller.createFromState
+        ShufflingCacheCaller.testing
       )
     ).toEqual(nextShuffling);
     // the current shuffling is not available anymore
     expect(
-      shufflingCache.getSync(
-        currentEpoch,
-        state.epochCtx.currentShufflingDecisionRoot,
-        ShufflingCacheCaller.createFromState
-      )
+      shufflingCache.getSync(currentEpoch, state.epochCtx.currentShufflingDecisionRoot, ShufflingCacheCaller.testing)
     ).toBeNull();
   });
 
@@ -94,13 +82,13 @@ describe("ShufflingCache", function () {
     const shufflingRequest0 = shufflingCache.get(
       state.epochCtx.epoch,
       state.epochCtx.currentShufflingDecisionRoot,
-      ShufflingCacheCaller.attestationVerification
+      ShufflingCacheCaller.testing
     );
     expect(shufflingRequest0).toBeInstanceOf(Promise);
     const shufflingRequest1 = shufflingCache.get(
       state.epochCtx.epoch,
       state.epochCtx.currentShufflingDecisionRoot,
-      ShufflingCacheCaller.attestationVerification
+      ShufflingCacheCaller.testing
     );
     expect(shufflingRequest1).toBeInstanceOf(Promise);
 
