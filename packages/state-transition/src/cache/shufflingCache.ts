@@ -68,9 +68,33 @@ export interface ShufflingCacheOptions {
 
 export interface IShufflingCache {
   addMetrics(metrics: ShufflingCacheMetrics | null): void;
-  get(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): Promise<EpochShuffling | null>;
+
+  /**
+   * Will synchronously get a shuffling if it is available or will return null if not.
+   */
   getSync(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null;
+
+  /**
+   * Will immediately return a shuffling if it is available, or a promise to an in-progress shuffling calculation.
+   *
+   * If shuffling is not available returns null and does not attempt to compute shuffling.
+   */
+  get(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): Promise<EpochShuffling | null>;
+
+  /**
+   * Will synchronously get a shuffling if it is available.
+   *
+   * If a shuffling is not immediately available, a shuffling will be calculated.
+   *
+   * NOTE: this may recalculate an already in-progress shuffling.
+   */
   buildSync(state: BeaconStateAllForks, epoch: Epoch, decisionRoot: RootHex, activeIndexes: number[]): EpochShuffling;
+
+  /**
+   * Will immediately return a shuffling if it is available, or a promise to an in-progress shuffling calculation.
+   *
+   * If neither is available, a shuffling will be calculated.
+   */
   build(
     state: BeaconStateAllForks,
     epoch: Epoch,
@@ -111,12 +135,6 @@ export class ShufflingCache implements IShufflingCache {
     }
   }
 
-  /**
-   * Used for attestation verifications.  Will immediately return a shuffling if it is available,
-   * otherwise it will return the promise for the shuffling and the consumer will need to wait for
-   * it to be calculated.  Consumer await covers both cases.  If shuffling is not available returns
-   * null and does not attempt to compute shuffling.
-   */
   async get(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): Promise<EpochShuffling | null> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem === undefined) {
@@ -132,10 +150,6 @@ export class ShufflingCache implements IShufflingCache {
     }
   }
 
-  /**
-   * Will synchronously get a shuffling if it is available or will return null if not. The consumer
-   * will have to then submit for building the shuffling. Metrics are collected by this._get
-   */
   getSync(epoch: Epoch, decisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem === undefined) {
