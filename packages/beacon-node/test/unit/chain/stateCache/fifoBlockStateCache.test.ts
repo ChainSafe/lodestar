@@ -10,8 +10,8 @@ describe("FIFOBlockStateCache", function () {
   let cache: FIFOBlockStateCache;
   const shuffling: EpochShuffling = {
     epoch: 0,
-    activeIndices: [],
-    shuffling: [],
+    activeIndices: new Uint32Array(),
+    shuffling: new Uint32Array(),
     committees: [],
     committeesPerSlot: 1,
   };
@@ -89,17 +89,18 @@ describe("FIFOBlockStateCache", function () {
 
   for (const {name, headState, addAsHeadArr, keptStates, prunedState} of testCases) {
     it(name, () => {
+      expect(cache.getSeedState().hashTreeRoot()).toEqual(state1.hashTreeRoot());
       // move to head this state
       cache.setHeadState(headState);
-      expect(cache.size).to.be.equal(2, "Size must be same as initial 2");
+      expect(cache.size).toEqualWithMessage(2, "Size must be same as initial 2");
       for (const addAsHead of addAsHeadArr) {
         cache.add(state3, addAsHead);
       }
-      expect(cache.size).to.be.equal(2, "Size should reduce to initial 2 after prunning");
+      expect(cache.size).toEqualWithMessage(2, "Size should reduce to initial 2 after prunning");
       expect(cache.dumpKeyOrder()).toEqual(keptStates);
       expect(cache.get(prunedState)).toBeNull();
       for (const key of keptStates) {
-        expect(cache.get(key), `must have key ${key}`).to.be.not.null;
+        expect(cache.get(key)).not.toBeNull();
       }
     });
   }

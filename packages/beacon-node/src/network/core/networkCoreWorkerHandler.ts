@@ -1,9 +1,9 @@
 import path from "node:path";
-import worker_threads from "node:worker_threads";
+import workerThreads from "node:worker_threads";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
-import {PeerId} from "@libp2p/interface";
+import {PeerId, Secp256k1PeerId} from "@libp2p/interface";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
@@ -78,14 +78,14 @@ export class WorkerNetworkCore implements INetworkCore {
     wireEventsOnMainThread<NetworkEventData>(
       NetworkWorkerThreadEventType.networkEvent,
       modules.events,
-      modules.worker as unknown as worker_threads.Worker,
+      modules.worker as unknown as workerThreads.Worker,
       modules.metrics,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
       NetworkWorkerThreadEventType.reqRespBridgeEvents,
       this.reqRespBridgeEventBus,
-      modules.worker as unknown as worker_threads.Worker,
+      modules.worker as unknown as workerThreads.Worker,
       modules.metrics,
       reqRespBridgeEventDirection
     );
@@ -110,7 +110,7 @@ export class WorkerNetworkCore implements INetworkCore {
       opts,
       chainConfigJson: chainConfigToJson(config),
       genesisValidatorsRoot: config.genesisValidatorsRoot,
-      peerIdProto: exportToProtobuf(peerId),
+      peerIdProto: exportToProtobuf(peerId as Secp256k1PeerId),
       localMultiaddrs,
       metricsEnabled,
       peerStoreDir,

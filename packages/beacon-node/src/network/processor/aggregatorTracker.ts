@@ -14,13 +14,27 @@ const MAX_SLOTS_CACHED = SLOTS_PER_EPOCH * 2;
 export class AggregatorTracker {
   private subnetAggregatorsBySlot = new MapDef<Slot, Set<SubnetId>>(() => new Set());
 
+  get maxSlotsCached(): number {
+    return MAX_SLOTS_CACHED;
+  }
+
   addAggregator(subnet: SubnetId, slot: Slot): void {
     this.subnetAggregatorsBySlot.getOrDefault(slot).add(subnet);
-
-    pruneSetToMax(this.subnetAggregatorsBySlot, MAX_SLOTS_CACHED);
   }
 
   shouldAggregate(subnet: SubnetId, slot: Slot): boolean {
     return this.subnetAggregatorsBySlot.get(slot)?.has(subnet) === true;
+  }
+
+  prune(): void {
+    // We could also `pruneBySlot` as items before current slot are no longer
+    // relevant but due to small cache size (64), the best approach is to
+    // just prune the cache after a batch of subnet subscriptions is processed.
+    pruneSetToMax(
+      this.subnetAggregatorsBySlot,
+      MAX_SLOTS_CACHED,
+      // Prune the oldest slots first
+      (a, b) => a - b
+    );
   }
 }

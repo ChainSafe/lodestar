@@ -1,5 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {Api, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {Logger} from "@lodestar/utils";
 import {Slot, Root, RootHex} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
@@ -26,14 +26,24 @@ export class ChainHeaderTracker {
 
   constructor(
     private readonly logger: Logger,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly emitter: ValidatorEventEmitter
   ) {}
 
   start(signal: AbortSignal): void {
     this.logger.verbose("Subscribing to head event");
     this.api.events
-      .eventstream([EventType.head], signal, this.onHeadUpdate)
+      .eventstream({
+        topics: [EventType.head],
+        signal,
+        onEvent: this.onHeadUpdate,
+        onError: (e) => {
+          this.logger.error("Failed to receive head event", {}, e);
+        },
+        onClose: () => {
+          this.logger.verbose("Closed stream for head event", {});
+        },
+      })
       .catch((e) => this.logger.error("Failed to subscribe to head event", {}, e));
   }
 

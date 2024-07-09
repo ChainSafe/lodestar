@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.14.0",
+  "version": "1.19.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -19,8 +19,8 @@
     "./networks": {
       "import": "./lib/networks.js"
     },
-    "./presets": {
-      "import": "./lib/presets.js"
+    "./configs": {
+      "import": "./lib/configs.js"
     }
   },
   "typesVersions": {
@@ -49,8 +49,8 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
-    "pretest": "yarn run check-types",
-    "test:unit": "yarn vitest --run --dir test/unit/ --coverage",
+    "test": "yarn test:unit",
+    "test:unit": "yarn vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
@@ -64,8 +64,8 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^0.14.0",
-    "@lodestar/params": "^1.14.0",
-    "@lodestar/types": "^1.14.0"
+    "@chainsafe/ssz": "^0.15.1",
+    "@lodestar/params": "^1.19.0",
+    "@lodestar/types": "^1.19.0"
   }
 }

@@ -1,8 +1,10 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey} from "@chainsafe/bls/types";
 import {BitArray} from "@chainsafe/ssz";
-import {altair, Root, ssz} from "@lodestar/types";
+import {ApiClient} from "@lodestar/api";
+import {altair, Bytes32, Root, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
+import {GenesisData} from "../index.js";
 import {SyncCommitteeFast} from "../types.js";
 
 export function sumBits(bits: BitArray): number {
@@ -78,3 +80,16 @@ export function isEmptyHeader(header: BeaconBlockHeader): boolean {
 // Thanks https://github.com/iliakan/detect-node/blob/master/index.esm.js
 export const isNode =
   Object.prototype.toString.call(typeof process !== "undefined" ? process : 0) === "[object process]";
+
+export async function getGenesisData(api: Pick<ApiClient, "beacon">): Promise<GenesisData> {
+  const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
+
+  return {
+    genesisTime,
+    genesisValidatorsRoot,
+  };
+}
+
+export async function getFinalizedSyncCheckpoint(api: Pick<ApiClient, "beacon">): Promise<Bytes32> {
+  return (await api.beacon.getStateFinalityCheckpoints({stateId: "head"})).value().finalized.root;
+}

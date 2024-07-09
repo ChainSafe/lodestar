@@ -1,4 +1,3 @@
-export * from "./command.js";
 export * from "./errors.js";
 export * from "./ethers.js";
 export * from "./file.js";

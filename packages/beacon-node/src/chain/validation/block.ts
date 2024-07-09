@@ -1,6 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks} from "@lodestar/types";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
@@ -11,6 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {IBeaconChain} from "../interface.js";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";
@@ -19,7 +19,7 @@ import {RegenCaller} from "../regen/index.js";
 export async function validateGossipBlock(
   config: ChainForkConfig,
   chain: IBeaconChain,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock,
   fork: ForkName
 ): Promise<void> {
   const block = signedBlock.message;
@@ -111,13 +111,13 @@ export async function validateGossipBlock(
     });
   }
 
-  // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
+  // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.
   // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
   // this is something we should change this in the future to make the code airtight to the spec.
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blockSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
+    .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });

@@ -30,12 +30,12 @@ export type EpochShuffling = {
   /**
    * Non-shuffled active validator indices
    */
-  activeIndices: ValidatorIndex[];
+  activeIndices: Uint32Array;
 
   /**
    * The active validator indices, shuffled into their committee
    */
-  shuffling: ValidatorIndex[];
+  shuffling: Uint32Array;
 
   /**
    * List of list of committees Committees
@@ -45,7 +45,7 @@ export type EpochShuffling = {
    * Note: With a high amount of shards, or low amount of validators,
    * some shards may not have a committee this epoch
    */
-  committees: ValidatorIndex[][][];
+  committees: Uint32Array[][];
 
   /**
    * Committees per slot, for fast attestation verification
@@ -61,13 +61,14 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
 
 export function computeEpochShuffling(
   state: BeaconStateAllForks,
-  activeIndices: ValidatorIndex[],
+  activeIndices: ArrayLike<ValidatorIndex>,
   epoch: Epoch
 ): EpochShuffling {
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
 
   // copy
-  const shuffling = activeIndices.slice();
+  const _activeIndices = new Uint32Array(activeIndices);
+  const shuffling = _activeIndices.slice();
   unshuffleList(shuffling, seed);
 
   const activeValidatorCount = activeIndices.length;
@@ -75,9 +76,9 @@ export function computeEpochShuffling(
 
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
-  const committees: ValidatorIndex[][][] = [];
+  const committees: Uint32Array[][] = [];
   for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
-    const slotCommittees: ValidatorIndex[][] = [];
+    const slotCommittees: Uint32Array[] = [];
     for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
       const index = slot * committeesPerSlot + committeeIndex;
       const startOffset = Math.floor((activeValidatorCount * index) / committeeCount);
@@ -85,14 +86,14 @@ export function computeEpochShuffling(
       if (!(startOffset <= endOffset)) {
         throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
       }
-      slotCommittees.push(shuffling.slice(startOffset, endOffset));
+      slotCommittees.push(shuffling.subarray(startOffset, endOffset));
     }
     committees.push(slotCommittees);
   }
 
   return {
     epoch,
-    activeIndices,
+    activeIndices: _activeIndices,
     shuffling,
     committees,
     committeesPerSlot,

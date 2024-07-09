@@ -1,8 +1,9 @@
-import qs from "qs";
-import fastify, {FastifyInstance} from "fastify";
-import fastifyCors from "@fastify/cors";
-import {Api, ServerApi} from "@lodestar/api";
-import {registerRoutes} from "@lodestar/api/beacon/server";
+import {parse as parseQueryString} from "qs";
+import {FastifyInstance, fastify} from "fastify";
+import {fastifyCors} from "@fastify/cors";
+import {Endpoints} from "@lodestar/api";
+import {ApplicationMethods, addSszContentTypeParser} from "@lodestar/api/server";
+import {BeaconApiMethods, registerRoutes} from "@lodestar/api/beacon/server";
 import {ChainForkConfig} from "@lodestar/config";
 
 export type ServerOpts = {
@@ -10,18 +11,22 @@ export type ServerOpts = {
   host: string;
 };
 
+type LightClientEndpoints = Pick<Endpoints, "lightclient" | "proof" | "events">;
+
 export async function startServer(
   opts: ServerOpts,
   config: ChainForkConfig,
-  api: {[K in keyof Api]: ServerApi<Api[K]>}
+  methods: {[K in keyof LightClientEndpoints]: ApplicationMethods<LightClientEndpoints[K]>}
 ): Promise<FastifyInstance> {
   const server = fastify({
     logger: false,
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
+    querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
-  registerRoutes(server, config, api, ["lightclient", "proof", "events"]);
+  addSszContentTypeParser(server);
+
+  registerRoutes(server, config, methods as BeaconApiMethods, ["lightclient", "proof", "events"]);
 
   void server.register(fastifyCors, {origin: "*"});
 

@@ -584,7 +584,7 @@ export class EpochCache {
   /**
    * Return the beacon committee at slot for index.
    */
-  getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
     const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
     if (index >= slotCommittees.length) {
       throw new EpochCacheError({
@@ -745,7 +745,7 @@ export class EpochCache {
         const committee = this.getBeaconCommittee(slot, i);
         if (committee.includes(validatorIndex)) {
           return {
-            validators: committee,
+            validators: Array.from(committee),
             committeeIndex: i,
             slot,
           };

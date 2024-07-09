@@ -1,10 +1,27 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
-import {isForkExecution, ForkName, isForkLightClient} from "@lodestar/params";
+import {ChainForkConfig} from "@lodestar/config";
+import {
+  Epoch,
+  phase0,
+  capella,
+  Slot,
+  ssz,
+  StringType,
+  RootHex,
+  altair,
+  UintNum64,
+  LightClientOptimisticUpdate,
+  LightClientFinalityUpdate,
+  SSEPayloadAttributes,
+} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 
-import {RouteDef, TypeJson, WithVersion} from "../../utils/index.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../interfaces.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
+import {getExecutionForkTypes, getLightClientForkTypes} from "../../utils/fork.js";
+import {VersionType} from "../../utils/metadata.js";
+
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(
@@ -18,8 +35,6 @@ export const blobSidecarSSE = new ContainerType(
   {typeName: "BlobSidecarSSE", jsonCase: "eth2"}
 );
 type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export enum EventType {
   /**
@@ -35,6 +50,10 @@ export enum EventType {
   attestation = "attestation",
   /** The node has received a valid voluntary exit (from P2P or API) */
   voluntaryExit = "voluntary_exit",
+  /** The node has received a valid proposer slashing (from P2P or API) */
+  proposerSlashing = "proposer_slashing",
+  /** The node has received a valid attester slashing (from P2P or API) */
+  attesterSlashing = "attester_slashing",
   /** The node has received a valid blsToExecutionChange (from P2P or API) */
   blsToExecutionChange = "bls_to_execution_change",
   /** Finalized checkpoint has been updated */
@@ -58,6 +77,8 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.block]: EventType.block,
   [EventType.attestation]: EventType.attestation,
   [EventType.voluntaryExit]: EventType.voluntaryExit,
+  [EventType.proposerSlashing]: EventType.proposerSlashing,
+  [EventType.attesterSlashing]: EventType.attesterSlashing,
   [EventType.blsToExecutionChange]: EventType.blsToExecutionChange,
   [EventType.finalizedCheckpoint]: EventType.finalizedCheckpoint,
   [EventType.chainReorg]: EventType.chainReorg,
@@ -85,6 +106,8 @@ export type EventData = {
   };
   [EventType.attestation]: phase0.Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
+  [EventType.proposerSlashing]: phase0.ProposerSlashing;
+  [EventType.attesterSlashing]: phase0.AttesterSlashing;
   [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
@@ -103,50 +126,80 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: allForks.LightClientOptimisticUpdate};
-  [EventType.lightClientFinalityUpdate]: {version: ForkName; data: allForks.LightClientFinalityUpdate};
-  [EventType.payloadAttributes]: {version: ForkName; data: allForks.SSEPayloadAttributes};
+  [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: LightClientOptimisticUpdate};
+  [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
+  [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
 
-export type Api = {
+type EventstreamArgs = {
+  /** Event types to subscribe to */
+  topics: EventType[];
+  signal: AbortSignal;
+  onEvent: (event: BeaconEvent) => void;
+  onError?: (err: Error) => void;
+  onClose?: () => void;
+};
+
+export type Endpoints = {
   /**
    * Subscribe to beacon node events
    * Provides endpoint to subscribe to beacon node Server-Sent-Events stream.
    * Consumers should use [eventsource](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-eventsource-interface)
    * implementation to listen on those events.
    *
-   * @param topics Event types to subscribe to
-   * @returns Opened SSE stream.
+   * Returns if SSE stream has been opened.
    */
-  eventstream(
-    topics: EventType[],
-    signal: AbortSignal,
-    onEvent: (event: BeaconEvent) => void
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
+  eventstream: Endpoint<
+    // ⏎
+    "GET",
+    EventstreamArgs,
+    {query: {topics: EventType[]}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
-export const routesData: {[K in keyof Api]: RouteDef} = {
-  eventstream: {url: "/eth/v1/events", method: "GET"},
-};
-
-export type ReqTypes = {
-  eventstream: {
-    query: {topics: EventType[]};
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    eventstream: {
+      url: "/eth/v1/events",
+      method: "GET",
+      req: {
+        writeReq: ({topics}) => ({query: {topics}}),
+        parseReq: ({query}) => ({topics: query.topics}) as EventstreamArgs,
+        schema: {
+          query: {topics: Schema.StringArrayRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
   };
-};
+}
 
-// It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
-// The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
+export type TypeJson<T> = {
+  toJson: (data: T) => unknown; // server
+  fromJson: (data: unknown) => T; // client
+};
 
 export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
-  const getLightClientType = (fork: ForkName): allForks.AllForksLightClientSSZTypes => {
-    if (!isForkLightClient(fork)) {
-      throw Error(`Invalid fork=${fork} for lightclient fork types`);
-    }
-    return ssz.allForksLightClient[fork];
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const WithVersion = <T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> => {
+    return {
+      toJson: ({data, version}) => ({
+        data: getType(version).toJson(data),
+        version,
+      }),
+      fromJson: (val) => {
+        const {version} = VersionType.fromJson(val);
+        return {
+          data: getType(version).fromJson((val as {data: unknown}).data),
+          version,
+        };
+      },
+    };
   };
 
   return {
@@ -174,6 +227,8 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
 
     [EventType.attestation]: ssz.phase0.Attestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
+    [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
+    [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing,
     [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(
@@ -201,15 +256,15 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
-    [EventType.payloadAttributes]: WithVersion((fork) =>
-      isForkExecution(fork) ? ssz.allForksExecution[fork].SSEPayloadAttributes : ssz.bellatrix.SSEPayloadAttributes
-    ),
+    [EventType.payloadAttributes]: WithVersion((fork) => getExecutionForkTypes(fork).SSEPayloadAttributes),
     [EventType.blobSidecar]: blobSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
-      (fork) => getLightClientType(fork).LightClientOptimisticUpdate
+      (fork) => getLightClientForkTypes(fork).LightClientOptimisticUpdate
     ),
-    [EventType.lightClientFinalityUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientFinalityUpdate),
+    [EventType.lightClientFinalityUpdate]: WithVersion(
+      (fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate
+    ),
   };
 }
 

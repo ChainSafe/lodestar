@@ -14,7 +14,7 @@ on:
 
 jobs:
   docs:
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     env:
       DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'stable' }}
     steps:
@@ -25,13 +25,13 @@ jobs:
           echo "Deploying ref: $DEPLOY_REF"
 
       # Checkout the correct ref being deployed
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_REF }}
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           check-latest: true
           cache: yarn          
 
@@ -62,21 +62,12 @@ jobs:
       - name: Lint built docs
         run: yarn docs:lint:fix
 
-      - name: Set up Python
-        uses: actions/setup-python@v1
-        
-      - name: Install dependencies
-        working-directory: docs
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
       - name: Build docs
         working-directory: docs
-        run: mkdocs build --verbose --clean --site-dir site
+        run: yarn && yarn build
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/site
+          publish_dir: ./docs/build

@@ -8,7 +8,7 @@ describe("validate application domains", () => {
       for (let i = 0; i < DOMAIN_APPLICATION_MASK.length; i++) {
         r += DOMAIN_APPLICATION_MASK[i] & domain[i];
       }
-      // eslint-disable-next-line chai-expect/no-inner-compare
+
       expect(r > 0).toBeWithMessage(true, `${name} mask application should be valid`);
     });
   });

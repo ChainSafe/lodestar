@@ -1,25 +1,29 @@
-import EventEmitter from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, SyncPeriod} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
-import {ForkName} from "@lodestar/params";
-import {LightClientTransport} from "./interface.js";
+import mitt from "mitt";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  type SyncPeriod,
+} from "@lodestar/types";
+import {type ApiClient, routes} from "@lodestar/api";
+import {type ForkName} from "@lodestar/params";
+import {MittEmitter} from "../events.js";
+import {type LightClientTransport} from "./interface.js";
 
 export type LightClientRestEvents = {
-  [routes.events.EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
-  [routes.events.EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
+  [routes.events.EventType.lightClientFinalityUpdate]: (update: LightClientFinalityUpdate) => void;
+  [routes.events.EventType.lightClientOptimisticUpdate]: (update: LightClientOptimisticUpdate) => void;
 };
 
-type RestEvents = StrictEventEmitter<EventEmitter, LightClientRestEvents>;
+export type LightClientRestEmitter = MittEmitter<LightClientRestEvents>;
 
-export class LightClientRestTransport extends (EventEmitter as {new (): RestEvents}) implements LightClientTransport {
+export class LightClientRestTransport implements LightClientTransport {
   private controller = new AbortController();
-  private readonly eventEmitter: StrictEventEmitter<EventEmitter, LightClientRestEvents> = new EventEmitter();
+  private readonly eventEmitter: LightClientRestEmitter = mitt();
   private subscribedEventstream = false;
 
-  constructor(private readonly api: Api) {
-    super();
-  }
+  constructor(private readonly api: ApiClient) {}
 
   async getUpdates(
     startPeriod: SyncPeriod,
@@ -27,44 +31,36 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
   ): Promise<
     {
       version: ForkName;
-      data: allForks.LightClientUpdate;
+      data: LightClientUpdate;
     }[]
   > {
-    const res = await this.api.lightclient.getUpdates(startPeriod, count);
-    ApiError.assert(res);
-    return res.response;
+    const res = await this.api.lightclient.getLightClientUpdatesByRange({startPeriod, count});
+    const updates = res.value();
+    const {versions} = res.meta();
+    return updates.map((data, i) => ({data, version: versions[i]}));
   }
 
-  async getOptimisticUpdate(): Promise<{version: ForkName; data: allForks.LightClientOptimisticUpdate}> {
-    const res = await this.api.lightclient.getOptimisticUpdate();
-    ApiError.assert(res);
-    return res.response;
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: LightClientOptimisticUpdate}> {
+    const res = await this.api.lightclient.getLightClientOptimisticUpdate();
+    return {version: res.meta().version, data: res.value()};
   }
 
-  async getFinalityUpdate(): Promise<{version: ForkName; data: allForks.LightClientFinalityUpdate}> {
-    const res = await this.api.lightclient.getFinalityUpdate();
-    ApiError.assert(res);
-    return res.response;
+  async getFinalityUpdate(): Promise<{version: ForkName; data: LightClientFinalityUpdate}> {
+    const res = await this.api.lightclient.getLightClientFinalityUpdate();
+    return {version: res.meta().version, data: res.value()};
   }
 
-  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: allForks.LightClientBootstrap}> {
-    const res = await this.api.lightclient.getBootstrap(blockRoot);
-    ApiError.assert(res);
-    return res.response;
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: LightClientBootstrap}> {
+    const res = await this.api.lightclient.getLightClientBootstrap({blockRoot});
+    return {version: res.meta().version, data: res.value()};
   }
 
-  async fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
-    const res = await this.api.beacon.getBlockV2(blockRootAsString);
-    ApiError.assert(res);
-    return res.response;
-  }
-
-  onOptimisticUpdate(handler: (optimisticUpdate: allForks.LightClientOptimisticUpdate) => void): void {
+  onOptimisticUpdate(handler: (optimisticUpdate: LightClientOptimisticUpdate) => void): void {
     this.subscribeEventstream();
     this.eventEmitter.on(routes.events.EventType.lightClientOptimisticUpdate, handler);
   }
 
-  onFinalityUpdate(handler: (finalityUpdate: allForks.LightClientFinalityUpdate) => void): void {
+  onFinalityUpdate(handler: (finalityUpdate: LightClientFinalityUpdate) => void): void {
     this.subscribeEventstream();
     this.eventEmitter.on(routes.events.EventType.lightClientFinalityUpdate, handler);
   }
@@ -74,10 +70,10 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       return;
     }
 
-    void this.api.events.eventstream(
-      [routes.events.EventType.lightClientOptimisticUpdate, routes.events.EventType.lightClientFinalityUpdate],
-      this.controller.signal,
-      (event) => {
+    void this.api.events.eventstream({
+      topics: [routes.events.EventType.lightClientOptimisticUpdate, routes.events.EventType.lightClientFinalityUpdate],
+      signal: this.controller.signal,
+      onEvent: (event) => {
         switch (event.type) {
           case routes.events.EventType.lightClientOptimisticUpdate:
             this.eventEmitter.emit(routes.events.EventType.lightClientOptimisticUpdate, event.message.data);
@@ -87,8 +83,8 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
             this.eventEmitter.emit(routes.events.EventType.lightClientFinalityUpdate, event.message.data);
             break;
         }
-      }
-    );
+      },
+    });
     this.subscribedEventstream = true;
   }
 }

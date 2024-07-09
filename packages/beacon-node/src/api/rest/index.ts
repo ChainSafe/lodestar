@@ -1,4 +1,5 @@
-import {Api, ServerApi} from "@lodestar/api";
+import {Endpoints} from "@lodestar/api";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
@@ -10,24 +11,23 @@ export {allNamespaces} from "@lodestar/api";
 
 export type BeaconRestApiServerOpts = Omit<RestApiServerOpts, "bearerToken"> & {
   enabled: boolean;
-  api: (keyof Api)[];
+  api: (keyof Endpoints)[];
 };
 
 export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
   enabled: true,
-  // ApiNamespace "debug" is not turned on by default
-  api: ["beacon", "config", "events", "node", "validator", "lightclient"],
+  api: ["beacon", "config", "debug", "events", "node", "validator", "lightclient"],
   address: "127.0.0.1",
   port: 9596,
   cors: "*",
   // beacon -> validator API is trusted, and for large amounts of keys the payload is multi-MB
-  bodyLimit: 10 * 1024 * 1024, // 10MB
+  bodyLimit: 20 * 1024 * 1024, // 20MB for big block + blobs
 };
 
 export type BeaconRestApiServerModules = RestApiServerModules & {
   config: ChainForkConfig;
   logger: Logger;
-  api: {[K in keyof Api]: ServerApi<Api[K]>};
+  api: BeaconApiMethods;
   metrics: RestApiServerMetrics | null;
 };
 

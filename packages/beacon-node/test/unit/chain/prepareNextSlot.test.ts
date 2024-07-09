@@ -3,13 +3,12 @@ import {config} from "@lodestar/config/default";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
-import {generateCachedBellatrixState} from "../../utils/state.js";
+import {generateCachedBellatrixState, zeroProtoBlock} from "../../utils/state.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
-import {zeroProtoBlock} from "../../utils/mocks/chain.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../__mocks__/mockedBeaconChain.js";
-import {MockedLogger, getMockedLogger} from "../../__mocks__/loggerMock.js";
 
 describe("PrepareNextSlot scheduler", () => {
   const abortController = new AbortController();
@@ -62,7 +61,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
@@ -74,8 +73,8 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    expect(regenStub.getBlockSlotState).toHaveBeenCalled();
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
   it("pre bellatrix - should handle regen.getBlockSlotState error", async () => {
@@ -87,8 +86,8 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    expect(regenStub.getBlockSlotState).toHaveBeenCalled();
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
     expect(loggerStub.error).toHaveBeenCalledTimes(1);
   });
 
@@ -99,7 +98,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledWith();
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
@@ -112,8 +111,8 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    expect(regenStub.getBlockSlotState).toHaveBeenCalled();
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
   it("bellatrix - should prepare payload", async () => {
@@ -121,6 +120,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
     getForkStub.mockReturnValue(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
@@ -135,11 +135,11 @@ describe("PrepareNextSlot scheduler", () => {
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
 
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    expect(regenStub.getBlockSlotState).toHaveBeenCalled();
-    expect(updateBuilderStatus).toHaveBeenCalled();
-    expect(forkChoiceStub.getJustifiedBlock).toHaveBeenCalled();
-    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalled();
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(updateBuilderStatus).toHaveBeenCalledOnce();
+    expect(forkChoiceStub.getJustifiedBlock).toHaveBeenCalledOnce();
+    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledOnce();
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(1);
   });

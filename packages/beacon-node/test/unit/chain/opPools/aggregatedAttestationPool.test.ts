@@ -2,13 +2,15 @@ import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
+import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
+import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
+import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {
   AggregatedAttestationPool,
   aggregateInto,
-  getParticipationFn,
+  getNotSeenValidatorsFn,
   MatchingDataAttestationGroup,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
@@ -17,7 +19,7 @@ import {generateCachedAltairState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
+import {generateValidators} from "../../../utils/validator.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -26,24 +28,53 @@ const validSignature = fromHexString(
 
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;
+  const fork = ForkName.altair;
   const altairForkEpoch = 2020;
   const currentEpoch = altairForkEpoch + 10;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
-  const originalState = generateCachedAltairState({slot: currentSlot + 1}, altairForkEpoch);
-  let altairState: CachedBeaconStateAllForks;
 
+  const committeeIndex = 0;
   const attestation = ssz.phase0.Attestation.defaultValue();
   attestation.data.slot = currentSlot;
+  attestation.data.index = committeeIndex;
   attestation.data.target.epoch = currentEpoch;
   const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
 
-  const committee = [0, 1, 2, 3];
-  let forkchoiceStub: MockedBeaconChain["forkChoice"];
+  const validatorOpts = {
+    activationEpoch: 0,
+    effectiveBalance: MAX_EFFECTIVE_BALANCE,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+    exitEpoch: FAR_FUTURE_EPOCH,
+  };
+  // this makes a committee length of 4
+  const vc = 64;
+  const committeeLength = 4;
+  const validators = generateValidators(vc, validatorOpts);
+  const originalState = generateCachedAltairState({slot: currentSlot + 1, validators}, altairForkEpoch);
+  const committee = originalState.epochCtx.getBeaconCommittee(currentSlot, committeeIndex);
+  expect(committee.length).toEqual(committeeLength);
+  // 0 and 1 in committee are fully participated
+  const epochParticipation = newFilledArray(vc, 0b111);
+  for (let i = 0; i < committeeLength; i++) {
+    if (i === 0 || i === 1) {
+      epochParticipation[committee[i]] = 0b111;
+    } else {
+      epochParticipation[committee[i]] = 0b000;
+    }
+  }
+  (originalState as CachedBeaconStateAltair).previousEpochParticipation =
+    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
+  (originalState as CachedBeaconStateAltair).currentEpochParticipation =
+    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
+  originalState.commit();
+  let altairState: CachedBeaconStateAllForks;
+
+  let forkchoiceStub: MockedForkChoice;
 
   beforeEach(() => {
     pool = new AggregatedAttestationPool();
     altairState = originalState.clone();
-    forkchoiceStub = getMockedBeaconChain().forkChoice;
+    forkchoiceStub = getMockedForkChoice();
   });
 
   afterEach(() => {
@@ -53,9 +84,16 @@ describe("AggregatedAttestationPool", function () {
   it("getParticipationFn", () => {
     // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
     // 0 and 1 are fully participated
-    const participationFn = getParticipationFn(altairState);
-    const participation = participationFn(currentEpoch, committee);
-    expect(participation).toEqual(new Set([0, 1]));
+    const notSeenValidatorFn = getNotSeenValidatorsFn(altairState);
+    const participation = notSeenValidatorFn(currentEpoch, committee);
+    // seen attesting indices are 0, 1 => not seen are 2, 3
+    expect(participation).toEqual(
+      // {
+      // validatorIndices: [null, null, committee[2], committee[3]],
+      // attestingIndices: new Set([2, 3]),
+      // }
+      new Set([2, 3])
+    );
   });
 
   // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
@@ -68,7 +106,7 @@ describe("AggregatedAttestationPool", function () {
 
   for (const {name, attestingBits, isReturned} of testCases) {
     it(name, function () {
-      const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
+      const aggregationBits = new BitArray(new Uint8Array(attestingBits), committeeLength);
       pool.add(
         {...attestation, aggregationBits},
         attDataRootHex,
@@ -78,9 +116,9 @@ describe("AggregatedAttestationPool", function () {
       forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
       forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
       if (isReturned) {
-        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).toBeGreaterThan(0);
+        expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState).length).toBeGreaterThan(0);
       } else {
-        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).toEqual(0);
+        expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState).length).toEqual(0);
       }
       // "forkchoice should be called to check pivot block"
       expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
@@ -92,7 +130,7 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).toEqual([]);
+    expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
     // "forkchoice should not be called"
     expect(forkchoiceStub.iterateAncestorBlocks).not.toHaveBeenCalledTimes(1);
   });
@@ -103,7 +141,7 @@ describe("AggregatedAttestationPool", function () {
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
     forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
     forkchoiceStub.getDependentRoot.mockReturnValue("0xWeird");
-    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).toEqual([]);
+    expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
     // "forkchoice should be called to check pivot block"
     expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
   });
@@ -144,7 +182,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
   ];
 
   const attestationData = ssz.phase0.AttestationData.defaultValue();
-  const committee = linspace(0, 7);
+  const committee = Uint32Array.from(linspace(0, 7));
 
   for (const {id, attestationsToAdd} of testCases) {
     it(id, () => {
@@ -180,13 +218,14 @@ describe("MatchingDataAttestationGroup.add()", () => {
 describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   const testCases: {
     id: string;
-    seenAttestingBits: number[];
+    notSeenAttestingBits: number[];
     attestationsToAdd: {bits: number[]; notSeenAttesterCount: number}[];
   }[] = [
     // Note: attestationsToAdd MUST intersect in order to not be aggregated and distort the results
     {
       id: "All have attested",
-      seenAttestingBits: [0b11111111],
+      // same to seenAttestingBits: [0b11111111],
+      notSeenAttestingBits: [0b00000000],
       attestationsToAdd: [
         {bits: [0b11111110], notSeenAttesterCount: 0},
         {bits: [0b00000011], notSeenAttesterCount: 0},
@@ -194,7 +233,8 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
     },
     {
       id: "Some have attested",
-      seenAttestingBits: [0b11110001], // equals to indexes [ 0, 4, 5, 6, 7 ]
+      // same to seenAttestingBits: [0b11110001]
+      notSeenAttestingBits: [0b00001110],
       attestationsToAdd: [
         {bits: [0b11111110], notSeenAttesterCount: 3},
         {bits: [0b00000011], notSeenAttesterCount: 1},
@@ -202,7 +242,8 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
     },
     {
       id: "Non have attested",
-      seenAttestingBits: [0b00000000],
+      // same to seenAttestingBits: [0b00000000],
+      notSeenAttestingBits: [0b11111111],
       attestationsToAdd: [
         {bits: [0b11111110], notSeenAttesterCount: 7},
         {bits: [0b00000011], notSeenAttesterCount: 2},
@@ -211,9 +252,9 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   ];
 
   const attestationData = ssz.phase0.AttestationData.defaultValue();
-  const committee = linspace(0, 7);
+  const committee = Uint32Array.from(linspace(0, 7));
 
-  for (const {id, seenAttestingBits, attestationsToAdd} of testCases) {
+  for (const {id, notSeenAttestingBits, attestationsToAdd} of testCases) {
     it(id, () => {
       const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
 
@@ -229,8 +270,19 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
         attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length});
       }
 
-      const indices = new BitArray(new Uint8Array(seenAttestingBits), 8).intersectValues(committee);
-      const attestationsForBlock = attestationGroup.getAttestationsForBlock(new Set(indices));
+      const notSeenAggBits = new BitArray(new Uint8Array(notSeenAttestingBits), 8);
+      // const notSeenValidatorIndices: (ValidatorIndex | null)[] = [];
+      const notSeenAttestingIndices = new Set<number>();
+      for (let i = 0; i < committee.length; i++) {
+        // notSeenValidatorIndices.push(notSeenAggBits.get(i) ? committee[i] : null);
+        if (notSeenAggBits.get(i)) {
+          notSeenAttestingIndices.add(i);
+        }
+      }
+      const attestationsForBlock = attestationGroup.getAttestationsForBlock(
+        // notSeenValidatorIndices,
+        notSeenAttestingIndices
+      );
 
       for (const [i, {notSeenAttesterCount}] of attestationsToAdd.entries()) {
         const attestation = attestationsForBlock.find((a) => a.attestation === attestations[i]);

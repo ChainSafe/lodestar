@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../interface.js";
@@ -51,7 +51,7 @@ export type ReqOpts = {
   // To label request metrics
   routeId?: string;
   // retry opts
-  retryAttempts?: number;
+  retries?: number;
   retryDelay?: number;
   shouldRetry?: (lastError: Error) => boolean;
 };
@@ -108,9 +108,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       jwtId?: string;
       /** If jwtSecret and jwtVersion are provided, jwtVersion will be included in JwtClaim.clv. */
       jwtVersion?: string;
-      /** Retry attempts */
-      retryAttempts?: number;
-      /** Retry delay, only relevant with retry attempts */
+      /** Number of retries per request */
+      retries?: number;
+      /** Retry delay, only relevant if retries > 0 */
       retryDelay?: number;
       /** Metrics for retry, could be expanded later */
       metrics?: JsonRpcHttpClientMetrics | null;
@@ -158,18 +158,17 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       const routeId = opts?.routeId ?? "unknown";
 
       const res = await retry<RpcResponse<R>>(
-        async (attempt) => {
-          /** If this is a retry, increment the retry counter for this method */
-          if (attempt > 1) {
-            this.opts?.metrics?.retryCount.inc({routeId});
-          }
+        async (_attempt) => {
           return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
         },
         {
-          retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
-          retryDelay: opts?.retryDelay ?? this.opts?.retryDelay ?? 0,
+          retries: opts?.retries ?? this.opts?.retries ?? 0,
+          retryDelay: opts?.retryDelay ?? this.opts?.retryDelay,
           shouldRetry: opts?.shouldRetry,
           signal: this.opts?.signal,
+          onRetry: () => {
+            this.opts?.metrics?.retryCount.inc({routeId});
+          },
         }
       );
       return parseRpcResponse(res, payload);
@@ -352,8 +351,8 @@ export class ErrorJsonRpcResponse extends Error {
         ? typeof res.error.message === "string"
           ? res.error.message
           : typeof res.error.code === "number"
-          ? parseJsonRpcErrorCode(res.error.code)
-          : JSON.stringify(res.error)
+            ? parseJsonRpcErrorCode(res.error.code)
+            : JSON.stringify(res.error)
         : String(res.error);
 
     super(`JSON RPC error: ${errorMessage}, ${payloadMethod}`);

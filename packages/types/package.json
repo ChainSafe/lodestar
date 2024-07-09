@@ -11,14 +11,11 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.14.0",
+  "version": "1.19.0",
   "type": "module",
   "exports": {
     ".": {
       "import": "./lib/index.js"
-    },
-    "./allForks": {
-      "import": "./lib/allForks/index.js"
     },
     "./altair": {
       "import": "./lib/altair/index.js"
@@ -61,9 +58,10 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "test:constants:minimal": "LODESTAR_PRESET=minimal vitest --run --dir test/constants/ --coverage",
-    "test:constants:mainnet": "LODESTAR_PRESET=mainnet vitest --run --dir test/constants/ --coverage",
-    "test:unit": "wrapper() { yarn test:constants:minimal $@ && yarn test:constants:mainnet $@ && vitest --run --dir test/unit/ --coverage $@; }; wrapper",
+    "test": "yarn test:unit",
+    "test:constants:minimal": "LODESTAR_PRESET=minimal vitest --run --dir test/constants/",
+    "test:constants:mainnet": "LODESTAR_PRESET=mainnet vitest --run --dir test/constants/",
+    "test:unit": "wrapper() { yarn test:constants:minimal $@ && yarn test:constants:mainnet $@ && LODESTAR_PRESET=mainnet vitest --run --dir test/unit/ $@; }; wrapper",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
     "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
@@ -72,8 +70,9 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.14.0",
-    "@lodestar/params": "^1.14.0"
+    "@chainsafe/ssz": "^0.15.1",
+    "@lodestar/params": "^1.19.0",
+    "ethereum-cryptography": "^2.0.0"
   },
   "keywords": [
     "ethereum",

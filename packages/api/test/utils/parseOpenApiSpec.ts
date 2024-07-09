@@ -47,14 +47,17 @@ type RouteDefinition = {
   operationId: string;
   parameters: {
     name: string;
-    in: "path" | "query";
+    in: "path" | "query" | "header";
     schema: JsonSchema;
   }[];
   responses: {
     /** `"200"` | `"500"` */
-    [statusCode: string]: {
-      content?: Content;
-    };
+    [statusCode: string]:
+      | {
+          headers?: Record<string, {schema: JsonSchema}>;
+          content?: Content;
+        }
+      | undefined;
   };
   requestBody?: {
     content?: Content;
@@ -65,12 +68,20 @@ export type RouteSpec = {
   url: RouteUrl;
   method: HttpMethod;
   responseOkSchema: JsonSchema | undefined;
+  responseSszRequired: boolean;
   requestSchema: JsonSchema;
+  requestSszRequired: boolean;
 };
 
 export type ReqSchema = {
   params?: JsonSchema;
   query?: JsonSchema;
+  headers?: JsonSchema;
+  body?: JsonSchema;
+};
+
+export type RespSchema = {
+  headers?: JsonSchema;
   body?: JsonSchema;
 };
 
@@ -80,40 +91,38 @@ enum StatusCode {
 
 enum ContentType {
   json = "application/json",
+  ssz = "application/octet-stream",
 }
 
-export type ParseOpenApiSpecOpts = {
-  routesDropOneOf?: string[];
-};
-
-export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSpecOpts): Map<OperationId, RouteSpec> {
+export function parseOpenApiSpec(openApiJson: OpenApiJson): Map<OperationId, RouteSpec> {
   const routes = new Map<OperationId, RouteSpec>();
 
   for (const [routeUrl, routesByMethod] of Object.entries(openApiJson.paths)) {
     for (const [httpMethod, routeDefinition] of Object.entries(routesByMethod)) {
-      const responseOkSchema = routeDefinition.responses[StatusCode.ok]?.content?.[ContentType.json]?.schema;
-
-      const dropOneOf = opts?.routesDropOneOf?.includes(routeDefinition.operationId);
+      const responseOkSchema = buildRespSchema(routeDefinition);
 
       // Force all properties to have required, else ajv won't validate missing properties
-      if (responseOkSchema) {
-        try {
-          preprocessSchema(responseOkSchema, {dropOneOf});
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.log(responseOkSchema);
-          throw e;
-        }
+      try {
+        preprocessSchema(responseOkSchema);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.log(responseOkSchema);
+        throw e;
       }
+      const responseSszRequired =
+        routeDefinition.responses[StatusCode.ok]?.content?.[ContentType.ssz]?.schema !== undefined;
 
       const requestSchema = buildReqSchema(routeDefinition);
-      preprocessSchema(requestSchema, {dropOneOf});
+      preprocessSchema(requestSchema);
+      const requestSszRequired = routeDefinition.requestBody?.content?.[ContentType.ssz]?.schema !== undefined;
 
       routes.set(routeDefinition.operationId, {
         url: routeUrl,
         method: httpMethod,
         responseOkSchema,
+        responseSszRequired,
         requestSchema,
+        requestSszRequired,
       });
     }
   }
@@ -121,7 +130,7 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSp
   return routes;
 }
 
-function preprocessSchema(schema: JsonSchema, opts?: {dropOneOf?: boolean}): void {
+function preprocessSchema(schema: JsonSchema): void {
   // Require all properties
   applyRecursively(schema, (obj) => {
     if (obj.type === "object" && obj.properties && !obj.required) {
@@ -140,16 +149,6 @@ function preprocessSchema(schema: JsonSchema, opts?: {dropOneOf?: boolean}): voi
       delete obj.required;
     }
   });
-
-  if (opts?.dropOneOf) {
-    // Pick single oneOf, AJV has trouble validating against blocks and states
-    applyRecursively(schema, (obj) => {
-      if (obj.oneOf) {
-        // splice(1) = mutate array in place to drop all items after index 1 (included)
-        obj.oneOf.splice(1);
-      }
-    });
-  }
 
   // Remove non-intersecting allOf enum
   applyRecursively(schema, (obj) => {
@@ -174,7 +173,7 @@ export function applyRecursively(schema: unknown, fn: (obj: JsonSchema) => void)
 }
 
 function buildReqSchema(routeDefinition: RouteDefinition): JsonSchema {
-  const reqSchemas: ReqSchema = {};
+  const reqSchema: ReqSchema = {};
 
   // "parameters": [{
   //     "name": "block_id",
@@ -198,30 +197,69 @@ function buildReqSchema(routeDefinition: RouteDefinition): JsonSchema {
   for (const parameter of routeDefinition.parameters ?? []) {
     switch (parameter.in) {
       case "path":
-        if (!reqSchemas.params) reqSchemas.params = {type: "object", properties: {}};
-        if (!reqSchemas.params.properties) reqSchemas.params.properties = {};
-        reqSchemas.params.properties[parameter.name] = parameter.schema;
+        if (!reqSchema.params) reqSchema.params = {type: "object", properties: {}};
+        if (!reqSchema.params.properties) reqSchema.params.properties = {};
+        reqSchema.params.properties[parameter.name] = parameter.schema;
         break;
 
       case "query":
-        if (!reqSchemas.query) reqSchemas.query = {type: "object", properties: {}};
-        if (!reqSchemas.query.properties) reqSchemas.query.properties = {};
-        reqSchemas.query.properties[parameter.name] = parameter.schema;
+        if (!reqSchema.query) reqSchema.query = {type: "object", properties: {}};
+        if (!reqSchema.query.properties) reqSchema.query.properties = {};
+        reqSchema.query.properties[parameter.name] = parameter.schema;
         break;
 
-      // case "header"
+      case "header":
+        if (!reqSchema.headers) reqSchema.headers = {type: "object", properties: {}};
+        if (!reqSchema.headers.properties) reqSchema.headers.properties = {};
+        reqSchema.headers.properties[parameter.name] = parameter.schema;
+        break;
     }
   }
 
-  const requestJsonSchema = routeDefinition.requestBody?.content?.[ContentType.json].schema;
+  const requestJsonSchema = routeDefinition.requestBody?.content?.[ContentType.json]?.schema;
 
   if (requestJsonSchema) {
-    reqSchemas.body = requestJsonSchema;
+    reqSchema.body = requestJsonSchema;
   }
 
   return {
     type: "object",
-    properties: reqSchemas as Record<string, JsonSchema>,
+    properties: reqSchema,
+  };
+}
+
+function buildRespSchema(routeDefinition: RouteDefinition): JsonSchema {
+  const respSchema: RespSchema = {};
+
+  const responseOk = routeDefinition.responses[StatusCode.ok];
+
+  // "headers": {
+  //   "Eth-Consensus-Version": {
+  //     "required": true,
+  //     "schema": {
+  //       "type": "string",
+  //       "enum": ["phase0", "altair", "bellatrix", "capella", "deneb"],
+  //       "example": "phase0",
+  //     },
+  //   },
+  // },
+
+  if (responseOk?.headers) {
+    Object.entries(responseOk.headers).map(([header, {schema}]) => {
+      if (!respSchema.headers) respSchema.headers = {type: "object", properties: {}};
+      if (!respSchema.headers.properties) respSchema.headers.properties = {};
+      respSchema.headers.properties[header] = schema;
+    });
+  }
+
+  const responseJsonSchema = responseOk?.content?.[ContentType.json]?.schema;
+  if (responseJsonSchema) {
+    respSchema.body = responseJsonSchema;
+  }
+
+  return {
+    type: "object",
+    properties: respSchema,
   };
 }
 
@@ -229,5 +267,6 @@ function buildReqSchema(routeDefinition: RouteDefinition): JsonSchema {
 // - Correct URL
 // - Correct method
 // - Correct query?
+// - Correct headers?
 // - Correct body?
 // - Correct return type

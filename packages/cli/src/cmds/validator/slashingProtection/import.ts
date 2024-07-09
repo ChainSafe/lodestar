@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {Interchange} from "@lodestar/validator";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {CliCommand, YargsError} from "../../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {parseLoggerArgs} from "../../../util/logger.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
@@ -13,7 +13,7 @@ import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 type ImportArgs = {
-  file?: string;
+  file: string;
 };
 
 export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & AccountValidatorArgs & GlobalArgs & LogArgs> =
@@ -24,7 +24,7 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
 
     examples: [
       {
-        command: "validator slashing-protection import --network goerli --file interchange.json",
+        command: "validator slashing-protection import --network holesky --file interchange.json",
         description: "Import an interchange file to the slashing protection DB",
       },
     ],
@@ -39,7 +39,6 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
 
     handler: async (args) => {
       const {file} = args;
-      if (!file) throw new YargsError("must provide file arg");
 
       const {config, network} = getBeaconConfigFromArgs(args);
       const validatorPaths = getValidatorPaths(args, network);

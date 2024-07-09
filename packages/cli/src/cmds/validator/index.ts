@@ -1,4 +1,4 @@
-import {CliCommand} from "../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
 import {getAccountPaths} from "./paths.js";
 import {slashingProtection} from "./slashingProtection/index.js";
@@ -12,14 +12,14 @@ import {validatorHandler} from "./handler.js";
 export const validator: CliCommand<IValidatorCliArgs, GlobalArgs> = {
   command: "validator",
   describe: "Run one or multiple validator clients",
-  docsFolder: "validator-management",
+  docsFolder: "run/validator-management",
   examples: [
     {
-      command: "validator --network goerli",
+      command: "validator --network holesky",
       title: "Base `validator` command",
       description:
         "Run one validator client with all the keystores available in the directory" +
-        ` ${getAccountPaths({dataDir: ".goerli"}, "goerli").keystoresDir}`,
+        ` ${getAccountPaths({dataDir: ".holesky"}, "holesky").keystoresDir}`,
     },
   ],
   options: validatorOptions,

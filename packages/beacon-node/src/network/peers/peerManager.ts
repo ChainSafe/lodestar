@@ -2,8 +2,8 @@ import {Connection, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
-import {allForks, altair, phase0} from "@lodestar/types";
-import {retry, withTimeout} from "@lodestar/utils";
+import {Metadata, altair, phase0} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -90,7 +90,7 @@ export interface IReqRespBeaconNodePeerManager {
   sendPing(peerId: PeerId): Promise<phase0.Ping>;
   sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
   sendGoodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
-  sendMetadata(peerId: PeerId): Promise<allForks.Metadata>;
+  sendMetadata(peerId: PeerId): Promise<Metadata>;
 }
 
 export type PeerManagerModules = {
@@ -301,7 +301,7 @@ export class PeerManager {
   /**
    * Handle a METADATA request + response (rpc handler responds with METADATA automatically)
    */
-  private onMetadata(peer: PeerId, metadata: allForks.Metadata): void {
+  private onMetadata(peer: PeerId, metadata: Metadata): void {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
@@ -504,11 +504,12 @@ export class PeerManager {
 
     // Prune connectedPeers map in case it leaks. It has happen in previous nodes,
     // disconnect is not always called for all peers
-    if (this.connectedPeers.size > connectedPeers.length * 2) {
+    if (this.connectedPeers.size > connectedPeers.length * 1.1) {
       const actualConnectedPeerIds = new Set(connectedPeers.map((peerId) => peerId.toString()));
       for (const peerIdStr of this.connectedPeers.keys()) {
         if (!actualConnectedPeerIds.has(peerIdStr)) {
           this.connectedPeers.delete(peerIdStr);
+          this.metrics?.leakedConnectionsCount.inc();
         }
       }
     }
@@ -606,22 +607,18 @@ export class PeerManager {
       void this.requestStatus(remotePeer, this.statusCache.get());
     }
 
-    // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
-    // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
-    // See https://github.com/libp2p/js-libp2p/pull/1168
-    retry(
-      async () => {
-        const agentVersionBytes = (await this.libp2p.peerStore.get(peerData.peerId)).metadata.get("AgentVersion");
-        if (agentVersionBytes) {
-          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+    this.libp2p.services.identify
+      .identify(evt.detail)
+      .then((result) => {
+        const agentVersion = result.agentVersion;
+        if (agentVersion) {
           peerData.agentVersion = agentVersion;
           peerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
         }
-      },
-      {retries: 3, retryDelay: 1000}
-    ).catch((err) => {
-      this.logger.error("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
-    });
+      })
+      .catch((err) => {
+        this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+      });
   };
 
   /**

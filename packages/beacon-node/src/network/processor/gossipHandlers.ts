@@ -1,9 +1,10 @@
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconConfig} from "@lodestar/config";
-import {Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, allForks, deneb} from "@lodestar/types";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
+import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
 import {
@@ -45,7 +46,13 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {BlockInput, GossipedInputType, BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {
+  BlockInput,
+  GossipedInputType,
+  BlobSidecarValidation,
+  BlockInputType,
+  NullBlockInput,
+} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
@@ -73,6 +80,7 @@ export type ValidatorFnsModules = {
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
+const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
 
 /**
  * Gossip handlers perform validation + handling in a single function.
@@ -105,7 +113,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
 
   async function validateBeaconBlock(
-    signedBlock: allForks.SignedBeaconBlock,
+    signedBlock: SignedBeaconBlock,
     blockBytes: Uint8Array,
     fork: ForkName,
     peerIdStr: string,
@@ -115,17 +123,21 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const forkTypes = config.getForkTypes(slot);
     const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToVal = Date.now() / 1000 - seenTimestampSec;
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     // always set block to seen cache for all forks so that we don't need to download it
-    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(config, {
-      type: GossipedInputType.block,
-      signedBlock,
-      blockBytes,
-    });
+    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
+      config,
+      {
+        type: GossipedInputType.block,
+        signedBlock,
+        blockBytes,
+      },
+      metrics
+    );
     const blockInput = blockInputRes.blockInput;
     // blockInput can't be returned null, improve by enforcing via return types
-    if (blockInput === null) {
+    if (blockInput.block === null) {
       throw Error(
         `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockHex} slot=${slot}`
       );
@@ -133,19 +145,27 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const blockInputMeta =
       config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb ? blockInputRes.blockInputMeta : {};
 
-    metrics?.gossipBlock.receivedToGossipValidate.observe(recvToVal);
-    logger.verbose("Received gossip block", {
-      slot: slot,
-      root: blockHex,
-      curentSlot: chain.clock.currentSlot,
-      peerId: peerIdStr,
-      delaySec,
-      recvToVal,
-      ...blockInputMeta,
-    });
-
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
+
+      logger.debug("Received gossip block", {
+        slot: slot,
+        root: blockHex,
+        curentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        delaySec,
+        ...blockInputMeta,
+        recvToValLatency,
+        recvToValidation,
+        validationTime,
+      });
+
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
@@ -170,40 +190,51 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     gossipIndex: number,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput | null> {
+  ): Promise<BlockInput | NullBlockInput> {
     const blobBlockHeader = blobSidecar.signedBlockHeader.message;
     const slot = blobBlockHeader.slot;
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
     const blockHex = prettyBytes(blockRoot);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToVal = Date.now() / 1000 - seenTimestampSec;
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(config, {
-      type: GossipedInputType.blob,
-      blobSidecar,
-      blobBytes,
-    });
-
-    metrics?.gossipBlob.receivedToGossipValidate.observe(recvToVal);
-    logger.verbose("Received gossip blob", {
-      slot: slot,
-      root: blockHex,
-      curentSlot: chain.clock.currentSlot,
-      peerId: peerIdStr,
-      delaySec,
-      recvToVal,
-      gossipIndex,
-      ...blockInputMeta,
-    });
+    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+      config,
+      {
+        type: GossipedInputType.blob,
+        blobSidecar,
+        blobBytes,
+      },
+      metrics
+    );
 
     try {
       await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlob.validationTime.observe(validationTime);
+
+      logger.debug("Received gossip blob", {
+        slot: slot,
+        root: blockHex,
+        curentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        delaySec,
+        gossipIndex,
+        ...blockInputMeta,
+        recvToValLatency,
+        recvToValidation,
+        validationTime,
+      });
+
       return blockInput;
     } catch (e) {
       if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput !== null) {
+        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
           logger.debug("Gossip blob has error", {slot, root: blockHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
@@ -227,6 +258,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+    // if blobs are not yet fully available start an aggressive blob pull
+    if (blockInput.type === BlockInputType.dataPromise) {
+      events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+    }
 
     chain
       .processBlock(blockInput, {
@@ -255,15 +290,20 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         chain.seenGossipBlockInput.prune();
       })
       .catch((e) => {
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
+
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.DATA_UNAVAILABLE: {
-              // TODO: create a newevent unknownBlobs and only pull blobs
               const slot = signedBlock.message.slot;
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
               events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
+
+              // Error is quite frequent and not critical
+              logLevel = LogLevel.debug;
               break;
             }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
@@ -272,14 +312,21 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected EL client
+              logLevel = LogLevel.error;
               break;
             default:
               // TODO: Should it use PeerId or string?
               core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
+              // Misbehaving peer, but could highlight an issue in another client
+              logLevel = LogLevel.warn;
           }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+        logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
         chain.seenGossipBlockInput.prune();
       });
   }
@@ -312,7 +359,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
       const {serializedData} = gossipData;
       const blobSidecar = sszDeserialize(topic, serializedData);
-      if (config.getForkSeq(blobSidecar.signedBlockHeader.message.slot) < ForkSeq.deneb) {
+      const blobSlot = blobSidecar.signedBlockHeader.message.slot;
+      const index = blobSidecar.index;
+
+      if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
       const blockInput = await validateBeaconBlob(
@@ -322,20 +372,39 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         peerIdStr,
         seenTimestampSec
       );
-      if (blockInput !== null) {
-        // TODO DENEB:
-        //
-        // With blobsPromise the block import would have been attempted with the receipt of the block gossip
-        // and should have resolved the availability promise, however we could track if the block processing
-        // was halted and requeue it
+      if (blockInput.block !== null) {
+        // we can just queue up the blockInput in the processor, but block gossip handler would have already
+        // queued it up.
         //
         // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
       } else {
-        // TODO DENEB:
-        //
-        // If block + blobs not fully received in the slot within some deadline, we should trigger block/blob
-        // pull using req/resp by root pre-emptively even though it will be trigged on seeing any block/blob
-        // gossip on next slot via missing parent checks
+        // wait for the block to arrive till some cutoff else emit unknownBlockInput event
+        chain.logger.debug("Block not yet available, racing with cutoff", {blobSlot, index});
+        const normalBlockInput = await raceWithCutoff(
+          chain,
+          blobSlot,
+          blockInput.blockInputPromise,
+          BLOCK_AVAILABILITY_CUTOFF_MS
+        ).catch((_e) => {
+          return null;
+        });
+
+        if (normalBlockInput !== null) {
+          chain.logger.debug("Block corresponding to blob is now available for processing", {blobSlot, index});
+          // we can directly send it for processing but block gossip handler will queue it up anyway
+          // if we see any issues later, we can send it to handleValidBeaconBlock
+          //
+          // handleValidBeaconBlock(normalBlockInput, peerIdStr, seenTimestampSec);
+          //
+          // however we can emit the event which will atleast add the peer to the list of peers to pull
+          // data from
+          if (normalBlockInput.type === BlockInputType.dataPromise) {
+            events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+          }
+        } else {
+          chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {blobSlot, index});
+          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+        }
       }
     },
 
@@ -453,6 +522,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
     },
 
     [GossipType.proposer_slashing]: async ({
@@ -470,6 +541,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
     },
 
     [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
@@ -691,4 +764,20 @@ export async function validateGossipFnRetryUnknownRoot<T>(
       throw e;
     }
   }
+}
+
+async function raceWithCutoff<T>(
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
+  blockSlot: Slot,
+  availabilityPromise: Promise<T>,
+  cutoffMsFromSlotStart: number
+): Promise<T> {
+  const cutoffTimeMs = Math.max(
+    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + cutoffMsFromSlotStart - Date.now(),
+    0
+  );
+  const cutoffTimeout = new Promise((_resolve, reject) => setTimeout(reject, cutoffTimeMs));
+  await Promise.race([availabilityPromise, cutoffTimeout]);
+  // we can only be here if availabilityPromise has resolved else an error will be thrown
+  return availabilityPromise;
 }

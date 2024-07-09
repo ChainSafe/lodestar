@@ -184,11 +184,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
 
 export const BlindedBeaconBlock = new ContainerType(
   {
-    slot: Slot,
-    proposerIndex: ValidatorIndex,
-    // Reclare expandedType() with altair block and altair state
-    parentRoot: Root,
-    stateRoot: Root,
+    ...bellatrixSsz.BlindedBeaconBlock.fields,
     body: BlindedBeaconBlockBody, // Modified in capella
   },
   {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}

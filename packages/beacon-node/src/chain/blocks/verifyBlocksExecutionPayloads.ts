@@ -6,7 +6,7 @@ import {
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
+import {bellatrix, Slot, deneb, SignedBeaconBlock} from "@lodestar/types";
 import {
   IForkChoice,
   assertValidTerminalPowBlock,
@@ -68,13 +68,14 @@ type VerifyBlockExecutionResponse =
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
   if (blocks.length === 0) {
@@ -246,11 +247,17 @@ export async function verifyBlocksExecutionPayload(
 
   const executionTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined && executionStatuses[0] === ExecutionStatus.Valid) {
-    const recvToVerifiedExecPayload = executionTime / 1000 - opts.seenTimestampSec;
-    chain.metrics?.gossipBlock.receivedToExecutionPayloadVerification.observe(recvToVerifiedExecPayload);
-    chain.logger.verbose("Verified execution payload", {
+    const recvToValidation = executionTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    chain.metrics?.gossipBlock.executionPayload.recvToValidation.observe(recvToValidation);
+    chain.metrics?.gossipBlock.executionPayload.validationTime.observe(validationTime);
+
+    chain.logger.debug("Verified execution payload", {
       slot: blocks[0].message.slot,
-      recvToVerifiedExecPayload,
+      recvToValLatency,
+      recvToValidation,
+      validationTime,
     });
   }
 
@@ -267,7 +274,7 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  block: allForks.SignedBeaconBlock,
+  block: SignedBeaconBlock,
   preState0: CachedBeaconStateAllForks,
   opts: BlockProcessOpts,
   isOptimisticallySafe: boolean,
@@ -298,12 +305,16 @@ export async function verifyBlockExecutionPayload(
       ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
       : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+
+  const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
+  chain.logger.debug("Call engine api newPayload", logCtx);
   const execResult = await chain.executionEngine.notifyNewPayload(
     fork,
     executionPayloadEnabled,
     versionedHashes,
     parentBlockRoot
   );
+  chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
@@ -319,7 +330,7 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromBlockHash: toHexString(block.message.parentRoot),
+        invalidateFromParentBlockRoot: toHexString(block.message.parentRoot),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -382,7 +393,7 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[]
+  blocks: SignedBeaconBlock[]
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
   let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
@@ -416,7 +427,7 @@ function getSegmentErrorResponse(
       invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
-        invalidateFromBlockHash: parentBlock.blockRoot,
+        invalidateFromParentBlockRoot: parentBlock.blockRoot,
       };
     }
   }

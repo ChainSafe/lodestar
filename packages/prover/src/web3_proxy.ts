@@ -10,9 +10,9 @@ import {JsonRpcRequestOrBatch, JsonRpcRequestPayload, JsonRpcResponseOrBatch} fr
 import {getResponseForRequest, isBatchRequest} from "./utils/json_rpc.js";
 import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
-import {ELRpc} from "./utils/rpc.js";
+import {ELRpcProvider} from "./utils/rpc_provider.js";
 
-export type VerifiedProxyOptions = VerifiedExecutionInitOptions & {
+export type VerifiedProxyOptions = Exclude<VerifiedExecutionInitOptions<false>, "mutateProvider" | "providerTypes"> & {
   executionRpcUrl: string;
   requestTimeout: number;
 };
@@ -86,7 +86,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   });
 
   let proxyServerListeningAddress: {host: string; port: number} | undefined;
-  const rpc = new ELRpc(
+  const rpc = new ELRpcProvider(
     createHttpHandler({
       signal,
       info: () => {

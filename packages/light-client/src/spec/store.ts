@@ -1,6 +1,6 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
-import {SyncPeriod, allForks} from "@lodestar/types";
+import {LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncPeriod} from "@lodestar/types";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee} from "../utils/index.js";
 import {LightClientUpdateSummary} from "./isBetterUpdate.js";
 
@@ -18,29 +18,29 @@ export interface ILightClientStore {
   setActiveParticipants(period: SyncPeriod, activeParticipants: number): void;
 
   // Header that is finalized
-  finalizedHeader: allForks.LightClientHeader;
+  finalizedHeader: LightClientHeader;
 
   // Most recent available reasonably-safe header
-  optimisticHeader: allForks.LightClientHeader;
+  optimisticHeader: LightClientHeader;
 }
 
 export interface LightClientStoreEvents {
-  onSetFinalizedHeader?: (header: allForks.LightClientHeader) => void;
-  onSetOptimisticHeader?: (header: allForks.LightClientHeader) => void;
+  onSetFinalizedHeader?: (header: LightClientHeader) => void;
+  onSetOptimisticHeader?: (header: LightClientHeader) => void;
 }
 
 export class LightClientStore implements ILightClientStore {
   readonly syncCommittees = new Map<SyncPeriod, SyncCommitteeFast>();
   readonly bestValidUpdates = new Map<SyncPeriod, LightClientUpdateWithSummary>();
 
-  private _finalizedHeader: allForks.LightClientHeader;
-  private _optimisticHeader: allForks.LightClientHeader;
+  private _finalizedHeader: LightClientHeader;
+  private _optimisticHeader: LightClientHeader;
 
   private readonly maxActiveParticipants = new Map<SyncPeriod, number>();
 
   constructor(
     readonly config: BeaconConfig,
-    bootstrap: allForks.LightClientBootstrap,
+    bootstrap: LightClientBootstrap,
     private readonly events: LightClientStoreEvents
   ) {
     const bootstrapPeriod = computeSyncPeriodAtSlot(bootstrap.header.beacon.slot);
@@ -49,20 +49,20 @@ export class LightClientStore implements ILightClientStore {
     this._optimisticHeader = bootstrap.header;
   }
 
-  get finalizedHeader(): allForks.LightClientHeader {
+  get finalizedHeader(): LightClientHeader {
     return this._finalizedHeader;
   }
 
-  set finalizedHeader(value: allForks.LightClientHeader) {
+  set finalizedHeader(value: LightClientHeader) {
     this._finalizedHeader = value;
     this.events.onSetFinalizedHeader?.(value);
   }
 
-  get optimisticHeader(): allForks.LightClientHeader {
+  get optimisticHeader(): LightClientHeader {
     return this._optimisticHeader;
   }
 
-  set optimisticHeader(value: allForks.LightClientHeader) {
+  set optimisticHeader(value: LightClientHeader) {
     this._optimisticHeader = value;
     this.events.onSetOptimisticHeader?.(value);
   }
@@ -95,7 +95,7 @@ export type SyncCommitteeFast = {
 };
 
 export type LightClientUpdateWithSummary = {
-  update: allForks.LightClientUpdate;
+  update: LightClientUpdate;
   summary: LightClientUpdateSummary;
 };
 

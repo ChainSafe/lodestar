@@ -1,17 +1,16 @@
-import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
-import {deserializeBeaconStateSerialized, getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
+import {BeaconState} from "@lodestar/types";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
+import {getSlotFromBeaconStateSerialized} from "../../../util/sszBytes.js";
 
-export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.debug.Api> {
+export function getDebugApi({
+  chain,
+  config,
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.debug.Endpoints> {
   return {
-    async getDebugChainHeads() {
-      const heads = chain.forkChoice.getHeads();
-      return {
-        data: heads.map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot})),
-      };
-    },
-
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
       return {
@@ -36,43 +35,25 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
       return {data: nodes};
     },
 
-    async getState(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await getStateResponseWithRegen(chain, stateId);
-      if (format === "ssz") {
-        if (state instanceof Uint8Array) {
-          return state;
-        }
-        return state.serialize();
+    async getStateV2({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      let slot: number;
+      let data: Uint8Array | BeaconState;
+      if (state instanceof Uint8Array) {
+        slot = getSlotFromBeaconStateSerialized(state);
+        data = context?.returnBytes ? state : config.getForkTypes(slot).BeaconState.deserialize(state);
       } else {
-        if (state instanceof Uint8Array) {
-          return {data: deserializeBeaconStateSerialized(config, state)};
-        }
-        return {data: state.toValue()};
+        slot = state.slot;
+        data = context?.returnBytes ? state.serialize() : state.toValue();
       }
-    },
-
-    async getStateV2(stateId: string | number, format?: ResponseFormat) {
-      const {state, executionOptimistic} = await getStateResponseWithRegen(chain, stateId);
-      if (format === "ssz") {
-        if (state instanceof Uint8Array) {
-          return state;
-        }
-        return state.serialize();
-      } else {
-        if (state instanceof Uint8Array) {
-          const data = deserializeBeaconStateSerialized(config, state);
-          return {
-            data,
-            version: config.getForkName(data.slot),
-            executionOptimistic,
-          };
-        }
-        return {
-          data: state.toValue(),
-          version: config.getForkName(state.slot),
+      return {
+        data,
+        meta: {
+          version: config.getForkName(slot),
           executionOptimistic,
-        };
-      }
+          finalized,
+        },
+      };
     },
   };
 }

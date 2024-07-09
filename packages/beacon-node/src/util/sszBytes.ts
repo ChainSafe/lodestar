@@ -71,9 +71,7 @@ export function getAttDataBase64FromAttestationSerialized(data: Uint8Array): Att
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE)).toString(
-    "base64"
-  );
+  return toBase64(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE));
 }
 
 /**
@@ -162,9 +160,9 @@ export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(
+  return toBase64(
     data.slice(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE)
-  ).toString("base64");
+  );
 }
 
 /**
@@ -215,4 +213,8 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
   // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
   return (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0;
+}
+
+function toBase64(data: Uint8Array): string {
+  return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("base64");
 }

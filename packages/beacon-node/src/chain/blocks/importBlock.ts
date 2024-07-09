@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
+import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -19,6 +19,7 @@ import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
@@ -57,7 +58,7 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus} = fullyVerifiedBlock;
   const {block, source} = blockInput;
   const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
@@ -67,6 +68,12 @@ export async function importBlock(
   const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+
+  // this is just a type assertion since blockinput with dataPromise type will not end up here
+  if (blockInput.type === BlockInputType.dataPromise) {
+    throw Error("Unavailable block can not be imported in forkchoice");
+  }
 
   // 1. Persist block to hot DB (pre-emptively)
   // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
@@ -83,7 +90,8 @@ export async function importBlock(
     postState,
     blockDelaySec,
     this.clock.currentSlot,
-    executionStatus
+    executionStatus,
+    dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
@@ -94,15 +102,21 @@ export async function importBlock(
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // We want to import block asap so call all event handler in the next event loop
-  setTimeout(() => {
+  callInNextEventLoop(async () => {
     this.emitter.emit(routes.events.EventType.block, {
       block: blockRootHex,
       slot: blockSlot,
       executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
     });
 
-    if (blockInput.type === BlockInputType.postDeneb) {
-      for (const blobSidecar of blockInput.blobs) {
+    // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
+    // out of data range blocks and import then in forkchoice although one would not be able to
+    // attest and propose with such head similar to optimistic sync
+    if (blockInput.type === BlockInputType.availableData) {
+      const {blobsSource, blobs} = blockInput.blockData;
+
+      this.metrics?.importBlock.blobsBySource.inc({blobsSource});
+      for (const blobSidecar of blobs) {
         const {index, kzgCommitment} = blobSidecar;
         this.emitter.emit(routes.events.EventType.blobSidecar, {
           blockRoot: blockRootHex,
@@ -113,7 +127,7 @@ export async function importBlock(
         });
       }
     }
-  }, 0);
+  });
 
   // 3. Import attestations to fork choice
   //
@@ -289,17 +303,17 @@ export async function importBlock(
     // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
       // we want to import block asap so do this in the next event loop
-      setTimeout(() => {
+      callInNextEventLoop(() => {
         try {
           this.lightClientServer.onImportBlockHead(
-            block.message as allForks.AllForksLightClient["BeaconBlock"],
+            block.message as BeaconBlock<ForkLightClient>,
             postState as CachedBeaconStateAltair,
             parentBlockSlot
           );
         } catch (e) {
           this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
         }
-      }, 0);
+      });
     }
   }
 
@@ -359,7 +373,8 @@ export async function importBlock(
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState);
-    this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
+    // consumers should not mutate or get the transfered cache
+    this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
@@ -414,6 +429,16 @@ export async function importBlock(
         this.emitter.emit(routes.events.EventType.attestation, attestation);
       }
     }
+    if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
+      for (const attesterSlashing of block.message.body.attesterSlashings) {
+        this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+      }
+    }
+    if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
+      for (const proposerSlashing of block.message.body.proposerSlashings) {
+        this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      }
+    }
   }
 
   // Register stat metrics about the block after importing it
@@ -432,14 +457,18 @@ export async function importBlock(
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
-  setTimeout(() => {
+  callInNextEventLoop(() => {
     this.reprocessController.onBlockImported({slot: blockSlot, root: blockRootHex}, advancedSlot);
-  }, 0);
+  });
 
   if (opts.seenTimestampSec !== undefined) {
-    const recvToImportedBlock = Date.now() / 1000 - opts.seenTimestampSec;
-    this.metrics?.gossipBlock.receivedToBlockImport.observe(recvToImportedBlock);
-    this.logger.verbose("Imported block", {slot: blockSlot, recvToImportedBlock});
+    const recvToValidation = Date.now() / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    this.metrics?.gossipBlock.blockImport.recvToValidation.observe(recvToValidation);
+    this.metrics?.gossipBlock.blockImport.validationTime.observe(validationTime);
+
+    this.logger.debug("Imported block", {slot: blockSlot, recvToValLatency, recvToValidation, validationTime});
   }
 
   this.logger.verbose("Block processed", {

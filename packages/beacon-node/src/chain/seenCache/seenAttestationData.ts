@@ -6,7 +6,7 @@ import {InsertOutcome} from "../opPools/types.js";
 
 export type AttestationDataCacheEntry = {
   // part of shuffling data, so this does not take memory
-  committeeIndices: number[];
+  committeeIndices: Uint32Array;
   // IndexedAttestationData signing root, 32 bytes
   signingRoot: Uint8Array;
   // to be consumed by forkchoice and oppool

@@ -3,16 +3,15 @@ import fs from "node:fs";
 import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
-import {Api} from "@lodestar/api/keymanager";
-import {registerRoutes} from "@lodestar/api/keymanager/server";
+import {KeymanagerApiMethods, registerRoutes} from "@lodestar/api/keymanager/server";
 import {ChainForkConfig} from "@lodestar/config";
-
-import {ServerApi} from "@lodestar/api";
 import {writeFile600Perm} from "../../../util/index.js";
 
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {
   isAuthEnabled: boolean;
   tokenDir?: string;
+  // Takes precedence over `tokenDir`
+  tokenFile?: string;
 };
 
 export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
@@ -26,7 +25,7 @@ export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
 
 export type KeymanagerRestApiServerModules = RestApiServerModules & {
   config: ChainForkConfig;
-  api: ServerApi<Api>;
+  api: KeymanagerApiMethods;
 };
 
 export const apiTokenFileName = "api-token.txt";
@@ -44,7 +43,9 @@ export class KeymanagerRestApiServer extends RestApiServer {
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
     };
 
-    const apiTokenPath = path.join(opts.tokenDir ?? ".", apiTokenFileName);
+    const apiTokenPath = opts.tokenFile
+      ? path.resolve(opts.tokenFile)
+      : path.join(opts.tokenDir ?? ".", apiTokenFileName);
     let bearerToken: string | undefined;
 
     if (opts.isAuthEnabled) {

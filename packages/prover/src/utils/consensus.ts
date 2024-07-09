@@ -1,21 +1,27 @@
-import {Api} from "@lodestar/api/beacon";
-import {allForks, Bytes32, capella} from "@lodestar/types";
+import {ApiClient} from "@lodestar/api/beacon";
+import {Bytes32, ExecutionPayload, capella} from "@lodestar/types";
 import {GenesisData, Lightclient} from "@lodestar/light-client";
-import {ApiError} from "@lodestar/api";
 import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {hexToBuffer} from "./conversion.js";
 
+export async function fetchBlock(api: ApiClient, slot: number): Promise<capella.SignedBeaconBlock | undefined> {
+  const res = await api.beacon.getBlockV2({blockId: slot});
+
+  if (res.ok) return res.value() as capella.SignedBeaconBlock;
+  return;
+}
+
 export async function fetchNearestBlock(
-  api: Api,
+  api: ApiClient,
   slot: number,
   direction: "up" | "down" = "down"
 ): Promise<capella.SignedBeaconBlock> {
-  const res = await api.beacon.getBlockV2(slot);
+  const res = await api.beacon.getBlockV2({blockId: slot});
 
-  if (res.ok) return res.response.data;
+  if (res.ok) return res.value() as capella.SignedBeaconBlock;
 
-  if (!res.ok && res.error.code === 404) {
+  if (!res.ok && res.status === 404) {
     return fetchNearestBlock(api, direction === "down" ? slot - 1 : slot + 1);
   }
 
@@ -39,11 +45,11 @@ export async function getExecutionPayloads({
   endSlot,
   logger,
 }: {
-  api: Api;
+  api: ApiClient;
   startSlot: number;
   endSlot: number;
   logger: Logger;
-}): Promise<Record<number, allForks.ExecutionPayload>> {
+}): Promise<Map<number, ExecutionPayload>> {
   [startSlot, endSlot] = [Math.min(startSlot, endSlot), Math.max(startSlot, endSlot)];
   if (startSlot === endSlot) {
     logger.debug("Fetching EL payload", {slot: startSlot});
@@ -51,18 +57,18 @@ export async function getExecutionPayloads({
     logger.debug("Fetching EL payloads", {startSlot, endSlot});
   }
 
-  const payloads: Record<number, allForks.ExecutionPayload> = {};
+  const payloads = new Map<number, ExecutionPayload>();
 
   let slot = endSlot;
-  let block = await fetchNearestBlock(api, slot, "down");
-  payloads[block.message.slot] = block.message.body.executionPayload;
+  let block = await fetchNearestBlock(api, slot);
+  payloads.set(block.message.slot, block.message.body.executionPayload);
   slot = block.message.slot - 1;
 
   while (slot >= startSlot) {
-    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1);
 
     if (block.message.body.executionPayload.parentHash === previousBlock.message.body.executionPayload.blockHash) {
-      payloads[block.message.slot] = block.message.body.executionPayload;
+      payloads.set(block.message.slot, block.message.body.executionPayload);
     }
 
     slot = block.message.slot - 1;
@@ -73,35 +79,34 @@ export async function getExecutionPayloads({
 }
 
 export async function getExecutionPayloadForBlockNumber(
-  api: Api,
+  api: ApiClient,
   startSlot: number,
   blockNumber: number
-): Promise<Record<number, allForks.ExecutionPayload>> {
-  const payloads: Record<number, allForks.ExecutionPayload> = {};
+): Promise<Map<number, ExecutionPayload>> {
+  const payloads = new Map<number, ExecutionPayload>();
 
-  let block = await fetchNearestBlock(api, startSlot, "down");
-  payloads[block.message.slot] = block.message.body.executionPayload;
+  let block = await fetchNearestBlock(api, startSlot);
+  payloads.set(block.message.slot, block.message.body.executionPayload);
 
-  while (payloads[block.message.slot].blockNumber !== blockNumber) {
-    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
+  while (payloads.get(block.message.slot)?.blockNumber !== blockNumber) {
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1);
     block = previousBlock;
-    payloads[block.message.slot] = block.message.body.executionPayload;
+    payloads.set(block.message.slot, block.message.body.executionPayload);
   }
 
   return payloads;
 }
 
-export async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
-  const res = await api.beacon.getGenesis();
-  ApiError.assert(res);
+export async function getGenesisData(api: Pick<ApiClient, "beacon">): Promise<GenesisData> {
+  const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
 
   return {
-    genesisTime: Number(res.response.data.genesisTime),
-    genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
+    genesisTime,
+    genesisValidatorsRoot,
   };
 }
 
-export async function getSyncCheckpoint(api: Pick<Api, "beacon">, checkpoint?: string): Promise<Bytes32> {
+export async function getSyncCheckpoint(api: Pick<ApiClient, "beacon">, checkpoint?: string): Promise<Bytes32> {
   let syncCheckpoint: Bytes32 | undefined = checkpoint ? hexToBuffer(checkpoint) : undefined;
 
   if (syncCheckpoint && syncCheckpoint.byteLength !== 32) {
@@ -109,9 +114,8 @@ export async function getSyncCheckpoint(api: Pick<Api, "beacon">, checkpoint?: s
   }
 
   if (!syncCheckpoint) {
-    const res = await api.beacon.getStateFinalityCheckpoints("head");
-    ApiError.assert(res);
-    syncCheckpoint = res.response.data.finalized.root;
+    const res = await api.beacon.getStateFinalityCheckpoints({stateId: "head"});
+    syncCheckpoint = res.value().finalized.root;
   }
 
   return syncCheckpoint;

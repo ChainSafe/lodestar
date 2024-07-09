@@ -1,8 +1,15 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
-import {ProtoBlock, MaybeValidExecutionStatus, LVHExecResponse, ProtoNode} from "../protoArray/interface.js";
+import {Epoch, Slot, ValidatorIndex, phase0, Root, RootHex, BeaconBlock} from "@lodestar/types";
+import {
+  ProtoBlock,
+  MaybeValidExecutionStatus,
+  LVHExecResponse,
+  ProtoNode,
+  DataAvailabilityStatus,
+} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
+import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -41,6 +48,22 @@ export type AncestorResult =
   | {code: AncestorStatus.NoCommonAncenstor}
   | {code: AncestorStatus.BlockUnknown};
 
+// Reason for not proposer boost reorging
+export enum NotReorgedReason {
+  HeadBlockIsTimely = "headBlockIsTimely",
+  ParentBlockNotAvailable = "parentBlockNotAvailable",
+  ProposerBoostReorgDisabled = "proposerBoostReorgDisabled",
+  NotShufflingStable = "notShufflingStable",
+  NotFFGCompetitive = "notFFGCompetitive",
+  ChainLongUnfinality = "chainLongUnfinality",
+  ParentBlockDistanceMoreThanOneSlot = "parentBlockDistanceMoreThanOneSlot",
+  ReorgMoreThanOneSlot = "reorgMoreThanOneSlot",
+  ProposerBoostNotWornOff = "proposerBoostNotWornOff",
+  HeadBlockNotWeak = "headBlockNotWeak",
+  ParentBlockNotStrong = "ParentBlockNotStrong",
+  NotProposingOnTime = "notProposingOnTime",
+}
+
 export type ForkChoiceMetrics = {
   votes: number;
   queuedAttestations: number;
@@ -76,7 +99,11 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
-  updateHead(): ProtoBlock;
+  updateAndGetHead(mode: UpdateAndGetHeadOpt): {
+    head: ProtoBlock;
+    isHeadTimely?: boolean;
+    notReorgedReason?: NotReorgedReason;
+  };
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
@@ -104,11 +131,12 @@ export interface IForkChoice {
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
    */
   onBlock(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
+    executionStatus: MaybeValidExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.

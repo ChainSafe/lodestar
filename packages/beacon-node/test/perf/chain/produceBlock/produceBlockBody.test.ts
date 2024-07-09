@@ -28,7 +28,8 @@ describe("produceBlockBody", () => {
     state = stateOg.clone();
     chain = new BeaconChain(
       {
-        proposerBoostEnabled: true,
+        proposerBoost: true,
+        proposerBoostReorg: false,
         computeUnrealized: false,
         safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
         disableArchiveOnCheckpoint: true,
@@ -41,7 +42,6 @@ describe("produceBlockBody", () => {
         config: state.config,
         db,
         logger,
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         processShutdownCallback: () => {},
         metrics: null,
         anchorState: state,

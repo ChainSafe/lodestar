@@ -5,7 +5,7 @@ import {RegistryMetricCreator} from "../../../src/index.js";
 import {MonitoringService} from "../../../src/monitoring/service.js";
 import {MonitoringOptions} from "../../../src/monitoring/options.js";
 import {sleep} from "../../utils/sleep.js";
-import {MockedLogger, getMockedLogger} from "../../__mocks__/loggerMock.js";
+import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./remoteService.js";
 
 describe("monitoring / service", () => {
@@ -257,7 +257,7 @@ describe("monitoring / service", () => {
     await waitForInterval();
 
     afterAll(() => {
-      service.close;
+      service.close();
     });
 
     return service;

@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import tmp from "tmp";
+import {dirSync as tmpDirSync} from "tmp";
 import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
 import {ForkSeq} from "@lodestar/params";
 
-const web3signerVersion = "23.11.0";
+const web3signerVersion = "24.2.0";
 
 /** Till what version is the web3signer image updated for signature verification */
-const supportedForkSeq = ForkSeq.capella;
+const supportedForkSeq = ForkSeq.deneb;
 
 export type StartedExternalSigner = {
   container: StartedTestContainer;
@@ -23,7 +23,7 @@ export async function startExternalSigner({
   password: string;
 }): Promise<StartedExternalSigner> {
   // path to store configuration
-  const tmpDir = tmp.dirSync({
+  const tmpDir = tmpDirSync({
     unsafeCleanup: true,
     // In Github runner NodeJS process probably runs as root, so web3signer doesn't have permissions to read config dir
     mode: 755,

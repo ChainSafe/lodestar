@@ -32,8 +32,6 @@ describe("Perf test sanity check", function () {
     const phase0State = generatePerfTestCachedStatePhase0();
     const cache = beforeProcessEpoch(phase0State);
     expect(
-      // Chai does not support bigint comparisons
-      // eslint-disable-next-line chai-expect/no-inner-compare
       BigInt(cache.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT) > targetStake,
       `targetStake too low: ${
         BigInt(cache.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)

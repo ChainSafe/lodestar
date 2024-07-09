@@ -6,7 +6,7 @@ import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {testLogger} from "../../utils/logger.js";
 import {defaultEth1Options} from "../../../src/eth1/options.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
-import {getMockedBeaconDb} from "../../__mocks__/mockedBeaconDb.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 
 describe("Eth1DepositDataTracker", function () {
   const controller = new AbortController();

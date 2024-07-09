@@ -1,6 +1,8 @@
+import {WireFormat, defaultInit} from "@lodestar/api";
 import {defaultOptions} from "@lodestar/validator";
+import {CliCommandOptions} from "@lodestar/utils";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {ensure0xPrefix, CliCommandOptions} from "../../util/index.js";
+import {ensure0xPrefix} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -45,7 +47,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     builder?: boolean;
     "builder.selection"?: string;
-    "builder.boostFactor"?: bigint;
+    "builder.boostFactor"?: string;
 
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
@@ -54,9 +56,13 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     importKeystores?: string[];
     importKeystoresPassword?: string;
 
+    "http.requestWireFormat"?: string;
+    "http.responseWireFormat"?: string;
+
     "externalSigner.url"?: string;
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
+    "externalSigner.fetchInterval"?: number;
 
     distributed?: boolean;
 
@@ -77,7 +83,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
 export type KeymanagerArgs = {
   keymanager?: boolean;
-  "keymanager.authEnabled"?: boolean;
+  "keymanager.auth"?: boolean;
+  "keymanager.tokenFile"?: string;
   "keymanager.port"?: number;
   "keymanager.address"?: string;
   "keymanager.cors"?: string;
@@ -92,10 +99,17 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     default: false,
     group: "keymanager",
   },
-  "keymanager.authEnabled": {
+  "keymanager.auth": {
+    alias: ["keymanager.authEnabled"],
     type: "boolean",
     description: "Enable token bearer authentication for key manager API server",
     default: true,
+    group: "keymanager",
+  },
+  "keymanager.tokenFile": {
+    alias: ["tokenFile"],
+    type: "string",
+    description: "Path to file containing bearer token used for key manager API authentication",
     group: "keymanager",
   },
   "keymanager.port": {
@@ -242,7 +256,8 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.selection": {
     type: "string",
-    description: "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly` or `executiononly`",
+    description:
+      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
@@ -267,7 +282,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   blindedLocal: {
-    type: "string",
+    type: "boolean",
     description: "Request fetching local block in blinded format for produceBlockV3",
     defaultDescription: `${defaultOptions.blindedLocal}`,
   },
@@ -293,15 +308,30 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "boolean",
   },
 
-  // Remote signer
+  "http.requestWireFormat": {
+    type: "string",
+    description: `Wire format to use in HTTP requests to beacon node. Can be one of \`${WireFormat.json}\` or \`${WireFormat.ssz}\``,
+    defaultDescription: `${defaultInit.requestWireFormat}`,
+    group: "http",
+  },
+
+  "http.responseWireFormat": {
+    type: "string",
+    description: `Preferred wire format for HTTP responses from beacon node. Can be one of \`${WireFormat.json}\` or \`${WireFormat.ssz}\``,
+    defaultDescription: `${defaultInit.responseWireFormat}`,
+    group: "http",
+  },
+
+  // External signer
 
   "externalSigner.url": {
     description: "URL to connect to an external signing server",
     type: "string",
-    group: "externalSignerUrl",
+    group: "externalSigner",
   },
 
   "externalSigner.pubkeys": {
+    implies: ["externalSigner.url"],
     description:
       "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
@@ -312,15 +342,24 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
         .map((item) => item.split(","))
         .flat(1)
         .map(ensure0xPrefix),
-    group: "externalSignerUrl",
+    group: "externalSigner",
   },
 
   "externalSigner.fetch": {
+    implies: ["externalSigner.url"],
     conflicts: ["externalSigner.pubkeys"],
     description:
       "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",
-    group: "externalSignerUrl",
+    group: "externalSigner",
+  },
+
+  "externalSigner.fetchInterval": {
+    implies: ["externalSigner.fetch"],
+    description:
+      "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
+    type: "number",
+    group: "externalSigner",
   },
 
   // Distributed validator

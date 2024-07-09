@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {Slot, allForks} from "@lodestar/types";
+import {ForkAll, ForkSeq} from "@lodestar/params";
+import {SSZTypesFor, Slot} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 
 /**
@@ -37,15 +37,12 @@ export const VALIDATOR_BYTES_SIZE = 121;
  */
 const SLOT_BYTES_POSITION_IN_STATE = 40;
 
-export function getForkFromStateBytes(config: ChainForkConfig, bytes: Buffer | Uint8Array): ForkSeq {
+export function getForkFromStateBytes(config: ChainForkConfig, bytes: Uint8Array): ForkSeq {
   const slot = bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
   return config.getForkSeq(slot);
 }
 
-export function getStateTypeFromBytes(
-  config: ChainForkConfig,
-  bytes: Buffer | Uint8Array
-): allForks.AllForksSSZTypes["BeaconState"] {
+export function getStateTypeFromBytes(config: ChainForkConfig, bytes: Uint8Array): SSZTypesFor<ForkAll, "BeaconState"> {
   const slot = getStateSlotFromBytes(bytes);
   return config.getForkTypes(slot).BeaconState;
 }

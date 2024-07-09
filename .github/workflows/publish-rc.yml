@@ -15,7 +15,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -42,52 +42,47 @@ jobs:
       tag: ${{ steps.get_tag.outputs.tag }}
       prev_tag: ${{ steps.get_prev_tag.outputs.prev_tag }}
 
+  binaries:
+    name: Build lodestar binaries
+    uses: ./.github/workflows/binaries.yml
+    needs: tag
+    with:
+      version: ${{ needs.tag.outputs.tag }}
+
   npm:
     name: Publish to NPM & Github
     runs-on: buildjet-4vcpu-ubuntu-2204
-    needs: tag
+    needs: [tag, binaries]
     if: needs.tag.outputs.is_rc == 'true'
     steps:
-      # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
-      - uses: actions/setup-node@v3
+
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: 20
-          check-latest: true
-          cache: yarn          
-      - name: Node.js version
-        id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
-      - name: Restore dependencies
-        uses: actions/cache@master
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
-      - name: Install & build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
-      - name: Build
-        run: yarn build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
+          node: 22
 
       - name: Generate changelog
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
 
+      - name: Get binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          files: dist/*
+          fail_on_unmatched_files: true
           tag_name: ${{ needs.tag.outputs.tag }}
           body_path: "CHANGELOG.md"
-          release_name: Release ${{ needs.tag.outputs.tag }}
+          name: Release ${{ needs.tag.outputs.tag }}
           prerelease: true
 
       - name: Change and commit version
@@ -132,7 +127,7 @@ jobs:
     needs: [tag, npm]
     if: needs.tag.outputs.is_rc == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} rc 900
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU

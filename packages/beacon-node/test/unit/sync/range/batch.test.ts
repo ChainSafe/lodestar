@@ -7,12 +7,12 @@ import {Batch, BatchStatus, BatchErrorCode, BatchError} from "../../../../src/sy
 import {EPOCHS_PER_BATCH} from "../../../../src/sync/constants.js";
 import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
-describe("sync / range / batch", async () => {
+describe("sync / range / batch", () => {
   // Common mock data
   const startEpoch = 0;
   const peer = validPeerIdStr;
   const blocksDownloaded = [
-    getBlockInput.preDeneb(config, ssz.phase0.SignedBeaconBlock.defaultValue(), BlockSource.byRange, null),
+    getBlockInput.preData(config, ssz.phase0.SignedBeaconBlock.defaultValue(), BlockSource.byRange, null),
   ];
 
   it("Should return correct blockByRangeRequest", () => {

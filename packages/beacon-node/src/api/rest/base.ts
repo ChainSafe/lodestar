@@ -1,8 +1,8 @@
-import qs from "qs";
-import fastify, {FastifyInstance} from "fastify";
-import fastifyCors from "@fastify/cors";
+import {parse as parseQueryString} from "qs";
+import {FastifyInstance, FastifyRequest, fastify, errorCodes} from "fastify";
+import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
-import {RouteConfig} from "@lodestar/api/beacon/server";
+import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
@@ -30,6 +30,11 @@ export type RestApiServerMetrics = SocketMetrics & {
 };
 
 /**
+ * Error code used by Fastify if media type is not supported (415)
+ */
+const INVALID_MEDIA_TYPE_CODE = errorCodes.FST_ERR_CTP_INVALID_MEDIA_TYPE().code;
+
+/**
  * REST API powered by `fastify` server.
  */
 export class RestApiServer {
@@ -48,7 +53,7 @@ export class RestApiServer {
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
       querystringParser: (str) =>
-        qs.parse(str, {
+        parseQueryString(str, {
           // Array as comma-separated values must be supported to be OpenAPI spec compliant
           comma: true,
           // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
@@ -60,10 +65,12 @@ export class RestApiServer {
       http: {maxHeaderSize: opts.headerLimit},
     });
 
+    addSszContentTypeParser(server);
+
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
     // To parse our ApiError -> statusCode
-    server.setErrorHandler((err, req, res) => {
+    server.setErrorHandler((err, _req, res) => {
       if (err.validation) {
         void res.status(400).send(err.validation);
       } else {
@@ -84,21 +91,21 @@ export class RestApiServer {
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
     server.addHook("onRequest", async (req, _res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Req ${req.id as string} ${req.ip} ${operationId}`);
+      const operationId = getOperationId(req);
+      this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
     });
 
     server.addHook("preHandler", async (req, _res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Exec ${req.id as string} ${req.ip} ${operationId}`);
+      const operationId = getOperationId(req);
+      this.logger.debug(`Exec ${req.id} ${req.ip} ${operationId}`);
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Res ${req.id as string} ${operationId} - ${res.raw.statusCode}`);
-      metrics?.responseTime.observe({operationId}, res.getResponseTime() / 1000);
+      const operationId = getOperationId(req);
+      this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
+      metrics?.responseTime.observe({operationId}, res.elapsedTime / 1000);
     });
 
     server.addHook("onError", async (req, _res, err) => {
@@ -106,12 +113,12 @@ export class RestApiServer {
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
       if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
-      const {operationId} = req.routeConfig as RouteConfig;
+      const operationId = getOperationId(req);
 
-      if (err instanceof ApiError) {
-        this.logger.warn(`Req ${req.id as string} ${operationId} failed`, {reason: err.message});
+      if (err instanceof ApiError || err.code === INVALID_MEDIA_TYPE_CODE) {
+        this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
       } else {
-        this.logger.error(`Req ${req.id as string} ${operationId} error`, {}, err);
+        this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
       }
       metrics?.errors.inc({operationId});
     });
@@ -157,4 +164,8 @@ export class RestApiServer {
   protected shouldIgnoreError(_err: Error): boolean {
     return false;
   }
+}
+
+function getOperationId(req: FastifyRequest): string {
+  return req.routeOptions.schema?.operationId ?? "unknown";
 }

@@ -3,7 +3,7 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {ssz} from "@lodestar/types";
 
 import {SeenGossipBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
-import {BlockInputType, GossipedInputType} from "../../../../src/chain/blocks/types.js";
+import {BlockInputType, GossipedInputType, BlockInput} from "../../../../src/chain/blocks/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("SeenGossipBlockInput", () => {
@@ -105,43 +105,52 @@ describe("SeenGossipBlockInput", () => {
 
         try {
           if (eventType === GossipedInputType.block) {
-            const blockInputRes = seenGossipBlockInput.getGossipBlockInput(config, {
-              type: GossipedInputType.block,
-              signedBlock,
-              blockBytes: null,
-            });
+            const blockInputRes = seenGossipBlockInput.getGossipBlockInput(
+              config,
+              {
+                type: GossipedInputType.block,
+                signedBlock,
+                blockBytes: null,
+              },
+              null
+            );
 
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
             } else if (expectedResponseType === null) {
-              expect(blockInputRes).toBeNull;
+              expect(blockInputRes).toBeNull();
             } else {
-              expect(blockInputRes.blockInput?.type).to.be.equal(expectedResponseType);
+              expect((blockInputRes.blockInput as BlockInput)?.type).toEqual(expectedResponseType);
             }
           } else {
             const index = parseInt(inputEvent.split("blob")[1] ?? "0");
             const blobSidecar = blobSidecars[index];
-            expect(blobSidecar).not.equal(undefined);
+            expect(blobSidecar).not.toBeUndefined();
 
-            const blockInputRes = seenGossipBlockInput.getGossipBlockInput(config, {
-              type: GossipedInputType.blob,
-              blobSidecar,
-              blobBytes: null,
-            });
+            const blobInputRes = seenGossipBlockInput.getGossipBlockInput(
+              config,
+              {
+                type: GossipedInputType.blob,
+                blobSidecar,
+                blobBytes: null,
+              },
+              null
+            );
 
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
             } else if (expectedResponseType === null) {
-              expect(blockInputRes).toBeNull;
+              expect(blobInputRes.blockInput.block).toBeNull();
+              expect(blobInputRes.blockInputMeta.expectedBlobs).toBeNull();
             } else {
-              expect(blockInputRes.blockInput?.type).to.equal(expectedResponseType);
+              expect((blobInputRes.blockInput as BlockInput)?.type).toEqual(expectedResponseType);
             }
           }
         } catch (e) {
           if (!(e as Error).message.includes("expected to fail with error")) {
             if (!(expectedResponseType instanceof Error)) {
               expect.fail(
-                `expected not to fail with respose=${expectedResponseType} but errored: ${(e as Error).message}`
+                `expected not to fail with response=${expectedResponseType} but errored: ${(e as Error).message}`
               );
             }
           }
@@ -156,9 +165,9 @@ function parseResponseType(expectedRes: string | null): BlockInputType | null | 
     case null:
       return null;
     case "pd":
-      return BlockInputType.postDeneb;
+      return BlockInputType.availableData;
     case "bp":
-      return BlockInputType.blobsPromise;
+      return BlockInputType.dataPromise;
     default:
       return Error(expectedRes);
   }

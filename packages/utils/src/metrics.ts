@@ -1,3 +1,5 @@
+import {NonEmptyArray} from "./types.js";
+
 export type NoLabels = Record<string, never>;
 export type LabelsGeneric = Record<string, string | number>;
 export type LabelKeys<Labels extends LabelsGeneric> = Extract<keyof Labels, string>;
@@ -39,7 +41,7 @@ export interface Counter<Labels extends LabelsGeneric = NoLabels> {
 export type GaugeConfig<Labels extends LabelsGeneric> = {
   name: string;
   help: string;
-} & (NoLabels extends Labels ? {labelNames?: never} : {labelNames: [LabelKeys<Labels>, ...LabelKeys<Labels>[]]});
+} & (NoLabels extends Labels ? {labelNames?: never} : {labelNames: NonEmptyArray<LabelKeys<Labels>>});
 
 export type HistogramConfig<Labels extends LabelsGeneric> = GaugeConfig<Labels> & {
   buckets?: number[];

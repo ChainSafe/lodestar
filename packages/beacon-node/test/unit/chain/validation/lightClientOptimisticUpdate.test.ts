@@ -5,11 +5,10 @@ import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
-import {getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
+import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
 describe("Light Client Optimistic Update validation", function () {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig({
     ...defaultChainConfig,
     /* eslint-disable @typescript-eslint/naming-convention */

@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
+import {phase0, RootHex, ssz} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
@@ -21,7 +21,7 @@ import {
 
 export type AggregateAndProofValidationResult = {
   indexedAttestation: phase0.IndexedAttestation;
-  committeeIndices: ValidatorIndex[];
+  committeeIndices: Uint32Array;
   attDataRootHex: RootHex;
 };
 
@@ -127,6 +127,9 @@ async function validateAggregateAndProof(
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
   // Lighthouse doesn't check maxSkipSlots option here but Lodestar wants to be more strict
   // to be more DOS protection
+
+  // [REJECT] The aggregate attestation's target block is an ancestor of the block named in the LMD vote
+  // -- i.e. `get_checkpoint_block(store, aggregate.data.beacon_block_root, aggregate.data.target.epoch) == aggregate.data.target.root`
   const attHeadBlock = verifyHeadBlockAndTargetRoot(
     chain,
     attData.beaconBlockRoot,
@@ -148,10 +151,17 @@ async function validateAggregateAndProof(
     RegenCaller.validateGossipAttestation
   );
 
-  const committeeIndices: number[] = cachedAttData
+  // [REJECT] The committee index is within the expected range
+  // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
+  const committeeIndices = cachedAttData
     ? cachedAttData.committeeIndices
     : getCommitteeIndices(shuffling, attSlot, attIndex);
 
+  // [REJECT] The number of aggregation bits matches the committee size
+  // -- i.e. `len(aggregation_bits) == len(get_beacon_committee(state, aggregate.data.slot, index))`.
+  if (aggregate.aggregationBits.bitLen !== committeeIndices.length) {
+    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS});
+  }
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices,

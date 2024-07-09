@@ -1,6 +1,5 @@
-import {LogLevels} from "@lodestar/utils";
+import {LogLevels, CliCommandOptions} from "@lodestar/utils";
 import {LogLevel, logFormats} from "@lodestar/logger";
-import {CliCommandOptions} from "../util/command.js";
 import {LOG_FILE_DISABLE_KEYWORD} from "../util/logger.js";
 
 export type LogArgs = {

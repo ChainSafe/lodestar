@@ -4,6 +4,7 @@ export enum ClientKind {
   Teku = "Teku",
   Prysm = "Prysm",
   Lodestar = "Lodestar",
+  Grandine = "Grandine",
   Unknown = "Unknown",
 }
 
@@ -21,6 +22,7 @@ export function getKnownClientFromAgentVersion(agentVersion: string): ClientKind
   if (agentLC === "teku") return ClientKind.Teku;
   if (agentLC === "prysm") return ClientKind.Prysm;
   if (agentLC === "nimbus") return ClientKind.Nimbus;
+  if (agentLC === "grandine") return ClientKind.Grandine;
   if (agentLC === "lodestar" || agentLC === "js-libp2p") return ClientKind.Lodestar;
 
   return null;

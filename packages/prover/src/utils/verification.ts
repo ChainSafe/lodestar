@@ -4,7 +4,7 @@ import {ELBlock, ELProof, HexString, JsonRpcRequest} from "../types.js";
 import {bufferToHex} from "./conversion.js";
 import {getELBlock, getELCode, getELProof} from "./execution.js";
 import {isValidAccount, isValidBlock, isValidCodeHash, isValidStorageKeys} from "./validation.js";
-import {ELRpc} from "./rpc.js";
+import {ELRpcProvider} from "./rpc_provider.js";
 
 type VerificationResult<T> = {data: T; valid: true} | {valid: false; data?: undefined};
 
@@ -16,7 +16,7 @@ export async function verifyAccount({
   block,
 }: {
   address: HexString;
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   proofProvider: ProofProvider;
   logger: Logger;
   block?: number | string;
@@ -54,7 +54,7 @@ export async function verifyCode({
   block,
 }: {
   address: HexString;
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   proofProvider: ProofProvider;
   logger: Logger;
   codeHash: HexString;
@@ -81,13 +81,14 @@ export async function verifyBlock({
   rpc,
 }: {
   payload: JsonRpcRequest<[block: string | number, hydrated: boolean]>;
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   proofProvider: ProofProvider;
   logger: Logger;
 }): Promise<VerificationResult<ELBlock>> {
   try {
-    const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
-    const block = await getELBlock(rpc, payload.params);
+    const blockNumber = payload.params[0];
+    const executionPayload = await proofProvider.getExecutionPayload(blockNumber);
+    const block = await getELBlock(rpc, [blockNumber, true]); // Always request hydrated blocks as we need access to `transactions` details
 
     // If response is not valid from the EL we don't need to verify it
     if (!block) return {data: block, valid: false};

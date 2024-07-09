@@ -4,10 +4,10 @@ import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
+import {phase0, bellatrix, ssz, RootHex, deneb, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
 import {bnToNum, fromHex} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq, isForkBlobs, ForkName} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
@@ -20,13 +20,14 @@ import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
-import {ClockStopped} from "../../utils/mocks/clock.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {ClockStopped} from "../../mocks/clock.js";
 import {
   getBlockInput,
   AttestationImportOpt,
   BlockSource,
   BlobSidecarValidation,
+  BlobsSource,
 } from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -96,12 +97,13 @@ const forkChoiceTest =
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
             assertCorrectProgressiveBalances,
+            proposerBoost: true,
+            proposerBoostReorg: true,
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
-            db: getStubbedBeaconDb(),
+            db: getMockedBeaconDb(),
             logger,
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
             processShutdownCallback: () => {},
             clock,
             metrics: null,
@@ -210,11 +212,14 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.postDeneb(config, signedBlock, BlockSource.gossip, blobSidecars, null, [
-                    null,
-                  ]);
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, null, {
+                    fork: ForkName.deneb,
+                    blobs: blobSidecars,
+                    blobsBytes: [null],
+                    blobsSource: BlobsSource.gossip,
+                  });
                 } else {
-                  blockImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null);
+                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip, null);
                 }
 
                 await chain.processBlock(blockImport, {
@@ -264,17 +269,17 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = chain.forkChoice.updateHead();
+              const head = (chain.forkChoice as ForkChoice).updateHead();
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {
-                expect({slot: head.slot, root: head.blockRoot}).deep.equals(
+                expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
                   {slot: bnToNum(step.checks.head.slot), root: step.checks.head.root},
                   `Invalid head at step ${i}`
                 );
               }
               if (step.checks.proposer_boost_root !== undefined) {
-                expect(proposerBootRoot).to.be.equal(
+                expect(proposerBootRoot).toEqualWithMessage(
                   step.checks.proposer_boost_root,
                   `Invalid proposer boost root at step ${i}`
                 );
@@ -283,20 +288,33 @@ const forkChoiceTest =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
-                expect(chain.forkChoice.getTime()).to.be.equal(
+                expect(chain.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).to.be.deep.equal(
+                expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).toEqualWithMessage(
                   step.checks.justified_checkpoint,
                   `Invalid justified checkpoint at step ${i}`
                 );
               }
               if (step.checks.finalized_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).to.be.deep.equal(
+                expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
                   step.checks.finalized_checkpoint,
                   `Invalid finalized checkpoint at step ${i}`
+                );
+              }
+              if (step.checks.get_proposer_head) {
+                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
+                  head,
+                  tickTime % config.SECONDS_PER_SLOT,
+                  currentSlot
+                );
+                logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
+                expect(proposerHead.blockRoot).toEqualWithMessage(
+                  step.checks.get_proposer_head,
+                  `Invalid proposer head at step ${i}`
                 );
               }
             }
@@ -327,7 +345,7 @@ const forkChoiceTest =
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
-          const blocks = new Map<string, allForks.SignedBeaconBlock>();
+          const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const powBlocks = new Map<string, bellatrix.PowBlock>();
           const attestations = new Map<string, phase0.Attestation>();
@@ -367,7 +385,6 @@ const forkChoiceTest =
           };
         },
         timeout: 10000,
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
@@ -460,6 +477,7 @@ type Checks = {
     justified_checkpoint?: SpecTestCheckpoint;
     finalized_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
+    get_proposer_head?: string;
   };
 };
 
@@ -469,9 +487,9 @@ type ForkChoiceTestCase = {
     bls_setting: bigint;
   };
   anchorState: BeaconStateAllForks;
-  anchorBlock: allForks.BeaconBlock;
+  anchorBlock: BeaconBlock;
   steps: Step[];
-  blocks: Map<string, allForks.SignedBeaconBlock>;
+  blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, phase0.Attestation>;

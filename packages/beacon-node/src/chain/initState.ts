@@ -7,7 +7,7 @@ import {
   computeCheckpointEpochAtStateSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {phase0, allForks, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, toHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
@@ -21,7 +21,7 @@ import {GenesisResult} from "./genesis/interface.js";
 export async function persistGenesisResult(
   db: IBeaconDb,
   genesisResult: GenesisResult,
-  genesisBlock: allForks.SignedBeaconBlock
+  genesisBlock: SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
     db.stateArchive.add(genesisResult.state),
@@ -52,10 +52,7 @@ export async function persistAnchorState(
   }
 }
 
-export function createGenesisBlock(
-  config: ChainForkConfig,
-  genesisState: BeaconStateAllForks
-): allForks.SignedBeaconBlock {
+export function createGenesisBlock(config: ChainForkConfig, genesisState: BeaconStateAllForks): SignedBeaconBlock {
   const types = config.getForkTypes(GENESIS_SLOT);
   const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = genesisState.hashTreeRoot();

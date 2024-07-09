@@ -1,13 +1,13 @@
 # Lodestar Eth Consensus Lightclient Prover
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![ETH Beacon APIs Spec v2.1.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.1.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.1.0)
+[![ETH Beacon APIs Spec v2.5.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.5.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
-![Node Version](https://img.shields.io/badge/node-20.x-green)
+![Node Version](https://img.shields.io/badge/node-22.x-green)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Typescript REST client for the [Ethereum Consensus API spec](https://github.com/ethereum/beacon-apis)
+A set of tools allowing to verify EL client JSON-RPC calls.
 
 ## Usage
 
@@ -17,15 +17,39 @@ You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy.
 import Web3 from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
-const {provider, proofProvider} = createVerifiedExecutionProvider(
-  new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"),
-  {
-    transport: LCTransport.Rest,
-    urls: ["https://lodestar-sepolia.chainsafe.io"],
-    network: "sepolia",
-    wsCheckpoint: "trusted-checkpoint",
-  }
-);
+const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
+
+const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, {
+  transport: LCTransport.Rest,
+  urls: ["https://lodestar-sepolia.chainsafe.io"],
+  network: "sepolia",
+  wsCheckpoint: "trusted-checkpoint",
+});
+
+const web3 = new Web3(provider);
+
+const address = "0xf97e180c050e5Ab072211Ad2C213Eb5AEE4DF134";
+const balance = await web3.eth.getBalance(address, "latest");
+console.log({balance, address});
+```
+
+In this scenario the actual provider is mutated to handle the RPC requests and verify those. So here if you use `provider` or `httpProvider` both are the same objects. This behavior is useful when you already have an application and usage of any provider across the code space and don't want to change the code. So you mutate the provider during startup.
+
+For some scenarios when you don't want to mutate the provider you can pass an option `mutateProvider` as `false`. In this scenario the object `httpProvider` is not mutated and you get a new object `provider`. This is useful when your provider object does not allow mutation, e.g. Metamask provider accessible through `window.ethereum`. If not provided `mutateProvider` is considered as `true` by default. In coming releases we will switch its default behavior to `false`.
+
+```ts
+import Web3 from "web3";
+import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
+
+const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
+
+const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, {
+  transport: LCTransport.Rest,
+  urls: ["https://lodestar-sepolia.chainsafe.io"],
+  network: "sepolia",
+  wsCheckpoint: "trusted-checkpoint",
+  mutateProvider: false,
+});
 
 const web3 = new Web3(provider);
 
@@ -37,15 +61,20 @@ console.log({balance, address});
 You can also invoke the package as binary.
 
 ```bash
-npm -i g @lodestar/prover
+npm i -g @lodestar/prover
 
-lodestar-prover start \
+lodestar-prover proxy \
   --network sepolia \
-  --execution-rpc https://lodestar-sepoliarpc.chainsafe.io \
-  --mode rest \
-  --beacon-rpc https://lodestar-sepolia.chainsafe.io \
+  --executionRpcUrl https://lodestar-sepoliarpc.chainsafe.io \
+  --beaconUrls https://lodestar-sepolia.chainsafe.io \
   --port 8080
 ```
+
+## How to detect a web3 provider
+
+There can be different implementations of the web3 providers and each can handle the RPC request differently. We call those different provider types. We had provided builtin support for common providers e.g. web3.js, ethers or any eip1193 compatible providers. We inspect given provider instance at runtime to detect the correct provider type.
+
+If your project is using some provider type which is not among above list, you have the option to register a custom provider type with the `createVerifiedExecutionProvider` with the option `providerTypes` which will be an array of your supported provider types. Your custom provider types will have higher priority than default provider types. Please see [existing provide types implementations](./src/provider_types/) to know how to implement your own if needed.
 
 ## Supported Web3 Methods
 
@@ -115,7 +144,7 @@ lodestar-prover start \
 ## Prerequisites
 
 - [NodeJS](https://nodejs.org/) (LTS)
-- [Yarn](https://yarnpkg.com/)
+- [Yarn](https://classic.yarnpkg.com/lang/en/)
 
 ## What you need
 

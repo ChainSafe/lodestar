@@ -3,12 +3,12 @@ import {toBufferBE} from "bigint-buffer";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@lodestar/config/default";
-import {HttpStatusCode, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub} from "../../utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
@@ -55,11 +55,9 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.mockResolvedValue({
-      response: {data: [validatorResponse], executionOptimistic: false},
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
+    api.beacon.getStateValidators.mockResolvedValue(
+      mockApiResponse({data: [validatorResponse], meta: {executionOptimistic: false, finalized: false}})
+    );
 
     // Reply with some duties
     const slot = 1;
@@ -73,18 +71,12 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.mockResolvedValue({
-      response: {dependentRoot: ZERO_HASH_HEX, data: [duty], executionOptimistic: false},
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({data: [duty], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
 
     // Accept all subscriptions
-    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue({
-      response: undefined,
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
@@ -121,11 +113,9 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.mockResolvedValue({
-      response: {data: [validatorResponse], executionOptimistic: false},
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
+    api.beacon.getStateValidators.mockResolvedValue(
+      mockApiResponse({data: [validatorResponse], meta: {executionOptimistic: false, finalized: false}})
+    );
 
     // Reply with some duties
     const slot = 1;
@@ -138,18 +128,12 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.mockResolvedValue({
-      response: {data: [duty], dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({data: [duty], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
 
     // Accept all subscriptions
-    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue({
-      ok: true,
-      status: HttpStatusCode.OK,
-      response: undefined,
-    });
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();

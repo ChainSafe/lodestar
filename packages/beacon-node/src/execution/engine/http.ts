@@ -1,4 +1,4 @@
-import {Root, RootHex, allForks, Wei} from "@lodestar/types";
+import {ExecutionPayload, Root, RootHex, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
@@ -45,7 +45,7 @@ export type ExecutionEngineModules = {
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
-  retryAttempts: number;
+  retries: number;
   retryDelay: number;
   timeout?: number;
   /**
@@ -72,7 +72,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
    * port/url, one can override this and skip providing a jwt secret.
    */
   urls: ["http://localhost:8551"],
-  retryAttempts: 3,
+  retries: 2,
   retryDelay: 2000,
   timeout: 12000,
 };
@@ -103,7 +103,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
   // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
-  private state: ExecutionEngineState = ExecutionEngineState.ONLINE;
+  state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -171,7 +171,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(
     fork: ForkName,
-    executionPayload: allForks.ExecutionPayload,
+    executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root
   ): Promise<ExecutePayloadResponse> {
@@ -179,8 +179,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_newPayloadV2"
-        : "engine_newPayloadV1";
+          ? "engine_newPayloadV2"
+          : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -299,13 +299,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_forkchoiceUpdatedV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_forkchoiceUpdatedV2"
-        : "engine_forkchoiceUpdatedV1";
+          ? "engine_forkchoiceUpdatedV2"
+          : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts =
-      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 1};
+      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retries: 0};
 
     const request = this.rpcFetchQueue.push({
       method,
@@ -364,7 +364,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fork: ForkName,
     payloadId: PayloadId
   ): Promise<{
-    executionPayload: allForks.ExecutionPayload;
+    executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
     shouldOverrideBuilder?: boolean;
@@ -373,8 +373,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_getPayloadV2"
-        : "engine_getPayloadV1";
+          ? "engine_getPayloadV2"
+          : "engine_getPayloadV1";
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -415,10 +415,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});
     return response.map(deserializeExecutionPayloadBody);
-  }
-
-  getState(): ExecutionEngineState {
-    return this.state;
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {

@@ -15,7 +15,13 @@ import {
   ReqRespMethod,
   networkEventDirection,
 } from "../../../../src/network/index.js";
-import {BlockInputType, BlockSource} from "../../../../src/chain/blocks/types.js";
+import {
+  BlockInputType,
+  BlockSource,
+  BlockInput,
+  BlockInputDataBlobs,
+  CachedData,
+} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {IteratorEventType} from "../../../../src/util/asyncIterableToEvents.js";
 import {NetworkWorkerApi} from "../../../../src/network/core/index.js";
@@ -81,7 +87,7 @@ describe.skip("data serialization through worker boundary", function () {
     },
     [NetworkEvent.unknownBlockParent]: {
       blockInput: {
-        type: BlockInputType.preDeneb,
+        type: BlockInputType.preData,
         block: ssz.capella.SignedBeaconBlock.defaultValue(),
         source: BlockSource.gossip,
         blockBytes: ZERO_HASH,
@@ -90,6 +96,10 @@ describe.skip("data serialization through worker boundary", function () {
     },
     [NetworkEvent.unknownBlock]: {
       rootHex: ZERO_HASH_HEX,
+      peer,
+    },
+    [NetworkEvent.unknownBlockInput]: {
+      blockInput: getEmptyBlockInput(),
       peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
@@ -138,7 +148,7 @@ describe.skip("data serialization through worker boundary", function () {
     getConnectedPeers: [],
     getConnectedPeerCount: [],
     updateStatus: [statusZero],
-    publishGossip: ["test-topic", bytes, {allowPublishToZeroPeers: true, ignoreDuplicatePublishError: true}],
+    publishGossip: ["test-topic", bytes, {allowPublishToZeroTopicPeers: true, ignoreDuplicatePublishError: true}],
     close: [],
     scrapeMetrics: [],
     writeProfile: [0, ""],
@@ -240,3 +250,23 @@ describe.skip("data serialization through worker boundary", function () {
 });
 
 type Resolves<T extends Promise<unknown>> = T extends Promise<infer U> ? (U extends void ? null : U) : never;
+
+function getEmptyBlockInput(): BlockInput {
+  let resolveAvailability: ((blobs: BlockInputDataBlobs) => void) | null = null;
+  const availabilityPromise = new Promise<BlockInputDataBlobs>((resolveCB) => {
+    resolveAvailability = resolveCB;
+  });
+  if (resolveAvailability === null) {
+    throw Error("Promise Constructor was not executed immediately");
+  }
+  const blobsCache = new Map();
+
+  const cachedData = {fork: ForkName.deneb, blobsCache, availabilityPromise, resolveAvailability} as CachedData;
+  return {
+    type: BlockInputType.dataPromise,
+    block: ssz.deneb.SignedBeaconBlock.defaultValue(),
+    source: BlockSource.gossip,
+    blockBytes: ZERO_HASH,
+    cachedData,
+  };
+}

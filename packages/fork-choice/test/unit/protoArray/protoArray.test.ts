@@ -1,7 +1,7 @@
 import {describe, it, expect} from "vitest";
 import {RootHex} from "@lodestar/types";
 
-import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
+import {ProtoArray, ExecutionStatus, DataAvailabilityStatus} from "../../../src/index.js";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {
@@ -30,7 +30,10 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       genesisSlot
     );
@@ -53,7 +56,10 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       genesisSlot + 1
     );
@@ -76,7 +82,10 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       genesisSlot + 1
     );

@@ -7,9 +7,9 @@ import {setActivePreset, PresetName} from "../../src/setPreset.js";
 setActivePreset(PresetName.minimal);
 
 // 2. Import from any other @lodestar/params paths
-import {expect} from "chai";
+import assert from "node:assert";
 
 const {SLOTS_PER_EPOCH} = await import("../../src/index.js");
 
-expect(SLOTS_PER_EPOCH).to.equal(8, "SLOTS_PER_EPOCH should have minimal preset value");
-expect(process.env.LODESTAR_PRESET).to.equal(undefined, "LODESTAR_PRESET ENV must not be set");
+assert.equal(SLOTS_PER_EPOCH, 8, "SLOTS_PER_EPOCH should have minimal preset value");
+assert.equal(process.env.LODESTAR_PRESET, undefined, "LODESTAR_PRESET ENV must not be set");

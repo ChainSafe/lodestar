@@ -1,0 +1,41 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`forkName > should have valid allForks 1`] = `
+[
+  "phase0",
+  "altair",
+  "bellatrix",
+  "capella",
+  "deneb",
+]
+`;
+
+exports[`forkName > should have valid blobs forks 1`] = `
+[
+  "deneb",
+]
+`;
+
+exports[`forkName > should have valid execution forks 1`] = `
+[
+  "bellatrix",
+  "capella",
+  "deneb",
+]
+`;
+
+exports[`forkName > should have valid lightclient forks 1`] = `
+[
+  "altair",
+  "bellatrix",
+  "capella",
+  "deneb",
+]
+`;
+
+exports[`forkName > should have valid withdrawal forks 1`] = `
+[
+  "capella",
+  "deneb",
+]
+`;

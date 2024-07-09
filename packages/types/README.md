@@ -2,9 +2,9 @@
 
 [![npm](https://img.shields.io/npm/v/@lodestar/types)](https://www.npmjs.com/package/@lodestar/types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
+[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
-![Node Version](https://img.shields.io/badge/node-20.x-green)
+![Node Version](https://img.shields.io/badge/node-22.x-green)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
@@ -67,13 +67,13 @@ import {Epoch, ssz} from "@lodestar/types";
 const epoch: Epoch = ssz.Epoch.defaultValue();
 ```
 
-In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. Typescript interfaces for this purpose are exported under the `allForks` namespace. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
+In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
 
 ```typescript
 import {ForkName} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
+import {ssz, BeaconState} from "@lodestar/types";
 
-const state: allForks.BeaconState = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
+const state: BeaconState<ForkName.phase0> = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
 ```
 
 ## License

@@ -8,7 +8,7 @@ import {
   ValidatorProposerConfig,
   defaultOptions,
 } from "@lodestar/validator";
-import {routes} from "@lodestar/api";
+import {WireFormat, routes} from "@lodestar/api";
 import {getMetrics} from "@lodestar/validator";
 import {
   RegistryMetricCreator,
@@ -22,10 +22,11 @@ import {GlobalArgs} from "../../options/index.js";
 import {YargsError, cleanOldLogFiles, getDefaultGraffiti, mkdir, parseLoggerArgs} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/proposerConfig.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
-import {logSigners} from "./signers/logSigners.js";
+import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
@@ -92,13 +93,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
-    if (args["keymanager"]) {
-      logger.warn("No local keystores or remote signers found with current args, expecting to be added via keymanager");
-    } else {
-      throw new YargsError(
-        "No local keystores and remote signers found with current args, start with --keymanager if intending to add them later (via keymanager)"
-      );
-    }
+    warnOrExitNoSigners(args, logger);
   }
 
   logSigners(logger, signers);
@@ -157,7 +152,13 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       db,
       config,
       slashingProtection,
-      api: args.beaconNodes,
+      api: {
+        clientOrUrls: args.beaconNodes,
+        globalInit: {
+          requestWireFormat: parseWireFormat(args, "http.requestWireFormat"),
+          responseWireFormat: parseWireFormat(args, "http.responseWireFormat"),
+        },
+      },
       logger,
       processShutdownCallback,
       signers,
@@ -171,6 +172,11 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       useProduceBlockV3: args.useProduceBlockV3,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
       blindedLocal: args.blindedLocal,
+      externalSigner: {
+        url: args["externalSigner.url"],
+        fetch: args["externalSigner.fetch"],
+        fetchInterval: args["externalSigner.fetchInterval"],
+      },
     },
     metrics
   );
@@ -199,9 +205,10 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         address: args["keymanager.address"],
         port: args["keymanager.port"],
         cors: args["keymanager.cors"],
-        isAuthEnabled: args["keymanager.authEnabled"],
+        isAuthEnabled: args["keymanager.auth"],
         headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
+        tokenFile: args["keymanager.tokenFile"],
         tokenDir: dbPath,
       },
       {config, logger, api: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}
@@ -227,7 +234,7 @@ function getProposerConfigFromArgs(
       selection: parseBuilderSelection(
         args["builder.selection"] ?? (args["builder"] ? defaultOptions.builderAliasSelection : undefined)
       ),
-      boostFactor: args["builder.boostFactor"] !== undefined ? BigInt(args["builder.boostFactor"]) : undefined,
+      boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
     },
   };
 
@@ -254,24 +261,6 @@ function getProposerConfigFromArgs(
   return valProposerConfig;
 }
 
-function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
-  if (builderSelection) {
-    switch (builderSelection) {
-      case "maxprofit":
-        break;
-      case "builderalways":
-        break;
-      case "builderonly":
-        break;
-      case "executiononly":
-        break;
-      default:
-        throw Error("Invalid input for builder selection, check help.");
-    }
-  }
-  return builderSelection as routes.validator.BuilderSelection;
-}
-
 function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.BroadcastValidation | undefined {
   if (broadcastValidation) {
     switch (broadcastValidation) {
@@ -280,9 +269,25 @@ function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.B
       case "consensus_and_equivocation":
         break;
       default:
-        throw Error("Invalid input for broadcastValidation, check help");
+        throw new YargsError("Invalid input for broadcastValidation, check help");
     }
   }
 
   return broadcastValidation as routes.beacon.BroadcastValidation;
+}
+
+function parseWireFormat(args: IValidatorCliArgs, key: keyof IValidatorCliArgs): WireFormat | undefined {
+  const wireFormat = args[key];
+
+  if (wireFormat !== undefined) {
+    switch (wireFormat) {
+      case WireFormat.json:
+      case WireFormat.ssz:
+        break;
+      default:
+        throw new YargsError(`Invalid input for ${key}, must be one of "${WireFormat.json}" or "${WireFormat.ssz}"`);
+    }
+  }
+
+  return wireFormat;
 }

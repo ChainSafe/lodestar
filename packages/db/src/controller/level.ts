@@ -8,8 +8,6 @@ enum Status {
   closed = "closed",
 }
 
-type LevelNodeJS = ClassicLevel<Uint8Array, Uint8Array>;
-
 export interface LevelDBOptions extends DatabaseOptions {
   db?: ClassicLevel<Uint8Array, Uint8Array>;
 }
@@ -57,7 +55,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       await db.open();
     } catch (e) {
       if ((e as LevelDbError).cause?.code === "LEVEL_LOCKED") {
-        throw new Error("Database is already in use by another Lodestar instance");
+        throw new Error("Database already in use by another process");
       }
       throw e;
     }
@@ -167,14 +165,14 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
    * The result might not include recently written data.
    */
   approximateSize(start: Uint8Array, end: Uint8Array): Promise<number> {
-    return (this.db as LevelNodeJS).approximateSize(start, end);
+    return this.db.approximateSize(start, end);
   }
 
   /**
    * Manually trigger a database compaction in the range [start..end].
    */
   compactRange(start: Uint8Array, end: Uint8Array): Promise<void> {
-    return (this.db as LevelNodeJS).compactRange(start, end);
+    return this.db.compactRange(start, end);
   }
 
   /** Capture metrics for db.iterator, db.keys, db.values .all() calls */
@@ -225,6 +223,10 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
         this.logger.debug("Error approximating db size", {}, e);
       })
       .finally(timer);
+  }
+
+  static async destroy(location: string): Promise<void> {
+    return ClassicLevel.destroy(location);
   }
 }
 

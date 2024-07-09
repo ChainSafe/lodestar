@@ -1,15 +1,21 @@
 import {digest} from "@chainsafe/as-sha256";
 import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
-import {ValidatorIndex, Bytes32} from "@lodestar/types";
+import {Bytes32} from "@lodestar/types";
 import {assert, bytesToBigInt} from "@lodestar/utils";
 
+// ArrayLike<number> but with settable indices
+type Shuffleable = {
+  readonly length: number;
+  [index: number]: number;
+};
+
 // ShuffleList shuffles a list, using the given seed for randomness. Mutates the input list.
-export function shuffleList(input: ValidatorIndex[], seed: Bytes32): void {
+export function shuffleList(input: Shuffleable, seed: Bytes32): void {
   innerShuffleList(input, seed, true);
 }
 
 // UnshuffleList undoes a list shuffling using the seed of the shuffling. Mutates the input list.
-export function unshuffleList(input: ValidatorIndex[], seed: Bytes32): void {
+export function unshuffleList(input: Shuffleable, seed: Bytes32): void {
   innerShuffleList(input, seed, false);
 }
 
@@ -70,7 +76,7 @@ function setPositionUint32(value: number, buf: Buffer): void {
 }
 
 // Shuffles or unshuffles, depending on the `dir` (true for shuffling, false for unshuffling
-function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean): void {
+function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void {
   if (input.length <= 1) {
     // nothing to (un)shuffle
     return;
@@ -84,6 +90,8 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
   const listSize = input.length >>> 0;
   // check if list size fits in uint32
   assert.equal(listSize, input.length, "input length does not fit uint32");
+  // check that the seed is 32 bytes
+  assert.lte(seed.length, _SHUFFLE_H_SEED_SIZE, `seed length is not lte ${_SHUFFLE_H_SEED_SIZE} bytes`);
 
   const buf = Buffer.alloc(_SHUFFLE_H_TOTAL_SIZE);
   let r = 0;
@@ -94,8 +102,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
   }
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
-  const _seed = seed;
-  Buffer.from(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
+  buf.set(seed, 0);
 
   // initial values here are not used: overwritten first within the inner for loop.
   let source = seed; // just setting it to a Bytes32
@@ -108,8 +115,8 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
     buf[_SHUFFLE_H_SEED_SIZE] = r;
     // Seed is already in place, now just hash the correct part of the buffer, and take a uint64 from it,
     //  and modulo it to get a pivot within range.
-    const h = digest(buf.slice(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
-    const pivot = Number(bytesToBigInt(h.slice(0, 8)) % BigInt(listSize)) >>> 0;
+    const h = digest(buf.subarray(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
+    const pivot = Number(bytesToBigInt(h.subarray(0, 8)) % BigInt(listSize)) >>> 0;
 
     // Split up the for-loop in two:
     //  1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2)

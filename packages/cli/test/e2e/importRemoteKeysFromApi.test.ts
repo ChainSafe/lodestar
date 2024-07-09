@@ -1,9 +1,9 @@
 import path from "node:path";
 import {describe, it, expect, beforeAll, vi} from "vitest";
 import {rimraf} from "rimraf";
-import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
+import {ApiClient, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
-import {ApiError, HttpStatusCode} from "@lodestar/api";
+import {HttpStatusCode} from "@lodestar/api";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
@@ -11,11 +11,10 @@ import {startValidatorWithKeyManager} from "../utils/validator.js";
 
 const url = "https://remote.signer";
 
-async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
-  const remoteKeys = await keymanagerClient.listRemoteKeys();
-  ApiError.assert(remoteKeys);
+async function expectKeys(keymanagerClient: ApiClient, expectedPubkeys: string[], message: string): Promise<void> {
+  const remoteKeys = (await keymanagerClient.listRemoteKeys()).value();
   expectDeepEquals(
-    remoteKeys.response.data,
+    remoteKeys,
     expectedPubkeys.map((pubkey) => ({pubkey, url, readonly: false})),
     message
   );
@@ -40,10 +39,11 @@ describe("import remoteKeys from api", function () {
     await expectKeys(keymanagerClient, [], "Wrong listRemoteKeys before importing");
 
     // Import test keys
-    const importRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
-    ApiError.assert(importRes);
+    const importRes = await keymanagerClient.importRemoteKeys({
+      remoteSigners: pubkeysToAdd.map((pubkey) => ({pubkey, url})),
+    });
     expectDeepEquals(
-      importRes.response.data,
+      importRes.value(),
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.imported})),
       "Wrong importRemoteKeys response"
     );
@@ -52,10 +52,11 @@ describe("import remoteKeys from api", function () {
     await expectKeys(keymanagerClient, pubkeysToAdd, "Wrong listRemoteKeys after importing");
 
     // Attempt to import the same keys again
-    const importAgainRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
-    ApiError.assert(importAgainRes);
+    const importAgainRes = await keymanagerClient.importRemoteKeys({
+      remoteSigners: pubkeysToAdd.map((pubkey) => ({pubkey, url})),
+    });
     expectDeepEquals(
-      importAgainRes.response.data,
+      importAgainRes.value(),
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.duplicate})),
       "Wrong importRemoteKeys again response"
     );
@@ -67,10 +68,9 @@ describe("import remoteKeys from api", function () {
     await expectKeys(keymanagerClient, pubkeysToAdd, "Wrong listRemoteKeys before deleting");
 
     // Delete keys
-    const deleteRes = await keymanagerClient.deleteRemoteKeys(pubkeysToAdd);
-    ApiError.assert(deleteRes);
+    const deleteRes = await keymanagerClient.deleteRemoteKeys({pubkeys: pubkeysToAdd});
     expectDeepEquals(
-      deleteRes.response.data,
+      deleteRes.value(),
       pubkeysToAdd.map(() => ({status: DeleteRemoteKeyStatus.deleted})),
       "Wrong deleteRemoteKeys response"
     );
@@ -82,9 +82,9 @@ describe("import remoteKeys from api", function () {
   it("reject calls without bearerToken", async function () {
     await startValidatorWithKeyManager([], {dataDir});
     const keymanagerUrl = "http://localhost:38011";
-    const keymanagerClientNoAuth = getClient({baseUrl: keymanagerUrl, bearerToken: undefined}, {config});
+    const keymanagerClientNoAuth = getClient({baseUrl: keymanagerUrl, globalInit: {bearerToken: undefined}}, {config});
     const res = await keymanagerClientNoAuth.listRemoteKeys();
     expect(res.ok).toBe(false);
-    expect(res.error?.code).toEqual(HttpStatusCode.UNAUTHORIZED);
+    expect(res.status).toEqual(HttpStatusCode.UNAUTHORIZED);
   });
 });

@@ -1,47 +1,42 @@
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
   ForkName,
-  RANDOM_SUBNETS_PER_VALIDATOR,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {Epoch, Slot, ssz} from "@lodestar/types";
-import {Logger, MapDef, randBetween} from "@lodestar/utils";
-import {shuffle} from "../../util/shuffle.js";
+import {Logger, MapDef} from "@lodestar/utils";
+import {BeaconConfig} from "@lodestar/config";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {
-  IAttnetsService,
-  CommitteeSubscription,
-  SubnetsServiceOpts,
-  RandBetweenFn,
-  ShuffleFn,
-  GossipSubscriber,
-  SubnetsServiceTestOpts,
-} from "./interface.js";
-
-/**
- * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
- * gossip topics that we subscribed to due to the validator connection.
- */
-const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
+import {stringifyGossipTopic} from "../gossip/topic.js";
+import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";
+import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, GossipSubscriber, NodeId} from "./interface.js";
+import {computeSubscribedSubnet} from "./util.js";
 
 const gossipType = GossipType.beacon_attestation;
 
 export enum SubnetSource {
   committee = "committee",
-  random = "random",
+  longLived = "long_lived",
 }
 
+type Subnet = number;
+// map of subnet to time to form stable mesh as seconds, null if not yet formed
+type AggregatorDutyInfo = Map<Subnet, number | null>;
+
 /**
- * Manage random (long lived) subnets and committee (short lived) subnets.
- * - PeerManager uses attnetsService to know which peers are required for duties
+ * This value means node is not able to form stable mesh.
+ */
+const NOT_ABLE_TO_FORM_STABLE_MESH_SEC = -1;
+
+/**
+ * Manage deleterministic long lived (DLL) subnets and short lived subnets.
+ * - PeerManager uses attnetsService to know which peers are required for duties and long lived subscriptions
  * - Network call addCommitteeSubscriptions() from API calls
  * - Gossip handler checks shouldProcess to know if validator is aggregator
  */
@@ -53,33 +48,24 @@ export class AttnetsService implements IAttnetsService {
    * This class will tell gossip to subscribe and un-subscribe
    * If a value exists for `SubscriptionId` it means that gossip subscription is active in network.gossip
    */
-  private subscriptionsCommittee = new SubnetMap();
-  /** Same as `subscriptionsCommittee` but for long-lived subnets. May overlap with `subscriptionsCommittee` */
-  private subscriptionsRandom = new SubnetMap();
+  private shortLivedSubscriptions = new SubnetMap();
+  /** ${SUBNETS_PER_NODE} long lived subscriptions, may overlap with `shortLivedSubscriptions` */
+  private longLivedSubscriptions = new Set<number>();
   /**
-   * Map of an aggregator at a slot and subnet
+   * Map of an aggregator at a slot and AggregatorDutyInfo
    * Used to determine if we should process an attestation.
    */
-  private aggregatorSlotSubnet = new MapDef<Slot, Set<number>>(() => new Set());
-
-  /**
-   * A collection of seen validators. These dictate how many random subnets we should be
-   * subscribed to. As these time out, we unsubscribe from the required random subnets and update our ENR.
-   * This is a map of validator index and its last active slot.
-   */
-  private knownValidators = new Map<number, Slot>();
-
-  private randBetweenFn: RandBetweenFn;
-  private shuffleFn: ShuffleFn;
+  private aggregatorSlotSubnet = new MapDef<Slot, AggregatorDutyInfo>(() => new Map());
 
   constructor(
-    private readonly config: ChainForkConfig,
+    private readonly config: BeaconConfig,
     private readonly clock: IClock,
     private readonly gossip: GossipSubscriber,
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,
-    private readonly opts: SubnetsServiceOpts & SubnetsServiceTestOpts
+    private readonly nodeId: NodeId | null,
+    private readonly opts: SubnetsServiceOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
     // so that we have enough subnet topic peers, see https://github.com/ChainSafe/lodestar/issues/4921
@@ -89,12 +75,10 @@ export class AttnetsService implements IAttnetsService {
       }
     }
 
-    this.randBetweenFn = this.opts.randBetweenFn ?? randBetween;
-    this.shuffleFn = this.opts.shuffleFn ?? shuffle;
     if (metrics) {
-      metrics.attnetsService.subscriptionsRandom.addCollect(() => this.onScrapeLodestarMetrics(metrics));
+      metrics.attnetsService.longLivedSubscriptions.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
-
+    this.recomputeLongLivedSubnets();
     this.clock.on(ClockEvent.slot, this.onSlot);
     this.clock.on(ClockEvent.epoch, this.onEpoch);
   }
@@ -105,34 +89,38 @@ export class AttnetsService implements IAttnetsService {
   }
 
   /**
-   * Get all active subnets for the hearbeat.
+   * Get all active subnets for the hearbeat:
+   *   - committeeSubnets so that submitted attestations can be spread to the network
+   *  - longLivedSubscriptions because other peers based on this node's ENR for their submitted attestations
    */
   getActiveSubnets(): RequestedSubnet[] {
-    // Omit subscriptionsRandom, not necessary to force the network component to keep peers on that subnets
-    return this.committeeSubnets.getActiveTtl(this.clock.currentSlot);
+    const shortLivedSubnets = this.committeeSubnets.getActiveTtl(this.clock.currentSlot);
+
+    const longLivedSubscriptionsToSlot =
+      (Math.floor(this.clock.currentEpoch / EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) + 1) *
+      EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION *
+      SLOTS_PER_EPOCH;
+    const longLivedSubnets = Array.from(this.longLivedSubscriptions).map((subnet) => ({
+      subnet,
+      toSlot: longLivedSubscriptionsToSlot,
+    }));
+
+    // could be overlap, PeerDiscovery will handle it
+    return [...shortLivedSubnets, ...longLivedSubnets];
   }
 
   /**
    * Called from the API when validator is a part of a committee.
    */
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void {
-    const currentSlot = this.clock.currentSlot;
-    let addedknownValidators = false;
-
-    for (const {validatorIndex, subnet, slot, isAggregator} of subscriptions) {
-      // Add known validator
-      if (!this.knownValidators.has(validatorIndex)) addedknownValidators = true;
-      this.knownValidators.set(validatorIndex, currentSlot);
-
+    for (const {subnet, slot, isAggregator} of subscriptions) {
       // the peer-manager heartbeat will help find the subnet
       this.committeeSubnets.request({subnet, toSlot: slot + 1});
       if (isAggregator) {
         // need exact slot here
-        this.aggregatorSlotSubnet.getOrDefault(slot).add(subnet);
+        this.aggregatorSlotSubnet.getOrDefault(slot).set(subnet, null);
       }
     }
-
-    if (addedknownValidators) this.rebalanceRandomSubnets();
   }
 
   /**
@@ -145,17 +133,26 @@ export class AttnetsService implements IAttnetsService {
     return this.aggregatorSlotSubnet.getOrDefault(slot).has(subnet);
   }
 
-  /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
+  /**
+   * TODO-dll: clarify how many epochs before the fork we should subscribe to the new fork
+   * Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
+   **/
   subscribeSubnetsToNextFork(nextFork: ForkName): void {
-    this.logger.info("Suscribing to random attnets to next fork", {nextFork});
-    for (const subnet of this.subscriptionsRandom.getAll()) {
+    this.logger.info("Subscribing to long lived attnets to next fork", {
+      nextFork,
+      subnets: Array.from(this.longLivedSubscriptions).join(","),
+    });
+    for (const subnet of this.longLivedSubscriptions) {
       this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
     }
   }
 
-  /** Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork */
+  /**
+   * TODO-dll: clarify how many epochs after the fork we should unsubscribe to the new fork
+   * Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
+   **/
   unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
-    this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
+    this.logger.info("Unsubscribing to long lived attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts.subscribeAllSubnets) {
         this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
@@ -167,98 +164,144 @@ export class AttnetsService implements IAttnetsService {
    * Run per slot.
    * - Subscribe to gossip subnets 2 slots in advance
    * - Unsubscribe from expired subnets
+   * - Track time to stable mesh if not yet formed
    */
   private onSlot = (clockSlot: Slot): void => {
     try {
-      for (const [dutiedSlot, subnets] of this.aggregatorSlotSubnet.entries()) {
+      setTimeout(
+        () => {
+          this.onHalfSlot(clockSlot);
+        },
+        this.config.SECONDS_PER_SLOT * 0.5 * 1000
+      );
+
+      for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
         if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {
           // Trigger gossip subscription first, in batch
-          if (subnets.size > 0) {
-            this.subscribeToSubnets(Array.from(subnets), SubnetSource.committee);
+          if (dutiedInfo.size > 0) {
+            this.subscribeToSubnets(Array.from(dutiedInfo.keys()), SubnetSource.committee);
           }
           // Then, register the subscriptions
-          Array.from(subnets).map((subnet) => this.subscriptionsCommittee.request({subnet, toSlot: dutiedSlot}));
+          for (const subnet of dutiedInfo.keys()) {
+            this.shortLivedSubscriptions.request({subnet, toSlot: dutiedSlot});
+          }
         }
+        this.trackTimeToStableMesh(clockSlot, dutiedSlot, dutiedInfo);
       }
 
-      // For node >= 64 validators, we should consistently subscribe to all subnets
-      // it's important to check random subnets first
-      // See https://github.com/ChainSafe/lodestar/issues/4929
-      this.unsubscribeExpiredRandomSubnets(clockSlot);
       this.unsubscribeExpiredCommitteeSubnets(clockSlot);
+      this.pruneExpiredAggregator(clockSlot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onSlot", {slot: clockSlot}, e as Error);
     }
   };
 
+  private onHalfSlot = (clockSlot: Slot): void => {
+    for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
+      this.trackTimeToStableMesh(clockSlot, dutiedSlot, dutiedInfo);
+    }
+  };
+
+  /**
+   * Track time to form stable mesh if not yet formed
+   */
+  private trackTimeToStableMesh(clockSlot: Slot, dutiedSlot: Slot, dutiedInfo: AggregatorDutyInfo): void {
+    if (dutiedSlot < clockSlot) {
+      // aggregator duty is expired, set timeToStableMesh to some big value so we know this value is not good
+      for (const [subnet, timeToFormMesh] of dutiedInfo.entries()) {
+        if (timeToFormMesh === null) {
+          dutiedInfo.set(subnet, NOT_ABLE_TO_FORM_STABLE_MESH_SEC);
+          this.metrics?.attnetsService.subscriptionsCommitteeTimeToStableMesh.observe(
+            {subnet},
+            NOT_ABLE_TO_FORM_STABLE_MESH_SEC
+          );
+        }
+      }
+    } else if (dutiedSlot <= clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {
+      // aggregator duty is not expired, track time to stable mesh if this is the 1st time we see mesh peers>=Dlo (6)
+      for (const [subnet, timeToFormMesh] of dutiedInfo.entries()) {
+        if (timeToFormMesh === null) {
+          const topicStr = stringifyGossipTopic(this.config, {
+            type: gossipType,
+            fork: this.config.getForkName(dutiedSlot),
+            subnet,
+          });
+          const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
+          if (numMeshPeers >= GOSSIP_D_LOW) {
+            const timeToStableMeshSec = this.clock.secFromSlot(
+              dutiedSlot - this.opts.slotsToSubscribeBeforeAggregatorDuty
+            );
+            // set to dutiedInfo so we'll not set to metrics again
+            dutiedInfo.set(subnet, timeToStableMeshSec);
+            this.metrics?.attnetsService.subscriptionsCommitteeTimeToStableMesh.observe({subnet}, timeToStableMeshSec);
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Run per epoch, clean-up operations that are not urgent
+   * Subscribe to new random subnets every EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs
    */
   private onEpoch = (epoch: Epoch): void => {
     try {
-      const slot = computeStartSlotAtEpoch(epoch);
-      this.pruneExpiredKnownValidators(slot);
-      this.pruneExpiredAggregator(slot);
+      if (epoch % EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION === 0) {
+        this.recomputeLongLivedSubnets();
+      }
     } catch (e) {
       this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e as Error);
     }
   };
+
+  private recomputeLongLivedSubnets(): void {
+    if (this.nodeId === null) {
+      this.logger.verbose("Cannot recompute long-lived subscriptions, no nodeId");
+      return;
+    }
+
+    const oldSubnets = this.longLivedSubscriptions;
+    const newSubnets = computeSubscribedSubnet(this.nodeId, this.clock.currentEpoch);
+    this.logger.verbose("Recomputing long-lived subscriptions", {
+      epoch: this.clock.currentEpoch,
+      oldSubnets: Array.from(oldSubnets).join(","),
+      newSubnets: newSubnets.join(","),
+    });
+
+    const toRemoveSubnets = [];
+    for (const subnet of oldSubnets) {
+      if (!newSubnets.includes(subnet)) {
+        toRemoveSubnets.push(subnet);
+      }
+    }
+
+    // First, tell gossip to subscribe to the subnets if not connected already
+    this.subscribeToSubnets(newSubnets, SubnetSource.longLived);
+
+    // then update longLivedSubscriptions
+    for (const subnet of toRemoveSubnets) {
+      this.longLivedSubscriptions.delete(subnet);
+    }
+
+    for (const subnet of newSubnets) {
+      //  this.longLivedSubscriptions is a set so it'll handle duplicates
+      this.longLivedSubscriptions.add(subnet);
+    }
+
+    // Only tell gossip to unsubsribe last, longLivedSubscriptions has the latest state
+    this.unsubscribeSubnets(toRemoveSubnets, this.clock.currentSlot, SubnetSource.longLived);
+    this.updateMetadata();
+  }
 
   /**
    * Unsubscribe to a committee subnet from subscribedCommitteeSubnets.
    * If a random subnet is present, we do not unsubscribe from it.
    */
   private unsubscribeExpiredCommitteeSubnets(slot: Slot): void {
-    const expired = this.subscriptionsCommittee.getExpired(slot);
+    const expired = this.shortLivedSubscriptions.getExpired(slot);
     if (expired.length > 0) {
       this.unsubscribeSubnets(expired, slot, SubnetSource.committee);
     }
-  }
-
-  /**
-   * A random subnet has expired.
-   * This function selects a new subnet to join, or extends the expiry if there are no more
-   * available subnets to choose from.
-   */
-  private unsubscribeExpiredRandomSubnets(slot: Slot): void {
-    const expired = this.subscriptionsRandom.getExpired(slot);
-    const currentSlot = this.clock.currentSlot;
-
-    if (expired.length === 0) {
-      return;
-    }
-
-    if (this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR >= ATTESTATION_SUBNET_COUNT) {
-      // Optimization: If we have to be subcribed to all subnets, no need to unsubscribe. Just extend the timeout
-      for (const subnet of expired) {
-        this.subscriptionsRandom.request({subnet, toSlot: this.randomSubscriptionSlotLen() + currentSlot});
-      }
-      return;
-    }
-
-    // Prune subnets and re-subcribe to new ones
-    this.unsubscribeSubnets(expired, slot, SubnetSource.random);
-    this.rebalanceRandomSubnets();
-  }
-
-  /**
-   * A known validator has not sent a subscription in a while. They are considered offline and the
-   * beacon node no longer needs to be subscribed to the allocated random subnets.
-   *
-   * We don't keep track of a specific validator to random subnet, rather the ratio of active
-   * validators to random subnets. So when a validator goes offline, we can simply remove the
-   * allocated amount of random subnets.
-   */
-  private pruneExpiredKnownValidators(currentSlot: Slot): void {
-    let deletedKnownValidators = false;
-    for (const [index, slot] of this.knownValidators.entries()) {
-      if (currentSlot > slot + LAST_SEEN_VALIDATOR_TIMEOUT) {
-        const deleted = this.knownValidators.delete(index);
-        if (deleted) deletedKnownValidators = true;
-      }
-    }
-
-    if (deletedKnownValidators) this.rebalanceRandomSubnets();
   }
 
   /**
@@ -266,65 +309,17 @@ export class AttnetsService implements IAttnetsService {
    * @param currentSlot
    */
   private pruneExpiredAggregator(currentSlot: Slot): void {
-    for (const slot of this.aggregatorSlotSubnet.keys()) {
-      if (currentSlot > slot) {
-        this.aggregatorSlotSubnet.delete(slot);
+    for (const dutiedSlot of this.aggregatorSlotSubnet.keys()) {
+      if (currentSlot > dutiedSlot) {
+        this.aggregatorSlotSubnet.delete(dutiedSlot);
       }
-    }
-  }
-
-  /**
-   * Called when we have new validators or expired validators.
-   * knownValidators should be updated before this function.
-   */
-  private rebalanceRandomSubnets(): void {
-    const slot = this.clock.currentSlot;
-    // By limiting to ATTESTATION_SUBNET_COUNT, if target is still over subnetDiff equals 0
-    const targetRandomSubnetCount = Math.min(
-      this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR,
-      ATTESTATION_SUBNET_COUNT
-    );
-    const subnetDiff = targetRandomSubnetCount - this.subscriptionsRandom.size;
-
-    // subscribe to more random subnets
-    if (subnetDiff > 0) {
-      const activeSubnets = new Set(this.subscriptionsRandom.getActive(slot));
-      const allSubnets = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => i);
-      const availableSubnets = allSubnets.filter((subnet) => !activeSubnets.has(subnet));
-      const subnetsToConnect = this.shuffleFn(availableSubnets).slice(0, subnetDiff);
-
-      // Tell gossip to connect to the subnets if not connected already
-      this.subscribeToSubnets(subnetsToConnect, SubnetSource.random);
-
-      // Register these new subnets until some future slot
-      for (const subnet of subnetsToConnect) {
-        // the heartbeat will help connect to respective peers
-        this.subscriptionsRandom.request({subnet, toSlot: this.randomSubscriptionSlotLen() + slot});
-      }
-    }
-
-    // unsubscribe some random subnets
-    if (subnetDiff < 0) {
-      const activeRandomSubnets = this.subscriptionsRandom.getActive(slot);
-      // TODO: Do we want to remove the oldest subnets or the newest subnets?
-      // .slice(-2) will extract the last two items of the array
-      const toRemoveSubnets = activeRandomSubnets.slice(subnetDiff);
-      for (const subnet of toRemoveSubnets) {
-        this.subscriptionsRandom.delete(subnet);
-      }
-      this.unsubscribeSubnets(toRemoveSubnets, slot, SubnetSource.random);
-    }
-
-    // If there has been a change update the local ENR bitfield
-    if (subnetDiff !== 0) {
-      this.updateMetadata();
     }
   }
 
   /** Update ENR */
   private updateMetadata(): void {
     const subnets = ssz.phase0.AttestationSubnets.defaultValue();
-    for (const subnet of this.subscriptionsRandom.getAll()) {
+    for (const subnet of this.longLivedSubscriptions) {
       subnets.set(subnet, true);
     }
 
@@ -334,11 +329,14 @@ export class AttnetsService implements IAttnetsService {
     }
   }
 
-  /** Tigger a gossip subcription only if not already subscribed */
+  /**
+   * Trigger a gossip subcription only if not already subscribed
+   * shortLivedSubscriptions or longLivedSubscriptions should be updated right AFTER this called
+   **/
   private subscribeToSubnets(subnets: number[], src: SubnetSource): void {
     const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
-      if (!this.subscriptionsCommittee.has(subnet) && !this.subscriptionsRandom.has(subnet)) {
+      if (!this.shortLivedSubscriptions.has(subnet) && !this.longLivedSubscriptions.has(subnet)) {
         for (const fork of forks) {
           this.gossip.subscribeTopic({type: gossipType, fork, subnet});
         }
@@ -347,17 +345,17 @@ export class AttnetsService implements IAttnetsService {
     }
   }
 
-  /** Trigger a gossip un-subscrition only if no-one is still subscribed */
+  /**
+   * Trigger a gossip un-subscription only if no-one is still subscribed
+   * If unsubscribe long lived subnets, longLivedSubscriptions should be updated right BEFORE this called
+   **/
   private unsubscribeSubnets(subnets: number[], slot: Slot, src: SubnetSource): void {
     // No need to unsubscribeTopic(). Return early to prevent repetitive extra work
     if (this.opts.subscribeAllSubnets) return;
 
     const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
-      if (
-        !this.subscriptionsCommittee.isActiveAtSlot(subnet, slot) &&
-        !this.subscriptionsRandom.isActiveAtSlot(subnet, slot)
-      ) {
+      if (!this.shortLivedSubscriptions.isActiveAtSlot(subnet, slot) && !this.longLivedSubscriptions.has(subnet)) {
         for (const fork of forks) {
           this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
         }
@@ -366,17 +364,21 @@ export class AttnetsService implements IAttnetsService {
     }
   }
 
-  private randomSubscriptionSlotLen(): Slot {
-    return (
-      this.randBetweenFn(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) *
-      SLOTS_PER_EPOCH
-    );
-  }
-
   private onScrapeLodestarMetrics(metrics: NetworkCoreMetrics): void {
     metrics.attnetsService.committeeSubnets.set(this.committeeSubnets.size);
-    metrics.attnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
-    metrics.attnetsService.subscriptionsRandom.set(this.subscriptionsRandom.size);
+    metrics.attnetsService.subscriptionsCommittee.set(this.shortLivedSubscriptions.size);
+    // track short lived subnet status, >= 6 (Dlo) means healthy, otherwise unhealthy
+    const currentSlot = this.clock.currentSlot;
+    for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
+      const topicStr = stringifyGossipTopic(this.config, {
+        type: gossipType,
+        fork: this.config.getForkName(currentSlot),
+        subnet,
+      });
+      const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
+      metrics.attnetsService.subscriptionsCommitteeMeshPeers.observe({subnet}, numMeshPeers);
+    }
+    metrics.attnetsService.longLivedSubscriptions.set(this.longLivedSubscriptions.size);
     let aggregatorCount = 0;
     for (const subnets of this.aggregatorSlotSubnet.values()) {
       aggregatorCount += subnets.size;

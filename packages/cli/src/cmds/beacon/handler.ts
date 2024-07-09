@@ -1,4 +1,5 @@
 import path from "node:path";
+import {getHeapStatistics} from "node:v8";
 import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
@@ -28,12 +29,20 @@ import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
+const EIGHT_GB = 8 * 1024 * 1024 * 1024;
 
 /**
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
+
+  const heapSizeLimit = getHeapStatistics().heap_size_limit;
+  if (heapSizeLimit < EIGHT_GB) {
+    logger.warn(
+      `Node.js heap size limit is too low, consider increasing it to at least ${EIGHT_GB}. See https://chainsafe.github.io/lodestar/faqs#running-a-node for more details.`
+    );
+  }
 
   // initialize directories
   mkdir(beaconPaths.dataDir);
@@ -92,20 +101,22 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     }
 
     // Prune invalid SSZ objects every interval
-    const {persistInvalidSszObjectsDir} = args;
-    const pruneInvalidSSZObjectsInterval = persistInvalidSszObjectsDir
-      ? setInterval(() => {
-          try {
-            pruneOldFilesInDir(
-              persistInvalidSszObjectsDir,
-              (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
-            );
-          } catch (e) {
-            logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
-          }
-          // Run every ~1 hour
-        }, HOURS_TO_MS)
-      : null;
+    const {persistInvalidSszObjectsDir, persistInvalidSszObjects} = options.chain;
+    const pruneInvalidSSZObjectsInterval =
+      persistInvalidSszObjectsDir && persistInvalidSszObjects
+        ? setInterval(() => {
+            try {
+              const deletedFileCount = pruneOldFilesInDir(
+                persistInvalidSszObjectsDir,
+                (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
+              );
+              logger.info("Pruned invalid SSZ objects", {deletedFileCount});
+            } catch (e) {
+              logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
+            }
+            // Run every ~1 hour
+          }, HOURS_TO_MS)
+        : null;
 
     // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {

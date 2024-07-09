@@ -1,11 +1,11 @@
 import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
 import {fetch} from "@lodestar/api";
-import {phase0, altair, capella} from "@lodestar/types";
+import {phase0, altair, capella, BeaconBlock, BlindedBeaconBlock} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
-import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
+import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {PubkeyHex} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -63,7 +63,7 @@ export type SignableMessage =
   | {type: SignableMessageType.AGGREGATION_SLOT; data: {slot: Slot}}
   | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
   | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
-  | {type: SignableMessageType.BLOCK_V2; data: allForks.FullOrBlindedBeaconBlock}
+  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock | BlindedBeaconBlock}
   | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
   | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
   | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}
@@ -101,16 +101,20 @@ type Web3SignerSerializedRequest = {
   signingRoot: RootHex;
 };
 
+enum MediaType {
+  json = "application/json",
+}
+
 /**
  * Return public keys from the server.
  */
 export async function externalSignerGetKeys(externalSignerUrl: string): Promise<string[]> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
-    headers: {"Content-Type": "application/json"},
+    headers: {Accept: MediaType.json},
   });
 
-  return handlerExternalSignerResponse<string[]>(res);
+  return handleExternalSignerResponse<string[]>(res);
 }
 
 /**
@@ -143,11 +147,14 @@ export async function externalSignerPostSignature(
 
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${pubkeyHex}`, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: {
+      Accept: MediaType.json,
+      "Content-Type": MediaType.json,
+    },
     body: JSON.stringify(requestObj),
   });
 
-  const data = await handlerExternalSignerResponse<{signature: string}>(res);
+  const data = await handleExternalSignerResponse<{signature: string}>(res);
   return data.signature;
 }
 
@@ -157,20 +164,34 @@ export async function externalSignerPostSignature(
 export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean> {
   const res = await fetch(`${remoteUrl}/upcheck`, {
     method: "GET",
-    headers: {"Content-Type": "application/json"},
+    headers: {Accept: MediaType.json},
   });
 
-  const data = await handlerExternalSignerResponse<{status: string}>(res);
+  const data = await handleExternalSignerResponse<{status: string}>(res);
   return data.status === "OK";
 }
 
-async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
+async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const errBody = await res.text();
-    throw Error(`${errBody}`);
+    throw Error(errBody || res.statusText);
   }
 
-  return JSON.parse(await res.text()) as T;
+  const contentType = res.headers.get("content-type");
+  if (contentType === null) {
+    throw Error("No Content-Type header found in response");
+  }
+
+  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+  if (mediaType !== MediaType.json) {
+    throw Error(`Unsupported response media type: ${mediaType}`);
+  }
+
+  try {
+    return (await res.json()) as T;
+  } catch (e) {
+    throw Error(`Invalid json response: ${(e as Error).message}`);
+  }
 }
 
 function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {

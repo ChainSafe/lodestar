@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
+import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
-import {ApiError, routes} from "@lodestar/api";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
-import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {waitForSlot} from "../utils/simulation/utils/network.js";
+import {routes} from "@lodestar/api";
+import {Simulation} from "../utils/crucible/simulation.js";
+import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
+import {waitForSlot} from "../utils/crucible/utils/network.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -16,9 +16,10 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   runTillEpoch: 2,
+  initialNodes: 1,
 });
 
-const env = await SimulationEnvironment.initWithDefaults(
+const env = await Simulation.initWithDefaults(
   {
     id: "beacon-endpoints",
     logsDir: path.join(logFilesDir, "beacon-endpoints"),
@@ -37,22 +38,20 @@ const env = await SimulationEnvironment.initWithDefaults(
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 
 const node = env.nodes[0].beacon;
-await waitForSlot(2, env.nodes, {env, silent: true});
+await waitForSlot("Wait for 2 slots before checking endpoints", {env, slot: 2});
 
-const res = await node.api.beacon.getStateValidators("head");
-ApiError.assert(res);
-const stateValidators = res.response.data;
+const validators = (await node.api.beacon.getStateValidators({stateId: "head"})).value();
 
 await env.tracker.assert("should have correct validators count called without filters", async () => {
-  expect(stateValidators.length).to.be.equal(validatorCount);
+  assert.equal(validators.length, validatorCount);
 });
 
 await env.tracker.assert("should have correct validator index for first validator filters", async () => {
-  expect(stateValidators[0].index).to.be.equal(0);
+  assert.equal(validators[0].index, 0);
 });
 
 await env.tracker.assert("should have correct validator index for second validator filters", async () => {
-  expect(stateValidators[1].index).to.be.equal(1);
+  assert.equal(validators[1].index, 1);
 });
 
 await env.tracker.assert(
@@ -61,12 +60,13 @@ await env.tracker.assert(
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const res = await node.api.beacon.getStateValidators("head", {
-      id: [filterPubKey],
-    });
-    ApiError.assert(res);
+    const res = await node.api.beacon.getStateValidators({stateId: "head", validatorIds: [filterPubKey]});
 
-    expect(res.response.data.length).to.be.equal(1);
+    assert.equal(res.value().length, 1);
+
+    const {executionOptimistic, finalized} = res.meta();
+    assert.equal(executionOptimistic, false);
+    assert.equal(finalized, false);
   }
 );
 
@@ -76,12 +76,9 @@ await env.tracker.assert(
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const res = await node.api.beacon.getStateValidators("head", {
-      id: [filterPubKey],
-    });
-    ApiError.assert(res);
+    const res = await node.api.beacon.getStateValidators({stateId: "head", validatorIds: [filterPubKey]});
 
-    expect(toHexString(res.response.data[0].validator.pubkey)).to.be.equal(filterPubKey);
+    assert.equal(toHexString(res.value()[0].validator.pubkey), filterPubKey);
   }
 );
 
@@ -90,10 +87,9 @@ await env.tracker.assert(
   async () => {
     const validatorIndex = 0;
 
-    const res = await node.api.beacon.getStateValidator("head", validatorIndex);
-    ApiError.assert(res);
+    const res = await node.api.beacon.getStateValidator({stateId: "head", validatorId: validatorIndex});
 
-    expect(res.response.data.index).to.be.equal(validatorIndex);
+    assert.equal(res.value().index, validatorIndex);
   }
 );
 
@@ -103,10 +99,9 @@ await env.tracker.assert(
     const hexPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const res = await node.api.beacon.getStateValidator("head", hexPubKey);
-    ApiError.assert(res);
+    const res = await node.api.beacon.getStateValidator({stateId: "head", validatorId: hexPubKey});
 
-    expect(toHexString(res.response.data.validator.pubkey)).to.be.equal(hexPubKey);
+    assert.equal(toHexString(res.value().validator.pubkey), hexPubKey);
   }
 );
 
@@ -120,15 +115,14 @@ await env.tracker.assert("BN Not Synced", async () => {
   };
 
   const res = await node.api.node.getSyncingStatus();
-  ApiError.assert(res);
 
-  expect(res.response.data).to.be.deep.equal(expectedSyncStatus);
+  assert.deepEqual(res.value(), expectedSyncStatus);
 });
 
 await env.tracker.assert("Return READY pre genesis", async () => {
   const {status} = await node.api.node.getHealth();
 
-  expect(status).to.be.equal(routes.node.NodeHealth.READY);
+  assert.equal(status, routes.node.NodeHealth.READY);
 });
 
 await env.stop();

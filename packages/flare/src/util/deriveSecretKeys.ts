@@ -2,9 +2,9 @@ import bls from "@chainsafe/bls";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@lodestar/state-transition";
+import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "./errors.js";
 import {parseRange} from "./format.js";
-import {CliCommandOptions} from "./command.js";
 
 export type SecretKeysArgs = {
   mnemonic?: string;

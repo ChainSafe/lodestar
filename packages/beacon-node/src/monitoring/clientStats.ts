@@ -66,7 +66,7 @@ function createProcessStats(process: ProcessType): ClientStats {
     clientName: new StaticProperty({
       jsonKey: "client_name",
       value: CLIENT_NAME,
-      description: "Name of client, e.g. lodestar, prysm, lighthouse, teku, nimbus",
+      description: "Name of client, e.g. lodestar, prysm, lighthouse, teku, nimbus, grandine",
     }),
     clientVersion: new MetricProperty({
       jsonKey: "client_version",

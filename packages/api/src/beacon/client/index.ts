@@ -1,6 +1,12 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Api} from "../routes/index.js";
-import {IHttpClient, HttpClient, HttpClientOptions, HttpClientModules} from "../../utils/client/index.js";
+import {
+  ApiClientMethods,
+  HttpClient,
+  HttpClientModules,
+  HttpClientOptions,
+  IHttpClient,
+} from "../../utils/client/index.js";
+import {Endpoints} from "../routes/index.js";
 
 import * as beacon from "./beacon.js";
 import * as configApi from "./config.js";
@@ -17,10 +23,12 @@ type ClientModules = HttpClientModules & {
   httpClient?: IHttpClient;
 };
 
+export type ApiClient = {[K in keyof Endpoints]: ApiClientMethods<Endpoints[K]>} & {httpClient: IHttpClient};
+
 /**
  * REST HTTP client for all routes
  */
-export function getClient(opts: HttpClientOptions, modules: ClientModules): Api {
+export function getClient(opts: HttpClientOptions, modules: ClientModules): ApiClient {
   const {config} = modules;
   const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 
@@ -28,11 +36,12 @@ export function getClient(opts: HttpClientOptions, modules: ClientModules): Api 
     beacon: beacon.getClient(config, httpClient),
     config: configApi.getClient(config, httpClient),
     debug: debug.getClient(config, httpClient),
-    events: events.getClient(httpClient.baseUrl),
+    events: events.getClient(config, httpClient.baseUrl),
     lightclient: lightclient.getClient(config, httpClient),
     lodestar: lodestar.getClient(config, httpClient),
     node: node.getClient(config, httpClient),
     proof: proof.getClient(config, httpClient),
     validator: validator.getClient(config, httpClient),
+    httpClient,
   };
 }

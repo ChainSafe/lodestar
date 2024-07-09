@@ -3,21 +3,17 @@ import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
-import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
+import {altair, phase0, Root, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {connect, getNetworkForTest, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
+import {connect, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
+import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 
-/* eslint-disable
-    mocha/no-top-level-hooks,
-    require-yield,
-    @typescript-eslint/naming-convention,
-    @typescript-eslint/explicit-function-return-type
-*/
+/* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
 describe(
   "network / reqresp / main thread",
@@ -83,53 +79,6 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
     return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
-
-  // it("should send/receive a ping message", async function () {
-  //   const [netA, netB] = await createAndConnectPeers();
-
-  //   // Modify the metadata to make the seqNumber non-zero
-  //   netB.metadata.attnets = BitArray.fromBitLen(0);
-  //   netB.metadata.attnets = BitArray.fromBitLen(0);
-  //   const expectedPong = netB.metadata.seqNumber;
-  //   expect(expectedPong.toString()).to.deep.equal("2", "seqNumber");
-
-  //   const pong = await netA.reqResp.ping(peerIdB);
-  //   expect(pong.toString()).to.deep.equal(expectedPong.toString(), "Wrong response body");
-  // });
-
-  // it("should send/receive a metadata message - altair", async function () {
-  //   const [netA, netB] = await createAndConnectPeers();
-
-  //   const metadata: altair.Metadata = {
-  //     seqNumber: netB.metadata.seqNumber,
-  //     attnets: netB.metadata.attnets,
-  //     syncnets: netB.metadata.syncnets,
-  //   };
-
-  //   const receivedMetadata = await netA.reqResp.metadata(peerIdB);
-  //   expect(receivedMetadata).to.deep.equal(metadata, "Wrong response body");
-  // });
-
-  // it("should send/receive a status message", async function () {
-  //   const status: phase0.Status = {
-  //     forkDigest: Buffer.alloc(4, 0),
-  //     finalizedRoot: Buffer.alloc(32, 0),
-  //     finalizedEpoch: 0,
-  //     headRoot: Buffer.alloc(32, 0),
-  //     headSlot: 0,
-  //   };
-  //   const statusNetA: phase0.Status = {...status, finalizedEpoch: 1};
-  //   const statusNetB: phase0.Status = {...status, finalizedEpoch: 2};
-
-  //   const [netA, netB] = await createAndConnectPeers({
-  //     onStatus: async function* onRequest() {
-  //       yield {data: ssz.phase0.Status.serialize(statusNetB), fork: ForkName.phase0};
-  //     },
-  //   });
-
-  //   const receivedStatus = await netA.reqResp.status(peerIdB, statusNetA);
-  //   expect(receivedStatus).to.deep.equal(statusNetB, "Wrong response body");
-  // });
 
   it("should send/receive signed blocks", async function () {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
@@ -379,7 +328,7 @@ function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): Respo
   return wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
 }
 
-function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: allForks.SignedBeaconBlock): ResponseOutgoing {
+function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconBlock): ResponseOutgoing {
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
     fork: config.getForkName(block.message.slot),

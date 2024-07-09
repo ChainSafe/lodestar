@@ -1,237 +1,161 @@
-import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, ArrayType} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
-import {ChainForkConfig} from "@lodestar/config";
-import {objectToExpectedCase} from "@lodestar/utils";
-import {APIClientHandler, ApiClientResponseData, APIServerHandler, ClientApi} from "../interfaces.js";
-import {Schema, SchemaDefinition} from "./schema.js";
+import {ExtraRequestInit} from "./client/request.js";
+import {EmptyMeta} from "./codecs.js";
+import {HeadersExtra} from "./headers.js";
+import {SchemaDefinition} from "./schema.js";
+import {WireFormat} from "./wireFormat.js";
 
-// See /packages/api/src/routes/index.ts for reasoning
+export type HasOnlyOptionalProps<T> = {
+  [K in keyof T]-?: object extends Pick<T, K> ? never : K;
+} extends {[_ in keyof T]: never}
+  ? true
+  : false;
 
-/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
+export type PathParams = Record<string, string | number>;
+export type QueryParams = Record<string, string | number | boolean | (string | number)[]>;
+export type HeaderParams = Record<string, string>;
 
-/** All JSON inside the JS code must be camel case */
-const codeCase = "camel" as const;
-
-export type RouteGroupDefinition<
-  Api extends Record<string, APIServerHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric},
+export type RequestData<
+  P extends PathParams = PathParams,
+  Q extends QueryParams = QueryParams,
+  H extends HeaderParams = HeaderParams,
 > = {
-  routesData: RoutesData<Api>;
-  getReqSerializers: (config: ChainForkConfig) => ReqSerializers<Api, ReqTypes>;
-  getReturnTypes: (config: ChainForkConfig) => ReturnTypes<ClientApi<Api>>;
+  params?: P;
+  query?: Q;
+  headers?: H;
 };
 
-export type RouteDef = {
+export type JsonRequestData<
+  B = unknown,
+  P extends PathParams = PathParams,
+  Q extends QueryParams = QueryParams,
+  H extends HeaderParams = HeaderParams,
+> = RequestData<P, Q, H> & {
+  body?: B;
+};
+
+export type SszRequestData<P extends JsonRequestData> = Omit<P, "body"> &
+  ("body" extends keyof P ? (P["body"] extends void ? {body?: never} : {body: Uint8Array}) : {body?: never});
+
+export type HttpMethod = "GET" | "POST" | "DELETE";
+
+/**
+ * This type describes the general shape of a route
+ *
+ * This includes both http and application-level shape
+ * - The http method
+ *   - Used to more strictly enforce the shape of the request
+ * - The application-level parameters
+ *   - this enforces the shape of the input data passed by the client and to the route handler
+ * - The http request
+ *   - this enforces the shape of the querystring, url params, request body
+ * - The application-level return data
+ *   - this enforces the shape of the output data passed back to the client and returned by the route handler
+ * - The application-level return metadata
+ *   - this enforces the shape of the returned metadata, used informationally and to help decode the return data
+ */
+export type Endpoint<
+  Method extends HttpMethod = HttpMethod,
+  ArgsType = unknown,
+  RequestType extends Method extends "GET" ? RequestData : JsonRequestData = JsonRequestData,
+  ReturnType = unknown,
+  Meta = unknown,
+> = {
+  method: Method;
+  /** The parameters the client passes / server app code ingests */
+  args: ArgsType;
+  /** The parameters in the http request */
+  request: RequestType;
+  /** The return data */
+  return: ReturnType;
+  /** The return metadata */
+  meta: Meta;
+};
+
+// Request codec
+
+/** Encode / decode requests to & from function params, as well as schema definitions */
+export type RequestWithoutBodyCodec<E extends Endpoint> = {
+  writeReq: (p: E["args"]) => E["request"]; // client
+  parseReq: (r: E["request"]) => E["args"]; // server
+  schema: SchemaDefinition<E["request"]>;
+};
+
+export type JsonRequestMethods<E extends Endpoint> = {
+  writeReqJson: (p: E["args"]) => E["request"]; // client
+  parseReqJson: (r: E["request"]) => E["args"]; // server
+};
+
+export type SszRequestMethods<E extends Endpoint> = {
+  writeReqSsz: (p: E["args"]) => SszRequestData<E["request"]>; // client
+  parseReqSsz: (r: SszRequestData<E["request"]>) => E["args"]; // server
+};
+
+export type RequestWithBodyCodec<E extends Endpoint> = JsonRequestMethods<E> &
+  SszRequestMethods<E> & {
+    schema: SchemaDefinition<E["request"]>;
+    /** Support ssz-only or json-only requests */
+    onlySupport?: WireFormat;
+  };
+
+/**
+ * Handles translation between `Endpoint["args"]` and `Endpoint["request"]`
+ */
+export type RequestCodec<E extends Endpoint> = E["method"] extends "GET"
+  ? RequestWithoutBodyCodec<E>
+  : "body" extends keyof E["request"]
+    ? RequestWithBodyCodec<E>
+    : RequestWithoutBodyCodec<E>;
+
+export function isRequestWithoutBody<E extends Endpoint>(
+  definition: RouteDefinition<E>
+): definition is RouteDefinition<E> & {req: RequestWithoutBodyCodec<E>} {
+  return definition.method === "GET" || definition.req.schema.body === undefined;
+}
+
+// Response codec
+
+export type ResponseDataCodec<T, M> = {
+  toJson: (data: T, meta: M) => unknown; // server
+  fromJson: (data: unknown, meta: M) => T; // client
+  serialize: (data: T, meta: M) => Uint8Array; // server
+  deserialize: (data: Uint8Array, meta: M) => T; // client
+};
+
+export type ResponseMetadataCodec<T> = {
+  toJson: (val: T) => unknown; // server
+  fromJson: (val: unknown) => T; // client
+  toHeadersObject: (val: T) => Record<string, string>; // server
+  fromHeaders: (headers: HeadersExtra) => T; // server
+};
+
+export type ResponseCodec<E extends Endpoint> = {
+  data: ResponseDataCodec<E["return"], E["meta"]>;
+  meta: ResponseMetadataCodec<E["meta"]>;
+  /** Occasionally, json responses require an extra transformation to separate the data from metadata */
+  transform?: {
+    toResponse: (data: unknown, meta: unknown) => unknown;
+    fromResponse: (resp: unknown) => {
+      data: E["return"];
+    } & (E["meta"] extends EmptyMeta ? {meta?: never} : {meta: E["meta"]});
+  };
+  /** Support ssz-only or json-only responses */
+  onlySupport?: WireFormat;
+  /** Indicator used to handle empty responses */
+  isEmpty?: true;
+};
+
+/**
+ * Top-level definition of a route used by both the client and server
+ * - url and method
+ * - request and response codec
+ * - request json schema
+ */
+export type RouteDefinition<E extends Endpoint> = {
   url: string;
-  method: "GET" | "POST" | "DELETE";
-  statusOk?: number;
+  method: E["method"];
+  req: RequestCodec<E>;
+  resp: ResponseCodec<E>;
+  init?: ExtraRequestInit;
 };
 
-export type ReqGeneric = {
-  params?: Record<string, string | number>;
-  query?: Record<string, string | number | boolean | (string | number)[]>;
-  body?: any;
-  headers?: Record<string, string[] | string | undefined>;
-};
-
-export type ReqEmpty = ReqGeneric;
-export type Resolves<T extends (...args: any) => any> = Awaited<ReturnType<T>>;
-
-export type TypeJson<T> = {
-  toJson(val: T): unknown;
-  fromJson(json: unknown): T;
-};
-
-//
-// REQ
-//
-
-export type ReqSerializer<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = {
-  writeReq: (...args: Parameters<Fn>) => ReqType;
-  parseReq: (arg: ReqType) => Parameters<Fn>;
-  schema?: SchemaDefinition<ReqType>;
-};
-
-export type ReqSerializers<
-  Api extends Record<string, APIServerHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric},
-> = {
-  [K in keyof Api]: ReqSerializer<Api[K], ReqTypes[K]>;
-};
-
-/** Curried definition to infer only one of the two generic types */
-export type ReqGenArg<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = ReqSerializer<Fn, ReqType>;
-
-//
-// Helpers
-//
-
-/** Shortcut for routes that have no params, query nor body */
-export const reqEmpty: ReqSerializer<() => void, ReqEmpty> = {
-  writeReq: () => ({}),
-  parseReq: () => [] as [],
-};
-
-/** Shortcut for routes that have only body */
-export const reqOnlyBody = <T>(
-  type: TypeJson<T>,
-  bodySchema: Schema
-): ReqGenArg<(arg: T) => Promise<void>, {body: unknown}> => ({
-  writeReq: (items) => ({body: type.toJson(items)}),
-  parseReq: ({body}) => [type.fromJson(body)],
-  schema: {body: bodySchema},
-});
-
-/** SSZ factory helper + typed. limit = 1e6 as a big enough random number */
-export function ArrayOf<T>(elementType: Type<T>): ArrayType<Type<T>, unknown, unknown> {
-  if (isCompositeType(elementType)) {
-    return new ListCompositeType(elementType, Infinity) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  } else if (isBasicType(elementType)) {
-    return new ListBasicType(elementType, Infinity) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  } else {
-    throw Error(`Unknown type ${elementType.typeName}`);
-  }
-}
-
-/**
- * SSZ factory helper + typed to return responses of type
- * ```
- * data: T
- * ```
- */
-export function ContainerData<T>(dataType: TypeJson<T>): TypeJson<{data: T}> {
-  return {
-    toJson: ({data}) => ({
-      data: dataType.toJson(data),
-    }),
-    fromJson: ({data}: {data: unknown}) => {
-      return {
-        data: dataType.fromJson(data),
-      };
-    },
-  };
-}
-
-/**
- * SSZ factory helper + typed to return responses of type `{data: T; executionOptimistic: boolean}`
- */
-export function ContainerDataExecutionOptimistic<T>(
-  dataType: TypeJson<T>
-): TypeJson<{data: T; executionOptimistic: boolean}> {
-  return {
-    toJson: ({data, executionOptimistic}) => ({
-      data: dataType.toJson(data),
-      execution_optimistic: executionOptimistic,
-    }),
-    fromJson: ({data, execution_optimistic}: {data: unknown; execution_optimistic: boolean}) => {
-      return {
-        data: dataType.fromJson(data),
-        executionOptimistic: execution_optimistic,
-      };
-    },
-  };
-}
-
-/**
- * SSZ factory helper + typed to return responses of type
- * ```
- * data: T
- * version: ForkName
- * ```
- */
-export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> {
-  return {
-    toJson: ({data, version}) => ({
-      data: getType(version ?? ForkName.phase0).toJson(data),
-      version,
-    }),
-    fromJson: ({data, version}: {data: unknown; version: string}) => {
-      // Teku returns fork as UPPERCASE
-      version = version.toLowerCase();
-
-      // Un-safe external data, validate version is known ForkName value
-      if (!(version in ForkName)) throw Error(`Invalid version ${version}`);
-
-      return {
-        data: getType(version as ForkName).fromJson(data),
-        version: version as ForkName,
-      };
-    },
-  };
-}
-
-/**
- * SSZ factory helper to wrap an existing type with `{executionOptimistic: boolean}`
- */
-export function WithExecutionOptimistic<T extends {data: unknown}>(
-  type: TypeJson<T>
-): TypeJson<T & {executionOptimistic: boolean}> {
-  return {
-    toJson: ({executionOptimistic, ...data}) => ({
-      ...(type.toJson(data as unknown as T) as Record<string, unknown>),
-      execution_optimistic: executionOptimistic,
-    }),
-    fromJson: ({execution_optimistic, ...data}: T & {execution_optimistic: boolean}) => ({
-      ...type.fromJson(data),
-      executionOptimistic: execution_optimistic,
-    }),
-  };
-}
-
-/**
- * SSZ factory helper to wrap an existing type with `{executionPayloadValue: Wei, consensusBlockValue: Wei}`
- */
-export function WithBlockValues<T extends {data: unknown}>(
-  type: TypeJson<T>
-): TypeJson<T & {executionPayloadValue: bigint; consensusBlockValue: bigint}> {
-  return {
-    toJson: ({executionPayloadValue, consensusBlockValue, ...data}) => ({
-      ...(type.toJson(data as unknown as T) as Record<string, unknown>),
-      execution_payload_value: executionPayloadValue.toString(),
-      consensus_block_value: consensusBlockValue.toString(),
-    }),
-    fromJson: ({
-      execution_payload_value,
-      consensus_block_value,
-      ...data
-    }: T & {execution_payload_value: string; consensus_block_value: string}) => ({
-      ...type.fromJson(data),
-      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
-      executionPayloadValue: BigInt(execution_payload_value ?? "0"),
-      consensusBlockValue: BigInt(consensus_block_value ?? "0"),
-    }),
-  };
-}
-
-type JsonCase = "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform";
-
-/** Helper to only translate casing */
-export function jsonType<T extends Record<string, unknown> | Record<string, unknown>[] | unknown[]>(
-  jsonCase: JsonCase
-): TypeJson<T> {
-  return {
-    toJson: (val: T) => objectToExpectedCase(val as Record<string, unknown>, jsonCase),
-    fromJson: (json) => objectToExpectedCase(json as Record<string, unknown>, codeCase) as T,
-  };
-}
-
-/** Helper to not do any transformation with the type */
-export function sameType<T>(): TypeJson<T> {
-  return {
-    toJson: (val) => val as unknown,
-    fromJson: (json) => json as T,
-  };
-}
-
-//
-// RETURN
-//
-export type KeysOfNonVoidResolveValues<Api extends Record<string, APIClientHandler>> = {
-  [K in keyof Api]: ApiClientResponseData<Resolves<Api[K]>> extends void ? never : K;
-}[keyof Api];
-
-export type ReturnTypes<Api extends Record<string, APIClientHandler>> = {
-  [K in keyof Pick<Api, KeysOfNonVoidResolveValues<Api>>]: TypeJson<ApiClientResponseData<Resolves<Api[K]>>>;
-};
-
-export type RoutesData<Api extends Record<string, APIServerHandler>> = {[K in keyof Api]: RouteDef};
+export type RouteDefinitions<Es extends Record<string, Endpoint>> = {[K in keyof Es]: RouteDefinition<Es[K]>};

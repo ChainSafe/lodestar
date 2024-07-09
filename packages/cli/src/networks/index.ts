@@ -2,7 +2,7 @@ import fs from "node:fs";
 import got from "got";
 import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ApiError, getClient} from "@lodestar/api";
+import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
@@ -13,28 +13,15 @@ import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
 import * as gnosis from "./gnosis.js";
-import * as goerli from "./goerli.js";
-import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 import * as holesky from "./holesky.js";
 import * as chiado from "./chiado.js";
 import * as ephemery from "./ephemery.js";
 
-export type NetworkName =
-  | "mainnet"
-  | "dev"
-  | "gnosis"
-  | "goerli"
-  | "ropsten"
-  | "sepolia"
-  | "holesky"
-  | "chiado"
-  | "ephemery";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
-  "goerli",
-  "ropsten",
   "sepolia",
   "holesky",
   "chiado",
@@ -70,10 +57,6 @@ export function getNetworkData(network: NetworkName): {
       return dev;
     case "gnosis":
       return gnosis;
-    case "goerli":
-      return goerli;
-    case "ropsten":
-      return ropsten;
     case "sepolia":
       return sepolia;
     case "holesky":
@@ -174,18 +157,29 @@ export async function fetchWeakSubjectivityState(
     }
 
     // getStateV2 should be available for all forks including phase0
-    const getStatePromise = api.debug.getStateV2(stateId, "ssz");
+    const getStatePromise = api.debug.getStateV2(
+      {stateId},
+      {
+        responseWireFormat: WireFormat.ssz,
+        headers: {
+          // Set Accept header explicitly to fix Checkpointz incompatibility
+          // See https://github.com/ethpandaops/checkpointz/issues/165
+          [HttpHeader.Accept]: MediaType.ssz,
+        },
+      }
+    );
 
     const stateBytes = await callFnWhenAwait(
       getStatePromise,
       () => logger.info("Download in progress, please wait..."),
       GET_STATE_LOG_INTERVAL
     ).then((res) => {
-      ApiError.assert(res, "Can not fetch state from beacon node");
-      return res.response;
+      return res.ssz();
     });
 
     logger.info("Download completed", {stateId});
+    // It should not be required to get fork type from bytes but Checkpointz does not return
+    // Eth-Consensus-Version header, see https://github.com/ethpandaops/checkpointz/issues/164
     const wsState = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
     return {

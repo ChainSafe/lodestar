@@ -1,4 +1,4 @@
-import {CliCommand} from "../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {IValidatorCliArgs} from "./options.js";
@@ -21,6 +21,9 @@ export const list: CliCommand<IValidatorCliArgs, GlobalArgs, ReturnType> = {
 
   handler: async (args) => {
     const {network} = getBeaconConfigFromArgs(args);
+
+    // Ignore lockfiles to allow listing while validator client is running
+    args.force = true;
 
     const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
 

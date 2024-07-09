@@ -271,7 +271,7 @@ Historical context and reasons against valid alternatives to help future discuss
 
 Lodestar used `master` as the single target for feature branches.
 
-![lodestar-release](docs/images/lodestar-releases.png)
+![lodestar-release](docs/static/images/lodestar-releases.png)
 
 - Main branch = `master`
 - Features merged to `master`

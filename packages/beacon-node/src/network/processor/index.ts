@@ -2,6 +2,8 @@ import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {pruneSetToMax} from "@lodestar/utils";
+import {ForkSeq} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../chain/interface.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -16,6 +18,7 @@ import {
   GossipValidatorFn,
 } from "../gossip/interface.js";
 import {PeerIdStr} from "../peers/index.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
@@ -47,10 +50,10 @@ const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
 /**
  * This is respective to gossipsub seenTTL (which is 550 * 0.7 = 385s), also it's respective
  * to beacon_attestation ATTESTATION_PROPAGATION_SLOT_RANGE (32 slots).
- * If message slots are withint this window, it'll likely to be filtered by gossipsub seenCache.
+ * If message slots are within this window, it'll likely to be filtered by gossipsub seenCache.
  * This is mainly for DOS protection, see https://github.com/ChainSafe/lodestar/issues/5393
  */
-const EARLIEST_PERMISSIBLE_SLOT_DISTANCE = 32;
+const DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE = 32;
 
 type WorkOpts = {
   bypassQueue?: boolean;
@@ -250,7 +253,14 @@ export class NetworkProcessor {
       if (slotRoot) {
         // DOS protection: avoid processing messages that are too old
         const {slot, root} = slotRoot;
-        if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSIBLE_SLOT_DISTANCE) {
+        const clockSlot = this.chain.clock.currentSlot;
+        const {fork} = message.topic;
+        let earliestPermissableSlot = clockSlot - DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE;
+        if (ForkSeq[fork] >= ForkSeq.deneb && topicType === GossipType.beacon_attestation) {
+          // post deneb, the attestations could be in current or previous epoch
+          earliestPermissableSlot = computeStartSlotAtEpoch(this.chain.clock.currentEpoch - 1);
+        }
+        if (slot < earliestPermissableSlot) {
           // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           this.metrics?.networkProcessor.gossipValidationError.inc({
             topic: topicType,
@@ -258,10 +268,7 @@ export class NetworkProcessor {
           });
           return;
         }
-        if (
-          slot === this.chain.clock.currentSlot &&
-          (topicType === GossipType.beacon_block || topicType === GossipType.blob_sidecar)
-        ) {
+        if (slot === clockSlot && (topicType === GossipType.beacon_block || topicType === GossipType.blob_sidecar)) {
           // in the worse case if the current slot block is not valid, this will be reset in the next slot
           this.isProcessingCurrentSlotBlock = true;
         }
@@ -446,22 +453,22 @@ export class NetworkProcessor {
 
     if (Array.isArray(messageOrArray)) {
       for (const [i, msg] of messageOrArray.entries()) {
-        setTimeout(() => {
+        callInNextEventLoop(() => {
           this.events.emit(NetworkEvent.gossipMessageValidationResult, {
             msgId: msg.msgId,
             propagationSource: msg.propagationSource,
             acceptance: acceptanceArr[i],
           });
-        }, 0);
+        });
       }
     } else {
-      setTimeout(() => {
+      callInNextEventLoop(() => {
         this.events.emit(NetworkEvent.gossipMessageValidationResult, {
           msgId: messageOrArray.msgId,
           propagationSource: messageOrArray.propagationSource,
           acceptance: acceptanceArr[0],
         });
-      }, 0);
+      });
     }
   }
 

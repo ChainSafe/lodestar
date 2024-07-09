@@ -29,26 +29,39 @@ export type LVHValidResponse = {
 export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;
   latestValidExecHash: RootHex | null;
-  invalidateFromBlockHash: RootHex;
+  invalidateFromParentBlockRoot: RootHex;
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
 export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
 
-export type BlockExecution =
+export enum DataAvailabilityStatus {
+  PreData = "PreData",
+  /* validator activities can't be performed on out of range data */
+  OutOfRange = "OutOfRange",
+  Available = "Available",
+}
+
+export type BlockExtraMeta =
   | {
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
+      dataAvailabilityStatus: DataAvailabilityStatus;
     }
-  | {executionPayloadBlockHash: null; executionStatus: ExecutionStatus.PreMerge};
+  | {
+      executionPayloadBlockHash: null;
+      executionStatus: ExecutionStatus.PreMerge;
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData;
+    };
+
 /**
  * A block that is to be applied to the fork choice
  *
  * A simplified version of BeaconBlock
  */
 
-export type ProtoBlock = BlockExecution & {
+export type ProtoBlock = BlockExtraMeta & {
   /**
    * The slot is not necessary for ProtoArray,
    * it just exists so external components can easily query the block slot.
@@ -78,6 +91,9 @@ export type ProtoBlock = BlockExecution & {
   unrealizedJustifiedRoot: RootHex;
   unrealizedFinalizedEpoch: Epoch;
   unrealizedFinalizedRoot: RootHex;
+
+  // Indicate whether block arrives in a timely manner ie. before the 4 second mark
+  timeliness: boolean;
 };
 
 /**

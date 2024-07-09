@@ -45,7 +45,7 @@ describe("ExecutionEngine / http", () => {
       {
         mode: "http",
         urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
+        retries: defaultExecutionEngineHttpOpts.retries,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
       {signal: controller.signal, logger: console as unknown as Logger}

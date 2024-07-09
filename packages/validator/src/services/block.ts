@@ -3,25 +3,25 @@ import {
   BLSPubkey,
   Slot,
   BLSSignature,
-  allForks,
-  isBlindedSignedBeaconBlock,
   ProducedBlockSource,
   deneb,
   isBlockContents,
+  BeaconBlock,
+  BeaconBlockOrContents,
+  isBlindedSignedBeaconBlock,
+  BlindedBeaconBlock,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution} from "@lodestar/params";
-import {ETH_TO_WEI, extendError, gweiToWei, prettyBytes} from "@lodestar/utils";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
+import {extendError, prettyBytes, prettyWeiToEth} from "@lodestar/utils";
+import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {formatBigDecimal} from "../util/format.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
-
-// display upto 5 decimal places
-const MAX_DECIMAL_FACTOR = BigInt("100000");
 
 // The following combination of blocks and blobs can be produced
 //  i) a full block pre deneb
@@ -30,14 +30,14 @@ const MAX_DECIMAL_FACTOR = BigInt("100000");
 type FullOrBlindedBlockWithContents =
   | {
       version: ForkPreBlobs;
-      block: allForks.BeaconBlock;
+      block: BeaconBlock<ForkPreBlobs>;
       contents: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkBlobs;
-      block: allForks.BeaconBlock;
+      block: BeaconBlock<ForkBlobs>;
       contents: {
         kzgProofs: deneb.KZGProofs;
         blobs: deneb.Blobs;
@@ -47,7 +47,7 @@ type FullOrBlindedBlockWithContents =
     }
   | {
       version: ForkExecution;
-      block: allForks.BlindedBeaconBlock;
+      block: BlindedBeaconBlock;
       contents: null;
       executionPayloadBlinded: true;
       executionPayloadSource: ProducedBlockSource;
@@ -68,7 +68,7 @@ export class BlockProposingService {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly metrics: Metrics | null,
@@ -142,7 +142,6 @@ export class BlockProposingService {
       const produceOpts = {
         feeRecipient,
         strictFeeRecipientCheck,
-        builderBoostFactor,
         blindedLocal,
       };
       const blockContents = await produceBlockFn(
@@ -150,6 +149,7 @@ export class BlockProposingService {
         slot,
         randaoReveal,
         graffiti,
+        builderBoostFactor,
         produceOpts,
         builderSelection
       ).catch((e: Error) => {
@@ -178,7 +178,7 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (
-    signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     contents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
@@ -188,12 +188,17 @@ export class BlockProposingService {
           "Ignoring contents while publishing blinded block - publishing beacon should assemble it from its local cache or builder"
         );
       }
-      ApiError.assert(await this.api.beacon.publishBlindedBlockV2(signedBlock, opts));
+      (await this.api.beacon.publishBlindedBlockV2({signedBlindedBlock: signedBlock, ...opts})).assertOk();
     } else {
       if (contents === null) {
-        ApiError.assert(await this.api.beacon.publishBlockV2(signedBlock, opts));
+        (await this.api.beacon.publishBlockV2({signedBlockOrContents: signedBlock, ...opts})).assertOk();
       } else {
-        ApiError.assert(await this.api.beacon.publishBlockV2({...contents, signedBlock}, opts));
+        (
+          await this.api.beacon.publishBlockV2({
+            signedBlockOrContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkBlobs>},
+            ...opts,
+          })
+        ).assertOk();
       }
     }
   };
@@ -203,37 +208,36 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    {feeRecipient, strictFeeRecipientCheck, builderBoostFactor, blindedLocal}: routes.validator.ExtraProduceBlockOps,
+    builderBoostFactor: bigint,
+    {feeRecipient, strictFeeRecipientCheck, blindedLocal}: routes.validator.ExtraProduceBlockOpts,
     builderSelection: routes.validator.BuilderSelection
   ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
-    const res = await this.api.validator.produceBlockV3(slot, randaoReveal, graffiti, false, {
+    const res = await this.api.validator.produceBlockV3({
+      slot,
+      randaoReveal,
+      graffiti,
+      skipRandaoVerification: false,
       feeRecipient,
       builderSelection,
       strictFeeRecipientCheck,
       blindedLocal,
       builderBoostFactor,
     });
-    ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
-    const {response} = res;
+    const meta = res.meta();
 
     const debugLogCtx = {
-      executionPayloadSource: response.executionPayloadSource,
-      executionPayloadBlinded: response.executionPayloadBlinded,
-      // winston logger doesn't like bigint
-      executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      totalBlockValue: `${formatBigDecimal(
-        response.executionPayloadValue + gweiToWei(response.consensusBlockValue),
-        ETH_TO_WEI,
-        MAX_DECIMAL_FACTOR
-      )} ETH`,
+      executionPayloadSource: meta.executionPayloadSource,
+      executionPayloadBlinded: meta.executionPayloadBlinded,
+      executionPayloadValue: prettyWeiToEth(meta.executionPayloadValue),
+      consensusBlockValue: prettyWeiToEth(meta.consensusBlockValue),
+      totalBlockValue: prettyWeiToEth(meta.executionPayloadValue + meta.consensusBlockValue),
       // TODO PR: should be used in api call instead of adding in log
       strictFeeRecipientCheck,
       builderSelection,
       api: "produceBlockV3",
     };
 
-    return parseProduceBlockResponse(response, debugLogCtx, builderSelection);
+    return parseProduceBlockResponse({data: res.value(), ...meta}, debugLogCtx, builderSelection);
   };
 
   /** a wrapper function used for backward compatibility with the clients who don't have v3 implemented yet */
@@ -242,7 +246,8 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    _opts: routes.validator.ExtraProduceBlockOps,
+    _builderBoostFactor: bigint,
+    _opts: routes.validator.ExtraProduceBlockOpts,
     builderSelection: routes.validator.BuilderSelection
   ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
     // other clients have always implemented builder vs execution race in produce blinded block
@@ -252,25 +257,23 @@ export class BlockProposingService {
 
     if (ForkSeq[fork] < ForkSeq.bellatrix || builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
       Object.assign(debugLogCtx, {api: "produceBlockV2"});
-      const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
-      ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
-      const {response} = res;
+      const res = await this.api.validator.produceBlockV2({slot, randaoReveal, graffiti});
+      const {version} = res.meta();
       const executionPayloadSource = ProducedBlockSource.engine;
 
       return parseProduceBlockResponse(
-        {executionPayloadBlinded: false, executionPayloadSource, ...response},
+        {data: res.value(), executionPayloadBlinded: false, executionPayloadSource, version},
         debugLogCtx,
         builderSelection
       );
     } else {
       Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
-      const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
-      ApiError.assert(res, "Failed to produce block: validator.produceBlindedBlock");
-      const {response} = res;
+      const res = await this.api.validator.produceBlindedBlock({slot, randaoReveal, graffiti});
+      const {version} = res.meta();
       const executionPayloadSource = ProducedBlockSource.builder;
 
       return parseProduceBlockResponse(
-        {executionPayloadBlinded: true, executionPayloadSource, ...response},
+        {data: res.value(), executionPayloadBlinded: true, executionPayloadSource, version},
         debugLogCtx,
         builderSelection
       );
@@ -279,7 +282,11 @@ export class BlockProposingService {
 }
 
 function parseProduceBlockResponse(
-  response: routes.validator.ProduceFullOrBlindedBlockOrContentsRes,
+  response: {data: BeaconBlockOrContents | BlindedBeaconBlock} & {
+    executionPayloadSource: ProducedBlockSource;
+    executionPayloadBlinded: boolean;
+    version: ForkName;
+  },
   debugLogCtx: Record<string, string | boolean | undefined>,
   builderSelection: routes.validator.BuilderSelection
 ): FullOrBlindedBlockWithContents & DebugLogCtx {
@@ -306,10 +313,11 @@ function parseProduceBlockResponse(
       debugLogCtx,
     } as FullOrBlindedBlockWithContents & DebugLogCtx;
   } else {
-    if (isBlockContents(response.data)) {
+    const data = response.data;
+    if (isBlockContents(data)) {
       return {
-        block: response.data.block,
-        contents: {blobs: response.data.blobs, kzgProofs: response.data.kzgProofs},
+        block: data.block,
+        contents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
         version: response.version,
         executionPayloadBlinded: false,
         executionPayloadSource,

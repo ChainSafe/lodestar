@@ -1,6 +1,5 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {
-  allForks,
   UintNum64,
   Root,
   phase0,
@@ -12,6 +11,10 @@ import {
   Wei,
   capella,
   altair,
+  BeaconBlock,
+  ExecutionPayload,
+  SignedBeaconBlock,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {
   BeaconStateAllForks,
@@ -22,8 +25,7 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -52,6 +54,9 @@ import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/pro
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {BlockRewards} from "./rewards/blockRewards.js";
+import {AttestationsRewards} from "./rewards/attestationsRewards.js";
+import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -60,6 +65,12 @@ export type BlockHash = RootHex;
 export type StateGetOpts = {
   allowRegen: boolean;
 };
+
+export enum FindHeadFnName {
+  recomputeForkChoiceHead = "recomputeForkChoiceHead",
+  predictProposerHead = "predictProposerHead",
+  getProposerHead = "getProposerHead",
+}
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -111,7 +122,7 @@ export interface IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
-  readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
+  readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
@@ -131,18 +142,24 @@ export interface IBeaconChain {
   getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
   getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 
-  getHistoricalStateBySlot(slot: Slot): Promise<{state: Uint8Array; executionOptimistic: boolean} | null>;
+  getHistoricalStateBySlot(
+    slot: Slot
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /** Returns a local state canonical at `slot` */
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a local state by state root */
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  /** Returns a cached state by checkpoint */
+  getStateByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
 
   /**
    * Since we can have multiple parallel chains,
@@ -151,23 +168,25 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(
     slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   /**
    * Get local block by root, does not fetch from the network
    */
-  getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  getBlockByRoot(
+    root: RootHex
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: allForks.BeaconBlock;
+    block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
   produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: allForks.BlindedBeaconBlock;
+    block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
   }>;
@@ -181,11 +200,17 @@ export interface IBeaconChain {
 
   recomputeForkChoiceHead(): ProtoBlock;
 
+  /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
+  predictProposerHead(slot: Slot): ProtoBlock;
+
+  /** When proposerBoostReorg is enabled and we are proposing a block, this is called to determine which head block to build on */
+  getProposerHead(slot: Slot): ProtoBlock;
+
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
-  persistBlock(data: allForks.BeaconBlock | allForks.BlindedBeaconBlock, suffix?: string): void;
+  persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
@@ -200,6 +225,16 @@ export interface IBeaconChain {
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
+
+  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards>;
+  getAttestationsRewards(
+    epoch: Epoch,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
+  getSyncCommitteeRewards(
+    blockRef: BeaconBlock | BlindedBeaconBlock,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<SyncCommitteeRewards>;
 }
 
 export type SSZObjectType =

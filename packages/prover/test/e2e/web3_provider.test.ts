@@ -1,13 +1,13 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {describe, it, expect, beforeAll} from "vitest";
-import Web3 from "web3";
+import {describe, it, expect, beforeAll, vi} from "vitest";
+import {Web3} from "web3";
 import {ethers} from "ethers";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {waitForCapellaFork, testTimeout, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
+import {waitForCapellaFork, minCapellaTimeMs, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 
-/* prettier-ignore */
 describe("web3_provider", function () {
+  vi.setConfig({hookTimeout: minCapellaTimeMs});
+
   beforeAll(async () => {
     await waitForCapellaFork();
   });
@@ -43,5 +43,22 @@ describe("web3_provider", function () {
         await expect(provider.send("eth_getProof", [accounts[0].address, [], "latest"])).resolves.toBeDefined();
       });
     });
+
+    describe("ELRpc", () => {
+      it("should connect to the network and and call verified methods only", async () => {
+        const nonVerifiedProvider = new Web3.providers.HttpProvider(rpcUrl);
+        const {provider: verifiedProvider} = createVerifiedExecutionProvider(nonVerifiedProvider, {
+          transport: LCTransport.Rest,
+          urls: [beaconUrl],
+          config,
+          mutateProvider: false,
+        });
+
+        const web3 = new Web3(nonVerifiedProvider);
+        const accounts = await web3.eth.getAccounts();
+
+        await expect(verifiedProvider.request("eth_getBalance", [accounts[0], "latest"])).resolves.toBeDefined();
+      });
+    });
   });
-}, {timeout: testTimeout});
+});

@@ -12,7 +12,7 @@ There are a number of sim tests that are available and each has a slightly diffe
 
 ### Environment Variables
 
-To see what typical values for these are check out the `test-sim.yaml` workflow file in the `.github/workflows` directory.
+To see what typical values for these are check out the `.env.test` file in the root directory.
 
 - `GETH_DOCKER_IMAGE`: The geth docker image that will be used
 - `NETHERMIND_IMAGE`: The nethermind docker image that will be used
@@ -23,10 +23,7 @@ To see what typical values for these are check out the `test-sim.yaml` workflow 
 The multi-fork sim test checks most of the functionality Lodestar provides. Is verifies that Lodestar is capable of peering, moving through all of the forks and using various sync methods in a testnet environment. Lodestar is tested with both Geth and Nethermind as the execution client. It also checks a Lighthouse/Geth node for cross client compatibility.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
-    LIGHTHOUSE_DOCKER_IMAGE=sigp/lighthouse:latest-amd64-modern-dev \
-    NETHERMIND_DOCKER_IMAGE=nethermind/nethermind:1.18.0 \
-    yarn workspace @chainsafe/lodestar test:sim:multifork
+yarn workspace @chainsafe/lodestar test:sim:multifork
 ```
 
 ### `test:sim:endpoints`
@@ -34,8 +31,7 @@ GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
 This tests that various endpoints of the beacon node and validator client are working as expected.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
-    yarn workspace @chainsafe/lodestar test:sim:endpoints
+yarn workspace @chainsafe/lodestar test:sim:endpoints
 ```
 
 ### `test:sim:deneb`
@@ -47,9 +43,7 @@ This test is still included in our CI but is no longer as important as it once w
 Checks that Lodestar is compatible with other consensus validators and vice-versa. All tests use Geth as the EL.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
-    LIGHTHOUSE_DOCKER_IMAGE=sigp/lighthouse:latest-amd64-modern-dev \
-    yarn workspace @chainsafe/lodestar test:sim:mixedclient
+yarn workspace @chainsafe/lodestar test:sim:mixedclient
 ```
 
 ## Sim Test Infrastructure
@@ -115,7 +109,7 @@ Here is an example of the table and how to interpret it:
 - `fork`: shows what fork is currently being tested
 - `eph`: During simulation tests the Lodestar repo is setup to use 8 slot per epoch so what is shown is the epoch number and the slot number within that epoch as `epoch/slot`
 - `slot`: The slot number that is currently being processed
-- `head`: If all clients have the the same head the first couple of bytes of the hash are shown. If all clients do not have the same head `different` is reported.
+- `head`: If all clients have the same head the first couple of bytes of the hash are shown. If all clients do not have the same head `different` is reported.
 - `finzed`: Shows the number of the last finalized slot
 - `peers`: The number of peers that each node is connected to. If all have the same number then only a single value is shown. If they do not have the same number of peers count for each node is reported in a comma-separated list
 - `attCount`: The number of attestations that the node has seen.

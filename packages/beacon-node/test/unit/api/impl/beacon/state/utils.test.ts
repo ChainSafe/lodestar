@@ -102,7 +102,7 @@ describe("beacon state api utils", function () {
     });
   });
 
-  describe("getStateValidatorIndex", async function () {
+  describe("getStateValidatorIndex", () => {
     const state = generateCachedAltairState();
     const pubkey2index = state.epochCtx.pubkey2index;
 
@@ -126,18 +126,24 @@ describe("beacon state api utils", function () {
       if (resp1.valid) {
         expect(resp1.validatorIndex).toBe(index);
       } else {
-        expect.fail("validator index should be found - validator index input");
+        expect.fail("validator index should be found - validator index as string input");
       }
-      const pubkey = state.validators.get(index).pubkey;
-      const resp2 = getStateValidatorIndex(pubkey, state, pubkey2index);
+      const resp2 = getStateValidatorIndex(index, state, pubkey2index);
       if (resp2.valid) {
         expect(resp2.validatorIndex).toBe(index);
       } else {
-        expect.fail("validator index should be found - Uint8Array input");
+        expect.fail("validator index should be found - validator index as number input");
       }
-      const resp3 = getStateValidatorIndex(toHexString(pubkey), state, pubkey2index);
+      const pubkey = state.validators.get(index).pubkey;
+      const resp3 = getStateValidatorIndex(pubkey, state, pubkey2index);
       if (resp3.valid) {
         expect(resp3.validatorIndex).toBe(index);
+      } else {
+        expect.fail("validator index should be found - Uint8Array input");
+      }
+      const resp4 = getStateValidatorIndex(toHexString(pubkey), state, pubkey2index);
+      if (resp4.valid) {
+        expect(resp4.validatorIndex).toBe(index);
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }

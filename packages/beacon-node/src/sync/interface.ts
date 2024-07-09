@@ -2,7 +2,7 @@ import {Logger} from "@lodestar/utils";
 import {RootHex, Slot, phase0} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
-import {BlockInput} from "../chain/blocks/types.js";
+import {BlockInput, BlockInputType, NullBlockInput} from "../chain/blocks/types.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -77,8 +77,15 @@ type PendingBlockCommon = {
 export type UnknownBlock = PendingBlockCommon & {
   status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
   parentBlockRootHex: null;
-  blockInput: null;
-};
+} & (
+    | {unknownBlockType: PendingBlockType.UNKNOWN_BLOCK; blockInput: null}
+    | {unknownBlockType: PendingBlockType.UNKNOWN_BLOBS; blockInput: BlockInput & {type: BlockInputType.dataPromise}}
+    | {unknownBlockType: PendingBlockType.UNKNOWN_BLOCKINPUT; blockInput: NullBlockInput}
+  );
+
+/**
+ * either the blobs are unknown or in future some blobs and even the block is unknown
+ */
 
 export type DownloadedBlock = PendingBlockCommon & {
   status: PendingBlockStatus.downloaded | PendingBlockStatus.processing;
@@ -102,4 +109,7 @@ export enum PendingBlockType {
    * During gossip time, we may get a block but the parent root is unknown (not in forkchoice).
    */
   UNKNOWN_PARENT = "unknown_parent",
+
+  UNKNOWN_BLOCKINPUT = "unknown_blockinput",
+  UNKNOWN_BLOBS = "unknown_blobs",
 }

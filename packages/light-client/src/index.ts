@@ -1,15 +1,23 @@
 import mitt from "mitt";
-import {init as initBls} from "@chainsafe/bls/switchable";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
-import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientHeader,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  phase0,
+  RootHex,
+  Slot,
+  SyncPeriod,
+} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
-import {isNode} from "./utils/utils.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
-import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
+import {getConsoleLogger, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightclientSpec} from "./spec/index.js";
 import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
@@ -34,7 +42,7 @@ export type LightclientInitArgs = {
   opts?: LightclientOpts;
   genesisData: GenesisData;
   transport: LightClientTransport;
-  bootstrap: allForks.LightClientBootstrap;
+  bootstrap: LightClientBootstrap;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -116,7 +124,7 @@ export class Lightclient {
         : genesisData.genesisValidatorsRoot;
 
     this.config = createBeaconConfig(config, this.genesisValidatorsRoot);
-    this.logger = logger ?? getLcLoggerConsole();
+    this.logger = logger ?? getConsoleLogger();
     this.transport = transport;
     this.runStatus = {code: RunStatusCode.uninitialized};
 
@@ -153,12 +161,6 @@ export class Lightclient {
   ): Promise<Lightclient> {
     const {transport, checkpointRoot} = args;
 
-    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's an async process. This should be initialized once before any bls operations.
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await initBls(isNode ? "blst-native" : "herumi");
-
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
@@ -167,10 +169,28 @@ export class Lightclient {
     return new Lightclient({...args, bootstrap});
   }
 
-  start(): void {
-    this.runLoop().catch((e) => {
-      this.logger.error("Error on runLoop", {}, e as Error);
+  /**
+   * @returns a `Promise` that will resolve once `runStatus` equals `RunStatusCode.started`
+   */
+  start(): Promise<void> {
+    const startPromise = new Promise<void>((resolve) => {
+      const resolveAndStopListening = (status: RunStatusCode): void => {
+        if (status === RunStatusCode.started) {
+          this.emitter.off(LightclientEvent.statusChange, resolveAndStopListening);
+          resolve();
+        }
+      };
+      this.emitter.on(LightclientEvent.statusChange, resolveAndStopListening);
+
+      // If already started, resolve immediately
+      // Checking after the event registration to remove potential for race conditions
+      resolveAndStopListening(this.runStatus.code);
     });
+
+    // Do not block the event loop
+    void this.runLoop();
+
+    return startPromise;
   }
 
   stop(): void {
@@ -180,21 +200,15 @@ export class Lightclient {
     this.updateRunStatus({code: RunStatusCode.stopped});
   }
 
-  getHead(): allForks.LightClientHeader {
+  getHead(): LightClientHeader {
     return this.lightclientSpec.store.optimisticHeader;
   }
 
-  getFinalized(): allForks.LightClientHeader {
+  getFinalized(): LightClientHeader {
     return this.lightclientSpec.store.finalizedHeader;
   }
 
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {
-    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await initBls(isNode ? "blst-native" : "herumi");
-
     const periodRanges = chunkifyInclusiveRange(fromPeriod, toPeriod, MAX_PERIODS_PER_REQUEST);
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
@@ -211,12 +225,6 @@ export class Lightclient {
   }
 
   private async runLoop(): Promise<void> {
-    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await initBls(isNode ? "blst-native" : "herumi");
-
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const currentPeriod = computeSyncPeriodAtSlot(this.currentSlot);
@@ -279,17 +287,14 @@ export class Lightclient {
       }
 
       // Wait for the next epoch
-      if (this.runStatus.code !== RunStatusCode.started) {
-        return;
-      } else {
-        try {
-          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.runStatus.controller.signal);
-        } catch (e) {
-          if (isErrorAborted(e)) {
-            return;
-          }
-          throw e;
+      try {
+        const runStatus = this.runStatus as {code: RunStatusCode.started; controller: AbortController}; // At this point, client is started
+        await sleep(timeUntilNextEpoch(this.config, this.genesisTime), runStatus.controller.signal);
+      } catch (e) {
+        if (isErrorAborted(e)) {
+          return;
         }
+        throw e;
       }
     }
   }
@@ -298,7 +303,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(optimisticUpdate: allForks.LightClientOptimisticUpdate): void {
+  private processOptimisticUpdate(optimisticUpdate: LightClientOptimisticUpdate): void {
     this.lightclientSpec.onOptimisticUpdate(this.currentSlotWithTolerance(), optimisticUpdate);
   }
 
@@ -306,11 +311,11 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: allForks.LightClientFinalityUpdate): void {
+  private processFinalizedUpdate(finalizedUpdate: LightClientFinalityUpdate): void {
     this.lightclientSpec.onFinalityUpdate(this.currentSlotWithTolerance(), finalizedUpdate);
   }
 
-  private processSyncCommitteeUpdate(update: allForks.LightClientUpdate): void {
+  private processSyncCommitteeUpdate(update: LightClientUpdate): void {
     this.lightclientSpec.onUpdate(this.currentSlotWithTolerance(), update);
   }
 
@@ -323,3 +328,9 @@ export class Lightclient {
     this.emitter.emit(LightclientEvent.statusChange, this.runStatus.code);
   }
 }
+
+// To export these name spaces to the bundle JS
+import * as utils from "./utils.js";
+import * as validation from "./validation.js";
+import * as transport from "./transport.js";
+export {utils, validation, transport};

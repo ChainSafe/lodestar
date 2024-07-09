@@ -1,6 +1,6 @@
-import {describe, it, expect, afterEach} from "vitest";
+import {describe, it, expect, afterEach, vi} from "vitest";
 import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
-import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
 import {ChainConfig} from "@lodestar/config";
 import {ssz, altair} from "@lodestar/types";
 import {TimestampFormatCode} from "@lodestar/logger";
@@ -8,15 +8,15 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/param
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {Api, ApiError, getClient, routes} from "@lodestar/api";
+import {ApiClient, getClient, routes} from "@lodestar/api";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {HeadEventData} from "../../../src/chain/index.js";
 
-// To make the code review easy for code block below
-/* prettier-ignore */
 describe("chain / lightclient", function () {
+  vi.setConfig({testTimeout: 600_000});
+
   /**
    * Max distance between beacon node head and lightclient head
    * If SECONDS_PER_SLOT === 1, there should be some margin for slow blocks,
@@ -131,7 +131,7 @@ describe("chain / lightclient", function () {
       });
 
       loggerLC.info("Initialized lightclient", {headSlot: lightclient.getHead().beacon.slot});
-      lightclient.start();
+      void lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
         bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
@@ -178,22 +178,18 @@ describe("chain / lightclient", function () {
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
   });
-}, {timeout: 600_000});
+});
 
 // TODO: Re-incorporate for REST-only light-client
 async function getHeadStateProof(
   lightclient: Lightclient,
-  api: Api,
+  api: ApiClient,
   paths: JsonPath[]
-): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
+): Promise<{proof: CompactMultiProof; header: altair.LightClientHeader}> {
   const header = lightclient.getHead();
   const stateId = toHexString(header.beacon.stateRoot);
   const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
   const descriptor = computeDescriptor(gindices);
-  const res = await api.proof.getStateProof(stateId, descriptor);
-  ApiError.assert(res);
-  return {
-    proof: res.response.data as TreeOffsetProof,
-    header,
-  };
+  const proof = (await api.proof.getStateProof({stateId, descriptor})).value();
+  return {proof, header};
 }

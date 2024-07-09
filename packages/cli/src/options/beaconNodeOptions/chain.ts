@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -12,7 +12,8 @@ export type ChainArgs = {
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
-  "chain.proposerBoostEnabled"?: boolean;
+  "chain.proposerBoost"?: boolean;
+  "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
@@ -26,6 +27,11 @@ export type ChainArgs = {
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
+  "chain.archiveBlobEpochs"?: number;
+  "chain.nHistoricalStates"?: boolean;
+  "chain.nHistoricalStatesFileDataStore"?: boolean;
+  "chain.maxBlockStates"?: number;
+  "chain.maxCPStateEpochsInMemory"?: number;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -38,7 +44,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
-    proposerBoostEnabled: args["chain.proposerBoostEnabled"],
+    proposerBoost: args["chain.proposerBoost"],
+    proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
@@ -53,6 +60,12 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
+    archiveBlobEpochs: args["chain.archiveBlobEpochs"],
+    nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
+    nHistoricalStatesFileDataStore:
+      args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
+    maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
+    maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
   };
 }
 
@@ -112,11 +125,20 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.proposerBoostEnabled": {
+  "chain.proposerBoost": {
+    alias: ["chain.proposerBoostEnabled"],
     hidden: true,
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
-    defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
+    defaultDescription: String(defaultOptions.chain.proposerBoost),
+    group: "chain",
+  },
+
+  "chain.proposerBoostReorg": {
+    hidden: true,
+    type: "boolean",
+    description: "Enable proposer boost reorg to reorg out a late block",
+    defaultDescription: String(defaultOptions.chain.proposerBoostReorg),
     group: "chain",
   },
 
@@ -210,6 +232,45 @@ Will double processing times. Use only for debugging purposes.",
     description: "Maximum ShufflingCache epochs to keep in memory",
     type: "number",
     default: defaultOptions.chain.maxShufflingCacheEpochs,
+    group: "chain",
+  },
+
+  "chain.archiveBlobEpochs": {
+    description: "Number of epochs to retain finalized blobs (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS)",
+    type: "number",
+    group: "chain",
+  },
+
+  "chain.nHistoricalStates": {
+    hidden: true,
+    description:
+      "Use the new FIFOBlockStateCache and PersistentCheckpointStateCache or not which make lodestar heap size bounded instead of unbounded as before",
+    type: "boolean",
+    default: defaultOptions.chain.nHistoricalStates,
+    group: "chain",
+  },
+
+  "chain.nHistoricalStatesFileDataStore": {
+    hidden: true,
+    description: "Use fs to store checkpoint state for PersistentCheckpointStateCache or not",
+    type: "boolean",
+    default: defaultOptions.chain.nHistoricalStatesFileDataStore,
+    group: "chain",
+  },
+
+  "chain.maxBlockStates": {
+    hidden: true,
+    description: "Max block states to cache in memory, used for FIFOBlockStateCache",
+    type: "number",
+    default: defaultOptions.chain.maxBlockStates,
+    group: "chain",
+  },
+
+  "chain.maxCPStateEpochsInMemory": {
+    hidden: true,
+    description: "Max epochs to cache checkpoint states in memory, used for PersistentCheckpointStateCache",
+    type: "number",
+    default: defaultOptions.chain.maxCPStateEpochsInMemory,
     group: "chain",
   },
 };

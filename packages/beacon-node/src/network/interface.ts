@@ -15,7 +15,18 @@ import {
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import type {Datastore} from "interface-datastore";
-import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {Identify} from "@chainsafe/libp2p-identify";
+import {
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  SignedBeaconBlock,
+  Slot,
+  SlotRootHex,
+  altair,
+  capella,
+  deneb,
+  phase0,
+} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
@@ -49,16 +60,16 @@ export interface INetwork extends INetworkCorePublic {
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
+  ): Promise<WithBytes<SignedBeaconBlock>[]>;
   sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
+  ): Promise<WithBytes<SignedBeaconBlock>[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
 
   // Gossip
-  publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number>;
+  publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
@@ -68,8 +79,8 @@ export interface INetwork extends INetworkCorePublic {
   publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number>;
   publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<number>;
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
-  publishLightClientFinalityUpdate(update: allForks.LightClientFinalityUpdate): Promise<number>;
-  publishLightClientOptimisticUpdate(update: allForks.LightClientOptimisticUpdate): Promise<number>;
+  publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
+  publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
@@ -98,4 +109,4 @@ export type LodestarComponents = {
   metrics?: Metrics;
 };
 
-export type Libp2p = ILibp2p<{components: LodestarComponents}>;
+export type Libp2p = ILibp2p<{components: LodestarComponents; identify: Identify}>;

@@ -5,11 +5,12 @@ import {
   DataAvailableStatus,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
@@ -31,6 +32,7 @@ export async function verifyBlocksStateTransitionOnly(
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
   const postStates: CachedBeaconStateAllForks[] = [];
   const proposerBalanceDeltas: number[] = [];
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
@@ -89,16 +91,20 @@ export async function verifyBlocksStateTransitionOnly(
 
     // this avoids keeping our node busy processing blocks
     if (i < blocks.length - 1) {
-      await sleep(0);
+      await nextEventLoop();
     }
   }
 
   const verifyStateTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
     const slot = blocks[0].block.message.slot;
-    const recvToTransition = verifyStateTime / 1000 - opts.seenTimestampSec;
-    metrics?.gossipBlock.receivedToStateTransition.observe(recvToTransition);
-    logger.verbose("Verified block state transition", {slot, recvToTransition});
+    const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    metrics?.gossipBlock.stateTransition.recvToValidation.observe(recvToValidation);
+    metrics?.gossipBlock.stateTransition.validationTime.observe(validationTime);
+
+    logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
   return {postStates, proposerBalanceDeltas, verifyStateTime};

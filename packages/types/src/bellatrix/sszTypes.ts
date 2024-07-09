@@ -9,7 +9,7 @@ import {
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
-import {stringType} from "../utils/StringType.js";
+import {stringType} from "../utils/stringType.js";
 
 const {
   Bytes32,
@@ -222,7 +222,7 @@ export const SSEPayloadAttributesCommon = new ContainerType(
   {
     proposerIndex: UintNum64,
     proposalSlot: Slot,
-    proposalBlockNumber: UintNum64,
+    parentBlockNumber: UintNum64,
     parentBlockRoot: Root,
     parentBlockHash: Root,
   },

@@ -4,6 +4,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
+import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
 
@@ -68,9 +69,26 @@ export class FIFOBlockStateCache implements BlockStateCache {
   }
 
   /**
+   * Get a seed state for state reload, this could be any states. The goal is to have the same
+   * base merkle tree for all BeaconState objects across application.
+   * See packages/state-transition/src/util/loadState/loadState.ts for more detail
+   */
+  getSeedState(): CachedBeaconStateAllForks {
+    const firstValue = this.cache.values().next();
+    if (firstValue.done) {
+      // should not happen
+      throw Error("No state in FIFOBlockStateCache");
+    }
+
+    const firstState = firstValue.value;
+    // don't transfer cache because consumer only use this cache to reload another state from disc
+    return firstState.clone(true);
+  }
+
+  /**
    * Get a state from this cache given a state root hex.
    */
-  get(rootHex: RootHex): CachedBeaconStateAllForks | null {
+  get(rootHex: RootHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
     if (!item) {
@@ -80,7 +98,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
     this.metrics?.hits.inc();
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item;
+    return item.clone(opts?.dontTransferCache);
   }
 
   /**
