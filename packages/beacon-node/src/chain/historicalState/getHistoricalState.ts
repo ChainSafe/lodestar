@@ -8,7 +8,6 @@ import {
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock} from "@lodestar/types/allForks";
 import {BeaconConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 
@@ -57,13 +56,6 @@ export async function getNearestState(
 }
 
 /**
- * Get blocks (from, to]
- */
-export function getBlocksBetween(from: number, to: number, db: IBeaconDb): AsyncIterable<SignedBeaconBlock> {
-  return db.blockArchive.valuesStream({gt: from, lte: to});
-}
-
-/**
  * Get and regenerate a historical state
  */
 export async function getHistoricalState(
@@ -74,7 +66,7 @@ export async function getHistoricalState(
   metrics?: BeaconStateTransitionMetrics
 ): Promise<Uint8Array> {
   let state = await getNearestState(slot, config, db, pubkey2index);
-  for await (const block of getBlocksBetween(state.slot, slot, db)) {
+  for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     state = stateTransition(
       state,
       block,

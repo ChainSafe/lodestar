@@ -40,7 +40,6 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
       workerData,
     } as ConstructorParameters<typeof Worker>[1]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const api = await spawn<HistoricalStateWorkerApi>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
