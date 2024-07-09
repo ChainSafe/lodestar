@@ -580,9 +580,9 @@ export class EpochCache {
       // was already pulled by the api or another method on EpochCache
       this.currentShuffling = this.nextShuffling;
     } else {
-      this.currentShuffling = this.shufflingCache
-        ? this.shufflingCache.getOrBuildSync(this.nextEpoch, this.nextDecisionRoot, state, this.nextActiveIndices)
-        : computeEpochShuffling(state, this.nextActiveIndices, this.nextEpoch);
+      this.currentShuffling =
+        this.shufflingCache?.getOrBuildSync(this.nextEpoch, this.nextDecisionRoot, state, this.nextActiveIndices) ??
+        computeEpochShuffling(state, this.nextActiveIndices, this.nextEpoch);
     }
 
     const currentEpoch = this.nextEpoch;
@@ -895,9 +895,8 @@ export class EpochCache {
         return this.currentShuffling;
       case this.nextEpoch:
         if (!this.nextShuffling) {
-          this.nextShuffling = this.shufflingCache
-            ? this.shufflingCache.getSync(this.nextEpoch, this.getDecisionRoot(this.nextEpoch))
-            : null;
+          this.nextShuffling =
+            this.shufflingCache?.getSync(this.nextEpoch, this.getDecisionRoot(this.nextEpoch)) ?? null;
         }
         return this.nextShuffling;
       default:
