@@ -3,6 +3,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
+  getActiveValidatorIndices,
   getShufflingDecisionBlock,
 } from "@lodestar/state-transition";
 import {ProtoBlock, IForkChoice, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
@@ -82,9 +83,12 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   };
 
   const shufflingCache = new ShufflingCache();
-  shufflingCache.processState(state, state.epochCtx.currentShuffling.epoch);
-  shufflingCache.processState(state, state.epochCtx.nextShuffling.epoch);
   const dependentRoot = getShufflingDecisionBlock(state, state.epochCtx.currentShuffling.epoch);
+  shufflingCache.set(state.epochCtx.currentShuffling, dependentRoot);
+
+  const nextEpoch = state.epochCtx.currentShuffling.epoch + 1;
+  const nextDependentRoot = getShufflingDecisionBlock(state, nextEpoch);
+  shufflingCache.buildSync(nextEpoch, nextDependentRoot, state, getActiveValidatorIndices(state, nextEpoch));
 
   const forkChoice = {
     getBlock: (root) => {

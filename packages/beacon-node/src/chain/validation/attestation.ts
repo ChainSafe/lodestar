@@ -584,7 +584,7 @@ export async function getShufflingForAttestationVerification(
   const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
   const shufflingDependentRoot = getShufflingDependentRoot(chain.forkChoice, attEpoch, blockEpoch, attHeadBlock);
 
-  const shuffling = await chain.shufflingCache.getShufflingOrNull(attEpoch, shufflingDependentRoot);
+  const shuffling = await chain.shufflingCache.get(attEpoch, shufflingDependentRoot);
   if (shuffling) {
     // most of the time, we should get the shuffling from cache
     chain.metrics?.gossipAttestation.shufflingCacheHit.inc({caller: regenCaller});

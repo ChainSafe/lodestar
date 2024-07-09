@@ -581,7 +581,7 @@ export class EpochCache {
       this.currentShuffling = this.nextShuffling;
     } else {
       this.currentShuffling =
-        this.shufflingCache?.getOrBuildSync(this.nextEpoch, this.nextDecisionRoot, state, this.nextActiveIndices) ??
+        this.shufflingCache?.buildSync(this.nextEpoch, this.nextDecisionRoot, state, this.nextActiveIndices) ??
         computeEpochShuffling(state, this.nextActiveIndices, this.nextEpoch);
     }
 
@@ -589,7 +589,8 @@ export class EpochCache {
     this.nextShuffling = null;
     this.nextDecisionRoot = getShufflingDecisionBlock(state, currentEpoch + 1);
     this.nextActiveIndices = epochTransitionCache.nextEpochShufflingActiveValidatorIndices;
-    this.shufflingCache?.build(currentEpoch + 1, this.nextDecisionRoot, state, this.nextActiveIndices);
+    // TODO move this out to beacon node
+    void this.shufflingCache?.build(currentEpoch + 1, this.nextDecisionRoot, state, this.nextActiveIndices);
 
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;

@@ -7,22 +7,33 @@ export class MockShufflingCache implements IShufflingCache {
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, EpochShuffling>> = new MapDef(
     () => new Map<RootHex, EpochShuffling>()
   );
-  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): void {
-    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-    this.set(shuffling, decisionRoot);
-  }
-
-  getOrBuildSync(
+  async build(
     epoch: number,
     decisionRoot: string,
     state: BeaconStateAllForks,
     activeIndices: number[]
-  ): EpochShuffling {
-    const shuffling = this.getSync(epoch, decisionRoot);
-    if (!shuffling) {
-      this.build(epoch, decisionRoot, state, activeIndices);
+  ): Promise<EpochShuffling> {
+    const cachedShuffling = this.getSync(epoch, decisionRoot);
+    if (cachedShuffling) {
+      return cachedShuffling;
     }
-    return this.getSync(epoch, decisionRoot) as EpochShuffling;
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+        this.set(shuffling, decisionRoot);
+        resolve(shuffling);
+      });
+    });
+  }
+
+  buildSync(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): EpochShuffling {
+    const cachedShuffling = this.getSync(epoch, decisionRoot);
+    if (cachedShuffling) {
+      return cachedShuffling;
+    }
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    this.set(shuffling, decisionRoot);
+    return shuffling;
   }
 
   getSync(epoch: number, decisionRoot: string): EpochShuffling | null {

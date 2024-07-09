@@ -69,41 +69,11 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   /**
-   * Insert a promise to make sure we don't regen state for the same shuffling.
-   * Bound by MAX_SHUFFLING_PROMISE to make sure our node does not blow up.
-   */
-  insertPromise(shufflingEpoch: Epoch, decisionRootHex: RootHex): void {
-    const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
-      .flatMap((innerMap) => Array.from(innerMap.values()))
-      .filter((item) => isPromiseCacheItem(item)).length;
-    if (promiseCount >= MAX_PROMISES) {
-      throw new Error(
-        `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${shufflingEpoch}, decisionRootHex: ${decisionRootHex}`
-      );
-    }
-    let resolveFn: ((shuffling: EpochShuffling) => void) | null = null;
-    const promise = new Promise<EpochShuffling>((resolve) => {
-      resolveFn = resolve;
-    });
-    if (resolveFn === null) {
-      throw new Error("Promise Constructor was not executed immediately");
-    }
-
-    const cacheItem: PromiseCacheItem = {
-      type: CacheItemType.promise,
-      promise,
-      resolveFn,
-    };
-    this.add(shufflingEpoch, decisionRootHex, cacheItem);
-    this.metrics?.shufflingCache.insertPromiseCount.inc();
-  }
-
-  /**
    * Most of the time, this should return a shuffling immediately.
    * If there's a promise, it means we are computing the same shuffling, so we wait for the promise to resolve.
    * Return null if we don't have a shuffling for this epoch and dependentRootHex.
    */
-  async getShufflingOrNull(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
+  async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
     if (cacheItem === undefined) {
       return null;
@@ -115,18 +85,6 @@ export class ShufflingCache implements IShufflingCache {
       // promise
       return cacheItem.promise;
     }
-  }
-
-  async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling> {
-    const item = await this.getShufflingOrNull(shufflingEpoch, decisionRootHex);
-    if (!item) {
-      throw new ShufflingCacheError({
-        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
-        epoch: shufflingEpoch,
-        decisionRoot: decisionRootHex,
-      });
-    }
-    return item;
   }
 
   /**
@@ -146,59 +104,82 @@ export class ShufflingCache implements IShufflingCache {
     return null;
   }
 
-  getOrBuildSync(
+  buildSync(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): EpochShuffling {
+    const cachedShuffling = this.getSync(epoch, decisionRoot);
+    if (cachedShuffling) {
+      return cachedShuffling;
+    }
+
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    this.set(shuffling, decisionRoot);
+    return shuffling;
+  }
+
+  async build(
     epoch: number,
     decisionRoot: string,
     state: BeaconStateAllForks,
     activeIndices: number[]
-  ): EpochShuffling {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (cacheItem && isShufflingCacheItem(cacheItem)) {
-      // this.metrics?.shufflingCache.cacheHitInEpochTransition();
-      return cacheItem.shuffling;
+  ): Promise<EpochShuffling> {
+    const cachedShuffling = await this.get(epoch, decisionRoot);
+    if (cachedShuffling) {
+      return cachedShuffling;
     }
-    // if (cacheItem) {
-    //   this.metrics?.shufflingCache.cacheMissInEpochTransition();
-    // } else {
-    //   this.metrics?.shufflingCache.shufflingPromiseNotResolvedInEpochTransition();
-    // }
-    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-    this.add(epoch, decisionRoot, {
-      type: CacheItemType.shuffling,
-      shuffling,
-    });
-    return shuffling;
-  }
 
-  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): void {
-    let resolveFn: (shuffling: EpochShuffling) => void = () => {};
-    this.add(epoch, decisionRoot, {
-      type: CacheItemType.promise,
-      resolveFn,
-      promise: new Promise<EpochShuffling>((resolve) => {
-        resolveFn = resolve;
-      }),
-    });
+    // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
+    // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
+    const cacheItem = this.insertPromise(epoch, decisionRoot);
+    // TODO: replace this call with a worker
     setTimeout(() => {
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-      this.add(epoch, decisionRoot, {
-        type: CacheItemType.shuffling,
-        shuffling,
-      });
-    }, 100);
+      this.set(shuffling, decisionRoot);
+    }, 5);
+    return cacheItem.promise;
   }
 
   set(shuffling: EpochShuffling, decisionRoot: string): void {
-    const cacheItem: ShufflingCacheItem = {
-      shuffling,
-      type: CacheItemType.shuffling,
-    };
-    this.add(shuffling.epoch, decisionRoot, cacheItem);
+    const items = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
+    // if a pending shuffling promise exists, resolve it
+    const item = items.get(decisionRoot);
+    if (item !== undefined && isPromiseCacheItem(item)) {
+      item.resolveFn(shuffling);
+    }
+    // set the shuffling
+    items.set(decisionRoot, {type: CacheItemType.shuffling, shuffling});
+    // prune the cache
+    pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
   }
 
-  private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
-    this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionBlock, cacheItem);
-    pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
+  /**
+   * Insert a promise to make sure we don't regen state for the same shuffling.
+   * Bound by MAX_SHUFFLING_PROMISE to make sure our node does not blow up.
+   */
+  private insertPromise(shufflingEpoch: Epoch, decisionRoot: RootHex): PromiseCacheItem {
+    const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
+      .flatMap((innerMap) => Array.from(innerMap.values()))
+      .filter((item) => isPromiseCacheItem(item)).length;
+    if (promiseCount >= MAX_PROMISES) {
+      throw new Error(
+        `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${shufflingEpoch}, decisionRootHex: ${decisionRoot}`
+      );
+    }
+    let resolveFn: ((shuffling: EpochShuffling) => void) | null = null;
+    const promise = new Promise<EpochShuffling>((resolve) => {
+      resolveFn = resolve;
+    });
+    if (resolveFn === null) {
+      throw new Error("Promise Constructor was not executed immediately");
+    }
+
+    this.metrics?.shufflingCache.insertPromiseCount.inc();
+
+    const cacheItem: PromiseCacheItem = {
+      type: CacheItemType.promise,
+      promise,
+      resolveFn,
+    };
+    this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionRoot, cacheItem);
+    return cacheItem;
   }
 }
 
