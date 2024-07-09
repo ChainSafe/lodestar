@@ -11,6 +11,7 @@ export type HistoricalStateRegenInitModules = {
   config: BeaconConfig;
   logger: LoggerNode;
   metrics: Metrics | null;
+  signal?: AbortSignal;
 };
 export type HistoricalStateRegenModules = HistoricalStateRegenInitModules & {
   api: ModuleThread<HistoricalStateWorkerApi>;

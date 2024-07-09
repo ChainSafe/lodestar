@@ -23,6 +23,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   constructor(modules: HistoricalStateRegenModules) {
     this.api = modules.api;
     this.logger = modules.logger;
+    modules.signal?.addEventListener("abort", () => this.close(), {once: true});
   }
   static async init(modules: HistoricalStateRegenInitModules): Promise<HistoricalStateRegen> {
     const workerData: HistoricalStateWorkerData = {

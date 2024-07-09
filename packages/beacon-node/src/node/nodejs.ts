@@ -203,8 +203,8 @@ export class BeaconNode {
       config,
       metrics,
       logger: logger.child({module: LoggerModule.chain}),
+      signal,
     });
-    signal.addEventListener("abort", () => historicalStateRegen.close(), {once: true});
 
     const chain = new BeaconChain(opts.chain, {
       config,
