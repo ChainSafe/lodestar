@@ -46,6 +46,7 @@ describe(`capella processEpoch - ${stateId}`, () => {
     fn: (state) => {
       const cache = beforeProcessEpoch(state);
       processEpoch(fork, state as CachedBeaconStateCapella, cache);
+      state.slot++;
       state.epochCtx.afterProcessEpoch(state, cache);
       // Simulate root computation through the next block to account for changes
       // 74184 hash64 ops - 92.730 ms
@@ -154,6 +155,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
       const state = stateOg.value.clone();
       const cacheAfter = beforeProcessEpoch(state);
       processEpoch(fork, state, cacheAfter);
+      state.slot++;
       return {state, cache: cacheAfter};
     },
     beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
