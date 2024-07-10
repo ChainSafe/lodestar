@@ -25,10 +25,9 @@ export function getLightclientApi({
     },
 
     async getLightClientOptimisticUpdate() {
-      const lightClientServer = chain.lightClientServer;
-      assertLightClientServer(lightClientServer);
+      assertLightClientServer(chain.lightClientServer);
 
-      const update = lightClientServer.getOptimisticUpdate();
+      const update = chain.lightClientServer.getOptimisticUpdate();
       if (update === null) {
         throw Error("No optimistic update available");
       }
@@ -36,10 +35,9 @@ export function getLightclientApi({
     },
 
     async getLightClientFinalityUpdate() {
-      const lightClientServer = chain.lightClientServer;
-      assertLightClientServer(lightClientServer);
+      assertLightClientServer(chain.lightClientServer);
 
-      const update = lightClientServer.getFinalityUpdate();
+      const update = chain.lightClientServer.getFinalityUpdate();
       if (update === null) {
         throw Error("No finality update available");
       }
@@ -47,10 +45,9 @@ export function getLightclientApi({
     },
 
     async getLightClientBootstrap({blockRoot}) {
-      const lightClientServer = chain.lightClientServer;
-      assertLightClientServer(lightClientServer);
+      assertLightClientServer(chain.lightClientServer);
 
-      const bootstrapProof = await lightClientServer.getBootstrap(fromHex(blockRoot));
+      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHex(blockRoot));
       return {data: bootstrapProof, meta: {version: config.getForkName(bootstrapProof.header.beacon.slot)}};
     },
 
