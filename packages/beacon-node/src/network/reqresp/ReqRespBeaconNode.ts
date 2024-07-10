@@ -74,7 +74,7 @@ export class ReqRespBeaconNode extends ReqResp {
   protected readonly logger: Logger;
   protected readonly disableLightClientServer: boolean;
 
-  constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts) {
+  constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
     const {events, peersData, peerRpcScores, metadata, metrics, logger} = modules;
 
     super(
