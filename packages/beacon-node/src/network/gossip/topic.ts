@@ -201,7 +201,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
  */
 export function getCoreTopicsAtFork(
   fork: ForkName,
-  opts: {subscribeAllSubnets?: boolean}
+  opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
@@ -227,8 +227,10 @@ export function getCoreTopicsAtFork(
   // Any fork after altair included
   if (ForkSeq[fork] >= ForkSeq.altair) {
     topics.push({type: GossipType.sync_committee_contribution_and_proof});
-    topics.push({type: GossipType.light_client_optimistic_update});
-    topics.push({type: GossipType.light_client_finality_update});
+    if (!opts.disableLightClientServer) {
+      topics.push({type: GossipType.light_client_optimistic_update});
+      topics.push({type: GossipType.light_client_finality_update});
+    }
   }
 
   if (opts.subscribeAllSubnets) {
