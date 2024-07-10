@@ -4,7 +4,7 @@ import {CachedBeaconStatePhase0} from "../types.js";
 import {computeStartSlotAtEpoch, getBlockRootAtSlot, AttesterStatus} from "../util/index.js";
 
 /**
- * Mutates `statuses` from all pending attestations.
+ * Mutates `statuses` and `flags` from all pending attestations.
  *
  * PERF: Cost 'proportional' to attestation count + how many bits per attestation + how many flags the attestation triggers
  *
@@ -17,6 +17,7 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot, AttesterStatus} from "../ut
 export function processPendingAttestations(
   state: CachedBeaconStatePhase0,
   statuses: AttesterStatus[],
+  flags: Uint8Array,
   attestations: phase0.PendingAttestation[],
   epoch: Epoch,
   sourceFlag: number,
@@ -62,12 +63,11 @@ export function processPendingAttestations(
     }
 
     for (const p of participants) {
-      const status = statuses[p];
-      status.flags |= sourceFlag;
+      flags[p] |= sourceFlag;
       if (attVotedTargetRoot) {
-        status.flags |= targetFlag;
+        flags[p] |= targetFlag;
         if (attVotedHeadRoot) {
-          status.flags |= headFlag;
+          flags[p] |= headFlag;
         }
       }
     }

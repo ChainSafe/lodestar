@@ -130,6 +130,8 @@ export interface EpochTransitionCache {
    */
   statuses: AttesterStatus[];
 
+  flags: Uint8Array;
+
   /**
    * balances array will be populated by processRewardsAndPenalties() and consumed by processEffectiveBalanceUpdates().
    * processRewardsAndPenalties() already has a regular Javascript array of balances.
@@ -200,6 +202,11 @@ export function beforeProcessEpoch(
   const validators = state.validators.getAllReadonlyValues();
   const validatorCount = validators.length;
 
+  // Flags for each validator
+  // We can use Uint8Array since we only need 8 bits per validator
+  // See src/util/attesterStatus.ts
+  const flags = new Uint8Array(validatorCount);
+
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();
 
@@ -214,7 +221,7 @@ export function beforeProcessEpoch(
         indicesToSlash.push(i);
       }
     } else {
-      status.flags |= FLAG_UNSLASHED;
+      flags[i] |= FLAG_UNSLASHED;
     }
 
     const {activationEpoch, exitEpoch} = validator;
@@ -230,7 +237,7 @@ export function beforeProcessEpoch(
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
     if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       eligibleValidatorIndices.push(i);
-      status.flags |= FLAG_ELIGIBLE_ATTESTER;
+      flags[i] |= FLAG_ELIGIBLE_ATTESTER;
     }
 
     if (isActiveCurr) {
@@ -313,6 +320,7 @@ export function beforeProcessEpoch(
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
       statuses,
+      flags,
       (state as CachedBeaconStatePhase0).previousEpochAttestations.getAllReadonly(),
       prevEpoch,
       FLAG_PREV_SOURCE_ATTESTER,
@@ -322,6 +330,7 @@ export function beforeProcessEpoch(
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
       statuses,
+      flags,
       (state as CachedBeaconStatePhase0).currentEpochAttestations.getAllReadonly(),
       currentEpoch,
       FLAG_CURR_SOURCE_ATTESTER,
@@ -331,11 +340,10 @@ export function beforeProcessEpoch(
   } else {
     const previousEpochParticipation = (state as CachedBeaconStateAltair).previousEpochParticipation.getAll();
     for (let i = 0; i < previousEpochParticipation.length; i++) {
-      const status = statuses[i];
       // this is required to pass random spec tests in altair
       if (isActivePrevEpoch[i]) {
         // FLAG_PREV are indexes [0,1,2]
-        status.flags |= previousEpochParticipation[i];
+        flags[i] |= previousEpochParticipation[i];
       }
     }
 
@@ -345,7 +353,7 @@ export function beforeProcessEpoch(
       // this is required to pass random spec tests in altair
       if (status.active) {
         // FLAG_PREV are indexes [3,4,5], so shift by 3
-        status.flags |= currentEpochParticipation[i] << 3;
+        flags[i] |= currentEpochParticipation[i] << 3;
       }
     }
   }
@@ -361,19 +369,19 @@ export function beforeProcessEpoch(
   const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
   const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
 
-  for (let i = 0; i < statuses.length; i++) {
-    const status = statuses[i];
+  for (let i = 0; i < validatorCount; i++) {
     const effectiveBalanceByIncrement = effectiveBalancesByIncrements[i];
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
+    const flag = flags[i];
+    if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalanceByIncrement;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       prevTargetUnslStake += effectiveBalanceByIncrement;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
       prevHeadUnslStake += effectiveBalanceByIncrement;
     }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_CURR_TARGET_UNSLASHED)) {
       currTargetUnslStake += effectiveBalanceByIncrement;
     }
   }
@@ -423,6 +431,7 @@ export function beforeProcessEpoch(
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActiveNextEpoch,
     statuses,
+    flags,
 
     // Will be assigned in processRewardsAndPenalties()
     balances: undefined,

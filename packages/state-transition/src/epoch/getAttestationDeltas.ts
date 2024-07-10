@@ -52,7 +52,8 @@ export function getAttestationDeltas(
   state: CachedBeaconStatePhase0,
   cache: EpochTransitionCache
 ): [number[], number[]] {
-  const validatorCount = cache.statuses.length;
+  const {flags, statuses} = cache;
+  const validatorCount = flags.length;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
@@ -77,12 +78,12 @@ export function getAttestationDeltas(
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32, 31, 30
   const rewardPnaltyItemCache = new Map<number, RewardPenaltyItem>();
-  const {statuses} = cache;
   const {effectiveBalanceIncrements} = state.epochCtx;
   for (let i = 0; i < statuses.length; i++) {
+    const flag = flags[i];
+    const status = statuses[i];
     const effectiveBalanceIncrement = effectiveBalanceIncrements[i];
     const effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
-    const status = statuses[i];
 
     let rewardItem = rewardPnaltyItemCache.get(effectiveBalanceIncrement);
     if (!rewardItem) {
@@ -121,14 +122,14 @@ export function getAttestationDeltas(
     } = rewardItem;
 
     // inclusion speed bonus
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
       rewards[status.proposerIndex] += proposerReward;
       rewards[i] += Math.floor(maxAttesterReward / status.inclusionDelay);
     }
 
-    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+    if (hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
       // expected FFG source
-      if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
         // justification-participation reward
         rewards[i] += sourceCheckpointReward;
       } else {
@@ -137,7 +138,7 @@ export function getAttestationDeltas(
       }
 
       // expected FFG target
-      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
         // boundary-attestation reward
         rewards[i] += targetCheckpointReward;
       } else {
@@ -146,7 +147,7 @@ export function getAttestationDeltas(
       }
 
       // expected head
-      if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED)) {
         // canonical-participation reward
         rewards[i] += headReward;
       } else {
@@ -158,7 +159,7 @@ export function getAttestationDeltas(
       if (isInInactivityLeak) {
         penalties[i] += basePenalty;
 
-        if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+        if (!hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
           penalties[i] += finalityDelayPenalty;
         }
       }

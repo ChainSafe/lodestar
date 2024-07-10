@@ -25,7 +25,6 @@ const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
  * precomputed participation.
  */
 export type AttesterStatus = {
-  flags: number;
   proposerIndex: number; // -1 when not included by any proposer
   inclusionDelay: number;
   active: boolean;
@@ -33,7 +32,6 @@ export type AttesterStatus = {
 
 export function createAttesterStatus(): AttesterStatus {
   return {
-    flags: 0,
     proposerIndex: -1,
     inclusionDelay: 0,
     active: false,

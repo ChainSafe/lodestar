@@ -39,7 +39,12 @@ export enum OpSource {
 export type ValidatorMonitor = {
   registerLocalValidator(index: number): void;
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
-  registerValidatorStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
+  registerValidatorStatuses(
+    currentEpoch: Epoch,
+    statuses: AttesterStatus[],
+    flags: Uint8Array,
+    balances?: number[]
+  ): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: BeaconBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
@@ -115,8 +120,8 @@ type ValidatorStatus = {
   inclusionDistance: number;
 };
 
-function statusToSummary(status: AttesterStatus): ValidatorStatus {
-  const flags = parseAttesterFlags(status.flags);
+function statusToSummary(status: AttesterStatus, flag: number): ValidatorStatus {
+  const flags = parseAttesterFlags(flag);
   return {
     isSlashed: flags.unslashed,
     isActiveInCurrentEpoch: status.active,
@@ -287,7 +292,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses, balances) {
+    registerValidatorStatuses(currentEpoch, statuses, flags, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -306,7 +311,7 @@ export function createValidatorMonitor(
           continue;
         }
 
-        const summary = statusToSummary(status);
+        const summary = statusToSummary(status, flags[index]);
 
         if (summary.isPrevSourceAttester) {
           metrics.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc();

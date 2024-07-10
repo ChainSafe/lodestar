@@ -19,16 +19,17 @@ export function generateBalanceDeltasEpochTransitionCache(
 ): EpochTransitionCache {
   const vc = state.validators.length;
 
-  const statuses = generateStatuses(state.validators.length, flagFactors);
+  const {statuses, flags} = generateStatuses(state.validators.length, flagFactors);
   const eligibleValidatorIndices: number[] = [];
-  for (let i = 0; i < statuses.length; i++) {
-    if (hasMarkers(statuses[i].flags, FLAG_ELIGIBLE_ATTESTER)) {
+  for (let i = 0; i < flags.length; i++) {
+    if (hasMarkers(flags[i], FLAG_ELIGIBLE_ATTESTER)) {
       eligibleValidatorIndices.push(i);
     }
   }
 
   const cache: Partial<EpochTransitionCache> = {
     statuses,
+    flags,
     eligibleValidatorIndices,
     totalActiveStakeByIncrement: vc,
     baseRewardPerIncrement: 726,
@@ -45,19 +46,20 @@ export function generateBalanceDeltasEpochTransitionCache(
 
 export type FlagFactors = Record<keyof AttesterFlags, number> | number;
 
-function generateStatuses(vc: number, flagFactors: FlagFactors): AttesterStatus[] {
+function generateStatuses(vc: number, flagFactors: FlagFactors): {statuses: AttesterStatus[]; flags: Uint8Array} {
   const totalProposers = 32;
   const statuses = new Array<AttesterStatus>(vc);
+  const flags = new Uint8Array(vc);
 
   for (let i = 0; i < vc; i++) {
     // Set to number to set all validators to the same value
     if (typeof flagFactors === "number") {
       statuses[i] = {
-        flags: flagFactors,
         proposerIndex: i % totalProposers,
         inclusionDelay: 1 + (i % 4),
         active: true,
       };
+      flags[i] = flagFactors;
     } else {
       // Use a factor to set some validators to this flag
       const flagsObj: AttesterFlags = {
@@ -71,13 +73,13 @@ function generateStatuses(vc: number, flagFactors: FlagFactors): AttesterStatus[
         eligibleAttester: i < vc * flagFactors.eligibleAttester, // 7
       };
       statuses[i] = {
-        flags: toAttesterFlags(flagsObj),
         proposerIndex: i % totalProposers,
         inclusionDelay: 1 + (i % 4),
         active: true,
       };
+      flags[i] = toAttesterFlags(flagsObj);
     }
   }
 
-  return statuses;
+  return {statuses, flags};
 }
