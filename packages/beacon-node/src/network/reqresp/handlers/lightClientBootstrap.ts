@@ -11,11 +11,10 @@ import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 
 export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
-  const lightClientServer = chain.lightClientServer;
-  assertLightClientServer(lightClientServer);
+  assertLightClientServer(chain.lightClientServer);
 
   try {
-    const bootstrap = await lightClientServer.getBootstrap(requestBody);
+    const bootstrap = await chain.lightClientServer.getBootstrap(requestBody);
     const fork = chain.config.getForkName(bootstrap.header.beacon.slot);
     const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
