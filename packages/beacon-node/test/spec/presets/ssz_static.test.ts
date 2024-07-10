@@ -2,13 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {expect, it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
-<<<<<<< HEAD
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-=======
-import {ssz} from "@lodestar/types";
-import {ACTIVE_PRESET, ForkName, ForkLightClient, ForkExecution} from "@lodestar/params";
->>>>>>> 82d0692d63d (test: fix ssz_static spec tests for all forks (#6771))
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";

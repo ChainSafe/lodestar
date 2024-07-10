@@ -222,14 +222,18 @@ export function getSeenAttDataKeyFromSignedAggregateAndProof(
  */
 export function getSeenAttDataKeyFromSignedAggregateAndProofElectra(data: Uint8Array): SeenAttDataKey | null {
   const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET;
-  const endIndex = startIndex + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE;
+  const endIndex = startIndex + ATTESTATION_DATA_SIZE;
 
-  if (data.length < endIndex) {
+  if (data.length < endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE) {
     return null;
   }
 
   // base64 is a bit efficient than hex
-  return toBase64(data.subarray(startIndex, endIndex));
+
+  return Buffer.concat([
+    data.subarray(startIndex, endIndex),
+    data.subarray(endIndex + SIGNATURE_SIZE, endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE),
+  ]).toString("base64");
 }
 
 /**

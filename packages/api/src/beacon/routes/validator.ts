@@ -623,9 +623,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: WithVersion(
           (fork) =>
-            (isForkBlobs(fork)
-              ? sszTypesFor(fork).BlockContents
-              : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
+            (isForkBlobs(fork) ? sszTypesFor(fork).BlockContents : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
       },

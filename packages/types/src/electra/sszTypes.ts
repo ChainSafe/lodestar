@@ -11,13 +11,13 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
-  MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD,
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_COMMITTEE,
   MAX_COMMITTEES_PER_SLOT,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-  MAX_CONSOLIDATIONS,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
   PENDING_BALANCE_DEPOSITS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PENDING_CONSOLIDATIONS_LIMIT,
@@ -123,7 +123,7 @@ export const DepositRequest = new ContainerType(
   {typeName: "DepositRequest", jsonCase: "eth2"}
 );
 
-export const DepositRequests = new ListCompositeType(DepositRequest, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
+export const DepositRequests = new ListCompositeType(DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD);
 
 export const WithdrawalRequest = new ContainerType(
   {
@@ -142,7 +142,10 @@ export const ConsolidationRequest = new ContainerType(
   },
   {typeName: "ConsolidationRequest", jsonCase: "eth2"}
 );
-export const ConsolidationRequests = new ListCompositeType(ConsolidationRequest, MAX_CONSOLIDATIONS);
+export const ConsolidationRequests = new ListCompositeType(
+  ConsolidationRequest,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
+);
 
 export const ExecutionPayload = new ContainerType(
   {
