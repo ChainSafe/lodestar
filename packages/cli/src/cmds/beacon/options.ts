@@ -143,7 +143,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   disableLightClientServer: {
-    description: "Disable lightclient server.",
+    description: "Disable light client server.",
     type: "boolean",
   },
 };
