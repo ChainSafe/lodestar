@@ -106,13 +106,14 @@ export class ShufflingCache implements IShufflingCache {
   async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
     if (cacheItem === undefined) {
+      // this.metrics?.shufflingCache.miss();
       return null;
     }
 
     if (isShufflingCacheItem(cacheItem)) {
       return cacheItem.shuffling;
     } else {
-      // promise
+      // this.metrics?.shufflingCache.shufflingPromiseNotResolved({type: async});
       return cacheItem.promise;
     }
   }
@@ -122,10 +123,15 @@ export class ShufflingCache implements IShufflingCache {
    */
   getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
-    if (cacheItem && isShufflingCacheItem(cacheItem)) {
-      return cacheItem.shuffling;
+    if (cacheItem) {
+      if (isShufflingCacheItem(cacheItem)) {
+        // this.metrics?.shufflingCache.hit()
+        return cacheItem.shuffling;
+      }
+      //   this.metrics?.shufflingCache.shufflingPromiseNotResolved({type: sync});
     }
 
+    // this.metrics?.shufflingCache.miss();
     // ignore promise and cache misses
     return null;
   }
@@ -136,16 +142,11 @@ export class ShufflingCache implements IShufflingCache {
     state: BeaconStateAllForks,
     activeIndices: number[]
   ): EpochShuffling {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (cacheItem && isShufflingCacheItem(cacheItem)) {
-      // this.metrics?.shufflingCache.cacheHitInEpochTransition();
-      return cacheItem.shuffling;
+    const cacheItem = this.getSync(epoch, decisionRoot);
+    if (cacheItem) {
+      return cacheItem;
     }
-    // if (cacheItem) {
-    //   this.metrics?.shufflingCache.cacheMissInEpochTransition();
-    // } else {
-    //   this.metrics?.shufflingCache.shufflingPromiseNotResolvedInEpochTransition();
-    // }
+    // this.metrics?.shufflingCache.cacheMissInEpochTransition();
     const shuffling = computeEpochShuffling(state, activeIndices, epoch);
     this.set(shuffling, decisionRoot, {
       type: CacheItemType.shuffling,
@@ -155,21 +156,19 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): void {
-    let resolveFn: (shuffling: EpochShuffling) => void = () => {};
-    this.set(shuffling, decisionRoot, {
-      type: CacheItemType.promise,
-      resolveFn,
-      promise: new Promise<EpochShuffling>((resolve) => {
-        resolveFn = resolve;
-      }),
-    });
+    this.insertPromise(epoch, decisionRoot);
+    /**
+     * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
+     * on a NICE thread with a rust implementation
+     */
     setTimeout(() => {
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
       this.set(shuffling, decisionRoot, {
         type: CacheItemType.shuffling,
         shuffling,
       });
-    }, 100);
+      // wait until after the first slot to help with attestation and block proposal performance
+    }, 12_000);
   }
 
   set(shuffling: EpochShuffling, decisionRoot: string): void {
