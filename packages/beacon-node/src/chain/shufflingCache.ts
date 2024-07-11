@@ -72,13 +72,13 @@ export class ShufflingCache implements IShufflingCache {
    * Insert a promise to make sure we don't regen state for the same shuffling.
    * Bound by MAX_SHUFFLING_PROMISE to make sure our node does not blow up.
    */
-  insertPromise(shufflingEpoch: Epoch, decisionRoot: RootHex): void {
+  insertPromise(epoch: Epoch, decisionRoot: RootHex): void {
     const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
       .flatMap((innerMap) => Array.from(innerMap.values()))
       .filter((item) => isPromiseCacheItem(item)).length;
     if (promiseCount >= MAX_PROMISES) {
       throw new Error(
-        `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${shufflingEpoch}, decisionRootHex: ${decisionRoot}`
+        `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${epoch}, decisionRootHex: ${decisionRoot}`
       );
     }
     let resolveFn: ((shuffling: EpochShuffling) => void) | null = null;
@@ -94,7 +94,7 @@ export class ShufflingCache implements IShufflingCache {
       promise,
       resolveFn,
     };
-    this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionRoot, cacheItem);
+    this.itemsByDecisionRootByEpoch.getOrDefault(epoch).set(decisionRoot, cacheItem);
     this.metrics?.shufflingCache.insertPromiseCount.inc();
   }
 
@@ -103,8 +103,8 @@ export class ShufflingCache implements IShufflingCache {
    * If there's a promise, it means we are computing the same shuffling, so we wait for the promise to resolve.
    * Return null if we don't have a shuffling for this epoch and dependentRootHex.
    */
-  async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
+  async get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null> {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem === undefined) {
       // this.metrics?.shufflingCache.miss();
       return null;
@@ -120,8 +120,8 @@ export class ShufflingCache implements IShufflingCache {
   /**
    * Will synchronously get a shuffling if it is available or will return null if not.
    */
-  getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
+  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem) {
       if (isShufflingCacheItem(cacheItem)) {
         // this.metrics?.shufflingCache.hit()
@@ -146,7 +146,7 @@ export class ShufflingCache implements IShufflingCache {
     state: BeaconStateAllForks,
     activeIndices: number[]
   ): EpochShuffling {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem && isShufflingCacheItem(cacheItem)) {
       // this.metrics?.shufflingCache.cacheHitEpochTransition();
       return cacheItem.shuffling;
@@ -158,10 +158,7 @@ export class ShufflingCache implements IShufflingCache {
     } else {
       // this.metrics?.shufflingCache.cacheMissEpochTransition();
     }
-    this.set(shuffling, decisionRoot, {
-      type: CacheItemType.shuffling,
-      shuffling,
-    });
+    this.set(shuffling, decisionRoot);
     return shuffling;
   }
 
@@ -176,10 +173,7 @@ export class ShufflingCache implements IShufflingCache {
      */
     setTimeout(() => {
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-      this.set(shuffling, decisionRoot, {
-        type: CacheItemType.shuffling,
-        shuffling,
-      });
+      this.set(shuffling, decisionRoot);
       // wait until after the first slot to help with attestation and block proposal performance
     }, 12_000);
   }
