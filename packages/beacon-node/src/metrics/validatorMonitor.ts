@@ -1,6 +1,5 @@
 import {
   computeEpochAtSlot,
-  AttesterStatus,
   parseAttesterFlags,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -41,7 +40,7 @@ export type ValidatorMonitor = {
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
   registerValidatorStatuses(
     currentEpoch: Epoch,
-    statuses: AttesterStatus[],
+    inclusionDelays: number[],
     flags: number[],
     isActiveCurrEpoch: boolean[],
     balances?: number[]
@@ -121,7 +120,7 @@ type ValidatorStatus = {
   inclusionDistance: number;
 };
 
-function statusToSummary(status: AttesterStatus, flag: number, isActiveInCurrentEpoch: boolean): ValidatorStatus {
+function statusToSummary(inclusionDelay: number, flag: number, isActiveInCurrentEpoch: boolean): ValidatorStatus {
   const flags = parseAttesterFlags(flag);
   return {
     isSlashed: flags.unslashed,
@@ -136,7 +135,7 @@ function statusToSummary(status: AttesterStatus, flag: number, isActiveInCurrent
     isCurrSourceAttester: flags.currSourceAttester,
     isCurrTargetAttester: flags.currTargetAttester,
     isCurrHeadAttester: flags.currHeadAttester,
-    inclusionDistance: status.inclusionDelay,
+    inclusionDistance: inclusionDelay,
   };
 }
 
@@ -293,7 +292,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses, flags, isActiveCurrEpoch, balances) {
+    registerValidatorStatuses(currentEpoch, inclusionDelays, flags, isActiveCurrEpoch, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -307,12 +306,7 @@ export function createValidatorMonitor(
         // - One to account for it being the previous epoch.
         // - One to account for the state advancing an epoch whilst generating the validator
         //     statuses.
-        const status = statuses[index];
-        if (status === undefined) {
-          continue;
-        }
-
-        const summary = statusToSummary(status, flags[index], isActiveCurrEpoch[index]);
+        const summary = statusToSummary(inclusionDelays[index], flags[index], isActiveCurrEpoch[index]);
 
         if (summary.isPrevSourceAttester) {
           metrics.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc();

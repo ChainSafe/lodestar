@@ -19,23 +19,6 @@ const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 
-/**
- * During the epoch transition, additional data is precomputed to avoid traversing any state a second
- * time. Attestations are a big part of this, and each validator has a "status" to represent its
- * precomputed participation.
- */
-export type AttesterStatus = {
-  proposerIndex: number; // -1 when not included by any proposer
-  inclusionDelay: number;
-};
-
-export function createAttesterStatus(): AttesterStatus {
-  return {
-    proposerIndex: -1,
-    inclusionDelay: 0,
-  };
-}
-
 export function hasMarkers(flags: number, markers: number): boolean {
   return (flags & markers) === markers;
 }

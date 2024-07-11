@@ -52,7 +52,7 @@ export function getAttestationDeltas(
   state: CachedBeaconStatePhase0,
   cache: EpochTransitionCache
 ): [number[], number[]] {
-  const {flags, statuses} = cache;
+  const {flags, proposerIndices, inclusionDelays} = cache;
   const validatorCount = flags.length;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
@@ -79,9 +79,8 @@ export function getAttestationDeltas(
   // so there are limited values of them like 32, 31, 30
   const rewardPnaltyItemCache = new Map<number, RewardPenaltyItem>();
   const {effectiveBalanceIncrements} = state.epochCtx;
-  for (let i = 0; i < statuses.length; i++) {
+  for (let i = 0; i < flags.length; i++) {
     const flag = flags[i];
-    const status = statuses[i];
     const effectiveBalanceIncrement = effectiveBalanceIncrements[i];
     const effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
 
@@ -123,8 +122,8 @@ export function getAttestationDeltas(
 
     // inclusion speed bonus
     if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
-      rewards[status.proposerIndex] += proposerReward;
-      rewards[i] += Math.floor(maxAttesterReward / status.inclusionDelay);
+      rewards[proposerIndices[i]] += proposerReward;
+      rewards[i] += Math.floor(maxAttesterReward / inclusionDelays[i]);
     }
 
     if (hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {

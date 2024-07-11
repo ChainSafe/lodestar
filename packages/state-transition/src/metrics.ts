@@ -2,7 +2,6 @@ import {Epoch} from "@lodestar/types";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "./types.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
-import {AttesterStatus} from "./util/attesterStatus.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 
 export type BeaconStateTransitionMetrics = {
@@ -23,7 +22,7 @@ export type BeaconStateTransitionMetrics = {
   postStateValidatorsNodesPopulatedHit: Gauge;
   registerValidatorStatuses: (
     currentEpoch: Epoch,
-    statuses: AttesterStatus[],
+    inclusionDelays: number[],
     flags: number[],
     isActiveCurrEpoch: boolean[],
     balances?: number[]

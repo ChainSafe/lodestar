@@ -3,8 +3,6 @@ import {intDiv} from "@lodestar/utils";
 import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 
 import {
-  AttesterStatus,
-  createAttesterStatus,
   hasMarkers,
   FLAG_UNSLASHED,
   FLAG_ELIGIBLE_ATTESTER,
@@ -128,7 +126,10 @@ export interface EpochTransitionCache {
    * - prev attester flag set
    * With a status flag to check this conditions at once we just have to mask with an OR of the conditions.
    */
-  statuses: AttesterStatus[];
+
+  proposerIndices: number[];
+
+  inclusionDelays: number[];
 
   flags: number[];
 
@@ -196,7 +197,6 @@ export function beforeProcessEpoch(
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
-  const statuses: AttesterStatus[] = [];
 
   let totalActiveStakeByIncrement = 0;
 
@@ -210,8 +210,15 @@ export function beforeProcessEpoch(
   const isActivePrevEpoch = new Array(validatorCount).fill(true);
   const isActiveCurrEpoch = new Array(validatorCount).fill(true);
   const isActiveNextEpoch = new Array(validatorCount).fill(true);
-  // Flags for each validator
-  // See src/util/attesterStatus.ts
+
+  // During the epoch transition, additional data is precomputed to avoid traversing any state a second
+  // time. Attestations are a big part of this, and each validator has a "status" to represent its
+  // precomputed participation.
+  // - proposerIndex: number; // -1 when not included by any proposer
+  // - inclusionDelay: number;
+  // - flags: number; // bitfield of AttesterFlags
+  const proposerIndices = new Array(validatorCount).fill(-1);
+  const inclusionDelays = new Array(validatorCount).fill(0);
   const flags = new Array(validatorCount).fill(0);
 
   // Clone before being mutated in processEffectiveBalanceUpdates
@@ -221,7 +228,6 @@ export function beforeProcessEpoch(
 
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
-    const status = createAttesterStatus();
 
     if (validator.slashed) {
       if (slashingsEpoch === validator.withdrawableEpoch) {
@@ -302,8 +308,6 @@ export function beforeProcessEpoch(
       indicesToEject.push(i);
     }
 
-    statuses.push(status);
-
     if (!isActiveNext) {
       isActiveNextEpoch[i] = false;
     }
@@ -331,7 +335,8 @@ export function beforeProcessEpoch(
   if (forkSeq === ForkSeq.phase0) {
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
-      statuses,
+      proposerIndices,
+      inclusionDelays,
       flags,
       (state as CachedBeaconStatePhase0).previousEpochAttestations.getAllReadonly(),
       prevEpoch,
@@ -341,7 +346,8 @@ export function beforeProcessEpoch(
     );
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
-      statuses,
+      proposerIndices,
+      inclusionDelays,
       flags,
       (state as CachedBeaconStatePhase0).currentEpochAttestations.getAllReadonly(),
       currentEpoch,
@@ -442,7 +448,8 @@ export function beforeProcessEpoch(
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActiveCurrEpoch,
     isActiveNextEpoch,
-    statuses,
+    proposerIndices,
+    inclusionDelays,
     flags,
 
     // Will be assigned in processRewardsAndPenalties()
