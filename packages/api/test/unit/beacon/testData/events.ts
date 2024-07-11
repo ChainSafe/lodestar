@@ -1,15 +1,15 @@
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {Api, EventData, EventType, blobSidecarSSE} from "../../../../src/beacon/routes/events.js";
+import {Endpoints, EventData, EventType, blobSidecarSSE} from "../../../../src/beacon/routes/events.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const abortController = new AbortController();
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const testData: GenericServerTestCases<Api> = {
+export const testData: GenericServerTestCases<Endpoints> = {
   eventstream: {
-    args: [[EventType.head, EventType.chainReorg], abortController.signal, function onEvent() {}],
+    args: {topics: [EventType.head, EventType.chainReorg], signal: abortController.signal, onEvent: () => {}},
     res: undefined,
   },
 };

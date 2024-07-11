@@ -3,7 +3,7 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lod
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -77,7 +77,7 @@ export class SyncCommitteeDutiesService {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     metrics: Metrics | null,
@@ -222,8 +222,7 @@ export class SyncCommitteeDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (syncCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      const res = await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions);
-      ApiError.assert(res, "Failed to subscribe to sync committee subnets");
+      (await this.api.validator.prepareSyncCommitteeSubnets({subscriptions: syncCommitteeSubscriptions})).assertOk();
     }
   }
 
@@ -236,13 +235,12 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const res = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr);
-    ApiError.assert(res, "Failed to obtain SyncDuties");
+    const duties = (await this.api.validator.getSyncCommitteeDuties({epoch, indices: indexArr})).value();
 
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
-    for (const duty of res.response.data) {
+    for (const duty of duties) {
       const {validatorIndex} = duty;
       if (!this.validatorStore.hasValidatorIndex(validatorIndex)) {
         continue;

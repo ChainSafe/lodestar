@@ -1,16 +1,16 @@
 import {toHexString} from "@chainsafe/ssz";
-import {deneb, RootHex, ssz, allForks} from "@lodestar/types";
+import {deneb, RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
-import {BLOBSIDECAR_FIXED_SIZE, ForkSeq} from "@lodestar/params";
+import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName} from "@lodestar/params";
 
 import {
   BlockInput,
   NullBlockInput,
   getBlockInput,
   BlockSource,
-  BlockInputBlobs,
-  BlobsCache,
+  BlockInputDataBlobs,
+  CachedData,
   GossipedInputType,
   getBlockInputBlobs,
   BlobsSource,
@@ -23,16 +23,14 @@ export enum BlockInputAvailabilitySource {
 }
 
 type GossipedBlockInput =
-  | {type: GossipedInputType.block; signedBlock: allForks.SignedBeaconBlock; blockBytes: Uint8Array | null}
+  | {type: GossipedInputType.block; signedBlock: SignedBeaconBlock; blockBytes: Uint8Array | null}
   | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null};
 
 type BlockInputCacheType = {
-  block?: allForks.SignedBeaconBlock;
+  fork: ForkName;
+  block?: SignedBeaconBlock;
   blockBytes?: Uint8Array | null;
-  blobsCache: BlobsCache;
-  // blobs promise and its callback cached for delayed resolution
-  availabilityPromise: Promise<BlockInputBlobs>;
-  resolveAvailability: (blobs: BlockInputBlobs) => void;
+  cachedData?: CachedData;
   // block promise and its callback cached for delayed resolution
   blockInputPromise: Promise<BlockInput>;
   resolveBlockInput: (blockInput: BlockInput) => void;
@@ -77,25 +75,29 @@ export class SeenGossipBlockInput {
       } {
     let blockHex;
     let blockCache;
+    let fork;
 
     if (gossipedInput.type === GossipedInputType.block) {
       const {signedBlock, blockBytes} = gossipedInput;
+      fork = config.getForkName(signedBlock.message.slot);
 
       blockHex = toHexString(
         config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry();
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
 
       blockCache.block = signedBlock;
       blockCache.blockBytes = blockBytes;
     } else {
       const {blobSidecar, blobBytes} = gossipedInput;
       const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
+      fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
+
       blockHex = toHexString(blockRoot);
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry();
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
-      blockCache.blobsCache.set(blobSidecar.index, {
+      blockCache.cachedData?.blobsCache.set(blobSidecar.index, {
         blobSidecar,
         // easily splice out the unsigned message as blob is a fixed length type
         blobBytes: blobBytes?.slice(0, BLOBSIDECAR_FIXED_SIZE) ?? null,
@@ -106,23 +108,21 @@ export class SeenGossipBlockInput {
       this.blockInputCache.set(blockHex, blockCache);
     }
 
-    const {
-      block: signedBlock,
-      blockBytes,
-      blobsCache,
-      availabilityPromise,
-      resolveAvailability,
-      blockInputPromise,
-      resolveBlockInput,
-    } = blockCache;
+    const {block: signedBlock, blockBytes, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
 
     if (signedBlock !== undefined) {
-      if (config.getForkSeq(signedBlock.message.slot) < ForkSeq.deneb) {
+      if (!isForkBlobs(fork)) {
         return {
-          blockInput: getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, blockBytes ?? null),
+          blockInput: getBlockInput.preData(config, signedBlock, BlockSource.gossip, blockBytes ?? null),
           blockInputMeta: {pending: null, haveBlobs: 0, expectedBlobs: 0},
         };
       }
+
+      if (cachedData === undefined || !isForkBlobs(cachedData.fork)) {
+        throw Error("Missing or Invalid fork cached Data for deneb+ block");
+      }
+      const {blobsCache, resolveAvailability} = cachedData;
+
       // block is available, check if all blobs have shown up
       const {slot, body} = signedBlock.message;
       const {blobKzgCommitments} = body as deneb.BeaconBlockBody;
@@ -136,33 +136,29 @@ export class SeenGossipBlockInput {
 
       if (blobKzgCommitments.length === blobsCache.size) {
         const allBlobs = getBlockInputBlobs(blobsCache);
-        resolveAvailability({...allBlobs, blobsSource: BlobsSource.gossip});
+        const blockData = {...allBlobs, blobsSource: BlobsSource.gossip, fork: cachedData.fork};
+        resolveAvailability(blockData);
         metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const {blobs, blobsBytes} = allBlobs;
-        const blockInput = getBlockInput.postDeneb(
+        const blockInput = getBlockInput.availableData(
           config,
           signedBlock,
           BlockSource.gossip,
-          blobs,
-          BlobsSource.gossip,
           blockBytes ?? null,
-          blobsBytes
+          blockData
         );
 
         resolveBlockInput(blockInput);
         return {
           blockInput,
-          blockInputMeta: {pending: null, haveBlobs: blobs.length, expectedBlobs: blobKzgCommitments.length},
+          blockInputMeta: {pending: null, haveBlobs: allBlobs.blobs.length, expectedBlobs: blobKzgCommitments.length},
         };
       } else {
-        const blockInput = getBlockInput.blobsPromise(
+        const blockInput = getBlockInput.dataPromise(
           config,
           signedBlock,
           BlockSource.gossip,
-          blobsCache,
           blockBytes ?? null,
-          availabilityPromise,
-          resolveAvailability
+          cachedData
         );
 
         resolveBlockInput(blockInput);
@@ -177,13 +173,16 @@ export class SeenGossipBlockInput {
       }
     } else {
       // will need to wait for the block to showup
+      if (cachedData === undefined) {
+        throw Error("Missing cachedData for deneb+ blobs");
+      }
+      const {blobsCache} = cachedData;
+
       return {
         blockInput: {
           block: null,
           blockRootHex: blockHex,
-          blobsCache,
-          availabilityPromise,
-          resolveAvailability,
+          cachedData,
           blockInputPromise,
         },
         blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
@@ -192,22 +191,30 @@ export class SeenGossipBlockInput {
   }
 }
 
-function getEmptyBlockInputCacheEntry(): BlockInputCacheType {
+function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
   // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
   let resolveBlockInput: ((block: BlockInput) => void) | null = null;
   const blockInputPromise = new Promise<BlockInput>((resolveCB) => {
     resolveBlockInput = resolveCB;
   });
+  if (resolveBlockInput === null) {
+    throw Error("Promise Constructor was not executed immediately");
+  }
+  if (!isForkBlobs(fork)) {
+    return {fork, blockInputPromise, resolveBlockInput};
+  }
 
-  let resolveAvailability: ((blobs: BlockInputBlobs) => void) | null = null;
-  const availabilityPromise = new Promise<BlockInputBlobs>((resolveCB) => {
+  let resolveAvailability: ((blobs: BlockInputDataBlobs) => void) | null = null;
+  const availabilityPromise = new Promise<BlockInputDataBlobs>((resolveCB) => {
     resolveAvailability = resolveCB;
   });
 
-  if (resolveAvailability === null || resolveBlockInput === null) {
+  if (resolveAvailability === null) {
     throw Error("Promise Constructor was not executed immediately");
   }
+
   const blobsCache = new Map();
-  return {blockInputPromise, resolveBlockInput, availabilityPromise, resolveAvailability, blobsCache};
+  const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
+  return {fork, blockInputPromise, resolveBlockInput, cachedData};
 }

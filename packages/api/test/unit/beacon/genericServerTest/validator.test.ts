@@ -1,13 +1,13 @@
 import {describe} from "vitest";
 import {config} from "@lodestar/config/default";
-import {Api, ReqTypes} from "../../../../src/beacon/routes/validator.js";
+import {Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {getClient} from "../../../../src/beacon/client/validator.js";
 import {getRoutes} from "../../../../src/beacon/server/validator.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/validator.js";
 
 describe("beacon / validator", () => {
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
+  runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
   // TODO: Extra tests to implement maybe
 

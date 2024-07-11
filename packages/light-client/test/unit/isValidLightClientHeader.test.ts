@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
-import {ssz, allForks} from "@lodestar/types";
+import {LightClientHeader, ssz} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
 
@@ -80,7 +80,7 @@ describe("isValidLightClientHeader", function () {
     executionBranch: capellaLCHeader.executionBranch,
   };
 
-  const testCases: [string, allForks.LightClientHeader][] = [
+  const testCases: [string, LightClientHeader][] = [
     ["altair LC header", altairLCHeader],
     ["altair upgraded to capella", altairUpgradedCapellaLCHeader],
     ["altair upgraded to deneb", altairUpgradedDenebLCHeader],
@@ -88,7 +88,7 @@ describe("isValidLightClientHeader", function () {
     ["capella upgraded to deneb LC header", capellaUpgradedDenebHeader],
   ];
 
-  testCases.forEach(([name, header]: [string, allForks.LightClientHeader]) => {
+  testCases.forEach(([name, header]: [string, LightClientHeader]) => {
     it(name, function () {
       const isValid = isValidLightClientHeader(config, header);
       expect(isValid).toBe(true);

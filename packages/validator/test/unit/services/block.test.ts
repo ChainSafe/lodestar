@@ -5,11 +5,11 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
 import {ssz, ProducedBlockSource} from "@lodestar/types";
-import {HttpStatusCode, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub} from "../../utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
@@ -39,15 +39,12 @@ describe("BlockDutiesService", function () {
   it("Should produce, sign, and publish a block", async function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
-    api.validator.getProposerDuties.mockResolvedValue({
-      response: {
-        dependentRoot: ZERO_HASH_HEX,
-        executionOptimistic: false,
-        data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
-      },
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
+    api.validator.getProposerDuties.mockResolvedValue(
+      mockApiResponse({
+        data: [{slot, validatorIndex: 0, pubkey: pubkeys[0]}],
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
 
     const clock = new ClockMock();
     // use produceBlockV3
@@ -71,19 +68,19 @@ describe("BlockDutiesService", function () {
     validatorStore.getFeeRecipient.mockReturnValue("0x00");
     validatorStore.strictFeeRecipientCheck.mockReturnValue(false);
 
-    api.validator.produceBlockV3.mockResolvedValue({
-      response: {
+    api.validator.produceBlockV3.mockResolvedValue(
+      mockApiResponse({
         data: signedBlock.message,
-        version: ForkName.bellatrix,
-        executionPayloadValue: BigInt(1),
-        consensusBlockValue: BigInt(1),
-        executionPayloadBlinded: false,
-        executionPayloadSource: ProducedBlockSource.engine,
-      },
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
-    api.beacon.publishBlockV2.mockResolvedValue({ok: true, status: HttpStatusCode.OK, response: undefined});
+        meta: {
+          version: ForkName.bellatrix,
+          executionPayloadValue: BigInt(1),
+          consensusBlockValue: BigInt(1),
+          executionPayloadBlinded: false,
+          executionPayloadSource: ProducedBlockSource.engine,
+        },
+      })
+    );
+    api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
 
     // Trigger block production for slot 1
     const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
@@ -95,17 +92,16 @@ describe("BlockDutiesService", function () {
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlockV2.mock.calls[0]).toEqual([
-      signedBlock,
-      {broadcastValidation: routes.beacon.BroadcastValidation.consensus},
+      {signedBlockOrContents: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
 
     // ProduceBlockV3 is called with all correct arguments
     expect(api.validator.produceBlockV3.mock.calls[0]).toEqual([
-      1,
-      signedBlock.message.body.randaoReveal,
-      "aaaa",
-      false,
       {
+        slot: 1,
+        randaoReveal: signedBlock.message.body.randaoReveal,
+        graffiti: "aaaa",
+        skipRandaoVerification: false,
         feeRecipient: "0x00",
         builderSelection: routes.validator.BuilderSelection.MaxProfit,
         strictFeeRecipientCheck: false,
@@ -118,15 +114,12 @@ describe("BlockDutiesService", function () {
   it("Should produce, sign, and publish a blinded block", async function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
-    api.validator.getProposerDuties.mockResolvedValue({
-      response: {
-        dependentRoot: ZERO_HASH_HEX,
-        executionOptimistic: false,
-        data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
-      },
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
+    api.validator.getProposerDuties.mockResolvedValue(
+      mockApiResponse({
+        data: [{slot, validatorIndex: 0, pubkey: pubkeys[0]}],
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
 
     const clock = new ClockMock();
     // use produceBlockV3
@@ -142,19 +135,19 @@ describe("BlockDutiesService", function () {
       message: block,
       signature: signedBlock.signature,
     }));
-    api.validator.produceBlockV3.mockResolvedValue({
-      response: {
+    api.validator.produceBlockV3.mockResolvedValue(
+      mockApiResponse({
         data: signedBlock.message,
-        version: ForkName.bellatrix,
-        executionPayloadValue: BigInt(1),
-        consensusBlockValue: BigInt(1),
-        executionPayloadBlinded: true,
-        executionPayloadSource: ProducedBlockSource.engine,
-      },
-      ok: true,
-      status: HttpStatusCode.OK,
-    });
-    api.beacon.publishBlindedBlockV2.mockResolvedValue({ok: true, status: HttpStatusCode.OK, response: undefined});
+        meta: {
+          version: ForkName.bellatrix,
+          executionPayloadValue: BigInt(1),
+          consensusBlockValue: BigInt(1),
+          executionPayloadBlinded: true,
+          executionPayloadSource: ProducedBlockSource.engine,
+        },
+      })
+    );
+    api.beacon.publishBlindedBlockV2.mockResolvedValue(mockApiResponse({}));
 
     // Trigger block production for slot 1
     const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
@@ -166,8 +159,7 @@ describe("BlockDutiesService", function () {
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlindedBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlindedBlockV2.mock.calls[0]).toEqual([
-      signedBlock,
-      {broadcastValidation: routes.beacon.BroadcastValidation.consensus},
+      {signedBlindedBlock: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
   });
 });

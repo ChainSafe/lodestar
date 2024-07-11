@@ -2,7 +2,6 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got, {RequestError} from "got";
 import yaml from "js-yaml";
-import {HttpClient} from "@lodestar/api";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../../interfaces.js";
@@ -93,25 +92,25 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       health: async () => {
         try {
           await got.get(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
-          return {ok: true};
         } catch (err) {
           if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
-            return {ok: true};
+            return;
           }
-          return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};
+          throw err;
         }
       },
     },
   ]);
 
-  const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`});
   const api = getClient(
     {baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`},
     {config: forkConfig}
   ) as unknown as LighthouseAPI;
   api.lighthouse = {
     async getPeers() {
-      return httpClient.json({url: "/lighthouse/peers", method: "GET"});
+      const res = await got(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      return {body: JSON.parse(res.body), status: res.statusCode};
     },
   };
 

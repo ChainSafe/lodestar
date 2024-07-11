@@ -64,7 +64,10 @@ export class Simulation {
       timestampFormat: {
         format: TimestampFormatCode.DateRegular,
       },
-      file: {level: LogLevel.debug, filepath: path.join(options.logsDir, `simulation-${this.options.id}.log`)},
+      file: {
+        level: options.logLevel ?? LogLevel.debug,
+        filepath: path.join(options.logsDir, `simulation-${this.options.id}.log`),
+      },
     });
     this.clock = new EpochClock({
       genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
@@ -74,7 +77,7 @@ export class Simulation {
     });
 
     this.externalSigner = new ExternalSignerServer([]);
-    this.runner = new Runner({logsDir: this.options.logsDir, logger: this.logger.child({module: "runner"})});
+    this.runner = new Runner({logger: this.logger});
     this.tracker = SimulationTracker.initWithDefaults({
       logsDir: options.logsDir,
       logger: this.logger,
@@ -173,12 +176,12 @@ export class Simulation {
         for (const node of this.nodes) {
           if (node.validator?.keys.type === "remote") {
             this.externalSigner.addKeys(node.validator?.keys.secretKeys);
-            await node.validator.keyManager.importRemoteKeys(
-              node.validator.keys.secretKeys.map((sk) => ({
+            await node.validator.keyManager.importRemoteKeys({
+              remoteSigners: node.validator.keys.secretKeys.map((sk) => ({
                 pubkey: sk.toPublicKey().toHex(),
                 url: this.externalSigner.url,
-              }))
-            );
+              })),
+            });
             this.logger.info(`Imported remote keys for node ${node.id}`);
           }
         }

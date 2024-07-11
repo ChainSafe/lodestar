@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {allForks, Epoch, Slot} from "@lodestar/types";
+import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
@@ -93,14 +93,14 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   };
 }
 
-function sumAttestationBits(block: allForks.BeaconBlock): number {
+function sumAttestationBits(block: BeaconBlock): number {
   return Array.from(block.body.attestations).reduce(
     (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
     0
   );
 }
 
-function avgInclusionDelay(block: allForks.BeaconBlock): number {
+function avgInclusionDelay(block: BeaconBlock): number {
   const inclDelay = Array.from(block.body.attestations).map((att) => block.slot - att.data.slot);
   return avg(inclDelay);
 }

@@ -13,7 +13,7 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {Metadata, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
@@ -184,7 +184,7 @@ export class ReqRespBeaconNode extends ReqResp {
     );
   }
 
-  async sendMetadata(peerId: PeerId): Promise<allForks.Metadata> {
+  async sendMetadata(peerId: PeerId): Promise<Metadata> {
     return collectExactOneTyped(
       this.sendReqRespRequest(
         peerId,

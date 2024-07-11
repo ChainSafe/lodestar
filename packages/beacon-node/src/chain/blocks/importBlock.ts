@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
+import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -58,7 +58,7 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus} = fullyVerifiedBlock;
   const {block, source} = blockInput;
   const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
@@ -70,8 +70,8 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
-  // this is just a type assertion since blockinput with blobsPromise type will not end up here
-  if (blockInput.type === BlockInputType.blobsPromise) {
+  // this is just a type assertion since blockinput with dataPromise type will not end up here
+  if (blockInput.type === BlockInputType.dataPromise) {
     throw Error("Unavailable block can not be imported in forkchoice");
   }
 
@@ -90,7 +90,8 @@ export async function importBlock(
     postState,
     blockDelaySec,
     this.clock.currentSlot,
-    executionStatus
+    executionStatus,
+    dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
@@ -108,11 +109,11 @@ export async function importBlock(
       executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
     });
 
-    // blobsPromise will not end up here, but preDeneb could. In future we might also allow syncing
+    // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
     // out of data range blocks and import then in forkchoice although one would not be able to
     // attest and propose with such head similar to optimistic sync
-    if (blockInput.type === BlockInputType.postDeneb) {
-      const {blobsSource, blobs} = blockInput;
+    if (blockInput.type === BlockInputType.availableData) {
+      const {blobsSource, blobs} = blockInput.blockData;
 
       this.metrics?.importBlock.blobsBySource.inc({blobsSource});
       for (const blobSidecar of blobs) {
@@ -305,7 +306,7 @@ export async function importBlock(
       callInNextEventLoop(() => {
         try {
           this.lightClientServer.onImportBlockHead(
-            block.message as allForks.AllForksLightClient["BeaconBlock"],
+            block.message as BeaconBlock<ForkLightClient>,
             postState as CachedBeaconStateAltair,
             parentBlockSlot
           );

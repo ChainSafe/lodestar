@@ -70,9 +70,13 @@ export function createElapsedTimeTracker({minElapsedTime}: {minElapsedTime: numb
   function elapsedTimeTracker(): boolean {
     const now = Date.now();
     const msSinceLastCall = now - (lastTimeCalled ?? 0);
-    lastTimeCalled = now;
 
-    return msSinceLastCall > minElapsedTime;
+    if (msSinceLastCall > minElapsedTime) {
+      // Do not reset timer if called before timer elapsed
+      lastTimeCalled = now;
+      return true;
+    }
+    return false;
   }
 
   return Object.assign(elapsedTimeTracker, {

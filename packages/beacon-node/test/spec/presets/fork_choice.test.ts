@@ -4,10 +4,10 @@ import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
+import {phase0, bellatrix, ssz, RootHex, deneb, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
 import {bnToNum, fromHex} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq, isForkBlobs, ForkName} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
@@ -97,6 +97,8 @@ const forkChoiceTest =
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
             assertCorrectProgressiveBalances,
+            proposerBoost: true,
+            proposerBoostReorg: true,
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
@@ -210,17 +212,14 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.postDeneb(
-                    config,
-                    signedBlock,
-                    BlockSource.gossip,
-                    blobSidecars,
-                    BlobsSource.gossip,
-                    null,
-                    [null]
-                  );
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, null, {
+                    fork: ForkName.deneb,
+                    blobs: blobSidecars,
+                    blobsBytes: [null],
+                    blobsSource: BlobsSource.gossip,
+                  });
                 } else {
-                  blockImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null);
+                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip, null);
                 }
 
                 await chain.processBlock(blockImport, {
@@ -270,7 +269,7 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = chain.forkChoice.updateHead();
+              const head = (chain.forkChoice as ForkChoice).updateHead();
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {
@@ -346,7 +345,7 @@ const forkChoiceTest =
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
-          const blocks = new Map<string, allForks.SignedBeaconBlock>();
+          const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const powBlocks = new Map<string, bellatrix.PowBlock>();
           const attestations = new Map<string, phase0.Attestation>();
@@ -488,9 +487,9 @@ type ForkChoiceTestCase = {
     bls_setting: bigint;
   };
   anchorState: BeaconStateAllForks;
-  anchorBlock: allForks.BeaconBlock;
+  anchorBlock: BeaconBlock;
   steps: Step[];
-  blocks: Map<string, allForks.SignedBeaconBlock>;
+  blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, phase0.Attestation>;

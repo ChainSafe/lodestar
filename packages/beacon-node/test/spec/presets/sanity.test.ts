@@ -7,7 +7,7 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {allForks, deneb, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -107,7 +107,7 @@ export function generateBlocksSZZTypeMapping(fork: ForkName, n: number): BlocksS
 }
 
 type SanityBlocksTestCase = {
-  [k: string]: allForks.SignedBeaconBlock | unknown | null | undefined;
+  [k: string]: SignedBeaconBlock | unknown | null | undefined;
   meta: {
     blocks_count: number;
     bls_setting: bigint;

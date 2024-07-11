@@ -1,11 +1,11 @@
 import {describe, it, expect, beforeEach} from "vitest";
-import {ssz, allForks} from "@lodestar/types";
+import {LightClientHeader, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
 
 describe("UpgradeLightClientHeader", function () {
-  let lcHeaderByFork: Record<ForkName, allForks.LightClientHeader>;
+  let lcHeaderByFork: Record<ForkName, LightClientHeader>;
   let testSlots: Record<ForkName, number>;
 
   /* eslint-disable @typescript-eslint/naming-convention */

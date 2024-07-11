@@ -1,42 +1,60 @@
-import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
-import {BeaconPreset} from "@lodestar/params";
-import {ChainConfig} from "@lodestar/config";
-import {Bytes32, UintNum64, phase0, ssz} from "@lodestar/types";
-import {mapValues} from "@lodestar/utils";
+/* eslint-disable @typescript-eslint/naming-convention */
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {ssz} from "@lodestar/types";
 import {
   ArrayOf,
-  ReqEmpty,
-  reqEmpty,
-  ReturnTypes,
-  ReqSerializers,
-  RoutesData,
-  sameType,
-  ContainerData,
-} from "../../utils/index.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../interfaces.js";
+  EmptyArgs,
+  EmptyRequestCodec,
+  EmptyMeta,
+  EmptyMetaCodec,
+  EmptyRequest,
+  JsonOnlyResp,
+} from "../../utils/codecs.js";
+import {Endpoint, RouteDefinitions} from "../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type DepositContract = {
-  chainId: UintNum64;
-  address: Bytes32;
-};
+export const DepositContractType = new ContainerType(
+  {
+    chainId: ssz.UintNum64,
+    address: ssz.ExecutionAddress,
+  },
+  {jsonCase: "eth2"}
+);
 
-export type Spec = BeaconPreset & ChainConfig;
+export const ForkListType = ArrayOf(ssz.phase0.Fork);
 
-export type Api = {
+export type DepositContract = ValueOf<typeof DepositContractType>;
+export type ForkList = ValueOf<typeof ForkListType>;
+export type Spec = Record<string, string>;
+
+export type Endpoints = {
   /**
    * Get deposit contract address.
    * Retrieve Eth1 deposit contract address and chain ID.
    */
-  getDepositContract(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: DepositContract}}>>;
+  getDepositContract: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    DepositContract,
+    EmptyMeta
+  >;
 
   /**
    * Get scheduled upcoming forks.
    * Retrieve all scheduled upcoming forks this node is aware of.
    */
-  getForkSchedule(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Fork[]}}>>;
+  getForkSchedule: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ForkList,
+    EmptyMeta
+  >;
 
   /**
    * Retrieve specification configuration used on this node.  The configuration should include:
@@ -48,37 +66,52 @@ export type Api = {
    * - any value starting with 0x in the spec is returned as a hex string
    * - numeric values are returned as a quoted integer
    */
-  getSpec(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Record<string, string>}}>>;
+  getSpec: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    Spec,
+    EmptyMeta
+  >;
 };
 
-/**
- * Define javascript values for each route
- */
-export const routesData: RoutesData<Api> = {
-  getDepositContract: {url: "/eth/v1/config/deposit_contract", method: "GET"},
-  getForkSchedule: {url: "/eth/v1/config/fork_schedule", method: "GET"},
-  getSpec: {url: "/eth/v1/config/spec", method: "GET"},
-};
-
-export type ReqTypes = {[K in keyof Api]: ReqEmpty};
-
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
-  return mapValues(routesData, () => reqEmpty);
-}
-
-/* eslint-disable @typescript-eslint/naming-convention */
-export function getReturnTypes(): ReturnTypes<Api> {
-  const DepositContract = new ContainerType(
-    {
-      chainId: ssz.UintNum64,
-      address: new ByteVectorType(20),
-    },
-    {jsonCase: "eth2"}
-  );
-
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    getDepositContract: ContainerData(DepositContract),
-    getForkSchedule: ContainerData(ArrayOf(ssz.phase0.Fork)),
-    getSpec: ContainerData(sameType()),
+    getDepositContract: {
+      url: "/eth/v1/config/deposit_contract",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: DepositContractType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getForkSchedule: {
+      url: "/eth/v1/config/fork_schedule",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ForkListType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getSpec: {
+      url: "/eth/v1/config/spec",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResp({
+        data: {
+          toJson: (data) => data,
+          fromJson: (data) => {
+            if (typeof data !== "object" || data === null) {
+              throw Error("JSON must be of type object");
+            }
+            return data as Spec;
+          },
+        },
+        meta: EmptyMetaCodec,
+      }),
+    },
   };
 }

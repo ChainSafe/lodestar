@@ -28,6 +28,34 @@ const config: Config = {
     locales: ["en"],
   },
 
+  plugins: [
+    [
+      "@docusaurus/plugin-client-redirects",
+      {
+        createRedirects(existingPath: string) {
+          if (
+            existingPath.includes("/advanced-topics") ||
+            existingPath.includes("/getting-started") ||
+            existingPath.includes("/beacon-management") ||
+            existingPath.includes("/validator-management") ||
+            existingPath.includes("/logging-and-metrics") ||
+            existingPath.includes("/bootnode") ||
+            existingPath.includes("/data-retention")
+          ) {
+            return ["/run".concat(existingPath)];
+          } else if (existingPath.includes("/testing") || existingPath.includes("/tools")) {
+            return ["/contribution".concat(existingPath)];
+          } else if (existingPath.includes("/lightclient-prover")) {
+            return ["/libraries".concat(existingPath)];
+          } else if (existingPath.includes("data-retention.md")) {
+            return ["/run/beacon-management".concat(existingPath)];
+          }
+          return undefined; // Return a falsy value: no redirect created
+        },
+      },
+    ],
+  ],
+
   presets: [
     [
       "classic",

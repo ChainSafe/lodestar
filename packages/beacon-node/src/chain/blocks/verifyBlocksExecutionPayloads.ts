@@ -6,7 +6,7 @@ import {
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
+import {bellatrix, Slot, deneb, SignedBeaconBlock} from "@lodestar/types";
 import {
   IForkChoice,
   assertValidTerminalPowBlock,
@@ -68,7 +68,7 @@ type VerifyBlockExecutionResponse =
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -274,7 +274,7 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  block: allForks.SignedBeaconBlock,
+  block: SignedBeaconBlock,
   preState0: CachedBeaconStateAllForks,
   opts: BlockProcessOpts,
   isOptimisticallySafe: boolean,
@@ -393,7 +393,7 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[]
+  blocks: SignedBeaconBlock[]
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
   let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;

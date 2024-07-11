@@ -14,14 +14,14 @@
 
 ## Getting started
 
-- :gear: Follow the installation method for [source install](https://chainsafe.github.io/lodestar/getting-started/installation/#build-from-source), [NPM install](https://chainsafe.github.io/lodestar/getting-started/installation/#install-from-npm-not-recommended), or [Docker install](https://chainsafe.github.io/lodestar/getting-started/installation/#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
+- :gear: Follow the instructions for [build from source](https://chainsafe.github.io/lodestar/run/getting-started/installation#build-from-source), [binaries](https://chainsafe.github.io/lodestar/run/getting-started/installation#binaries), or [Docker](https://chainsafe.github.io/lodestar/run/getting-started/installation#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
 - :books: Use [Lodestar libraries](https://chainsafe.github.io/lodestar/supporting-libraries/libraries/) in your next Ethereum Typescript project.
-- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/getting-started/starting-a-node/).
-- :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet/).
+- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/run/beacon-management/starting-a-node/).
+- :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
 - :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
 - :nerd_face: View the [Package and dependency structure](https://chainsafe.github.io/lodestar/contribution/depgraph/).
 - :memo: Prospective contributors can read the [contributing section](./CONTRIBUTING.md) to understand how we develop and test on Lodestar.
-- :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
+- :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or join us on [Discord](https://discord.gg/yjyvFRP)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 - :rotating_light: Please note our [security policy](./SECURITY.md).
 - :bird: Follow Lodestar on [Twitter](https://twitter.com/lodestar_eth) for announcements and updates! [![Twitter Follow](https://img.shields.io/twitter/follow/lodestar_eth)](https://twitter.com/lodestar_eth)

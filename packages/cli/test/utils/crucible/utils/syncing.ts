@@ -1,13 +1,13 @@
-import {ApiError, routes} from "@lodestar/api";
-import {Slot} from "@lodestar/types";
+import {routes} from "@lodestar/api";
+import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
+import {ForkBlobs} from "@lodestar/params";
 import type {Simulation} from "../simulation.js";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
 import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitForSlot} from "./network.js";
 
 export async function assertRangeSync(env: Simulation): Promise<void> {
-  const currentHead = await env.nodes[0].beacon.api.beacon.getBlockHeader("head");
-  ApiError.assert(currentHead);
+  const currentHead = (await env.nodes[0].beacon.api.beacon.getBlockHeader({blockId: "head"})).value();
 
   const rangeSync = await env.createNodePair({
     id: "range-sync-node",
@@ -45,8 +45,8 @@ export async function assertRangeSync(env: Simulation): Promise<void> {
   );
 
   await waitForNodeSync(env, rangeSync, {
-    head: toHex(currentHead.response.data.root),
-    slot: currentHead.response.data.header.message.slot,
+    head: toHex(currentHead.root),
+    slot: currentHead.header.message.slot,
   });
 
   await rangeSync.beacon.job.stop();
@@ -63,8 +63,9 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
     });
   }
 
-  const finalizedCheckpoint = await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints("head");
-  ApiError.assert(finalizedCheckpoint);
+  const finalizedCheckpoint = (
+    await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints({stateId: "head"})
+  ).value();
 
   const checkpointSync = await env.createNodePair({
     id: "checkpoint-sync-node",
@@ -72,7 +73,7 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
       type: BeaconClient.Lodestar,
       options: {
         clientOptions: {
-          wssCheckpoint: `${toHex(finalizedCheckpoint.response.data.finalized.root)}:${finalizedCheckpoint.response.data.finalized.epoch}`,
+          wssCheckpoint: `${toHex(finalizedCheckpoint.finalized.root)}:${finalizedCheckpoint.finalized.epoch}`,
         },
       },
     },
@@ -85,8 +86,8 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
   await connectNewNode(checkpointSync, env.nodes);
 
   await waitForNodeSync(env, checkpointSync, {
-    head: toHex(finalizedCheckpoint.response.data.finalized.root),
-    slot: env.clock.getLastSlotOfEpoch(finalizedCheckpoint.response.data.finalized.epoch),
+    head: toHex(finalizedCheckpoint.finalized.root),
+    slot: env.clock.getLastSlotOfEpoch(finalizedCheckpoint.finalized.epoch),
   });
 
   await checkpointSync.beacon.job.stop();
@@ -94,10 +95,10 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
 }
 
 export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
-  const currentHead = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
-  ApiError.assert(currentHead);
-  const currentSidecars = await env.nodes[0].beacon.api.beacon.getBlobSidecars(currentHead.response.data.message.slot);
-  ApiError.assert(currentSidecars);
+  const currentHead = (await env.nodes[0].beacon.api.beacon.getBlockV2({blockId: "head"})).value();
+  const currentSidecars = (
+    await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
+  ).value();
 
   const unknownBlockSync = await env.createNodePair({
     id: "unknown-block-sync-node",
@@ -114,7 +115,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
           the 'unknown block sync' won't function properly. Moreover, the 'unknownBlockSync' requires some startup time,
           contributing to the overall gap. For stability in our CI, we've opted to set a higher limit on this constraint.
           */
-          "sync.slotImportTolerance": currentHead.response.data.message.slot,
+          "sync.slotImportTolerance": currentHead.message.slot,
         },
       },
     },
@@ -128,18 +129,16 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   // Wait for EL node to start and sync before publishing an unknown block
   await sleep(5000);
   try {
-    ApiError.assert(
-      await unknownBlockSync.beacon.api.beacon.publishBlockV2(
-        {
-          signedBlock: currentHead.response.data,
-          blobs: currentSidecars.response.data.map((b) => b.blob),
-          kzgProofs: currentSidecars.response.data.map((b) => b.kzgProof),
+    (
+      await unknownBlockSync.beacon.api.beacon.publishBlockV2({
+        signedBlockOrContents: {
+          signedBlock: currentHead as SignedBeaconBlock<ForkBlobs>,
+          blobs: currentSidecars.map((b) => b.blob),
+          kzgProofs: currentSidecars.map((b) => b.kzgProof),
         },
-        {
-          broadcastValidation: routes.beacon.BroadcastValidation.none,
-        }
-      )
-    );
+        broadcastValidation: routes.beacon.BroadcastValidation.none,
+      })
+    ).assertOk();
 
     env.tracker.record({
       message: "Publishing unknown block should fail",
@@ -157,12 +156,8 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   }
 
   await waitForHead(env, unknownBlockSync, {
-    head: toHex(
-      env.forkConfig
-        .getForkTypes(currentHead.response.data.message.slot)
-        .BeaconBlock.hashTreeRoot(currentHead.response.data.message)
-    ),
-    slot: currentHead.response.data.message.slot,
+    head: toHex(env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)),
+    slot: currentHead.message.slot,
   });
 
   await unknownBlockSync.beacon.job.stop();
@@ -185,9 +180,8 @@ export async function waitForNodeSync(
 export async function waitForNodeSyncStatus(env: Simulation, node: NodePair): Promise<void> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const result = await node.beacon.api.node.getSyncingStatus();
-    ApiError.assert(result);
-    if (!result.response.data.isSyncing) {
+    const result = (await node.beacon.api.node.getSyncingStatus()).value();
+    if (!result.isSyncing) {
       break;
     } else {
       await sleep(1000, env.options.controller.signal);

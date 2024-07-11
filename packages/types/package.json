@@ -11,14 +11,11 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.19.0",
+  "version": "1.20.0",
   "type": "module",
   "exports": {
     ".": {
       "import": "./lib/index.js"
-    },
-    "./allForks": {
-      "import": "./lib/allForks/index.js"
     },
     "./altair": {
       "import": "./lib/altair/index.js"
@@ -74,7 +71,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/ssz": "^0.15.1",
-    "@lodestar/params": "^1.19.0",
+    "@lodestar/params": "^1.20.0",
     "ethereum-cryptography": "^2.0.0"
   },
   "keywords": [

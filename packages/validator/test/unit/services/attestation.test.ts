@@ -2,11 +2,11 @@ import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {HttpStatusCode, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub} from "../../utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
@@ -85,56 +85,31 @@ describe("AttestationService", function () {
         ];
 
         // Return empty replies to duties service
-        api.beacon.getStateValidators.mockResolvedValue({
-          response: {executionOptimistic: false, finalized: false, data: []},
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
-        api.validator.getAttesterDuties.mockResolvedValue({
-          response: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false, data: []},
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
+        api.beacon.getStateValidators.mockResolvedValue(
+          mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
+        );
+        api.validator.getAttesterDuties.mockResolvedValue(
+          mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+        );
 
         // Mock duties service to return some duties directly
         vi.spyOn(attestationService["dutiesService"], "getDutiesAtSlot").mockImplementation(() => duties);
 
         // Mock beacon's attestation and aggregates endpoints
-        api.validator.produceAttestationData.mockResolvedValue({
-          response: {data: attestation.data},
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
-        api.validator.getAggregatedAttestation.mockResolvedValue({
-          response: {data: attestation},
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
-        api.beacon.submitPoolAttestations.mockResolvedValue({
-          response: undefined,
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
-        api.validator.publishAggregateAndProofs.mockResolvedValue({
-          response: undefined,
-          ok: true,
-          status: HttpStatusCode.OK,
-        });
+        api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: attestation.data}));
+        api.validator.getAggregatedAttestation.mockResolvedValue(mockApiResponse({data: attestation}));
+
+        api.beacon.submitPoolAttestations.mockResolvedValue(mockApiResponse({}));
+        api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));
 
         if (opts.distributedAggregationSelection) {
           // Mock distributed validator middleware client selections endpoint
           // and return a selection proof that passes `is_aggregator` test
-          api.validator.submitBeaconCommitteeSelections.mockResolvedValue({
-            response: {data: [{validatorIndex: 0, slot: 0, selectionProof: Buffer.alloc(1, 0x10)}]},
-            ok: true,
-            status: HttpStatusCode.OK,
-          });
+          api.validator.submitBeaconCommitteeSelections.mockResolvedValue(
+            mockApiResponse({data: [{validatorIndex: 0, slot: 0, selectionProof: Buffer.alloc(1, 0x10)}]})
+          );
           // Accept all subscriptions
-          api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue({
-            response: undefined,
-            ok: true,
-            status: HttpStatusCode.OK,
-          });
+          api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
         }
 
         // Mock signing service
@@ -152,7 +127,7 @@ describe("AttestationService", function () {
             selectionProof: ZERO_HASH,
           };
           expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledOnce();
-          expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledWith([selection]);
+          expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledWith({selections: [selection]});
 
           // Must resubscribe validator as aggregator on beacon committee subnet
           const subscription: routes.validator.BeaconCommitteeSubscription = {
@@ -163,16 +138,16 @@ describe("AttestationService", function () {
             isAggregator: true,
           };
           expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
-          expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledWith([subscription]);
+          expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledWith({subscriptions: [subscription]});
         }
 
         // Must submit the attestation received through produceAttestationData()
         expect(api.beacon.submitPoolAttestations).toHaveBeenCalledOnce();
-        expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith([attestation]);
+        expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith({signedAttestations: [attestation]});
 
         // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
         expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
-        expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith([aggregate]);
+        expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
       });
     });
   }

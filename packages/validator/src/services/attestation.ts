@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -35,7 +35,7 @@ export class AttestationService {
 
   constructor(
     private readonly logger: LoggerVc,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
@@ -167,9 +167,7 @@ export class AttestationService {
    */
   private async produceAttestation(committeeIndex: number, slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
-    const res = await this.api.validator.produceAttestationData(committeeIndex, slot);
-    ApiError.assert(res, "Error producing attestation");
-    return res.response.data;
+    return (await this.api.validator.produceAttestationData({committeeIndex, slot})).value();
   }
 
   /**
@@ -223,7 +221,7 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
+      (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
@@ -255,13 +253,12 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const res = await this.api.validator.getAggregatedAttestation(
-      ssz.phase0.AttestationData.hashTreeRoot(attestation),
-      attestation.slot
-    );
-    ApiError.assert(res, "Error producing aggregateAndProofs");
-    const aggregate = res.response;
-    this.metrics?.numParticipantsInAggregate.observe(aggregate.data.aggregationBits.getTrueBitIndexes().length);
+    const res = await this.api.validator.getAggregatedAttestation({
+      attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
+      slot: attestation.slot,
+    });
+    const aggregate = res.value();
+    this.metrics?.numParticipantsInAggregate.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
 
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
 
@@ -272,7 +269,7 @@ export class AttestationService {
           // Produce signed aggregates only for validators that are subscribed aggregators.
           if (selectionProof !== null) {
             signedAggregateAndProofs.push(
-              await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate.data)
+              await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)
             );
             this.logger.debug("Signed aggregateAndProofs", logCtxValidator);
           }
@@ -286,8 +283,7 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        const res = await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
-        ApiError.assert(res);
+        (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {
@@ -322,7 +318,7 @@ export class AttestationService {
     this.logger.debug("Submitting partial beacon committee selection proofs", {slot, count: partialSelections.length});
 
     const res = await Promise.race([
-      this.api.validator.submitBeaconCommitteeSelections(partialSelections),
+      this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections}),
       // Exit attestation aggregation flow if there is no response after 1/3 of slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
@@ -334,9 +330,8 @@ export class AttestationService {
     if (!res) {
       throw new Error("Failed to receive combined selection proofs before 1/3 of slot");
     }
-    ApiError.assert(res, "Error receiving combined selection proofs");
 
-    const combinedSelections = res.response.data;
+    const combinedSelections = res.value();
     this.logger.debug("Received combined beacon committee selection proofs", {slot, count: combinedSelections.length});
 
     const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
@@ -373,10 +368,7 @@ export class AttestationService {
 
     // If there are any subscriptions with aggregators, push them out to the beacon node.
     if (beaconCommitteeSubscriptions.length > 0) {
-      ApiError.assert(
-        await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions),
-        "Failed to resubscribe to beacon committee subnets"
-      );
+      (await this.api.validator.prepareBeaconCommitteeSubnet({subscriptions: beaconCommitteeSubscriptions})).assertOk();
       this.logger.debug("Resubscribed validators as aggregators on beacon committee subnets", {
         slot,
         count: beaconCommitteeSubscriptions.length,

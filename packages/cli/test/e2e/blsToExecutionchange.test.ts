@@ -2,7 +2,7 @@ import path from "node:path";
 import {afterAll, describe, it, vi, beforeEach, afterEach} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {sleep, retry} from "@lodestar/utils";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
@@ -39,14 +39,13 @@ describe("bLSToExecutionChange cmd", function () {
     const baseUrl = `http://127.0.0.1:${restPort}`;
     // To cleanup the event stream connection
     const httpClientController = new AbortController();
-    const client = getClient({baseUrl, getAbortSignal: () => httpClientController.signal}, {config});
+    const client = getClient({baseUrl, globalInit: {signal: httpClientController.signal}}, {config});
 
     // Wait for beacon node API to be available + genesis
     await retry(
       async () => {
-        const head = await client.beacon.getBlockHeader("head");
-        ApiError.assert(head);
-        if (head.response.data.header.message.slot < 1) throw Error("pre-genesis");
+        const head = (await client.beacon.getBlockHeader({blockId: "head"})).value();
+        if (head.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 60}
     );
@@ -73,9 +72,8 @@ describe("bLSToExecutionChange cmd", function () {
       "--toExecutionAddress 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     ]);
 
-    const pooledBlsChanges = await client.beacon.getPoolBlsToExecutionChanges();
-    ApiError.assert(pooledBlsChanges);
-    const message = pooledBlsChanges.response.data[0].message;
+    const pooledBlsChanges = (await client.beacon.getPoolBLSToExecutionChanges()).value();
+    const {message} = pooledBlsChanges[0];
     const {validatorIndex, toExecutionAddress, fromBlsPubkey} = message;
     if (
       validatorIndex !== 0 ||

@@ -16,7 +16,6 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  allForks,
   UintNum64,
   Root,
   phase0,
@@ -28,8 +27,13 @@ import {
   Wei,
   bellatrix,
   isBlindedBeaconBlock,
+  BeaconBlock,
+  SignedBeaconBlock,
+  ExecutionPayload,
+  BlindedBeaconBlock,
+  BlindedBeaconBlockBody,
 } from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -45,7 +49,14 @@ import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts, CommonBlockBody} from "./interface.js";
+import {
+  IBeaconChain,
+  ProposerPreparationData,
+  BlockHash,
+  StateGetOpts,
+  CommonBlockBody,
+  FindHeadFnName,
+} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -150,7 +161,7 @@ export class BeaconChain implements IBeaconChain {
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
   // actual publish
-  readonly producedBlockRoot = new Map<RootHex, allForks.ExecutionPayload | null>();
+  readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
 
   readonly opts: IChainOptions;
@@ -279,7 +290,8 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts,
-      this.justifiedBalancesGetter.bind(this)
+      this.justifiedBalancesGetter.bind(this),
+      logger
     );
     const regen = new QueuedStateRegenerator({
       config,
@@ -490,7 +502,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getCanonicalBlockAtSlot(
     slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
@@ -512,7 +524,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getBlockByRoot(
     root: string
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
     const block = this.forkChoice.getBlockHex(root);
     if (block) {
       const data = await this.db.block.get(fromHexString(root));
@@ -546,7 +558,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: allForks.BeaconBlock;
+    block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
@@ -555,7 +567,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: allForks.BlindedBeaconBlock;
+    block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
   }> {
@@ -608,7 +620,7 @@ export class BeaconChain implements IBeaconChain {
     const bodyRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
-        : this.config.getBlindedForkTypes(slot).BeaconBlockBody.hashTreeRoot(body as allForks.BlindedBeaconBlockBody);
+        : this.config.getExecutionForkTypes(slot).BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
     this.logger.debug("Computing block post state from the produced body", {
       slot,
       bodyRoot: toHexString(bodyRoot),
@@ -628,7 +640,7 @@ export class BeaconChain implements IBeaconChain {
     const blockRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
-        : this.config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block as allForks.BlindedBeaconBlock);
+        : this.config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toHex(blockRoot);
 
     // track the produced block for consensus broadcast validations
@@ -703,12 +715,50 @@ export class BeaconChain implements IBeaconChain {
 
   recomputeForkChoiceHead(): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.recomputeForkChoiceHead});
 
     try {
-      return this.forkChoice.updateHead();
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc();
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicialHead});
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  predictProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.predictProposerHead});
+
+    try {
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  getProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.getProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
+
+    try {
+      const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
+        mode: UpdateHeadOpt.GetProposerHead,
+        secFromSlot,
+        slot,
+      });
+
+      if (isHeadTimely && notReorgedReason !== undefined) {
+        this.metrics?.forkChoice.notReorgedReason.inc({reason: notReorgedReason});
+      }
+      return head;
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetProposerHead});
       throw e;
     } finally {
       timer?.();
@@ -724,10 +774,10 @@ export class BeaconChain implements IBeaconChain {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
-  persistBlock(data: allForks.BeaconBlock | allForks.BlindedBeaconBlock, suffix?: string): void {
+  persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
-      const sszType = this.config.getBlindedForkTypes(slot).BeaconBlock;
+      const sszType = this.config.getExecutionForkTypes(slot).BlindedBeaconBlock;
       void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
     } else {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;
@@ -1048,7 +1098,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  async getBlockRewards(block: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards> {
+  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
     const preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
@@ -1087,7 +1137,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getSyncCommitteeRewards(
-    block: allForks.FullOrBlindedBeaconBlock,
+    block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
     const preState = this.regen.getPreStateSync(block);

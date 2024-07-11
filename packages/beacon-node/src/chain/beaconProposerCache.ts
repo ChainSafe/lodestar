@@ -8,7 +8,7 @@ const PROPOSER_PRESERVE_EPOCHS = 2;
 export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
-  private readonly feeRecipientByValidatorIndex: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
+  private readonly feeRecipientByValidatorIndex: MapDef<number, {epoch: Epoch; feeRecipient: string}>;
   constructor(
     opts: {suggestedFeeRecipient: string},
     private readonly metrics?: Metrics | null
@@ -33,11 +33,11 @@ export class BeaconProposerCache {
     }
   }
 
-  getOrDefault(proposerIndex: number | string): string {
-    return this.feeRecipientByValidatorIndex.getOrDefault(`${proposerIndex}`).feeRecipient;
+  getOrDefault(proposerIndex: number): string {
+    return this.feeRecipientByValidatorIndex.getOrDefault(proposerIndex).feeRecipient;
   }
 
-  get(proposerIndex: number | string): string | undefined {
-    return this.feeRecipientByValidatorIndex.get(`${proposerIndex}`)?.feeRecipient;
+  get(proposerIndex: number): string | undefined {
+    return this.feeRecipientByValidatorIndex.get(proposerIndex)?.feeRecipient;
   }
 }

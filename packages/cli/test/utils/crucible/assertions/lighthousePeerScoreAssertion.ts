@@ -1,4 +1,3 @@
-import {ApiError} from "@lodestar/api";
 import {AssertionResult, BeaconClient, LighthouseAPI, NodePair, Assertion} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
@@ -47,13 +46,12 @@ export const lighthousePeerScoreAssertion: Assertion<"lighthousePeerScore", {gos
 };
 
 async function getLodestarPeerIds(nodes: NodePair[]): Promise<Record<string, string>> {
-  const lodestartPeers = nodes.filter((n) => n.beacon.client === BeaconClient.Lodestar);
+  const lodestarPeers = nodes.filter((n) => n.beacon.client === BeaconClient.Lodestar);
   const peerIdMap: Record<string, string> = {};
 
-  for (const p of lodestartPeers) {
-    const res = await p.beacon.api.node.getNetworkIdentity();
-    ApiError.assert(res);
-    peerIdMap[res.response.data.peerId] = p.beacon.id;
+  for (const p of lodestarPeers) {
+    const identity = (await p.beacon.api.node.getNetworkIdentity()).value();
+    peerIdMap[identity.peerId] = p.beacon.id;
   }
 
   return peerIdMap;

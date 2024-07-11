@@ -1,5 +1,4 @@
 import {capella} from "@lodestar/types";
-import {ApiError} from "@lodestar/api";
 import {MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
 import {Match, AssertionResult, Assertion} from "../interfaces.js";
 
@@ -27,21 +26,23 @@ export function createWithdrawalAssertions<T extends string>(
 
       for (const withdrawal of withdrawals) {
         withdrawalAmount += withdrawal.amount;
-        const validatorDataLastSlot = await node.beacon.api.beacon.getStateValidator(
-          slot - 1,
-          withdrawal.validatorIndex
-        );
-        const validatorDataCurrentSlot = await node.beacon.api.beacon.getStateValidator(
-          slot,
-          withdrawal.validatorIndex
-        );
-        ApiError.assert(validatorDataLastSlot);
-        ApiError.assert(validatorDataCurrentSlot);
+        const validatorDataLastSlot = (
+          await node.beacon.api.beacon.getStateValidator({
+            stateId: slot - 1,
+            validatorId: withdrawal.validatorIndex,
+          })
+        ).value();
+        const validatorDataCurrentSlot = (
+          await node.beacon.api.beacon.getStateValidator({
+            stateId: slot,
+            validatorId: withdrawal.validatorIndex,
+          })
+        ).value();
 
         validators[withdrawal.validatorIndex] = {
           withdrawalAmount: withdrawal.amount,
-          balanceInLastSlot: BigInt(validatorDataLastSlot.response.data.balance),
-          currentBalance: BigInt(validatorDataCurrentSlot.response.data.balance),
+          balanceInLastSlot: BigInt(validatorDataLastSlot.balance),
+          currentBalance: BigInt(validatorDataCurrentSlot.balance),
         };
       }
 

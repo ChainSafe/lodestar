@@ -5,7 +5,7 @@ import {Epoch, Root} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {ZERO_HASH} from "../constants/constants.js";
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, getCurrentEpoch, computeCheckpointEpochAtStateSlot} from "./epoch.js";
 import {getCurrentSlot} from "./slot.js";
 import {getActiveValidatorIndices, getChurnLimit} from "./validator.js";

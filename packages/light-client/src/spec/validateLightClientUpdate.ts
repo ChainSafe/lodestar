@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
-import {Root, ssz, allForks} from "@lodestar/types";
+import {LightClientUpdate, Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   FINALIZED_ROOT_INDEX,
@@ -27,7 +27,7 @@ import {ILightClientStore} from "./store.js";
 export function validateLightClientUpdate(
   config: ChainForkConfig,
   store: ILightClientStore,
-  update: allForks.LightClientUpdate,
+  update: LightClientUpdate,
   syncCommittee: SyncCommitteeFast
 ): void {
   // Verify sync committee has sufficient participants

@@ -2,7 +2,7 @@ import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
@@ -17,7 +17,7 @@ describe("gossip block validation", function () {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
   let verifySignature: Mock<[boolean]>;
-  let job: allForks.SignedBeaconBlock;
+  let job: SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
   const block = ssz.phase0.BeaconBlock.defaultValue();

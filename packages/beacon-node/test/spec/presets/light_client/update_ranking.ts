@@ -1,5 +1,5 @@
 import {expect} from "vitest";
-import {altair, ssz, allForks} from "@lodestar/types";
+import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
 import {isForkLightClient} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
@@ -22,7 +22,7 @@ export const updateRanking: TestRunnerFn<UpdateRankingTestCase, void> = (fork) =
     testFunction: (testcase) => {
       // Parse update files
       const updatesCount = Number(testcase.meta.updates_count as bigint);
-      const updates: allForks.LightClientUpdate[] = [];
+      const updates: LightClientUpdate[] = [];
 
       for (let i = 0; i < updatesCount; i++) {
         const update = (testcase as unknown as Record<string, altair.LightClientUpdate>)[`updates_${i}`];
@@ -54,7 +54,7 @@ newUpdate = ${renderUpdate(newUpdate)}
       },
       sszTypes: {
         [UPDATES_FILE_NAME]: isForkLightClient(fork)
-          ? ssz.allForksLightClient[fork].LightClientUpdate
+          ? sszTypesFor(fork).LightClientUpdate
           : ssz.altair.LightClientUpdate,
       },
       expectFunc: () => {},

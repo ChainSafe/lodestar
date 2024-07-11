@@ -1,4 +1,4 @@
-import {Root, RootHex, allForks, Wei} from "@lodestar/types";
+import {ExecutionPayload, Root, RootHex, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
@@ -103,7 +103,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
   // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
-  private state: ExecutionEngineState = ExecutionEngineState.ONLINE;
+  state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -171,7 +171,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(
     fork: ForkName,
-    executionPayload: allForks.ExecutionPayload,
+    executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root
   ): Promise<ExecutePayloadResponse> {
@@ -364,7 +364,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fork: ForkName,
     payloadId: PayloadId
   ): Promise<{
-    executionPayload: allForks.ExecutionPayload;
+    executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
     shouldOverrideBuilder?: boolean;
@@ -415,10 +415,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});
     return response.map(deserializeExecutionPayloadBody);
-  }
-
-  getState(): ExecutionEngineState {
-    return this.state;
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {

@@ -1,7 +1,7 @@
 # Lodestar Eth Consensus Lightclient Prover
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![ETH Beacon APIs Spec v2.1.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.1.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.1.0)
+[![ETH Beacon APIs Spec v2.5.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.5.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-22.x-green)
 
@@ -74,7 +74,7 @@ lodestar-prover proxy \
 
 There can be different implementations of the web3 providers and each can handle the RPC request differently. We call those different provider types. We had provided builtin support for common providers e.g. web3.js, ethers or any eip1193 compatible providers. We inspect given provider instance at runtime to detect the correct provider type.
 
-If your project is using some provider type which is not among above list, you have the option to register a custom provider type with the `createVerifiedExecutionProvider` with the option `providerTypes` which will be an array of your supported provider types. Your custom provider types will have higher priority than default provider types. Please see [existing provide types implementations](./src/provider_types/) to know how to implement your own if needed.
+If your project is using some provider type which is not among above list, you have the option to register a custom provider type with the `createVerifiedExecutionProvider` with the option `providerTypes` which will be an array of your supported provider types. Your custom provider types will have higher priority than default provider types. Please see [existing provide types implementations](https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover/src/provider_types) to know how to implement your own if needed.
 
 ## Supported Web3 Methods
 

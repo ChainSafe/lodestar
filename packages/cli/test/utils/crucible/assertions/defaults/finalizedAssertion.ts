@@ -1,4 +1,3 @@
-import {ApiError} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {AssertionResult, Assertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
@@ -7,9 +6,8 @@ export const finalizedAssertion: Assertion<"finalized", Slot> = {
   id: "finalized",
   match: everySlotMatcher,
   async capture({node}) {
-    const finalized = await node.beacon.api.beacon.getBlockHeader("finalized");
-    ApiError.assert(finalized);
-    return finalized.response.data.header.message.slot ?? 0;
+    const finalized = (await node.beacon.api.beacon.getBlockHeader({blockId: "finalized"})).value();
+    return finalized.header.message.slot ?? 0;
   },
   async assert({store, slot, clock, epoch}) {
     const errors: AssertionResult[] = [];

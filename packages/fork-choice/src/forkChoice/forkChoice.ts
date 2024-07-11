@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Logger, fromHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
+import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -26,6 +26,7 @@ import {
   MaybeValidExecutionStatus,
   LVHExecResponse,
   ProtoNode,
+  DataAvailabilityStatus,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -45,9 +46,21 @@ import {
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
 export type ForkChoiceOpts = {
-  proposerBoostEnabled?: boolean;
+  proposerBoost?: boolean;
+  proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
 };
+
+export enum UpdateHeadOpt {
+  GetCanonicialHead = "getCanonicialHead", // Skip getProposerHead
+  GetProposerHead = "getProposerHead", // With getProposerHead
+  GetPredictedProposerHead = "getPredictedProposerHead", // With predictProposerHead
+}
+
+export type UpdateAndGetHeadOpt =
+  | {mode: UpdateHeadOpt.GetCanonicialHead}
+  | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
+  | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -157,6 +170,41 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   *
+   * A multiplexer to wrap around the traditional `updateHead()` according to the scenario
+   * Scenarios as follow:
+   *    Prepare to propose in the next slot: getHead() -> predictProposerHead()
+   *    Proposing in the current slot: updateHead() -> getProposerHead()
+   *    Others eg. initializing forkchoice, importBlock: updateHead()
+   *
+   * Only `GetProposerHead` returns additional field `isHeadTimely` and `notReorgedReason` for metrics purpose
+   */
+  updateAndGetHead(opt: UpdateAndGetHeadOpt): {
+    head: ProtoBlock;
+    isHeadTimely?: boolean;
+    notReorgedReason?: NotReorgedReason;
+  } {
+    const {mode} = opt;
+
+    const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    switch (mode) {
+      case UpdateHeadOpt.GetPredictedProposerHead:
+        return {head: this.predictProposerHead(canonicialHeadBlock, opt.slot)};
+      case UpdateHeadOpt.GetProposerHead: {
+        const {
+          proposerHead: head,
+          isHeadTimely,
+          notReorgedReason,
+        } = this.getProposerHead(canonicialHeadBlock, opt.secFromSlot, opt.slot);
+        return {head, isHeadTimely, notReorgedReason};
+      }
+      case UpdateHeadOpt.GetCanonicialHead:
+      default:
+        return {head: canonicialHeadBlock};
+    }
+  }
+
+  /**
    * Get the proposer boost root
    */
   getProposerBoostRoot(): RootHex {
@@ -176,7 +224,7 @@ export class ForkChoice implements IForkChoice {
    */
   predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoostEnabled) {
+    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
       this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
       return headBlock;
     }
@@ -209,7 +257,7 @@ export class ForkChoice implements IForkChoice {
    *
    * This function takes in the canonical head block and determine the proposer head (canonical head block or its parent)
    * https://github.com/ethereum/consensus-specs/pull/3034 for info about proposer boost reorg
-   * This function should only be called during block proposal and only be called after `updateHead()`
+   * This function should only be called during block proposal and only be called after `updateHead()` in `updateAndGetHead()`
    *
    * Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
    */
@@ -222,7 +270,7 @@ export class ForkChoice implements IForkChoice {
     let proposerHead = headBlock;
 
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoostEnabled) {
+    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
       this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
@@ -328,7 +376,7 @@ export class ForkChoice implements IForkChoice {
      * starting from the proposerIndex
      */
     let proposerBoost: {root: RootHex; score: number} | null = null;
-    if (this.opts?.proposerBoostEnabled && this.proposerBoostRoot) {
+    if (this.opts?.proposerBoost && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
         getCommitteeFraction(this.fcStore.justified.totalBalance, {
@@ -416,11 +464,12 @@ export class ForkChoice implements IForkChoice {
    * This ensures that the forkchoice is never out of sync.
    */
   onBlock(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
+    executionStatus: MaybeValidExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
@@ -486,7 +535,7 @@ export class ForkChoice implements IForkChoice {
     // before attesting interval = before 1st interval
     const isTimely = this.isBlockTimely(block, blockDelaySec);
     if (
-      this.opts?.proposerBoostEnabled &&
+      this.opts?.proposerBoost &&
       isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null
@@ -597,8 +646,13 @@ export class ForkChoice implements IForkChoice {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionPayloadNumber: block.body.executionPayload.blockNumber,
             executionStatus: this.getPostMergeExecStatus(executionStatus),
+            dataAvailabilityStatus,
           }
-        : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
+        : {
+            executionPayloadBlockHash: null,
+            executionStatus: this.getPreMergeExecStatus(executionStatus),
+            dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+          }),
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -1034,7 +1088,7 @@ export class ForkChoice implements IForkChoice {
    * Return true if the block is timely for the current slot.
    * Child class can overwrite this for testing purpose.
    */
-  protected isBlockTimely(block: allForks.BeaconBlock, blockDelaySec: number): boolean {
+  protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
     return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
   }
@@ -1043,6 +1097,14 @@ export class ForkChoice implements IForkChoice {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
+  }
+
+  private getPreMergeDataStatus(dataAvailabilityStatus: DataAvailabilityStatus): DataAvailabilityStatus.PreData {
+    if (dataAvailabilityStatus !== DataAvailabilityStatus.PreData)
+      throw Error(
+        `Invalid pre-merge data status: expected: ${DataAvailabilityStatus.PreData}, got ${dataAvailabilityStatus}`
+      );
+    return dataAvailabilityStatus;
   }
 
   private getPostMergeExecStatus(
