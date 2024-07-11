@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access*/
 import {expect, describe, it, vi, beforeAll} from "vitest";
 import {sleep} from "@lodestar/utils";
 import {Lightclient, LightclientEvent, utils, transport} from "../../dist/lightclient.min.mjs";

@@ -1,10 +1,5 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  getShufflingDecisionBlock,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProtoBlock, IForkChoice, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
