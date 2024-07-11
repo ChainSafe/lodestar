@@ -158,10 +158,12 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
       const state = stateOg.value.clone();
       const cacheAfter = beforeProcessEpoch(state);
       processEpoch(fork, state as CachedBeaconStatePhase0, cacheAfter);
-      state.slot++;
       return {state, cache: cacheAfter};
     },
     beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
-    fn: ({state, cache}) => state.epochCtx.afterProcessEpoch(state, cache),
+    fn: ({state, cache}) => {
+      state.slot++;
+      state.epochCtx.afterProcessEpoch(state, cache);
+    },
   });
 }
