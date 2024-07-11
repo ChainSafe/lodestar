@@ -99,8 +99,9 @@ export const ExecutionWitness = new ContainerType(
   {
     stateDiff: StateDiff,
     verkleProof: VerkleProof,
+    parentStateRoot: Root,
   },
-  {typeName: "ExecutionWitness", casingMap: {stateDiff: "stateDiff", verkleProof: "verkleProof"}}
+  {typeName: "ExecutionWitness", casingMap: {stateDiff: "stateDiff", verkleProof: "verkleProof", parentStateRoot: "parentStateRoot"}}
 );
 
 // Beacon Chain types
