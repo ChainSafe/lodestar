@@ -24,7 +24,7 @@ export type BeaconStateTransitionMetrics = {
   registerValidatorStatuses: (
     currentEpoch: Epoch,
     statuses: AttesterStatus[],
-    flags: Uint8Array,
+    flags: number[],
     isActiveCurrEpoch: boolean[],
     balances?: number[]
   ) => void;

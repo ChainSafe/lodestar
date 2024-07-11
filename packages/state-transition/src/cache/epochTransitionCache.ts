@@ -130,7 +130,7 @@ export interface EpochTransitionCache {
    */
   statuses: AttesterStatus[];
 
-  flags: Uint8Array;
+  flags: number[];
 
   /**
    * balances array will be populated by processRewardsAndPenalties() and consumed by processEffectiveBalanceUpdates().
@@ -211,9 +211,8 @@ export function beforeProcessEpoch(
   const isActiveCurrEpoch = new Array(validatorCount).fill(true);
   const isActiveNextEpoch = new Array(validatorCount).fill(true);
   // Flags for each validator
-  // We can use Uint8Array since we only need 8 bits per validator
   // See src/util/attesterStatus.ts
-  const flags = new Uint8Array(validatorCount);
+  const flags = new Array(validatorCount).fill(0);
 
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();

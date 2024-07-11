@@ -46,10 +46,10 @@ export function generateBalanceDeltasEpochTransitionCache(
 
 export type FlagFactors = Record<keyof AttesterFlags, number> | number;
 
-function generateStatuses(vc: number, flagFactors: FlagFactors): {statuses: AttesterStatus[]; flags: Uint8Array} {
+function generateStatuses(vc: number, flagFactors: FlagFactors): {statuses: AttesterStatus[]; flags: number[]} {
   const totalProposers = 32;
   const statuses = new Array<AttesterStatus>(vc);
-  const flags = new Uint8Array(vc);
+  const flags = new Array(vc).fill(0);
 
   for (let i = 0; i < vc; i++) {
     // Set to number to set all validators to the same value
@@ -57,7 +57,6 @@ function generateStatuses(vc: number, flagFactors: FlagFactors): {statuses: Atte
       statuses[i] = {
         proposerIndex: i % totalProposers,
         inclusionDelay: 1 + (i % 4),
-        active: true,
       };
       flags[i] = flagFactors;
     } else {
@@ -75,7 +74,6 @@ function generateStatuses(vc: number, flagFactors: FlagFactors): {statuses: Atte
       statuses[i] = {
         proposerIndex: i % totalProposers,
         inclusionDelay: 1 + (i % 4),
-        active: true,
       };
       flags[i] = toAttesterFlags(flagsObj);
     }
