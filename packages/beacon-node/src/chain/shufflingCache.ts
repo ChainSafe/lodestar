@@ -103,7 +103,7 @@ export class ShufflingCache implements IShufflingCache {
    * If there's a promise, it means we are computing the same shuffling, so we wait for the promise to resolve.
    * Return null if we don't have a shuffling for this epoch and dependentRootHex.
    */
-  async getShufflingOrNull(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
+  async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
     if (cacheItem === undefined) {
       return null;
@@ -117,32 +117,16 @@ export class ShufflingCache implements IShufflingCache {
     }
   }
 
-  async get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling> {
-    const item = await this.getShufflingOrNull(shufflingEpoch, decisionRootHex);
-    if (!item) {
-      throw new ShufflingCacheError({
-        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
-        epoch: shufflingEpoch,
-        decisionRoot: decisionRootHex,
-      });
-    }
-    return item;
-  }
-
   /**
    * Same to getShufflingOrNull() function but synchronous.
    */
   getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
-    if (cacheItem === undefined) {
-      return null;
-    }
-
-    if (isShufflingCacheItem(cacheItem)) {
+    if (cacheItem && isShufflingCacheItem(cacheItem)) {
       return cacheItem.shuffling;
     }
 
-    // ignore promise
+    // ignore promise and cache misses
     return null;
   }
 

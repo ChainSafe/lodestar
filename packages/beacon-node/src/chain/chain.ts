@@ -904,7 +904,13 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // resolve the promise to unblock other calls of the same epoch and dependent root
-    return this.shufflingCache.get(attEpoch, getShufflingDecisionBlock(state, attEpoch));
+    const shuffling = await this.shufflingCache.get(attEpoch, getShufflingDecisionBlock(state, attEpoch));
+    if (!shuffling) {
+      // This will be essentially unreachable considering regen should build the shuffling for this epoch
+      // but need to handle anyhow
+      throw Error(`UNREACHABLE: Shuffling not found for attestation epoch ${attEpoch} decisionRoot ${decisionRoot}`);
+    }
+    return shuffling;
   }
 
   /**
