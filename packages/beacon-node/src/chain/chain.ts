@@ -876,6 +876,9 @@ export class BeaconChain implements IBeaconChain {
     attHeadBlock: ProtoBlock,
     regenCaller: RegenCaller
   ): Promise<EpochShuffling> {
+    // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
+    // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
+    this.shufflingCache.insertPromise(attEpoch, shufflingDependentRoot);
     const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
 
     let state: CachedBeaconStateAllForks;
@@ -900,14 +903,8 @@ export class BeaconChain implements IBeaconChain {
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
 
-    const decisionRoot = getShufflingDecisionBlock(state, attEpoch);
-    const shuffling = await this.shufflingCache.get(attEpoch, decisionRoot);
-    if (!shuffling) {
-      // This will be essentially unreachable considering regen should build the shuffling for this epoch
-      // but need to handle anyhow
-      throw Error(`UNREACHABLE: Shuffling not found for attestation epoch ${attEpoch} decisionRoot ${decisionRoot}`);
-    }
-    return shuffling;
+    // resolve the promise to unblock other calls of the same epoch and dependent root
+    return this.shufflingCache.get(attEpoch, getShufflingDecisionBlock(state, attEpoch));
   }
 
   /**
