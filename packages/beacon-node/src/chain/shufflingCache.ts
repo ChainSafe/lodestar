@@ -113,13 +113,12 @@ export class ShufflingCache implements IShufflingCache {
     if (isShufflingCacheItem(cacheItem)) {
       return cacheItem.shuffling;
     } else {
-      // this.metrics?.shufflingCache.shufflingPromiseNotResolved({type: async});
       return cacheItem.promise;
     }
   }
 
   /**
-   * Same to getShufflingOrNull() function but synchronous.
+   * Will synchronously get a shuffling if it is available or will return null if not.
    */
   getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
@@ -128,26 +127,37 @@ export class ShufflingCache implements IShufflingCache {
         // this.metrics?.shufflingCache.hit()
         return cacheItem.shuffling;
       }
-      //   this.metrics?.shufflingCache.shufflingPromiseNotResolved({type: sync});
+      //   this.metrics?.shufflingCache.shufflingPromiseNotResolved();
     }
-
     // this.metrics?.shufflingCache.miss();
-    // ignore promise and cache misses
     return null;
   }
 
+  /**
+   * Gets a cached shuffling via the epoch and decision root.  If the shuffling is not
+   * available it will build it synchronously and return the shuffling.
+   *
+   * NOTE: If a shuffling is already queued and not calculated it will build and resolve
+   * the promise but the already queued build will happen at some later time
+   */
   getOrBuildSync(
     epoch: number,
     decisionRoot: string,
     state: BeaconStateAllForks,
     activeIndices: number[]
   ): EpochShuffling {
-    const cacheItem = this.getSync(epoch, decisionRoot);
-    if (cacheItem) {
-      return cacheItem;
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
+    if (cacheItem && isShufflingCacheItem(cacheItem)) {
+      // this.metrics?.shufflingCache.cacheHitEpochTransition();
+      return cacheItem.shuffling;
     }
-    // this.metrics?.shufflingCache.cacheMissInEpochTransition();
     const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    if (cacheItem) {
+      // this.metrics?.shufflingCache.shufflingPromiseNotResolvedEpochTransition();
+      cacheItem.resolveFn(shuffling);
+    } else {
+      // this.metrics?.shufflingCache.cacheMissEpochTransition();
+    }
     this.set(shuffling, decisionRoot, {
       type: CacheItemType.shuffling,
       shuffling,
@@ -155,6 +165,9 @@ export class ShufflingCache implements IShufflingCache {
     return shuffling;
   }
 
+  /**
+   * Queue asynchronous build for an EpochShuffling
+   */
   build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): void {
     this.insertPromise(epoch, decisionRoot);
     /**
@@ -171,6 +184,10 @@ export class ShufflingCache implements IShufflingCache {
     }, 12_000);
   }
 
+  /**
+   * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will
+   * resolve the promise with the built shuffling
+   */
   set(shuffling: EpochShuffling, decisionRoot: string): void {
     const items = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
     // if a pending shuffling promise exists, resolve it

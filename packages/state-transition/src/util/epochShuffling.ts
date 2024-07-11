@@ -14,14 +14,34 @@ import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 
 export interface IShufflingCache {
+  /**
+   * Will synchronously get a shuffling if it is available or will return null if not.
+   */
   getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null;
+
+  /**
+   * Gets a cached shuffling via the epoch and decision root.  If the shuffling is not
+   * available it will build it synchronously and return the shuffling.
+   *
+   * NOTE: If a shuffling is already queued and not calculated it will build and resolve
+   * the promise but the already queued build will happen at some later time
+   */
   getOrBuildSync(
     epoch: Epoch,
     decisionRoot: RootHex,
     state: BeaconStateAllForks,
     activeIndices: ValidatorIndex[]
   ): EpochShuffling;
+
+  /**
+   * Queue asynchronous build for an EpochShuffling
+   */
   build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void;
+
+  /**
+   * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will
+   * resolve the promise with the built shuffling
+   */
   set(shuffling: EpochShuffling, decisionRoot: RootHex): void;
 }
 
