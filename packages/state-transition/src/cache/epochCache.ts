@@ -562,7 +562,12 @@ export class EpochCache {
 
   /**
    * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
-   * new epoch.
+   * new epoch. Also handles pre-computation of values that may change during the upcoming epoch and
+   * that get used in the following epoch transition.  Often those pre-computations are not used by the
+   * chain but are courtesy values that are served via the API for epoch look ahead of duties.
+   *
+   * Steps for afterProcessEpoch
+   * 1) update previous/current/next values of cached items
    */
   afterProcessEpoch(
     state: BeaconStateAllForks,
@@ -572,38 +577,71 @@ export class EpochCache {
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
+    // Advance time units
+    // state.slot is advanced right before calling this function
+    // ```
+    // postState.slot++;
+    // afterProcessEpoch(postState, epochTransitionCache);
+    // ```
+
+    // After updating the "current" epoch the "cached epoch" will be out of sync with the clock
+    // epoch until the clock catches up (should be less than a second or so).  Because this function
+    // and the remainder of the state-transition is all synchronous there is no chance that this value
+    // can be read incorrectly, however, if the synchronous-only paradigm changes it must be taken
+    // into account
+    this.epoch = this.nextEpoch;
+    // TODO: why was this what was used @twoeths? and not a simple increment like above if all the other
+    // stuff in this function was swapped curr->prev and next->curr?
+    // this.epoch = computeEpochAtSlot(state.slot);
+
+    // Move current values to previous values as they are no longer for the current epoch
     this.previousDecisionRoot = this.currentDecisionRoot;
     this.previousShuffling = this.currentShuffling;
+    // Roll current proposers into previous proposers for metrics
+    this.proposersPrevEpoch = this.proposers;
 
+    // Move next values to be the current values of the upcoming epoch after epoch transition finishes
     this.currentDecisionRoot = this.nextDecisionRoot;
     if (this.nextShuffling) {
       // was already pulled by the api or another method on EpochCache
       this.currentShuffling = this.nextShuffling;
     } else {
       this.currentShuffling =
-        this.shufflingCache?.buildSync(this.nextEpoch, this.nextDecisionRoot, state, this.nextActiveIndices) ??
-        computeEpochShuffling(state, this.nextActiveIndices, this.nextEpoch);
+        this.shufflingCache?.getOrBuildSync(
+          this.epoch,
+          this.currentDecisionRoot,
+          state,
+          // have to use the "nextActiveIndices" that were saved in the last transition here to calculate
+          // the upcoming shuffling if it is not already built (similar condition to the below computation)
+          this.nextActiveIndices
+        ) ??
+        // allow for this case during testing where the ShufflingCache is not present, may affect perf testing
+        // so should be taken into account when structuring tests.  Should not affect unit or other tests though
+        computeEpochShuffling(state, this.nextActiveIndices, this.epoch);
     }
+    this.proposers = computeProposers(
+      getSeed(state, this.epoch, DOMAIN_BEACON_PROPOSER),
+      this.currentShuffling,
+      this.effectiveBalanceIncrements
+    );
 
-    const currentEpoch = this.nextEpoch;
-    this.nextShuffling = null;
-    this.nextDecisionRoot = getShufflingDecisionBlock(state, currentEpoch + 1);
+    /**
+     * Calculate look-ahead values for n+2 (will be n+1 after transition finishes)
+     */
+    this.nextDecisionRoot = getShufflingDecisionBlock(state, this.nextEpoch);
     this.nextActiveIndices = epochTransitionCache.nextEpochShufflingActiveValidatorIndices;
-    // TODO move this out to beacon node
-    void this.shufflingCache?.build(currentEpoch + 1, this.nextDecisionRoot, state, this.nextActiveIndices);
-
-    // Roll current proposers into previous proposers for metrics
-    this.proposersPrevEpoch = this.proposers;
-
-    const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-    this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
-
+    if (this.shufflingCache) {
+      this.nextShuffling = null;
+      this.shufflingCache?.build(this.nextEpoch, this.nextDecisionRoot, state, this.nextActiveIndices);
+    } else {
+      this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, this.nextEpoch);
+    }
     // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
-    this.proposersNextEpoch = {computed: false, seed: getSeed(state, currentEpoch + 1, DOMAIN_BEACON_PROPOSER)};
+    this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextEpoch, DOMAIN_BEACON_PROPOSER)};
 
     // TODO: DEDUPLICATE from createEpochCache
     //
-    // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
+    // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute every time the
     // active validator indices set changes in size. Validators change active status only when:
     // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
     //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
@@ -625,14 +663,14 @@ export class EpochCache {
     );
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
-    const exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
+    const exitQueueEpoch = computeActivationExitEpoch(this.epoch);
     if (exitQueueEpoch > this.exitQueueEpoch) {
       this.exitQueueEpoch = exitQueueEpoch;
       this.exitQueueChurn = 0;
     }
 
     this.totalActiveBalanceIncrements = epochTransitionCache.nextEpochTotalActiveBalanceByIncrement;
-    if (currentEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+    if (this.epoch >= this.config.ALTAIR_FORK_EPOCH) {
       this.syncParticipantReward = computeSyncParticipantReward(this.totalActiveBalanceIncrements);
       this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
       this.baseRewardPerIncrement = computeBaseRewardPerIncrement(this.totalActiveBalanceIncrements);
@@ -641,13 +679,6 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = this.currentTargetUnslashedBalanceIncrements;
     this.currentTargetUnslashedBalanceIncrements = 0;
 
-    // Advance time units
-    // state.slot is advanced right before calling this function
-    // ```
-    // postState.slot++;
-    // afterProcessEpoch(postState, epochTransitionCache);
-    // ```
-    this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
   }
 
