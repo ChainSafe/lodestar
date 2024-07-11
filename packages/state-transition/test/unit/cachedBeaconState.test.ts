@@ -8,7 +8,6 @@ import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
-import {MockShufflingCache} from "../utils/mockShufflingCache.js";
 import {IShufflingCache} from "../../src/index.js";
 
 describe("CachedBeaconState", () => {
@@ -66,7 +65,6 @@ describe("CachedBeaconState", () => {
         config,
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
-        shufflingCache: new MockShufflingCache(),
       },
       {skipSyncCommitteeCache: true}
     );
