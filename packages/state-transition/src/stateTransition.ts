@@ -195,8 +195,8 @@ function processSlotsWithTransientCache(
 
       processEpoch(fork, postState, epochTransitionCache, metrics);
 
-      const {currentEpoch, statuses, flags, balances} = epochTransitionCache;
-      metrics?.registerValidatorStatuses(currentEpoch, statuses, flags, balances);
+      const {currentEpoch, statuses, flags, isActiveCurrEpoch, balances} = epochTransitionCache;
+      metrics?.registerValidatorStatuses(currentEpoch, statuses, flags, isActiveCurrEpoch, balances);
 
       postState.slot++;
 

@@ -27,14 +27,12 @@ const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 export type AttesterStatus = {
   proposerIndex: number; // -1 when not included by any proposer
   inclusionDelay: number;
-  active: boolean;
 };
 
 export function createAttesterStatus(): AttesterStatus {
   return {
     proposerIndex: -1,
     inclusionDelay: 0,
-    active: false,
   };
 }
 

@@ -164,6 +164,12 @@ export interface EpochTransitionCache {
   nextEpochTotalActiveBalanceByIncrement: number;
 
   /**
+   * Track by validator index if it's active in the current epoch.
+   * Used in metrics
+   */
+  isActiveCurrEpoch: boolean[];
+
+  /**
    * Track by validator index if it's active in the next epoch.
    * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
    */
@@ -190,8 +196,6 @@ export function beforeProcessEpoch(
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
-  const isActivePrevEpoch: boolean[] = [];
-  const isActiveNextEpoch: boolean[] = [];
   const statuses: AttesterStatus[] = [];
 
   let totalActiveStakeByIncrement = 0;
@@ -202,6 +206,10 @@ export function beforeProcessEpoch(
   const validators = state.validators.getAllReadonlyValues();
   const validatorCount = validators.length;
 
+  // pre-fill with true (most validators are active)
+  const isActivePrevEpoch = new Array(validatorCount).fill(true);
+  const isActiveCurrEpoch = new Array(validatorCount).fill(true);
+  const isActiveNextEpoch = new Array(validatorCount).fill(true);
   // Flags for each validator
   // We can use Uint8Array since we only need 8 bits per validator
   // See src/util/attesterStatus.ts
@@ -230,7 +238,9 @@ export function beforeProcessEpoch(
     const isActiveNext = activationEpoch <= nextEpoch && nextEpoch < exitEpoch;
     const isActiveNext2 = activationEpoch <= nextEpoch2 && nextEpoch2 < exitEpoch;
 
-    isActivePrevEpoch.push(isActivePrev);
+    if (!isActivePrev) {
+      isActivePrevEpoch[i] = false;
+    }
 
     // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
@@ -241,8 +251,9 @@ export function beforeProcessEpoch(
     }
 
     if (isActiveCurr) {
-      status.active = true;
       totalActiveStakeByIncrement += effectiveBalancesByIncrements[i];
+    } else {
+      isActiveCurrEpoch[i] = false;
     }
 
     // To optimize process_registry_updates():
@@ -285,7 +296,7 @@ export function beforeProcessEpoch(
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
     else if (
-      status.active &&
+      isActiveCurr &&
       validator.exitEpoch === FAR_FUTURE_EPOCH &&
       validator.effectiveBalance <= config.EJECTION_BALANCE
     ) {
@@ -294,7 +305,9 @@ export function beforeProcessEpoch(
 
     statuses.push(status);
 
-    isActiveNextEpoch.push(isActiveNext);
+    if (!isActiveNext) {
+      isActiveNextEpoch[i] = false;
+    }
 
     if (isActiveNext2) {
       nextEpochShufflingActiveValidatorIndices.push(i);
@@ -349,9 +362,8 @@ export function beforeProcessEpoch(
 
     const currentEpochParticipation = (state as CachedBeaconStateAltair).currentEpochParticipation.getAll();
     for (let i = 0; i < currentEpochParticipation.length; i++) {
-      const status = statuses[i];
       // this is required to pass random spec tests in altair
-      if (status.active) {
+      if (isActiveCurrEpoch[i]) {
         // FLAG_PREV are indexes [3,4,5], so shift by 3
         flags[i] |= currentEpochParticipation[i] << 3;
       }
@@ -429,6 +441,7 @@ export function beforeProcessEpoch(
     nextEpochShufflingActiveValidatorIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
+    isActiveCurrEpoch,
     isActiveNextEpoch,
     statuses,
     flags,

@@ -43,6 +43,7 @@ export type ValidatorMonitor = {
     currentEpoch: Epoch,
     statuses: AttesterStatus[],
     flags: Uint8Array,
+    isActiveCurrEpoch: boolean[],
     balances?: number[]
   ): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: BeaconBlock): void;
@@ -120,12 +121,12 @@ type ValidatorStatus = {
   inclusionDistance: number;
 };
 
-function statusToSummary(status: AttesterStatus, flag: number): ValidatorStatus {
+function statusToSummary(status: AttesterStatus, flag: number, isActiveInCurrentEpoch: boolean): ValidatorStatus {
   const flags = parseAttesterFlags(flag);
   return {
     isSlashed: flags.unslashed,
-    isActiveInCurrentEpoch: status.active,
-    isActiveInPreviousEpoch: status.active,
+    isActiveInCurrentEpoch,
+    isActiveInPreviousEpoch: isActiveInCurrentEpoch,
     // TODO: Implement
     currentEpochEffectiveBalance: 0,
 
@@ -292,7 +293,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses, flags, balances) {
+    registerValidatorStatuses(currentEpoch, statuses, flags, isActiveCurrEpoch, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -311,7 +312,7 @@ export function createValidatorMonitor(
           continue;
         }
 
-        const summary = statusToSummary(status, flags[index]);
+        const summary = statusToSummary(status, flags[index], isActiveCurrEpoch[index]);
 
         if (summary.isPrevSourceAttester) {
           metrics.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc();
