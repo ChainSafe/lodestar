@@ -72,13 +72,13 @@ export class ShufflingCache implements IShufflingCache {
    * Insert a promise to make sure we don't regen state for the same shuffling.
    * Bound by MAX_SHUFFLING_PROMISE to make sure our node does not blow up.
    */
-  insertPromise(shufflingEpoch: Epoch, decisionRootHex: RootHex): void {
+  insertPromise(shufflingEpoch: Epoch, decisionRoot: RootHex): void {
     const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
       .flatMap((innerMap) => Array.from(innerMap.values()))
       .filter((item) => isPromiseCacheItem(item)).length;
     if (promiseCount >= MAX_PROMISES) {
       throw new Error(
-        `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${shufflingEpoch}, decisionRootHex: ${decisionRootHex}`
+        `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${shufflingEpoch}, decisionRootHex: ${decisionRoot}`
       );
     }
     let resolveFn: ((shuffling: EpochShuffling) => void) | null = null;
@@ -94,7 +94,7 @@ export class ShufflingCache implements IShufflingCache {
       promise,
       resolveFn,
     };
-    this.add(shufflingEpoch, decisionRootHex, cacheItem);
+    this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionRoot, cacheItem);
     this.metrics?.shufflingCache.insertPromiseCount.inc();
   }
 
@@ -147,7 +147,7 @@ export class ShufflingCache implements IShufflingCache {
     //   this.metrics?.shufflingCache.shufflingPromiseNotResolvedInEpochTransition();
     // }
     const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-    this.add(epoch, decisionRoot, {
+    this.set(shuffling, decisionRoot, {
       type: CacheItemType.shuffling,
       shuffling,
     });
@@ -156,7 +156,7 @@ export class ShufflingCache implements IShufflingCache {
 
   build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: number[]): void {
     let resolveFn: (shuffling: EpochShuffling) => void = () => {};
-    this.add(epoch, decisionRoot, {
+    this.set(shuffling, decisionRoot, {
       type: CacheItemType.promise,
       resolveFn,
       promise: new Promise<EpochShuffling>((resolve) => {
@@ -165,7 +165,7 @@ export class ShufflingCache implements IShufflingCache {
     });
     setTimeout(() => {
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-      this.add(epoch, decisionRoot, {
+      this.set(shuffling, decisionRoot, {
         type: CacheItemType.shuffling,
         shuffling,
       });
@@ -173,15 +173,19 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   set(shuffling: EpochShuffling, decisionRoot: string): void {
-    const cacheItem: ShufflingCacheItem = {
-      shuffling,
-      type: CacheItemType.shuffling,
-    };
-    this.add(shuffling.epoch, decisionRoot, cacheItem);
-  }
-
-  private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
-    this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionBlock, cacheItem);
+    const items = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
+    // if a pending shuffling promise exists, resolve it
+    const item = items.get(decisionRoot);
+    if (item) {
+      if (isPromiseCacheItem(item)) {
+        item.resolveFn(shuffling);
+      } else {
+        // metric for throwing away previously calculated shuffling
+      }
+    }
+    // set the shuffling
+    items.set(decisionRoot, {type: CacheItemType.shuffling, shuffling});
+    // prune the cache
     pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
   }
 }
