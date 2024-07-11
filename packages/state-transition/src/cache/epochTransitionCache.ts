@@ -217,9 +217,9 @@ export function beforeProcessEpoch(
   // - proposerIndex: number; // -1 when not included by any proposer
   // - inclusionDelay: number;
   // - flags: number; // bitfield of AttesterFlags
-  const proposerIndices = new Array(validatorCount).fill(-1);
-  const inclusionDelays = new Array(validatorCount).fill(0);
-  const flags = new Array(validatorCount).fill(0);
+  const proposerIndices = new Array<number>(validatorCount).fill(-1);
+  const inclusionDelays = new Array<number>(validatorCount).fill(0);
+  const flags = new Array<number>(validatorCount).fill(0);
 
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();

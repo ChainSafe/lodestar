@@ -5,7 +5,7 @@ describe("array", () => {
   itBench({
     id: "Array.fill",
     fn: () => {
-      const arr = new Array(N).fill(0);
+      new Array(N).fill(0);
       for (let i = 0; i < N; i++) {
         void 0;
       }
