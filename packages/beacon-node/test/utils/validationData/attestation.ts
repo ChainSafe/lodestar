@@ -82,9 +82,10 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   };
 
   const shufflingCache = new ShufflingCache();
-  shufflingCache.processState(state, state.epochCtx.currentShuffling.epoch);
-  shufflingCache.processState(state, state.epochCtx.nextShuffling.epoch);
-  const dependentRoot = getShufflingDecisionBlock(state, state.epochCtx.currentShuffling.epoch);
+  shufflingCache.set(state.epochCtx.previousShuffling, state.epochCtx.previousDecisionRoot);
+  shufflingCache.set(state.epochCtx.currentShuffling, state.epochCtx.currentDecisionRoot);
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  shufflingCache.set(state.epochCtx.nextShuffling!, state.epochCtx.nextDecisionRoot);
 
   const forkChoice = {
     getBlock: (root) => {
@@ -95,7 +96,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
-    getDependentRoot: () => dependentRoot,
+    getDependentRoot: () => state.epochCtx.currentDecisionRoot,
   } as Partial<IForkChoice> as IForkChoice;
 
   const committeeIndices = state.epochCtx.getBeaconCommittee(attSlot, attIndex);

@@ -97,6 +97,7 @@ export function generateState(
 
 /**
  * This generates state with default pubkey
+ * TODO: (@matthewkeil) - this is duplicated and exists in state-transition as well
  */
 export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.phase0);
