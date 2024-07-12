@@ -46,11 +46,13 @@ describe("ShufflingCache", function () {
     expect(await shufflingRequest1).toEqual(state.epochCtx.nextShuffling!);
   });
 
-  it("should support up to 2 promises at a time", async function () {
+  it("should support up to 4 promises at a time", async function () {
     // insert 2 promises at the same epoch
     shufflingCache.insertPromise(currentEpoch, "0x00");
     shufflingCache.insertPromise(currentEpoch, "0x01");
+    shufflingCache.insertPromise(currentEpoch, "0x02");
+    shufflingCache.insertPromise(currentEpoch, "0x03");
     // inserting other promise should throw error
-    expect(() => shufflingCache.insertPromise(currentEpoch, "0x02")).toThrow();
+    expect(() => shufflingCache.insertPromise(currentEpoch, "0x04")).toThrow();
   });
 });
