@@ -27,6 +27,7 @@ export type ChainArgs = {
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
+  "chain.minTimeDelayToBuildShuffling"?: number;
   "chain.archiveBlobEpochs"?: number;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
@@ -60,6 +61,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
+    minTimeDelayToBuildShuffling:
+      args["chain.minTimeDelayToBuildShuffling"] ?? defaultOptions.chain.minTimeDelayToBuildShuffling,
     archiveBlobEpochs: args["chain.archiveBlobEpochs"],
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
@@ -232,6 +235,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Maximum ShufflingCache epochs to keep in memory",
     type: "number",
     default: defaultOptions.chain.maxShufflingCacheEpochs,
+    group: "chain",
+  },
+
+  "chain.minTimeDelayToBuildShuffling": {
+    hidden: true,
+    description: "Minimum amount of time to delay before building a shuffling after its queued",
+    type: "number",
+    default: defaultOptions.chain.minTimeDelayToBuildShuffling,
     group: "chain",
   },
 

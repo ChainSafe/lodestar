@@ -15,7 +15,9 @@ const MAX_EPOCHS = 4;
  * With default chain option of maxSkipSlots = 32, there should be no shuffling promise. If that happens a lot, it could blow up Lodestar,
  * with MAX_EPOCHS = 4, only allow 2 promise at a time. Note that regen already bounds number of concurrent requests at 1 already.
  */
-const MAX_PROMISES = 2;
+const MAX_PROMISES = 4;
+
+const DEFAULT_MIN_TIME_DELAY_IN_MS = 5;
 
 enum CacheItemType {
   shuffling,
@@ -37,6 +39,7 @@ type CacheItem = ShufflingCacheItem | PromiseCacheItem;
 
 export type ShufflingCacheOpts = {
   maxShufflingCacheEpochs?: number;
+  minTimeDelayToBuildShuffling?: number;
 };
 
 /**
@@ -52,9 +55,10 @@ export class ShufflingCache implements IShufflingCache {
   );
 
   private readonly maxEpochs: number;
+  private readonly minTimeDelayToBuild: number;
 
   constructor(
-    private readonly metrics: Metrics | null = null,
+    readonly metrics: Metrics | null = null,
     opts: ShufflingCacheOpts = {}
   ) {
     if (metrics) {
@@ -66,6 +70,7 @@ export class ShufflingCache implements IShufflingCache {
     }
 
     this.maxEpochs = opts.maxShufflingCacheEpochs ?? MAX_EPOCHS;
+    this.minTimeDelayToBuild = opts.minTimeDelayToBuildShuffling ?? DEFAULT_MIN_TIME_DELAY_IN_MS;
   }
 
   /**
@@ -175,7 +180,7 @@ export class ShufflingCache implements IShufflingCache {
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
       this.set(shuffling, decisionRoot);
       // wait until after the first slot to help with attestation and block proposal performance
-    }, 12_000);
+    }, this.minTimeDelayToBuild);
   }
 
   /**
