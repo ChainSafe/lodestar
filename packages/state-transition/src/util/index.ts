@@ -4,6 +4,7 @@ export * from "./attestation.js";
 export * from "./attesterStatus.js";
 export * from "./balance.js";
 export * from "./blindedBlock.js";
+export * from "./calculateCommitteeAssignments.js";
 export * from "./capella.js";
 export * from "./execution.js";
 export * from "./blockRoot.js";

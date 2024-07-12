@@ -34,6 +34,7 @@ import {
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
+import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
@@ -380,6 +381,7 @@ export class EpochCache {
     } else {
       currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
       shufflingCache?.set(currentShuffling, currentDecisionRoot);
+      // shufflingCache?.metrics?.shufflingCache.miss();
     }
 
     let previousShuffling: EpochShuffling;
@@ -391,6 +393,7 @@ export class EpochCache {
     } else {
       previousShuffling = computeEpochShuffling(state, previousActiveIndices, previousEpoch);
       shufflingCache?.set(previousShuffling, previousDecisionRoot);
+      // shufflingCache?.metrics?.shufflingCache.miss();
     }
 
     let nextShuffling: EpochShuffling;
@@ -399,6 +402,7 @@ export class EpochCache {
     } else {
       nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
       shufflingCache?.set(nextShuffling, nextDecisionRoot);
+      // shufflingCache?.metrics?.shufflingCache.miss();
     }
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
@@ -605,6 +609,7 @@ export class EpochCache {
     if (this.nextShuffling) {
       // was already pulled by the api or another method on EpochCache
       this.currentShuffling = this.nextShuffling;
+      // shufflingCache?.metrics?.shufflingCache.nextShufflingOnEpochCache();
     } else {
       this.currentShuffling =
         this.shufflingCache?.getOrBuildSync(
@@ -804,30 +809,8 @@ export class EpochCache {
     epoch: Epoch,
     requestedValidatorIndices: ValidatorIndex[]
   ): Map<ValidatorIndex, AttesterDuty> {
-    const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
-    const duties = new Map<ValidatorIndex, AttesterDuty>();
-
-    const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
-    for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
-      const slotCommittees = epochCommittees[epochSlot];
-      for (let i = 0, committeesAtSlot = slotCommittees.length; i < committeesAtSlot; i++) {
-        for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
-          const validatorIndex = slotCommittees[i][j];
-          if (requestedValidatorIndicesSet.has(validatorIndex)) {
-            duties.set(validatorIndex, {
-              validatorIndex,
-              committeeLength,
-              committeesAtSlot,
-              validatorCommitteeIndex: j,
-              committeeIndex: i,
-              slot: epoch * SLOTS_PER_EPOCH + epochSlot,
-            });
-          }
-        }
-      }
-    }
-
-    return duties;
+    const shuffling = this.getShufflingAtEpoch(epoch);
+    return calculateCommitteeAssignments(shuffling, requestedValidatorIndices);
   }
 
   /**
@@ -990,16 +973,6 @@ function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
   // TODO: Research what's the best number to minimize both memory cost and copy costs
   return 1024 * Math.ceil(validatorCount / 1024);
 }
-
-// Copied from lodestar-api package to avoid depending on the package
-type AttesterDuty = {
-  validatorIndex: ValidatorIndex;
-  committeeIndex: CommitteeIndex;
-  committeeLength: number;
-  committeesAtSlot: number;
-  validatorCommitteeIndex: number;
-  slot: Slot;
-};
 
 export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",

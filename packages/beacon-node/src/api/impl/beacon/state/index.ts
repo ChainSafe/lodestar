@@ -202,7 +202,14 @@ export function getBeaconStateApi({
 
       const epoch = filters.epoch ?? computeEpochAtSlot(state.slot);
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(epoch);
+      const decisionRoot = stateCached.epochCtx.getDecisionRoot(epoch);
+      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      if (!shuffling) {
+        throw new ApiError(
+          400,
+          `No shuffling found to calculate committees for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
+        );
+      }
       const committees = shuffling.committees;
       const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
         const slot = startSlot + slotInEpoch;
