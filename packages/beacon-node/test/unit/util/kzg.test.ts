@@ -2,10 +2,12 @@ import {describe, it, expect, afterEach, beforeAll} from "vitest";
 import {bellatrix, deneb, ssz} from "@lodestar/types";
 import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
+import {computeBlobSidecars, getDataColumnSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
+import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
 
 describe("C-KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -71,6 +73,41 @@ describe("C-KZG", () => {
         // We expect some error from here
         // console.log(error);
       }
+    });
+  });
+
+  it("DataColumnSidecars", () => {
+    const config = createChainForkConfig({
+      ...defaultChainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    });
+    const signedBeaconBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+    const mocks = getBlobCellAndProofs();
+    const blobs = mocks.map(({blob}) => blob);
+    const kzgCommitments = blobs.map(ckzg.blobToKzgCommitment);
+    for (const commitment of kzgCommitments) {
+      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+      signedBeaconBlock.message.body.blobKzgCommitments.push(commitment);
+    }
+
+    const sidecars = getDataColumnSidecars(config, signedBeaconBlock, {blobs});
+    const signedBlockHeader = signedBlockToSignedHeader(config, signedBeaconBlock);
+
+    sidecars.forEach((sidecar, column) => {
+      expect(sidecar.index).toBe(column);
+      expect(sidecar.signedBlockHeader).toStrictEqual(signedBlockHeader);
+      expect(sidecar.kzgCommitments).toStrictEqual(kzgCommitments);
+      expect(sidecar.column.length).toBe(blobs.length);
+      expect(sidecar.kzgProofs.length).toBe(blobs.length);
+      sidecar.column.forEach((cell, row) => {
+        expect(Uint8Array.from(cell)).toStrictEqual(mocks[row].cells[column]);
+      });
+      sidecar.kzgProofs.forEach((proof, row) => {
+        expect(Uint8Array.from(proof)).toStrictEqual(mocks[row].proofs[column]);
+      });
     });
   });
 });
