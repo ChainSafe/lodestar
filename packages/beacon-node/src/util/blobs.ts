@@ -63,7 +63,14 @@ export function computeBlobSidecars(
   });
 }
 
-export function computeDataColumnSidecars(
+/**
+ * Turns a SignedBeaconBlock and an array of Blobs from a given slot into an array of
+ * DataColumnSidecars that are ready to be served by gossip and req/resp.
+ *
+ * Implementation of get_data_column_sidecars
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_data_column_sidecars
+ */
+export function getDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
   contents: deneb.Contents & {kzgCommitmentsInclusionProof?: peerdas.KzgCommitmentsInclusionProof}
@@ -75,28 +82,29 @@ export function computeDataColumnSidecars(
   if (blobKzgCommitments.length === 0) {
     return [];
   }
-
+  const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const fork = config.getForkName(signedBlockHeader.message.slot);
   const kzgCommitmentsInclusionProof =
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const cellsAndProofs = contents.blobs.map((blob) => ckzg.computeCellsAndKzgProofs(blob));
-  const dataColumnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, j) => {
-    // j'th column
-    const column = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][0][j]);
-    const kzgProofs = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][1][j]);
 
-    const dataColumnSidecar = {
-      index: j,
-      column,
-      kzgCommitments: blobKzgCommitments,
-      kzgProofs,
-      signedBlockHeader,
-      kzgCommitmentsInclusionProof,
-    } as peerdas.DataColumnSidecar;
+  const dataColumnSidecar = {
+    index: j,
+    column,
+    kzgCommitments: blobKzgCommitments,
+    kzgProofs,
+    signedBlockHeader,
+    kzgCommitmentsInclusionProof,
+  } as peerdas.DataColumnSidecar;
 
-    return dataColumnSidecar;
+  contents.blobs.map(ckzg.computeCellsAndKzgProofs).forEach(([cells, proofs], rowNumber) => {
+    cells.map((cell, columnNumber) => {
+      if (rowNumber === 0) {
+        sidecars[columnNumber].index = columnNumber;
+      }
+      sidecars[columnNumber].column[rowNumber] = cell;
+      sidecars[columnNumber].kzgProofs[rowNumber] = proofs[columnNumber];
+    });
   });
 
-  return dataColumnSidecars;
+  return sidecars;
 }

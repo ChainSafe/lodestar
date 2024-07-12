@@ -14,7 +14,7 @@ import {
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
 } from "../../../../../src/db/repositories/dataColumnSidecars.js";
 import {testLogger} from "../../../../utils/logger.js";
-import {computeDataColumnSidecars} from "../../../../../src/util/blobs.js";
+import {getDataColumnSidecars} from "../../../../../src/util/blobs.js";
 import {loadEthereumTrustedSetup, initCKZG} from "../../../../../src/util/kzg.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -54,7 +54,7 @@ describe("block archive repository", function () {
     singedBlock.message.body.blobKzgCommitments.push(commitment);
     singedBlock.message.body.blobKzgCommitments.push(commitment);
     singedBlock.message.body.blobKzgCommitments.push(commitment);
-    const dataColumnSidecars = computeDataColumnSidecars(config, singedBlock, {
+    const dataColumnSidecars = getDataColumnSidecars(config, singedBlock, {
       blobs: [blob, blob, blob],
       kzgProofs: [commitment, commitment, commitment],
     });
