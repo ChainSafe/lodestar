@@ -177,6 +177,21 @@ export interface EpochTransitionCache {
   isActiveNextEpoch: boolean[];
 }
 
+// reuse arrays to avoid memory reallocation and gc
+// WARNING: this is not async safe
+/** WARNING: reused, never gc'd */
+const isActivePrevEpoch = new Array<boolean>();
+/** WARNING: reused, never gc'd */
+const isActiveCurrEpoch = new Array<boolean>();
+/** WARNING: reused, never gc'd */
+const isActiveNextEpoch = new Array<boolean>();
+/** WARNING: reused, never gc'd */
+const proposerIndices = new Array<number>();
+/** WARNING: reused, never gc'd */
+const inclusionDelays = new Array<number>();
+/** WARNING: reused, never gc'd */
+const flags = new Array<number>();
+
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
   opts?: EpochTransitionCacheOpts
@@ -207,9 +222,12 @@ export function beforeProcessEpoch(
   const validatorCount = validators.length;
 
   // pre-fill with true (most validators are active)
-  const isActivePrevEpoch = new Array(validatorCount).fill(true);
-  const isActiveCurrEpoch = new Array(validatorCount).fill(true);
-  const isActiveNextEpoch = new Array(validatorCount).fill(true);
+  isActivePrevEpoch.length = validatorCount;
+  isActiveCurrEpoch.length = validatorCount;
+  isActiveNextEpoch.length = validatorCount;
+  isActivePrevEpoch.fill(true);
+  isActiveCurrEpoch.fill(true);
+  isActiveNextEpoch.fill(true);
 
   // During the epoch transition, additional data is precomputed to avoid traversing any state a second
   // time. Attestations are a big part of this, and each validator has a "status" to represent its
@@ -217,9 +235,12 @@ export function beforeProcessEpoch(
   // - proposerIndex: number; // -1 when not included by any proposer
   // - inclusionDelay: number;
   // - flags: number; // bitfield of AttesterFlags
-  const proposerIndices = new Array<number>(validatorCount).fill(-1);
-  const inclusionDelays = new Array<number>(validatorCount).fill(0);
-  const flags = new Array<number>(validatorCount).fill(0);
+  proposerIndices.length = validatorCount;
+  inclusionDelays.length = validatorCount;
+  flags.length = validatorCount;
+  proposerIndices.fill(-1);
+  inclusionDelays.fill(0);
+  flags.fill(0);
 
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();
