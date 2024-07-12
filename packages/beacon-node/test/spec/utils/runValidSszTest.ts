@@ -146,7 +146,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
     assertNode(compositeType.commitView(view), "deserializeToView");
 
     const viewDU = compositeType.deserializeToViewDU(copy(testDataSerialized));
-    assertNode(compositeType.commitViewDU(viewDU), "deserializeToViewDU");
+    assertNode(compositeType.commitViewDU(viewDU).node, "deserializeToViewDU");
   }
 }
 

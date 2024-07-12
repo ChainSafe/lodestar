@@ -9,7 +9,7 @@ import {CachedBeaconStateCapella} from "../types.js";
 export function upgradeStateToDeneb(stateCapella: CachedBeaconStateCapella): CachedBeaconStateDeneb {
   const {config} = stateCapella;
 
-  const stateCapellaNode = ssz.capella.BeaconState.commitViewDU(stateCapella);
+  const stateCapellaNode = ssz.capella.BeaconState.commitViewDU(stateCapella).node;
   const stateDenebView = ssz.deneb.BeaconState.getViewDU(stateCapellaNode);
 
   const stateDeneb = getCachedBeaconState(stateDenebView, stateCapella);

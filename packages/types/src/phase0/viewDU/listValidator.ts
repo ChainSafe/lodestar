@@ -50,14 +50,14 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
     super(type, _rootNode, cache);
   }
 
-  commit(hashComps: HashComputationGroup | null = null): void {
+  commit(hashComps: HashComputationGroup | null = null): boolean {
     const isOldRootHashed = this._rootNode.h0 !== null;
     if (this.viewsChanged.size === 0) {
       if (!isOldRootHashed && hashComps !== null) {
         // not possible to get HashComputations due to BranchNodeStruct
         this._rootNode.root;
       }
-      return;
+      return false;
     }
 
     // TODO - batch: remove this type cast
@@ -149,5 +149,6 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
 
     this.viewsChanged.clear();
     this.dirtyLength = false;
+    return true;
   }
 }

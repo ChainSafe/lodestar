@@ -41,7 +41,7 @@ export function upgradeStateToBellatrix(stateAltair: CachedBeaconStateAltair): C
   // next_sync_committee           | -   | next_sync_committee
   // -                             | new | latest_execution_payload_header
 
-  const stateAltairNode = ssz.altair.BeaconState.commitViewDU(stateAltair);
+  const stateAltairNode = ssz.altair.BeaconState.commitViewDU(stateAltair).node;
   const stateBellatrixView = ssz.bellatrix.BeaconState.getViewDU(stateAltairNode);
   // Attach existing BeaconStateCache from stateAltair to new stateBellatrixView object
   const stateBellatrix = getCachedBeaconState(stateBellatrixView, stateAltair);
