@@ -300,8 +300,6 @@ export function beforeProcessEpoch(
       indicesToEject.push(i);
     }
 
-    statuses.push(status);
-
     isActiveNextEpoch.push(isActiveNext);
 
     if (isActiveNext2) {
