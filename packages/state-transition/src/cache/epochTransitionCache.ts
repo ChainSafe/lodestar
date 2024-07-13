@@ -168,6 +168,11 @@ export interface EpochTransitionCache {
   isActiveNextEpoch: boolean[];
 }
 
+// reuse statuses to avoid memory reallocation and gc
+// WARNING: this is not async safe
+/** WARNING: reused, never gc'd */
+const statuses = new Array<AttesterStatus>();
+
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
   opts?: EpochTransitionCacheOpts
@@ -190,7 +195,6 @@ export function beforeProcessEpoch(
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
   const isActivePrevEpoch: boolean[] = [];
   const isActiveNextEpoch: boolean[] = [];
-  const statuses: AttesterStatus[] = [];
 
   let totalActiveStakeByIncrement = 0;
 
@@ -199,6 +203,10 @@ export function beforeProcessEpoch(
   // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
   const validators = state.validators.getAllReadonlyValues();
   const validatorCount = validators.length;
+  const oldStatusesLength = statuses.length;
+  for (let i = oldStatusesLength; i < validatorCount; i++) {
+    statuses.push(createAttesterStatus());
+  }
 
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();
@@ -207,7 +215,12 @@ export function beforeProcessEpoch(
 
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
-    const status = createAttesterStatus();
+    const status = statuses[i];
+
+    // status.active set below
+    status.flags = 0;
+    status.proposerIndex = -1;
+    status.inclusionDelay = 0;
 
     if (validator.slashed) {
       if (slashingsEpoch === validator.withdrawableEpoch) {
@@ -236,6 +249,8 @@ export function beforeProcessEpoch(
     if (isActiveCurr) {
       status.active = true;
       totalActiveStakeByIncrement += effectiveBalancesByIncrements[i];
+    } else {
+      status.active = false;
     }
 
     // To optimize process_registry_updates():
