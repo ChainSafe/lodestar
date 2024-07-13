@@ -290,10 +290,10 @@
     "@noble/hashes" "^1.0.0"
     "@scure/bip39" "^1.0.0"
 
-"@chainsafe/bls-keystore@^3.0.1":
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls-keystore/-/bls-keystore-3.0.1.tgz#1eaf1d89d3628b5fbab62fcd10f48703f2c428cc"
-  integrity sha512-U6m/tMgdEUq60RhcIj7xUD5n6zuavSbThR+szuAglmUa9gY8QfInxXpGAT4hyc2QjbLy9115vJVyhyu7TDl+DQ==
+"@chainsafe/bls-keystore@./chainsafe-bls-keystore-3.0.1-node.tgz":
+  version "3.0.1-node"
+  uid e86a205101b9304970fbca71c97ffb71f44231bd
+  resolved "./chainsafe-bls-keystore-3.0.1-node.tgz#e86a205101b9304970fbca71c97ffb71f44231bd"
   dependencies:
     ethereum-cryptography "^2.0.0"
     uuid "^9.0.0"
