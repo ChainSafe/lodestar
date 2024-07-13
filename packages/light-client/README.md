@@ -26,7 +26,7 @@ Access to an beacon node that supports the light client specification is necessa
 - `/eth/v1/beacon/light_client/bootstrap/{block_root}`
 - `/eth/v0/beacon/light_client/committee_root`
 
-System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/lightclient-prover/prover) being one of them.
+System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/libraries/lightclient-prover/prover) being one of them.
 
 You can find more information about the light-client protocol in the [specification](https://github.com/ethereum/consensus-specs).
 
