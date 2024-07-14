@@ -43,6 +43,8 @@ export type ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: Uint8Array;
   ELECTRA_FORK_EPOCH: number;
+  EIP7594_FORK_VERSION: Uint8Array;
+  EIP7594_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -75,6 +77,7 @@ export type ChainConfig = {
 
   SAMPLES_PER_SLOT: number;
   CUSTODY_REQUIREMENT: number;
+  NODE_CUSTODY_REQUIREMENT: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -108,6 +111,8 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // ELECTRA
   ELECTRA_FORK_VERSION: "bytes",
   ELECTRA_FORK_EPOCH: "number",
+  EIP7594_FORK_VERSION: "bytes",
+  EIP7594_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -140,6 +145,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   SAMPLES_PER_SLOT: "number",
   CUSTODY_REQUIREMENT: "number",
+  NODE_CUSTODY_REQUIREMENT: "number",
 };
 
 /** Allows values in a Spec file */

@@ -30,9 +30,13 @@ export type PeerDiscoveryOpts = {
   discv5FirstQueryDelayMs: number;
   discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
+  // experimental flags for debugging
+  onlyConnectToBiggerDataNodes?: boolean;
+  onlyConnectToMinimalCustodyOverlapNodes?: boolean;
 };
 
 export type PeerDiscoveryModules = {
+  nodeId: NodeId,
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
@@ -115,24 +119,31 @@ export class PeerDiscovery {
   private discv5FirstQueryDelayMs: number;
 
   private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
+  private onlyConnectToBiggerDataNodes: boolean | undefined = false;
+  private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
-    const {libp2p, peerRpcScores, metrics, logger, config} = modules;
+    const {libp2p, peerRpcScores, metrics, logger, config, nodeId} = modules;
     this.libp2p = libp2p;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
     this.config = config;
     this.discv5 = discv5;
-    this.nodeId = fromHexString(ENR.decodeTxt(opts.discv5.enr).nodeId);
+    this.nodeId = nodeId;
     // we will only connect to peers that can provide us custody
-    this.custodySubnets = getCustodyColumnSubnets(this.nodeId, config.CUSTODY_REQUIREMENT);
+    this.custodySubnets = getCustodyColumnSubnets(
+      nodeId,
+      Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)
+    );
 
     this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;
     this.discv5StartMs = Date.now();
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
+    this.onlyConnectToBiggerDataNodes = opts.onlyConnectToBiggerDataNodes;
+    this.onlyConnectToMinimalCustodyOverlapNodes = opts.onlyConnectToMinimalCustodyOverlapNodes;
 
     this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.on("discovered", this.onDiscoveredENR);
@@ -447,7 +458,13 @@ export class PeerDiscovery {
     }
     const peerCustodySubnetCount = peer.custodySubnetCount;
     const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
-    const hasAllColumns = this.custodySubnets.reduce((acc, elem) => acc && peerCustodySubnets.includes(elem), true);
+
+    const matchingSubnetsNum = this.custodySubnets.reduce(
+      (acc, elem) => acc + (peerCustodySubnets.includes(elem) ? 1 : 0),
+      0
+    );
+    const hasAllColumns = matchingSubnetsNum === this.custodySubnets.length;
+    const hasMinCustodyMatchingColumns = matchingSubnetsNum >= this.config.CUSTODY_REQUIREMENT;
 
     this.logger.warn("peerCustodySubnets", {
       peerId: peer.peerId.toString(),
@@ -458,7 +475,10 @@ export class PeerDiscovery {
       custodySubnets: this.custodySubnets.join(","),
       nodeId: `${toHexString(this.nodeId)}`,
     });
-    if (!hasAllColumns) {
+    if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {
+      return false;
+    }
+    if (this.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
       return false;
     }
 

@@ -62,8 +62,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const electra: ForkInfo = {
     name: ForkName.electra,
     seq: ForkSeq.electra,
-    epoch: config.ELECTRA_FORK_EPOCH,
-    version: config.ELECTRA_FORK_VERSION,
+    epoch: config.EIP7594_FORK_EPOCH,
+    version: config.EIP7594_FORK_VERSION,
     prevVersion: config.DENEB_FORK_VERSION,
     prevForkName: ForkName.deneb,
   };

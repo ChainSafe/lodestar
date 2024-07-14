@@ -8,7 +8,10 @@ import {NodeId} from "../network/subnets/index.js";
 export type CustodyConfig = {custodyColumnsIndex: Uint8Array; custodyColumnsLen: number; custodyColumns: ColumnIndex[]};
 
 export function getCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
-  const custodyColumns = getCustodyColumns(nodeId, config.CUSTODY_REQUIREMENT);
+  const custodyColumns = getCustodyColumns(
+    nodeId,
+    Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)
+  );
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
   return {...custodyMeta, custodyColumns};
 }
