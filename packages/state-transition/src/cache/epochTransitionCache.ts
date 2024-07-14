@@ -246,7 +246,12 @@ export function beforeProcessEpoch(
   flags.length = validatorCount;
   proposerIndices.fill(-1);
   inclusionDelays.fill(0);
-  flags.fill(0);
+  // flags.fill(0);
+  // flags will be zero'd out below
+  // In the first loop, set slashed+eligibility
+  // In the second loop, set participation flags
+  // TODO: optimize by combining the two loops
+  // likely will require splitting into phase0 and post-phase0 versions
 
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();
@@ -255,13 +260,14 @@ export function beforeProcessEpoch(
 
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
+    let flag = 0;
 
     if (validator.slashed) {
       if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
       }
     } else {
-      flags[i] |= FLAG_UNSLASHED;
+      flag |= FLAG_UNSLASHED;
     }
 
     const {activationEpoch, exitEpoch} = validator;
@@ -279,8 +285,10 @@ export function beforeProcessEpoch(
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
     if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       eligibleValidatorIndices.push(i);
-      flags[i] |= FLAG_ELIGIBLE_ATTESTER;
+      flag |= FLAG_ELIGIBLE_ATTESTER;
     }
+
+    flags[i] = flag;
 
     if (isActiveCurr) {
       totalActiveStakeByIncrement += effectiveBalancesByIncrements[i];
@@ -384,21 +392,15 @@ export function beforeProcessEpoch(
     );
   } else {
     const previousEpochParticipation = (state as CachedBeaconStateAltair).previousEpochParticipation.getAll();
-    for (let i = 0; i < previousEpochParticipation.length; i++) {
-      // this is required to pass random spec tests in altair
-      if (isActivePrevEpoch[i]) {
-        // FLAG_PREV are indexes [0,1,2]
-        flags[i] |= previousEpochParticipation[i];
-      }
-    }
-
     const currentEpochParticipation = (state as CachedBeaconStateAltair).currentEpochParticipation.getAll();
-    for (let i = 0; i < currentEpochParticipation.length; i++) {
-      // this is required to pass random spec tests in altair
-      if (isActiveCurrEpoch[i]) {
-        // FLAG_PREV are indexes [3,4,5], so shift by 3
-        flags[i] |= currentEpochParticipation[i] << 3;
-      }
+    for (let i = 0; i < validatorCount; i++) {
+      flags[i] |=
+        // checking active status first is required to pass random spec tests in altair
+        // in practice, inactive validators will have 0 participation
+        // FLAG_PREV are indexes [0,1,2]
+        (isActivePrevEpoch[i] ? previousEpochParticipation[i] : 0) |
+        // FLAG_CURR are indexes [3,4,5], so shift by 3
+        (isActiveCurrEpoch[i] ? currentEpochParticipation[i] << 3 : 0);
     }
   }
 
