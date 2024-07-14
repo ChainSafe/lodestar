@@ -1,4 +1,5 @@
 import {Connection, PeerId} from "@libp2p/interface";
+import {ENR} from "@chainsafe/enr";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
@@ -82,6 +83,9 @@ export type PeerManagerOpts = {
    * If set to true, connect to Discv5 bootnodes. If not set or false, do not connect
    */
   connectToDiscv5Bootnodes?: boolean;
+  // experimental flags for debugging
+  onlyConnectToBiggerDataNodes?: boolean;
+  onlyConnectToMinimalCustodyOverlapNodes?: boolean;
 };
 
 /**
@@ -194,6 +198,8 @@ export class PeerManager {
           discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
           discv5: opts.discv5,
           connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
+          onlyConnectToBiggerDataNodes: opts.onlyConnectToBiggerDataNodes,
+          onlyConnectToMinimalCustodyOverlapNodes: opts.onlyConnectToMinimalCustodyOverlapNodes,
         })
       : null;
 
@@ -385,10 +391,16 @@ export class PeerManager {
       const custodySubnetCount =
         peerData?.custodySubnetCount ?? this.discovery?.["peerIdToCustodySubnetCount"].get(peer.toString());
 
-      const peerCustodySubnetCount = custodySubnetCount ?? 4;
+      const peerCustodySubnetCount = custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT;
       const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
+
       const myCustodySubnets = this.discovery?.["custodySubnets"] ?? [];
-      const hasAllColumns = myCustodySubnets.reduce((acc, elem) => acc && peerCustodySubnets.includes(elem), true);
+      const matchingSubnetsNum = myCustodySubnets.reduce(
+        (acc, elem) => acc + (peerCustodySubnets.includes(elem) ? 1 : 0),
+        0
+      );
+      const hasAllColumns = matchingSubnetsNum === myCustodySubnets.length;
+      const hasMinCustodyMatchingColumns = matchingSubnetsNum >= this.config.CUSTODY_REQUIREMENT;
 
       this.logger.warn(`onStatus ${custodySubnetCount == undefined ? "undefined custody count assuming 4" : ""}`, {
         nodeId: nodeId ? toHexString(nodeId) : undefined,
@@ -399,16 +411,27 @@ export class PeerManager {
         myCustodySubnets: myCustodySubnets.join(","),
       });
 
-      if (!hasAllColumns) {
+      if (this.opts.onlyConnectToBiggerDataNodes && !hasAllColumns) {
         const enr = this.discovery?.["peerIdToMyEnr"].get(peer.toString());
-        console.log("lowcustody count enr", enr);
+        this.logger.debug(
+          `ignoring peercontected onlyConnectToBiggerDataNodes=true hasAllColumns=${hasAllColumns}`,
+          exportENRToJSON(enr)
+        );
         return;
       }
 
-      {
-        const dataColumns = getCustodyColumns(nodeId, peerCustodySubnetCount);
-        this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status, dataColumns});
+      if (this.opts.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
+        const enr = this.discovery?.["peerIdToMyEnr"].get(peer.toString());
+        this.logger.debug(
+          `ignoring peercontected onlyConnectToMinimalCustodyOverlapNodes=true hasMinCustodyMatchingColumns=${hasMinCustodyMatchingColumns}`,
+          exportENRToJSON(enr)
+        );
+        return;
       }
+
+      // coule be optimized by directly using the previously calculated subnet
+      const dataColumns = getCustodyColumns(nodeId, peerCustodySubnetCount);
+      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status, dataColumns});
     }
   }
 
@@ -759,4 +782,15 @@ export class PeerManager {
     metrics.peers.set(total);
     metrics.peersSync.set(syncPeers);
   }
+}
+
+function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefined {
+  if (enr === undefined) {
+    return undefined;
+  }
+  return {
+    ip4: enr.kvs.get("ip")?.toString(),
+    csc: enr.kvs.get("csc")?.toString(),
+    nodeId: enr.nodeId,
+  };
 }

@@ -30,6 +30,9 @@ export type PeerDiscoveryOpts = {
   discv5FirstQueryDelayMs: number;
   discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
+  // experimental flags for debugging
+  onlyConnectToBiggerDataNodes?: boolean;
+  onlyConnectToMinimalCustodyOverlapNodes?: boolean;
 };
 
 export type PeerDiscoveryModules = {
@@ -115,6 +118,8 @@ export class PeerDiscovery {
   private discv5FirstQueryDelayMs: number;
 
   private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
+  private onlyConnectToBiggerDataNodes: boolean | undefined = false;
+  private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
     const {libp2p, peerRpcScores, metrics, logger, config} = modules;
@@ -133,6 +138,8 @@ export class PeerDiscovery {
     this.discv5StartMs = Date.now();
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
+    this.onlyConnectToBiggerDataNodes = opts.onlyConnectToBiggerDataNodes;
+    this.onlyConnectToMinimalCustodyOverlapNodes = opts.onlyConnectToMinimalCustodyOverlapNodes;
 
     this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.on("discovered", this.onDiscoveredENR);
@@ -437,7 +444,13 @@ export class PeerDiscovery {
     }
     const peerCustodySubnetCount = peer.custodySubnetCount;
     const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
-    const hasAllColumns = this.custodySubnets.reduce((acc, elem) => acc && peerCustodySubnets.includes(elem), true);
+
+    const matchingSubnetsNum = this.custodySubnets.reduce(
+      (acc, elem) => acc + (peerCustodySubnets.includes(elem) ? 1 : 0),
+      0
+    );
+    const hasAllColumns = matchingSubnetsNum === this.custodySubnets.length;
+    const hasMinCustodyMatchingColumns = matchingSubnetsNum >= this.config.CUSTODY_REQUIREMENT;
 
     this.logger.warn("peerCustodySubnets", {
       peerId: peer.peerId.toString(),
@@ -448,7 +461,10 @@ export class PeerDiscovery {
       custodySubnets: this.custodySubnets.join(","),
       nodeId: `${toHexString(this.nodeId)}`,
     });
-    if (!hasAllColumns) {
+    if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {
+      return false;
+    }
+    if (this.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
       return false;
     }
 
