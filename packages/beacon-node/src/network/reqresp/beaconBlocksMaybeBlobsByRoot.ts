@@ -12,45 +12,71 @@ import {
   BlobsSource,
   BlockInputDataBlobs,
   DataColumnsSource,
-  getBlockInputDataColumns,
   BlockInputDataDataColumns,
 } from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
-import {matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
+import {PartialDownload, matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
 
 export async function beaconBlocksMaybeBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
-  request: phase0.BeaconBlocksByRootRequest
-): Promise<BlockInput[]> {
-  const allBlocks = await network.sendBeaconBlocksByRoot(peerId, request);
+  request: phase0.BeaconBlocksByRootRequest,
+  partialDownload: null | PartialDownload
+): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
+  console.log("beaconBlocksMaybeBlobsByRoot", request);
+  const allBlocks = partialDownload
+    ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block, bytes: blockInput.blockBytes!}))
+    : await network.sendBeaconBlocksByRoot(peerId, request);
+
+  console.log("beaconBlocksMaybeBlobsByRoot response", {allBlocks: allBlocks.length});
+
   const preDataBlocks = [];
   const blobsDataBlocks = [];
   const dataColumnsDataBlocks = [];
 
+  const {custodyConfig} = network;
+  const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.custodyColumns;
+  const peerColumns = network.getConnectedPeerCustody(peerId);
+
+  // get match
+  const columns = peerColumns.reduce((acc, elem) => {
+    if (neededColumns.includes(elem)) {
+      acc.push(elem);
+    }
+    return acc;
+  }, [] as number[]);
+  let pendingDataColumns = null;
+
   const blobIdentifiers: deneb.BlobIdentifier[] = [];
   const dataColumnIdentifiers: electra.DataColumnIdentifier[] = [];
 
+  let prevFork = null;
   for (const block of allBlocks) {
     const slot = block.data.message.slot;
     const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.data.message);
     const fork = config.getForkName(slot);
+    if (fork !== (prevFork ?? fork)) {
+      throw Error("beaconBlocksMaybeBlobsByRoot only accepts requests of same fork");
+    }
+    prevFork = fork;
+
     if (ForkSeq[fork] < ForkSeq.deneb) {
       preDataBlocks.push(block);
     } else if (fork === ForkName.deneb) {
       blobsDataBlocks.push(block);
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+      console.log("beaconBlocksMaybeBlobsByRoot", {blobKzgCommitmentsLen});
       for (let index = 0; index < blobKzgCommitmentsLen; index++) {
         blobIdentifiers.push({blockRoot, index});
       }
     } else if (fork === ForkName.electra) {
       dataColumnsDataBlocks.push(block);
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      const custodyColumnIndexes = blobKzgCommitmentsLen > 0 ? network.custodyConfig.custodyColumns : [];
+      const custodyColumnIndexes = blobKzgCommitmentsLen > 0 ? columns : [];
       for (const columnIndex of custodyColumnIndexes) {
         dataColumnIdentifiers.push({blockRoot, index: columnIndex});
       }
@@ -85,29 +111,46 @@ export async function beaconBlocksMaybeBlobsByRoot(
   }
 
   if (dataColumnsDataBlocks.length > 0) {
+    pendingDataColumns = neededColumns.reduce((acc, elem) => {
+      if (!columns.includes(elem)) {
+        acc.push(elem);
+      }
+      return acc;
+    }, [] as number[]);
+
     let allDataColumnsSidecars: electra.DataColumnSidecar[];
+    console.log("allDataColumnsSidecars", partialDownload, dataColumnIdentifiers);
     if (dataColumnIdentifiers.length > 0) {
       allDataColumnsSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
     } else {
+      if (partialDownload !== null) {
+        return partialDownload;
+      }
       allDataColumnsSidecars = [];
     }
 
     // The last arg is to provide slot to which all blobs should be exausted in matching
     // and here it should be infinity since all bobs should match
     const blockInputWithBlobs = matchBlockWithDataColumns(
+      network,
       peerId,
       config,
-      network.custodyConfig,
+      custodyConfig,
+      columns,
       allBlocks,
       allDataColumnsSidecars,
       Infinity,
       BlockSource.byRoot,
-      DataColumnsSource.byRoot
+      DataColumnsSource.byRoot,
+      partialDownload
     );
     blockInputs = [...blockInputs, ...blockInputWithBlobs];
   }
 
-  return blockInputs;
+  return {
+    blocks: blockInputs,
+    pendingDataColumns: pendingDataColumns && pendingDataColumns.length > 0 ? pendingDataColumns : null,
+  };
 }
 
 export async function unavailableBeaconBlobsByRoot(
@@ -128,6 +171,7 @@ export async function unavailableBeaconBlobsByRoot(
     block = allBlocks[0].data;
     blockBytes = allBlocks[0].bytes;
     cachedData = unavailableBlockInput.cachedData;
+    console.log("downloaded sendBeaconBlocksByRoot", block);
   } else {
     ({block, cachedData, blockBytes} = unavailableBlockInput);
   }
@@ -194,11 +238,30 @@ export async function unavailableBeaconBlobsByRoot(
       metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
       availableBlockInput = getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
     } else {
-      const custodyColumnIndexes = network.custodyConfig.custodyColumns;
-      for (const columnIndex of custodyColumnIndexes) {
-        if (dataColumnsCache.has(columnIndex) === false) {
-          dataColumnIdentifiers.push({blockRoot, index: columnIndex});
+      const {custodyConfig} = network;
+      const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
+        if (dataColumnsCache.get(elem) === undefined) {
+          acc.push(elem);
         }
+        return acc;
+      }, [] as number[]);
+      const peerColumns = network.getConnectedPeerCustody(peerId);
+
+      // get match
+      const columns = peerColumns.reduce((acc, elem) => {
+        if (neededColumns.includes(elem)) {
+          acc.push(elem);
+        }
+        return acc;
+      }, [] as number[]);
+
+      // this peer can't help fetching columns for this block
+      if (unavailableBlockInput.block !== null && columns.length === 0) {
+        return unavailableBlockInput;
+      }
+
+      for (const columnIndex of columns) {
+        dataColumnIdentifiers.push({blockRoot, index: columnIndex});
       }
 
       let allDataColumnSidecars: electra.DataColumnSidecar[];
@@ -208,32 +271,21 @@ export async function unavailableBeaconBlobsByRoot(
         allDataColumnSidecars = [];
       }
 
-      // add them in cache so that its reflected in all the blockInputs that carry this
-      // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
-      // verifyBlocksDataAvailability
-      for (const dataColumnSidecar of allDataColumnSidecars) {
-        dataColumnsCache.set(dataColumnSidecar.index, {dataColumnSidecar, dataColumnBytes: null});
-      }
-
-      // check and see if all blobs are now available and in that case resolve availability
-      // if not this will error and the leftover blobs will be tried from another peer
-      const allDataColumns = getBlockInputDataColumns(dataColumnsCache, custodyColumnIndexes);
-      const {dataColumns} = allDataColumns;
-      if (dataColumns.length !== network.custodyConfig.custodyColumnsLen) {
-        throw Error(
-          `Not all dataColumns fetched missingColumns=${network.custodyConfig.custodyColumnsLen - dataColumns.length}`
-        );
-      }
-      const blockData = {
-        fork: cachedData.fork,
-        ...allDataColumns,
-        dataColumnsLen: network.custodyConfig.custodyColumnsLen,
-        dataColumnsIndex: network.custodyConfig.custodyColumnsIndex,
-        dataColumnsSource: DataColumnsSource.byRoot,
-      } as BlockInputDataDataColumns;
-      resolveAvailability(blockData);
-      metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
-      availableBlockInput = getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
+      [availableBlockInput] = matchBlockWithDataColumns(
+        network,
+        peerId,
+        config,
+        custodyConfig,
+        columns,
+        [{data: block, bytes: blockBytes}],
+        allDataColumnSidecars,
+        block.message.slot,
+        BlockSource.byRoot,
+        DataColumnsSource.byRoot,
+        unavailableBlockInput.block !== null
+          ? {blocks: [unavailableBlockInput], pendingDataColumns: neededColumns}
+          : null
+      );
     }
   } else {
     throw Error(`Invalid cachedData fork=${cachedData.fork} for unavailableBeaconBlobsByRoot`);

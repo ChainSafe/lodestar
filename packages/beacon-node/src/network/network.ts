@@ -270,6 +270,14 @@ export class Network implements INetwork {
   getConnectedPeers(): PeerIdStr[] {
     return Array.from(this.connectedPeers.keys());
   }
+  getConnectedPeerCustody(peerId: PeerIdStr): number[] {
+    const columns = this.connectedPeers.get(peerId);
+    if (columns === undefined) {
+      throw Error("peerId not in connectedPeers");
+    }
+
+    return columns;
+  }
   getConnectedPeerCount(): number {
     return this.connectedPeers.size;
   }

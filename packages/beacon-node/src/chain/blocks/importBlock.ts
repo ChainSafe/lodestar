@@ -1,6 +1,13 @@
 import {toHexString} from "@chainsafe/ssz";
 import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
-import {ForkName, ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkName,
+  ForkLightClient,
+  ForkSeq,
+  INTERVALS_PER_SLOT,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,

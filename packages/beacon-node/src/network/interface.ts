@@ -26,7 +26,7 @@ import {
   capella,
   deneb,
   phase0,
-  electra
+  electra,
 } from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {CustodyConfig} from "../util/dataColumns.js";
@@ -38,6 +38,7 @@ import {PeerAction} from "./peers/index.js";
 import {NodeId} from "./subnets/interface.js";
 
 export type WithBytes<T> = {data: T; bytes: Uint8Array};
+export type WithOptionalBytes<T> = {data: T; bytes: Uint8Array | null};
 
 /**
  * The architecture of the network looks like so:
@@ -56,6 +57,7 @@ export interface INetwork extends INetworkCorePublic {
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
+  getConnectedPeerCustody(peerId: PeerIdStr): number[];
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;

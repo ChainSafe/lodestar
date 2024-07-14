@@ -11,6 +11,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH} from "../constants.js";
+import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
   validateBatchesStatus,
@@ -36,7 +37,11 @@ export type SyncChainFns = {
    */
   processChainSegment: (blocks: BlockInput[], syncType: RangeSyncType) => Promise<void>;
   /** Must download blocks, and validate their range */
-  downloadBeaconBlocksByRange: (peer: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest) => Promise<BlockInput[]>;
+  downloadBeaconBlocksByRange: (
+    peer: PeerIdStr,
+    request: phase0.BeaconBlocksByRangeRequest,
+    partialDownload: PartialDownload
+  ) => Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Hook called when Chain state completes */
@@ -108,6 +113,7 @@ export class SyncChain {
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
+  private readonly peersetCustody = new Map<PeerIdStr, {custodyColumns: number[]}>();
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
@@ -189,8 +195,9 @@ export class SyncChain {
   /**
    * Add peer to the chain and request batches if active
    */
-  addPeer(peer: PeerIdStr, target: ChainTarget): void {
+  addPeer(peer: PeerIdStr, target: ChainTarget, custodyColumns: number[]): void {
     this.peerset.set(peer, target);
+    this.peersetCustody.set(peer, {custodyColumns});
     this.computeTarget();
     this.triggerBatchDownloader();
   }
@@ -332,7 +339,7 @@ export class SyncChain {
       return;
     }
 
-    const peerBalancer = new ChainPeersBalancer(peers, toArr(this.batches));
+    const peerBalancer = new ChainPeersBalancer(peers, this.peersetCustody, toArr(this.batches));
 
     // Retry download of existing batches
     for (const batch of this.batches.values()) {
@@ -395,38 +402,42 @@ export class SyncChain {
    */
   private async sendBatch(batch: Batch, peer: PeerIdStr): Promise<void> {
     try {
-      batch.startDownloading(peer);
+      const partialDownload = batch.startDownloading(peer);
 
       // wrapError ensures to never call both batch success() and batch error()
-      const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request));
+      const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload));
 
       if (!res.err) {
-        batch.downloadingSuccess(res.result);
-        let hasPostDenebBlocks = false;
-        const blobs = res.result.reduce((acc, blockInput) => {
-          hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
-          return hasPostDenebBlocks
-            ? acc +
-                (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.deneb
-                  ? blockInput.blockData.blobs.length
-                  : 0)
-            : 0;
-        }, 0);
-        const dataColumns = res.result.reduce((acc, blockInput) => {
-          hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
-          return hasPostDenebBlocks
-            ? acc +
-                (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.electra
-                  ? blockInput.blockData.dataColumns.length
-                  : 0)
-            : 0;
-        }, 0);
+        const blocks = batch.downloadingSuccess(res.result);
+        if (blocks !== null) {
+          let hasPostDenebBlocks = false;
+          const blobs = blocks.reduce((acc, blockInput) => {
+            hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
+            return hasPostDenebBlocks
+              ? acc +
+                  (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.deneb
+                    ? blockInput.blockData.blobs.length
+                    : 0)
+              : 0;
+          }, 0);
+          const dataColumns = blocks.reduce((acc, blockInput) => {
+            hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
+            return hasPostDenebBlocks
+              ? acc +
+                  (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.electra
+                    ? blockInput.blockData.dataColumns.length
+                    : 0)
+              : 0;
+          }, 0);
 
-        const downloadInfo = {blocks: res.result.length};
-        if (hasPostDenebBlocks) {
-          Object.assign(downloadInfo, {blobs, dataColumns});
+          const downloadInfo = {blocks: blocks.length};
+          if (hasPostDenebBlocks) {
+            Object.assign(downloadInfo, {blobs, dataColumns});
+          }
+          this.logger.debug("Downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo, peer});
+        } else {
+          this.logger.debug("Partially downloaded batch", {id: this.logId, ...batch.getMetadata(), peer});
         }
-        this.logger.debug("Downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo, peer});
         this.triggerBatchProcessor();
       } else {
         this.logger.verbose("Batch download error", {id: this.logId, ...batch.getMetadata()}, res.err);

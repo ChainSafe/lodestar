@@ -17,7 +17,7 @@ import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
-import {getCustodyColumns} from "../../util/dataColumns.js";
+import {getCustodyColumnSubnets, getCustodyColumns} from "../../util/dataColumns.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeersData, PeerData} from "./peersData.js";
 import {getKnownClientFromAgentVersion, ClientKind} from "./client.js";
@@ -378,12 +378,35 @@ export class PeerManager {
     }
     if (getConnection(this.libp2p, peer.toString())) {
       const nodeId = peerData?.nodeId ?? this.discovery?.["peerIdToNodeId"].get(peer.toString());
+      if (nodeId === undefined) {
+        this.logger.error("onStatus with nodeId=undefined", {peerId: peer.toString()});
+        return;
+      }
       const custodySubnetCount =
         peerData?.custodySubnetCount ?? this.discovery?.["peerIdToCustodySubnetCount"].get(peer.toString());
-      this.logger.warn("onStatus", {nodeId: nodeId ? toHexString(nodeId) : undefined, peerId: peer.toString()});
 
-      if (nodeId !== undefined && custodySubnetCount !== undefined) {
-        const dataColumns = getCustodyColumns(nodeId, custodySubnetCount);
+      const peerCustodySubnetCount = custodySubnetCount ?? 4;
+      const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
+      const myCustodySubnets = this.discovery?.["custodySubnets"] ?? [];
+      const hasAllColumns = myCustodySubnets.reduce((acc, elem) => acc && peerCustodySubnets.includes(elem), true);
+
+      this.logger.warn(`onStatus ${custodySubnetCount == undefined ? "undefined custody count assuming 4" : ""}`, {
+        nodeId: nodeId ? toHexString(nodeId) : undefined,
+        peerId: peer.toString(),
+        custodySubnetCount,
+        hasAllColumns,
+        peerCustodySubnets: peerCustodySubnets.join(","),
+        myCustodySubnets: myCustodySubnets.join(","),
+      });
+
+      if (!hasAllColumns) {
+        const enr = this.discovery?.["peerIdToMyEnr"].get(peer.toString());
+        console.log("lowcustody count enr", enr);
+        return;
+      }
+
+      {
+        const dataColumns = getCustodyColumns(nodeId, peerCustodySubnetCount);
         this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status, dataColumns});
       }
     }

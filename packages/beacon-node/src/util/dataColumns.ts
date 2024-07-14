@@ -22,7 +22,7 @@ export function getCustodyColumnsMeta(custodyColumns: ColumnIndex[]): {
   const custodyColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
   let custodyAtIndex = 1;
   for (const columnIndex of custodyColumns) {
-    custodyColumns[columnIndex] = custodyAtIndex;
+    custodyColumnsIndex[columnIndex] = custodyAtIndex;
     custodyAtIndex++;
   }
   return {custodyColumnsIndex, custodyColumnsLen: custodyColumns.length};

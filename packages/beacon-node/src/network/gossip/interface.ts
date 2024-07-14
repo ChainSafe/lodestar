@@ -11,7 +11,7 @@ import {
   phase0,
   SignedBeaconBlock,
   Slot,
-  electra
+  electra,
 } from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";

@@ -23,7 +23,7 @@ export async function* onDataColumnSidecarsByRoot(
   let lastFetchedSideCars: {
     blockRoot: RootHex;
     bytes: Uint8Array;
-    custodyColumns: Uint8Array;
+    dataColumnsIndex: Uint8Array;
     columnsSize: number;
   } | null = null;
 
@@ -54,15 +54,18 @@ export async function* onDataColumnSidecarsByRoot(
       const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
       const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
 
-      const custodyColumns = dataColumnSidecarsBytesWrapped.slice(
+      const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
       );
 
-      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, custodyColumns};
+      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex};
     }
 
-    const dataIndex = lastFetchedSideCars.custodyColumns[index];
+    const dataIndex = lastFetchedSideCars.dataColumnsIndex[index] - 1;
+    if (dataIndex < 0) {
+      throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
+    }
     const {columnsSize} = lastFetchedSideCars;
 
     if (dataIndex === undefined || dataIndex === 0) {
@@ -73,8 +76,8 @@ export async function* onDataColumnSidecarsByRoot(
 
     // dataIndex is 1 based index
     const dataColumnSidecarBytes = lastFetchedSideCars.bytes.slice(
-      (dataIndex - 1) * columnsSize,
-      dataIndex * columnsSize
+      dataIndex * columnsSize,
+      (dataIndex + 1) * columnsSize
     );
     if (dataColumnSidecarBytes.length !== columnsSize) {
       throw Error(
