@@ -25,6 +25,7 @@ export type BeaconStateTransitionMetrics = {
     inclusionDelays: number[],
     flags: number[],
     isActiveCurrEpoch: boolean[],
+    isActivePrevEpoch: boolean[],
     balances?: number[]
   ) => void;
 };

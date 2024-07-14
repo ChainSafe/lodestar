@@ -165,6 +165,12 @@ export interface EpochTransitionCache {
   nextEpochTotalActiveBalanceByIncrement: number;
 
   /**
+   * Track by validator index if it's active in the prev epoch.
+   * Used in metrics
+   */
+  isActivePrevEpoch: boolean[];
+
+  /**
    * Track by validator index if it's active in the current epoch.
    * Used in metrics
    */
@@ -467,6 +473,7 @@ export function beforeProcessEpoch(
     nextEpochShufflingActiveValidatorIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
+    isActivePrevEpoch,
     isActiveCurrEpoch,
     isActiveNextEpoch,
     proposerIndices,
