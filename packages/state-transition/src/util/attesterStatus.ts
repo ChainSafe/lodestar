@@ -1,23 +1,26 @@
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 
-export const FLAG_PREV_SOURCE_ATTESTER = 1 << 0;
-export const FLAG_PREV_TARGET_ATTESTER = 1 << 1;
-export const FLAG_PREV_HEAD_ATTESTER = 1 << 2;
-export const FLAG_CURR_SOURCE_ATTESTER = 1 << 3;
-export const FLAG_CURR_TARGET_ATTESTER = 1 << 4;
-export const FLAG_CURR_HEAD_ATTESTER = 1 << 5;
+// We pack both previous and current epoch attester flags
+// as well as slashed and eligibility flags into a single number
+// to save space in our epoch transition cache.
+// Note: the order of the flags is important for efficiently translating
+// from the BeaconState flags to our flags.
+// [prevSource, prevTarget, prevHead, currSource, currTarget, currHead, unslashed, eligible]
+export const FLAG_PREV_SOURCE_ATTESTER = 1 << TIMELY_SOURCE_FLAG_INDEX;
+export const FLAG_PREV_TARGET_ATTESTER = 1 << TIMELY_TARGET_FLAG_INDEX;
+export const FLAG_PREV_HEAD_ATTESTER = 1 << TIMELY_HEAD_FLAG_INDEX;
+
+export const FLAG_CURR_SOURCE_ATTESTER = 1 << (3 + TIMELY_SOURCE_FLAG_INDEX);
+export const FLAG_CURR_TARGET_ATTESTER = 1 << (3 + TIMELY_TARGET_FLAG_INDEX);
+export const FLAG_CURR_HEAD_ATTESTER = 1 << (3 + TIMELY_HEAD_FLAG_INDEX);
 
 export const FLAG_UNSLASHED = 1 << 6;
 export const FLAG_ELIGIBLE_ATTESTER = 1 << 7;
-// Precompute OR flags
+
+// Precompute OR flags used in epoch processing
 export const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
 export const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
 export const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
-
-/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
-const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
-const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
-const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 
 export function hasMarkers(flags: number, markers: number): boolean {
   return (flags & markers) === markers;
@@ -58,18 +61,4 @@ export function toAttesterFlags(flagsObj: AttesterFlags): number {
   if (flagsObj.unslashed) flag |= FLAG_UNSLASHED;
   if (flagsObj.eligibleAttester) flag |= FLAG_ELIGIBLE_ATTESTER;
   return flag;
-}
-
-export type ParticipationFlags = {
-  timelySource: boolean;
-  timelyTarget: boolean;
-  timelyHead: boolean;
-};
-
-export function parseParticipationFlags(flags: number): ParticipationFlags {
-  return {
-    timelySource: hasMarkers(flags, TIMELY_SOURCE),
-    timelyTarget: hasMarkers(flags, TIMELY_TARGET),
-    timelyHead: hasMarkers(flags, TIMELY_HEAD),
-  };
 }
