@@ -9,10 +9,12 @@ import {Batch, BatchStatus} from "../batch.js";
  */
 export class ChainPeersBalancer {
   private peers: PeerIdStr[];
+  private peerset: Map<PeerIdStr, {custodyColumns: number[]}>;
   private activeRequestsByPeer = new Map<PeerIdStr, number>();
 
-  constructor(peers: PeerIdStr[], batches: Batch[]) {
+  constructor(peers: PeerIdStr[], peerset: Map<PeerIdStr, {custodyColumns: number[]}>, batches: Batch[]) {
     this.peers = shuffle(peers);
+    this.peerset = peerset;
 
     // Compute activeRequestsByPeer from all batches internal states
     for (const batch of batches) {
@@ -27,9 +29,28 @@ export class ChainPeersBalancer {
    * Sort peers by (1) no failed request (2) less active requests, then pick first
    */
   bestPeerToRetryBatch(batch: Batch): PeerIdStr | undefined {
+    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+      return;
+    }
+    const {partialDownload} = batch.state;
+
     const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
-      this.peers,
+      this.peers.filter((peerId) => {
+        if (partialDownload === null) {
+          return true;
+        }
+
+        const peerColumns = this.peerset.get(peerId)?.custodyColumns ?? [];
+        const columns = peerColumns.reduce((acc, elem) => {
+          if (partialDownload.pendingDataColumns.includes(elem)) {
+            acc.push(elem);
+          }
+          return acc;
+        }, [] as number[]);
+
+        return columns.length > 0;
+      }),
       (peer) => (failedPeers.has(peer) ? 1 : 0), // Sort by no failed first = 0
       (peer) => this.activeRequestsByPeer.get(peer) ?? 0 // Sort by least active req
     );

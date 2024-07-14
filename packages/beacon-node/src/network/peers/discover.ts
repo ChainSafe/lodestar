@@ -100,6 +100,7 @@ export class PeerDiscovery {
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private peerIdToNodeId = new Map<PeerIdStr, NodeId>();
+  private peerIdToMyEnr = new Map<PeerIdStr, ENR>();
   private peerIdToCustodySubnetCount = new Map<PeerIdStr, number>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
@@ -319,9 +320,12 @@ export class PeerDiscovery {
 
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
-    const custodySubnetCount = 0;
+    const custodySubnetCount = this.peerIdToCustodySubnetCount.get(id.toString());
+    if (custodySubnetCount === undefined) {
+      this.logger.warn("onDiscoveredPeer with unknown custodySubnetCount assuming 4", {peerId: id.toString()});
+    }
 
-    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, custodySubnetCount);
+    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, custodySubnetCount ?? 4);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
@@ -337,6 +341,7 @@ export class PeerDiscovery {
 
     const nodeId = fromHexString(enr.nodeId);
     this.peerIdToNodeId.set(peerId.toString(), nodeId);
+    this.peerIdToMyEnr.set(peerId.toString(), enr);
     pruneSetToMax(this.peerIdToNodeId, MAX_CACHED_NODEIDS);
 
     // tcp multiaddr is known to be be present, checked inside the worker
@@ -349,7 +354,10 @@ export class PeerDiscovery {
     // Are this fields mandatory?
     const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
-    const custodySubnetCountBytes = enr.kvs.get(ENRKey.custody_subnet_count); // 64 bits
+    const custodySubnetCountBytes = enr.kvs.get(ENRKey.csc); // 64 bits
+    if (custodySubnetCountBytes === undefined) {
+      this.logger.warn("peer discovered with no csc assuming 4", exportENRToJSON(enr));
+    }
 
     // Use faster version than ssz's implementation that leverages pre-cached.
     // Some nodes don't serialize the bitfields properly, encoding the syncnets as attnets,
@@ -357,7 +365,7 @@ export class PeerDiscovery {
     // never throw and treat too long or too short bitfields as zero-ed
     const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
-    const custodySubnetCount = custodySubnetCountBytes ? ssz.UintNum64.deserialize(custodySubnetCountBytes) : 1;
+    const custodySubnetCount = custodySubnetCountBytes ? ssz.Uint8.deserialize(custodySubnetCountBytes) : 4;
     this.peerIdToCustodySubnetCount.set(peerId.toString(), custodySubnetCount);
 
     const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets, custodySubnetCount);
@@ -431,7 +439,7 @@ export class PeerDiscovery {
     const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
     const hasAllColumns = this.custodySubnets.reduce((acc, elem) => acc && peerCustodySubnets.includes(elem), true);
 
-    this.logger.debug("peerCustodySubnets", {
+    this.logger.warn("peerCustodySubnets", {
       peerId: peer.peerId.toString(),
       peerNodeId: toHexString(nodeId),
       hasAllColumns,
@@ -558,4 +566,15 @@ function formatLibp2pDialError(e: Error): void {
   ) {
     e.stack = undefined;
   }
+}
+
+function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefined {
+  if (enr === undefined) {
+    return undefined;
+  }
+  return {
+    ip4: enr.kvs.get("ip")?.toString(),
+    csc: enr.kvs.get("csc")?.toString(),
+    nodeId: enr.nodeId,
+  };
 }

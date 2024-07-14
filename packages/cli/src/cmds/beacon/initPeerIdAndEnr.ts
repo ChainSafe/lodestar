@@ -87,7 +87,9 @@ export function overwriteEnrWithCliArgs(
     maybeUpdateEnr(enr, "tcp", args["enr.tcp"] ?? port ?? enr.tcp);
     maybeUpdateEnr(enr, "tcp6", args["enr.tcp6"] ?? port6 ?? enr.tcp6);
   }
-  enr.set("custody_subnet_count", ssz.UintNum64.serialize(config.CUSTODY_REQUIREMENT));
+
+  // csc is big ending but since 1 bytes suffices for now so its the same
+  enr.set("csc", ssz.Uint8.serialize(config.CUSTODY_REQUIREMENT));
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
     const isLocal = isLocalMultiAddr(mu);

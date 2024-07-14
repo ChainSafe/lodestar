@@ -1,4 +1,4 @@
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB} from "@lodestar/params";
+import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {electra, Slot, ssz, ColumnIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -76,8 +76,7 @@ export function* iterateDataColumnBytesFromWrapper(
   chain: IBeaconChain,
   dataColumnSidecarsBytesWrapped: Uint8Array,
   blockSlot: Slot,
-  // use the columns include to see if you want to yield in response
-  _columns: ColumnIndex[]
+  columns: ColumnIndex[]
 ): Iterable<ResponseOutgoing> {
   const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
     COLUMN_SIZE_IN_WRAPPER_INDEX,
@@ -85,10 +84,25 @@ export function* iterateDataColumnBytesFromWrapper(
   );
   const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
   const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
+  const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
+    CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
+    CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
+  );
 
   const columnsLen = allDataColumnSidecarsBytes.length / columnsSize;
+  // no columns possibly no blob
+  if (columnsLen === 0) {
+    return;
+  }
 
-  for (let index = 0; index < columnsLen; index++) {
+  const fork = chain.config.getForkName(blockSlot);
+
+  for (const column of columns) {
+    // get the index at which the column is
+    const index = dataColumnsIndex[column] - 1;
+    if (index < 0) {
+      throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${column} not custodied`);
+    }
     const dataColumnSidecarBytes = allDataColumnSidecarsBytes.slice(index * columnsSize, (index + 1) * columnsSize);
     if (dataColumnSidecarBytes.length !== columnsSize) {
       throw new ResponseError(
@@ -98,7 +112,7 @@ export function* iterateDataColumnBytesFromWrapper(
     }
     yield {
       data: dataColumnSidecarBytes,
-      fork: chain.config.getForkName(blockSlot),
+      fork,
     };
   }
 }

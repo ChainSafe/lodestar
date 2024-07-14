@@ -11,7 +11,7 @@ export enum ENRKey {
   eth2 = "eth2",
   attnets = "attnets",
   syncnets = "syncnets",
-  custody_subnet_count = "custody_subnet_count",
+  csc = "csc",
 }
 export enum SubnetType {
   attnets = "attnets",
