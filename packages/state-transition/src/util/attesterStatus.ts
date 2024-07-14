@@ -62,3 +62,22 @@ export function toAttesterFlags(flagsObj: AttesterFlags): number {
   if (flagsObj.eligibleAttester) flag |= FLAG_ELIGIBLE_ATTESTER;
   return flag;
 }
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
+const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+
+export type ParticipationFlags = {
+  timelySource: boolean;
+  timelyTarget: boolean;
+  timelyHead: boolean;
+};
+
+export function parseParticipationFlags(flags: number): ParticipationFlags {
+  return {
+    timelySource: hasMarkers(flags, TIMELY_SOURCE),
+    timelyTarget: hasMarkers(flags, TIMELY_TARGET),
+    timelyHead: hasMarkers(flags, TIMELY_HEAD),
+  };
+}
