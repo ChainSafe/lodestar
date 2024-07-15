@@ -105,21 +105,21 @@ describe("C-KZG", () => {
       expect(sidecar.kzgProofs.length).toBe(blobs.length);
       sidecar.column.forEach((cell, row) => {
         expect(Uint8Array.from(cell)).toStrictEqual(mocks[row].cells[column]);
-      });
-      sidecar.kzgProofs.forEach((proof, row) => {
+        const proof = sidecar.kzgProofs[row];
         expect(Uint8Array.from(proof)).toStrictEqual(mocks[row].proofs[column]);
+        const commitment = sidecar.kzgCommitments[row];
+        const cellIndex = sidecar.index;
+        expect(ckzg.verifyCellKzgProofBatch([commitment], [cellIndex], [cell], [proof])).toBeTruthy();
       });
+      expect(
+        ckzg.verifyCellKzgProofBatch(
+          sidecar.kzgCommitments,
+          Array.from({length: sidecar.column.length}, () => sidecar.index),
+          sidecar.column,
+          sidecar.kzgProofs
+        )
+      ).toBeTruthy();
     });
-
-    const sideCarsPerBlob = sidecars.length / blobs.length;
-    while (sidecars.length > 0) {
-      const batch = sidecars.splice(0, sideCarsPerBlob);
-      const commitments = batch.map(({kzgCommitments}) => kzgCommitments).flat();
-      const cells = batch.map(({column}) => column).flat();
-      const proofs = batch.map(({kzgProofs}) => kzgProofs).flat();
-      ckzg.verifyCellKzgProofBatch(commitments, linspace(0, cells.length - 1), cells, proofs);
-    }
-    expect(sidecars.length).toBe(0);
   });
 });
 
