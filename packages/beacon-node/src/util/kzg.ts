@@ -13,36 +13,31 @@ function ckzgNotLoaded(): never {
 }
 
 export let ckzg: {
-  freeTrustedSetup(): void;
   loadTrustedSetup(precompute: number, filePath: string): void;
   blobToKzgCommitment(blob: Uint8Array): Uint8Array;
+  computeKzgProof(blob: Uint8Array, zBytes: Uint8Array): [Uint8Array, Uint8Array];
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
+  verifyKzgProof(commitmentBytes: Uint8Array, zBytes: Uint8Array, yBytes: Uint8Array, proofBytes: Uint8Array): boolean;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
-  computeCells(blob: Uint8Array): Uint8Array[];
   computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
-  cellsToBlob(cells: Uint8Array[]): Uint8Array;
-  recoverAllCells(cellIds: number[], cells: Uint8Array[]): Uint8Array[];
-  verifyCellKzgProof(commitmentBytes: Uint8Array, cellId: number, cell: Uint8Array, proofBytes: Uint8Array): boolean;
+  recoverCellsAndKzgProofs(cellIndices: number[], cells: Uint8Array[]): [Uint8Array[], Uint8Array[]];
   verifyCellKzgProofBatch(
     commitmentsBytes: Uint8Array[],
-    rowIndices: number[],
-    columnIndices: number[],
+    cellIndices: number[],
     cells: Uint8Array[],
     proofsBytes: Uint8Array[]
   ): boolean;
 } = {
-  freeTrustedSetup: ckzgNotLoaded,
   loadTrustedSetup: ckzgNotLoaded,
   blobToKzgCommitment: ckzgNotLoaded,
+  computeKzgProof: ckzgNotLoaded,
   computeBlobKzgProof: ckzgNotLoaded,
+  verifyKzgProof: ckzgNotLoaded,
   verifyBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProofBatch: ckzgNotLoaded,
-  computeCells: ckzgNotLoaded,
   computeCellsAndKzgProofs: ckzgNotLoaded,
-  cellsToBlob: ckzgNotLoaded,
-  recoverAllCells: ckzgNotLoaded,
-  verifyCellKzgProof: ckzgNotLoaded,
+  recoverCellsAndKzgProofs: ckzgNotLoaded,
   verifyCellKzgProofBatch: ckzgNotLoaded,
 };
 
