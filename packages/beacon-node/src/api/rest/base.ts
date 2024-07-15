@@ -100,7 +100,7 @@ export class RestApiServer {
       if (
         // go-eth2-client supports handling SSZ data in response for these endpoints
         !["produceBlindedBlock", "produceBlockV3", "getBlockV2", "getStateV2"].includes(operationId) &&
-        // Only Vouch (and Charon?) seems to override default header
+        // Only Vouch seems to override default header
         ["go-eth2-client", "Go-http-client", "Vouch"].includes(req.headers["user-agent"]?.split("/")[0] ?? "")
       ) {
         // Override Accept header to force server to return JSON
