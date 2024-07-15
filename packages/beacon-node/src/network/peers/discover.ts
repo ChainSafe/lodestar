@@ -36,6 +36,7 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
+  nodeId: NodeId,
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
@@ -122,16 +123,19 @@ export class PeerDiscovery {
   private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
-    const {libp2p, peerRpcScores, metrics, logger, config} = modules;
+    const {libp2p, peerRpcScores, metrics, logger, config, nodeId} = modules;
     this.libp2p = libp2p;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
     this.config = config;
     this.discv5 = discv5;
-    this.nodeId = fromHexString(ENR.decodeTxt(opts.discv5.enr).nodeId);
+    this.nodeId = nodeId;
     // we will only connect to peers that can provide us custody
-    this.custodySubnets = getCustodyColumnSubnets(this.nodeId, config.CUSTODY_REQUIREMENT);
+    this.custodySubnets = getCustodyColumnSubnets(
+      nodeId,
+      Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)
+    );
 
     this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;

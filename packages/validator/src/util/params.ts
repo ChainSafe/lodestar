@@ -234,5 +234,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Electra
     SAMPLES_PER_SLOT: electraForkRelevant,
     CUSTODY_REQUIREMENT: electraForkRelevant,
+    NODE_CUSTODY_REQUIREMENT: electraForkRelevant,
   };
 }

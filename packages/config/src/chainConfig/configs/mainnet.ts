@@ -106,4 +106,5 @@ export const chainConfig: ChainConfig = {
   // Electra
   SAMPLES_PER_SLOT: 8,
   CUSTODY_REQUIREMENT: 1,
+  NODE_CUSTODY_REQUIREMENT: 1,
 };

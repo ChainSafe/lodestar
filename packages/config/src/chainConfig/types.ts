@@ -75,6 +75,7 @@ export type ChainConfig = {
 
   SAMPLES_PER_SLOT: number;
   CUSTODY_REQUIREMENT: number;
+  NODE_CUSTODY_REQUIREMENT: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -140,6 +141,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   SAMPLES_PER_SLOT: "number",
   CUSTODY_REQUIREMENT: "number",
+  NODE_CUSTODY_REQUIREMENT: "number",
 };
 
 /** Allows values in a Spec file */
