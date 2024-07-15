@@ -50,7 +50,12 @@ export function parseAcceptHeader(accept?: string, supported = SUPPORTED_MEDIA_T
         // Normalize here, using 1 as the default qvalue
         const quality = current.includes(";") ? current.split(";") : [current, "q=1"];
 
-        const mediaType = quality[0].trim();
+        let mediaType = quality[0].trim();
+
+        if (mediaType === "*/*") {
+          // Default to json if all media types are accepted
+          mediaType = MediaType.json;
+        }
 
         // If the mime type isn't acceptable, move on to the next entry
         if (!isSupportedMediaType(mediaType, supported)) {
