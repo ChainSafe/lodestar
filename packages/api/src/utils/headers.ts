@@ -4,6 +4,12 @@ export enum HttpHeader {
   ContentType = "content-type",
   Accept = "accept",
   Authorization = "authorization",
+  /**
+   * Used to indicate which response headers should be made available to
+   * scripts running in the browser, in response to a cross-origin request.
+   * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Expose-Headers
+   */
+  ExposeHeaders = "access-control-expose-headers",
 }
 
 export enum MediaType {
