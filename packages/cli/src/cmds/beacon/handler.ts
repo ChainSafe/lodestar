@@ -1,6 +1,5 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
-import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
@@ -61,13 +60,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  // additional metrics registries
-  const metricsRegistries: Registry[] = [];
-  let networkRegistry: Registry | undefined;
-  if (options.metrics.enabled) {
-    networkRegistry = new Registry();
-    metricsRegistries.push(networkRegistry);
-  }
   const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
@@ -92,7 +84,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
-      metricsRegistries,
     });
 
     // dev debug option to have access to the BN instance
