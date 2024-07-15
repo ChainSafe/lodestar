@@ -19,7 +19,7 @@ export function getApiClientStub(): ApiClientStub {
       publishBlindedBlockV2: vi.fn(),
       publishBlockV2: vi.fn(),
       submitPoolSyncCommitteeSignatures: vi.fn(),
-      submitPoolAttestations: vi.fn(),
+      submitPoolAttestationsV2: vi.fn(),
     },
     validator: {
       getProposerDuties: vi.fn(),

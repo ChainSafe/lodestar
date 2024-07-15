@@ -27,6 +27,17 @@ export function getBeaconPoolApi({
     async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
+
+      if (committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
+      }
+
+      return {data: attestations};
+    },
+
+    async getPoolAttestationsV2({slot, committeeIndex}) {
+      // Already filtered by slot
+      let attestations = chain.aggregatedAttestationPool.getAll(slot);
       const fork = chain.config.getForkName(slot ?? attestations[0].data.slot) ?? ForkName.phase0;
 
       if (committeeIndex !== undefined) {
@@ -38,6 +49,10 @@ export function getBeaconPoolApi({
 
     async getPoolAttesterSlashings() {
       return {data: chain.opPool.getAllAttesterSlashings()};
+    },
+
+    async getPoolAttesterSlashingsV2() {
+      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: ForkName.phase0}};
     },
 
     async getPoolProposerSlashings() {
@@ -109,10 +124,20 @@ export function getBeaconPoolApi({
       }
     },
 
+    async submitPoolAttestationsV2({signedAttestations}) {
+      // TODO Electra: Refactor submitPoolAttestations and submitPoolAttestationsV2
+      await this.submitPoolAttestations({signedAttestations});
+    },
+
     async submitPoolAttesterSlashings({attesterSlashing}) {
       await validateApiAttesterSlashing(chain, attesterSlashing);
       chain.opPool.insertAttesterSlashing(attesterSlashing);
       await network.publishAttesterSlashing(attesterSlashing);
+    },
+
+    async submitPoolAttesterSlashingsV2({attesterSlashing}) {
+      // TODO Electra: Refactor submitPoolAttesterSlashings and submitPoolAttesterSlashingsV2
+      await this.submitPoolAttesterSlashings({attesterSlashing});
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {

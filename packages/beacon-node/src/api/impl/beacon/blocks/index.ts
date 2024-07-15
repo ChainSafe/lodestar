@@ -413,6 +413,14 @@ export function getBeaconBlockApi({
       };
     },
 
+    async getBlockAttestationsV2({blockId}) {
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      return {
+        data: Array.from(block.message.body.attestations),
+        meta: {executionOptimistic, finalized, version: config.getForkName(block.message.slot)},
+      };
+    },
+
     async getBlockRoot({blockId}) {
       // Fast path: From head state already available in memory get historical blockRoot
       const slot = typeof blockId === "string" ? parseInt(blockId) : blockId;

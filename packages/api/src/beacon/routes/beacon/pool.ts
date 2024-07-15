@@ -2,7 +2,7 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
-import {phase0, capella, CommitteeIndex, Slot, ssz} from "@lodestar/types";
+import {phase0, capella, CommitteeIndex, Slot, ssz, electra} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {
   ArrayOf,
@@ -23,16 +23,21 @@ import {fromHeaders} from "../../../utils/headers.js";
 
 const AttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const AttestationListTypeElectra = ArrayOf(ssz.electra.Attestation);
-const AttesterSlashingListType = ArrayOf(ssz.phase0.AttesterSlashing);
+const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
+const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
 const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
 
-type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
+export type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
-type AttestationList = AttestationListPhase0 | AttestationListElectra;
-type AttesterSlashingList = ValueOf<typeof AttesterSlashingListType>;
+export type AttestationList = AttestationListPhase0 | AttestationListElectra;
+
+type AttesterSlashingPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
+type AttesterSlashingElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
+type AttesterSlashingList = AttesterSlashingPhase0 | AttesterSlashingElectra;
+
 type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
 type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeListType>;
@@ -44,6 +49,18 @@ export type Endpoints = {
    * Retrieves attestations known by the node but not necessarily incorporated into any block
    */
   getPoolAttestations: Endpoint<
+    "GET",
+    {slot?: Slot; committeeIndex?: CommitteeIndex},
+    {query: {slot?: number; committee_index?: number}},
+    AttestationList,
+    EmptyMeta
+  >;
+
+  /**
+   * Get Attestations from operations pool
+   * Retrieves attestations known by the node but not necessarily incorporated into any block
+   */
+  getPoolAttestationsV2: Endpoint<
     "GET",
     {slot?: Slot; committeeIndex?: CommitteeIndex},
     {query: {slot?: number; committee_index?: number}},
@@ -60,8 +77,21 @@ export type Endpoints = {
     "GET",
     EmptyArgs,
     EmptyRequest,
-    AttesterSlashingList,
+    AttesterSlashingPhase0,
     EmptyMeta
+  >;
+
+  /**
+   * Get AttesterSlashings from operations pool
+   * Retrieves attester slashings known by the node but not necessarily incorporated into any block
+   */
+  getPoolAttesterSlashingsV2: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    AttesterSlashingList,
+    VersionMeta
   >;
 
   /**
@@ -113,6 +143,22 @@ export type Endpoints = {
    */
   submitPoolAttestations: Endpoint<
     "POST",
+    {signedAttestations: AttestationListPhase0},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Submit Attestation objects to node
+   * Submits Attestation objects to the node.  Each attestation in the request body is processed individually.
+   *
+   * If an attestation is validated successfully the node MUST publish that attestation on the appropriate subnet.
+   *
+   * If one or more attestations fail validation the node MUST return a 400 error with details of which attestations have failed, and why.
+   */
+  submitPoolAttestationsV2: Endpoint<
+    "POST",
     {signedAttestations: AttestationList},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
@@ -127,6 +173,18 @@ export type Endpoints = {
     "POST",
     {attesterSlashing: phase0.AttesterSlashing},
     {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Submit AttesterSlashing object to node's pool
+   * Submits AttesterSlashing object to node's pool and if passes validation node MUST broadcast it to network.
+   */
+  submitPoolAttesterSlashingsV2: Endpoint<
+    "POST",
+    {attesterSlashing: phase0.AttesterSlashing | electra.AttesterSlashing},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -191,6 +249,19 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
       },
       resp: {
+        data: AttestationListTypePhase0,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getPoolAttestationsV2: {
+      url: "/eth/v2/beacon/pool/attestations",
+      method: "GET",
+      req: {
+        writeReq: ({slot, committeeIndex}) => ({query: {slot, committee_index: committeeIndex}}),
+        parseReq: ({query}) => ({slot: query.slot, committeeIndex: query.committee_index}),
+        schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
+      },
+      resp: {
         data: WithVersion((fork) =>
           ForkSeq[fork] >= ForkSeq.electra ? AttestationListTypeElectra : AttestationListTypePhase0
         ),
@@ -202,8 +273,19 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: AttesterSlashingListType,
+        data: AttesterSlashingListTypePhase0,
         meta: EmptyMetaCodec,
+      },
+    },
+    getPoolAttesterSlashingsV2: {
+      url: "/eth/v2/beacon/pool/attester_slashings",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: WithVersion((fork) =>
+          ForkSeq[fork] >= ForkSeq.electra ? AttesterSlashingListTypeElectra : AttesterSlashingListTypePhase0
+        ),
+        meta: VersionCodec,
       },
     },
     getPoolProposerSlashings: {
@@ -235,6 +317,22 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     },
     submitPoolAttestations: {
       url: "/eth/v1/beacon/pool/attestations",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedAttestations}) => ({
+          body: AttestationListTypePhase0.toJson(signedAttestations),
+        }),
+        parseReqJson: ({body}) => ({signedAttestations: AttestationListTypePhase0.fromJson(body)}),
+        writeReqSsz: ({signedAttestations}) => ({body: AttestationListTypePhase0.serialize(signedAttestations)}),
+        parseReqSsz: ({body}) => ({signedAttestations: AttestationListTypePhase0.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    submitPoolAttestationsV2: {
+      url: "/eth/v2/beacon/pool/attestations",
       method: "POST",
       req: {
         writeReqJson: ({signedAttestations}) => {
@@ -298,6 +396,63 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body}) => ({attesterSlashing: ssz.phase0.AttesterSlashing.deserialize(body)}),
         schema: {
           body: Schema.Object,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    submitPoolAttesterSlashingsV2: {
+      url: "/eth/v2/beacon/pool/attester_slashings",
+      method: "POST",
+      req: {
+        writeReqJson: ({attesterSlashing}) => {
+          const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+          return {
+            body:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? ssz.electra.AttesterSlashing.toJson(attesterSlashing as electra.AttesterSlashing)
+                : ssz.phase0.AttesterSlashing.toJson(attesterSlashing as phase0.AttesterSlashing),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
+          const fork =
+            versionHeader !== undefined
+              ? toForkName(versionHeader)
+              : config.getForkName(
+                  Number((body as {attestations1: {data: {slot: string}}})?.attestations1.data.slot ?? 0)
+                );
+
+          return {
+            attesterSlashing:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? ssz.electra.AttesterSlashing.fromJson(body)
+                : ssz.phase0.AttesterSlashing.fromJson(body),
+          };
+        },
+        writeReqSsz: ({attesterSlashing}) => {
+          const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+          return {
+            body:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
+                : ssz.electra.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
+          const fork = toForkName(versionHeader);
+          return {
+            attesterSlashing:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? ssz.electra.AttesterSlashing.deserialize(body)
+                : ssz.phase0.AttesterSlashing.deserialize(body),
+          };
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
         },
       },
       resp: EmptyResponseCodec,

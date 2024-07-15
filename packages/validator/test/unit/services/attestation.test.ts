@@ -105,7 +105,7 @@ describe("AttestationService", function () {
           mockApiResponse({data: attestation, meta: {version: ForkName.phase0}})
         );
 
-        api.beacon.submitPoolAttestations.mockResolvedValue(mockApiResponse({}));
+        api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
         api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));
 
         if (opts.distributedAggregationSelection) {
@@ -148,8 +148,8 @@ describe("AttestationService", function () {
         }
 
         // Must submit the attestation received through produceAttestationData()
-        expect(api.beacon.submitPoolAttestations).toHaveBeenCalledOnce();
-        expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith({signedAttestations: [attestation]});
+        expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
+        expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [attestation]});
 
         // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
         expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();

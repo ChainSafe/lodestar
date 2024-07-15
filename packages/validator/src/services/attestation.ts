@@ -225,7 +225,7 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
+      (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {

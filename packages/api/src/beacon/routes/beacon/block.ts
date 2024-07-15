@@ -8,7 +8,6 @@ import {
   deneb,
   isSignedBlockContents,
   SignedBeaconBlock,
-  BeaconBlockBody,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
@@ -27,6 +26,7 @@ import {
 import {getExecutionForkTypes, toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
+import {AttestationList, AttestationListPhase0} from "./pool.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -101,8 +101,20 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    BeaconBlockBody["attestations"],
+    AttestationListPhase0,
     ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
+   * Get block attestations
+   * Retrieves attestation included in requested block.
+   */
+  getBlockAttestationsV2: Endpoint<
+    "GET",
+    BlockArgs,
+    {params: {block_id: string}},
+    AttestationList,
+    ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
   /**
@@ -249,6 +261,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: ssz.phase0.BeaconBlockBody.fields.attestations,
         meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getBlockAttestationsV2: {
+      url: "/eth/v2/beacon/blocks/{block_id}/attestations",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: WithVersion((fork) => ssz[fork].BeaconBlockBody.fields.attestations),
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
     getBlockHeader: {
