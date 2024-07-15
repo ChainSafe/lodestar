@@ -84,6 +84,7 @@ describe("CachedBeaconState", () => {
             state.validators.get(i).effectiveBalance += 1;
           }
         }
+        state.commit();
 
         if (validatorCountDelta < 0) {
           state.validators = state.validators.sliceTo(state.validators.length - 1 + validatorCountDelta);

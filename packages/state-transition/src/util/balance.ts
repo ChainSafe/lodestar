@@ -1,5 +1,5 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
-import {Gwei, ValidatorIndex} from "@lodestar/types";
+import {Gwei, ValidatorIndex, phase0} from "@lodestar/types";
 import {bigIntMax} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "..";
@@ -44,6 +44,11 @@ export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorInde
 }
 
 /**
+ * This data is reused and never gc.
+ */
+const validators = new Array<phase0.Validator>();
+
+/**
  * This method is used to get justified balances from a justified state.
  * This is consumed by forkchoice which based on delta so we return "by increment" (in ether) value,
  * ie [30, 31, 32] instead of [30e9, 31e9, 32e9]
@@ -63,7 +68,8 @@ export function getEffectiveBalanceIncrementsZeroInactive(
     validatorCount
   );
 
-  const validators = justifiedState.validators.getAllReadonly();
+  validators.length = validatorCount;
+  justifiedState.validators.getAllReadonlyValues(validators);
   let j = 0;
   for (let i = 0; i < validatorCount; i++) {
     if (i === activeIndices[j]) {

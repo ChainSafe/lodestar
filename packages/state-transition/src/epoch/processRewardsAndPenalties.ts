@@ -10,6 +10,10 @@ import {getAttestationDeltas} from "./getAttestationDeltas.js";
 import {getRewardsAndPenaltiesAltair} from "./getRewardsAndPenalties.js";
 
 /**
+ * This data is reused and never gc.
+ */
+const balances = new Array<number>();
+/**
  * Iterate over all validator and compute rewards and penalties to apply to balances.
  *
  * PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
@@ -25,7 +29,8 @@ export function processRewardsAndPenalties(
   }
 
   const [rewards, penalties] = getRewardsAndPenalties(state, cache);
-  const balances = state.balances.getAll();
+  balances.length = state.balances.length;
+  state.balances.getAll(balances);
 
   for (let i = 0, len = rewards.length; i < len; i++) {
     balances[i] += rewards[i] - penalties[i] - (slashingPenalties[i] ?? 0);
