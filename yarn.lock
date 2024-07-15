@@ -4494,9 +4494,9 @@ byte-size@8.1.1:
   resolved "https://registry.yarnpkg.com/byte-size/-/byte-size-8.1.1.tgz#3424608c62d59de5bfda05d31e0313c6174842ae"
   integrity sha512-tUkzZWK0M/qdoLEqikxBWe4kumyuwjl3HO6zHTr4yEI23EojPtLYXdG1+AQY7MN0cGyNDvEaJ8wiYQm6P2bPxg==
 
-c-kzg@matthewkeil/c-kzg-4844#13aa01464479aa7c1ccafa64d52cbc17699ffa07:
+c-kzg@matthewkeil/c-kzg-4844#853b22fa416d4eac376678a36bfba0bccb59dd78:
   version "0.0.0"
-  resolved "https://codeload.github.com/matthewkeil/c-kzg-4844/tar.gz/13aa01464479aa7c1ccafa64d52cbc17699ffa07"
+  resolved "https://codeload.github.com/matthewkeil/c-kzg-4844/tar.gz/853b22fa416d4eac376678a36bfba0bccb59dd78"
 
 cac@^6.7.14:
   version "6.7.14"
