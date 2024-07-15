@@ -8,6 +8,7 @@ import {computeBlobSidecars, getDataColumnSidecars, kzgCommitmentToVersionedHash
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
+import {linspace} from "../../../src/util/numpy.js";
 
 describe("C-KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -109,6 +110,16 @@ describe("C-KZG", () => {
         expect(Uint8Array.from(proof)).toStrictEqual(mocks[row].proofs[column]);
       });
     });
+
+    const sideCarsPerBlob = sidecars.length / blobs.length;
+    while (sidecars.length > 0) {
+      const batch = sidecars.splice(0, sideCarsPerBlob);
+      const commitments = batch.map(({kzgCommitments}) => kzgCommitments).flat();
+      const cells = batch.map(({column}) => column).flat();
+      const proofs = batch.map(({kzgProofs}) => kzgProofs).flat();
+      ckzg.verifyCellKzgProofBatch(commitments, linspace(0, cells.length - 1), cells, proofs);
+    }
+    expect(sidecars.length).toBe(0);
   });
 });
 
