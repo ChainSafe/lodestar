@@ -258,7 +258,7 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const res = await this.api.validator.getAggregatedAttestation({
+    const res = await this.api.validator.getAggregatedAttestationV2({
       attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
       slot: attestation.slot,
       committeeIndex,

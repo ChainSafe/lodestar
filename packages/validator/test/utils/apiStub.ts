@@ -32,7 +32,7 @@ export function getApiClientStub(): ApiClientStub {
       publishContributionAndProofs: vi.fn(),
       submitSyncCommitteeSelections: vi.fn(),
       produceAttestationData: vi.fn(),
-      getAggregatedAttestation: vi.fn(),
+      getAggregatedAttestationV2: vi.fn(),
       publishAggregateAndProofs: vi.fn(),
       submitBeaconCommitteeSelections: vi.fn(),
     },

@@ -403,6 +403,23 @@ export type Endpoints = {
       /** HashTreeRoot of AttestationData that validator want's aggregated */
       attestationDataRoot: Root;
       slot: Slot;
+    },
+    {query: {attestation_data_root: string; slot: number}},
+    phase0.Attestation,
+    EmptyMeta
+  >;
+
+  /**
+   * Get aggregated attestation
+   * Aggregates all attestations matching given attestation data root, slot and committee index
+   * Returns an aggregated `Attestation` object with same `AttestationData` root.
+   */
+  getAggregatedAttestationV2: Endpoint<
+    "GET",
+    {
+      /** HashTreeRoot of AttestationData that validator want's aggregated */
+      attestationDataRoot: Root;
+      slot: Slot;
       committeeIndex: number;
     },
     {query: {attestation_data_root: string; slot: number; committeeIndex: number}},
@@ -798,6 +815,29 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     },
     getAggregatedAttestation: {
       url: "/eth/v1/validator/aggregate_attestation",
+      method: "GET",
+      req: {
+        writeReq: ({attestationDataRoot, slot}) => ({
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot},
+        }),
+        parseReq: ({query}) => ({
+          attestationDataRoot: fromHexString(query.attestation_data_root),
+          slot: query.slot,
+        }),
+        schema: {
+          query: {
+            attestation_data_root: Schema.StringRequired,
+            slot: Schema.UintRequired,
+          },
+        },
+      },
+      resp: {
+        data: ssz.phase0.Attestation,
+        meta: EmptyMetaCodec
+      },
+    },
+    getAggregatedAttestationV2: {
+      url: "/eth/v2/validator/aggregate_attestation",
       method: "GET",
       req: {
         writeReq: ({attestationDataRoot, slot, committeeIndex}) => ({

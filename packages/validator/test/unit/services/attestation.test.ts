@@ -101,7 +101,7 @@ describe("AttestationService", function () {
 
         // Mock beacon's attestation and aggregates endpoints
         api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: attestation.data}));
-        api.validator.getAggregatedAttestation.mockResolvedValue(
+        api.validator.getAggregatedAttestationV2.mockResolvedValue(
           mockApiResponse({data: attestation, meta: {version: ForkName.phase0}})
         );
 
@@ -151,7 +151,7 @@ describe("AttestationService", function () {
         expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
         expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [attestation]});
 
-        // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
+        // Must submit the aggregate received through getAggregatedAttestationV2() then createAndSignAggregateAndProof()
         expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
         expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
       });
