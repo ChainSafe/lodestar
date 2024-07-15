@@ -95,15 +95,15 @@ export class RestApiServer {
       this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
 
-      const userAgent = req.headers["user-agent"]?.split("/")[0] ?? "";
+      // Workaround to fix compatibility with go-eth2-client
+      // See https://github.com/attestantio/go-eth2-client/issues/144
       if (
         // go-eth2-client supports handling SSZ data in response for these endpoints
         ["produceBlindedBlock", "produceBlockV3", "getBlockV2", "getStateV2"].includes(operationId) &&
         // Only Vouch seems to override default header
-        ["Go-http-client", "Vouch"].includes(userAgent)
+        ["Go-http-client", "Vouch"].includes(req.headers["user-agent"]?.split("/")[0] ?? "")
       ) {
         // Override Accept header to force server to return JSON
-        // See https://github.com/attestantio/go-eth2-client/issues/144
         req.headers.accept = "application/json";
       }
     });
