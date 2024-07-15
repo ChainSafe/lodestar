@@ -52,7 +52,7 @@ export type Endpoints = {
     "GET",
     {slot?: Slot; committeeIndex?: CommitteeIndex},
     {query: {slot?: number; committee_index?: number}},
-    AttestationList,
+    AttestationListPhase0,
     EmptyMeta
   >;
 

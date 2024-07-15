@@ -68,6 +68,10 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations({signedAttestations}) {
+      await this.submitPoolAttestationsV2({signedAttestations});
+    },
+
+    async submitPoolAttestationsV2({signedAttestations}) {
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
@@ -94,7 +98,7 @@ export function getBeaconPoolApi({
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
-            chain.emitter.emit(routes.events.EventType.attestation, {data: attestation, version: ForkName.phase0});
+            chain.emitter.emit(routes.events.EventType.attestation, {data: attestation, version: fork});
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
@@ -122,11 +126,6 @@ export function getBeaconPoolApi({
       } else if (errors.length === 1) {
         throw errors[0];
       }
-    },
-
-    async submitPoolAttestationsV2({signedAttestations}) {
-      // TODO Electra: Refactor submitPoolAttestations and submitPoolAttestationsV2
-      await this.submitPoolAttestations({signedAttestations});
     },
 
     async submitPoolAttesterSlashings({attesterSlashing}) {
