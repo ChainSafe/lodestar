@@ -1067,8 +1067,8 @@ export function getValidatorApi(
       };
     },
 
-    async getAggregatedAttestation({}) {
-      throw new Error("Not implemented");
+    async getAggregatedAttestation() {
+      throw new Error("Not implemented. Use getAggregatedAttestationV2 for now.");
     },
 
     async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {

@@ -833,7 +833,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: ssz.phase0.Attestation,
-        meta: EmptyMetaCodec
+        meta: EmptyMetaCodec,
       },
     },
     getAggregatedAttestationV2: {
