@@ -99,7 +99,7 @@ export class RestApiServer {
       // See https://github.com/attestantio/go-eth2-client/issues/144
       if (
         // go-eth2-client supports handling SSZ data in response for these endpoints
-        ["produceBlindedBlock", "produceBlockV3", "getBlockV2", "getStateV2"].includes(operationId) &&
+        !["produceBlindedBlock", "produceBlockV3", "getBlockV2", "getStateV2"].includes(operationId) &&
         // Only Vouch seems to override default header
         ["Go-http-client", "Vouch"].includes(req.headers["user-agent"]?.split("/")[0] ?? "")
       ) {
