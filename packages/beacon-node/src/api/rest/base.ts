@@ -94,6 +94,13 @@ export class RestApiServer {
       const operationId = getOperationId(req);
       this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
+
+      const userAgent = req.headers["user-agent"]?.split("/")[0];
+      if (operationId !== "produceBlockV3" && userAgent && ["Go-http-client", "Vouch"].includes(userAgent)) {
+        // Override Accept header to force server to return JSON
+        // See https://github.com/attestantio/go-eth2-client/issues/144
+        req.headers.accept = "application/json";
+      }
     });
 
     server.addHook("preHandler", async (req, _res) => {
