@@ -17,6 +17,7 @@ export const sepoliaChainConfig: ChainConfig = {
   // # Sunday, June 19, 2022 2:00:00 PM +UTC
   MIN_GENESIS_TIME: 1655647200,
   GENESIS_FORK_VERSION: b("0x90000069"),
+  GENESIS_DELAY: 86400,
 
   // Forking
   // ---------------------------------------------------------------
