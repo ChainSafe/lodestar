@@ -18,6 +18,7 @@ export const sepoliaChainConfig: ChainConfig = {
   MIN_GENESIS_TIME: 1655647200,
   GENESIS_FORK_VERSION: b("0x90000069"),
   GENESIS_DELAY: 86400,
+
   // Forking
   // ---------------------------------------------------------------
   // # Altair
