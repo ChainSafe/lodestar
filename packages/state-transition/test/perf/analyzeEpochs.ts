@@ -114,8 +114,8 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const attesterFlagsCount = {...attesterFlagsCountZero};
     const keys = Object.keys(attesterFlagsCountZero) as (keyof typeof attesterFlagsCountZero)[];
-    for (const status of cache.statuses) {
-      const flags = parseAttesterFlags(status.flags);
+    for (const flag of cache.flags) {
+      const flags = parseAttesterFlags(flag);
       for (const key of keys) {
         if (flags[key]) attesterFlagsCount[key]++;
       }
