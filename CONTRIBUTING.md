@@ -50,7 +50,7 @@ Contributing to tests:
 
 ## Devcontainer
 
-A [devcontainer](https://containers.dev/) [configuration](.devcontainer/devcontainer.json) is provided to help speed up linux based development environment setup. It will be used by [GitHub Codespaces](https://github.com/features/codespaces) or directly inside VS Code via your local through this [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+A [devcontainer](https://containers.dev/) [configuration](https://github.com/ChainSafe/lodestar/blob/unstable/.devcontainer/devcontainer.json) is provided to help speed up linux based development environment setup. It will be used by [GitHub Codespaces](https://github.com/features/codespaces) or directly inside VS Code via your local through this [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
 
 ### Common Issues
 

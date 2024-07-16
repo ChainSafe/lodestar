@@ -5,7 +5,10 @@ import {rimraf} from "rimraf";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {cachedSeckeysHex} from "../../utils/cachedKeys.js";
 import {testFilesDir} from "../../utils.js";
-import {decryptKeystoreDefinitions} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions.js";
+import {
+  decryptKeystoreDefinitions,
+  KeystoreDecryptOptions,
+} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions.js";
 import {LocalKeystoreDefinition} from "../../../src/cmds/validator/keymanager/interface.js";
 import {LockfileError, unlockFilepath} from "../../../src/util/lockfile.js";
 
@@ -56,16 +59,20 @@ describe("decryptKeystoreDefinitions", () => {
       }
     });
 
-    testDecryptKeystoreDefinitions(cacheFilePath);
+    testDecryptKeystoreDefinitions({cacheFilePath});
   });
 
   describe("without keystore cache", () => {
     testDecryptKeystoreDefinitions();
   });
 
-  function testDecryptKeystoreDefinitions(cacheFilePath?: string): void {
+  describe("disabled thread pool", () => {
+    testDecryptKeystoreDefinitions({disableThreadPool: true});
+  });
+
+  function testDecryptKeystoreDefinitions(opts?: Partial<KeystoreDecryptOptions>): void {
     it("decrypt keystores", async () => {
-      const signers = await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
+      const signers = await decryptKeystoreDefinitions(definitions, {logger: console, signal, ...opts});
       expect(signers.length).toBe(secretKeys.length);
       for (const signer of signers) {
         const hexSecret = signer.secretKey.toHex();
@@ -75,11 +82,11 @@ describe("decryptKeystoreDefinitions", () => {
     });
 
     it("fail to decrypt keystores if lockfiles already exist", async () => {
-      await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
+      await decryptKeystoreDefinitions(definitions, {logger: console, signal, ...opts});
       // lockfiles should exist after the first run
 
       try {
-        await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
+        await decryptKeystoreDefinitions(definitions, {logger: console, signal, ...opts});
         expect.fail("Second decrypt should fail due to failure to get lockfile");
       } catch (e) {
         expect((e as LockfileError).code).toBe<LockfileError["code"]>("ELOCKED");
@@ -87,10 +94,10 @@ describe("decryptKeystoreDefinitions", () => {
     });
 
     it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
-      await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
+      await decryptKeystoreDefinitions(definitions, {logger: console, signal, ...opts});
       // lockfiles should exist after the first run
 
-      await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath, ignoreLockFile: true});
+      await decryptKeystoreDefinitions(definitions, {logger: console, signal, ...opts, ignoreLockFile: true});
     });
   }
 });

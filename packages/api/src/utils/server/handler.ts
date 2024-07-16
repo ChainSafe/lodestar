@@ -44,7 +44,7 @@ export function createFastifyHandler<E extends Endpoint>(
     if (definition.resp.isEmpty) {
       // Ignore Accept header, the response will be sent without body
       responseMediaType = null;
-    } else if (acceptHeader === undefined || acceptHeader === "*/*") {
+    } else if (acceptHeader === undefined) {
       // Default to json to not force user to set header, e.g. when using curl
       responseMediaType = MediaType.json;
     } else {

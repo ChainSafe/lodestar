@@ -29,7 +29,7 @@ type RewardPenaltyItem = {
 };
 
 /**
- * An aggregate of getFlagIndexDeltas and getInactivityPenaltyDeltas that loop through process.statuses 1 time instead of 4.
+ * An aggregate of getFlagIndexDeltas and getInactivityPenaltyDeltas that loop through process.flags 1 time instead of 4.
  *
  * - On normal mainnet conditions
  *   - prevSourceAttester: 98%
@@ -62,10 +62,10 @@ export function getRewardsAndPenaltiesAltair(
     fork === ForkSeq.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
 
-  const {statuses} = cache;
-  for (let i = 0; i < statuses.length; i++) {
-    const status = statuses[i];
-    if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+  const {flags} = cache;
+  for (let i = 0; i < flags.length; i++) {
+    const flag = flags[i];
+    if (!hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
       continue;
     }
 
@@ -98,7 +98,7 @@ export function getRewardsAndPenaltiesAltair(
       rewardPenaltyItem;
 
     // same logic to getFlagIndexDeltas
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       if (!isInInactivityLeakBn) {
         rewards[i] += timelySourceReward;
       }
@@ -106,7 +106,7 @@ export function getRewardsAndPenaltiesAltair(
       penalties[i] += timelySourcePenalty;
     }
 
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       if (!isInInactivityLeakBn) {
         rewards[i] += timelyTargetReward;
       }
@@ -114,7 +114,7 @@ export function getRewardsAndPenaltiesAltair(
       penalties[i] += timelyTargetPenalty;
     }
 
-    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
       if (!isInInactivityLeakBn) {
         rewards[i] += timelyHeadReward;
       }
@@ -122,7 +122,7 @@ export function getRewardsAndPenaltiesAltair(
 
     // Same logic to getInactivityPenaltyDeltas
     // TODO: if we have limited value in inactivityScores we can provide a cache too
-    if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+    if (!hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       const penaltyNumerator = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT * state.inactivityScores.get(i);
       penalties[i] += Math.floor(penaltyNumerator / penaltyDenominator);
     }
