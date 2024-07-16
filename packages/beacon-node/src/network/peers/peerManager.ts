@@ -12,7 +12,7 @@ import {NetworkEvent, INetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
-import {NodeId, SubnetsService} from "../subnets/index.js";
+import {NodeId, SubnetsService, computeNodeId} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
@@ -392,11 +392,7 @@ export class PeerManager {
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
     if (getConnection(this.libp2p, peer.toString())) {
-      const nodeId = peerData?.nodeId ?? this.discovery?.["peerIdToNodeId"].get(peer.toString());
-      if (nodeId === undefined) {
-        this.logger.error("onStatus with nodeId=undefined", {peerId: peer.toString()});
-        return;
-      }
+      const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       const custodySubnetCount =
         peerData?.custodySubnetCount ?? this.discovery?.["peerIdToCustodySubnetCount"].get(peer.toString());
 
@@ -420,19 +416,17 @@ export class PeerManager {
       });
 
       if (this.opts.onlyConnectToBiggerDataNodes && !hasAllColumns) {
-        const enr = this.discovery?.["peerIdToMyEnr"].get(peer.toString());
-        this.logger.debug(
-          `ignoring peercontected onlyConnectToBiggerDataNodes=true hasAllColumns=${hasAllColumns}`,
-          exportENRToJSON(enr)
-        );
+        this.logger.debug(`ignoring peercontected onlyConnectToBiggerDataNodes=true hasAllColumns=${hasAllColumns}`, {
+          nodeId: nodeId ? toHexString(nodeId) : undefined,
+          peerId: peer.toString(),
+        });
         return;
       }
 
       if (this.opts.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
-        const enr = this.discovery?.["peerIdToMyEnr"].get(peer.toString());
         this.logger.debug(
           `ignoring peercontected onlyConnectToMinimalCustodyOverlapNodes=true hasMinCustodyMatchingColumns=${hasMinCustodyMatchingColumns}`,
-          exportENRToJSON(enr)
+          {nodeId: nodeId ? toHexString(nodeId) : undefined, peerId: peer.toString()}
         );
         return;
       }
@@ -649,7 +643,7 @@ export class PeerManager {
     // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
     // If that happens, it's okay. Only the "outbound" connection triggers immediate action
     const now = Date.now();
-    const nodeId = this.discovery?.["peerIdToNodeId"].get(remotePeer.toString()) ?? null;
+    const nodeId = computeNodeId(remotePeer);
     const custodySubnetCount = this.discovery?.["peerIdToCustodySubnetCount"].get(remotePeer.toString()) ?? null;
     const peerData: PeerData = {
       lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,

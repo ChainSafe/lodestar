@@ -13,7 +13,7 @@ import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
-import {NodeId} from "../subnets/interface.js";
+import {NodeId, computeNodeId} from "../subnets/interface.js";
 import {getCustodyColumnSubnets} from "../../util/dataColumns.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
@@ -36,7 +36,7 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
-  nodeId: NodeId,
+  nodeId: NodeId;
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
@@ -103,8 +103,6 @@ export class PeerDiscovery {
   private logger: LoggerNode;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
-  private peerIdToNodeId = new Map<PeerIdStr, NodeId>();
-  private peerIdToMyEnr = new Map<PeerIdStr, ENR>();
   private peerIdToCustodySubnetCount = new Map<PeerIdStr, number>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
@@ -349,12 +347,6 @@ export class PeerDiscovery {
     }
     // async due to some crypto that's no longer necessary
     const peerId = await enr.peerId();
-
-    const nodeId = fromHexString(enr.nodeId);
-    this.peerIdToNodeId.set(peerId.toString(), nodeId);
-    this.peerIdToMyEnr.set(peerId.toString(), enr);
-    pruneSetToMax(this.peerIdToNodeId, MAX_CACHED_NODEIDS);
-
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {
@@ -393,8 +385,8 @@ export class PeerDiscovery {
     syncnets: boolean[],
     custodySubnetCount: number
   ): DiscoveredPeerStatus {
-    const nodeId = this.peerIdToNodeId.get(peerId.toString());
-    this.logger.warn("handleDiscoveredPeer", {nodeId: nodeId ? toHexString(nodeId) : null, peerId: peerId.toString()});
+    const nodeId = computeNodeId(peerId);
+    this.logger.warn("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
@@ -442,10 +434,7 @@ export class PeerDiscovery {
   }
 
   private shouldDialPeer(peer: CachedENR): boolean {
-    const nodeId = this.peerIdToNodeId.get(peer.peerId.toString());
-    if (nodeId === undefined) {
-      return false;
-    }
+    const nodeId = computeNodeId(peer.peerId);
     const peerCustodySubnetCount = peer.custodySubnetCount;
     const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
 

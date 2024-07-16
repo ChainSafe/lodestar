@@ -1,4 +1,4 @@
-import {ENR} from "@chainsafe/enr";
+import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, electra, ssz} from "@lodestar/types";
 import {ForkSeq, NUMBER_OF_COLUMNS, ForkName} from "@lodestar/params";
@@ -12,16 +12,14 @@ import {
   BlockInputDataBlobs,
   BlockInputDataDataColumns,
   DataColumnsSource,
-  DataColumnsCacheMap,
   BlockInputType,
   getBlockInputDataColumns,
 } from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithBytes, WithOptionalBytes} from "../interface.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
-import {Network} from "../network.js";
-import {NetworkCore} from "../core/networkCore.js";
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
+import {computeNodeId} from "../subnets/index.js";
 
 export type PartialDownload = null | {blocks: BlockInput[]; pendingDataColumns: number[]};
 export async function beaconBlocksMaybeBlobsByRange(
@@ -284,16 +282,14 @@ export function matchBlockWithDataColumns(
         );
 
         if (dataColumnSidecars.length !== requestedColumns.length || !requestedColumnsPresent) {
-          const peerEnr = ((network as Network)["core"] as NetworkCore)["peerManager"]?.["discovery"]?.[
-            "peerIdToMyEnr"
-          ].get(peerId);
           console.log(
             "matchBlockWithDataColumns",
             `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${custodyColumnsLen} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`,
             {
               allBlocks: allBlocks.length,
               allDataColumnSidecars: allDataColumnSidecars.length,
-              peerEnr: exportENRToJSON(peerEnr),
+              peerId,
+              nodeId: toHexString(computeNodeId(peerId)),
               blobKzgCommitmentsLen,
             }
           );
@@ -362,15 +358,4 @@ export function matchBlockWithDataColumns(
     );
   }
   return blockInputs;
-}
-
-function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefined {
-  if (enr === undefined) {
-    return undefined;
-  }
-  return {
-    ip4: enr.kvs.get("ip")?.toString(),
-    csc: enr.kvs.get("csc")?.toString(),
-    nodeId: enr.nodeId,
-  };
 }
