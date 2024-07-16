@@ -3,8 +3,6 @@ import {intDiv} from "@lodestar/utils";
 import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 
 import {
-  AttesterStatus,
-  createAttesterStatus,
   hasMarkers,
   FLAG_UNSLASHED,
   FLAG_ELIGIBLE_ATTESTER,
@@ -128,7 +126,12 @@ export interface EpochTransitionCache {
    * - prev attester flag set
    * With a status flag to check this conditions at once we just have to mask with an OR of the conditions.
    */
-  statuses: AttesterStatus[];
+
+  proposerIndices: number[];
+
+  inclusionDelays: number[];
+
+  flags: number[];
 
   /**
    * balances array will be populated by processRewardsAndPenalties() and consumed by processEffectiveBalanceUpdates().
@@ -162,11 +165,38 @@ export interface EpochTransitionCache {
   nextEpochTotalActiveBalanceByIncrement: number;
 
   /**
+   * Track by validator index if it's active in the prev epoch.
+   * Used in metrics
+   */
+  isActivePrevEpoch: boolean[];
+
+  /**
+   * Track by validator index if it's active in the current epoch.
+   * Used in metrics
+   */
+  isActiveCurrEpoch: boolean[];
+
+  /**
    * Track by validator index if it's active in the next epoch.
    * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
    */
   isActiveNextEpoch: boolean[];
 }
+
+// reuse arrays to avoid memory reallocation and gc
+// WARNING: this is not async safe
+/** WARNING: reused, never gc'd */
+const isActivePrevEpoch = new Array<boolean>();
+/** WARNING: reused, never gc'd */
+const isActiveCurrEpoch = new Array<boolean>();
+/** WARNING: reused, never gc'd */
+const isActiveNextEpoch = new Array<boolean>();
+/** WARNING: reused, never gc'd */
+const proposerIndices = new Array<number>();
+/** WARNING: reused, never gc'd */
+const inclusionDelays = new Array<number>();
+/** WARNING: reused, never gc'd */
+const flags = new Array<number>();
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
@@ -188,9 +218,6 @@ export function beforeProcessEpoch(
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
-  const isActivePrevEpoch: boolean[] = [];
-  const isActiveNextEpoch: boolean[] = [];
-  const statuses: AttesterStatus[] = [];
 
   let totalActiveStakeByIncrement = 0;
 
@@ -200,6 +227,32 @@ export function beforeProcessEpoch(
   const validators = state.validators.getAllReadonlyValues();
   const validatorCount = validators.length;
 
+  // pre-fill with true (most validators are active)
+  isActivePrevEpoch.length = validatorCount;
+  isActiveCurrEpoch.length = validatorCount;
+  isActiveNextEpoch.length = validatorCount;
+  isActivePrevEpoch.fill(true);
+  isActiveCurrEpoch.fill(true);
+  isActiveNextEpoch.fill(true);
+
+  // During the epoch transition, additional data is precomputed to avoid traversing any state a second
+  // time. Attestations are a big part of this, and each validator has a "status" to represent its
+  // precomputed participation.
+  // - proposerIndex: number; // -1 when not included by any proposer
+  // - inclusionDelay: number;
+  // - flags: number; // bitfield of AttesterFlags
+  proposerIndices.length = validatorCount;
+  inclusionDelays.length = validatorCount;
+  flags.length = validatorCount;
+  proposerIndices.fill(-1);
+  inclusionDelays.fill(0);
+  // flags.fill(0);
+  // flags will be zero'd out below
+  // In the first loop, set slashed+eligibility
+  // In the second loop, set participation flags
+  // TODO: optimize by combining the two loops
+  // likely will require splitting into phase0 and post-phase0 versions
+
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();
 
@@ -207,14 +260,14 @@ export function beforeProcessEpoch(
 
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
-    const status = createAttesterStatus();
+    let flag = 0;
 
     if (validator.slashed) {
       if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
       }
     } else {
-      status.flags |= FLAG_UNSLASHED;
+      flag |= FLAG_UNSLASHED;
     }
 
     const {activationEpoch, exitEpoch} = validator;
@@ -223,19 +276,24 @@ export function beforeProcessEpoch(
     const isActiveNext = activationEpoch <= nextEpoch && nextEpoch < exitEpoch;
     const isActiveNext2 = activationEpoch <= nextEpoch2 && nextEpoch2 < exitEpoch;
 
-    isActivePrevEpoch.push(isActivePrev);
+    if (!isActivePrev) {
+      isActivePrevEpoch[i] = false;
+    }
 
     // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
     if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       eligibleValidatorIndices.push(i);
-      status.flags |= FLAG_ELIGIBLE_ATTESTER;
+      flag |= FLAG_ELIGIBLE_ATTESTER;
     }
 
+    flags[i] = flag;
+
     if (isActiveCurr) {
-      status.active = true;
       totalActiveStakeByIncrement += effectiveBalancesByIncrements[i];
+    } else {
+      isActiveCurrEpoch[i] = false;
     }
 
     // To optimize process_registry_updates():
@@ -278,16 +336,16 @@ export function beforeProcessEpoch(
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
     else if (
-      status.active &&
+      isActiveCurr &&
       validator.exitEpoch === FAR_FUTURE_EPOCH &&
       validator.effectiveBalance <= config.EJECTION_BALANCE
     ) {
       indicesToEject.push(i);
     }
 
-    statuses.push(status);
-
-    isActiveNextEpoch.push(isActiveNext);
+    if (!isActiveNext) {
+      isActiveNextEpoch[i] = false;
+    }
 
     if (isActiveNext2) {
       nextEpochShufflingActiveValidatorIndices.push(i);
@@ -312,7 +370,9 @@ export function beforeProcessEpoch(
   if (forkSeq === ForkSeq.phase0) {
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
-      statuses,
+      proposerIndices,
+      inclusionDelays,
+      flags,
       (state as CachedBeaconStatePhase0).previousEpochAttestations.getAllReadonly(),
       prevEpoch,
       FLAG_PREV_SOURCE_ATTESTER,
@@ -321,7 +381,9 @@ export function beforeProcessEpoch(
     );
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
-      statuses,
+      proposerIndices,
+      inclusionDelays,
+      flags,
       (state as CachedBeaconStatePhase0).currentEpochAttestations.getAllReadonly(),
       currentEpoch,
       FLAG_CURR_SOURCE_ATTESTER,
@@ -330,23 +392,15 @@ export function beforeProcessEpoch(
     );
   } else {
     const previousEpochParticipation = (state as CachedBeaconStateAltair).previousEpochParticipation.getAll();
-    for (let i = 0; i < previousEpochParticipation.length; i++) {
-      const status = statuses[i];
-      // this is required to pass random spec tests in altair
-      if (isActivePrevEpoch[i]) {
-        // FLAG_PREV are indexes [0,1,2]
-        status.flags |= previousEpochParticipation[i];
-      }
-    }
-
     const currentEpochParticipation = (state as CachedBeaconStateAltair).currentEpochParticipation.getAll();
-    for (let i = 0; i < currentEpochParticipation.length; i++) {
-      const status = statuses[i];
-      // this is required to pass random spec tests in altair
-      if (status.active) {
-        // FLAG_PREV are indexes [3,4,5], so shift by 3
-        status.flags |= currentEpochParticipation[i] << 3;
-      }
+    for (let i = 0; i < validatorCount; i++) {
+      flags[i] |=
+        // checking active status first is required to pass random spec tests in altair
+        // in practice, inactive validators will have 0 participation
+        // FLAG_PREV are indexes [0,1,2]
+        (isActivePrevEpoch[i] ? previousEpochParticipation[i] : 0) |
+        // FLAG_CURR are indexes [3,4,5], so shift by 3
+        (isActiveCurrEpoch[i] ? currentEpochParticipation[i] << 3 : 0);
     }
   }
 
@@ -361,19 +415,19 @@ export function beforeProcessEpoch(
   const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
   const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
 
-  for (let i = 0; i < statuses.length; i++) {
-    const status = statuses[i];
+  for (let i = 0; i < validatorCount; i++) {
     const effectiveBalanceByIncrement = effectiveBalancesByIncrements[i];
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
+    const flag = flags[i];
+    if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalanceByIncrement;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       prevTargetUnslStake += effectiveBalanceByIncrement;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
       prevHeadUnslStake += effectiveBalanceByIncrement;
     }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_CURR_TARGET_UNSLASHED)) {
       currTargetUnslStake += effectiveBalanceByIncrement;
     }
   }
@@ -421,8 +475,12 @@ export function beforeProcessEpoch(
     nextEpochShufflingActiveValidatorIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
+    isActivePrevEpoch,
+    isActiveCurrEpoch,
     isActiveNextEpoch,
-    statuses,
+    proposerIndices,
+    inclusionDelays,
+    flags,
 
     // Will be assigned in processRewardsAndPenalties()
     balances: undefined,

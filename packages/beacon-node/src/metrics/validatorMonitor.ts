@@ -1,6 +1,5 @@
 import {
   computeEpochAtSlot,
-  AttesterStatus,
   parseAttesterFlags,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -39,7 +38,14 @@ export enum OpSource {
 export type ValidatorMonitor = {
   registerLocalValidator(index: number): void;
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
-  registerValidatorStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
+  registerValidatorStatuses(
+    currentEpoch: Epoch,
+    inclusionDelays: number[],
+    flags: number[],
+    isActiveCurrEpoch: boolean[],
+    isActivePrevEpoch: boolean[],
+    balances?: number[]
+  ): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: BeaconBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
@@ -115,12 +121,17 @@ type ValidatorStatus = {
   inclusionDistance: number;
 };
 
-function statusToSummary(status: AttesterStatus): ValidatorStatus {
-  const flags = parseAttesterFlags(status.flags);
+function statusToSummary(
+  inclusionDelay: number,
+  flag: number,
+  isActiveInCurrentEpoch: boolean,
+  isActiveInPreviousEpoch: boolean
+): ValidatorStatus {
+  const flags = parseAttesterFlags(flag);
   return {
     isSlashed: flags.unslashed,
-    isActiveInCurrentEpoch: status.active,
-    isActiveInPreviousEpoch: status.active,
+    isActiveInCurrentEpoch,
+    isActiveInPreviousEpoch,
     // TODO: Implement
     currentEpochEffectiveBalance: 0,
 
@@ -130,7 +141,7 @@ function statusToSummary(status: AttesterStatus): ValidatorStatus {
     isCurrSourceAttester: flags.currSourceAttester,
     isCurrTargetAttester: flags.currTargetAttester,
     isCurrHeadAttester: flags.currHeadAttester,
-    inclusionDistance: status.inclusionDelay,
+    inclusionDistance: inclusionDelay,
   };
 }
 
@@ -287,7 +298,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses, balances) {
+    registerValidatorStatuses(currentEpoch, inclusionDelays, flags, isActiveCurrEpoch, isActiveInPrevEpoch, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -301,12 +312,12 @@ export function createValidatorMonitor(
         // - One to account for it being the previous epoch.
         // - One to account for the state advancing an epoch whilst generating the validator
         //     statuses.
-        const status = statuses[index];
-        if (status === undefined) {
-          continue;
-        }
-
-        const summary = statusToSummary(status);
+        const summary = statusToSummary(
+          inclusionDelays[index],
+          flags[index],
+          isActiveCurrEpoch[index],
+          isActiveInPrevEpoch[index]
+        );
 
         if (summary.isPrevSourceAttester) {
           metrics.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc();
