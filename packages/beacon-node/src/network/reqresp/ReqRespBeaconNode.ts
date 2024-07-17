@@ -51,7 +51,7 @@ export interface ReqRespBeaconNodeModules {
   getHandler: GetReqRespHandlerFn;
 }
 
-export type ReqRespBeaconNodeOpts = ReqRespOpts;
+export type ReqRespBeaconNodeOpts = Partial<ReqRespOpts>;
 
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.

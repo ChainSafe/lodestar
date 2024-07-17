@@ -13,21 +13,15 @@ import {RequestError, RequestErrorCode, responseStatusErrorToRequestError} from 
 
 export {RequestError, RequestErrorCode};
 
-// Default spec values from https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#configuration
-export const DEFAULT_DIAL_TIMEOUT = 5 * 1000; // 5 sec
-export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
-export const DEFAULT_TTFB_TIMEOUT = 5 * 1000; // 5 sec
-export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
-
 export interface SendRequestOpts {
   /** The maximum time for complete response transfer. */
-  respTimeoutMs?: number;
+  respTimeoutMs: number;
   /** Non-spec timeout from sending request until write stream closed by responder */
-  requestTimeoutMs?: number;
+  requestTimeoutMs: number;
   /** The maximum time to wait for first byte of request response (time-to-first-byte). */
-  ttfbTimeoutMs?: number;
+  ttfbTimeoutMs: number;
   /** Non-spec timeout from dialing protocol until stream opened */
-  dialTimeoutMs?: number;
+  dialTimeoutMs: number;
 }
 
 type SendRequestModules = {
@@ -42,30 +36,38 @@ type SendRequestModules = {
  *
  * 1. Dial peer, establish duplex stream
  * 2. Encoded and write request to peer. Expect the responder to close the stream's write side
- * 3. Read and decode reponse(s) from peer. Will close the read stream if:
+ * 3. Read and decode response(s) from peer. Will close the read stream if:
  *    - An error result is received in one of the chunks. Reads the error_message and throws.
  *    - The responder closes the stream. If at the end or start of a <response_chunk>, return. Otherwise throws
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
 export async function* sendRequest(
-  {logger, libp2p, metrics, peerClient}: SendRequestModules,
   peerId: PeerId,
-  protocols: MixedProtocol[],
   protocolIDs: string[],
-  requestBody: Uint8Array,
-  signal?: AbortSignal,
-  opts?: SendRequestOpts,
-  requestId = 0
+  options: SendRequestOpts & {
+    requestBody: Uint8Array;
+    modules: SendRequestModules;
+    protocols: MixedProtocol[];
+    signal?: AbortSignal;
+    requestId?: number;
+  }
 ): AsyncIterable<ResponseIncoming> {
+  const {
+    modules: {libp2p, peerClient, logger, metrics},
+    protocols,
+    requestId = 0,
+    requestBody,
+    signal,
+    requestTimeoutMs,
+    dialTimeoutMs,
+    ttfbTimeoutMs,
+    respTimeoutMs,
+  } = options;
+
   if (protocols.length === 0) {
     throw Error("sendRequest must set > 0 protocols");
   }
-
-  const DIAL_TIMEOUT = opts?.dialTimeoutMs ?? DEFAULT_DIAL_TIMEOUT;
-  const REQUEST_TIMEOUT = opts?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
-  const TTFB_TIMEOUT = opts?.ttfbTimeoutMs ?? DEFAULT_TTFB_TIMEOUT;
-  const RESP_TIMEOUT = opts?.respTimeoutMs ?? DEFAULT_RESP_TIMEOUT;
 
   const peerIdStrShort = prettyPrintPeerId(peerId);
   const {method, encoding, version} = protocols[0];
@@ -102,7 +104,7 @@ export async function* sendRequest(
         if (!conn) throw Error("dialProtocol timeout");
         return conn;
       },
-      DIAL_TIMEOUT,
+      dialTimeoutMs,
       signal
     ).catch((e: Error) => {
       if (e instanceof TimeoutError) {
@@ -127,7 +129,7 @@ export async function* sendRequest(
 
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-    await withTimeout(() => pipe(requestEncode(protocol, requestBody), stream.sink), REQUEST_TIMEOUT, signal).catch(
+    await withTimeout(() => pipe(requestEncode(protocol, requestBody), stream.sink), requestTimeoutMs, signal).catch(
       (e) => {
         // Must close the stream read side (stream.source) manually AND the write side
         stream.abort(e);
@@ -155,12 +157,12 @@ export async function* sendRequest(
     const ttfbTimeoutController = new AbortController();
     const respTimeoutController = new AbortController();
 
-    const timeoutTTFB = setTimeout(() => ttfbTimeoutController.abort(), TTFB_TIMEOUT);
+    const timeoutTTFB = setTimeout(() => ttfbTimeoutController.abort(), ttfbTimeoutMs);
     let timeoutRESP: NodeJS.Timeout | null = null;
 
     const restartRespTimeout = (): void => {
       if (timeoutRESP) clearTimeout(timeoutRESP);
-      timeoutRESP = setTimeout(() => respTimeoutController.abort(), RESP_TIMEOUT);
+      timeoutRESP = setTimeout(() => respTimeoutController.abort(), respTimeoutMs);
     };
 
     try {

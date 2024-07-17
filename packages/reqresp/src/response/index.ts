@@ -14,23 +14,20 @@ import {ResponseError} from "./errors.js";
 
 export {ResponseError};
 
-// Default spec values from https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#configuration
-export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
-
-export interface HandleRequestOpts {
-  logger: Logger;
-  metrics: Metrics | null;
+export interface SendResponseOpts {
+  modules: {
+    logger: Logger;
+    metrics: Metrics | null;
+    rateLimiter: ReqRespRateLimiter;
+    /** Peer client type for logging and metrics: 'prysm' | 'lighthouse' */
+    peerClient?: string;
+  };
   stream: Stream;
-  peerId: PeerId;
   protocol: Protocol;
-  protocolID: string;
-  rateLimiter: ReqRespRateLimiter;
   signal?: AbortSignal;
   requestId?: number;
-  /** Peer client type for logging and metrics: 'prysm' | 'lighthouse' */
-  peerClient?: string;
   /** Non-spec timeout from sending request until write stream closed by responder */
-  requestTimeoutMs?: number;
+  requestTimeoutMs: number;
 }
 
 /**
@@ -43,21 +40,18 @@ export interface HandleRequestOpts {
  * 4a. Encode and write `<response_chunks>` to peer
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
-export async function handleRequest({
-  logger,
-  metrics,
-  stream,
-  peerId,
-  protocol,
-  protocolID,
-  rateLimiter,
-  signal,
-  requestId = 0,
-  peerClient = "unknown",
-  requestTimeoutMs,
-}: HandleRequestOpts): Promise<void> {
-  const REQUEST_TIMEOUT = requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
-
+export async function sendResponse(
+  peerId: PeerId,
+  protocolID: string,
+  {
+    modules: {logger, metrics, rateLimiter, peerClient = "unknown"},
+    protocol,
+    signal,
+    stream,
+    requestId = 0,
+    requestTimeoutMs,
+  }: SendResponseOpts
+): Promise<void> {
   const logCtx = {method: protocol.method, client: peerClient, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
@@ -72,7 +66,7 @@ export async function handleRequest({
 
         const requestBody = await withTimeout(
           () => pipe(stream.source as AsyncIterable<Uint8ArrayList>, requestDecode(protocol)),
-          REQUEST_TIMEOUT,
+          requestTimeoutMs,
           signal
         ).catch((e: unknown) => {
           if (e instanceof TimeoutError) {

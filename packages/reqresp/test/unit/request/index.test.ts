@@ -14,6 +14,19 @@ import {responseEncode} from "../../utils/response.js";
 import {RespStatus} from "../../../src/interface.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
+import {
+  DEFAULT_DIAL_TIMEOUT,
+  DEFAULT_REQUEST_TIMEOUT,
+  DEFAULT_RESP_TIMEOUT,
+  DEFAULT_TTFB_TIMEOUT,
+} from "../../../src/constants.js";
+
+const DEFAULT_TIMEOUTS = {
+  requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT,
+  dialTimeoutMs: DEFAULT_DIAL_TIMEOUT,
+  ttfbTimeoutMs: DEFAULT_TTFB_TIMEOUT,
+  respTimeoutMs: DEFAULT_RESP_TIMEOUT,
+};
 
 describe("request / sendRequest", () => {
   const logger = getEmptyLogger();
@@ -70,12 +83,15 @@ describe("request / sendRequest", () => {
 
       const responses = await pipe(
         sendRequest(
-          {logger, libp2p, metrics: null},
           peerId,
-          protocols,
           protocols.map((p) => p.method),
-          EMPTY_REQUEST,
-          controller.signal
+          {
+            modules: {logger, libp2p, metrics: null},
+            protocols,
+            requestBody: EMPTY_REQUEST,
+            signal: controller.signal,
+            ...DEFAULT_TIMEOUTS,
+          }
         ),
         all
       );
@@ -89,13 +105,13 @@ describe("request / sendRequest", () => {
 
     const timeoutTestCases: {
       id: string;
-      opts?: SendRequestOpts;
+      opts: SendRequestOpts;
       source: () => AsyncGenerator<Uint8Array>;
       error?: LodestarError<any>;
     }[] = [
       {
         id: "trigger a TTFB_TIMEOUT",
-        opts: {ttfbTimeoutMs: 0},
+        opts: {...DEFAULT_TIMEOUTS, ttfbTimeoutMs: 0},
         source: async function* () {
           await sleep(30); // Pause for too long before first byte
           yield sszSnappyPing.chunks[0];
@@ -104,7 +120,7 @@ describe("request / sendRequest", () => {
       },
       {
         id: "trigger a RESP_TIMEOUT",
-        opts: {respTimeoutMs: 0},
+        opts: {...DEFAULT_TIMEOUTS, respTimeoutMs: 0},
         source: async function* () {
           yield sszSnappyPing.chunks[0];
           await sleep(30); // Pause for too long after first byte
@@ -115,7 +131,7 @@ describe("request / sendRequest", () => {
       {
         // Upstream "abortable-iterator" never throws with an infinite sleep.
         id: "Infinite sleep on first byte",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
+        opts: {...DEFAULT_TIMEOUTS, ttfbTimeoutMs: 1, respTimeoutMs: 1},
         source: async function* () {
           await sleep(100000, controller.signal);
           yield sszSnappyPing.chunks[0];
@@ -124,7 +140,7 @@ describe("request / sendRequest", () => {
       },
       {
         id: "Infinite sleep on second chunk",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
+        opts: {...DEFAULT_TIMEOUTS, ttfbTimeoutMs: 1, respTimeoutMs: 1},
         source: async function* () {
           yield sszSnappyPing.chunks[0];
           await sleep(100000, controller.signal);
@@ -141,15 +157,13 @@ describe("request / sendRequest", () => {
 
         await expectRejectedWithLodestarError(
           pipe(
-            sendRequest(
-              {logger, libp2p, metrics: null},
-              peerId,
-              [emptyProtocol],
-              [testMethod],
-              EMPTY_REQUEST,
-              controller.signal,
-              opts
-            ),
+            sendRequest(peerId, [testMethod], {
+              modules: {logger, libp2p, metrics: null},
+              protocols: [emptyProtocol],
+              requestBody: EMPTY_REQUEST,
+              signal: controller.signal,
+              ...opts,
+            }),
             all
           ),
           error as LodestarError<any>
