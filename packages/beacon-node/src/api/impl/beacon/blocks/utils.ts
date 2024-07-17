@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {SignedBeaconBlock} from "@lodestar/types";
+import {IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {IBeaconChain} from "../../../../chain/interface.js";
@@ -22,44 +23,29 @@ export function toBeaconHeaderResponse(
   };
 }
 
-export async function resolveBlockId(
-  chain: IBeaconChain,
-  blockId: routes.beacon.BlockId
-): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
-  const res = await resolveBlockIdOrNull(chain, blockId);
-  if (!res) {
-    throw new ApiError(404, `No block found for id '${blockId}'`);
-  }
-
-  return res;
-}
-
-async function resolveBlockIdOrNull(
-  chain: IBeaconChain,
-  blockId: routes.beacon.BlockId
-): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.BlockId): string | number {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
-    return chain.getBlockByRoot(chain.forkChoice.getHead().blockRoot);
+    return forkChoice.getHead().blockRoot;
   }
 
   if (blockId === "genesis") {
-    return chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+    return GENESIS_SLOT;
   }
 
   if (blockId === "finalized") {
-    return chain.getCanonicalBlockAtSlot(chain.forkChoice.getFinalizedBlock().slot);
+    return forkChoice.getFinalizedBlock().blockRoot;
   }
 
   if (blockId === "justified") {
-    return chain.getBlockByRoot(chain.forkChoice.getJustifiedBlock().blockRoot);
+    return forkChoice.getJustifiedBlock().blockRoot;
   }
 
   if (blockId.startsWith("0x")) {
     if (!rootHexRegex.test(blockId)) {
       throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
     }
-    return chain.getBlockByRoot(blockId);
+    return blockId;
   }
 
   // block id must be slot
@@ -67,5 +53,23 @@ async function resolveBlockIdOrNull(
   if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
     throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
   }
-  return chain.getCanonicalBlockAtSlot(blockSlot);
+  return blockSlot;
+}
+
+export async function getBlockResponse(
+  chain: IBeaconChain,
+  blockId: routes.beacon.BlockId
+): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
+  const rootOrSlot = resolveBlockId(chain.forkChoice, blockId);
+  let res = null;
+  if (typeof rootOrSlot === "string") {
+    res = await chain.getBlockByRoot(rootOrSlot);
+  } else {
+    res = await chain.getCanonicalBlockAtSlot(rootOrSlot);
+  }
+  if (!res) {
+    throw new ApiError(404, `No block found for id '${blockId}'`);
+  }
+
+  return res;
 }

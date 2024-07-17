@@ -6,6 +6,17 @@ import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
 
+// class BeaconState(Container):
+//   genesis_time: uint64              - 8
+//   genesis_validators_root: bytes32  - 32
+//   slot: uint64
+//   ...
+const STATE_SLOT_OFFSET = 40;
+
+export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot {
+  return getSlotFromOffsetTrusted(data, STATE_SLOT_OFFSET);
+}
+
 // class Attestation(Container):
 //   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
 //   data: AttestationData - target data - 128

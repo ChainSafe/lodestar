@@ -1,8 +1,10 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {resolveStateId} from "../beacon/state/utils.js";
+import {BeaconState} from "@lodestar/types";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
+import {getSlotFromBeaconStateSerialized} from "../../../util/sszBytes.js";
 
 export function getDebugApi({
   chain,
@@ -34,11 +36,20 @@ export function getDebugApi({
     },
 
     async getStateV2({stateId}, context) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      let slot: number;
+      let data: Uint8Array | BeaconState;
+      if (state instanceof Uint8Array) {
+        slot = getSlotFromBeaconStateSerialized(state);
+        data = context?.returnBytes ? state : config.getForkTypes(slot).BeaconState.deserialize(state);
+      } else {
+        slot = state.slot;
+        data = context?.returnBytes ? state.serialize() : state.toValue();
+      }
       return {
-        data: context?.returnBytes ? state.serialize() : state.toValue(),
+        data,
         meta: {
-          version: config.getForkName(state.slot),
+          version: config.getForkName(slot),
           executionOptimistic,
           finalized,
         },
