@@ -110,6 +110,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
     res: undefined,
   },
+  publishAggregateAndProofsV2: {
+    args: {signedAggregateAndProofs: [ssz.electra.SignedAggregateAndProof.defaultValue()]},
+    res: undefined,
+  },
   publishContributionAndProofs: {
     args: {contributionAndProofs: [ssz.altair.SignedContributionAndProof.defaultValue()]},
     res: undefined,

@@ -289,7 +289,7 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
+        (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {

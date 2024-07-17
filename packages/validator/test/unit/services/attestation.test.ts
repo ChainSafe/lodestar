@@ -106,7 +106,7 @@ describe("AttestationService", function () {
         );
 
         api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
-        api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));
+        api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
 
         if (opts.distributedAggregationSelection) {
           // Mock distributed validator middleware client selections endpoint
@@ -152,8 +152,8 @@ describe("AttestationService", function () {
         expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [attestation]});
 
         // Must submit the aggregate received through getAggregatedAttestationV2() then createAndSignAggregateAndProof()
-        expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
-        expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
+        expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledOnce();
+        expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
       });
     });
   }

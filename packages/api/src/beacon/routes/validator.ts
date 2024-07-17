@@ -433,6 +433,18 @@ export type Endpoints = {
    */
   publishAggregateAndProofs: Endpoint<
     "POST",
+    {signedAggregateAndProofs: SignedAggregateAndProofListPhase0},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Publish multiple aggregate and proofs
+   * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+   */
+  publishAggregateAndProofsV2: Endpoint<
+    "POST",
     {signedAggregateAndProofs: SignedAggregateAndProofList},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
@@ -864,7 +876,23 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     publishAggregateAndProofs: {
-      url: "/eth/v1/validator/aggregate_and_proofs",
+      url: "/eth/v2/validator/aggregate_and_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListPhase0Type.toJson(signedAggregateAndProofs),
+        }),
+        parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body)}),
+        writeReqSsz: ({signedAggregateAndProofs}) => ({body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs)}),
+        parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    publishAggregateAndProofsV2: {
+      url: "/eth/v2/validator/aggregate_and_proofs",
       method: "POST",
       req: {
         writeReqJson: ({signedAggregateAndProofs}) => {
