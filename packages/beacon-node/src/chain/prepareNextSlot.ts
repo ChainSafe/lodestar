@@ -229,7 +229,13 @@ export class PrepareNextSlotScheduler {
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
       source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
-    state.hashTreeRoot();
+    if (isEpochTransition) {
+      // this also compute and populate validators' roots
+      state.commit();
+      state.node.root;
+    } else {
+      state.hashTreeRoot();
+    }
     hashTreeRootTimer?.();
   }
 }
