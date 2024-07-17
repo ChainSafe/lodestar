@@ -111,7 +111,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   publishAggregateAndProofsV2: {
-    args: {signedAggregateAndProofs: [ssz.electra.SignedAggregateAndProof.defaultValue()]},
+    args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
     res: undefined,
   },
   publishContributionAndProofs: {

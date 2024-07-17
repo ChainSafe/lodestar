@@ -451,7 +451,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         schema: {
-          body: Schema.ObjectArray,
+          body: Schema.Object,
           headers: {[MetaHeader.Version]: Schema.String},
         },
       },

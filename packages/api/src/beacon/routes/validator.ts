@@ -876,14 +876,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     publishAggregateAndProofs: {
-      url: "/eth/v2/validator/aggregate_and_proofs",
+      url: "/eth/v1/validator/aggregate_and_proofs",
       method: "POST",
       req: {
         writeReqJson: ({signedAggregateAndProofs}) => ({
           body: SignedAggregateAndProofListPhase0Type.toJson(signedAggregateAndProofs),
         }),
         parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body)}),
-        writeReqSsz: ({signedAggregateAndProofs}) => ({body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs)}),
+        writeReqSsz: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs),
+        }),
         parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body)}),
         schema: {
           body: Schema.ObjectArray,

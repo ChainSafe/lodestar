@@ -130,7 +130,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   submitPoolAttestationsV2: {
-    args: {signedAttestations: [ssz.electra.Attestation.defaultValue()]},
+    args: {signedAttestations: [ssz.phase0.Attestation.defaultValue()]},
     res: undefined,
   },
   submitPoolAttesterSlashings: {
