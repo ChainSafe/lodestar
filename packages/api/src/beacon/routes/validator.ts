@@ -422,7 +422,7 @@ export type Endpoints = {
       slot: Slot;
       committeeIndex: number;
     },
-    {query: {attestation_data_root: string; slot: number; committeeIndex: number}},
+    {query: {attestation_data_root: string; slot: number; committee_index: number}},
     Attestation,
     VersionMeta
   >;
@@ -853,18 +853,18 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: {
         writeReq: ({attestationDataRoot, slot, committeeIndex}) => ({
-          query: {attestation_data_root: toHexString(attestationDataRoot), slot, committeeIndex},
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot, committee_index: committeeIndex},
         }),
         parseReq: ({query}) => ({
           attestationDataRoot: fromHexString(query.attestation_data_root),
           slot: query.slot,
-          committeeIndex: query.committeeIndex,
+          committeeIndex: query.committee_index,
         }),
         schema: {
           query: {
             attestation_data_root: Schema.StringRequired,
             slot: Schema.UintRequired,
-            committeeIndex: Schema.UintRequired,
+            committee_index: Schema.UintRequired,
           },
         },
       },
