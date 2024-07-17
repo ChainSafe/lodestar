@@ -13,6 +13,7 @@ Casper
 Chai
 ChainSafe
 Codespaces
+Corepack
 Customizations
 DPoS
 DVs
@@ -41,6 +42,7 @@ Geth
 Github
 Gossipsub
 Grafana
+Grandine
 HTTPS
 HackMD
 Homebrew
@@ -60,6 +62,8 @@ LTS
 Lerna
 MEV
 MacOS
+Metamask
+ModuleNotFoundError
 Monorepo
 NPM
 NVM
@@ -74,6 +78,8 @@ PoS
 Prysm
 Quickstart
 RPC
+Reth
+Ryzen
 SHA
 SSD
 SSZ
@@ -98,6 +104,7 @@ blockRoot
 blockchain
 bootnode
 bootnodes
+bundlers
 chainConfig
 chainsafe
 chiado
@@ -122,17 +129,18 @@ devcontainer
 devnet
 devnets
 devtools
+distutils
 eg
 enodes
 enum
 env
 envs
 ephemery
+ethers
 flamegraph
 flamegraphs
 getNetworkIdentity
 gnosis
-goerli
 heapdump
 heaptrack
 holesky
@@ -175,7 +183,6 @@ repos
 req
 reqresp
 responder
-ropsten
 runtime
 scalability
 secp
@@ -192,11 +199,14 @@ testnets
 todo
 typesafe
 udp
+unpkg
 util
 utils
 validator
 validators
+vite
 vitest
+webpack
 wip
 xcode
 yaml

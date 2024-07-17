@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {phase0, Root, Slot, allForks, ssz} from "@lodestar/types";
+import {phase0, Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -94,7 +94,7 @@ type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
  */
 type BackFillSyncAnchor =
   | {
-      anchorBlock: allForks.SignedBeaconBlock;
+      anchorBlock: SignedBeaconBlock;
       anchorBlockRoot: Root;
       anchorSlot: Slot;
       lastBackSyncedBlock: BackfillBlock;

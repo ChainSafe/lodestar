@@ -1,3 +1,4 @@
+import {WireFormat, defaultInit} from "@lodestar/api";
 import {defaultOptions} from "@lodestar/validator";
 import {CliCommandOptions} from "@lodestar/utils";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
@@ -54,6 +55,10 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
+    disableKeystoresThreadPool?: boolean;
+
+    "http.requestWireFormat"?: string;
+    "http.responseWireFormat"?: string;
 
     "externalSigner.url"?: string;
     "externalSigner.pubkeys"?: string[];
@@ -297,11 +302,32 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "string",
   },
 
+  disableKeystoresThreadPool: {
+    hidden: true,
+    description:
+      "Disable thread pool and instead use main thread to decrypt keystores. This can speed up decryption in testing environments like Kurtosis",
+    type: "boolean",
+  },
+
   doppelgangerProtection: {
     alias: ["doppelgangerProtectionEnabled"],
     description: "Enables Doppelganger protection",
     default: false,
     type: "boolean",
+  },
+
+  "http.requestWireFormat": {
+    type: "string",
+    description: `Wire format to use in HTTP requests to beacon node. Can be one of \`${WireFormat.json}\` or \`${WireFormat.ssz}\``,
+    defaultDescription: `${defaultInit.requestWireFormat}`,
+    group: "http",
+  },
+
+  "http.responseWireFormat": {
+    type: "string",
+    description: `Preferred wire format for HTTP responses from beacon node. Can be one of \`${WireFormat.json}\` or \`${WireFormat.ssz}\``,
+    defaultDescription: `${defaultInit.responseWireFormat}`,
+    group: "http",
   },
 
   // External signer

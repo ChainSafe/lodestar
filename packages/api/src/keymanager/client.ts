@@ -1,10 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IHttpClient, generateGenericJsonClient} from "../utils/client/index.js";
-import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "./routes.js";
+import {ApiClientMethods, IHttpClient, createApiClientMethods} from "../utils/client/index.js";
+import {Endpoints, getDefinitions} from "./routes.js";
 
-export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Api {
-  const reqSerializers = getReqSerializers();
-  const returnTypes = getReturnTypes();
-  // All routes return JSON, use a client auto-generator
-  return generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient);
+export type ApiClient = ApiClientMethods<Endpoints>;
+
+export function getClient(config: ChainForkConfig, httpClient: IHttpClient): ApiClient {
+  return createApiClientMethods(getDefinitions(config), httpClient);
 }

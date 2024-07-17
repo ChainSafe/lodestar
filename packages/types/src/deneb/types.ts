@@ -1,5 +1,6 @@
 import {ValueOf} from "@chainsafe/ssz";
-import {BlockContents} from "../allForks/types.js";
+import {ForkName} from "@lodestar/params";
+import type {BlockContents} from "../types.js";
 import * as ssz from "./sszTypes.js";
 
 export type KZGProof = ValueOf<typeof ssz.KZGProof>;
@@ -48,4 +49,4 @@ export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimist
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
 
 export type ProducedBlobSidecars = Omit<BlobSidecars, "signedBlockHeader" | "kzgCommitmentInclusionProof">;
-export type Contents = Omit<BlockContents, "block">;
+export type Contents = Omit<BlockContents<ForkName.deneb>, "block">;

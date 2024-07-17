@@ -17,6 +17,7 @@ import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {LinkedList} from "../../../util/array.js";
+import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode, WorkResultError} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -352,7 +353,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       } else {
         this.jobs.push(job);
       }
-      setTimeout(this.runJob, 0);
+      callInNextEventLoop(this.runJob);
     }
   }
 
@@ -515,7 +516,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    setTimeout(this.runJob, 0);
+    callInNextEventLoop(this.runJob);
   };
 
   /**
@@ -550,7 +551,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      setTimeout(this.runJob, 0);
+      callInNextEventLoop(this.runJob);
     }
   };
 

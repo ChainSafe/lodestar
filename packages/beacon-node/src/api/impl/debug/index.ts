@@ -1,17 +1,14 @@
-import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 
-export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.debug.Api> {
+export function getDebugApi({
+  chain,
+  config,
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.debug.Endpoints> {
   return {
-    async getDebugChainHeads() {
-      const heads = chain.forkChoice.getHeads();
-      return {
-        data: heads.map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot})),
-      };
-    },
-
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
       return {
@@ -36,22 +33,16 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
       return {data: nodes};
     },
 
-    async getState(stateId: string | number, format?: ResponseFormat) {
+    async getStateV2({stateId}, context) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
-      if (format === "ssz") {
-        return state.serialize();
-      } else {
-        return {data: state.toValue(), executionOptimistic, finalized};
-      }
-    },
-
-    async getStateV2(stateId: string | number, format?: ResponseFormat) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
-      if (format === "ssz") {
-        return state.serialize();
-      } else {
-        return {data: state.toValue(), version: config.getForkName(state.slot), executionOptimistic, finalized};
-      }
+      return {
+        data: context?.returnBytes ? state.serialize() : state.toValue(),
+        meta: {
+          version: config.getForkName(state.slot),
+          executionOptimistic,
+          finalized,
+        },
+      };
     },
   };
 }

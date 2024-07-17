@@ -91,7 +91,7 @@ export class Eth1Provider implements IEth1Provider {
       this.state = Eth1ProviderState.ONLINE;
 
       if (oldState !== Eth1ProviderState.ONLINE) {
-        this.logger?.info("Eth1Provider is back online", {oldState, newState: this.state});
+        this.logger?.info("Eth1 provider is back online", {oldState, newState: this.state});
       }
     });
 
@@ -109,7 +109,7 @@ export class Eth1Provider implements IEth1Provider {
       if (this.state !== Eth1ProviderState.ONLINE) {
         if (isOneMinutePassed()) {
           this.logger?.error(
-            "Eth1Provider faced error",
+            "Eth1 provider error",
             {
               state: this.state,
               lastErrorAt: new Date(Date.now() - isOneMinutePassed.msSinceLastCall).toLocaleTimeString(),

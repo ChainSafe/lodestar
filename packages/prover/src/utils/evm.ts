@@ -4,8 +4,8 @@ import {VM, RunTxResult} from "@ethereumjs/vm";
 import {TransactionFactory} from "@ethereumjs/tx";
 import {Block, BlockHeader} from "@ethereumjs/block";
 import {NetworkName} from "@lodestar/config/networks";
-import {allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {ExecutionPayload} from "@lodestar/types";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, ELTransaction, JsonRpcVersion} from "../types.js";
@@ -13,7 +13,7 @@ import {bufferToHex, chunkIntoN, cleanObject, hexToBigInt, hexToBuffer, numberTo
 import {getChainCommon, getTxType} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
 import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
-import {ELRpc} from "./rpc.js";
+import {ELRpcProvider} from "./rpc_provider.js";
 
 export async function createVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
   const common = getChainCommon(proofProvider.config.PRESET_BASE as string);
@@ -39,9 +39,9 @@ export async function getVMWithState({
   vm,
   logger,
 }: {
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   vm: VM;
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   tx: ELTransaction;
   logger: Logger;
 }): Promise<VM> {
@@ -160,10 +160,10 @@ export async function executeVMCall({
   executionPayload,
   network,
 }: {
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   tx: ELTransaction;
   vm: VM;
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   network: NetworkName;
 }): Promise<RunTxResult["execResult"]> {
   const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data, input} = tx;
@@ -202,10 +202,10 @@ export async function executeVMTx({
   executionPayload,
   network,
 }: {
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   tx: ELTransaction;
   vm: VM;
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   network: NetworkName;
 }): Promise<RunTxResult> {
   const {result: block} = await rpc.request("eth_getBlockByHash", [bufferToHex(executionPayload.blockHash), true], {
@@ -258,7 +258,7 @@ export async function executeVMTx({
 
 export function getVMBlockHeaderFromELBlock(
   block: ELBlock,
-  executionPayload: allForks.ExecutionPayload,
+  executionPayload: ExecutionPayload,
   network: NetworkName
 ): BlockHeader {
   const blockHeaderData = {

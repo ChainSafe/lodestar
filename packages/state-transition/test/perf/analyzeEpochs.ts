@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {NetworkName} from "@lodestar/config/networks.js";
 import {phase0, ssz} from "@lodestar/types";
@@ -77,22 +77,18 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
   const baseUrl = getInfuraBeaconUrl(network);
   // Long timeout to download states
-  const client = getClient({baseUrl, timeoutMs: 5 * 60 * 1000}, {config});
+  const client = getClient({baseUrl, globalInit: {timeoutMs: 5 * 60 * 1000}}, {config});
 
   // Start at epoch 1 since 0 will go and fetch state at slot -1
   const maxEpoch = fromEpoch ?? Math.max(1, ...currCsv.map((row) => row.epoch));
 
-  const res = await client.beacon.getBlockHeader("head");
-  ApiError.assert(res);
-  const header = res.response.data;
-  const currentEpoch = computeEpochAtSlot(header.header.message.slot);
+  const {header} = (await client.beacon.getBlockHeader({blockId: "head"})).value();
+  const currentEpoch = computeEpochAtSlot(header.message.slot);
 
   for (let epoch = maxEpoch; epoch < currentEpoch; epoch++) {
     const stateSlot = computeStartSlotAtEpoch(epoch) - 1;
 
-    const res = await client.debug.getState(String(stateSlot));
-    ApiError.assert(res);
-    const state = res.response.data;
+    const state = (await client.debug.getStateV2({stateId: stateSlot})).value();
 
     const preEpoch = computeEpochAtSlot(state.slot);
     const nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
@@ -118,8 +114,8 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const attesterFlagsCount = {...attesterFlagsCountZero};
     const keys = Object.keys(attesterFlagsCountZero) as (keyof typeof attesterFlagsCountZero)[];
-    for (const status of cache.statuses) {
-      const flags = parseAttesterFlags(status.flags);
+    for (const flag of cache.flags) {
+      const flags = parseAttesterFlags(flag);
       for (const key of keys) {
         if (flags[key]) attesterFlagsCount[key]++;
       }
@@ -147,7 +143,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
       currentEpochAttestationsBits: countAttBits(currentEpochAttestations as phase0.PendingAttestation[]),
     });
 
-    // -- allForks
+    // -- all forks
     // processEffectiveBalanceUpdates: function of effectiveBalance changes
     // processEth1DataReset: free
     // processHistoricalRootsUpdate: free

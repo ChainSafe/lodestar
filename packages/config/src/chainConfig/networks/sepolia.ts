@@ -4,7 +4,7 @@ import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
 
 // Sepolia beacon chain config:
-// https://github.com/eth-clients/sepolia/blob/main/bepolia/config.yaml
+// https://github.com/eth-clients/sepolia/blob/main/metadata/config.yaml
 
 export const sepoliaChainConfig: ChainConfig = {
   ...mainnet,
@@ -17,6 +17,7 @@ export const sepoliaChainConfig: ChainConfig = {
   // # Sunday, June 19, 2022 2:00:00 PM +UTC
   MIN_GENESIS_TIME: 1655647200,
   GENESIS_FORK_VERSION: b("0x90000069"),
+  GENESIS_DELAY: 86400,
 
   // Forking
   // ---------------------------------------------------------------

@@ -9,6 +9,7 @@ import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {CommonBlockBody} from "../../../../../src/chain/interface.js";
+import {zeroProtoBlock} from "../../../../utils/state.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
@@ -87,6 +88,8 @@ describe("api/validator - produceBlockV3", function () {
         modules.chain.recomputeForkChoiceHead.mockReturnValue({
           blockRoot: toHexString(fullBlock.parentRoot),
         } as ProtoBlock);
+        modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
+        modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock);
 
         if (enginePayloadValue !== null) {
           const commonBlockBody: CommonBlockBody = {
@@ -130,13 +133,19 @@ describe("api/validator - produceBlockV3", function () {
           feeRecipient,
         };
 
-        const block = await api.produceBlockV3(slot, randaoReveal, graffiti, _skipRandaoVerification, produceBlockOpts);
+        const {data: block, meta} = await api.produceBlockV3({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification: _skipRandaoVerification,
+          ...produceBlockOpts,
+        });
 
         const expectedBlock = finalSelection === "builder" ? blindedBlock : fullBlock;
         const expectedExecution = finalSelection === "builder" ? true : false;
 
-        expect(block.data).toEqual(expectedBlock);
-        expect(block.executionPayloadBlinded).toEqual(expectedExecution);
+        expect(block).toEqual(expectedBlock);
+        expect(meta.executionPayloadBlinded).toEqual(expectedExecution);
 
         // check call counts
         if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {

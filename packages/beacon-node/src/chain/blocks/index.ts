@@ -1,5 +1,5 @@
-import {allForks} from "@lodestar/types";
 import {toHex, isErrorAborted} from "@lodestar/utils";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
@@ -68,7 +68,7 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus} =
+    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs} =
       await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
@@ -81,15 +81,14 @@ export async function processBlocks(
     }
 
     const {executionStatuses} = segmentExecStatus;
-    const fullyVerifiedBlocks = relevantBlocks.map(
+    const fullyVerifiedBlocks = availableBlockInputs.map(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
-        // Currently dataAvailableStatus is not used upstream but that can change if we
         // start supporting optimistic syncing/processing
-        dataAvailableStatus: dataAvailabilityStatuses[i],
+        dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
@@ -159,7 +158,7 @@ export async function processBlocks(
   }
 }
 
-function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockError {
+function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError {
   if (e instanceof BlockError) {
     return e;
   } else if (e instanceof Error) {

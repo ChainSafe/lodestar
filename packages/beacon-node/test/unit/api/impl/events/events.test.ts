@@ -43,8 +43,12 @@ describe("Events api impl", function () {
 
     function getEvents(topics: routes.events.EventType[]): routes.events.BeaconEvent[] {
       const events: routes.events.BeaconEvent[] = [];
-      void api.eventstream(topics, controller.signal, (event) => {
-        events.push(event);
+      void api.eventstream({
+        topics,
+        signal: controller.signal,
+        onEvent: (event) => {
+          events.push(event);
+        },
       });
       return events;
     }

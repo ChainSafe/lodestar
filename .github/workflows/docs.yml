@@ -31,7 +31,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           check-latest: true
           cache: yarn          
 
@@ -61,9 +61,6 @@ jobs:
 
       - name: Lint built docs
         run: yarn docs:lint:fix
-
-      - name: Set up Python
-        uses: actions/setup-python@v1
 
       - name: Build docs
         working-directory: docs

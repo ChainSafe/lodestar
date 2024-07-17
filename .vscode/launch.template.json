@@ -1,0 +1,79 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "name": "Attach",
+      "port": 9229,
+      "request": "attach",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Beacon",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "smartStep": true,
+      "program": "${workspaceFolder}/packages/cli/bin/lodestar.js",
+      "args": [
+        "beacon"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Dev",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "smartStep": true,
+      "program": "${workspaceFolder}/packages/cli/bin/lodestar.js",
+      "args": [
+        "dev"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test Current File",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/vitest",
+      "args": [
+        "--run",
+        "${file}",
+        "-t",
+        "${input:testName}",
+        "--pool",
+        "threads",
+        "--poolOptions.threads.singleThread"
+      ],
+      "cwd": "${workspaceFolder}/${input:packageName}",
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "packageName",
+      "type": "command",
+      "command": "extension.commandvariable.transform",
+      "args": {
+        "text": "${relativeFileDirname}",
+        "find": "^(packages/[^/]+).*",
+        "replace": "$1"
+      }
+    },
+    {
+      "id": "testName",
+      "type": "promptString",
+      "description": "Enter the test name to run, leave empty to run all"
+    }
+  ]
+}

@@ -99,6 +99,7 @@ export async function getSignersFromArgs(
       ignoreLockFile: args.force,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "imported_keystores.cache"),
+      disableThreadPool: args["disableKeystoresThreadPool"],
       logger,
       signal,
     });
@@ -133,6 +134,7 @@ export async function getSignersFromArgs(
       ignoreLockFile: args.force,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
+      disableThreadPool: args["disableKeystoresThreadPool"],
       logger,
       signal,
     });

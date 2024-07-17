@@ -3,7 +3,7 @@ import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getClient, HttpStatusCode} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
@@ -61,19 +61,15 @@ describe("api / impl / validator", function () {
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
-      await expect(client.validator.getLiveness(0, [1, 2, 3, 4, 5])).resolves.toEqual({
-        response: {
-          data: [
-            {index: 1, isLive: true},
-            {index: 2, isLive: true},
-            {index: 3, isLive: true},
-            {index: 4, isLive: true},
-            {index: 5, isLive: false},
-          ],
-        },
-        ok: true,
-        status: HttpStatusCode.OK,
-      });
+      const res = await client.validator.getLiveness({epoch: 0, indices: [1, 2, 3, 4, 5]});
+
+      expect(res.value()).toEqual([
+        {index: 1, isLive: true},
+        {index: 2, isLive: true},
+        {index: 3, isLive: true},
+        {index: 4, isLive: true},
+        {index: 5, isLive: false},
+      ]);
     });
 
     it("Should return only for previous, current and next epoch", async function () {
@@ -107,23 +103,23 @@ describe("api / impl / validator", function () {
       const previousEpoch = currentEpoch - 1;
 
       // current epoch is fine
-      await expect(client.validator.getLiveness(currentEpoch, [1])).resolves.toBeDefined();
+      (await client.validator.getLiveness({epoch: currentEpoch, indices: [1]})).assertOk();
       // next epoch is fine
-      await expect(client.validator.getLiveness(nextEpoch, [1])).resolves.toBeDefined();
+      (await client.validator.getLiveness({epoch: nextEpoch, indices: [1]})).assertOk();
       // previous epoch is fine
-      await expect(client.validator.getLiveness(previousEpoch, [1])).resolves.toBeDefined();
+      (await client.validator.getLiveness({epoch: previousEpoch, indices: [1]})).assertOk();
       // more than next epoch is not fine
-      const res1 = await client.validator.getLiveness(currentEpoch + 2, [1]);
+      const res1 = await client.validator.getLiveness({epoch: currentEpoch + 2, indices: [1]});
       expect(res1.ok).toBe(false);
-      expect(res1.error?.message).toEqual(
+      expect(res1.error()?.message).toEqual(
         expect.stringContaining(
           `Request epoch ${currentEpoch + 2} is more than one epoch before or after the current epoch ${currentEpoch}`
         )
       );
       // more than previous epoch is not fine
-      const res2 = await client.validator.getLiveness(currentEpoch - 2, [1]);
+      const res2 = await client.validator.getLiveness({epoch: currentEpoch - 2, indices: [1]});
       expect(res2.ok).toBe(false);
-      expect(res2.error?.message).toEqual(
+      expect(res2.error()?.message).toEqual(
         expect.stringContaining(
           `Request epoch ${currentEpoch - 2} is more than one epoch before or after the current epoch ${currentEpoch}`
         )

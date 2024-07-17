@@ -1,6 +1,6 @@
 import {Slot} from "@lodestar/types";
 import {phase0} from "@lodestar/types";
-import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
+import {ProtoBlock, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../src/constants/index.js";
@@ -43,7 +43,7 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     timeliness: false,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     ...overrides,
   } as ProtoBlock;
 }

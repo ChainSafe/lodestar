@@ -1,4 +1,6 @@
 import {ProducedBlockSource} from "@lodestar/types";
+import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 
@@ -57,18 +59,20 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     // Non-spec'ed
 
     forkChoice: {
-      findHead: register.histogram({
+      findHead: register.histogram<{entrypoint: string}>({
         name: "beacon_fork_choice_find_head_seconds",
         help: "Time taken to find head in seconds",
         buckets: [0.1, 1, 10],
+        labelNames: ["entrypoint"],
       }),
       requests: register.gauge({
         name: "beacon_fork_choice_requests_total",
         help: "Count of occasions where fork choice has tried to find a head",
       }),
-      errors: register.gauge({
+      errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
         name: "beacon_fork_choice_errors_total",
         help: "Count of occasions where fork choice has returned an error when trying to find a head",
+        labelNames: ["entrypoint"],
       }),
       changedHead: register.gauge({
         name: "beacon_fork_choice_changed_head_total",
@@ -108,6 +112,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       indices: register.gauge({
         name: "beacon_fork_choice_indices_count",
         help: "Current count of indices in fork choice data structures",
+      }),
+      notReorgedReason: register.gauge<{reason: NotReorgedReason}>({
+        name: "beacon_fork_choice_not_reorged_reason_total",
+        help: "Reason why the current head is not re-orged out",
+        labelNames: ["reason"],
       }),
     },
 
@@ -197,6 +206,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     clockEpoch: register.gauge({
       name: "beacon_clock_epoch",
       help: "Current clock epoch",
+    }),
+
+    weakHeadDetected: register.gauge({
+      name: "beacon_weak_head_detected_total",
+      help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
     }),
   };
 }

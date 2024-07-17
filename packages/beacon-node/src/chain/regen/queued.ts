@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Slot, allForks, RootHex, Epoch} from "@lodestar/types";
+import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
@@ -34,7 +34,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private readonly regen: StateRegenerator;
 
   private readonly forkChoice: IForkChoice;
-  private readonly stateCache: BlockStateCache;
+  private readonly blockStateCache: BlockStateCache;
   private readonly checkpointStateCache: CheckpointStateCache;
   private readonly metrics: Metrics | null;
   private readonly logger: Logger;
@@ -47,7 +47,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       modules.metrics ? modules.metrics.regenQueue : undefined
     );
     this.forkChoice = modules.forkChoice;
-    this.stateCache = modules.stateCache;
+    this.blockStateCache = modules.blockStateCache;
     this.checkpointStateCache = modules.checkpointStateCache;
     this.metrics = modules.metrics;
     this.logger = modules.logger;
@@ -64,12 +64,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   dropCache(): void {
-    this.stateCache.clear();
+    this.blockStateCache.clear();
     this.checkpointStateCache.clear();
   }
 
   dumpCacheSummary(): routes.lodestar.StateCacheItem[] {
-    return [...this.stateCache.dumpSummary(), ...this.checkpointStateCache.dumpSummary()];
+    return [...this.blockStateCache.dumpSummary(), ...this.checkpointStateCache.dumpSummary()];
   }
 
   /**
@@ -77,7 +77,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * This is not for block processing so don't transfer cache
    */
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null {
-    return this.stateCache.get(stateRoot, {dontTransferCache: true});
+    return this.blockStateCache.get(stateRoot, {dontTransferCache: true});
   }
 
   /**
@@ -86,7 +86,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * which is usually the gossip block.
    */
   getPreStateSync(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
     const parentRoot = toHexString(block.parentRoot);
@@ -113,7 +113,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     // Otherwise the state transition may not be cached and wasted. Queue for regen since the
     // work required will still be significant.
     if (parentEpoch === blockEpoch) {
-      const state = this.stateCache.get(parentBlock.stateRoot, opts);
+      const state = this.blockStateCache.get(parentBlock.stateRoot, opts);
       if (state) {
         return state;
       }
@@ -139,22 +139,23 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
     const opts = {dontTransferCache: true};
     return (
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, opts) || this.stateCache.get(head.stateRoot, opts)
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, opts) ||
+      this.blockStateCache.get(head.stateRoot, opts)
     );
   }
 
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
     this.checkpointStateCache.prune(finalizedEpoch, justifiedEpoch);
-    this.stateCache.prune(headStateRoot);
+    this.blockStateCache.prune(headStateRoot);
   }
 
   pruneOnFinalized(finalizedEpoch: number): void {
     this.checkpointStateCache.pruneFinalized(finalizedEpoch);
-    this.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
+    this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
   }
 
   processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void {
-    this.stateCache.add(postState);
+    this.blockStateCache.add(postState);
     this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
       this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e);
     });
@@ -170,10 +171,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     const headState =
       newHeadStateRoot === toHexString(maybeHeadState.hashTreeRoot())
         ? maybeHeadState
-        : this.stateCache.get(newHeadStateRoot, cloneOpts);
+        : this.blockStateCache.get(newHeadStateRoot, cloneOpts);
 
     if (headState) {
-      this.stateCache.setHeadState(headState);
+      this.blockStateCache.setHeadState(headState);
     } else {
       // Trigger regen on head change if necessary
       this.logger.warn("Head state not available, triggering regen", {stateRoot: newHeadStateRoot});
@@ -182,9 +183,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
       // up memory for regen step below. During regen, node won't be functional but eventually head will be available
       // for legacy StateContextCache only
-      this.stateCache.setHeadState(null);
+      this.blockStateCache.setHeadState(null);
       this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, cloneOpts, allowDiskReload).then(
-        (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
+        (headStateRegen) => this.blockStateCache.setHeadState(headStateRegen),
         (e) => this.logger.error("Error on head state regen", {}, e)
       );
     }
@@ -199,7 +200,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * - State after `block.parentRoot` dialed forward to block.slot
    */
   async getPreState(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
@@ -261,7 +262,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 
     // First attempt to fetch the state from cache before queueing
-    const state = this.stateCache.get(stateRoot, opts);
+    const state = this.blockStateCache.get(stateRoot, opts);
     if (state) {
       return state;
     }

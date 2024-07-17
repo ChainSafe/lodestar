@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Slot, CommitteeIndex, altair, Root, BLSSignature} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -26,7 +26,7 @@ export class SyncCommitteeService {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
@@ -124,10 +124,7 @@ export class SyncCommitteeService {
 
     const blockRoot: Uint8Array =
       this.chainHeaderTracker.getCurrentChainHead(slot) ??
-      (await this.api.beacon.getBlockRoot("head").then((res) => {
-        ApiError.assert(res, "Error producing SyncCommitteeMessage");
-        return res.response.data.root;
-      }));
+      (await this.api.beacon.getBlockRoot({blockId: "head"})).value().root;
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 
@@ -159,7 +156,7 @@ export class SyncCommitteeService {
 
     if (signatures.length > 0) {
       try {
-        ApiError.assert(await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures));
+        (await this.api.beacon.submitPoolSyncCommitteeSignatures({signatures})).assertOk();
         this.logger.info("Published SyncCommitteeMessage", {...logCtx, count: signatures.length});
         this.metrics?.publishedSyncCommitteeMessage.inc(signatures.length);
       } catch (e) {
@@ -194,8 +191,7 @@ export class SyncCommitteeService {
     }
 
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
-    const res = await this.api.validator.produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot);
-    ApiError.assert(res, "Error producing sync committee contribution during produceAndPublishAggregates");
+    const res = await this.api.validator.produceSyncCommitteeContribution({slot, subcommitteeIndex, beaconBlockRoot});
 
     const signedContributions: altair.SignedContributionAndProof[] = [];
 
@@ -206,7 +202,7 @@ export class SyncCommitteeService {
           // Produce signed contributions only for validators that are subscribed aggregators.
           if (selectionProof !== null) {
             signedContributions.push(
-              await this.validatorStore.signContributionAndProof(duty, selectionProof, res.response.data)
+              await this.validatorStore.signContributionAndProof(duty, selectionProof, res.value())
             );
             this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
           }
@@ -220,8 +216,9 @@ export class SyncCommitteeService {
 
     if (signedContributions.length > 0) {
       try {
-        const res = await this.api.validator.publishContributionAndProofs(signedContributions);
-        ApiError.assert(res);
+        (
+          await this.api.validator.publishContributionAndProofs({contributionAndProofs: signedContributions})
+        ).assertOk();
         this.logger.info("Published SyncCommitteeContribution", {...logCtx, count: signedContributions.length});
         this.metrics?.publishedSyncCommitteeContribution.inc(signedContributions.length);
       } catch (e) {
@@ -261,7 +258,7 @@ export class SyncCommitteeService {
     this.logger.debug("Submitting partial sync committee selection proofs", {slot, count: partialSelections.length});
 
     const res = await Promise.race([
-      this.api.validator.submitSyncCommitteeSelections(partialSelections),
+      this.api.validator.submitSyncCommitteeSelections({selections: partialSelections}),
       // Exit sync committee contributions flow if there is no response after 2/3 of slot.
       // This is in contrast to attestations aggregations flow which is already exited at 1/3 of the slot
       // because for sync committee is not required to resubscribe to subnets as beacon node will assume
@@ -275,9 +272,8 @@ export class SyncCommitteeService {
     if (!res) {
       throw new Error("Failed to receive combined selection proofs before 2/3 of slot");
     }
-    ApiError.assert(res, "Error receiving combined selection proofs");
 
-    const combinedSelections = res.response.data;
+    const combinedSelections = res.value();
     this.logger.debug("Received combined sync committee selection proofs", {slot, count: combinedSelections.length});
 
     for (const dutyAndProofs of duties) {

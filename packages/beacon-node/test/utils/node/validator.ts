@@ -1,9 +1,11 @@
 import tmp from "tmp";
+import {vi} from "vitest";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
-import {ServerApi, Api, HttpStatusCode, APIServerHandler} from "@lodestar/api";
+import {ApiClient, ApiError, HttpStatusCode, ApiResponse} from "@lodestar/api";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {mapValues} from "@lodestar/utils";
 import {BeaconNode} from "../../../src/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
@@ -67,7 +69,9 @@ export async function getAndInitDevValidators({
       Validator.initializeFromBeaconNode({
         db,
         config: node.config,
-        api: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
+        api: {
+          clientOrUrls: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
+        },
         slashingProtection,
         logger,
         processShutdownCallback: () => {},
@@ -87,38 +91,39 @@ export async function getAndInitDevValidators({
   };
 }
 
-export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K]>}): Api {
-  return mapValues(api, (apiModule) =>
-    mapValues(apiModule, (api: APIServerHandler) => {
-      return async (...args: any) => {
-        let code: HttpStatusCode = HttpStatusCode.OK;
+export function getApiFromServerHandlers(api: BeaconApiMethods): ApiClient {
+  const apiClient = mapValues(api, (apiModule) =>
+    mapValues(apiModule, (api: (args: unknown, context: unknown) => PromiseLike<{data: unknown; meta: unknown}>) => {
+      return async (args: unknown) => {
         try {
-          const response = await api(
-            ...args,
-            // request object
-            {},
-            // response object
-            {
-              code: (i: number) => {
-                code = i;
-              },
-            }
-          );
-          return {response, ok: true, status: code};
+          const apiResponse = new ApiResponse({} as any, null, new Response(null, {status: HttpStatusCode.OK}));
+          const result = await api(args, {});
+          apiResponse.value = () => result.data;
+          apiResponse.meta = () => result.meta;
+          return apiResponse;
         } catch (err) {
-          return {
-            ok: false,
-            status: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
-            error: {
-              code: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
-              message: (err as Error).message,
-              operationId: api.name,
-            },
+          const apiResponse = new ApiResponse(
+            {} as any,
+            null,
+            new Response(null, {status: HttpStatusCode.INTERNAL_SERVER_ERROR})
+          );
+          apiResponse.error = () => {
+            return new ApiError((err as Error).message, HttpStatusCode.INTERNAL_SERVER_ERROR, api.name);
           };
+          return apiResponse;
         }
       };
     })
-  ) as Api;
+  ) as ApiClient;
+
+  apiClient.httpClient = {
+    baseUrl: "",
+    request: vi.fn(),
+    urlsInits: [],
+    urlsScore: [],
+  };
+
+  return apiClient;
 }
 
 export function getNodeApiUrl(node: BeaconNode): string {

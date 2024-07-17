@@ -8,30 +8,30 @@ describe("BeaconProposerCache", function () {
   beforeEach(function () {
     // max 2 items
     cache = new BeaconProposerCache({suggestedFeeRecipient});
-    cache.add(1, {validatorIndex: "23", feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"});
-    cache.add(3, {validatorIndex: "43", feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc"});
+    cache.add(1, {validatorIndex: 23, feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"});
+    cache.add(3, {validatorIndex: 43, feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc"});
   });
 
   it("get default", function () {
-    expect(cache.get("32")).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(cache.get(32)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   });
 
   it("get what has been set", function () {
-    expect(cache.get("23")).toBe("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(cache.get(23)).toBe("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
   });
 
   it("override and get latest", function () {
-    cache.add(5, {validatorIndex: "23", feeRecipient: "0xdddddddddddddddddddddddddddddddddddddddd"});
-    expect(cache.get("23")).toBe("0xdddddddddddddddddddddddddddddddddddddddd");
+    cache.add(5, {validatorIndex: 23, feeRecipient: "0xdddddddddddddddddddddddddddddddddddddddd"});
+    expect(cache.get(23)).toBe("0xdddddddddddddddddddddddddddddddddddddddd");
   });
 
   it("prune", function () {
     cache.prune(4);
 
     // Default for what has been pruned
-    expect(cache.get("23")).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(cache.get(23)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
     // Original for what hasn't been pruned
-    expect(cache.get("43")).toBe("0xcccccccccccccccccccccccccccccccccccccccc");
+    expect(cache.get(43)).toBe("0xcccccccccccccccccccccccccccccccccccccccc");
   });
 });

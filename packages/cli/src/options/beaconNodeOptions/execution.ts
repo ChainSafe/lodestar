@@ -72,9 +72,9 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   },
 
   "execution.engineMock": {
-    description: "Set the execution engine to mock mode",
+    description: "Set the execution engine to mock mode (development only)",
     type: "boolean",
-    hidden: true,
+    hidden: false,
     group: "execution",
   },
 

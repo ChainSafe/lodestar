@@ -3,7 +3,7 @@ import {RLP} from "@ethereumjs/rlp";
 import {Trie} from "@ethereumjs/trie";
 import {Account, KECCAK256_NULL_S} from "@ethereumjs/util";
 import {keccak256} from "ethereum-cryptography/keccak.js";
-import {Bytes32, allForks} from "@lodestar/types";
+import {Bytes32, ExecutionPayload} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {ELBlock, ELProof, ELStorageProof, HexString} from "../types.js";
@@ -99,7 +99,7 @@ export async function isValidBlock({
   logger,
   config,
 }: {
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   block: ELBlock;
   logger: Logger;
   config: ChainForkConfig;

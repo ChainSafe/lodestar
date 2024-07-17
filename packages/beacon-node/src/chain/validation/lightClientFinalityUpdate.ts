@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks} from "@lodestar/types";
+import {LightClientFinalityUpdate} from "@lodestar/types";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {GossipAction} from "../errors/index.js";
@@ -9,7 +9,7 @@ import {updateReceivedTooEarly} from "./lightClientOptimisticUpdate.js";
 export function validateLightClientFinalityUpdate(
   config: ChainForkConfig,
   chain: IBeaconChain,
-  gossipedFinalityUpdate: allForks.LightClientFinalityUpdate
+  gossipedFinalityUpdate: LightClientFinalityUpdate
 ): void {
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
   const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.beacon.slot;

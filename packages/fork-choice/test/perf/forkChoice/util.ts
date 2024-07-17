@@ -1,6 +1,13 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  ProtoBlock,
+  ProtoArray,
+  DataAvailabilityStatus,
+} from "../../../src/index.js";
 import {computeTotalBalance} from "../../../src/forkChoice/store.js";
 
 const genesisSlot = 0;
@@ -29,6 +36,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
   );
@@ -77,6 +85,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
 
     protoArr.onBlock(block, block.slot);
