@@ -32,7 +32,7 @@ export async function archiveBlocks(
   config: ChainForkConfig,
   db: IBeaconDb,
   forkChoice: IForkChoice,
-  lightclientServer: LightClientServer,
+  lightclientServer: LightClientServer | undefined,
   logger: Logger,
   finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch,
@@ -111,7 +111,9 @@ export async function archiveBlocks(
     nonCheckpointBlockRoots.push(block.root);
   }
 
-  await lightclientServer.pruneNonCheckpointData(nonCheckpointBlockRoots);
+  if (lightclientServer) {
+    await lightclientServer.pruneNonCheckpointData(nonCheckpointBlockRoots);
+  }
 
   logger.verbose("Archiving of finalized blocks complete", {
     totalArchived: finalizedCanonicalBlocks.length,

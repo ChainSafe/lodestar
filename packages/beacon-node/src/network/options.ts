@@ -8,11 +8,11 @@ import {SubnetsServiceOpts} from "./subnets/interface.js";
 export interface NetworkOptions
   extends PeerManagerOpts,
     // remove all Functions
-    Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit">,
+    Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit" | "disableLightClientServer">,
     NetworkProcessorOpts,
     PeerRpcScoreOpts,
     SubnetsServiceOpts,
-    Eth2GossipsubOpts {
+    Omit<Eth2GossipsubOpts, "disableLightClientServer"> {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
@@ -22,6 +22,7 @@ export interface NetworkOptions
   private?: boolean;
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
+  disableLightClientServer?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -41,4 +42,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // this should only be set to true if useWorker is true
   beaconAttestationBatchValidation: true,
+  // This will enable the light client server by default
+  disableLightClientServer: false,
 };

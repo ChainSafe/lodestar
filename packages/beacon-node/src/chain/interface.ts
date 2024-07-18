@@ -95,7 +95,7 @@ export interface IBeaconChain {
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: IStateRegenerator;
-  readonly lightClientServer: LightClientServer;
+  readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;

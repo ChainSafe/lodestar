@@ -1,15 +1,15 @@
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, phase0, ValidatorIndex} from "@lodestar/types";
+import {BLSPubkey, Epoch, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
+import {IForkChoice} from "@lodestar/fork-choice";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
-export function resolveStateId(chain: IBeaconChain, stateId: routes.beacon.StateId): string | number {
+export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.StateId): RootHex | Slot {
   if (stateId === "head") {
-    const head = chain.forkChoice.getHead();
-    return head.stateRoot;
+    return forkChoice.getHead().stateRoot;
   }
 
   if (stateId === "genesis") {
@@ -17,17 +17,15 @@ export function resolveStateId(chain: IBeaconChain, stateId: routes.beacon.State
   }
 
   if (stateId === "finalized") {
-    const block = chain.forkChoice.getFinalizedBlock();
-    return block.stateRoot;
+    return forkChoice.getFinalizedBlock().stateRoot;
   }
 
   if (stateId === "justified") {
-    const block = chain.forkChoice.getJustifiedBlock();
-    return block.stateRoot;
+    return forkChoice.getJustifiedBlock().stateRoot;
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {
-    return stateId as string;
+    return stateId;
   }
 
   // id must be slot
@@ -43,42 +41,38 @@ export async function getStateResponse(
   chain: IBeaconChain,
   stateId: routes.beacon.StateId
 ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
-  const rootOrSlot = resolveStateId(chain, stateId);
+  const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
 
-  let state: {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null = null;
-  if (typeof rootOrSlot === "string") {
-    state = await chain.getStateByStateRoot(rootOrSlot);
-  } else if (typeof rootOrSlot === "number") {
-    state = await chain.getStateBySlot(rootOrSlot);
-  }
+  const res =
+    typeof rootOrSlot === "string"
+      ? await chain.getStateByStateRoot(rootOrSlot)
+      : await chain.getStateBySlot(rootOrSlot);
 
-  if (state == null) {
+  if (!res) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
-  return state;
+
+  return res;
 }
 
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
   stateId: routes.beacon.StateId
 ): Promise<{state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
-  const rootOrSlot = resolveStateId(chain, stateId);
+  const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
 
-  let state: {state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null = null;
-  if (typeof rootOrSlot === "string") {
-    state = await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true});
-  } else if (typeof rootOrSlot === "number") {
-    if (rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot) {
-      state = await chain.getStateBySlot(rootOrSlot, {allowRegen: true});
-    } else {
-      state = await chain.getHistoricalStateBySlot(rootOrSlot);
-    }
-  }
+  const res =
+    typeof rootOrSlot === "string"
+      ? await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true})
+      : rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot
+        ? await chain.getStateBySlot(rootOrSlot, {allowRegen: true})
+        : await chain.getHistoricalStateBySlot(rootOrSlot);
 
-  if (state == null) {
+  if (!res) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
-  return state;
+
+  return res;
 }
 
 /**
