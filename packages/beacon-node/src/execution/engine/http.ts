@@ -38,6 +38,7 @@ import {
   deserializeExecutionPayloadBody,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
+import { getLodestarClientVersion } from "../../util/graffiti.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -441,7 +442,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [clientVersion ?? this.getConsensusClientVersion()]});
+    >({method, params: [clientVersion ?? getLodestarClientVersion()]});
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
@@ -458,15 +459,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   get executionClientVersion(): ClientVersion | undefined {
     return this.clientVersion;
-  }
-
-  getConsensusClientVersion(): ClientVersion {
-    return {
-      code: ClientCode.LS,
-      name: "Lodestar",
-      version: this.opts?.version ?? "",
-      commit: this.opts?.commit?.slice(0, 2) ?? "",
-    };
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {

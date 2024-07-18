@@ -53,7 +53,7 @@ import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {toGraffitiBuffer} from "../../../util/graffiti.js";
+import {getLodestarClientVersion, toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
@@ -339,7 +339,7 @@ export function getValidatorApi(
     }
 
     const executionClientVersion = chain.executionEngine.getExecutionClientVersion();
-    const consensusClientVersion = chain.executionEngine.getConsensusClientVersion();
+    const consensusClientVersion = getLodestarClientVersion();
 
     if (executionClientVersion != undefined) {
       const {code: executionCode, commit: executionCommit} = executionClientVersion;
