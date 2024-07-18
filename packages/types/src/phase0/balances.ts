@@ -1,5 +1,5 @@
 import {BranchNode, HashComputation, Node, executeHashComputations} from "@chainsafe/persistent-merkle-tree";
-import {Balances} from "./sszTypes";
+import {Balances} from "./sszTypes.js";
 
 const chunksDepth = Balances.chunkDepth;
 const hashComputations: HashComputation[][] = Array.from({length: chunksDepth}, () => []);
