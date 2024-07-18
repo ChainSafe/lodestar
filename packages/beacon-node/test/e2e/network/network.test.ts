@@ -9,21 +9,17 @@ import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
-describe(
-  "network / main thread",
-  function () {
-    runTests({useWorker: false});
-  },
-  {timeout: 3000}
-);
+describe("network / main thread", function () {
+  vi.setConfig({testTimeout: 3000});
 
-describe(
-  "network / worker",
-  function () {
-    runTests({useWorker: true});
-  },
-  {timeout: 10_000}
-);
+  runTests({useWorker: false});
+});
+
+describe("network / worker", function () {
+  vi.setConfig({testTimeout: 10_000});
+
+  runTests({useWorker: true});
+});
 
 function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
