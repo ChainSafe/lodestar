@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {SignedBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
@@ -23,7 +23,7 @@ export function toBeaconHeaderResponse(
   };
 }
 
-export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.BlockId): string | number {
+export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.BlockId): RootHex | Slot {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
     return forkChoice.getHead().blockRoot;

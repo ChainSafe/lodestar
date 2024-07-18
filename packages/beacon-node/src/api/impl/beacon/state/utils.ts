@@ -1,13 +1,13 @@
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, phase0, ValidatorIndex} from "@lodestar/types";
+import {BLSPubkey, Epoch, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
-export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.StateId): string | number {
+export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.StateId): RootHex | Slot {
   if (stateId === "head") {
     return forkChoice.getHead().stateRoot;
   }
