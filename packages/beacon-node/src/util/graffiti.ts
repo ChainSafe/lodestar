@@ -16,3 +16,22 @@ export function getLodestarClientVersion(info?: {version: string, commit: string
     commit: info?.commit?.slice(0, 2) ?? "",
   };
 }
+
+export function getDefaultGraffiti(opts: {private?: boolean}, executionClientVersion?: ClientVersion): string {
+
+  if (opts.private) {
+    return "";
+  }
+
+  const consensusClientVersion = getLodestarClientVersion();
+
+  if (executionClientVersion != undefined) {
+    const {code: executionCode, commit: executionCommit} = executionClientVersion;
+
+    // Follow the 2-byte commit format in https://github.com/ethereum/execution-apis/pull/517#issuecomment-1918512560
+    return `${executionCode}${executionCommit.slice(0, 2)}${consensusClientVersion.code}${consensusClientVersion.commit}`;
+  }
+
+  // No EL client info available. We still want to include CL info albeit not spec compliant
+  return `${consensusClientVersion.code}${consensusClientVersion.commit}`;
+}

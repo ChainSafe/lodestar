@@ -180,10 +180,4 @@ export interface IExecutionEngine {
   getClientVersion(clientVersion?: ClientVersion): Promise<ClientVersion[]>;
 
   getState(): ExecutionEngineState;
-  /**
-   * Not to be confused with `getClientVersion`. This method returns cached client version
-   * from `getClientVersion` which is a rpc call to EL client
-   */
-  getExecutionClientVersion(): ClientVersion;
-  getConsensusClientVersion(): ClientVersion;
 }

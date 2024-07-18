@@ -117,7 +117,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
   // Cache EL client version from the latest getClientVersion call
-  private clientVersion?: ClientVersion;
+  clientVersion?: ClientVersion;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -156,6 +156,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
+    });
+
+    // Initial state engine state is ONLINE. Need to explicitly call `getClientVersion` once on startup
+    this.getClientVersion().catch((e) => {
+      this.logger.error("Unable to get client version", {caller: "ExecutionEngineHttp constructor"}, e);
     });
   }
 
@@ -451,7 +456,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     if (clientVersions.length > 0) {
       this.clientVersion = clientVersions[0];
-      this.logger.info(`executionClientVersion is set to ${JSON.stringify(this.clientVersion)}`);
+      this.logger.info("Execution client version is updated", this.clientVersion);
     }
 
     return clientVersions;

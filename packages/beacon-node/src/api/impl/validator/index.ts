@@ -53,7 +53,7 @@ import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getLodestarClientVersion, toGraffitiBuffer} from "../../../util/graffiti.js";
+import {getDefaultGraffiti, toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
@@ -332,26 +332,6 @@ export function getValidatorApi(
       );
   }
 
-  function getDefaultGraffiti(): string {
-
-    if (opts.private) {
-      return "";
-    }
-
-    const executionClientVersion = chain.executionEngine.getExecutionClientVersion();
-    const consensusClientVersion = getLodestarClientVersion();
-
-    if (executionClientVersion != undefined) {
-      const {code: executionCode, commit: executionCommit} = executionClientVersion;
-
-      // Follow the 2-byte commit format in https://github.com/ethereum/execution-apis/pull/517#issuecomment-1918512560
-      return `${executionCode}${executionCommit.slice(0, 2)}${consensusClientVersion.code}${consensusClientVersion.commit}`;
-    }
-
-    // No EL client info available. We still want to include CL info albeit not spec compliant
-    return `${consensusClientVersion.code}${consensusClientVersion.commit}`;
-  }
-
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {
@@ -423,7 +403,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
+        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, chain.executionEngine.clientVersion)),
         commonBlockBody,
       });
 
@@ -491,7 +471,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
+        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, chain.executionEngine.clientVersion)),
         feeRecipient,
         commonBlockBody,
       });
@@ -602,7 +582,7 @@ export function getValidatorApi(
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti()),
+      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, chain.executionEngine.clientVersion)),
     });
     logger.debug("Produced common block body", loggerContext);
 
