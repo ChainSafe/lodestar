@@ -9,8 +9,7 @@ import {ApiError, ValidationError} from "../../errors.js";
 
 export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.StateId): string | number {
   if (stateId === "head") {
-    const head = forkChoice.getHead();
-    return head.stateRoot;
+    return forkChoice.getHead().stateRoot;
   }
 
   if (stateId === "genesis") {
@@ -18,13 +17,11 @@ export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.S
   }
 
   if (stateId === "finalized") {
-    const block = forkChoice.getFinalizedBlock();
-    return block.stateRoot;
+    return forkChoice.getFinalizedBlock().stateRoot;
   }
 
   if (stateId === "justified") {
-    const block = forkChoice.getJustifiedBlock();
-    return block.stateRoot;
+    return forkChoice.getJustifiedBlock().stateRoot;
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {
