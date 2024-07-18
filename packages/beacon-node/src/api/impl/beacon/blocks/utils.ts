@@ -61,12 +61,12 @@ export async function getBlockResponse(
   blockId: routes.beacon.BlockId
 ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
   const rootOrSlot = resolveBlockId(chain.forkChoice, blockId);
-  let res = null;
-  if (typeof rootOrSlot === "string") {
-    res = await chain.getBlockByRoot(rootOrSlot);
-  } else {
-    res = await chain.getCanonicalBlockAtSlot(rootOrSlot);
-  }
+
+  const res =
+    typeof rootOrSlot === "string"
+      ? await chain.getBlockByRoot(rootOrSlot)
+      : await chain.getCanonicalBlockAtSlot(rootOrSlot);
+
   if (!res) {
     throw new ApiError(404, `No block found for id '${blockId}'`);
   }
