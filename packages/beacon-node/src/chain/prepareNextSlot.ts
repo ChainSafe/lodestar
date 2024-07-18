@@ -18,7 +18,7 @@ import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
-import {hashBalancesTree} from "@lodestar/types/lib/phase0/balances.js";
+import {hashBalancesTree} from "@lodestar/types/phase0";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
