@@ -13,12 +13,11 @@ export function validateLightClientOptimisticUpdate(
   chain: IBeaconChain,
   gossipedOptimisticUpdate: LightClientOptimisticUpdate
 ): void {
-  const lightClientServer = chain.lightClientServer;
-  assertLightClientServer(lightClientServer);
+  assertLightClientServer(chain.lightClientServer);
 
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
   const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.beacon.slot;
-  const localOptimisticUpdate = lightClientServer.getOptimisticUpdate();
+  const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
 
   if (localOptimisticUpdate && gossipedAttestedSlot <= localOptimisticUpdate.attestedHeader.beacon.slot) {
     throw new LightClientError(GossipAction.IGNORE, {

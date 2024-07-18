@@ -12,12 +12,11 @@ export function validateLightClientFinalityUpdate(
   chain: IBeaconChain,
   gossipedFinalityUpdate: LightClientFinalityUpdate
 ): void {
-  const lightClientServer = chain.lightClientServer;
-  assertLightClientServer(lightClientServer);
+  assertLightClientServer(chain.lightClientServer);
 
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
   const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.beacon.slot;
-  const localFinalityUpdate = lightClientServer.getFinalityUpdate();
+  const localFinalityUpdate = chain.lightClientServer.getFinalityUpdate();
 
   if (localFinalityUpdate && gossipedFinalitySlot <= localFinalityUpdate.finalizedHeader.beacon.slot) {
     throw new LightClientError(GossipAction.IGNORE, {

@@ -15,13 +15,12 @@ export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
-  const lightClientServer = chain.lightClientServer;
-  assertLightClientServer(lightClientServer);
+  assertLightClientServer(chain.lightClientServer);
 
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
   for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     try {
-      const update = await lightClientServer.getUpdate(period);
+      const update = await chain.lightClientServer.getUpdate(period);
       const fork = chain.config.getForkName(update.signatureSlot);
       const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](fork, 0);
 
