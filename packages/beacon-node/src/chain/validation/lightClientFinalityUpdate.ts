@@ -3,6 +3,7 @@ import {LightClientFinalityUpdate} from "@lodestar/types";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {GossipAction} from "../errors/index.js";
+import {assertLightClientServer} from "../../node/utils/lightclient.js";
 import {updateReceivedTooEarly} from "./lightClientOptimisticUpdate.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_finality_update
@@ -11,6 +12,8 @@ export function validateLightClientFinalityUpdate(
   chain: IBeaconChain,
   gossipedFinalityUpdate: LightClientFinalityUpdate
 ): void {
+  assertLightClientServer(chain.lightClientServer);
+
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
   const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.beacon.slot;
   const localFinalityUpdate = chain.lightClientServer.getFinalityUpdate();
