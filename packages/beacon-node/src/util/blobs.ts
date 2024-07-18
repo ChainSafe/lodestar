@@ -7,6 +7,7 @@ import {
   ForkName,
   ForkAll,
   NUMBER_OF_COLUMNS,
+  ForkBlobs,
 } from "@lodestar/params";
 import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, electra} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
@@ -72,20 +73,17 @@ export function computeBlobSidecars(
  */
 export function getDataColumnSidecars(
   config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock<ForkBlobs>,
   contents: deneb.Contents & {kzgCommitmentsInclusionProof?: electra.KzgCommitmentsInclusionProof}
 ): electra.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-  const {blobs} = contents;
-  if (!Array.isArray(blobs)) {
-    throw Error("Invalid block with missing blobs for computeBlobSidecars");
-  }
   if (blobKzgCommitments === undefined) {
     throw Error("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
   }
   if (blobKzgCommitments.length === 0) {
     return [];
   }
+  const {blobs} = contents;
   const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
   const kzgCommitmentsInclusionProof =
