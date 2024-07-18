@@ -2,6 +2,7 @@ import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {RequiredSelective} from "@lodestar/utils";
 import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
@@ -30,7 +31,7 @@ describe("Light Client Optimistic Update validation", function () {
     }
   });
 
-  function mockChain(): IBeaconChain {
+  function mockChain(): RequiredSelective<IBeaconChain, "lightClientServer"> {
     const chain = getMockedBeaconChain({config});
     vi.spyOn(chain, "genesisTime", "get").mockReturnValue(0);
     vi.spyOn(chain.lightClientServer, "getOptimisticUpdate");

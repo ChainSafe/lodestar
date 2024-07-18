@@ -126,7 +126,7 @@ export class BeaconChain implements IBeaconChain {
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: QueuedStateRegenerator;
-  readonly lightClientServer: LightClientServer;
+  readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
 
   // Ops pool
@@ -305,7 +305,9 @@ export class BeaconChain implements IBeaconChain {
       signal,
     });
 
-    const lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
+    if (!opts.disableLightClientServer) {
+      this.lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
+    }
 
     this.reprocessController = new ReprocessController(this.metrics);
 
@@ -316,7 +318,6 @@ export class BeaconChain implements IBeaconChain {
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
-    this.lightClientServer = lightClientServer;
 
     this.archiver = new Archiver(db, this, logger, signal, opts);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests

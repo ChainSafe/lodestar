@@ -499,9 +499,12 @@ export class NetworkCore implements INetworkCore {
   private subscribeCoreTopicsAtFork(fork: ForkName): void {
     if (this.subscribedForks.has(fork)) return;
     this.subscribedForks.add(fork);
-    const {subscribeAllSubnets} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
+    for (const topic of getCoreTopicsAtFork(fork, {
+      subscribeAllSubnets,
+      disableLightClientServer,
+    })) {
       this.gossip.subscribeTopic({...topic, fork});
     }
   }
@@ -509,9 +512,12 @@ export class NetworkCore implements INetworkCore {
   private unsubscribeCoreTopicsAtFork(fork: ForkName): void {
     if (!this.subscribedForks.has(fork)) return;
     this.subscribedForks.delete(fork);
-    const {subscribeAllSubnets} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
+    for (const topic of getCoreTopicsAtFork(fork, {
+      subscribeAllSubnets,
+      disableLightClientServer,
+    })) {
       this.gossip.unsubscribeTopic({...topic, fork});
     }
   }
