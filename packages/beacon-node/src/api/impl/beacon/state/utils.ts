@@ -28,7 +28,7 @@ export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.S
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {
-    return stateId as string;
+    return stateId;
   }
 
   // id must be slot
