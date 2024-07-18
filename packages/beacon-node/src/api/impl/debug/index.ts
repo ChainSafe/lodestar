@@ -37,11 +37,10 @@ export function getDebugApi({
 
     async getStateV2({stateId}, context) {
       const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
-      let slot: number;
-      let data: Uint8Array | BeaconState;
+      let slot: number, data: Uint8Array | BeaconState;
       if (state instanceof Uint8Array) {
         slot = getStateSlotFromBytes(state);
-        data = context?.returnBytes ? state : config.getForkTypes(slot).BeaconState.deserialize(state);
+        data = state;
       } else {
         slot = state.slot;
         data = context?.returnBytes ? state.serialize() : state.toValue();
