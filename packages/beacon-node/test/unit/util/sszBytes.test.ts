@@ -12,20 +12,7 @@ import {
   getSignatureFromAttestationSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromBlobSidecarSerialized,
-  getSlotFromBeaconStateSerialized,
 } from "../../../src/util/sszBytes.js";
-
-describe("state SSZ serialized picking", () => {
-  for (const slot of [1, 255, 2 ** 32 - 1]) {
-    it(`slot ${slot}`, () => {
-      const state = ssz.phase0.BeaconState.defaultValue();
-      state.slot = slot;
-      const bytes = ssz.phase0.BeaconState.serialize(state);
-
-      expect(getSlotFromBeaconStateSerialized(bytes)).toBe(slot);
-    });
-  }
-});
 
 describe("attestation SSZ serialized picking", () => {
   const testCases: phase0.Attestation[] = [

@@ -46,12 +46,10 @@ export async function getStateResponse(
 ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
   const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
 
-  let state = null;
-  if (typeof rootOrSlot === "string") {
-    state = await chain.getStateByStateRoot(rootOrSlot);
-  } else if (typeof rootOrSlot === "number") {
-    state = await chain.getStateBySlot(rootOrSlot);
-  }
+  const state =
+    typeof rootOrSlot === "string"
+      ? await chain.getStateByStateRoot(rootOrSlot)
+      : await chain.getStateBySlot(rootOrSlot);
 
   if (state == null) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
@@ -65,17 +63,12 @@ export async function getStateResponseWithRegen(
 ): Promise<{state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
   const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
 
-  let state: {state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null = null;
-  if (typeof rootOrSlot === "string") {
-    state = await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true});
-  } else if (typeof rootOrSlot === "number") {
-    if (rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot) {
-      state = await chain.getStateBySlot(rootOrSlot, {allowRegen: true});
-    } else {
-      // TODO implement historical state regen
-      // state = await chain.getHistoricalStateBySlot(rootOrSlot);
-    }
-  }
+  const state =
+    typeof rootOrSlot === "string"
+      ? await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true})
+      : rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot
+        ? await chain.getStateBySlot(rootOrSlot, {allowRegen: true})
+        : null; // TODO implement historical state regen
 
   if (state == null) {
     throw new ApiError(404, `No state found for id '${stateId}'`);

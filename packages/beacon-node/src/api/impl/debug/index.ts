@@ -4,7 +4,7 @@ import {BeaconState} from "@lodestar/types";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getSlotFromBeaconStateSerialized} from "../../../util/sszBytes.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
 
 export function getDebugApi({
   chain,
@@ -40,7 +40,7 @@ export function getDebugApi({
       let slot: number;
       let data: Uint8Array | BeaconState;
       if (state instanceof Uint8Array) {
-        slot = getSlotFromBeaconStateSerialized(state);
+        slot = getStateSlotFromBytes(state);
         data = context?.returnBytes ? state : config.getForkTypes(slot).BeaconState.deserialize(state);
       } else {
         slot = state.slot;
