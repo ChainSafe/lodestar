@@ -236,7 +236,9 @@ export class PrepareNextSlotScheduler {
       // instead of that, use single memory allocation to hash the whole tree
       hashBalancesTree(state.balances.node);
     }
-    state.hashTreeRoot();
+
+    // using state.hashTreeRoot() sometimes cause a lot of memory allocation due to HashComputations, using the old way to avoid that
+    state.node.rootHashObject;
     hashTreeRootTimer?.();
   }
 }
