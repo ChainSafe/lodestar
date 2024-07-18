@@ -18,6 +18,7 @@ import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
+import {hashBalancesTree} from "@lodestar/types/lib/phase0/balances.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
@@ -229,13 +230,13 @@ export class PrepareNextSlotScheduler {
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
       source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
+
     if (isEpochTransition) {
-      // this also compute and populate validators' roots
-      state.commit();
-      state.node.root;
-    } else {
-      state.hashTreeRoot();
+      // at epoch transition all balances are updated so we have to allocate a big HashComputations array there
+      // instead of that, use single memory allocation to hash the whole tree
+      hashBalancesTree(state.balances.node);
     }
+    state.hashTreeRoot();
     hashTreeRootTimer?.();
   }
 }
