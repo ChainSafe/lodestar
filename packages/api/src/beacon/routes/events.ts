@@ -107,10 +107,10 @@ export type EventData = {
     block: RootHex;
     executionOptimistic: boolean;
   };
-  [EventType.attestation]: {version: ForkName; data: Attestation};
+  [EventType.attestation]: phase0.Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
   [EventType.proposerSlashing]: phase0.ProposerSlashing;
-  [EventType.attesterSlashing]: {version: ForkName; data: AttesterSlashing};
+  [EventType.attesterSlashing]: phase0.AttesterSlashing;
   [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
@@ -228,10 +228,10 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
       {jsonCase: "eth2"}
     ),
 
-    [EventType.attestation]: WithVersion((fork) => sszTypesFor(fork).Attestation),
+    [EventType.attestation]: ssz.phase0.Attestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
     [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
-    [EventType.attesterSlashing]: WithVersion((fork) => sszTypesFor(fork).AttesterSlashing),
+    [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing,
     [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(
