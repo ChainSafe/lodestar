@@ -116,6 +116,8 @@ export type VersionedHashes = Uint8Array[];
  * - Integrated code into the same binary
  */
 export interface IExecutionEngine {
+  readonly state: ExecutionEngineState;
+
   payloadIdCache: PayloadIdCache;
   /**
    * A state transition function which applies changes to the self.execution_state.

@@ -5,6 +5,7 @@ import {StringType, ssz, stringType} from "@lodestar/types";
 import {ResponseMetadataCodec} from "./types.js";
 import {toBoolean} from "./serdes.js";
 import {toForkName} from "./fork.js";
+import {HttpHeader} from "./headers.js";
 
 export const VersionType = new ContainerType({
   /**
@@ -90,6 +91,7 @@ export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimistic
   fromJson: (val) => ExecutionOptimisticType.fromJson(val),
   toHeadersObject: (val) => ({
     [MetaHeader.ExecutionOptimistic]: val.executionOptimistic.toString(),
+    [HttpHeader.ExposeHeaders]: MetaHeader.ExecutionOptimistic,
   }),
   fromHeaders: (headers) => ({
     executionOptimistic: toBoolean(headers.getOrDefault(MetaHeader.ExecutionOptimistic, "false")),
@@ -101,6 +103,7 @@ export const VersionCodec: ResponseMetadataCodec<VersionMeta> = {
   fromJson: (val) => VersionType.fromJson(val),
   toHeadersObject: (val) => ({
     [MetaHeader.Version]: val.version,
+    [HttpHeader.ExposeHeaders]: MetaHeader.Version,
   }),
   fromHeaders: (headers) => ({
     version: toForkName(headers.getRequired(MetaHeader.Version)),
@@ -113,6 +116,7 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
   toHeadersObject: (val) => ({
     [MetaHeader.ExecutionOptimistic]: val.executionOptimistic.toString(),
     [MetaHeader.Version]: val.version,
+    [HttpHeader.ExposeHeaders]: [MetaHeader.ExecutionOptimistic, MetaHeader.Version].toString(),
   }),
   fromHeaders: (headers) => ({
     executionOptimistic: toBoolean(headers.getOrDefault(MetaHeader.ExecutionOptimistic, "false")),
@@ -126,6 +130,7 @@ export const ExecutionOptimisticAndFinalizedCodec: ResponseMetadataCodec<Executi
   toHeadersObject: (val) => ({
     [MetaHeader.ExecutionOptimistic]: val.executionOptimistic.toString(),
     [MetaHeader.Finalized]: val.finalized.toString(),
+    [HttpHeader.ExposeHeaders]: [MetaHeader.ExecutionOptimistic, MetaHeader.Finalized].toString(),
   }),
   fromHeaders: (headers) => ({
     executionOptimistic: toBoolean(headers.getOrDefault(MetaHeader.ExecutionOptimistic, "false")),
@@ -141,6 +146,7 @@ export const ExecutionOptimisticFinalizedAndVersionCodec: ResponseMetadataCodec<
       [MetaHeader.ExecutionOptimistic]: val.executionOptimistic.toString(),
       [MetaHeader.Finalized]: val.finalized.toString(),
       [MetaHeader.Version]: val.version,
+      [HttpHeader.ExposeHeaders]: [MetaHeader.ExecutionOptimistic, MetaHeader.Finalized, MetaHeader.Version].toString(),
     }),
     fromHeaders: (headers) => ({
       executionOptimistic: toBoolean(headers.getOrDefault(MetaHeader.ExecutionOptimistic, "false")),
@@ -156,6 +162,7 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
     toHeadersObject: (val) => ({
       [MetaHeader.ExecutionOptimistic]: val.executionOptimistic.toString(),
       [MetaHeader.DependentRoot]: val.dependentRoot,
+      [HttpHeader.ExposeHeaders]: [MetaHeader.ExecutionOptimistic, MetaHeader.DependentRoot].toString(),
     }),
     fromHeaders: (headers) => ({
       executionOptimistic: toBoolean(headers.getOrDefault(MetaHeader.ExecutionOptimistic, "false")),

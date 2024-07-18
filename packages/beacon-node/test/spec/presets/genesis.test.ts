@@ -1,6 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
-import {phase0, Root, ssz, TimeSeconds, ExecutionPayloadHeader} from "@lodestar/types";
+import {phase0, Root, ssz, TimeSeconds, ExecutionPayloadHeader, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -49,7 +49,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
 
       const executionPayloadHeaderType =
         fork !== ForkName.phase0 && fork !== ForkName.altair
-          ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayloadHeader
+          ? sszTypesFor(fork).ExecutionPayloadHeader
           : ssz.bellatrix.ExecutionPayloadHeader;
 
       return initializeBeaconStateFromEth1(
@@ -82,7 +82,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         // for merge/post merge genesis, no affect on other phases
         execution_payload_header:
           fork !== ForkName.phase0 && fork !== ForkName.altair
-            ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayloadHeader
+            ? sszTypesFor(fork).ExecutionPayloadHeader
             : ssz.bellatrix.ExecutionPayloadHeader,
         ...generateDepositSSZTypeMapping(192),
       },
@@ -151,8 +151,6 @@ type GenesisInitCase = {
   eth1_block_hash: string;
   eth1_timestamp: bigint;
 };
-
-type ExecutionFork = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   genesis: {type: RunnerType.default, fn: genesis},

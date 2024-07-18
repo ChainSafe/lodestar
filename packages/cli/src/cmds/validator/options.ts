@@ -55,6 +55,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
+    disableKeystoresThreadPool?: boolean;
 
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
@@ -298,6 +299,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description: "Path to a file with password to decrypt all keystores from `importKeystores` option",
     defaultDescription: "./password.txt",
     type: "string",
+  },
+
+  disableKeystoresThreadPool: {
+    hidden: true,
+    description:
+      "Disable thread pool and instead use main thread to decrypt keystores. This can speed up decryption in testing environments like Kurtosis",
+    type: "boolean",
   },
 
   doppelgangerProtection: {

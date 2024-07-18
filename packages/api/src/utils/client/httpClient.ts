@@ -50,6 +50,8 @@ export const defaultInit: Required<ExtraRequestInit> = {
 
 export interface IHttpClient {
   readonly baseUrl: string;
+  readonly urlsInits: UrlInitRequired[];
+  readonly urlsScore: number[];
 
   request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
@@ -71,13 +73,12 @@ export type HttpClientModules = {
 
 export class HttpClient implements IHttpClient {
   readonly urlsInits: UrlInitRequired[] = [];
+  readonly urlsScore: number[];
 
   private readonly signal: null | AbortSignal;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
   private readonly logger: null | Logger;
-
-  private readonly urlsScore: number[];
 
   /**
    * Cache to keep track of routes per server that do not support SSZ. This cache will only be
@@ -150,7 +151,7 @@ export class HttpClient implements IHttpClient {
       if (init.retries > 0) {
         return this.requestWithRetries(definition, args, init);
       } else {
-        return this.requestFallbackToJson(definition, args, init);
+        return this.getRequestMethod(init)(definition, args, init);
       }
     } else {
       return this.requestWithFallbacks(definition, args, localInit);
@@ -201,7 +202,7 @@ export class HttpClient implements IHttpClient {
             }
             const init = mergeInits(definition, urlInit, localInit);
 
-            const requestMethod = (init.retries > 0 ? this.requestWithRetries : this.requestFallbackToJson).bind(this);
+            const requestMethod = init.retries > 0 ? this.requestWithRetries.bind(this) : this.getRequestMethod(init);
 
             requestMethod(definition, args, init).then(
               async (res) => {
@@ -272,10 +273,11 @@ export class HttpClient implements IHttpClient {
   ): Promise<ApiResponse<E>> {
     const {retries, retryDelay, signal} = init;
     const routeId = definition.operationId;
+    const requestMethod = this.getRequestMethod(init);
 
     return retry(
       async (attempt) => {
-        const res = await this.requestFallbackToJson(definition, args, init);
+        const res = await requestMethod(definition, args, init);
         if (!res.ok && attempt <= retries) {
           throw res.error();
         }
@@ -393,6 +395,10 @@ export class HttpClient implements IHttpClient {
       clearTimeout(timeout);
       abortSignals.forEach((s) => s?.removeEventListener("abort", onSignalAbort));
     }
+  }
+
+  private getRequestMethod(init: ApiRequestInitRequired): typeof this._request {
+    return init.requestWireFormat === WireFormat.ssz ? this.requestFallbackToJson.bind(this) : this._request.bind(this);
   }
 }
 

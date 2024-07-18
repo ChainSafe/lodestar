@@ -1,6 +1,8 @@
 import {ClientVersion, ExecutionEngineState, IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
+  state = ExecutionEngineState.OFFLINE;
+
   readonly payloadIdCache = new PayloadIdCache();
 
   async notifyNewPayload(): Promise<never> {

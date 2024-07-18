@@ -1,7 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {
+  computeEpochAtSlot,
+  computeTimeAtSlot,
+  reconstructFullBlockOrContents,
+  signedBeaconBlockToBlinded,
+} from "@lodestar/state-transition";
+import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution} from "@lodestar/params";
 import {sleep, fromHex, toHex} from "@lodestar/utils";
 import {
   deneb,
@@ -381,6 +386,21 @@ export function getBeaconBlockApi({
           executionOptimistic,
           finalized,
           version: config.getForkName(block.message.slot),
+        },
+      };
+    },
+
+    async getBlindedBlock({blockId}) {
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+      return {
+        data: isForkExecution(fork)
+          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkExecution>)
+          : block,
+        meta: {
+          executionOptimistic,
+          finalized,
+          version: fork,
         },
       };
     },

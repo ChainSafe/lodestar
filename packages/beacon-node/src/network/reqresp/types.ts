@@ -1,7 +1,7 @@
 import {Type} from "@chainsafe/ssz";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
-import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz} from "@lodestar/types";
+import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz, sszTypesFor} from "@lodestar/types";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -91,14 +91,11 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
-  [ReqRespMethod.LightClientBootstrap]: (fork) =>
-    ssz.allForksLightClient[onlyLightclientFork(fork)].LightClientBootstrap,
-  [ReqRespMethod.LightClientUpdatesByRange]: (fork) =>
-    ssz.allForksLightClient[onlyLightclientFork(fork)].LightClientUpdate,
-  [ReqRespMethod.LightClientFinalityUpdate]: (fork) =>
-    ssz.allForksLightClient[onlyLightclientFork(fork)].LightClientFinalityUpdate,
+  [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientBootstrap,
+  [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientUpdate,
+  [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
-    ssz.allForksLightClient[onlyLightclientFork(fork)].LightClientOptimisticUpdate,
+    sszTypesFor(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
 };
 
 function onlyLightclientFork(fork: ForkName): ForkLightClient {

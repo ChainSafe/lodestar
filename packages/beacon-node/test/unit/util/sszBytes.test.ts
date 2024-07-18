@@ -4,7 +4,7 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
-  getAggregationBitsFromAttestationSerialized as getAggregationBitsFromAttestationSerialized,
+  getAggregationBitsFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
@@ -125,6 +125,15 @@ describe("aggregateAndProof SSZ serialized picking", () => {
     for (const size of invalidAttDataBase64DataSizes) {
       expect(getAttDataBase64FromSignedAggregateAndProofSerialized(Buffer.alloc(size))).toBeNull();
     }
+  });
+  it("getSlotFromSignedAggregateAndProofSerialized - invalid data - large slots", () => {
+    const serialize = (slot: Slot): Uint8Array => {
+      const s = ssz.phase0.SignedAggregateAndProof.defaultValue();
+      s.message.aggregate.data.slot = slot;
+      return ssz.phase0.SignedAggregateAndProof.serialize(s);
+    };
+    expect(getSlotFromSignedAggregateAndProofSerialized(serialize(0xffffffff))).toBe(0xffffffff);
+    expect(getSlotFromSignedAggregateAndProofSerialized(serialize(0x0100000000))).toBeNull();
   });
 });
 

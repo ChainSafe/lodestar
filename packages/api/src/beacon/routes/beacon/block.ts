@@ -12,7 +12,7 @@ import {
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
 } from "@lodestar/types";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPreExecution, ForkSeq, isForkExecution} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
@@ -85,6 +85,18 @@ export type Endpoints = {
     BlockArgs,
     {params: {block_id: string}},
     SignedBeaconBlock,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
+
+  /**
+   * Get blinded block
+   * Retrieves blinded block for given block id.
+   */
+  getBlindedBlock: Endpoint<
+    "GET",
+    BlockArgs,
+    {params: {block_id: string}},
+    SignedBlindedBeaconBlock | SignedBeaconBlock<ForkPreExecution>,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
@@ -223,6 +235,17 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: blockIdOnlyReq,
       resp: {
         data: WithVersion((fork) => ssz[fork].SignedBeaconBlock),
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getBlindedBlock: {
+      url: "/eth/v1/beacon/blinded_blocks/{block_id}",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: WithVersion((fork) =>
+          isForkExecution(fork) ? ssz[fork].SignedBlindedBeaconBlock : ssz[fork].SignedBeaconBlock
+        ),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
