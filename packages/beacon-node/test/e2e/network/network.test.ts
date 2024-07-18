@@ -107,11 +107,11 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
     // NetworkEvent.reqRespRequest does not work on worker thread
     // so we only test the peerDisconnected event
-    const onGoodbyeNetB = useWorker ? null : vi.fn<[phase0.Goodbye, PeerId]>();
+    const onGoodbyeNetB = useWorker ? null : vi.fn<(message: phase0.Goodbye, peerId: PeerId) => void>();
     netB.events.on(NetworkEvent.reqRespRequest, ({request, peer}) => {
       if (request.method === ReqRespMethod.Goodbye && onGoodbyeNetB) onGoodbyeNetB(request.body, peer);
     });
-    const onDisconnectNetB = vi.fn<[string]>();
+    const onDisconnectNetB = vi.fn<(_: string) => void>();
     netB.events.on(NetworkEvent.peerDisconnected, ({peer}) => {
       onDisconnectNetB(peer);
     });

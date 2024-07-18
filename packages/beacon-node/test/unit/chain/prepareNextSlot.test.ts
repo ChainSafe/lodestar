@@ -19,7 +19,7 @@ describe("PrepareNextSlot scheduler", () => {
   let regenStub: MockedBeaconChain["regen"];
   let loggerStub: MockedLogger;
   let beaconProposerCacheStub: MockedBeaconChain["beaconProposerCache"];
-  let getForkStub: MockInstance<[number], ForkName>;
+  let getForkStub: MockInstance<(_: number) => ForkName>;
   let updateBuilderStatus: MockedBeaconChain["updateBuilderStatus"];
   let executionEngineStub: MockedBeaconChain["executionEngine"];
   const emitPayloadAttributes = true;
