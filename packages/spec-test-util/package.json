@@ -67,12 +67,12 @@
     "rimraf": "^4.4.1",
     "snappyjs": "^0.7.0",
     "tar": "^6.1.13",
-    "vitest": "^1.2.1"
+    "vitest": "^2.0.3"
   },
   "devDependencies": {
     "@types/tar": "^6.1.4"
   },
   "peerDependencies": {
-    "vitest": "^1.2.1"
+    "vitest": "^2.0.3"
   }
 }
