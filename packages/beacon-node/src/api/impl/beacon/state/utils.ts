@@ -43,15 +43,16 @@ export async function getStateResponse(
 ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
   const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
 
-  const state =
+  const res =
     typeof rootOrSlot === "string"
       ? await chain.getStateByStateRoot(rootOrSlot)
       : await chain.getStateBySlot(rootOrSlot);
 
-  if (state == null) {
+  if (!res) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
-  return state;
+
+  return res;
 }
 
 export async function getStateResponseWithRegen(
@@ -60,17 +61,18 @@ export async function getStateResponseWithRegen(
 ): Promise<{state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
   const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
 
-  const state =
+  const res =
     typeof rootOrSlot === "string"
       ? await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true})
       : rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot
         ? await chain.getStateBySlot(rootOrSlot, {allowRegen: true})
         : null; // TODO implement historical state regen
 
-  if (state == null) {
+  if (!res) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
-  return state;
+
+  return res;
 }
 
 /**
