@@ -76,6 +76,10 @@ export function getDataColumnSidecars(
   contents: deneb.Contents & {kzgCommitmentsInclusionProof?: peerdas.KzgCommitmentsInclusionProof}
 ): peerdas.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
+  const {blobs} = contents;
+  if (!Array.isArray(blobs)) {
+    throw Error("Invalid block with missing blobs for computeBlobSidecars");
+  }
   if (blobKzgCommitments === undefined) {
     throw Error("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
   }
@@ -86,25 +90,19 @@ export function getDataColumnSidecars(
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
   const kzgCommitmentsInclusionProof =
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
+  const cellsAndProofs = blobs.map((blob) => ckzg.computeCellsAndKzgProofs(blob));
 
-  const dataColumnSidecar = {
-    index: j,
-    column,
-    kzgCommitments: blobKzgCommitments,
-    kzgProofs,
-    signedBlockHeader,
-    kzgCommitmentsInclusionProof,
-  } as peerdas.DataColumnSidecar;
-
-  contents.blobs.map(ckzg.computeCellsAndKzgProofs).forEach(([cells, proofs], rowNumber) => {
-    cells.map((cell, columnNumber) => {
-      if (rowNumber === 0) {
-        sidecars[columnNumber].index = columnNumber;
-      }
-      sidecars[columnNumber].column[rowNumber] = cell;
-      sidecars[columnNumber].kzgProofs[rowNumber] = proofs[columnNumber];
-    });
+  return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
+    // columnIndex'th column
+    const column = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber][0][columnIndex]);
+    const kzgProofs = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber][1][columnIndex]);
+    return {
+      index: columnIndex,
+      column,
+      kzgCommitments: blobKzgCommitments,
+      kzgProofs,
+      signedBlockHeader,
+      kzgCommitmentsInclusionProof,
+    };
   });
-
-  return sidecars;
 }

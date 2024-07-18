@@ -8,7 +8,6 @@ import {computeBlobSidecars, getDataColumnSidecars, kzgCommitmentToVersionedHash
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
-import {linspace} from "../../../src/util/numpy.js";
 
 describe("C-KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
