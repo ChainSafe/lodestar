@@ -12,6 +12,7 @@ import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {getLodestarClientVersion} from "../../util/graffiti.js";
 import {
   ExecutionPayloadStatus,
   ExecutePayloadResponse,
@@ -38,7 +39,6 @@ import {
   deserializeExecutionPayloadBody,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
-import { getLodestarClientVersion } from "../../util/graffiti.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -158,8 +158,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
     });
 
-    // Initial state engine state is ONLINE. Need to explicitly call `getClientVersion` once on startup
-    this.getClientVersion().catch((e) => {
+    // Initial engine state is ONLINE. Need to explicitly call `getClientVersion` once on startup
+    this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
       this.logger.error("Unable to get client version", {caller: "ExecutionEngineHttp constructor"}, e);
     });
   }
@@ -441,13 +441,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.state;
   }
 
-  async getClientVersion(clientVersion?: ClientVersion): Promise<ClientVersion[]> {
+  async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
     const method = "engine_getClientVersionV1";
 
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [clientVersion ?? getLodestarClientVersion()]});
+    >({method, params: [clientVersion]});
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
@@ -474,7 +474,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
-        this.getClientVersion().catch((e) => {
+        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
           this.logger.error("Unable to get client version", {caller: "updateEngineState"}, e);
         });
         break;

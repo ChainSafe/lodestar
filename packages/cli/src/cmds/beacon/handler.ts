@@ -204,7 +204,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     // Add User-Agent header to all builder requests
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string
-    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr, commit, version}, eth1: {jwtVersion: versionStr}});
+    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
     // Set commit and version for ClientVersion
     beaconNodeOptions.set({executionEngine: {commit, version}});
   }

@@ -177,7 +177,7 @@ export interface IExecutionEngine {
 
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
-  getClientVersion(clientVersion?: ClientVersion): Promise<ClientVersion[]>;
+  getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]>;
 
   getState(): ExecutionEngineState;
 }
