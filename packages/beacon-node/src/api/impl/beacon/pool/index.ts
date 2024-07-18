@@ -98,7 +98,7 @@ export function getBeaconPoolApi({
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
-            chain.emitter.emit(routes.events.EventType.attestation, {data: attestation, version: fork});
+            chain.emitter.emit(routes.events.EventType.attestation, attestation);
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);

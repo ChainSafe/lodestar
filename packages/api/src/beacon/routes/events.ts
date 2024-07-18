@@ -13,9 +13,6 @@ import {
   LightClientOptimisticUpdate,
   LightClientFinalityUpdate,
   SSEPayloadAttributes,
-  Attestation,
-  AttesterSlashing,
-  sszTypesFor,
 } from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 
