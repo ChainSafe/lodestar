@@ -20,10 +20,10 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.4
           registry-url: "https://registry.npmjs.org"
           check-latest: true
-          cache: yarn          
+          cache: yarn
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
