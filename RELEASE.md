@@ -1,4 +1,4 @@
-# Lodestar Release Guidelines
+∏# Lodestar Release Guidelines
 
 Lodestar is a blockchain node securing the Ethereum Beacon chain network. It is run by external individuals and operator entities outside of the control of the Lodestar team. We, as most other core dev teams, choose a slow conservative approach to releasing to ensure those node runners always update to stable, safe, and performant versions of our software.
 
@@ -162,8 +162,65 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
   - `git tag -am "v1.1.1-rc.0" v1.1.1-rc.0`
   - `git push origin v1.1.1-rc.0`
 
-Continue following the "test release candidate" and "merge release candidate" sections. Testing window may be modified depending on the severity of the bug fixed.
+### 3. Test hotfix release candidate
 
+Once a hotfix release candidate is created, the Lodestar team may begin a modified hotfix testing period consisting of a quick sanity check or longer if required.
+
+If the hotfix does not address the purpose of the hotfix release, or there is another bug discovered during this modified hotfix testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await an additional fix by the team. The fix will be committed to `unstable` first, then cherrypicked into the `rc/v1.1.1` hotfix branch. Then we publish and promote the new commit to `rc.x+1`. The modified hotfix testing period will reset.
+
+For example: After modified hotfix testing period, is the original bug resolved? Is performance equal to or better than latest stable?
+
+- **Yes**: Continue to the next release step
+- **No**: If it a small issue fixable quickly with another hot-fix?
+  - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.1` hotfix branch, go to step 2, incrementing the rc version
+  - **No**: Abort the release. Close the `chore: v1.1.v release` PR, delete the branch, and start the whole release process over.
+
+### 4. Merge hotfix release candidate
+
+- Ensure step 3 testing is successful and there is sufficient consensus to release `v1.1.1`.
+- Approving the `chore: v1.1.1 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
+- Merge `chore: v1.1.1 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- Merge stable `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections. See "Backporting merge conflicts from stable to unstable".
+
+#### Backporting merge conflicts from stable to unstable
+This process is unusual and if you discover that `stable` has unwanted changes from `unstable` in the release commit, you can undo the most recent commit and reset the working directory and index to match the state of the repository at the previous commit using:
+- `git reset --hard HEAD~1`
+- `git push -f`
+
+Pull the latest commits on both `stable` and `unstable` branches:
+- `git checkout stable && git pull origin stable`
+- `git checkout unstable && git pull origin unstable`
+
+Merge `stable` into `unstable` with conflict resolutions:
+- `git checkout unstable && git merge stable`
+- Resolve conflicts
+- Sanity check locally before pushing by using: `git diff unstable origin/unstable`
+- Disable `unstable` branch protection
+- `git push`
+- Enable `unstable` branch protection
+
+### 5. Tag stable release
+
+Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Github releases.
+
+#### All-in-one script (for example version `v1.1.0`):
+
+- `git checkout stable`
+- `yarn release:tag-stable 1.1.0`
+  - Must be run locally from a write-access account capable of triggering CI.
+
+#### Manual steps (for example version `v1.1.0`):
+
+- Check out the new stable
+  - `git checkout stable`
+- Tag it as `v1.1.0` with an annotated tag, push commit and tag.
+  - `git tag -am "v1.1.0" v1.1.0`
+  - `git push origin v1.1.0`
+
+### 6. Announce
+
+- Double check that Github release is correct
+- Publish to Social Media
 ## Dev release
 
 On every commit to `unstable` a dev release is done automatically in CI. A dev release:
