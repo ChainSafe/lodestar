@@ -444,7 +444,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          let fork: ForkName;
+          // As per spec, version header is optional for JSON requests
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
+          if (versionHeader !== undefined) {
+            fork = toForkName(versionHeader);
+          } else {
+            // Determine fork from slot in JSON payload
+            fork = config.getForkName((body as SignedBlindedBeaconBlock).message.slot);
+          }
+
           return {
             signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
           };
@@ -490,7 +499,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          let fork: ForkName;
+          // As per spec, version header is optional for JSON requests
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
+          if (versionHeader !== undefined) {
+            fork = toForkName(versionHeader);
+          } else {
+            // Determine fork from slot in JSON payload
+            fork = config.getForkName((body as SignedBlindedBeaconBlock).message.slot);
+          }
+
           return {
             signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
