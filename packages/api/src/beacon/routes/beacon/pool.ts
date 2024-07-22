@@ -77,7 +77,7 @@ export type Endpoints = {
     "GET",
     EmptyArgs,
     EmptyRequest,
-    AttesterSlashingPhase0,
+    AttesterSlashingListPhase0,
     EmptyMeta
   >;
 
