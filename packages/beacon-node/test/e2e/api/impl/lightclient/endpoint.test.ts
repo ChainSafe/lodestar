@@ -2,7 +2,7 @@ import {describe, it, beforeEach, afterEach, expect} from "vitest";
 import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {getClient, routes} from "@lodestar/api";
+import {getClient, HttpHeader, routes} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {Validator} from "@lodestar/validator";
@@ -102,6 +102,8 @@ describe("lightclient api", function () {
     expect(update.attestedHeader.beacon.slot).toBe(slot - 1);
     // version is set
     expect(res.meta().version).toBe(ForkName.altair);
+    // Ensure version header is made available to scripts running in the browser
+    expect(res.headers.get(HttpHeader.ExposeHeaders)?.includes("Eth-Consensus-Version")).toBe(true);
   });
 
   it.skip("getLightClientFinalityUpdate()", async function () {

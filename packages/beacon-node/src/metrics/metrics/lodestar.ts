@@ -1,5 +1,5 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
+import {BeaconState} from "@lodestar/types";
 import {BlockSource, BlobsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
@@ -28,7 +28,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
-  anchorState?: Pick<allForks.BeaconState, "genesisTime">
+  anchorState?: Pick<BeaconState, "genesisTime">
 ) {
   if (metadata) {
     register.static<LodestarMetadata>({

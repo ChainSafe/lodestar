@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
+import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -305,8 +305,8 @@ export async function importBlock(
       // we want to import block asap so do this in the next event loop
       callInNextEventLoop(() => {
         try {
-          this.lightClientServer.onImportBlockHead(
-            block.message as allForks.AllForksLightClient["BeaconBlock"],
+          this.lightClientServer?.onImportBlockHead(
+            block.message as BeaconBlock<ForkLightClient>,
             postState as CachedBeaconStateAltair,
             parentBlockSlot
           );

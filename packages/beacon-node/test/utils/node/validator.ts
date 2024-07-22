@@ -1,4 +1,5 @@
 import tmp from "tmp";
+import {vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -91,7 +92,7 @@ export async function getAndInitDevValidators({
 }
 
 export function getApiFromServerHandlers(api: BeaconApiMethods): ApiClient {
-  return mapValues(api, (apiModule) =>
+  const apiClient = mapValues(api, (apiModule) =>
     mapValues(apiModule, (api: (args: unknown, context: unknown) => PromiseLike<{data: unknown; meta: unknown}>) => {
       return async (args: unknown) => {
         try {
@@ -114,6 +115,15 @@ export function getApiFromServerHandlers(api: BeaconApiMethods): ApiClient {
       };
     })
   ) as ApiClient;
+
+  apiClient.httpClient = {
+    baseUrl: "",
+    request: vi.fn(),
+    urlsInits: [],
+    urlsScore: [],
+  };
+
+  return apiClient;
 }
 
 export function getNodeApiUrl(node: BeaconNode): string {

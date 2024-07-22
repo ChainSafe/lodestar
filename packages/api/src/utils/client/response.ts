@@ -161,11 +161,11 @@ export class ApiResponse<E extends Endpoint> extends Response {
       return null;
     }
 
-    return new ApiError(getErrorMessage(this.resolvedErrorBody()), this.status, this.definition.operationId);
+    return new ApiError(this.getErrorMessage(), this.status, this.definition.operationId);
   }
 
   async errorBody(): Promise<string> {
-    if (!this._errorBody) {
+    if (this._errorBody === undefined) {
       this._errorBody = await this.text();
     }
     return this._errorBody;
@@ -179,23 +179,24 @@ export class ApiResponse<E extends Endpoint> extends Response {
   }
 
   private resolvedErrorBody(): string {
-    if (!this._errorBody) {
+    if (this._errorBody === undefined) {
       throw Error("errorBody() must be called first");
     }
 
     return this._errorBody;
   }
-}
 
-function getErrorMessage(errBody: string): string {
-  try {
-    const errJson = JSON.parse(errBody) as {message?: string};
-    if (errJson.message) {
-      return errJson.message;
-    } else {
-      return errBody;
+  private getErrorMessage(): string {
+    const errBody = this.resolvedErrorBody();
+    try {
+      const errJson = JSON.parse(errBody) as {message?: string};
+      if (errJson.message) {
+        return errJson.message;
+      } else {
+        return errBody;
+      }
+    } catch (e) {
+      return errBody || this.statusText;
     }
-  } catch (e) {
-    return errBody;
   }
 }

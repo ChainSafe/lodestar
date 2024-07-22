@@ -4,7 +4,7 @@ import got from "got";
 import {getClient} from "@lodestar/api";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
-import {allForks} from "@lodestar/types";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../../src/index.js";
 import {testCachePath} from "../cache.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
@@ -67,7 +67,7 @@ export async function getNetworkCachedBlock(
   network: NetworkName,
   slot: number,
   timeout?: number
-): Promise<allForks.SignedBeaconBlock> {
+): Promise<SignedBeaconBlock> {
   const config = getNetworkConfig(network);
   const fileId = `block_${network}_${slot}.ssz`;
 

@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import {Slot, allForks} from "@lodestar/types";
+import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
 import {Simulation} from "../simulation.js";
@@ -155,7 +155,7 @@ export async function waitForSlot(
 export async function fetchBlock(
   node: NodePair,
   {tries, delay, slot, signal}: {slot: number; tries: number; delay: number; signal?: AbortSignal}
-): Promise<allForks.SignedBeaconBlock | undefined> {
+): Promise<SignedBeaconBlock | undefined> {
   for (let i = 0; i < tries; i++) {
     const res = await node.beacon.api.beacon.getBlockV2({blockId: slot});
     if (!res.ok) {

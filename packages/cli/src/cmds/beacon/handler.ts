@@ -1,6 +1,5 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
-import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
@@ -61,13 +60,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  // additional metrics registries
-  const metricsRegistries: Registry[] = [];
-  let networkRegistry: Registry | undefined;
-  if (options.metrics.enabled) {
-    networkRegistry = new Registry();
-    metricsRegistries.push(networkRegistry);
-  }
   const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
@@ -92,7 +84,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
-      metricsRegistries,
     });
 
     // dev debug option to have access to the BN instance
@@ -101,20 +92,22 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     }
 
     // Prune invalid SSZ objects every interval
-    const {persistInvalidSszObjectsDir} = args;
-    const pruneInvalidSSZObjectsInterval = persistInvalidSszObjectsDir
-      ? setInterval(() => {
-          try {
-            pruneOldFilesInDir(
-              persistInvalidSszObjectsDir,
-              (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
-            );
-          } catch (e) {
-            logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
-          }
-          // Run every ~1 hour
-        }, HOURS_TO_MS)
-      : null;
+    const {persistInvalidSszObjectsDir, persistInvalidSszObjects} = options.chain;
+    const pruneInvalidSSZObjectsInterval =
+      persistInvalidSszObjectsDir && persistInvalidSszObjects
+        ? setInterval(() => {
+            try {
+              const deletedFileCount = pruneOldFilesInDir(
+                persistInvalidSszObjectsDir,
+                (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
+              );
+              logger.info("Pruned invalid SSZ objects", {deletedFileCount});
+            } catch (e) {
+              logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
+            }
+            // Run every ~1 hour
+          }, HOURS_TO_MS)
+        : null;
 
     // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {
@@ -200,6 +193,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+
+  if (args.disableLightClientServer) {
+    beaconNodeOptions.set({chain: {disableLightClientServer: true}});
+  }
 
   if (args.private) {
     beaconNodeOptions.set({network: {private: true}});

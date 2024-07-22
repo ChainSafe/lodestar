@@ -70,6 +70,11 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         {
+          type: "doc",
+          label: "Getting Started",
+          id: "contribution/getting-started",
+        },
+        {
           type: "category",
           label: "Advanced Topics",
           items: ["contribution/advanced-topics/setting-up-a-testnet"],

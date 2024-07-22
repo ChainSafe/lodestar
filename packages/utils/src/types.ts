@@ -25,3 +25,10 @@ export type NonEmptyArray<T> = [T, ...T[]];
 export type ArrayToTuple<Tuple extends NonEmptyArray<unknown>> = {
   [Index in keyof Tuple]: Tuple[Index];
 };
+
+/**
+ * Convert optional attributes of an object to required
+ */
+export type RequiredSelective<T, Keys extends keyof T> = T & {
+  [K in Keys]-?: T[K];
+};

@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ListCompositeType, ValueOf} from "@chainsafe/ssz";
-import {ssz, SyncPeriod, allForks} from "@lodestar/types";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  ssz,
+  SyncPeriod,
+} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
@@ -33,7 +40,7 @@ export type Endpoints = {
     "GET",
     {startPeriod: SyncPeriod; count: number},
     {query: {start_period: number; count: number}},
-    allForks.LightClientUpdate[],
+    LightClientUpdate[],
     {versions: ForkName[]}
   >;
 
@@ -46,7 +53,7 @@ export type Endpoints = {
     "GET",
     EmptyArgs,
     EmptyRequest,
-    allForks.LightClientOptimisticUpdate,
+    LightClientOptimisticUpdate,
     VersionMeta
   >;
 
@@ -55,7 +62,7 @@ export type Endpoints = {
     "GET",
     EmptyArgs,
     EmptyRequest,
-    allForks.LightClientFinalityUpdate,
+    LightClientFinalityUpdate,
     VersionMeta
   >;
 
@@ -68,7 +75,7 @@ export type Endpoints = {
     "GET",
     {blockRoot: string},
     {params: {block_root: string}},
-    allForks.LightClientBootstrap,
+    LightClientBootstrap,
     VersionMeta
   >;
 
@@ -105,7 +112,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           },
           fromJson: (data, meta) => {
             const updates = data as unknown[];
-            const value: allForks.LightClientUpdate[] = [];
+            const value: LightClientUpdate[] = [];
             for (let i = 0; i < updates.length; i++) {
               const version = meta.versions[i];
               value.push(getLightClientForkTypes(version).LightClientUpdate.fromJson(updates[i]));
@@ -132,9 +139,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
             if (!Array.isArray(resp)) {
               throw Error("JSON is not an array");
             }
-            const updates: allForks.LightClientUpdate[] = [];
+            const updates: LightClientUpdate[] = [];
             const meta: {versions: ForkName[]} = {versions: []};
-            for (const {data, version} of resp as {data: allForks.LightClientUpdate; version: string}[]) {
+            for (const {data, version} of resp as {data: LightClientUpdate; version: string}[]) {
               updates.push(data);
               meta.versions.push(toForkName(version));
             }

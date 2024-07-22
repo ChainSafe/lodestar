@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
@@ -112,7 +112,7 @@ export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
 export class BlockError extends LodestarError<BlockErrorType> {
   constructor(
-    readonly signedBlock: allForks.SignedBeaconBlock,
+    readonly signedBlock: SignedBeaconBlock,
     type: BlockErrorType
   ) {
     super(type);

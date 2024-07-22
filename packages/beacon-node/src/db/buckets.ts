@@ -29,7 +29,7 @@ export enum Bucket {
   phase0_attesterSlashing = 15, // Root -> AttesterSlashing
   capella_blsToExecutionChange = 16, // ValidatorIndex -> SignedBLSToExecutionChange
   // checkpoint states
-  allForks_checkpointState = 17, // Root -> allForks.BeaconState
+  allForks_checkpointState = 17, // Root -> BeaconState
 
   // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
   phase0_depositEvent = 19, // depositIndex -> DepositEvent

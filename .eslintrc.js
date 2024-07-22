@@ -16,6 +16,9 @@ module.exports = {
     project: "./tsconfig.json",
     sourceType: "module",
   },
+  ignorePatterns: [
+    "webEsmBundle.browser.test.ts"
+  ],
   plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "prettier"],
   extends: [
     "eslint:recommended",

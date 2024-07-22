@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import path from "node:path";
 import {SecretKey} from "@chainsafe/blst";
+import {Keystore} from "@chainsafe/bls-keystore";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger} from "@lodestar/utils";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
@@ -7,11 +9,13 @@ import {LocalKeystoreDefinition} from "./interface.js";
 import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "./keystoreCache.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 
-type KeystoreDecryptOptions = {
+export type KeystoreDecryptOptions = {
   ignoreLockFile?: boolean;
   onDecrypt?: (index: number) => void;
   // Try to use the cache file if it exists
   cacheFilePath?: string;
+  /** Use main thread to decrypt keystores */
+  disableThreadPool?: boolean;
   logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
   signal: AbortSignal;
 };
@@ -57,14 +61,50 @@ export async function decryptKeystoreDefinitions(
   const signers = new Array<SignerLocal>(keystoreCount);
   const passwords = new Array<string>(keystoreCount);
   const errors: KeystoreDecryptError[] = [];
-  const decryptKeystores = new DecryptKeystoresThreadPool(keystoreCount, opts.signal);
 
-  for (const [index, definition] of keystoreDefinitions.entries()) {
-    lockKeystore(definition.keystorePath, opts);
+  if (!opts.disableThreadPool) {
+    const decryptKeystores = new DecryptKeystoresThreadPool(keystoreCount, opts.signal);
 
-    decryptKeystores.queue(
-      definition,
-      (secretKeyBytes: Uint8Array) => {
+    for (const [index, definition] of keystoreDefinitions.entries()) {
+      lockKeystore(definition.keystorePath, opts);
+
+      decryptKeystores.queue(
+        definition,
+        (secretKeyBytes: Uint8Array) => {
+          const signer: SignerLocal = {
+            type: SignerType.Local,
+            secretKey: SecretKey.fromBytes(secretKeyBytes),
+          };
+
+          signers[index] = signer;
+          passwords[index] = definition.password;
+
+          if (opts?.onDecrypt) {
+            opts?.onDecrypt(index);
+          }
+        },
+        (error: Error) => {
+          // In-progress tasks can't be canceled, so there's a chance that multiple errors may be caught
+          // add to the list of errors
+          errors.push({keystoreFile: path.basename(definition.keystorePath), error});
+          // cancel all pending tasks, no need to continue decrypting after we hit one error
+          decryptKeystores.cancel();
+        }
+      );
+    }
+
+    await decryptKeystores.completed();
+  } else {
+    // Decrypt keystores in main thread
+    for (const [index, definition] of keystoreDefinitions.entries()) {
+      lockKeystore(definition.keystorePath, opts);
+
+      try {
+        const keystore = Keystore.parse(fs.readFileSync(definition.keystorePath, "utf8"));
+
+        // Memory-hogging function
+        const secretKeyBytes = await keystore.decrypt(definition.password);
+
         const signer: SignerLocal = {
           type: SignerType.Local,
           secretKey: SecretKey.fromBytes(secretKeyBytes),
@@ -76,18 +116,13 @@ export async function decryptKeystoreDefinitions(
         if (opts?.onDecrypt) {
           opts?.onDecrypt(index);
         }
-      },
-      (error: Error) => {
-        // In-progress tasks can't be canceled, so there's a chance that multiple errors may be caught
-        // add to the list of errors
-        errors.push({keystoreFile: path.basename(definition.keystorePath), error});
-        // cancel all pending tasks, no need to continue decrypting after we hit one error
-        decryptKeystores.cancel();
+      } catch (e) {
+        errors.push({keystoreFile: path.basename(definition.keystorePath), error: e as Error});
+        // stop processing, no need to continue decrypting after we hit one error
+        break;
       }
-    );
+    }
   }
-
-  await decryptKeystores.completed();
 
   if (errors.length > 0) {
     // If an error occurs, the program isn't going to be running,

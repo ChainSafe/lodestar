@@ -1,6 +1,8 @@
 import {ExecutionEngineState, IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
+  state = ExecutionEngineState.OFFLINE;
+
   readonly payloadIdCache = new PayloadIdCache();
 
   async notifyNewPayload(): Promise<never> {
@@ -24,10 +26,6 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
   }
 
   getPayloadBodiesByRange(): Promise<never> {
-    throw Error("Execution engine disabled");
-  }
-
-  getState(): ExecutionEngineState {
     throw Error("Execution engine disabled");
   }
 }

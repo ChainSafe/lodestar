@@ -5,7 +5,7 @@ import {
   getAttesterSlashableIndices,
   processAttestationsAltair,
 } from "@lodestar/state-transition";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {BeaconBlock, altair, phase0} from "@lodestar/types";
 import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 
@@ -21,7 +21,7 @@ type SubRewardValue = number; // All reward values should be integer
  *  3) Reporting slashable behaviours from proposer and attester
  */
 export async function computeBlockRewards(
-  block: allForks.BeaconBlock,
+  block: BeaconBlock,
   preState: CachedBeaconStateAllForks,
   postState?: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
@@ -99,10 +99,7 @@ function computeSyncAggregateReward(block: altair.BeaconBlock, preState: CachedB
  * Calculate rewards received by block proposer for including proposer slashings.
  * All proposer slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
-function computeBlockProposerSlashingReward(
-  block: allForks.BeaconBlock,
-  state: CachedBeaconStateAllForks
-): SubRewardValue {
+function computeBlockProposerSlashingReward(block: BeaconBlock, state: CachedBeaconStateAllForks): SubRewardValue {
   let proposerSlashingReward = 0;
 
   for (const proposerSlashing of block.body.proposerSlashings) {
@@ -119,10 +116,7 @@ function computeBlockProposerSlashingReward(
  * Calculate rewards received by block proposer for including attester slashings.
  * All attester slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
-function computeBlockAttesterSlashingReward(
-  block: allForks.BeaconBlock,
-  preState: CachedBeaconStateAllForks
-): SubRewardValue {
+function computeBlockAttesterSlashingReward(block: BeaconBlock, preState: CachedBeaconStateAllForks): SubRewardValue {
   let attesterSlashingReward = 0;
 
   for (const attesterSlashing of block.body.attesterSlashings) {

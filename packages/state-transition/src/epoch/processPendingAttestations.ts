@@ -1,10 +1,10 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {Epoch, phase0} from "@lodestar/types";
 import {CachedBeaconStatePhase0} from "../types.js";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot, AttesterStatus} from "../util/index.js";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "../util/index.js";
 
 /**
- * Mutates `statuses` from all pending attestations.
+ * Mutates `proposerIndices`, `inclusionDelays` and `flags` from all pending attestations.
  *
  * PERF: Cost 'proportional' to attestation count + how many bits per attestation + how many flags the attestation triggers
  *
@@ -16,7 +16,9 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot, AttesterStatus} from "../ut
  */
 export function processPendingAttestations(
   state: CachedBeaconStatePhase0,
-  statuses: AttesterStatus[],
+  proposerIndices: number[],
+  inclusionDelays: number[],
+  flags: number[],
   attestations: phase0.PendingAttestation[],
   epoch: Epoch,
   sourceFlag: number,
@@ -53,21 +55,19 @@ export function processPendingAttestations(
 
     if (epoch === prevEpoch) {
       for (const p of participants) {
-        const status = statuses[p];
-        if (status.proposerIndex === -1 || status.inclusionDelay > inclusionDelay) {
-          status.proposerIndex = proposerIndex;
-          status.inclusionDelay = inclusionDelay;
+        if (proposerIndices[p] === -1 || inclusionDelays[p] > inclusionDelay) {
+          proposerIndices[p] = proposerIndex;
+          inclusionDelays[p] = inclusionDelay;
         }
       }
     }
 
     for (const p of participants) {
-      const status = statuses[p];
-      status.flags |= sourceFlag;
+      flags[p] |= sourceFlag;
       if (attVotedTargetRoot) {
-        status.flags |= targetFlag;
+        flags[p] |= targetFlag;
         if (attVotedHeadRoot) {
-          status.flags |= headFlag;
+          flags[p] |= headFlag;
         }
       }
     }

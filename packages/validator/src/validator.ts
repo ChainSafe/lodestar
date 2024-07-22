@@ -134,6 +134,21 @@ export class Validator {
       this.clock.start(this.controller.signal);
       this.chainHeaderTracker.start(this.controller.signal);
 
+      // Add notifier to warn user if primary node is unhealthy as there might
+      // not be any errors in the logs due to fallback nodes handling the requests
+      const {httpClient} = this.api;
+      if (httpClient.urlsInits.length > 1) {
+        const primaryNodeUrl = toSafePrintableUrl(httpClient.urlsInits[0].baseUrl);
+
+        this.clock?.runEveryEpoch(async () => {
+          // Only emit warning if URL score is 0 to prevent false positives
+          // if just a single request fails which might happen due to other reasons
+          if (httpClient.urlsScore[0] === 0) {
+            this.logger?.warn("Primary beacon node is unhealthy", {url: primaryNodeUrl});
+          }
+        });
+      }
+
       if (metrics) {
         this.db.setMetrics(metrics.db);
 

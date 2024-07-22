@@ -4,8 +4,8 @@ import {VM, RunTxResult} from "@ethereumjs/vm";
 import {TransactionFactory} from "@ethereumjs/tx";
 import {Block, BlockHeader} from "@ethereumjs/block";
 import {NetworkName} from "@lodestar/config/networks";
-import {allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {ExecutionPayload} from "@lodestar/types";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, ELTransaction, JsonRpcVersion} from "../types.js";
@@ -41,7 +41,7 @@ export async function getVMWithState({
 }: {
   rpc: ELRpcProvider;
   vm: VM;
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   tx: ELTransaction;
   logger: Logger;
 }): Promise<VM> {
@@ -163,7 +163,7 @@ export async function executeVMCall({
   rpc: ELRpcProvider;
   tx: ELTransaction;
   vm: VM;
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   network: NetworkName;
 }): Promise<RunTxResult["execResult"]> {
   const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data, input} = tx;
@@ -205,7 +205,7 @@ export async function executeVMTx({
   rpc: ELRpcProvider;
   tx: ELTransaction;
   vm: VM;
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   network: NetworkName;
 }): Promise<RunTxResult> {
   const {result: block} = await rpc.request("eth_getBlockByHash", [bufferToHex(executionPayload.blockHash), true], {
@@ -258,7 +258,7 @@ export async function executeVMTx({
 
 export function getVMBlockHeaderFromELBlock(
   block: ELBlock,
-  executionPayload: allForks.ExecutionPayload,
+  executionPayload: ExecutionPayload,
   network: NetworkName
 ): BlockHeader {
   const blockHeaderData = {
