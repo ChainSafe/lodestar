@@ -17,7 +17,7 @@ import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 /**
  * Data in a BeaconBlock is bounded so we can use a single HashComputationGroup for all blocks
  */
-const blockHCGroup = new HashComputationGroup([]);
+const blockHCGroup = new HashComputationGroup();
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.

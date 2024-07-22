@@ -27,9 +27,9 @@ export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
 const PREPARE_EPOCH_LIMIT = 1;
 
 /**
- * We always modify balances for every epoch transition so it makes sense to reuse HashComputationGroup there.
+ * The same HashComputationGroup to be used for all epoch transition.
  */
-const balancesHCGroup = new HashComputationGroup([]);
+const epochTransitionHCGroup = new HashComputationGroup();
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -236,10 +236,9 @@ export class PrepareNextSlotScheduler {
       source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
     if (isEpochTransition) {
-      state.balances.hashTreeRoot(balancesHCGroup);
-      state.node.rootHashObject;
+      state.hashTreeRoot(epochTransitionHCGroup);
     } else {
-      // normal slot
+      // normal slot, not worth to batch hash
       state.node.rootHashObject;
     }
     hashTreeRootTimer?.();
