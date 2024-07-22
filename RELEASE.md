@@ -191,7 +191,7 @@ Pull the latest commits on both `stable` and `unstable` branches:
 - `git checkout stable && git pull origin stable`
 - `git checkout unstable && git pull origin unstable`
 
-Merge `stable` into `unstable` with conflict resolutions:
+Merge `stable` into `unstable`, resolving conflicts:
 - `git checkout unstable && git merge stable`
 - Resolve conflicts
 - Sanity check locally before pushing by using: `git diff unstable origin/unstable`
