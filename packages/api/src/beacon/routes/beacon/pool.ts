@@ -34,9 +34,9 @@ export type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
 export type AttestationList = AttestationListPhase0 | AttestationListElectra;
 
-type AttesterSlashingPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
-type AttesterSlashingElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
-type AttesterSlashingList = AttesterSlashingPhase0 | AttesterSlashingElectra;
+type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
+type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
+type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
 
 type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
