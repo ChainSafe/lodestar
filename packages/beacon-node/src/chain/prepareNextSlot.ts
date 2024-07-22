@@ -29,7 +29,7 @@ const PREPARE_EPOCH_LIMIT = 1;
 /**
  * The same HashComputationGroup to be used for all epoch transition.
  */
-const epochTransitionHCGroup = new HashComputationGroup();
+const balancesHCGroup = new HashComputationGroup();
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -236,7 +236,11 @@ export class PrepareNextSlotScheduler {
       source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
     if (isEpochTransition) {
-      state.hashTreeRoot(epochTransitionHCGroup);
+      // balances are completely changed per epoch and it's not much different so we can reuse the HashComputationGroup
+      state.balances.hashTreeRoot(balancesHCGroup);
+      // it's more performant to use normal hashTreeRoot() for the rest of the state
+      // this saves ~10ms per ~100ms as monitored on mainnet as of Jul 2024
+      state.node.rootHashObject;
     } else {
       // normal slot, not worth to batch hash
       state.node.rootHashObject;
