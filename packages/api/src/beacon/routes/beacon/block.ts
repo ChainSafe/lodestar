@@ -12,8 +12,9 @@ import {
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   sszTypesFor,
+  BeaconBlockBody,
 } from "@lodestar/types";
-import {ForkName, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
+import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
@@ -26,7 +27,6 @@ import {
 import {getExecutionForkTypes, toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
-import {AttestationList, AttestationListPhase0} from "./pool.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -101,7 +101,7 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    AttestationListPhase0,
+    BeaconBlockBody<ForkPreElectra>["attestations"],
     ExecutionOptimisticAndFinalizedMeta
   >;
 
@@ -113,7 +113,7 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    AttestationList,
+    BeaconBlockBody["attestations"],
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 

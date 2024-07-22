@@ -912,15 +912,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
-          const fork =
-            versionHeader !== undefined
-              ? toForkName(versionHeader)
-              : config.getForkName(
-                  Number(
-                    (body as {message: {aggregate: {data: {slot: string}}}}[])[0]?.message.aggregate.data.slot ?? 0
-                  )
-                );
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
+          const fork = toForkName(versionHeader);
 
           return {
             signedAggregateAndProofs:

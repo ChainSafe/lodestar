@@ -38,7 +38,7 @@ export function getBeaconPoolApi({
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
-      const fork = chain.config.getForkName(slot ?? attestations[0].data.slot) ?? ForkName.phase0;
+      const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);

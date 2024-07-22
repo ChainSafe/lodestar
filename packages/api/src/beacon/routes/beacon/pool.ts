@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {phase0, capella, CommitteeIndex, Slot, ssz, electra} from "@lodestar/types";
+import {ForkPreElectra, ForkSeq, isForkElectra} from "@lodestar/params";
+import {phase0, capella, CommitteeIndex, Slot, ssz, electra, AttesterSlashing} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {
   ArrayOf,
@@ -171,7 +171,7 @@ export type Endpoints = {
    */
   submitPoolAttesterSlashings: Endpoint<
     "POST",
-    {attesterSlashing: phase0.AttesterSlashing},
+    {attesterSlashing: AttesterSlashing<ForkPreElectra>},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -262,9 +262,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
       },
       resp: {
-        data: WithVersion((fork) =>
-          ForkSeq[fork] >= ForkSeq.electra ? AttestationListTypeElectra : AttestationListTypePhase0
-        ),
+        data: WithVersion((fork) => (isForkElectra(fork) ? AttestationListTypeElectra : AttestationListTypePhase0)),
         meta: VersionCodec,
       },
     },
@@ -283,7 +281,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: EmptyRequestCodec,
       resp: {
         data: WithVersion((fork) =>
-          ForkSeq[fork] >= ForkSeq.electra ? AttesterSlashingListTypeElectra : AttesterSlashingListTypePhase0
+          isForkElectra(fork) ? AttesterSlashingListTypeElectra : AttesterSlashingListTypePhase0
         ),
         meta: VersionCodec,
       },
@@ -346,11 +344,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
-          const fork =
-            versionHeader !== undefined
-              ? toForkName(versionHeader)
-              : config.getForkName(Number((body as {data: {slot: string}}[])[0]?.data.slot ?? 0));
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
+          const fork = toForkName(versionHeader);
 
           return {
             signedAttestations:
@@ -415,13 +410,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
-          const fork =
-            versionHeader !== undefined
-              ? toForkName(versionHeader)
-              : config.getForkName(
-                  Number((body as {attestations1: {data: {slot: string}}})?.attestations1.data.slot ?? 0)
-                );
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
+          const fork = toForkName(versionHeader);
 
           return {
             attesterSlashing:
