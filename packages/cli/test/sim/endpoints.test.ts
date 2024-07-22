@@ -3,7 +3,6 @@ import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {GENESIS_SLOT} from "@lodestar/params";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
@@ -103,15 +102,6 @@ await env.tracker.assert(
     const res = await node.api.beacon.getStateValidator({stateId: "head", validatorId: hexPubKey});
 
     assert.equal(toHexString(res.value().validator.pubkey), hexPubKey);
-  }
-);
-
-await env.tracker.assert(
-  "should return 'finalized' as 'false' when getStateValidator is called with genesis slot",
-  async () => {
-    const res = await node.api.beacon.getStateValidator({stateId: GENESIS_SLOT, validatorId: 0});
-
-    assert.equal(res.meta().finalized, false);
   }
 );
 
