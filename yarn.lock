@@ -306,10 +306,41 @@
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^0.4.8"
 
-"@chainsafe/blst@https://github.com/chainsafe/blst-ts/raw/cayman/napi-rs-tarball/next/chainsafe-blst-v0.0.0.tgz":
-  version "0.0.0"
-  uid efe8ceb54b30a8fb76f3ebd65ed33c94a19a1a07
-  resolved "https://github.com/chainsafe/blst-ts/raw/cayman/napi-rs-tarball/next/chainsafe-blst-v0.0.0.tgz#efe8ceb54b30a8fb76f3ebd65ed33c94a19a1a07"
+"@chainsafe/blst-darwin-arm64@2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-darwin-arm64/-/blst-darwin-arm64-2.0.1.tgz#d96d6dd906a6c9c809d6f5b5539e031ccff63b25"
+  integrity sha512-ZmRLimvo+BoMcpalzuS3Pj0j6l2cSDU7qMBwjch49ljkrsr4/rls7COMW8MSyDyVUSfzg0agotAByYfs+Bg3ZQ==
+
+"@chainsafe/blst-darwin-x64@2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-darwin-x64/-/blst-darwin-x64-2.0.1.tgz#56018c5955337a5e2b754e941bdcda0a2c6f1a84"
+  integrity sha512-5DPtmKhia5/k0szjsrgxF7GCOE5pnSRcsLvtlChzkLY7KhfxnGt5XeNtCK6NoAAfcxzN8mZrwvvzDfsDmImTQg==
+
+"@chainsafe/blst-linux-arm64-gnu@2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-arm64-gnu/-/blst-linux-arm64-gnu-2.0.1.tgz#23a66095eaf4c23a8c54ef7df27d9c80d45ebb32"
+  integrity sha512-REIW0uM9a97iasE+RX+M1yEmIywOF1ly9/xl7JTYYASXoDDQD2eL06k17N5kXE/382wU28fU/h6V2qmWcqiWAQ==
+
+"@chainsafe/blst-linux-x64-gnu@2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-x64-gnu/-/blst-linux-x64-gnu-2.0.1.tgz#1769640e9b9140ee3e4142520c00d09c9ebc66e9"
+  integrity sha512-zH7GkMI+wWVKGp5MA+8A2EGx9fe5/jktz/KB2SrGhBu956IXh7qCV9mMCOzA4mmpxSuxjzD4auXpQc/D4uApLw==
+
+"@chainsafe/blst-win32-x64-msvc@2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-win32-x64-msvc/-/blst-win32-x64-msvc-2.0.1.tgz#dfebc2ea23875bc02ffac11d2d15bf6e644d59ed"
+  integrity sha512-RcOo1Sl1Ai5igp56l3I5kwWkesfbD14PBoUcoR61phvIHnhyZzOtVX6rhuCYwcl0IIgSDSWtNNMdSwX34GGmxA==
+
+"@chainsafe/blst@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-2.0.1.tgz#9e8ceb6766fcb231e4fa378eee6378275018a159"
+  integrity sha512-+sIlLzFb6htv1WH3XIF2WDN+qlstGpo8Zl5ibxzT6VsiBSswsH05AQMpd4uQfRO1uFKhEk9JDKi8bHvIDmN8Jg==
+  optionalDependencies:
+    "@chainsafe/blst-darwin-arm64" "2.0.1"
+    "@chainsafe/blst-darwin-x64" "2.0.1"
+    "@chainsafe/blst-linux-arm64-gnu" "2.0.1"
+    "@chainsafe/blst-linux-x64-gnu" "2.0.1"
+    "@chainsafe/blst-win32-x64-msvc" "2.0.1"
 
 "@chainsafe/discv5@^9.0.0":
   version "9.0.0"

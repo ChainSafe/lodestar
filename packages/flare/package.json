@@ -58,7 +58,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/blst": "https://github.com/chainsafe/blst-ts/raw/cayman/napi-rs-tarball/next/chainsafe-blst-v0.0.0.tgz",
+    "@chainsafe/blst": "^2.0.1",
     "@chainsafe/bls-keygen": "^0.4.0",
     "@lodestar/api": "^1.20.2",
     "@lodestar/config": "^1.20.2",
