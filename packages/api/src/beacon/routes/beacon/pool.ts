@@ -183,7 +183,7 @@ export type Endpoints = {
    */
   submitPoolAttesterSlashingsV2: Endpoint<
     "POST",
-    {attesterSlashing: phase0.AttesterSlashing | electra.AttesterSlashing},
+    {attesterSlashing: AttesterSlashing},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
