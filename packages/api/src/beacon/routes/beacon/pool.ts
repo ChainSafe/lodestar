@@ -409,8 +409,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           return {
             body:
               ForkSeq[fork] >= ForkSeq.electra
-                ? ssz.electra.AttesterSlashing.toJson(attesterSlashing as electra.AttesterSlashing)
-                : ssz.phase0.AttesterSlashing.toJson(attesterSlashing as phase0.AttesterSlashing),
+                ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
+                : ssz.phase0.AttesterSlashing.toJson(attesterSlashing),
             headers: {[MetaHeader.Version]: fork},
           };
         },
