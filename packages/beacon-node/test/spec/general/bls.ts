@@ -70,10 +70,14 @@ type BlsTestCase = {
  * output: BLS Signature -- expected output, single BLS signature or empty.
  * ```
  */
-function aggregate(input: string[]): string {
-  const pks = input.map((pkHex) => Signature.fromHex(pkHex));
-  const agg = aggregateSignatures(pks);
-  return agg.toHex();
+function aggregate(input: string[]): string | null {
+  try {
+    const pks = input.map((pkHex) => Signature.fromHex(pkHex));
+    const agg = aggregateSignatures(pks);
+    return agg.toHex();
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -87,11 +91,15 @@ function aggregate(input: string[]): string {
  */
 function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
-  return aggregateVerify(
-    messages.map(fromHexString),
-    pubkeys.map((pk) => PublicKey.fromHex(pk)),
-    Signature.fromHex(signature)
-  );
+  try {
+    return aggregateVerify(
+      messages.map(fromHexString),
+      pubkeys.map((pk) => PublicKey.fromHex(pk)),
+      Signature.fromHex(signature)
+    );
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -106,7 +114,11 @@ function eth_aggregate_pubkeys(input: string[]): string | null {
     if (pk === G1_POINT_AT_INFINITY) return null;
   }
 
-  return aggregateSerializedPublicKeys(input.map((hex) => fromHexString(hex))).toHex();
+  try {
+    return aggregateSerializedPublicKeys(input.map((hex) => fromHexString(hex))).toHex();
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -130,11 +142,15 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
     if (pk === G1_POINT_AT_INFINITY) return false;
   }
 
-  return fastAggregateVerify(
-    fromHexString(message),
-    pubkeys.map((hex) => PublicKey.fromHex(hex)),
-    Signature.fromHex(signature)
-  );
+  try {
+    return fastAggregateVerify(
+      fromHexString(message),
+      pubkeys.map((hex) => PublicKey.fromHex(hex)),
+      Signature.fromHex(signature)
+    );
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -167,7 +183,11 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
  */
 function sign(input: {privkey: string; message: string}): string | null {
   const {privkey, message} = input;
-  return SecretKey.fromHex(privkey).sign(fromHexString(message)).toHex();
+  try {
+    return SecretKey.fromHex(privkey).sign(fromHexString(message)).toHex();
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -179,5 +199,9 @@ function sign(input: {privkey: string; message: string}): string | null {
  */
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
   const {pubkey, message, signature} = input;
-  return _verify(fromHexString(message), PublicKey.fromHex(pubkey), Signature.fromHex(signature));
+  try {
+    return _verify(fromHexString(message), PublicKey.fromHex(pubkey), Signature.fromHex(signature));
+  } catch (e) {
+    return false;
+  }
 }
