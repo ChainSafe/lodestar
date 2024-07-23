@@ -1,4 +1,4 @@
-import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
+import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry, toSafePrintableUrl} from "@lodestar/utils";
 import {mergeHeaders} from "../headers.js";
 import {Endpoint} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
@@ -115,7 +115,11 @@ export class HttpClient implements IHttpClient {
       }
       // De-duplicate by baseUrl, having two baseUrls with different token or timeouts does not make sense
       if (!this.urlsInits.some((opt) => opt.baseUrl === urlInit.baseUrl)) {
-        this.urlsInits.push({...urlInit, urlIndex: i} as UrlInitRequired);
+        this.urlsInits.push({
+          ...urlInit,
+          urlIndex: i,
+          sanitizedUrl: toSafePrintableUrl(urlInit.baseUrl),
+        } as UrlInitRequired);
       }
     }
 
@@ -134,7 +138,7 @@ export class HttpClient implements IHttpClient {
     if (metrics) {
       metrics.urlsScore.addCollect(() => {
         for (let i = 0; i < this.urlsScore.length; i++) {
-          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsInits[i].baseUrl}, this.urlsScore[i]);
+          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsInits[i].sanitizedUrl}, this.urlsScore[i]);
         }
       });
     }
@@ -185,12 +189,12 @@ export class HttpClient implements IHttpClient {
           // - If url[0] is good, only send to 0
           // - If url[0] has recently errored, send to both 0, 1, etc until url[0] does not error for some time
           for (; i < this.urlsInits.length; i++) {
-            const baseUrl = this.urlsInits[i].baseUrl;
+            const {sanitizedUrl} = this.urlsInits[i];
             const routeId = definition.operationId;
 
             if (i > 0) {
-              this.metrics?.requestToFallbacks.inc({routeId, baseUrl});
-              this.logger?.debug("Requesting fallback URL", {routeId, baseUrl, score: this.urlsScore[i]});
+              this.metrics?.requestToFallbacks.inc({routeId, baseUrl: sanitizedUrl});
+              this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: sanitizedUrl, score: this.urlsScore[i]});
             }
 
             // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -217,7 +221,11 @@ export class HttpClient implements IHttpClient {
                   if (++errorCount >= requestCount) {
                     resolve(res);
                   } else {
-                    this.logger?.debug("Request error, retrying", {routeId, baseUrl}, res.error() as Error);
+                    this.logger?.debug(
+                      "Request error, retrying",
+                      {routeId, baseUrl: sanitizedUrl},
+                      res.error() as Error
+                    );
                   }
                 }
               },
@@ -229,7 +237,7 @@ export class HttpClient implements IHttpClient {
                 if (++errorCount >= requestCount) {
                   reject(err);
                 } else {
-                  this.logger?.debug("Request error, retrying", {routeId, baseUrl}, err);
+                  this.logger?.debug("Request error, retrying", {routeId, baseUrl: sanitizedUrl}, err);
                 }
               }
             );
@@ -347,7 +355,7 @@ export class HttpClient implements IHttpClient {
     abortSignals.forEach((s) => s?.addEventListener("abort", onSignalAbort));
 
     const routeId = definition.operationId;
-    const {baseUrl, requestWireFormat, responseWireFormat} = init;
+    const {sanitizedUrl, requestWireFormat, responseWireFormat} = init;
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
@@ -359,7 +367,7 @@ export class HttpClient implements IHttpClient {
       if (!apiResponse.ok) {
         await apiResponse.errorBody();
         this.logger?.debug("API response error", {routeId, status: apiResponse.status});
-        this.metrics?.requestErrors.inc({routeId, baseUrl});
+        this.metrics?.requestErrors.inc({routeId, baseUrl: sanitizedUrl});
         return apiResponse;
       }
 
@@ -376,7 +384,7 @@ export class HttpClient implements IHttpClient {
         streamTimer?.();
       }
     } catch (e) {
-      this.metrics?.requestErrors.inc({routeId, baseUrl});
+      this.metrics?.requestErrors.inc({routeId, baseUrl: sanitizedUrl});
 
       if (isAbortedError(e)) {
         if (abortSignals.some((s) => s?.aborted)) {
