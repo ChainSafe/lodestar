@@ -48,7 +48,7 @@ describe("validateGossipAttestationsSameAttData", () => {
       const bytes = new Uint8Array(32);
       const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       dataView.setUint32(0, i + 1, true);
-      const secretKey = SecretKey.fromBytes(bytes);
+      const secretKey = SecretKey.fromKeygen(bytes);
       const publicKey = secretKey.toPublicKey();
       keypair = {secretKey, publicKey};
       keypairs.set(i, keypair);
