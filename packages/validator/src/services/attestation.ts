@@ -225,6 +225,7 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
+      // TODO Electra: Ensure calling V2 works in pre-electra
       (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);

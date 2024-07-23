@@ -30,9 +30,9 @@ const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
 
-export type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
+type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
-export type AttestationList = AttestationListPhase0 | AttestationListElectra;
+type AttestationList = AttestationListPhase0 | AttestationListElectra;
 
 type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
 type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
