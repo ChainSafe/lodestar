@@ -5101,7 +5101,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds_bucket[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_gossip_validate_time_bucket[$rate_interval])",
           "format": "heatmap",
           "instant": false,
           "legendFormat": "time",
@@ -5273,7 +5273,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds_sum[$rate_interval]) / rate(lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_gossip_validate_time_sum[$rate_interval]) / rate(lodestar_gossip_block_gossip_validate_time_count[$rate_interval])",
           "format": "heatmap",
           "instant": false,
           "legendFormat": "time",

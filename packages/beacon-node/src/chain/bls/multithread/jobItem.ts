@@ -69,7 +69,7 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
       // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
       // and not a problem in the near future
       // this is monitored on v1.21.0 https://github.com/ChainSafe/lodestar/pull/6894/files#r1687359225
-      const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
+      const timer = metrics?.blsThreadPool.aggregateWithRandomnessMainThreadDuration.startTimer();
       const {pk, sig} = aggregateWithRandomness(job.sets.map((set) => ({pk: set.publicKey, sig: set.signature})));
       timer?.();
 
