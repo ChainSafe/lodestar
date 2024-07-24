@@ -35,15 +35,15 @@ export function parseLoggerArgs(
     timestampFormat: opts?.hideTimestamp
       ? {format: TimestampFormatCode.Hidden}
       : args.logFormatGenesisTime !== undefined
-      ? {
-          format: TimestampFormatCode.EpochSlot,
-          genesisTime: args.logFormatGenesisTime,
-          secondsPerSlot: config.SECONDS_PER_SLOT,
-          slotsPerEpoch: SLOTS_PER_EPOCH,
-        }
-      : {
-          format: TimestampFormatCode.DateRegular,
-        },
+        ? {
+            format: TimestampFormatCode.EpochSlot,
+            genesisTime: args.logFormatGenesisTime,
+            secondsPerSlot: config.SECONDS_PER_SLOT,
+            slotsPerEpoch: SLOTS_PER_EPOCH,
+          }
+        : {
+            format: TimestampFormatCode.DateRegular,
+          },
   };
 }
 

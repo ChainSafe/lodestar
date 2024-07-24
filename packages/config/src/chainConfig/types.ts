@@ -11,7 +11,7 @@ export type ChainConfig = {
    * Free-form short name of the network that this configuration applies to - known
    * canonical network names include:
    * * 'mainnet' - there can be only one
-   * * 'prater' - testnet
+   * * 'holesky' - testnet
    * Must match the regex: [a-z0-9\-]
    */
   CONFIG_NAME: string;
@@ -58,6 +58,9 @@ export type ChainConfig = {
 
   // Fork choice
   PROPOSER_SCORE_BOOST: number;
+  REORG_HEAD_WEIGHT_THRESHOLD: number;
+  REORG_PARENT_WEIGHT_THRESHOLD: number;
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: number;
 
   // Deposit contract
   DEPOSIT_CHAIN_ID: number;
@@ -114,6 +117,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Fork choice
   PROPOSER_SCORE_BOOST: "number",
+  REORG_HEAD_WEIGHT_THRESHOLD: "number",
+  REORG_PARENT_WEIGHT_THRESHOLD: "number",
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: "number",
 
   // Deposit contract
   DEPOSIT_CHAIN_ID: "number",
@@ -131,12 +137,12 @@ export type SpecValue = number | bigint | Uint8Array | string;
 export type SpecValueType<V extends SpecValue> = V extends number
   ? "number"
   : V extends bigint
-  ? "bigint"
-  : V extends Uint8Array
-  ? "bytes"
-  : V extends string
-  ? "string"
-  : never;
+    ? "bigint"
+    : V extends Uint8Array
+      ? "bytes"
+      : V extends string
+        ? "string"
+        : never;
 
 /** All possible type names for a SpecValue */
 export type SpecValueTypeName = SpecValueType<SpecValue>;

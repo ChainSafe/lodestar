@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
-import {altair, Root, Slot, ssz, allForks} from "@lodestar/types";
+import {altair, LightClientFinalityUpdate, LightClientUpdate, Root, Slot, ssz} from "@lodestar/types";
 import {
   FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,
@@ -24,7 +24,7 @@ import {computeSyncPeriodAtSlot} from "./utils/clock.js";
 export function assertValidLightClientUpdate(
   config: BeaconConfig,
   syncCommittee: SyncCommitteeFast,
-  update: allForks.LightClientUpdate
+  update: LightClientUpdate
 ): void {
   // DIFF FROM SPEC: An update with the same header.slot can be valid and valuable to the lightclient
   // It may have more consensus and result in a better snapshot whilst not advancing the state
@@ -64,7 +64,7 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: allForks.LightClientFinalityUpdate): void {
+export function assertValidFinalityProof(update: LightClientFinalityUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon),
@@ -94,7 +94,7 @@ export function assertValidFinalityProof(update: allForks.LightClientFinalityUpd
  *
  * Where `hashTreeRoot(state) == update.header.stateRoot`
  */
-export function assertValidSyncCommitteeProof(update: allForks.LightClientUpdate): void {
+export function assertValidSyncCommitteeProof(update: LightClientUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),

@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {ForkName} from "@lodestar/params";
 import {
@@ -79,7 +79,7 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
     });
   }
 
-  async function* arrToSource(arr: allForks.SignedBeaconBlock[]): AsyncGenerator<ResponseIncoming> {
+  async function* arrToSource(arr: SignedBeaconBlock[]): AsyncGenerator<ResponseIncoming> {
     for (const item of arr) {
       yield {data: ssz.phase0.SignedBeaconBlock.serialize(item), fork: ForkName.phase0, protocolVersion: 1};
     }

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {describe, it, vi, expect, afterAll, beforeEach, afterEach} from "vitest";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {getClient as getKeymanagerClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -35,7 +35,7 @@ describe("voluntary exit from api", function () {
         "--keymanager",
         `--keymanager.port=${keymanagerPort}`,
         // Disable bearer token auth to simplify testing
-        "--keymanager.authEnabled=false",
+        "--keymanager.auth=false",
       ],
       {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
@@ -53,9 +53,8 @@ describe("voluntary exit from api", function () {
     // Wait for beacon node API to be available + genesis
     await retry(
       async () => {
-        const head = await beaconClient.getBlockHeader("head");
-        ApiError.assert(head);
-        if (head.response.data.header.message.slot < 1) throw Error("pre-genesis");
+        const head = (await beaconClient.getBlockHeader({blockId: "head"})).value();
+        if (head.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 20}
     );
@@ -65,9 +64,9 @@ describe("voluntary exit from api", function () {
     const indexToExit = 0;
     const pubkeyToExit = interopSecretKey(indexToExit).toPublicKey().toHex();
 
-    const res = await keymanagerClient.signVoluntaryExit(pubkeyToExit, exitEpoch);
-    ApiError.assert(res);
-    const signedVoluntaryExit = res.response.data;
+    const signedVoluntaryExit = (
+      await keymanagerClient.signVoluntaryExit({pubkey: pubkeyToExit, epoch: exitEpoch})
+    ).value();
 
     expect(signedVoluntaryExit.message.epoch).toBe(exitEpoch);
     expect(signedVoluntaryExit.message.validatorIndex).toBe(indexToExit);
@@ -75,18 +74,17 @@ describe("voluntary exit from api", function () {
     expect(signedVoluntaryExit.signature).toBeDefined();
 
     // 2. submit signed voluntary exit message to beacon node
-    ApiError.assert(await beaconClient.submitPoolVoluntaryExit(signedVoluntaryExit));
+    (await beaconClient.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
 
     // 3. confirm validator status is 'active_exiting'
     await retry(
       async () => {
-        const res = await beaconClient.getStateValidator("head", pubkeyToExit);
-        ApiError.assert(res);
-        if (res.response.data.status !== "active_exiting") {
+        const validator = (await beaconClient.getStateValidator({stateId: "head", validatorId: pubkeyToExit})).value();
+        if (validator.status !== "active_exiting") {
           throw Error("Validator not exiting");
         } else {
           // eslint-disable-next-line no-console
-          console.log(`Confirmed validator ${pubkeyToExit} = ${res.response.data.status}`);
+          console.log(`Confirmed validator ${pubkeyToExit} = ${validator.status}`);
         }
       },
       {retryDelay: 1000, retries: 20}

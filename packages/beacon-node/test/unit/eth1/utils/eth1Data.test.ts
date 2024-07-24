@@ -1,4 +1,3 @@
-import pick from "lodash/pick.js";
 import {describe, it, expect} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -107,7 +106,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 
       if (expectedEth1Data) {
         const eth1Datas = await eth1DatasPromise;
-        const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
+        const eth1DatasPartial = eth1Datas.map(({blockNumber, depositCount}) => ({blockNumber, depositCount}));
         expect(eth1DatasPartial).toEqual(expectedEth1Data);
       } else if (error != null) {
         await expectRejectedWithLodestarError(eth1DatasPromise, error);

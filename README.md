@@ -4,9 +4,9 @@
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/chainsafe/lodestar?label=Github)](https://github.com/ChainSafe/lodestar/releases/latest)
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
-[![Ethereum Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
+[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
-![Node Version](https://img.shields.io/badge/node-20.x-green)
+![Node Version](https://img.shields.io/badge/node-22.x-green)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![gitpoap badge](https://public-api.gitpoap.io/v1/repo/ChainSafe/lodestar/badge)](https://www.gitpoap.io/gh/ChainSafe/lodestar)
 
@@ -14,14 +14,14 @@
 
 ## Getting started
 
-- :gear: Follow the installation method for [source install](https://chainsafe.github.io/lodestar/getting-started/installation/#build-from-source), [NPM install](https://chainsafe.github.io/lodestar/getting-started/installation/#install-from-npm-not-recommended), or [Docker install](https://chainsafe.github.io/lodestar/getting-started/installation/#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
+- :gear: Follow the instructions for [build from source](https://chainsafe.github.io/lodestar/run/getting-started/installation#build-from-source), [binaries](https://chainsafe.github.io/lodestar/run/getting-started/installation#binaries), or [Docker](https://chainsafe.github.io/lodestar/run/getting-started/installation#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
 - :books: Use [Lodestar libraries](https://chainsafe.github.io/lodestar/supporting-libraries/libraries/) in your next Ethereum Typescript project.
-- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/getting-started/starting-a-node/).
-- :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet/).
+- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/run/beacon-management/starting-a-node/).
+- :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
 - :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
 - :nerd_face: View the [Package and dependency structure](https://chainsafe.github.io/lodestar/contribution/depgraph/).
 - :memo: Prospective contributors can read the [contributing section](./CONTRIBUTING.md) to understand how we develop and test on Lodestar.
-- :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
+- :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or join us on [Discord](https://discord.gg/yjyvFRP)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 - :rotating_light: Please note our [security policy](./SECURITY.md).
 - :bird: Follow Lodestar on [Twitter](https://twitter.com/lodestar_eth) for announcements and updates! [![Twitter Follow](https://img.shields.io/twitter/follow/lodestar_eth)](https://twitter.com/lodestar_eth)
@@ -46,7 +46,7 @@ yarn build
 
 | Package                                                     | Version                                                                                                                     | License                                                                                                               | Docs                                                                                      | Description                                                      |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [`@lodestar/beacon-node`](./packages/beacon-node)           | [![npm](https://img.shields.io/npm/v/@lodestar/beacon-node)](https://www.npmjs.com/package/@lodestar/beacon-node)               | [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) | [![documentation](https://img.shields.io/badge/readme-blue)](./packages/beacon-node)      | :rotating_light: Beacon-chain client                             |
+| [`@lodestar/beacon-node`](./packages/beacon-node)           | [![npm](https://img.shields.io/npm/v/@lodestar/beacon-node)](https://www.npmjs.com/package/@lodestar/beacon-node)           | [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) | [![documentation](https://img.shields.io/badge/readme-blue)](./packages/beacon-node)      | :rotating_light: Beacon-chain client                             |
 | [`@lodestar/validator`](./packages/validator)               | [![npm](https://img.shields.io/npm/v/@lodestar/validator)](https://www.npmjs.com/package/@lodestar/validator)               | [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) | [![documentation](https://img.shields.io/badge/readme-blue)](./packages/validator)        | :bank: Validator client                                          |
 | [`@lodestar/light-client`](./packages/light-client)         | [![npm](https://img.shields.io/npm/v/@lodestar/light-client)](https://www.npmjs.com/package/@lodestar/light-client)         | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/readme-blue)](./packages/light-client)     | :bird: Ethereum Light client                                     |
 | [`@lodestar/api`](./packages/api)                           | [![npm](https://img.shields.io/npm/v/@lodestar/api)](https://www.npmjs.com/package/@lodestar/api)                           | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/readme-blue)](./packages/api)              | :clipboard: REST Client for the Ethereum Beacon API              |

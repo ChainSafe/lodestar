@@ -1,4 +1,4 @@
-import {allForks, phase0, Slot, RootHex, Epoch} from "@lodestar/types";
+import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -11,6 +11,7 @@ export enum RegenCaller {
   validateGossipBlock = "validateGossipBlock",
   validateGossipBlob = "validateGossipBlob",
   precomputeEpoch = "precomputeEpoch",
+  predictProposerHead = "predictProposerHead",
   produceAttestationData = "produceAttestationData",
   processBlocksInEpoch = "processBlocksInEpoch",
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
@@ -35,7 +36,8 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   dropCache(): void;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
-  getPreStateSync(block: allForks.BeaconBlock): CachedBeaconStateAllForks | null;
+  getPreStateSync(block: BeaconBlock): CachedBeaconStateAllForks | null;
+  getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
@@ -54,11 +56,7 @@ export interface IStateRegeneratorInternal {
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
    */
-  getPreState(
-    block: allForks.BeaconBlock,
-    opts: StateCloneOpts,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks>;
+  getPreState(block: BeaconBlock, opts: StateCloneOpts, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 
   /**
    * Return a valid checkpoint state
@@ -83,5 +81,5 @@ export interface IStateRegeneratorInternal {
   /**
    * Return the exact state with `stateRoot`
    */
-  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
+  getState(stateRoot: RootHex, rCaller: RegenCaller, opts?: StateCloneOpts): Promise<CachedBeaconStateAllForks>;
 }

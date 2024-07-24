@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22.4
 
   sim-test-multifork:
     name: Multifork sim test
@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22.4
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22.4
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -100,7 +100,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22.4
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -129,7 +129,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22.4
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -158,14 +158,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22.4
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
         run: |
           docker pull ${{env.GETH_DOCKER_IMAGE}}
           docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
-          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
+          # docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests mixed client
         run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:mixedclient
         working-directory: packages/cli

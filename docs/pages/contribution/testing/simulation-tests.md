@@ -109,7 +109,7 @@ Here is an example of the table and how to interpret it:
 - `fork`: shows what fork is currently being tested
 - `eph`: During simulation tests the Lodestar repo is setup to use 8 slot per epoch so what is shown is the epoch number and the slot number within that epoch as `epoch/slot`
 - `slot`: The slot number that is currently being processed
-- `head`: If all clients have the the same head the first couple of bytes of the hash are shown. If all clients do not have the same head `different` is reported.
+- `head`: If all clients have the same head the first couple of bytes of the hash are shown. If all clients do not have the same head `different` is reported.
 - `finzed`: Shows the number of the last finalized slot
 - `peers`: The number of peers that each node is connected to. If all have the same number then only a single value is shown. If they do not have the same number of peers count for each node is reported in a comma-separated list
 - `attCount`: The number of attestations that the node has seen.

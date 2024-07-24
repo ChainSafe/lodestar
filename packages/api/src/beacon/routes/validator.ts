@@ -1,47 +1,51 @@
-import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName, ForkBlobs, isForkBlobs, isForkExecution, ForkPreBlobs, ForkExecution} from "@lodestar/params";
+/* eslint-disable @typescript-eslint/naming-convention */
+import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {isForkBlobs} from "@lodestar/params";
 import {
-  allForks,
   altair,
-  BLSPubkey,
   BLSSignature,
   CommitteeIndex,
   Epoch,
   phase0,
-  bellatrix,
   Root,
   Slot,
   ssz,
-  UintNum64,
   UintBn64,
   ValidatorIndex,
-  RootHex,
-  StringType,
-  SubcommitteeIndex,
-  Wei,
   ProducedBlockSource,
+  stringType,
+  BeaconBlockOrContents,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
-import {ApiClientResponse} from "../../interfaces.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
+import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
 import {
-  RoutesData,
-  ReturnTypes,
   ArrayOf,
-  Schema,
+  EmptyMeta,
+  EmptyMetaCodec,
+  EmptyResponseCodec,
+  EmptyResponseData,
+  JsonOnlyReq,
+  WithMeta,
   WithVersion,
-  WithBlockValues,
-  reqOnlyBody,
-  ReqSerializers,
-  jsonType,
-  ContainerDataExecutionOptimistic,
-  ContainerData,
-  TypeJson,
-} from "../../utils/index.js";
-import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
-import {allForksBlockContentsResSerializer} from "../../utils/routes.js";
-import {ExecutionOptimistic} from "./beacon/block.js";
+} from "../../utils/codecs.js";
+import {
+  ExecutionOptimisticAndDependentRootCodec,
+  ExecutionOptimisticAndDependentRootMeta,
+  ExecutionOptimisticCodec,
+  ExecutionOptimisticMeta,
+  MetaHeader,
+  VersionCodec,
+  VersionMeta,
+  VersionType,
+} from "../../utils/metadata.js";
+
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export enum BuilderSelection {
+  Default = "default",
   BuilderAlways = "builderalways",
   ExecutionAlways = "executionalways",
   MaxProfit = "maxprofit",
@@ -51,121 +55,193 @@ export enum BuilderSelection {
   ExecutionOnly = "executiononly",
 }
 
-export type ExtraProduceBlockOps = {
+/** Lodestar-specific (non-standardized) options */
+export type ExtraProduceBlockOpts = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
-  builderBoostFactor?: UintBn64;
   strictFeeRecipientCheck?: boolean;
   blindedLocal?: boolean;
 };
 
-export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
-  | {data: allForks.BeaconBlock; version: ForkPreBlobs}
-  | {data: allForks.BlockContents; version: ForkBlobs}
+export const ProduceBlockV3MetaType = new ContainerType(
+  {
+    ...VersionType.fields,
+    /** Specifies whether the response contains full or blinded block */
+    executionPayloadBlinded: ssz.Boolean,
+    /** Execution payload value in Wei */
+    executionPayloadValue: ssz.UintBn64,
+    /** Consensus rewards paid to the proposer for this block, in Wei */
+    consensusBlockValue: ssz.UintBn64,
+  },
+  {jsonCase: "eth2"}
 );
-export type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: allForks.BlindedBeaconBlock;
-  version: ForkExecution;
+
+export type ProduceBlockV3Meta = ValueOf<typeof ProduceBlockV3MetaType> & {
+  /** Lodestar-specific (non-standardized) value */
+  executionPayloadSource: ProducedBlockSource;
 };
 
-export type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedBlockSource} & (
-  | (ProduceBlockOrContentsRes & {executionPayloadBlinded: false})
-  | (ProduceBlindedBlockRes & {executionPayloadBlinded: true})
+export const BlockContentsType = new ContainerType(
+  {
+    block: ssz.deneb.BeaconBlock,
+    kzgProofs: ssz.deneb.KZGProofs,
+    blobs: ssz.deneb.Blobs,
+  },
+  {jsonCase: "eth2"}
 );
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+export const AttesterDutyType = new ContainerType(
+  {
+    /** The validator's public key, uniquely identifying them */
+    pubkey: ssz.BLSPubkey,
+    /** Index of validator in validator registry */
+    validatorIndex: ssz.ValidatorIndex,
+    /** Index of the committee */
+    committeeIndex: ssz.CommitteeIndex,
+    /** Number of validators in committee */
+    committeeLength: ssz.UintNum64,
+    /** Number of committees at the provided slot */
+    committeesAtSlot: ssz.UintNum64,
+    /** Index of validator in committee */
+    validatorCommitteeIndex: ssz.UintNum64,
+    /** The slot at which the validator must attest */
+    slot: ssz.Slot,
+  },
+  {jsonCase: "eth2"}
+);
 
-export type BeaconCommitteeSubscription = {
-  validatorIndex: ValidatorIndex;
-  committeeIndex: number;
-  committeesAtSlot: number;
-  slot: Slot;
-  isAggregator: boolean;
-};
-
-/**
- * From https://github.com/ethereum/beacon-APIs/pull/136
- */
-export type SyncCommitteeSubscription = {
-  validatorIndex: ValidatorIndex;
-  syncCommitteeIndices: number[];
-  untilEpoch: Epoch;
-};
-
-/**
- * The types used here are string instead of ssz based because the use of proposer data
- * is just validator --> beacon json api call for `beaconProposerCache` cache update.
- */
-export type ProposerPreparationData = {
-  validatorIndex: string;
-  feeRecipient: string;
-};
-
-export type ProposerDuty = {
-  slot: Slot;
-  validatorIndex: ValidatorIndex;
-  pubkey: BLSPubkey;
-};
-
-export type AttesterDuty = {
-  // The validator's public key, uniquely identifying them
-  pubkey: BLSPubkey;
-  // Index of validator in validator registry
-  validatorIndex: ValidatorIndex;
-  committeeIndex: CommitteeIndex;
-  // Number of validators in committee
-  committeeLength: UintNum64;
-  // Number of committees at the provided slot
-  committeesAtSlot: UintNum64;
-  // Index of validator in committee
-  validatorCommitteeIndex: UintNum64;
-  // The slot at which the validator must attest.
-  slot: Slot;
-};
+export const ProposerDutyType = new ContainerType(
+  {
+    slot: ssz.Slot,
+    validatorIndex: ssz.ValidatorIndex,
+    pubkey: ssz.BLSPubkey,
+  },
+  {jsonCase: "eth2"}
+);
 
 /**
  * From https://github.com/ethereum/beacon-APIs/pull/134
  */
-export type SyncDuty = {
-  pubkey: BLSPubkey;
-  /** Index of validator in validator registry. */
-  validatorIndex: ValidatorIndex;
-  /** The indices of the validator in the sync committee. */
-  validatorSyncCommitteeIndices: number[];
-};
+export const SyncDutyType = new ContainerType(
+  {
+    pubkey: ssz.BLSPubkey,
+    /** Index of validator in validator registry. */
+    validatorIndex: ssz.ValidatorIndex,
+    /** The indices of the validator in the sync committee. */
+    validatorSyncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
+  },
+  {jsonCase: "eth2"}
+);
+
+export const BeaconCommitteeSubscriptionType = new ContainerType(
+  {
+    validatorIndex: ssz.ValidatorIndex,
+    committeeIndex: ssz.CommitteeIndex,
+    committeesAtSlot: ssz.Slot,
+    slot: ssz.Slot,
+    isAggregator: ssz.Boolean,
+  },
+  {jsonCase: "eth2"}
+);
+
+/**
+ * From https://github.com/ethereum/beacon-APIs/pull/136
+ */
+export const SyncCommitteeSubscriptionType = new ContainerType(
+  {
+    validatorIndex: ssz.ValidatorIndex,
+    syncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
+    untilEpoch: ssz.Epoch,
+  },
+  {jsonCase: "eth2"}
+);
+
+export const ProposerPreparationDataType = new ContainerType(
+  {
+    validatorIndex: ssz.ValidatorIndex,
+    feeRecipient: stringType,
+  },
+  {jsonCase: "eth2"}
+);
 
 /**
  * From https://github.com/ethereum/beacon-APIs/pull/224
  */
-export type BeaconCommitteeSelection = {
-  /** Index of the validator */
-  validatorIndex: ValidatorIndex;
-  /** The slot at which a validator is assigned to attest */
-  slot: Slot;
-  /** The `slot_signature` calculated by the validator for the upcoming attestation slot */
-  selectionProof: BLSSignature;
-};
+export const BeaconCommitteeSelectionType = new ContainerType(
+  {
+    /** Index of the validator */
+    validatorIndex: ssz.ValidatorIndex,
+    /** The slot at which a validator is assigned to attest */
+    slot: ssz.Slot,
+    /** The `slot_signature` calculated by the validator for the upcoming attestation slot */
+    selectionProof: ssz.BLSSignature,
+  },
+  {jsonCase: "eth2"}
+);
 
 /**
  * From https://github.com/ethereum/beacon-APIs/pull/224
  */
-export type SyncCommitteeSelection = {
-  /** Index of the validator */
-  validatorIndex: ValidatorIndex;
-  /** The slot at which validator is assigned to produce a sync committee contribution */
-  slot: Slot;
-  /** SubcommitteeIndex to which the validator is assigned */
-  subcommitteeIndex: SubcommitteeIndex;
-  /** The `slot_signature` calculated by the validator for the upcoming sync committee slot */
-  selectionProof: BLSSignature;
-};
+export const SyncCommitteeSelectionType = new ContainerType(
+  {
+    /** Index of the validator */
+    validatorIndex: ssz.ValidatorIndex,
+    /** The slot at which validator is assigned to produce a sync committee contribution */
+    slot: ssz.Slot,
+    /** SubcommitteeIndex to which the validator is assigned */
+    subcommitteeIndex: ssz.SubcommitteeIndex,
+    /** The `slot_signature` calculated by the validator for the upcoming sync committee slot */
+    selectionProof: ssz.BLSSignature,
+  },
+  {jsonCase: "eth2"}
+);
 
-export type LivenessResponseData = {
-  index: ValidatorIndex;
-  isLive: boolean;
-};
+export const LivenessResponseDataType = new ContainerType(
+  {
+    index: ssz.ValidatorIndex,
+    isLive: ssz.Boolean,
+  },
+  {jsonCase: "eth2"}
+);
 
-export type Api = {
+export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
+export const AttesterDutyListType = ArrayOf(AttesterDutyType);
+export const ProposerDutyListType = ArrayOf(ProposerDutyType);
+export const SyncDutyListType = ArrayOf(SyncDutyType);
+export const SignedAggregateAndProofListType = ArrayOf(ssz.phase0.SignedAggregateAndProof);
+export const SignedContributionAndProofListType = ArrayOf(ssz.altair.SignedContributionAndProof);
+export const BeaconCommitteeSubscriptionListType = ArrayOf(BeaconCommitteeSubscriptionType);
+export const SyncCommitteeSubscriptionListType = ArrayOf(SyncCommitteeSubscriptionType);
+export const ProposerPreparationDataListType = ArrayOf(ProposerPreparationDataType);
+export const BeaconCommitteeSelectionListType = ArrayOf(BeaconCommitteeSelectionType);
+export const SyncCommitteeSelectionListType = ArrayOf(SyncCommitteeSelectionType);
+export const LivenessResponseDataListType = ArrayOf(LivenessResponseDataType);
+export const SignedValidatorRegistrationV1ListType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
+
+export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
+export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
+export type AttesterDutyList = ValueOf<typeof AttesterDutyListType>;
+export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
+export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
+export type SyncDuty = ValueOf<typeof SyncDutyType>;
+export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
+export type SignedAggregateAndProofList = ValueOf<typeof SignedAggregateAndProofListType>;
+export type SignedContributionAndProofList = ValueOf<typeof SignedContributionAndProofListType>;
+export type BeaconCommitteeSubscription = ValueOf<typeof BeaconCommitteeSubscriptionType>;
+export type BeaconCommitteeSubscriptionList = ValueOf<typeof BeaconCommitteeSubscriptionListType>;
+export type SyncCommitteeSubscription = ValueOf<typeof SyncCommitteeSubscriptionType>;
+export type SyncCommitteeSubscriptionList = ValueOf<typeof SyncCommitteeSubscriptionListType>;
+export type ProposerPreparationData = ValueOf<typeof ProposerPreparationDataType>;
+export type ProposerPreparationDataList = ValueOf<typeof ProposerPreparationDataListType>;
+export type BeaconCommitteeSelection = ValueOf<typeof BeaconCommitteeSelectionType>;
+export type BeaconCommitteeSelectionList = ValueOf<typeof BeaconCommitteeSelectionListType>;
+export type SyncCommitteeSelection = ValueOf<typeof SyncCommitteeSelectionType>;
+export type SyncCommitteeSelectionList = ValueOf<typeof SyncCommitteeSelectionListType>;
+export type LivenessResponseData = ValueOf<typeof LivenessResponseDataType>;
+export type LivenessResponseDataList = ValueOf<typeof LivenessResponseDataListType>;
+export type SignedValidatorRegistrationV1List = ValueOf<typeof SignedValidatorRegistrationV1ListType>;
+
+export type Endpoints = {
   /**
    * Get attester duties
    * Requests the beacon node to provide a set of attestation duties, which should be performed by validators, for a particular epoch.
@@ -174,19 +250,18 @@ export type Api = {
    * - event.current_duty_dependent_root when `compute_epoch_at_slot(event.slot) + 1 == epoch`
    * - event.block otherwise
    * The dependent_root value is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` or the genesis block root in the case of underflow.
-   * @param epoch Should only be allowed 1 epoch ahead
-   * @param requestBody An array of the validator indices for which to obtain the duties.
-   * @returns any Success response
-   * @throws ApiError
    */
-  getAttesterDuties(
-    epoch: Epoch,
-    validatorIndices: ValidatorIndex[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: AttesterDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  getAttesterDuties: Endpoint<
+    "POST",
+    {
+      /** Should only be allowed 1 epoch ahead */
+      epoch: Epoch;
+      /** An array of the validator indices for which to obtain the duties */
+      indices: ValidatorIndices;
+    },
+    {params: {epoch: Epoch}; body: unknown},
+    AttesterDutyList,
+    ExecutionOptimisticAndDependentRootMeta
   >;
 
   /**
@@ -196,169 +271,166 @@ export type Api = {
    * - event.current_duty_dependent_root when `compute_epoch_at_slot(event.slot) == epoch`
    * - event.block otherwise
    * The dependent_root value is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)` or the genesis block root in the case of underflow.
-   * @param epoch
-   * @returns any Success response
-   * @throws ApiError
    */
-  getProposerDuties(
-    epoch: Epoch
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ProposerDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  getProposerDuties: Endpoint<
+    "GET",
+    {epoch: Epoch},
+    {params: {epoch: Epoch}},
+    ProposerDutyList,
+    ExecutionOptimisticAndDependentRootMeta
   >;
 
-  getSyncCommitteeDuties(
-    epoch: number,
-    validatorIndices: ValidatorIndex[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: SyncDuty[]; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
-  >;
-
-  /**
-   * Produce a new block, without signature.
-   * Requests a beacon node to produce a valid block, which can then be signed by a validator.
-   * @param slot The slot for which the block should be proposed.
-   * @param randaoReveal The validator's randao reveal value.
-   * @param graffiti Arbitrary data validator wants to include in block.
-   * @returns any Success response
-   * @throws ApiError
-   */
-  produceBlock(
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  getSyncCommitteeDuties: Endpoint<
+    "POST",
+    {
+      epoch: number;
+      indices: ValidatorIndices;
+    },
+    {params: {epoch: Epoch}; body: unknown},
+    SyncDutyList,
+    ExecutionOptimisticMeta
   >;
 
   /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
    * Metadata in the response indicates the type of block produced, and the supported types of block
    * will be added to as forks progress.
-   * @param slot The slot for which the block should be proposed.
-   * @param randaoReveal The validator's randao reveal value.
-   * @param graffiti Arbitrary data validator wants to include in block.
-   * @returns any Success response
-   * @throws ApiError
    */
-  produceBlockV2(
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: ProduceBlockOrContentsRes},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  produceBlockV2: Endpoint<
+    "GET",
+    {
+      /** The slot for which the block should be proposed */
+      slot: Slot;
+      /** The validator's randao reveal value */
+      randaoReveal: BLSSignature;
+      /** Arbitrary data validator wants to include in block */
+      graffiti: string;
+    } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
+    {
+      params: {slot: number};
+      query: {
+        randao_reveal: string;
+        graffiti: string;
+        fee_recipient?: string;
+        builder_selection?: string;
+        strict_fee_recipient_check?: boolean;
+      };
+    },
+    BeaconBlockOrContents,
+    VersionMeta
   >;
 
   /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
    * Metadata in the response indicates the type of block produced, and the supported types of block
    * will be added to as forks progress.
-   * @param slot The slot for which the block should be proposed.
-   * @param randaoReveal The validator's randao reveal value.
-   * @param graffiti Arbitrary data validator wants to include in block.
-   * @returns any Success response
-   * @throws ApiError
    */
-  produceBlockV3(
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string,
-    skipRandaoVerification?: boolean,
-    opts?: ExtraProduceBlockOps
-  ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: ProduceFullOrBlindedBlockOrContentsRes;
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  produceBlockV3: Endpoint<
+    "GET",
+    {
+      /** The slot for which the block should be proposed */
+      slot: Slot;
+      /** The validator's randao reveal value */
+      randaoReveal: BLSSignature;
+      /** Arbitrary data validator wants to include in block */
+      graffiti: string;
+      skipRandaoVerification?: boolean;
+      builderBoostFactor?: UintBn64;
+    } & ExtraProduceBlockOpts,
+    {
+      params: {slot: number};
+      query: {
+        randao_reveal: string;
+        graffiti: string;
+        skip_randao_verification?: string;
+        fee_recipient?: string;
+        builder_selection?: string;
+        builder_boost_factor?: string;
+        strict_fee_recipient_check?: boolean;
+        blinded_local?: boolean;
+      };
+    },
+    BeaconBlockOrContents | BlindedBeaconBlock,
+    ProduceBlockV3Meta
   >;
 
-  produceBlindedBlock(
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: ProduceBlindedBlockRes;
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  produceBlindedBlock: Endpoint<
+    "GET",
+    {
+      slot: Slot;
+      randaoReveal: BLSSignature;
+      graffiti: string;
+    },
+    {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
+    BlindedBeaconBlock,
+    VersionMeta
   >;
 
   /**
    * Produce an attestation data
    * Requests that the beacon node produce an AttestationData.
-   * @param slot The slot for which an attestation data should be created.
-   * @param committeeIndex The committee index for which an attestation data should be created.
-   * @returns any Success response
-   * @throws ApiError
    */
-  produceAttestationData(
-    index: CommitteeIndex,
-    slot: Slot
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.AttestationData}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  produceAttestationData: Endpoint<
+    "GET",
+    {
+      /** The committee index for which an attestation data should be created */
+      committeeIndex: CommitteeIndex;
+      /** The slot for which an attestation data should be created */
+      slot: Slot;
+    },
+    {query: {slot: number; committee_index: number}},
+    phase0.AttestationData,
+    EmptyMeta
   >;
 
-  produceSyncCommitteeContribution(
-    slot: Slot,
-    subcommitteeIndex: number,
-    beaconBlockRoot: Root
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: altair.SyncCommitteeContribution}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  produceSyncCommitteeContribution: Endpoint<
+    "GET",
+    {
+      slot: Slot;
+      subcommitteeIndex: number;
+      beaconBlockRoot: Root;
+    },
+    {query: {slot: number; subcommittee_index: number; beacon_block_root: string}},
+    altair.SyncCommitteeContribution,
+    EmptyMeta
   >;
 
   /**
    * Get aggregated attestation
    * Aggregates all attestations matching given attestation data root and slot
-   * @param attestationDataRoot HashTreeRoot of AttestationData that validator want's aggregated
-   * @param slot
-   * @returns any Returns aggregated `Attestation` object with same `AttestationData` root.
-   * @throws ApiError
+   * Returns an aggregated `Attestation` object with same `AttestationData` root.
    */
-  getAggregatedAttestation(
-    attestationDataRoot: Root,
-    slot: Slot
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.Attestation}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
+  getAggregatedAttestation: Endpoint<
+    "GET",
+    {
+      /** HashTreeRoot of AttestationData that validator want's aggregated */
+      attestationDataRoot: Root;
+      slot: Slot;
+    },
+    {query: {attestation_data_root: string; slot: number}},
+    phase0.Attestation,
+    EmptyMeta
   >;
 
   /**
    * Publish multiple aggregate and proofs
    * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-   * @param requestBody
-   * @returns any Successful response
-   * @throws ApiError
    */
-  publishAggregateAndProofs(
-    signedAggregateAndProofs: phase0.SignedAggregateAndProof[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
+  publishAggregateAndProofs: Endpoint<
+    "POST",
+    {signedAggregateAndProofs: SignedAggregateAndProofList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 
-  publishContributionAndProofs(
-    contributionAndProofs: altair.SignedContributionAndProof[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
+  publishContributionAndProofs: Endpoint<
+    "POST",
+    {contributionAndProofs: SignedContributionAndProofList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 
   /**
    * Signal beacon node to prepare for a committee subnet
@@ -369,28 +441,33 @@ export type Api = {
    * - announce subnet topic subscription on gossipsub
    * - aggregate attestations received on that subnet
    *
-   * @param requestBody
-   * @returns any Slot signature is valid and beacon node has prepared the attestation subnet.
+   * Returns if slot signature is valid and beacon node has prepared the attestation subnet.
    *
-   * Note that, we cannot be certain Beacon node will find peers for that subnet for various reasons,"
-   *
-   * @throws ApiError
+   * Note that we cannot be certain the Beacon node will find peers for that subnet for various reasons.
    */
-  prepareBeaconCommitteeSubnet(
-    subscriptions: BeaconCommitteeSubscription[]
-  ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE>
+  prepareBeaconCommitteeSubnet: Endpoint<
+    "POST",
+    {subscriptions: BeaconCommitteeSubscriptionList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
-  prepareSyncCommitteeSubnets(
-    subscriptions: SyncCommitteeSubscription[]
-  ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE>
+  prepareSyncCommitteeSubnets: Endpoint<
+    "POST",
+    {subscriptions: SyncCommitteeSubscriptionList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
-  prepareBeaconProposer(
-    proposers: ProposerPreparationData[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
+  prepareBeaconProposer: Endpoint<
+    "POST",
+    {proposers: ProposerPreparationDataList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 
   /**
    * Determine if a distributed validator has been selected to aggregate attestations
@@ -402,17 +479,17 @@ export type Api = {
    *
    * Note that this endpoint is not implemented by the beacon node and will return a 501 error
    *
-   * @param requestBody An array of partial beacon committee selection proofs
-   * @returns An array of threshold aggregated beacon committee selection proofs
-   * @throws ApiError
+   * Returns an array of threshold aggregated beacon committee selection proofs
    */
-  submitBeaconCommitteeSelections(
-    selections: BeaconCommitteeSelection[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: BeaconCommitteeSelection[]}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_IMPLEMENTED | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  submitBeaconCommitteeSelections: Endpoint<
+    "POST",
+    {
+      /** An array of partial beacon committee selection proofs */
+      selections: BeaconCommitteeSelectionList;
+    },
+    {body: unknown},
+    BeaconCommitteeSelectionList,
+    EmptyMeta
   >;
 
   /**
@@ -425,373 +502,465 @@ export type Api = {
    *
    * Note that this endpoint is not implemented by the beacon node and will return a 501 error
    *
-   * @param requestBody An array of partial sync committee selection proofs
-   * @returns An array of threshold aggregated sync committee selection proofs
-   * @throws ApiError
+   * Returns an array of threshold aggregated sync committee selection proofs
    */
-  submitSyncCommitteeSelections(
-    selections: SyncCommitteeSelection[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: SyncCommitteeSelection[]}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_IMPLEMENTED | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  submitSyncCommitteeSelections: Endpoint<
+    "POST",
+    {
+      /** An array of partial sync committee selection proofs */
+      selections: SyncCommitteeSelectionList;
+    },
+    {body: unknown},
+    SyncCommitteeSelectionList,
+    EmptyMeta
   >;
 
   /** Returns validator indices that have been observed to be active on the network */
-  getLiveness(
-    epoch: Epoch,
-    validatorIndices: ValidatorIndex[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LivenessResponseData[]}}, HttpStatusCode.BAD_REQUEST>>;
-
-  registerValidator(
-    registrations: bellatrix.SignedValidatorRegistrationV1[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
-};
-
-/**
- * Define javascript values for each route
- */
-export const routesData: RoutesData<Api> = {
-  getAttesterDuties: {url: "/eth/v1/validator/duties/attester/{epoch}", method: "POST"},
-  getProposerDuties: {url: "/eth/v1/validator/duties/proposer/{epoch}", method: "GET"},
-  getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/{epoch}", method: "POST"},
-  produceBlock: {url: "/eth/v1/validator/blocks/{slot}", method: "GET"},
-  produceBlockV2: {url: "/eth/v2/validator/blocks/{slot}", method: "GET"},
-  produceBlockV3: {url: "/eth/v3/validator/blocks/{slot}", method: "GET"},
-  produceBlindedBlock: {url: "/eth/v1/validator/blinded_blocks/{slot}", method: "GET"},
-  produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
-  produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
-  getAggregatedAttestation: {url: "/eth/v1/validator/aggregate_attestation", method: "GET"},
-  publishAggregateAndProofs: {url: "/eth/v1/validator/aggregate_and_proofs", method: "POST"},
-  publishContributionAndProofs: {url: "/eth/v1/validator/contribution_and_proofs", method: "POST"},
-  prepareBeaconCommitteeSubnet: {url: "/eth/v1/validator/beacon_committee_subscriptions", method: "POST"},
-  prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
-  prepareBeaconProposer: {url: "/eth/v1/validator/prepare_beacon_proposer", method: "POST"},
-  submitBeaconCommitteeSelections: {url: "/eth/v1/validator/beacon_committee_selections", method: "POST"},
-  submitSyncCommitteeSelections: {url: "/eth/v1/validator/sync_committee_selections", method: "POST"},
-  getLiveness: {url: "/eth/v1/validator/liveness/{epoch}", method: "POST"},
-  registerValidator: {url: "/eth/v1/validator/register_validator", method: "POST"},
-};
-
-/* eslint-disable @typescript-eslint/naming-convention */
-export type ReqTypes = {
-  getAttesterDuties: {params: {epoch: Epoch}; body: U64Str[]};
-  getProposerDuties: {params: {epoch: Epoch}};
-  getSyncCommitteeDuties: {params: {epoch: Epoch}; body: U64Str[]};
-  produceBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
-  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string; fee_recipient?: string}};
-  produceBlockV3: {
-    params: {slot: number};
-    query: {
-      randao_reveal: string;
-      graffiti: string;
-      skip_randao_verification?: boolean;
-      fee_recipient?: string;
-      builder_selection?: string;
-      builder_boost_factor?: string;
-      strict_fee_recipient_check?: boolean;
-      blinded_local?: boolean;
-    };
-  };
-  produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
-  produceAttestationData: {query: {slot: number; committee_index: number}};
-  produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
-  getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
-  publishAggregateAndProofs: {body: unknown};
-  publishContributionAndProofs: {body: unknown};
-  prepareBeaconCommitteeSubnet: {body: unknown};
-  prepareSyncCommitteeSubnets: {body: unknown};
-  prepareBeaconProposer: {body: unknown};
-  submitBeaconCommitteeSelections: {body: unknown};
-  submitSyncCommitteeSelections: {body: unknown};
-  getLiveness: {params: {epoch: Epoch}; body: U64Str[]};
-  registerValidator: {body: unknown};
-};
-
-const BeaconCommitteeSelection = new ContainerType(
-  {
-    validatorIndex: ssz.ValidatorIndex,
-    slot: ssz.Slot,
-    selectionProof: ssz.BLSSignature,
-  },
-  {jsonCase: "eth2"}
-);
-
-const SyncCommitteeSelection = new ContainerType(
-  {
-    validatorIndex: ssz.ValidatorIndex,
-    slot: ssz.Slot,
-    subcommitteeIndex: ssz.SubcommitteeIndex,
-    selectionProof: ssz.BLSSignature,
-  },
-  {jsonCase: "eth2"}
-);
-
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
-  const BeaconCommitteeSubscription = new ContainerType(
+  getLiveness: Endpoint<
+    "POST",
     {
-      validatorIndex: ssz.ValidatorIndex,
-      committeeIndex: ssz.CommitteeIndex,
-      committeesAtSlot: ssz.Slot,
-      slot: ssz.Slot,
-      isAggregator: ssz.Boolean,
+      epoch: Epoch;
+      indices: ValidatorIndex[];
     },
-    {jsonCase: "eth2"}
-  );
+    {params: {epoch: Epoch}; body: unknown},
+    LivenessResponseDataList,
+    EmptyMeta
+  >;
 
-  const SyncCommitteeSubscription = new ContainerType(
-    {
-      validatorIndex: ssz.ValidatorIndex,
-      syncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
-      untilEpoch: ssz.Epoch,
-    },
-    {jsonCase: "eth2"}
-  );
+  registerValidator: Endpoint<
+    "POST",
+    {registrations: SignedValidatorRegistrationV1List},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+};
 
-  const produceBlockV3: ReqSerializers<Api, ReqTypes>["produceBlockV3"] = {
-    writeReq: (slot, randaoReveal, graffiti, skipRandaoVerification, opts) => ({
-      params: {slot},
-      query: {
-        randao_reveal: toHexString(randaoReveal),
-        graffiti: toGraffitiHex(graffiti),
-        fee_recipient: opts?.feeRecipient,
-        skip_randao_verification: skipRandaoVerification,
-        builder_selection: opts?.builderSelection,
-        builder_boost_factor: opts?.builderBoostFactor?.toString(),
-        strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
-        blinded_local: opts?.blindedLocal,
-      },
-    }),
-    parseReq: ({params, query}) => [
-      params.slot,
-      fromHexString(query.randao_reveal),
-      fromGraffitiHex(query.graffiti),
-      query.skip_randao_verification,
-      {
-        feeRecipient: query.fee_recipient,
-        builderSelection: query.builder_selection as BuilderSelection,
-        builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
-        strictFeeRecipientCheck: query.strict_fee_recipient_check,
-        blindedLocal: query.blinded_local,
-      },
-    ],
-    schema: {
-      params: {slot: Schema.UintRequired},
-      query: {
-        randao_reveal: Schema.StringRequired,
-        graffiti: Schema.String,
-        fee_recipient: Schema.String,
-        skip_randao_verification: Schema.Boolean,
-        builder_selection: Schema.String,
-        builder_boost_factor: Schema.String,
-        strict_fee_recipient_check: Schema.Boolean,
-        blinded_local: Schema.Boolean,
-      },
-    },
-  };
-
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getAttesterDuties: {
-      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
-      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
-      schema: {
-        params: {epoch: Schema.UintRequired},
-        body: Schema.StringArray,
+      url: "/eth/v1/validator/duties/attester/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: AttesterDutyListType,
+        meta: ExecutionOptimisticAndDependentRootCodec,
       },
     },
-
     getProposerDuties: {
-      writeReq: (epoch) => ({params: {epoch}}),
-      parseReq: ({params}) => [params.epoch],
-      schema: {
-        params: {epoch: Schema.UintRequired},
+      url: "/eth/v1/validator/duties/proposer/{epoch}",
+      method: "GET",
+      req: {
+        writeReq: ({epoch}) => ({params: {epoch}}),
+        parseReq: ({params}) => ({epoch: params.epoch}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: ProposerDutyListType,
+        meta: ExecutionOptimisticAndDependentRootCodec,
       },
     },
-
     getSyncCommitteeDuties: {
-      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
-      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
-      schema: {
-        params: {epoch: Schema.UintRequired},
-        body: Schema.StringArray,
+      url: "/eth/v1/validator/duties/sync/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: SyncDutyListType,
+        meta: ExecutionOptimisticCodec,
       },
     },
-
-    produceBlock: produceBlockV3 as ReqSerializers<Api, ReqTypes>["produceBlock"],
-    produceBlockV2: produceBlockV3 as ReqSerializers<Api, ReqTypes>["produceBlockV2"],
-    produceBlockV3,
-    produceBlindedBlock: produceBlockV3 as ReqSerializers<Api, ReqTypes>["produceBlindedBlock"],
-
-    produceAttestationData: {
-      writeReq: (index, slot) => ({query: {slot, committee_index: index}}),
-      parseReq: ({query}) => [query.committee_index, query.slot],
-      schema: {
-        query: {slot: Schema.UintRequired, committee_index: Schema.UintRequired},
+    produceBlockV2: {
+      url: "/eth/v2/validator/blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({slot, randaoReveal, graffiti, feeRecipient, builderSelection, strictFeeRecipientCheck}) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHexString(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            fee_recipient: feeRecipient,
+            builder_selection: builderSelection,
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+          },
+        }),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHexString(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
+          feeRecipient: query.fee_recipient,
+          builderSelection: query.builder_selection as BuilderSelection,
+          strictFeeRecipientCheck: query.strict_fee_recipient_check,
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+            fee_recipient: Schema.String,
+            builder_selection: Schema.String,
+            strict_fee_recipient_check: Schema.Boolean,
+          },
+        },
+      },
+      resp: {
+        data: WithVersion(
+          (fork) => (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
+        ),
+        meta: VersionCodec,
       },
     },
+    produceBlockV3: {
+      url: "/eth/v3/validator/blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification,
+          feeRecipient,
+          builderSelection,
+          builderBoostFactor,
+          strictFeeRecipientCheck,
+          blindedLocal,
+        }) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHexString(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
+            fee_recipient: feeRecipient,
+            builder_selection: builderSelection,
+            builder_boost_factor: builderBoostFactor?.toString(),
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+            blinded_local: blindedLocal,
+          },
+        }),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHexString(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
+          skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
+          feeRecipient: query.fee_recipient,
+          builderSelection: query.builder_selection as BuilderSelection,
+          builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
+          strictFeeRecipientCheck: query.strict_fee_recipient_check,
+          blindedLocal: query.blinded_local,
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+            skip_randao_verification: Schema.String,
+            fee_recipient: Schema.String,
+            builder_selection: Schema.String,
+            builder_boost_factor: Schema.String,
+            strict_fee_recipient_check: Schema.Boolean,
+            blinded_local: Schema.Boolean,
+          },
+        },
+      },
+      resp: {
+        data: WithMeta(
+          ({version, executionPayloadBlinded}) =>
+            (executionPayloadBlinded
+              ? getExecutionForkTypes(version).BlindedBeaconBlock
+              : isForkBlobs(version)
+                ? BlockContentsType
+                : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
+        ),
+        meta: {
+          toJson: (meta) => ({
+            ...ProduceBlockV3MetaType.toJson(meta),
+            execution_payload_source: meta.executionPayloadSource,
+          }),
+          fromJson: (val) => {
+            const {executionPayloadBlinded, ...meta} = ProduceBlockV3MetaType.fromJson(val);
 
-    produceSyncCommitteeContribution: {
-      writeReq: (slot, index, root) => ({
-        query: {slot, subcommittee_index: index, beacon_block_root: toHexString(root)},
-      }),
-      parseReq: ({query}) => [query.slot, query.subcommittee_index, fromHexString(query.beacon_block_root)],
-      schema: {
-        query: {
-          slot: Schema.UintRequired,
-          subcommittee_index: Schema.UintRequired,
-          beacon_block_root: Schema.StringRequired,
+            // Extract source from the data and assign defaults in the spec compliant manner if not present
+            const executionPayloadSource =
+              (val as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
+              (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+
+            return {...meta, executionPayloadBlinded, executionPayloadSource};
+          },
+          toHeadersObject: (meta) => ({
+            [MetaHeader.Version]: meta.version,
+            [MetaHeader.ExecutionPayloadBlinded]: meta.executionPayloadBlinded.toString(),
+            [MetaHeader.ExecutionPayloadSource]: meta.executionPayloadSource.toString(),
+            [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
+            [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+          }),
+          fromHeaders: (headers) => {
+            const executionPayloadBlinded = toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadBlinded));
+
+            // Extract source from the headers and assign defaults in a spec compliant manner if not present
+            const executionPayloadSource =
+              (headers.get(MetaHeader.ExecutionPayloadSource) as ProducedBlockSource) ??
+              (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+
+            return {
+              version: toForkName(headers.getRequired(MetaHeader.Version)),
+              executionPayloadBlinded,
+              executionPayloadSource,
+              executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
+              consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
+            };
+          },
         },
       },
     },
-
-    getAggregatedAttestation: {
-      writeReq: (root, slot) => ({query: {attestation_data_root: toHexString(root), slot}}),
-      parseReq: ({query}) => [fromHexString(query.attestation_data_root), query.slot],
-      schema: {
-        query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
+    produceBlindedBlock: {
+      url: "/eth/v1/validator/blinded_blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({slot, randaoReveal, graffiti}) => ({
+          params: {slot},
+          query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
+        }),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHexString(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+          },
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => getExecutionForkTypes(fork).BlindedBeaconBlock),
+        meta: VersionCodec,
       },
     },
-
-    publishAggregateAndProofs: reqOnlyBody(ArrayOf(ssz.phase0.SignedAggregateAndProof), Schema.ObjectArray),
-    publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
-    prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
-    prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),
+    produceAttestationData: {
+      url: "/eth/v1/validator/attestation_data",
+      method: "GET",
+      req: {
+        writeReq: ({committeeIndex, slot}) => ({query: {slot, committee_index: committeeIndex}}),
+        parseReq: ({query}) => ({committeeIndex: query.committee_index, slot: query.slot}),
+        schema: {
+          query: {slot: Schema.UintRequired, committee_index: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: ssz.phase0.AttestationData,
+        meta: EmptyMetaCodec,
+      },
+    },
+    produceSyncCommitteeContribution: {
+      url: "/eth/v1/validator/sync_committee_contribution",
+      method: "GET",
+      req: {
+        writeReq: ({slot, subcommitteeIndex, beaconBlockRoot}) => ({
+          query: {slot, subcommittee_index: subcommitteeIndex, beacon_block_root: toHexString(beaconBlockRoot)},
+        }),
+        parseReq: ({query}) => ({
+          slot: query.slot,
+          subcommitteeIndex: query.subcommittee_index,
+          beaconBlockRoot: fromHexString(query.beacon_block_root),
+        }),
+        schema: {
+          query: {
+            slot: Schema.UintRequired,
+            subcommittee_index: Schema.UintRequired,
+            beacon_block_root: Schema.StringRequired,
+          },
+        },
+      },
+      resp: {
+        data: ssz.altair.SyncCommitteeContribution,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getAggregatedAttestation: {
+      url: "/eth/v1/validator/aggregate_attestation",
+      method: "GET",
+      req: {
+        writeReq: ({attestationDataRoot, slot}) => ({
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot},
+        }),
+        parseReq: ({query}) => ({attestationDataRoot: fromHexString(query.attestation_data_root), slot: query.slot}),
+        schema: {
+          query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: ssz.phase0.Attestation,
+        meta: EmptyMetaCodec,
+      },
+    },
+    publishAggregateAndProofs: {
+      url: "/eth/v1/validator/aggregate_and_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListType.toJson(signedAggregateAndProofs),
+        }),
+        parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.fromJson(body)}),
+        writeReqSsz: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListType.serialize(signedAggregateAndProofs),
+        }),
+        parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    publishContributionAndProofs: {
+      url: "/eth/v1/validator/contribution_and_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({contributionAndProofs}) => ({
+          body: SignedContributionAndProofListType.toJson(contributionAndProofs),
+        }),
+        parseReqJson: ({body}) => ({contributionAndProofs: SignedContributionAndProofListType.fromJson(body)}),
+        writeReqSsz: ({contributionAndProofs}) => ({
+          body: SignedContributionAndProofListType.serialize(contributionAndProofs),
+        }),
+        parseReqSsz: ({body}) => ({contributionAndProofs: SignedContributionAndProofListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    prepareBeaconCommitteeSubnet: {
+      url: "/eth/v1/validator/beacon_committee_subscriptions",
+      method: "POST",
+      req: {
+        writeReqJson: ({subscriptions}) => ({body: BeaconCommitteeSubscriptionListType.toJson(subscriptions)}),
+        parseReqJson: ({body}) => ({subscriptions: BeaconCommitteeSubscriptionListType.fromJson(body)}),
+        writeReqSsz: ({subscriptions}) => ({body: BeaconCommitteeSubscriptionListType.serialize(subscriptions)}),
+        parseReqSsz: ({body}) => ({subscriptions: BeaconCommitteeSubscriptionListType.deserialize(body)}),
+        schema: {body: Schema.ObjectArray},
+      },
+      resp: EmptyResponseCodec,
+    },
+    prepareSyncCommitteeSubnets: {
+      url: "/eth/v1/validator/sync_committee_subscriptions",
+      method: "POST",
+      req: {
+        writeReqJson: ({subscriptions}) => ({body: SyncCommitteeSubscriptionListType.toJson(subscriptions)}),
+        parseReqJson: ({body}) => ({subscriptions: SyncCommitteeSubscriptionListType.fromJson(body)}),
+        writeReqSsz: ({subscriptions}) => ({body: SyncCommitteeSubscriptionListType.serialize(subscriptions)}),
+        parseReqSsz: ({body}) => ({subscriptions: SyncCommitteeSubscriptionListType.deserialize(body)}),
+        schema: {body: Schema.ObjectArray},
+      },
+      resp: EmptyResponseCodec,
+    },
     prepareBeaconProposer: {
-      writeReq: (items: ProposerPreparationData[]) => ({body: items.map((item) => jsonType("snake").toJson(item))}),
-      parseReq: ({body}) => [
-        (body as Record<string, unknown>[]).map((item) => jsonType("snake").fromJson(item) as ProposerPreparationData),
-      ],
-      schema: {body: Schema.ObjectArray},
+      url: "/eth/v1/validator/prepare_beacon_proposer",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({proposers}) => ({body: ProposerPreparationDataListType.toJson(proposers)}),
+        parseReqJson: ({body}) => ({proposers: ProposerPreparationDataListType.fromJson(body)}),
+        schema: {body: Schema.ObjectArray},
+      }),
+      resp: EmptyResponseCodec,
     },
     submitBeaconCommitteeSelections: {
-      writeReq: (items) => ({body: ArrayOf(BeaconCommitteeSelection).toJson(items)}),
-      parseReq: () => [[]],
+      url: "/eth/v1/validator/beacon_committee_selections",
+      method: "POST",
+      req: {
+        writeReqJson: ({selections}) => ({body: BeaconCommitteeSelectionListType.toJson(selections)}),
+        parseReqJson: ({body}) => ({selections: BeaconCommitteeSelectionListType.fromJson(body)}),
+        writeReqSsz: ({selections}) => ({body: BeaconCommitteeSelectionListType.serialize(selections)}),
+        parseReqSsz: ({body}) => ({selections: BeaconCommitteeSelectionListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: {
+        data: BeaconCommitteeSelectionListType,
+        meta: EmptyMetaCodec,
+      },
     },
     submitSyncCommitteeSelections: {
-      writeReq: (items) => ({body: ArrayOf(SyncCommitteeSelection).toJson(items)}),
-      parseReq: () => [[]],
+      url: "/eth/v1/validator/sync_committee_selections",
+      method: "POST",
+      req: {
+        writeReqJson: ({selections}) => ({body: SyncCommitteeSelectionListType.toJson(selections)}),
+        parseReqJson: ({body}) => ({selections: SyncCommitteeSelectionListType.fromJson(body)}),
+        writeReqSsz: ({selections}) => ({body: SyncCommitteeSelectionListType.serialize(selections)}),
+        parseReqSsz: ({body}) => ({selections: SyncCommitteeSelectionListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: {
+        data: SyncCommitteeSelectionListType,
+        meta: EmptyMetaCodec,
+      },
     },
     getLiveness: {
-      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
-      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
-      schema: {
-        params: {epoch: Schema.UintRequired},
-        body: Schema.StringArray,
+      url: "/eth/v1/validator/liveness/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: LivenessResponseDataListType,
+        meta: EmptyMetaCodec,
       },
     },
-    registerValidator: reqOnlyBody(ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1), Schema.ObjectArray),
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  const rootHexType = new StringType();
-
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  const WithDependentRootExecutionOptimistic = <T>(dataType: Type<T>) =>
-    new ContainerType(
-      {
-        executionOptimistic: ssz.Boolean,
-        data: dataType,
-        dependentRoot: rootHexType,
+    registerValidator: {
+      url: "/eth/v1/validator/register_validator",
+      method: "POST",
+      req: {
+        writeReqJson: ({registrations}) => ({body: SignedValidatorRegistrationV1ListType.toJson(registrations)}),
+        parseReqJson: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.fromJson(body)}),
+        writeReqSsz: ({registrations}) => ({body: SignedValidatorRegistrationV1ListType.serialize(registrations)}),
+        parseReqSsz: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
       },
-      {jsonCase: "eth2"}
-    );
-
-  const AttesterDuty = new ContainerType(
-    {
-      pubkey: ssz.BLSPubkey,
-      validatorIndex: ssz.ValidatorIndex,
-      committeeIndex: ssz.CommitteeIndex,
-      committeeLength: ssz.UintNum64,
-      committeesAtSlot: ssz.UintNum64,
-      validatorCommitteeIndex: ssz.UintNum64,
-      slot: ssz.Slot,
+      resp: EmptyResponseCodec,
     },
-    {jsonCase: "eth2"}
-  );
-
-  const ProposerDuty = new ContainerType(
-    {
-      slot: ssz.Slot,
-      validatorIndex: ssz.ValidatorIndex,
-      pubkey: ssz.BLSPubkey,
-    },
-    {jsonCase: "eth2"}
-  );
-
-  const SyncDuty = new ContainerType(
-    {
-      pubkey: ssz.BLSPubkey,
-      validatorIndex: ssz.ValidatorIndex,
-      validatorSyncCommitteeIndices: ArrayOf(ssz.UintNum64),
-    },
-    {jsonCase: "eth2"}
-  );
-
-  const produceBlockOrContents = WithBlockValues(
-    WithVersion<allForks.BeaconBlockOrContents>((fork: ForkName) =>
-      isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
-    )
-  ) as TypeJson<ProduceBlockOrContentsRes>;
-  const produceBlindedBlock = WithBlockValues(
-    WithVersion<allForks.BlindedBeaconBlock>(
-      (fork: ForkName) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
-    )
-  ) as TypeJson<ProduceBlindedBlockRes>;
-
-  return {
-    getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
-    getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
-    getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
-
-    produceBlock: ContainerData(ssz.phase0.BeaconBlock),
-    produceBlockV2: produceBlockOrContents,
-    produceBlockV3: {
-      toJson: (data) => {
-        if (data.executionPayloadBlinded) {
-          return {
-            execution_payload_blinded: true,
-            execution_payload_source: data.executionPayloadSource,
-            ...(produceBlindedBlock.toJson(data) as Record<string, unknown>),
-          };
-        } else {
-          return {
-            execution_payload_blinded: false,
-            execution_payload_source: data.executionPayloadSource,
-            ...(produceBlockOrContents.toJson(data) as Record<string, unknown>),
-          };
-        }
-      },
-      fromJson: (data) => {
-        const executionPayloadBlinded = (data as {execution_payload_blinded: boolean}).execution_payload_blinded;
-        if (executionPayloadBlinded === undefined) {
-          throw Error(`Invalid executionPayloadBlinded=${executionPayloadBlinded} for fromJson deserialization`);
-        }
-
-        // extract source from the data and assign defaults in the spec complaint manner if not present in response
-        const executionPayloadSource =
-          (data as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
-          (executionPayloadBlinded ? ProducedBlockSource.builder : ProducedBlockSource.engine);
-
-        if (executionPayloadBlinded) {
-          return {executionPayloadBlinded, executionPayloadSource, ...produceBlindedBlock.fromJson(data)};
-        } else {
-          return {executionPayloadBlinded, executionPayloadSource, ...produceBlockOrContents.fromJson(data)};
-        }
-      },
-    },
-    produceBlindedBlock,
-
-    produceAttestationData: ContainerData(ssz.phase0.AttestationData),
-    produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
-    getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
-    submitBeaconCommitteeSelections: ContainerData(ArrayOf(BeaconCommitteeSelection)),
-    submitSyncCommitteeSelections: ContainerData(ArrayOf(SyncCommitteeSelection)),
-    getLiveness: jsonType("snake"),
   };
 }
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
+}
+
+function writeSkipRandaoVerification(skipRandaoVerification?: boolean): string | undefined {
+  return skipRandaoVerification === true ? "" : undefined;
+}
+
+function parseSkipRandaoVerification(skipRandaoVerification?: string): boolean {
+  return skipRandaoVerification !== undefined && skipRandaoVerification === "";
 }

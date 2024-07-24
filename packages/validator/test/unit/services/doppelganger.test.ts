@@ -2,10 +2,11 @@ import {describe, it, expect} from "vitest";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Api, HttpStatusCode} from "@lodestar/api";
+import {ApiClient} from "@lodestar/api";
 import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
 import {IndicesService} from "../../../src/services/indices.js";
 import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
+import {mockApiResponse} from "../../utils/apiStub.js";
 import {testLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 
@@ -193,26 +194,22 @@ class MapDef<K, V> extends Map<K, V> {
 
 type LivenessMap = Map<Epoch, Map<ValidatorIndex, boolean>>;
 
-function getMockBeaconApi(livenessMap: LivenessMap): Api {
+function getMockBeaconApi(livenessMap: LivenessMap): ApiClient {
   return {
     validator: {
-      async getLiveness(epoch, validatorIndices) {
-        return {
-          response: {
-            data: validatorIndices.map((index) => {
-              const livenessEpoch = livenessMap.get(epoch);
-              if (!livenessEpoch) throw Error(`Unknown epoch ${epoch}`);
-              const isLive = livenessEpoch.get(index);
-              if (isLive === undefined) throw Error(`No liveness for epoch ${epoch} index ${index}`);
-              return {index, isLive};
-            }),
-          },
-          ok: true,
-          status: HttpStatusCode.OK,
-        };
+      async getLiveness({epoch, indices}) {
+        return mockApiResponse({
+          data: indices.map((index) => {
+            const livenessEpoch = livenessMap.get(epoch);
+            if (!livenessEpoch) throw Error(`Unknown epoch ${epoch}`);
+            const isLive = livenessEpoch.get(index);
+            if (isLive === undefined) throw Error(`No liveness for epoch ${epoch} index ${index}`);
+            return {index, isLive};
+          }),
+        });
       },
-    } as Partial<Api["validator"]>,
-  } as Partial<Api> as Api;
+    } as Partial<ApiClient["validator"]>,
+  } as Partial<ApiClient> as ApiClient;
 }
 
 class ClockMockMsToSlot extends ClockMock {

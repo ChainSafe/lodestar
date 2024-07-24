@@ -1,26 +1,19 @@
+import type {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
-import {ServerApi} from "../../interfaces.js";
-import {
-  ServerInstance,
-  ServerRoutes,
-  getGenericJsonServer,
-  registerRoute,
-  type RouteConfig,
-} from "../../utils/server/index.js";
-import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes.js";
+import {ApplicationMethods, FastifyRoute, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
+import {Endpoints, getDefinitions} from "../routes.js";
+import {AnyEndpoint} from "../../utils/codecs.js";
 
-// Re-export for convenience
-export type {RouteConfig};
+export type BuilderApiMethods = ApplicationMethods<Endpoints>;
 
-export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
-  // All routes return JSON, use a server auto-generator
-  return getGenericJsonServer<ServerApi<Api>, ReqTypes>({routesData, getReturnTypes, getReqSerializers}, config, api);
+export function getRoutes(config: ChainForkConfig, methods: BuilderApiMethods): FastifyRoutes<Endpoints> {
+  return createFastifyRoutes(getDefinitions(config), methods);
 }
 
-export function registerRoutes(server: ServerInstance, config: ChainForkConfig, api: ServerApi<Api>): void {
-  const routes = getRoutes(config, api);
+export function registerRoutes(server: FastifyInstance, config: ChainForkConfig, methods: BuilderApiMethods): void {
+  const routes = getRoutes(config, methods);
 
   for (const route of Object.values(routes)) {
-    registerRoute(server, route);
+    server.route(route as FastifyRoute<AnyEndpoint>);
   }
 }

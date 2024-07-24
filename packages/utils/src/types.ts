@@ -6,8 +6,8 @@ export type RecursivePartial<T> = {
   [P in keyof T]?: T[P] extends (infer U)[]
     ? RecursivePartial<U>[]
     : T[P] extends Readonly<infer U>[]
-    ? Readonly<RecursivePartial<U>>[]
-    : RecursivePartial<T[P]>;
+      ? Readonly<RecursivePartial<U>>[]
+      : RecursivePartial<T[P]>;
 };
 
 /** Type safe wrapper for Number constructor that takes 'any' */
@@ -24,4 +24,11 @@ export type NonEmptyArray<T> = [T, ...T[]];
  */
 export type ArrayToTuple<Tuple extends NonEmptyArray<unknown>> = {
   [Index in keyof Tuple]: Tuple[Index];
+};
+
+/**
+ * Convert optional attributes of an object to required
+ */
+export type RequiredSelective<T, Keys extends keyof T> = T & {
+  [K in Keys]-?: T[K];
 };

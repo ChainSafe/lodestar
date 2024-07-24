@@ -12,6 +12,7 @@ import {
   ProtoArray,
   ExecutionStatus,
   EpochDifference,
+  DataAvailabilityStatus,
 } from "../../../src/index.js";
 
 const rootStateBytePrefix = 0xaa;
@@ -41,6 +42,7 @@ describe("Forkchoice", function () {
 
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
@@ -101,6 +103,9 @@ describe("Forkchoice", function () {
 
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
+
+      timeliness: false,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
   };
 
@@ -170,14 +175,14 @@ describe("Forkchoice", function () {
   // TODO: more unit tests for other apis
 });
 
-function getStateRoot(slot: number): RootHex {
+export function getStateRoot(slot: number): RootHex {
   const root = Buffer.alloc(32, 0x00);
   root[0] = rootStateBytePrefix;
   root[31] = slot;
   return toHex(root);
 }
 
-function getBlockRoot(slot: number): RootHex {
+export function getBlockRoot(slot: number): RootHex {
   const root = Buffer.alloc(32, 0x00);
   root[0] = rootBlockBytePrefix;
   root[31] = slot;

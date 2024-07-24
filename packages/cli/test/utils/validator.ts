@@ -1,9 +1,8 @@
 import childProcess from "node:child_process";
 import {afterEach} from "vitest";
 import {retry} from "@lodestar/utils";
-import {Api, getClient} from "@lodestar/api/keymanager";
+import {ApiClient, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
-import {ApiError} from "@lodestar/api";
 import {spawnCliCommand, gracefullyStopChildProcess} from "@lodestar/test-utils";
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
 import {expectDeepEqualsUnordered, findApiToken} from "./runUtils.js";
@@ -20,7 +19,7 @@ export async function startValidatorWithKeyManager(
 ): Promise<{
   validator: childProcess.ChildProcessWithoutNullStreams;
   stopValidator: () => Promise<void>;
-  keymanagerClient: Api;
+  keymanagerClient: ApiClient;
 }> {
   const keymanagerPort = 38011;
   const beaconPort = 39011;
@@ -55,7 +54,7 @@ export async function startValidatorWithKeyManager(
   const apiToken = await retry(async () => findApiToken(dataDir), {retryDelay: 500, retries: 10});
   const controller = new AbortController();
   const keymanagerClient = getClient(
-    {baseUrl: keymanagerUrl, bearerToken: apiToken, getAbortSignal: () => controller.signal},
+    {baseUrl: keymanagerUrl, globalInit: {bearerToken: apiToken, signal: controller.signal}},
     {config}
   );
 
@@ -86,12 +85,15 @@ export async function startValidatorWithKeyManager(
 /**
  * Query `keymanagerClient.listKeys()` API endpoint and assert that expectedPubkeys are in the response
  */
-export async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
-  const keys = await keymanagerClient.listKeys();
-  ApiError.assert(keys);
+export async function expectKeys(
+  keymanagerClient: ApiClient,
+  expectedPubkeys: string[],
+  message: string
+): Promise<void> {
+  const keys = (await keymanagerClient.listKeys()).value();
   // The order of keys isn't always deterministic so we can't use deep equal
   expectDeepEqualsUnordered(
-    keys.response.data,
+    keys,
     expectedPubkeys.map((pubkey) => ({validatingPubkey: pubkey, derivationPath: "", readonly: false})),
     message
   );

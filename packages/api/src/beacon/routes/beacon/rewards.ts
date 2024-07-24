@@ -1,97 +1,220 @@
-import {ContainerType} from "@chainsafe/ssz";
-import {ssz, ValidatorIndex} from "@lodestar/types";
+/* eslint-disable @typescript-eslint/naming-convention */
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {Epoch, ssz} from "@lodestar/types";
 
-import {
-  RoutesData,
-  ReturnTypes,
-  Schema,
-  ReqSerializers,
-  ContainerDataExecutionOptimistic,
-} from "../../../utils/index.js";
-import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../../interfaces.js";
-import {BlockId} from "./block.js";
+import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
+import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
+import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
+import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
+import {BlockArgs} from "./block.js";
+import {ValidatorId} from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-/**
- * True if the response references an unverified execution payload. Optimistic information may be invalidated at
- * a later time. If the field is not present, assume the False value.
- */
-export type ExecutionOptimistic = boolean;
+const BlockRewardsType = new ContainerType(
+  {
+    /** Proposer of the block, the proposer index who receives these rewards */
+    proposerIndex: ssz.ValidatorIndex,
+    /** Total block reward, equal to attestations + sync_aggregate + proposer_slashings + attester_slashings */
+    total: ssz.UintNum64,
+    /** Block reward component due to included attestations */
+    attestations: ssz.UintNum64,
+    /** Block reward component due to included sync_aggregate */
+    syncAggregate: ssz.UintNum64,
+    /** Block reward component due to included proposer_slashings */
+    proposerSlashings: ssz.UintNum64,
+    /** Block reward component due to included attester_slashings */
+    attesterSlashings: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+
+const AttestationsRewardType = new ContainerType(
+  {
+    /** Reward for head vote. Could be negative to indicate penalty */
+    head: ssz.UintNum64,
+    /** Reward for target vote. Could be negative to indicate penalty */
+    target: ssz.UintNum64,
+    /** Reward for source vote. Could be negative to indicate penalty */
+    source: ssz.UintNum64,
+    /** Inclusion delay reward (phase0 only) */
+    inclusionDelay: ssz.UintNum64,
+    /** Inactivity penalty. Should be a negative number to indicate penalty */
+    inactivity: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+
+const IdealAttestationsRewardsType = new ContainerType(
+  {
+    ...AttestationsRewardType.fields,
+    effectiveBalance: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+
+const TotalAttestationsRewardsType = new ContainerType(
+  {
+    ...AttestationsRewardType.fields,
+    validatorIndex: ssz.ValidatorIndex,
+  },
+  {jsonCase: "eth2"}
+);
+
+const AttestationsRewardsType = new ContainerType(
+  {
+    idealRewards: ArrayOf(IdealAttestationsRewardsType),
+    totalRewards: ArrayOf(TotalAttestationsRewardsType),
+  },
+  {jsonCase: "eth2"}
+);
+
+const SyncCommitteeRewardsType = ArrayOf(
+  new ContainerType(
+    {
+      validatorIndex: ssz.ValidatorIndex,
+      reward: ssz.UintNum64,
+    },
+    {jsonCase: "eth2"}
+  )
+);
 
 /**
  * Rewards info for a single block. Every reward value is in Gwei.
  */
-export type BlockRewards = {
-  /** Proposer of the block, the proposer index who receives these rewards */
-  proposerIndex: ValidatorIndex;
-  /** Total block reward, equal to attestations + sync_aggregate + proposer_slashings + attester_slashings */
-  total: number;
-  /** Block reward component due to included attestations */
-  attestations: number;
-  /** Block reward component due to included sync_aggregate */
-  syncAggregate: number;
-  /** Block reward component due to included proposer_slashings */
-  proposerSlashings: number;
-  /** Block reward component due to included attester_slashings */
-  attesterSlashings: number;
-};
+export type BlockRewards = ValueOf<typeof BlockRewardsType>;
 
-export type Api = {
+/**
+ * Rewards for a single set of (ideal or actual depending on usage) attestations. Reward value is in Gwei
+ */
+export type AttestationsReward = ValueOf<typeof AttestationsRewardType>;
+
+/**
+ * Rewards info for ideal attestations ie. Maximum rewards could be earned by making timely head, target and source vote.
+ * `effectiveBalance` is in Gwei
+ */
+export type IdealAttestationsReward = ValueOf<typeof IdealAttestationsRewardsType>;
+
+/**
+ * Rewards info for actual attestations
+ */
+export type TotalAttestationsReward = ValueOf<typeof TotalAttestationsRewardsType>;
+
+export type AttestationsRewards = ValueOf<typeof AttestationsRewardsType>;
+
+/**
+ * Rewards info for sync committee participation. Every reward value is in Gwei.
+ * Note: In the case that block proposer is present in `SyncCommitteeRewards`, the reward value only reflects rewards for
+ * participating in sync committee. Please refer to `BlockRewards.syncAggregate` for rewards of proposer including sync committee
+ * outputs into their block
+ */
+export type SyncCommitteeRewards = ValueOf<typeof SyncCommitteeRewardsType>;
+
+export type Endpoints = {
   /**
    * Get block rewards
    * Returns the info of rewards received by the block proposer
-   *
-   * @param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockRewards(
-    blockId: BlockId
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: BlockRewards; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
+  getBlockRewards: Endpoint<
+    "GET",
+    BlockArgs,
+    {params: {block_id: string}},
+    BlockRewards,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
+   * Get attestations rewards
+   * Negative values indicate penalties. `inactivity` can only be either 0 or negative number since it is penalty only
+   */
+  getAttestationsRewards: Endpoint<
+    "POST",
+    {
+      /** The epoch to get rewards info from */
+      epoch: Epoch;
+      /** List of validator indices or pubkeys to filter in */
+      validatorIds?: ValidatorId[];
+    },
+    {params: {epoch: number}; body: string[]},
+    AttestationsRewards,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
+   * Get sync committee rewards
+   * Returns participant reward value for each sync committee member at the given block.
+   */
+  getSyncCommitteeRewards: Endpoint<
+    "POST",
+    BlockArgs & {
+      /** List of validator indices or pubkeys to filter in */
+      validatorIds?: ValidatorId[];
+    },
+    {params: {block_id: string}; body: string[]},
+    SyncCommitteeRewards,
+    ExecutionOptimisticAndFinalizedMeta
   >;
 };
 
-/**
- * Define javascript values for each route
- */
-export const routesData: RoutesData<Api> = {
-  getBlockRewards: {url: "/eth/v1/beacon/rewards/blocks/{block_id}", method: "GET"},
-};
-
-export type ReqTypes = {
-  /* eslint-disable @typescript-eslint/naming-convention */
-  getBlockRewards: {params: {block_id: string}};
-};
-
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getBlockRewards: {
-      writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
-      parseReq: ({params}) => [params.block_id],
-      schema: {params: {block_id: Schema.StringRequired}},
+      url: "/eth/v1/beacon/rewards/blocks/{block_id}",
+      method: "GET",
+      req: {
+        writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
+        parseReq: ({params}) => ({blockId: params.block_id}),
+        schema: {params: {block_id: Schema.StringRequired}},
+      },
+      resp: {
+        data: BlockRewardsType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
     },
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  const BlockRewardsResponse = new ContainerType(
-    {
-      proposerIndex: ssz.ValidatorIndex,
-      total: ssz.UintNum64,
-      attestations: ssz.UintNum64,
-      syncAggregate: ssz.UintNum64,
-      proposerSlashings: ssz.UintNum64,
-      attesterSlashings: ssz.UintNum64,
+    getAttestationsRewards: {
+      url: "/eth/v1/beacon/rewards/attestations/{epoch}",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({epoch, validatorIds}) => ({
+          params: {epoch},
+          body: toValidatorIdsStr(validatorIds) || [],
+        }),
+        parseReqJson: ({params, body}) => ({
+          epoch: params.epoch,
+          validatorIds: fromValidatorIdsStr(body),
+        }),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.UintOrStringArray,
+        },
+      }),
+      resp: {
+        data: AttestationsRewardsType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
     },
-    {jsonCase: "eth2"}
-  );
-
-  return {
-    getBlockRewards: ContainerDataExecutionOptimistic(BlockRewardsResponse),
+    getSyncCommitteeRewards: {
+      url: "/eth/v1/beacon/rewards/sync_committee/{block_id}",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({blockId, validatorIds}) => ({
+          params: {block_id: blockId.toString()},
+          body: toValidatorIdsStr(validatorIds) || [],
+        }),
+        parseReqJson: ({params, body}) => ({
+          blockId: params.block_id,
+          validatorIds: fromValidatorIdsStr(body),
+        }),
+        schema: {
+          params: {block_id: Schema.StringRequired},
+          body: Schema.UintOrStringArray,
+        },
+      }),
+      resp: {
+        data: SyncCommitteeRewardsType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
   };
 }

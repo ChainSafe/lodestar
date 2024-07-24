@@ -30,7 +30,7 @@ runs:
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
 
     - name: Install & build
       if: steps.cache-build-restore.outputs.cache-hit != 'true'
@@ -46,6 +46,14 @@ runs:
       shell: bash
       run: yarn check-build
 
+    - name: Build bundle
+      shell: bash
+      run: yarn build:bundle
+
+    - name: Check bundle
+      shell: bash
+      run: yarn check-bundle
+
     - name: Cache build artifacts
       uses: actions/cache@master
       with:
@@ -55,4 +63,4 @@ runs:
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}

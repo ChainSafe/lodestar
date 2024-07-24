@@ -1,14 +1,15 @@
-import {Api, getClient} from "@lodestar/api/beacon";
+import {ApiClient, getClient} from "@lodestar/api/beacon";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {isForkWithdrawals} from "@lodestar/params";
-import {allForks, capella} from "@lodestar/types";
+import {ForkName, isForkWithdrawals} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
+import {ExecutionPayload, LightClientHeader} from "@lodestar/types";
 import {LCTransport, RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
 import {
+  fetchBlock,
   getExecutionPayloads,
   getGenesisData,
   getSyncCheckpoint,
@@ -19,7 +20,7 @@ import {PayloadStore} from "./payload_store.js";
 
 type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
   transport: LightClientRestTransport;
-  api: Api;
+  api: ApiClient;
   config: ChainForkConfig;
 };
 
@@ -31,7 +32,7 @@ export class ProofProvider {
 
   readonly config: ChainForkConfig;
   readonly network: NetworkName;
-  readonly api: Api;
+  readonly api: ApiClient;
 
   lightClient?: Lightclient;
 
@@ -96,18 +97,10 @@ export class ProofProvider {
     });
 
     assertLightClient(this.lightClient);
+
+    this.logger.info("Initiating lightclient");
     // Wait for the lightclient to start
-    await new Promise<void>((resolve) => {
-      const lightClientStarted = (status: RunStatusCode): void => {
-        if (status === RunStatusCode.started) {
-          this.lightClient?.emitter.off(LightclientEvent.statusChange, lightClientStarted);
-          resolve();
-        }
-      };
-      this.lightClient?.emitter.on(LightclientEvent.statusChange, lightClientStarted);
-      this.logger.info("Initiating lightclient");
-      this.lightClient?.start();
-    });
+    await this.lightClient?.start();
     this.logger.info("Lightclient synced", this.getStatus());
     this.registerEvents();
 
@@ -120,20 +113,20 @@ export class ProofProvider {
       endSlot: end,
       logger: this.logger,
     });
-    for (const payload of Object.values(payloads)) {
-      this.store.set(payload, false);
+    for (const [slot, payload] of payloads.entries()) {
+      this.store.set(payload, slot, false);
     }
 
     // Load the finalized payload from the CL
     const finalizedSlot = this.lightClient.getFinalized().beacon.slot;
     this.logger.debug("Getting finalized slot from lightclient", {finalizedSlot});
-    const finalizedPayload = await getExecutionPayloads({
-      api: this.opts.api,
-      startSlot: finalizedSlot,
-      endSlot: finalizedSlot,
-      logger: this.logger,
-    });
-    this.store.set(finalizedPayload[finalizedSlot], true);
+    const block = await fetchBlock(this.opts.api, finalizedSlot);
+    if (block) {
+      this.store.set(block.message.body.executionPayload, finalizedSlot, true);
+    } else {
+      this.logger.error("Failed to fetch finalized block", finalizedSlot);
+    }
+
     this.logger.info("Proof provider ready");
   }
 
@@ -153,7 +146,7 @@ export class ProofProvider {
     };
   }
 
-  async getExecutionPayload(blockNumber: number | string | "finalized" | "latest"): Promise<allForks.ExecutionPayload> {
+  async getExecutionPayload(blockNumber: number | string | "finalized" | "latest"): Promise<ExecutionPayload> {
     assertLightClient(this.lightClient);
 
     if (typeof blockNumber === "string" && blockNumber === "finalized") {
@@ -177,7 +170,7 @@ export class ProofProvider {
     throw new Error(`Invalid blockNumber "${blockNumber}"`);
   }
 
-  async processLCHeader(lcHeader: allForks.LightClientHeader, finalized = false): Promise<void> {
+  async processLCHeader(lcHeader: LightClientHeader, finalized = false): Promise<void> {
     const fork = this.opts.config.getForkName(lcHeader.beacon.slot);
 
     if (!isForkWithdrawals(fork)) {
@@ -192,7 +185,7 @@ export class ProofProvider {
       throw new Error("Execution payload is required for execution fork");
     }
 
-    await this.store.processLCHeader(lcHeader as capella.LightClientHeader, finalized);
+    await this.store.processLCHeader(lcHeader as LightClientHeader<ForkName.capella>, finalized);
   }
 
   private registerEvents(): void {

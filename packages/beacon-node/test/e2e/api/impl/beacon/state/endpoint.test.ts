@@ -2,7 +2,7 @@ import {describe, beforeAll, afterAll, it, expect} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {Api, ApiError, getClient} from "@lodestar/api";
+import {ApiClient, getClient} from "@lodestar/api";
 import {computeCommitteeCount} from "@lodestar/state-transition";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
@@ -17,7 +17,7 @@ describe("beacon state api", function () {
   const validatorsPerCommittee = validatorCount / committeeCount;
 
   let bn: BeaconNode;
-  let client: Api["beacon"];
+  let client: ApiClient["beacon"];
 
   beforeAll(async () => {
     bn = await getDevBeaconNode({
@@ -45,11 +45,13 @@ describe("beacon state api", function () {
 
   describe("getEpochCommittees", () => {
     it("should return all committees for the given state", async () => {
-      const res = await client.getEpochCommittees("head");
-      ApiError.assert(res);
-      const epochCommittees = res.response.data;
+      const res = await client.getEpochCommittees({stateId: "head"});
+      const epochCommittees = res.value();
+      const {executionOptimistic, finalized} = res.meta();
 
       expect(epochCommittees).toHaveLength(committeeCount);
+      expect(executionOptimistic).toBe(false);
+      expect(finalized).toBe(false);
 
       const slotCount: Record<string, number> = {};
       const indexCount: Record<string, number> = {};
@@ -75,9 +77,7 @@ describe("beacon state api", function () {
 
     it("should restrict returned committees to those matching the supplied index", async () => {
       const index = committeesPerSlot / 2;
-      const res = await client.getEpochCommittees("head", {index});
-      ApiError.assert(res);
-      const epochCommittees = res.response.data;
+      const epochCommittees = (await client.getEpochCommittees({stateId: "head", index})).value();
       expect(epochCommittees).toHaveLength(SLOTS_PER_EPOCH);
       for (const committee of epochCommittees) {
         expect(committee.index).toBeWithMessage(index, "Committee index does not match supplied index");
@@ -86,9 +86,7 @@ describe("beacon state api", function () {
 
     it("should restrict returned committees to those matching the supplied slot", async () => {
       const slot = SLOTS_PER_EPOCH / 2;
-      const res = await client.getEpochCommittees("head", {slot});
-      ApiError.assert(res);
-      const epochCommittees = res.response.data;
+      const epochCommittees = (await client.getEpochCommittees({stateId: "head", slot})).value();
       expect(epochCommittees).toHaveLength(committeesPerSlot);
       for (const committee of epochCommittees) {
         expect(committee.slot).toBeWithMessage(slot, "Committee slot does not match supplied slot");

@@ -14,12 +14,12 @@ describe("shuffle list", () => {
     // Don't run 4_000_000 since it's very slow and not testnet has gotten there yet
     // 4e6,
   ]) {
-    itBench<number[], number[]>({
+    itBench<Uint32Array, Uint32Array>({
       id: `shuffle list - ${listSize} els`,
       before: () => {
         const input: number[] = [];
         for (let i = 0; i < listSize; i++) input[i] = i;
-        return input;
+        return new Uint32Array(input);
       },
       beforeEach: (input) => input,
       fn: (input) => unshuffleList(input, seed),

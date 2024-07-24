@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {ForkName, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -26,7 +26,7 @@ type AttestationWithScore = {attestation: phase0.Attestation; score: number};
  * This function returns not seen participation for a given epoch and committee.
  * Return null if all validators are seen or no info to check.
  */
-type GetNotSeenValidatorsFn = (epoch: Epoch, committee: number[]) => Set<number> | null;
+type GetNotSeenValidatorsFn = (epoch: Epoch, committee: Uint32Array) => Set<number> | null;
 
 type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 
@@ -79,7 +79,7 @@ export class AggregatedAttestationPool {
     attestation: phase0.Attestation,
     dataRootHex: RootHex,
     attestingIndicesCount: number,
-    committee: ValidatorIndex[]
+    committee: Uint32Array
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -117,7 +117,11 @@ export class AggregatedAttestationPool {
   /**
    * Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items
    */
-  getAttestationsForBlock(forkChoice: IForkChoice, state: CachedBeaconStateAllForks): phase0.Attestation[] {
+  getAttestationsForBlock(
+    fork: ForkName,
+    forkChoice: IForkChoice,
+    state: CachedBeaconStateAllForks
+  ): phase0.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -144,7 +148,13 @@ export class AggregatedAttestationPool {
         continue; // Invalid attestations
       }
       // validateAttestation condition: Attestation slot not within inclusion window
-      if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot && stateSlot <= slot + SLOTS_PER_EPOCH)) {
+      if (
+        !(
+          slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot &&
+          // Post deneb, attestations are valid for current and previous epoch
+          (ForkSeq[fork] >= ForkSeq.deneb || stateSlot <= slot + SLOTS_PER_EPOCH)
+        )
+      ) {
         continue; // Invalid attestations
       }
 
@@ -271,7 +281,7 @@ export class MatchingDataAttestationGroup {
 
   constructor(
     // TODO: no need committee here
-    readonly committee: ValidatorIndex[],
+    readonly committee: Uint32Array,
     readonly data: phase0.AttestationData
   ) {}
 
@@ -398,7 +408,7 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
       state
     );
 
-    return (epoch: Epoch, committee: number[]) => {
+    return (epoch: Epoch, committee: Uint32Array) => {
       const participants =
         epoch === stateEpoch ? currentEpochParticipants : epoch === stateEpoch - 1 ? previousEpochParticipants : null;
       if (participants === null) {
@@ -426,7 +436,7 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
     const currentParticipation = altairState.currentEpochParticipation.getAll();
     const stateEpoch = computeEpochAtSlot(state.slot);
 
-    return (epoch: Epoch, committee: number[]) => {
+    return (epoch: Epoch, committee: Uint32Array) => {
       const participationStatus =
         epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
 

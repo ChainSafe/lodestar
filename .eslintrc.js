@@ -16,6 +16,9 @@ module.exports = {
     project: "./tsconfig.json",
     sourceType: "module",
   },
+  ignorePatterns: [
+    "webEsmBundle.browser.test.ts"
+  ],
   plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "prettier"],
   extends: [
     "eslint:recommended",
@@ -134,6 +137,13 @@ module.exports = {
     "no-console": "error",
     "no-loss-of-precision": "error",
     "no-prototype-builtins": 0,
+    "no-restricted-globals": [
+      "error",
+      {
+        name: "fetch",
+        message: "Please use 'fetch' from '@lodestar/api' instead.",
+      },
+    ],
     "no-restricted-imports": [
       "error",
       {
@@ -187,7 +197,14 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["**/*.config.js", "**/*.config.mjs", "**/*.config.cjs", "**/*.config.ts"],
+      files: [
+        "**/*.config.js",
+        "**/*.config.mjs",
+        "**/*.config.cjs",
+        "**/*.config.ts",
+        "scripts/vitest/**/*.ts",
+        "scripts/vite/**/*.ts",
+      ],
       rules: {
         "@typescript-eslint/naming-convention": "off",
         // Allow require in CJS modules

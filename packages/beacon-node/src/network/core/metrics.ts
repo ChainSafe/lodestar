@@ -2,7 +2,6 @@ import {RegistryMetricCreator} from "../../metrics/utils/registryMetricCreator.j
 import {SubnetType} from "../metadata.js";
 import {DiscoveredPeerStatus} from "../peers/discover.js";
 import {SubnetSource} from "../subnets/attnetsService.js";
-import {DLLSubnetSource} from "../subnets/dllAttnetsService.js";
 
 export type NetworkCoreMetrics = ReturnType<typeof createNetworkCoreMetrics>;
 
@@ -113,6 +112,10 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         buckets: [0.001, 0.01, 0.1, 1],
       }),
     },
+    leakedConnectionsCount: register.gauge({
+      name: "lodestar_peer_manager_leaked_connections_count",
+      help: "Total libp2p leaked connections detected by lodestar",
+    }),
 
     discovery: {
       peersToConnect: register.gauge({
@@ -214,12 +217,12 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_attnets_service_long_lived_subscriptions_total",
         help: "Count of long lived subscriptions",
       }),
-      subscribeSubnets: register.gauge<{subnet: number; src: SubnetSource | DLLSubnetSource}>({
+      subscribeSubnets: register.gauge<{subnet: number; src: SubnetSource}>({
         name: "lodestar_attnets_service_subscribe_subnets_total",
         help: "Count of subscribe_subnets calls",
         labelNames: ["subnet", "src"],
       }),
-      unsubscribeSubnets: register.gauge<{subnet: number; src: SubnetSource | DLLSubnetSource}>({
+      unsubscribeSubnets: register.gauge<{subnet: number; src: SubnetSource}>({
         name: "lodestar_attnets_service_unsubscribe_subnets_total",
         help: "Count of unsubscribe_subnets calls",
         labelNames: ["subnet", "src"],

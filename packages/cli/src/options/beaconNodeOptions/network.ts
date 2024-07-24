@@ -18,7 +18,6 @@ export type NetworkArgs = {
   discoveryPort6?: number;
   bootnodes?: string[];
   targetPeers?: number;
-  deterministicLongLivedAttnets?: boolean;
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty?: number;
   disablePeerScoring?: boolean;
@@ -33,6 +32,7 @@ export type NetworkArgs = {
   "network.gossipsubDLow"?: number;
   "network.gossipsubDHigh"?: number;
   "network.gossipsubAwaitHandler"?: boolean;
+  "network.disableFloodPublish"?: boolean;
   "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
@@ -137,7 +137,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
-    deterministicLongLivedAttnets: args["deterministicLongLivedAttnets"],
     subscribeAllSubnets: args["subscribeAllSubnets"],
     slotsToSubscribeBeforeAggregatorDuty:
       args["slotsToSubscribeBeforeAggregatorDuty"] ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
@@ -151,6 +150,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     gossipsubDLow: args["network.gossipsubDLow"],
     gossipsubDHigh: args["network.gossipsubDHigh"],
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
+    disableFloodPublish: args["network.disableFloodPublish"],
     mdns: args["mdns"],
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
@@ -226,13 +226,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "number",
     description: "The target connected peers. Above this number peers will be disconnected",
     defaultDescription: String(defaultOptions.network.targetPeers),
-    group: "network",
-  },
-
-  deterministicLongLivedAttnets: {
-    type: "boolean",
-    description: "Use deterministic subnet selection for long-lived subnet subscriptions",
-    defaultDescription: String(defaultOptions.network.deterministicLongLivedAttnets === true),
     group: "network",
   },
 
@@ -365,6 +358,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.gossipsubAwaitHandler": {
     hidden: true,
+    type: "boolean",
+    group: "network",
+  },
+
+  "network.disableFloodPublish": {
+    hidden: true,
+    description: "Disable gossipsub flood publish",
     type: "boolean",
     group: "network",
   },

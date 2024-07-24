@@ -4,6 +4,7 @@ import xxhashFactory from "xxhash-wasm";
 import {Message} from "@libp2p/interface";
 import {digest} from "@chainsafe/as-sha256";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
+import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
 import {intToBytes, toHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
@@ -19,7 +20,7 @@ const h64Seed = BigInt(Math.floor(Math.random() * 1e9));
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
-export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
+export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
     return xxhash.h64Raw(rpcMsg.data, h64Seed).toString(16);
   } else {
@@ -59,7 +60,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
   }
 
-  return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);
+  return digest(Buffer.concat(vec)).subarray(0, 20);
 }
 
 /** Snappyjs is faster at compressing small buffers */
@@ -67,7 +68,7 @@ const SNAPPYJS_COMPRESS_THRESHOLD = 100;
 /** Snappyjs is faster at uncompressing small buffers */
 const SNAPPYJS_UNCOMPRESS_THRESHOLD = 200;
 
-export class DataTransformSnappy {
+export class DataTransformSnappy implements DataTransform {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
     private readonly maxSizePerMessage: number
@@ -107,9 +108,9 @@ export class DataTransformSnappy {
    * Takes the data to be published (a topic and associated data) transforms the data. The
    * transformed data will then be used to create a `RawGossipsubMessage` to be sent to peers.
    */
-  outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
+  outboundTransform(_topicStr: string, data: Uint8Array): Uint8Array {
     if (data.length > this.maxSizePerMessage) {
-      throw Error(`ssz_snappy encoded data length ${length} > ${this.maxSizePerMessage}`);
+      throw Error(`ssz_snappy encoded data length ${data.length} > ${this.maxSizePerMessage}`);
     }
     // No need to parse topic, everything is snappy compressed
     if (data.length < SNAPPYJS_COMPRESS_THRESHOLD) {

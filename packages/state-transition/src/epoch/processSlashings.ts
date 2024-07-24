@@ -41,8 +41,8 @@ export function processSlashings(
     fork === ForkSeq.phase0
       ? PROPORTIONAL_SLASHING_MULTIPLIER
       : fork === ForkSeq.altair
-      ? PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR
-      : PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX;
+        ? PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR
+        : PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX;
 
   const {effectiveBalanceIncrements} = state.epochCtx;
   const adjustedTotalSlashingBalanceByIncrement = Math.min(

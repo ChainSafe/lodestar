@@ -1,4 +1,4 @@
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -43,9 +43,15 @@ describe("api/validator - produceBlockV2", function () {
     // Set the node's state to way back from current slot
     const slot = 100000;
     const randaoReveal = fullBlock.body.randaoReveal;
+    const parentBlockRoot = fullBlock.parentRoot;
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
+    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
+    modules.chain.recomputeForkChoiceHead.mockReturnValue(
+      generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
+    );
+    modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,
@@ -53,21 +59,23 @@ describe("api/validator - produceBlockV2", function () {
     });
 
     // check if expectedFeeRecipient is passed to produceBlock
-    await api.produceBlockV2(slot, randaoReveal, graffiti, {feeRecipient});
+    await api.produceBlockV2({slot, randaoReveal, graffiti, feeRecipient});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
+      parentBlockRoot,
       feeRecipient,
     });
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
     // pick it from beaconProposerCache
-    await api.produceBlockV2(slot, randaoReveal, graffiti);
+    await api.produceBlockV2({slot, randaoReveal, graffiti});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
+      parentBlockRoot,
       feeRecipient: undefined,
     });
   });
@@ -81,8 +89,9 @@ describe("api/validator - produceBlockV2", function () {
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
 
     const headSlot = 0;
-    modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
+    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
 
+    modules.chain.recomputeForkChoiceHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
     modules.chain["opPool"].getSlashingsAndExits.mockReturnValue([[], [], [], []]);
     modules.chain["aggregatedAttestationPool"].getAttestationsForBlock.mockReturnValue([]);
     modules.chain["eth1"].getEth1DataAndDeposits.mockResolvedValue({
@@ -108,7 +117,7 @@ describe("api/validator - produceBlockV2", function () {
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
-      proposerPubKey: Uint8Array.from(Buffer.alloc(32, 1)),
+      proposerPubKey: new Uint8Array(32).fill(1),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -118,7 +127,7 @@ describe("api/validator - produceBlockV2", function () {
       ZERO_HASH_HEX,
       {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
-        prevRandao: Uint8Array.from(Buffer.alloc(32, 0)),
+        prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: feeRecipient,
       }
     );
@@ -132,7 +141,7 @@ describe("api/validator - produceBlockV2", function () {
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
-      proposerPubKey: Uint8Array.from(Buffer.alloc(32, 1)),
+      proposerPubKey: new Uint8Array(32).fill(1),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -142,7 +151,7 @@ describe("api/validator - produceBlockV2", function () {
       ZERO_HASH_HEX,
       {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
-        prevRandao: Uint8Array.from(Buffer.alloc(32, 0)),
+        prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: "0x fee recipient address",
       }
     );

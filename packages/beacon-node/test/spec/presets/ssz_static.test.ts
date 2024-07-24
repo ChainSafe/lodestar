@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
-import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
+import {ssz, sszTypesFor} from "@lodestar/types";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
@@ -44,10 +44,7 @@ const sszStatic =
 
     /* eslint-disable @typescript-eslint/strict-boolean-expressions */
     const sszType =
-      // Since lightclient types are not updated/declared at all forks, this allForksLightClient
-      // will help us get the right type for lightclient objects
-      ((ssz.allForksLightClient[fork as ForkLightClient] || {}) as Types)[typeName] ||
-      (ssz[fork] as Types)[typeName] ||
+      (sszTypesFor(fork) as Types)[typeName] ||
       (ssz.capella as Types)[typeName] ||
       (ssz.bellatrix as Types)[typeName] ||
       (ssz.altair as Types)[typeName] ||

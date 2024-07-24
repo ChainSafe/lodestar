@@ -1,17 +1,18 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
-import {BlockSource} from "../../chain/blocks/types.js";
+import {BeaconState} from "@lodestar/types";
+import {BlockSource, BlobsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
+import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/interface.js";
+import {PendingBlockType} from "../../sync/index.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
@@ -27,7 +28,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
-  anchorState?: Pick<allForks.BeaconState, "genesisTime">
+  anchorState?: Pick<BeaconState, "genesisTime">
 ) {
   if (metadata) {
     register.static<LodestarMetadata>({
@@ -291,6 +292,11 @@ export function createLodestarMetrics(
 
     // Beacon state transition metrics
 
+    epochTransitionByCaller: register.gauge<{caller: RegenCaller}>({
+      name: "lodestar_epoch_transition_by_caller_total",
+      help: "Total count of epoch transition by caller",
+      labelNames: ["caller"],
+    }),
     epochTransitionTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",
@@ -587,6 +593,11 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block received via unknown block sync",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      resolveAvailabilitySource: register.gauge<{source: BlockInputAvailabilitySource}>({
+        name: "lodestar_sync_blockinput_availability_source",
+        help: "Total number of blocks whose data availability was resolved",
+        labelNames: ["source"],
+      }),
     },
 
     // Gossip sync committee
@@ -788,6 +799,11 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
+      }),
+      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
+        name: "lodestar_import_blobs_by_source_total",
+        help: "Total number of imported blobs by source",
+        labelNames: ["blobsSource"],
       }),
     },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
@@ -1184,9 +1200,9 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      statePersistDuration: register.histogram({
-        name: "lodestar_cp_state_cache_state_persist_seconds",
-        help: "Histogram of time to persist state to db",
+      stateSerializeDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_serialize_seconds",
+        help: "Histogram of time to serialize state to db",
         buckets: [0.1, 0.5, 1, 2, 3, 4],
       }),
       statePruneFromMemoryCount: register.gauge({
@@ -1198,13 +1214,13 @@ export function createLodestarMetrics(
         help: "Histogram of time to persist state to db since the clock slot",
         buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
-      stateReloadValidatorsSszDuration: register.histogram({
-        name: "lodestar_cp_state_cache_state_reload_validators_ssz_seconds",
+      stateReloadValidatorsSerializeDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_validators_serialize_seconds",
         help: "Histogram of time to serialize validators",
         buckets: [0.1, 0.2, 0.5, 1],
       }),
-      stateReloadValidatorsSszAllocCount: register.counter({
-        name: "lodestar_cp_state_cache_state_reload_validators_ssz_alloc_count",
+      stateReloadValidatorsSerializeAllocCount: register.counter({
+        name: "lodestar_cp_state_cache_state_reload_validators_serialize_alloc_count",
         help: "Total number time to allocate memory for validators serialization",
       }),
       stateReloadShufflingCacheMiss: register.counter({

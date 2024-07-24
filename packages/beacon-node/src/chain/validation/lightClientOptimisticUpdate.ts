@@ -1,17 +1,20 @@
-import {allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {LightClientOptimisticUpdate} from "@lodestar/types";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {assertLightClientServer} from "../../node/utils/lightclient.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
   config: ChainForkConfig,
   chain: IBeaconChain,
-  gossipedOptimisticUpdate: allForks.LightClientOptimisticUpdate
+  gossipedOptimisticUpdate: LightClientOptimisticUpdate
 ): void {
+  assertLightClientServer(chain.lightClientServer);
+
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
   const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.beacon.slot;
   const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
@@ -56,7 +59,7 @@ export function validateLightClientOptimisticUpdate(
 export function updateReceivedTooEarly(
   config: ChainForkConfig,
   genesisTime: number,
-  update: Pick<allForks.LightClientOptimisticUpdate, "signatureSlot">
+  update: Pick<LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
   const signatureSlot13TimestampMs = computeTimeAtSlot(config, update.signatureSlot + 1 / 3, genesisTime) * 1000;
   const earliestAllowedTimestampMs = signatureSlot13TimestampMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;

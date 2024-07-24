@@ -3,6 +3,8 @@ import {encodeErrorMessage} from "../utils/index.js";
 import {ContextBytesType, ContextBytesFactory, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
+const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
+
 /**
  * Yields byte chunks for a `<response>` with a zero response code `<result>`
  * ```bnf
@@ -24,7 +26,7 @@ export function responseEncodeSuccess(
       cbs.onChunk(chunkIndex++);
 
       // <result>
-      yield Buffer.from([RespStatus.SUCCESS]);
+      yield SUCCESS_BUFFER;
 
       // <context-bytes> - from altair
       const contextBytes = getContextBytes(protocol.contextBytes, chunk);

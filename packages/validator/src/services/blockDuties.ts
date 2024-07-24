@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
 import {ChainConfig} from "@lodestar/config";
 import {IClock, differenceHex, LoggerVc} from "../util/index.js";
@@ -33,7 +33,7 @@ export class BlockDutiesService {
   constructor(
     private readonly config: ChainConfig,
     private readonly logger: LoggerVc,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly metrics: Metrics | null,
@@ -183,11 +183,10 @@ export class BlockDutiesService {
       return;
     }
 
-    const res = await this.api.validator.getProposerDuties(epoch);
-    ApiError.assert(res, "Error on getProposerDuties");
-    const proposerDuties = res.response;
-    const {dependentRoot} = proposerDuties;
-    const relevantDuties = proposerDuties.data.filter((duty) => {
+    const res = await this.api.validator.getProposerDuties({epoch});
+    const proposerDuties = res.value();
+    const {dependentRoot} = res.meta();
+    const relevantDuties = proposerDuties.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });

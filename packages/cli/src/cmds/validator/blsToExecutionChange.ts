@@ -5,7 +5,7 @@ import {computeSigningRoot} from "@lodestar/state-transition";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {CliCommand} from "@lodestar/utils";
 
 import {GlobalArgs} from "../../options/index.js";
@@ -59,16 +59,12 @@ like to choose for BLS To Execution Change.",
     // submitting the signed message
     const {config: chainForkConfig} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const genesisRes = await client.beacon.getGenesis();
-    ApiError.assert(genesisRes, "Can not fetch genesis data");
-    const {genesisValidatorsRoot} = genesisRes.response.data;
+    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
     const config = createBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    const stateValidatorRes = await client.beacon.getStateValidators("head", {id: [publicKey]});
-    ApiError.assert(stateValidatorRes, "Can not fetch state validators");
-    const stateValidators = stateValidatorRes.response.data;
-    const stateValidator = stateValidators[0];
-    if (stateValidator === undefined) {
+    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validator = validators[0];
+    if (validator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
 
@@ -76,7 +72,7 @@ like to choose for BLS To Execution Change.",
     const fromBlsPubkey = blsPrivkey.toPublicKey().toBytes(PointFormat.compressed);
 
     const blsToExecutionChange: capella.BLSToExecutionChange = {
-      validatorIndex: stateValidator.index,
+      validatorIndex: validator.index,
       fromBlsPubkey,
       toExecutionAddress: fromHexString(args.toExecutionAddress),
     };
@@ -89,10 +85,12 @@ like to choose for BLS To Execution Change.",
       signature: blsPrivkey.sign(signingRoot).toBytes(),
     };
 
-    ApiError.assert(
-      await client.beacon.submitPoolBlsToExecutionChange([signedBLSToExecutionChange]),
-      "Can not submit bls to execution change"
-    );
+    (
+      await client.beacon.submitPoolBLSToExecutionChange({
+        blsToExecutionChanges: [signedBLSToExecutionChange],
+      })
+    ).assertOk();
+
     console.log(`Submitted bls to execution change for ${publicKey}`);
   },
 };

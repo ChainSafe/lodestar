@@ -1,10 +1,10 @@
 
 # --platform=$BUILDPLATFORM is used build javascript source with host arch
 # Otherwise TS builds on emulated archs and can be extremely slow (+1h)
-FROM --platform=${BUILDPLATFORM:-amd64} node:20-alpine as build_src
+FROM --platform=${BUILDPLATFORM:-amd64} node:22.4-alpine as build_src
 ARG COMMIT
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
 
 COPY . .
 
@@ -21,9 +21,9 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 
 # Copy built src + node_modules to build native packages for archs different than host.
 # Note: This step is redundant for the host arch
-FROM node:20-alpine as build_deps
+FROM node:22.4-alpine as build_deps
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
 
 COPY --from=build_src /usr/app .
 
@@ -35,7 +35,7 @@ RUN cd node_modules/classic-level && yarn rebuild
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
-FROM node:20-alpine
+FROM node:22.4-alpine
 WORKDIR /usr/app
 COPY --from=build_deps /usr/app .
 

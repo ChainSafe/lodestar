@@ -1,8 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
-import {ApiClientResponse} from "../../../interfaces.js";
-import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
-import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../../utils/index.js";
+import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
+import {EmptyArgs, EmptyRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../../utils/codecs.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as state from "./state.js";
@@ -10,24 +9,23 @@ import * as rewards from "./rewards.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-// NOTE: We choose to split the block, pool, and state namespaces so the files are not too big.
+// NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
 // However, for a consumer all these methods are within the same service "beacon"
-
-export * as block from "./block.js";
-export * as pool from "./pool.js";
-export * as state from "./state.js";
-export * as rewards from "./rewards.js";
+export {block, pool, state, rewards};
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
-export type {AttestationFilters} from "./pool.js";
-export type {BlockRewards} from "./rewards.js";
+export type {
+  BlockRewards,
+  AttestationsRewards,
+  IdealAttestationsReward,
+  TotalAttestationsReward,
+  SyncCommitteeRewards,
+} from "./rewards.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
   StateId,
   ValidatorId,
   ValidatorStatus,
-  ValidatorFilters,
-  CommitteesFilters,
   FinalityCheckpoints,
   ValidatorResponse,
   ValidatorBalance,
@@ -35,42 +33,34 @@ export type {
   EpochSyncCommitteeResponse,
 } from "./state.js";
 
-export type Api = block.Api &
-  pool.Api &
-  state.Api &
-  rewards.Api & {
-    getGenesis(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Genesis}}>>;
+export type Endpoints = block.Endpoints &
+  pool.Endpoints &
+  state.Endpoints &
+  rewards.Endpoints & {
+    getGenesis: Endpoint<
+      // ⏎
+      "GET",
+      EmptyArgs,
+      EmptyRequest,
+      phase0.Genesis,
+      EmptyMeta
+    >;
   };
 
-export const routesData: RoutesData<Api> = {
-  getGenesis: {url: "/eth/v1/beacon/genesis", method: "GET"},
-  ...block.routesData,
-  ...pool.routesData,
-  ...state.routesData,
-  ...rewards.routesData,
-};
-
-export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
-};
-
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getReqSerializers(config: ChainForkConfig) {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    getGenesis: reqEmpty,
-    ...block.getReqSerializers(config),
-    ...pool.getReqSerializers(),
-    ...state.getReqSerializers(),
-    ...rewards.getReqSerializers(),
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  return {
-    getGenesis: ContainerData(ssz.phase0.Genesis),
-    ...block.getReturnTypes(),
-    ...pool.getReturnTypes(),
-    ...state.getReturnTypes(),
-    ...rewards.getReturnTypes(),
+    getGenesis: {
+      url: "/eth/v1/beacon/genesis",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ssz.phase0.Genesis,
+        meta: EmptyMetaCodec,
+      },
+    },
+    ...block.getDefinitions(config),
+    ...pool.getDefinitions(config),
+    ...state.getDefinitions(config),
+    ...rewards.getDefinitions(config),
   };
 }

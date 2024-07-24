@@ -8,11 +8,11 @@ import {SubnetsServiceOpts} from "./subnets/interface.js";
 export interface NetworkOptions
   extends PeerManagerOpts,
     // remove all Functions
-    Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit">,
+    Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit" | "disableLightClientServer">,
     NetworkProcessorOpts,
     PeerRpcScoreOpts,
     SubnetsServiceOpts,
-    Eth2GossipsubOpts {
+    Omit<Eth2GossipsubOpts, "disableLightClientServer"> {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
@@ -22,23 +22,26 @@ export interface NetworkOptions
   private?: boolean;
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
+  disableLightClientServer?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
-  maxPeers: 55, // Allow some room above targetPeers for new inbound peers
-  targetPeers: 50,
+  maxPeers: 110, // Allow some room above targetPeers for new inbound peers
+  targetPeers: 100,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   /** disabled by default */
   discv5: null,
   rateLimitMultiplier: 1,
   useWorker: true,
+  // set after testing before 1.19.0, see https://github.com/ChainSafe/lodestar/issues/6596
+  disableFloodPublish: true,
   // default set via research in https://github.com/ChainSafe/lodestar/issues/2115
   maxYoungGenerationSizeMb: 152,
-  // subscribe to 2 subnets per node since v1.10
-  deterministicLongLivedAttnets: true,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // this should only be set to true if useWorker is true
   beaconAttestationBatchValidation: true,
+  // This will enable the light client server by default
+  disableLightClientServer: false,
 };

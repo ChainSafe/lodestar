@@ -1,11 +1,12 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 
 type OnEvent = (event: routes.events.BeaconEvent) => void;
 
 /**
  * In-memory simple event emitter for `BeaconEvent`
  */
-export class EventsServerApiMock implements ServerApi<routes.events.Api> {
+export class EventsServerApiMock implements ApplicationMethods<routes.events.Endpoints> {
   private readonly onEventsByTopic = new Map<routes.events.EventType, Set<OnEvent>>();
 
   hasSubscriptions(): boolean {
@@ -21,7 +22,15 @@ export class EventsServerApiMock implements ServerApi<routes.events.Api> {
     }
   }
 
-  async eventstream(topics: routes.events.EventType[], signal: AbortSignal, onEvent: OnEvent): Promise<void> {
+  async eventstream({
+    topics,
+    signal,
+    onEvent,
+  }: {
+    topics: routes.events.EventType[];
+    signal: AbortSignal;
+    onEvent: OnEvent;
+  }): Promise<void> {
     for (const topic of typeof topics === "string" ? [topics] : topics) {
       let onEvents = this.onEventsByTopic.get(topic);
       if (!onEvents) {

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {fromHexString} from "@chainsafe/ssz";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {Lightclient} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getNodeLogger} from "@lodestar/logger/node";
@@ -19,19 +19,18 @@ export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): P
   );
 
   const api = getClient({baseUrl: args.beaconApiUrl}, {config});
-  const res = await api.beacon.getGenesis();
-  ApiError.assert(res, "Can not fetch genesis data");
+  const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
 
   const client = await Lightclient.initializeFromCheckpointRoot({
     config,
     logger,
     genesisData: {
-      genesisTime: Number(res.response.data.genesisTime),
-      genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
+      genesisTime,
+      genesisValidatorsRoot,
     },
     checkpointRoot: fromHexString(args.checkpointRoot),
     transport: new LightClientRestTransport(api),
   });
 
-  client.start();
+  void client.start();
 }

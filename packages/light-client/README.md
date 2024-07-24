@@ -9,7 +9,7 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 ## Prerequisites
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
+[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
 ![Yarn](https://img.shields.io/badge/yarn-%232C8EBB.svg?style=for-the-badge&logo=yarn&logoColor=white)
@@ -26,7 +26,7 @@ Access to an beacon node that supports the light client specification is necessa
 - `/eth/v1/beacon/light_client/bootstrap/{block_root}`
 - `/eth/v0/beacon/light_client/committee_root`
 
-System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/lightclient-prover/prover) being one of them.
+System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/libraries/lightclient-prover/prover) being one of them.
 
 You can find more information about the light-client protocol in the [specification](https://github.com/ethereum/consensus-specs).
 
@@ -41,89 +41,83 @@ It is possible to start up the light-client as a standalone process.
 
 ```bash
 lodestar lightclient \
-    --network mainnet \
-    --beacon-api-url https://beacon-node.your-domain.com \
+    --network sepolia \
+    --beacon-api-url https://lodestar-sepolia.chainsafe.io \
     --checkpoint-root "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
 ```
 
 ## Light-Client Programmatic Example
 
-For this example we will assume there is a running beacon node at `https://beacon-node.your-domain.com`
+For this example we will assume there is a running beacon node at `https://lodestar-sepolia.chainsafe.io`
 
 ```ts
-import type {Api} from "@lodestar/api/beacon";
-import {ApiError} from "@lodestar/api";
-import type {Bytes32} from "@lodestar/types";
-import {createChainForkConfig} from "@lodestar/config";
-import {networksChainConfig} from "@lodestar/config/networks";
-import {
-    type GenesisData,
-    Lightclient,
-    LightclientEvent,
-    RunStatusCode
-} from "@lodestar/light-client";
-import {getClient} from "@lodestar/api";
+import {Lightclient, LightclientEvent} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {getLcLoggerConsole} from "@lodestar/light-client/utils";
+import {
+  getFinalizedSyncCheckpoint,
+  getGenesisData,
+  getConsoleLogger,
+  getApiFromUrl,
+  getChainForkConfigFromNetwork,
+} from "@lodestar/light-client/utils";
 
-async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
-    const res = await api.beacon.getGenesis();
-    ApiError.assert(res);
-
-    return {
-        genesisTime: Number(res.response.data.genesisTime),
-        genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
-    };
-}
-
-async function getSyncCheckpoint(api: Pick<Api, "beacon">): Promise<Bytes32> {
-    const res = await api.beacon.getStateFinalityCheckpoints("head");
-    ApiError.assert(res);
-    return res.response.data.finalized.root;
-}
-
-const config = createChainForkConfig(networksChainConfig.mainnet);
-
-const logger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
-
-const api = getClient({urls: ["https://beacon-node.your-domain.com"]}, {config});
-
-const transport = new LightClientRestTransport(api);
+const config = getChainForkConfigFromNetwork("sepolia");
+const logger = getConsoleLogger({logDebug: Boolean(process.env.DEBUG)});
+const api = getApiFromUrl({urls: ["https://lodestar-sepolia.chainsafe.io"]}, {config});
 
 const lightclient = await Lightclient.initializeFromCheckpointRoot({
-    config,
-    logger,
-    transport,
-    genesisData: await getGenesisData(api),
-    checkpointRoot: await getSyncCheckpoint(api),
-    opts: {
-        allowForcedUpdates: true,
-        updateHeadersOnForcedUpdate: true,
-    }
+  config,
+  logger,
+  transport: new LightClientRestTransport(api),
+  genesisData: await getGenesisData(api),
+  checkpointRoot: await getFinalizedSyncCheckpoint(api),
+  opts: {
+    allowForcedUpdates: true,
+    updateHeadersOnForcedUpdate: true,
+  },
 });
 
 // Wait for the lightclient to start
-await new Promise<void>((resolve) => {
-    const lightclientStarted = (status: RunStatusCode): void => {
-        if (status === RunStatusCode.started) {
-            lightclient?.emitter.off(LightclientEvent.statusChange, lightclientStarted);
-            resolve();
-        }
-    };
-    lightclient?.emitter.on(LightclientEvent.statusChange, lightclientStarted);
-    logger.info("Initiating lightclient");
-    lightclient?.start();
-});
+await lightclient.start();
 
 logger.info("Lightclient synced");
 
 lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finalityUpdate) => {
-    console.log(finalityUpdate);
+  logger.info(finalityUpdate);
 });
 
 lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
-    console.log(optimisticUpdate);
+  logger.info(optimisticUpdate);
 });
+```
+
+## Browser Integration
+
+If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.19.0` version.
+
+Directly link the dist build with the `<script />` tag with tools like unpkg or other. e.g.
+
+```html
+<script src="https://www.unpkg.com/@lodestar/light-client@1.18.0/dist/lightclient.es.min.js" type="module">
+```
+
+Then the lightclient package will be exposed to `globalThis`, in case of browser environment that will be `window`. You can access the package as `window.lodestar.lightclient`. All named exports will also be available from this interface. e.g. `window.lodestar.lightclient.transport`.
+
+NOTE: Due to `top-level-await` used in one of dependent library, the package will not be available right after the load. You have to use a hack to clear up that await from the event loop.
+
+```html
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    setTimeout(function () {
+      // here you can access the Lightclient
+      // window.lodestar.lightclient
+    }, 50);
+  });
+</script>
+
+**Typescript support** The web bundle comes with the types support. Unfortunately due to following
+[issue](https://github.com/microsoft/rushstack/issues/1128#issuecomment-2066257538) we can't bundle all types. A
+workaround would be to add `@chainsafe/as-sha256` as a devDependency to your project.
 ```
 
 ## Contributors

@@ -4,9 +4,10 @@ import {
   ProtoArray,
   ExecutionStatus,
   MaybeValidExecutionStatus,
-  BlockExecution,
+  BlockExtraMeta,
 } from "../../../src/index.js";
 import {LVHExecErrorCode} from "../../../src/protoArray/errors.js";
+import {DataAvailabilityStatus} from "../../../src/protoArray/interface.js";
 
 type ValidationTestCase = {
   root: string;
@@ -81,13 +82,18 @@ function setupForkChoice(): ProtoArray {
   for (const block of blocks) {
     const executionData = (
       block.executionStatus === ExecutionStatus.PreMerge
-        ? {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}
+        ? {
+            executionPayloadBlockHash: null,
+            executionStatus: ExecutionStatus.PreMerge,
+            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+          }
         : {
             executionPayloadBlockHash: block.root,
             executionPayloadNumber: block.slot,
             executionStatus: block.executionStatus,
+            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
           }
-    ) as BlockExecution;
+    ) as BlockExtraMeta;
     fc.onBlock(
       {
         slot: block.slot,
@@ -105,6 +111,8 @@ function setupForkChoice(): ProtoArray {
         unrealizedJustifiedRoot: "-",
         unrealizedFinalizedEpoch: 0,
         unrealizedFinalizedRoot: "-",
+
+        timeliness: false,
 
         ...executionData,
       },

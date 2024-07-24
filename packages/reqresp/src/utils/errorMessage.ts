@@ -1,4 +1,4 @@
-import {encodeSszSnappy} from "../encodingStrategies/sszSnappy/encode.js";
+import {writeSszSnappyPayload} from "../encodingStrategies/sszSnappy/encode.js";
 import {Encoding} from "../types.js";
 
 // ErrorMessage schema:
@@ -17,11 +17,11 @@ import {Encoding} from "../types.js";
  */
 export async function* encodeErrorMessage(errorMessage: string, encoding: Encoding): AsyncGenerator<Buffer> {
   const encoder = new TextEncoder();
-  const bytes = Buffer.from(encoder.encode(errorMessage).slice(0, 256));
+  const bytes = encoder.encode(errorMessage).slice(0, 256);
 
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      yield* encodeSszSnappy(bytes);
+      yield* writeSszSnappyPayload(bytes);
   }
 }
 

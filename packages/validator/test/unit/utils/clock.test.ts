@@ -84,6 +84,13 @@ describe("util / Clock", function () {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const testConfig = {SECONDS_PER_SLOT: 12} as BeaconConfig;
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
+
+    // Tests can fail under certain time slots, overriding the system time
+    // with a specific value allows us to run tests deterministically
+    beforeEach(() => {
+      vi.setSystemTime(genesisTime * 1000);
+    });
+
     const testCase: {name: string; delta: number}[] = [
       {name: "should return next slot after 11.5s", delta: 11.5},
       {name: "should return next slot after 12s", delta: 12},

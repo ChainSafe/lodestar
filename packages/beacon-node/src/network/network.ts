@@ -5,7 +5,19 @@ import {BeaconConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
-import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
+import {
+  phase0,
+  deneb,
+  altair,
+  Root,
+  capella,
+  SlotRootHex,
+  SignedBeaconBlock,
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
@@ -219,6 +231,8 @@ export class Network implements INetwork {
         this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
       }
     }
+    this.aggregatorTracker.prune();
+
     return this.core.prepareBeaconCommitteeSubnets(subscriptions);
   }
 
@@ -285,7 +299,7 @@ export class Network implements INetwork {
 
   // Gossip
 
-  async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number> {
+  async publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number> {
     const fork = this.config.getForkName(signedBlock.message.slot);
     return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock, {
       ignoreDuplicatePublishError: true,
@@ -378,7 +392,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishLightClientFinalityUpdate(update: allForks.LightClientFinalityUpdate): Promise<number> {
+  async publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number> {
     const fork = this.config.getForkName(update.signatureSlot);
     return this.publishGossip<GossipType.light_client_finality_update>(
       {type: GossipType.light_client_finality_update, fork},
@@ -386,7 +400,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishLightClientOptimisticUpdate(update: allForks.LightClientOptimisticUpdate): Promise<number> {
+  async publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number> {
     const fork = this.config.getForkName(update.signatureSlot);
     return this.publishGossip<GossipType.light_client_optimistic_update>(
       {type: GossipType.light_client_optimistic_update, fork},
@@ -408,7 +422,7 @@ export class Network implements INetwork {
     };
     const sentPeers = await this.core.publishGossip(topicStr, messageData, opts);
 
-    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
+    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers, currentSlot: this.clock.currentSlot});
     return sentPeers;
   }
 
@@ -417,7 +431,7 @@ export class Network implements INetwork {
   async sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]> {
+  ): Promise<WithBytes<SignedBeaconBlock>[]> {
     return collectSequentialBlocksInRange(
       this.sendReqRespRequest(
         peerId,
@@ -433,7 +447,7 @@ export class Network implements INetwork {
   async sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]> {
+  ): Promise<WithBytes<SignedBeaconBlock>[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
         peerId,
@@ -447,21 +461,21 @@ export class Network implements INetwork {
     );
   }
 
-  async sendLightClientBootstrap(peerId: PeerIdStr, request: Root): Promise<allForks.LightClientBootstrap> {
+  async sendLightClientBootstrap(peerId: PeerIdStr, request: Root): Promise<LightClientBootstrap> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),
       responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap]
     );
   }
 
-  async sendLightClientOptimisticUpdate(peerId: PeerIdStr): Promise<allForks.LightClientOptimisticUpdate> {
+  async sendLightClientOptimisticUpdate(peerId: PeerIdStr): Promise<LightClientOptimisticUpdate> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientOptimisticUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate]
     );
   }
 
-  async sendLightClientFinalityUpdate(peerId: PeerIdStr): Promise<allForks.LightClientFinalityUpdate> {
+  async sendLightClientFinalityUpdate(peerId: PeerIdStr): Promise<LightClientFinalityUpdate> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientFinalityUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate]
@@ -471,7 +485,7 @@ export class Network implements INetwork {
   async sendLightClientUpdatesByRange(
     peerId: PeerIdStr,
     request: altair.LightClientUpdatesByRange
-  ): Promise<allForks.LightClientUpdate[]> {
+  ): Promise<LightClientUpdate[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientUpdatesByRange, [Version.V1], request),
       request.count,
@@ -569,7 +583,7 @@ export class Network implements INetwork {
     return this.core.writeDiscv5HeapSnapshot(prefix, dirpath);
   }
 
-  private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {
+  private onLightClientFinalityUpdate = async (finalityUpdate: LightClientFinalityUpdate): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
@@ -586,9 +600,7 @@ export class Network implements INetwork {
     }
   };
 
-  private onLightClientOptimisticUpdate = async (
-    optimisticUpdate: allForks.LightClientOptimisticUpdate
-  ): Promise<void> => {
+  private onLightClientOptimisticUpdate = async (optimisticUpdate: LightClientOptimisticUpdate): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {

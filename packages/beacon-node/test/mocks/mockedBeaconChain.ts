@@ -16,6 +16,7 @@ import {Clock} from "../../src/util/clock.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {getMockedLogger} from "./loggerMock.js";
+import {getMockedClock} from "./clock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
@@ -50,6 +51,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getHeadRoot: vi.fn(),
       getDependentRoot: vi.fn(),
       getBlockHex: vi.fn(),
+      getBlock: vi.fn(),
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
       iterateAncestorBlocks: vi.fn(),
@@ -110,13 +112,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       opts: {},
       genesisTime,
       clock:
-        clock === "real"
-          ? new Clock({config, genesisTime: 0, signal: new AbortController().signal})
-          : {
-              currentSlot: undefined,
-              currentSlotWithGossipDisparity: undefined,
-              isCurrentSlotGivenGossipDisparity: vi.fn(),
-            },
+        clock === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock(),
       forkChoice: getMockedForkChoice(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
@@ -133,10 +129,12 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),
       produceCommonBlockBody: vi.fn(),
+      getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
+      predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
       getHeadState: vi.fn(),
       updateBuilderStatus: vi.fn(),
@@ -162,7 +160,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
   };
 });
 
-type MockedBeaconChainOptions = {
+export type MockedBeaconChainOptions = {
   clock: "real" | "fake";
   genesisTime: number;
   config: ChainForkConfig;

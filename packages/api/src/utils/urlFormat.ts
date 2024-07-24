@@ -53,7 +53,7 @@ export function urlToTokens(path: string): Token[] {
 }
 
 /**
- * Compile a route URL formater with syntax `/path/{var1}/{var2}`.
+ * Compile a route URL formatter with syntax `/path/{var1}/{var2}`.
  * Returns a function that expects an object `{var1: 1, var2: 2}`, and returns`/path/1/2`.
  *
  * It's cheap enough to be negligible. For the sample input below it costs:
@@ -62,7 +62,7 @@ export function urlToTokens(path: string): Token[] {
  * - execute with template literal: 12 ns / op
  * @param path `/eth/v1/validator/:name/attester/:epoch`
  */
-export function compileRouteUrlFormater(path: string): (arg: Args) => string {
+export function compileRouteUrlFormatter(path: string): (arg: Args) => string {
   const tokens = urlToTokens(path);
 
   // Return a faster function if there's not ':' token
@@ -82,7 +82,7 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
     }
   });
 
-  return function urlFormater(args: Args) {
+  return function urlFormatter(args: Args) {
     // Don't use .map() or .join(), it's x3 slower
     let s = "";
     for (const fn of fns) s += fn(args);
