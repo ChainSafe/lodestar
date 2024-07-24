@@ -1,5 +1,3 @@
-import * as snappyjs from "snappyjs";
-import * as snappy from "snappy";
 import xxhashFactory from "xxhash-wasm";
 import {Message} from "@libp2p/interface";
 import {digest} from "@chainsafe/as-sha256";
@@ -9,6 +7,13 @@ import {intToBytes, toHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {getGossipSSZType, GossipTopicCache} from "./topic.js";
+
+// Import snappy wasm (work around loading issues)
+// eslint-disable-next-line import/order
+import {createRequire} from "node:module";
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const snappyWasm = require("snappy-wasm") as typeof import("snappy-wasm");
 
 // Load WASM
 const xxhash = await xxhashFactory();
@@ -63,11 +68,6 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
   return digest(Buffer.concat(vec)).subarray(0, 20);
 }
 
-/** Snappyjs is faster at compressing small buffers */
-const SNAPPYJS_COMPRESS_THRESHOLD = 100;
-/** Snappyjs is faster at uncompressing small buffers */
-const SNAPPYJS_UNCOMPRESS_THRESHOLD = 200;
-
 export class DataTransformSnappy implements DataTransform {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
@@ -81,12 +81,8 @@ export class DataTransformSnappy implements DataTransform {
    * - `outboundTransform()`: compress snappy payload
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
-    let uncompressedData: Uint8Array;
-    if (data.length < SNAPPYJS_UNCOMPRESS_THRESHOLD) {
-      uncompressedData = snappyjs.uncompress(data, this.maxSizePerMessage);
-    } else {
-      uncompressedData = snappy.uncompressSync(Buffer.from(data)) as Uint8Array;
-    }
+    // TODO use this.maxSizePerMessage here
+    const uncompressedData = snappyWasm.decompress_raw(data);
 
     // check uncompressed data length before we extract beacon block root, slot or
     // attestation data at later steps
@@ -113,10 +109,6 @@ export class DataTransformSnappy implements DataTransform {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${this.maxSizePerMessage}`);
     }
     // No need to parse topic, everything is snappy compressed
-    if (data.length < SNAPPYJS_COMPRESS_THRESHOLD) {
-      return snappyjs.compress(data);
-    } else {
-      return snappy.compressSync(Buffer.from(data));
-    }
+    return snappyWasm.compress_raw(data);
   }
 }
