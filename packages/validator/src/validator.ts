@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger, toSafePrintableUrl} from "@lodestar/utils";
+import {Logger, toPrintableUrl} from "@lodestar/utils";
 import {getClient, ApiClient, routes, ApiRequestInit, defaultInit} from "@lodestar/api";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
@@ -138,7 +138,7 @@ export class Validator {
       // not be any errors in the logs due to fallback nodes handling the requests
       const {httpClient} = this.api;
       if (httpClient.urlsInits.length > 1) {
-        const primaryNodeUrl = toSafePrintableUrl(httpClient.urlsInits[0].baseUrl);
+        const primaryNodeUrl = toPrintableUrl(httpClient.urlsInits[0].baseUrl);
 
         this.clock?.runEveryEpoch(async () => {
           // Only emit warning if URL score is 0 to prevent false positives
@@ -296,7 +296,7 @@ export class Validator {
       // not necessary since this instance won't be used for validator duties
       api = getClient({urls, globalInit: {signal: opts.abortController.signal, ...globalInit}}, {config, logger});
       logger.info("Beacon node", {
-        urls: urls.map(toSafePrintableUrl).toString(),
+        urls: urls.map(toPrintableUrl).toString(),
         requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
         responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
       });

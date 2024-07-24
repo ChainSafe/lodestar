@@ -1,4 +1,4 @@
-import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry, toSafePrintableUrl} from "@lodestar/utils";
+import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry, toPrintableUrl} from "@lodestar/utils";
 import {mergeHeaders} from "../headers.js";
 import {Endpoint} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
@@ -118,7 +118,7 @@ export class HttpClient implements IHttpClient {
         this.urlsInits.push({
           ...urlInit,
           urlIndex: i,
-          sanitizedUrl: toSafePrintableUrl(urlInit.baseUrl),
+          printableUrl: toPrintableUrl(urlInit.baseUrl),
         } as UrlInitRequired);
       }
     }
@@ -138,7 +138,7 @@ export class HttpClient implements IHttpClient {
     if (metrics) {
       metrics.urlsScore.addCollect(() => {
         for (let i = 0; i < this.urlsScore.length; i++) {
-          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsInits[i].sanitizedUrl}, this.urlsScore[i]);
+          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsInits[i].printableUrl}, this.urlsScore[i]);
         }
       });
     }
@@ -189,7 +189,7 @@ export class HttpClient implements IHttpClient {
           // - If url[0] is good, only send to 0
           // - If url[0] has recently errored, send to both 0, 1, etc until url[0] does not error for some time
           for (; i < this.urlsInits.length; i++) {
-            const {sanitizedUrl} = this.urlsInits[i];
+            const {printableUrl: sanitizedUrl} = this.urlsInits[i];
             const routeId = definition.operationId;
 
             if (i > 0) {
@@ -355,7 +355,7 @@ export class HttpClient implements IHttpClient {
     abortSignals.forEach((s) => s?.addEventListener("abort", onSignalAbort));
 
     const routeId = definition.operationId;
-    const {sanitizedUrl, requestWireFormat, responseWireFormat} = init;
+    const {printableUrl: sanitizedUrl, requestWireFormat, responseWireFormat} = init;
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {

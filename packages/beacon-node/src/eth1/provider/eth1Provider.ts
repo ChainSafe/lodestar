@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex, isErrorAborted, createElapsedTimeTracker, toSafePrintableUrl} from "@lodestar/utils";
+import {fromHex, isErrorAborted, createElapsedTimeTracker, toPrintableUrl} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 
 import {FetchError, isFetchError} from "@lodestar/api";
@@ -84,7 +84,7 @@ export class Eth1Provider implements IEth1Provider {
       jwtVersion: opts.jwtVersion,
       metrics: metrics,
     });
-    this.logger?.info("Eth1 provider", {urls: providerUrls.map(toSafePrintableUrl).toString()});
+    this.logger?.info("Eth1 provider", {urls: providerUrls.map(toPrintableUrl).toString()});
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
       const oldState = this.state;

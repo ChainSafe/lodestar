@@ -32,7 +32,7 @@ export type UrlInitRequired = ApiRequestInit & {
   urlIndex: number;
   baseUrl: string;
   /** Used in logs and metrics to prevent leaking user credentials */
-  sanitizedUrl: string;
+  printableUrl: string;
 };
 export type ApiRequestInit = ExtraRequestInit & OptionalRequestInit & RequestInit;
 export type ApiRequestInitRequired = Required<ExtraRequestInit> & UrlInitRequired;
