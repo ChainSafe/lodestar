@@ -189,12 +189,12 @@ export class HttpClient implements IHttpClient {
           // - If url[0] is good, only send to 0
           // - If url[0] has recently errored, send to both 0, 1, etc until url[0] does not error for some time
           for (; i < this.urlsInits.length; i++) {
-            const {printableUrl: sanitizedUrl} = this.urlsInits[i];
+            const {printableUrl} = this.urlsInits[i];
             const routeId = definition.operationId;
 
             if (i > 0) {
-              this.metrics?.requestToFallbacks.inc({routeId, baseUrl: sanitizedUrl});
-              this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: sanitizedUrl, score: this.urlsScore[i]});
+              this.metrics?.requestToFallbacks.inc({routeId, baseUrl: printableUrl});
+              this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: printableUrl, score: this.urlsScore[i]});
             }
 
             // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -223,7 +223,7 @@ export class HttpClient implements IHttpClient {
                   } else {
                     this.logger?.debug(
                       "Request error, retrying",
-                      {routeId, baseUrl: sanitizedUrl},
+                      {routeId, baseUrl: printableUrl},
                       res.error() as Error
                     );
                   }
@@ -237,7 +237,7 @@ export class HttpClient implements IHttpClient {
                 if (++errorCount >= requestCount) {
                   reject(err);
                 } else {
-                  this.logger?.debug("Request error, retrying", {routeId, baseUrl: sanitizedUrl}, err);
+                  this.logger?.debug("Request error, retrying", {routeId, baseUrl: printableUrl}, err);
                 }
               }
             );
@@ -355,7 +355,7 @@ export class HttpClient implements IHttpClient {
     abortSignals.forEach((s) => s?.addEventListener("abort", onSignalAbort));
 
     const routeId = definition.operationId;
-    const {printableUrl: sanitizedUrl, requestWireFormat, responseWireFormat} = init;
+    const {printableUrl, requestWireFormat, responseWireFormat} = init;
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
@@ -367,7 +367,7 @@ export class HttpClient implements IHttpClient {
       if (!apiResponse.ok) {
         await apiResponse.errorBody();
         this.logger?.debug("API response error", {routeId, status: apiResponse.status});
-        this.metrics?.requestErrors.inc({routeId, baseUrl: sanitizedUrl});
+        this.metrics?.requestErrors.inc({routeId, baseUrl: printableUrl});
         return apiResponse;
       }
 
@@ -384,7 +384,7 @@ export class HttpClient implements IHttpClient {
         streamTimer?.();
       }
     } catch (e) {
-      this.metrics?.requestErrors.inc({routeId, baseUrl: sanitizedUrl});
+      this.metrics?.requestErrors.inc({routeId, baseUrl: printableUrl});
 
       if (isAbortedError(e)) {
         if (abortSignals.some((s) => s?.aborted)) {
