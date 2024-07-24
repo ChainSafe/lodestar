@@ -16,6 +16,7 @@ import {
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../index.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
+import {ReusableListIterator} from "@chainsafe/ssz";
 
 export type EpochTransitionCacheOpts = {
   /**
@@ -201,7 +202,7 @@ const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 /**
  * This data is reused and never gc.
  */
-const validators = new Array<phase0.Validator>();
+const validators = new ReusableListIterator<phase0.Validator>();
 const previousEpochParticipation = new Array<number>();
 const currentEpochParticipation = new Array<number>();
 
@@ -221,7 +222,7 @@ export function beforeProcessEpoch(
 
   const indicesToSlash: ValidatorIndex[] = [];
   const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
-  const indicesEligibleForActivation: ValidatorIndex[] = [];
+  const indicesEligibleForActivation: {validatorIndex: ValidatorIndex; activationEligibilityEpoch: Epoch}[] = [];
   const indicesToEject: ValidatorIndex[] = [];
 
   let totalActiveStakeByIncrement = 0;
@@ -229,8 +230,9 @@ export function beforeProcessEpoch(
   // To optimize memory each validator node in `state.validators` is represented with a special node type
   // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directly
   // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
-  validators.length = state.validators.length;
-  state.validators.getAllReadonlyValues(validators);
+  validators.reset();
+  state.validators.getAllReadonlyValuesIter(validators);
+  validators.clean();
 
   const validatorCount = validators.length;
 
@@ -263,8 +265,9 @@ export function beforeProcessEpoch(
 
   const effectiveBalancesByIncrements = epochCtx.effectiveBalanceIncrements;
 
-  for (let i = 0; i < validatorCount; i++) {
-    const validator = validators[i];
+  // for (let i = 0; i < validatorCount; i++) {
+  let i = 0;
+  for (const validator of validators) {
     let flag = 0;
 
     if (validator.slashed) {
@@ -329,7 +332,7 @@ export function beforeProcessEpoch(
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
     else if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
-      indicesEligibleForActivation.push(i);
+      indicesEligibleForActivation.push({validatorIndex: i, activationEligibilityEpoch: validator.activationEligibilityEpoch});
     }
 
     // To optimize process_registry_updates():
@@ -354,6 +357,7 @@ export function beforeProcessEpoch(
     if (isActiveNext2) {
       nextEpochShufflingActiveValidatorIndices[nextEpochShufflingActiveIndicesLength++] = i;
     }
+    i++;
   }
 
   if (totalActiveStakeByIncrement < 1) {
@@ -368,7 +372,7 @@ export function beforeProcessEpoch(
   // To optimize process_registry_updates():
   // order by sequence of activationEligibilityEpoch setting and then index
   indicesEligibleForActivation.sort(
-    (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
+    (a, b) => a.activationEligibilityEpoch - b.activationEligibilityEpoch || a.validatorIndex - b.validatorIndex
   );
 
   if (forkSeq === ForkSeq.phase0) {
@@ -479,7 +483,7 @@ export function beforeProcessEpoch(
     currEpochUnslashedTargetStakeByIncrement: currTargetUnslStake,
     indicesToSlash,
     indicesEligibleForActivationQueue,
-    indicesEligibleForActivation,
+    indicesEligibleForActivation: indicesEligibleForActivation.map(({validatorIndex}) => validatorIndex),
     indicesToEject,
     nextEpochShufflingActiveValidatorIndices,
     nextEpochShufflingActiveIndicesLength,

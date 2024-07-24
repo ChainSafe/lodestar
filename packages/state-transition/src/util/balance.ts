@@ -4,6 +4,7 @@ import {bigIntMax} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "..";
 import {CachedBeaconStateAllForks} from "../types.js";
+import {ReusableListIterator} from "@chainsafe/ssz";
 
 /**
  * Return the combined effective balance of the [[indices]].
@@ -46,7 +47,7 @@ export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorInde
 /**
  * This data is reused and never gc.
  */
-const validators = new Array<phase0.Validator>();
+const validators = new ReusableListIterator<phase0.Validator>();
 
 /**
  * This method is used to get justified balances from a justified state.
@@ -68,14 +69,16 @@ export function getEffectiveBalanceIncrementsZeroInactive(
     validatorCount
   );
 
-  validators.length = validatorCount;
-  justifiedState.validators.getAllReadonlyValues(validators);
+  validators.reset();
+  justifiedState.validators.getAllReadonlyValuesIter(validators);
+  validators.clean();
+  let i = 0;
   let j = 0;
-  for (let i = 0; i < validatorCount; i++) {
+  for (const validator of validators) {
     if (i === activeIndices[j]) {
       // active validator
       j++;
-      if (validators[i].slashed) {
+      if (validator.slashed) {
         // slashed validator
         effectiveBalanceIncrementsZeroInactive[i] = 0;
       }
@@ -83,6 +86,7 @@ export function getEffectiveBalanceIncrementsZeroInactive(
       // inactive validator
       effectiveBalanceIncrementsZeroInactive[i] = 0;
     }
+    i++;
   }
 
   return effectiveBalanceIncrementsZeroInactive;
