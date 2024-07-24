@@ -116,7 +116,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
   state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
-  // Cache EL client version from the latest getClientVersion call
+  // Cached EL client version from the latest getClientVersion call
   clientVersion?: ClientVersion;
 
   readonly payloadIdCache = new PayloadIdCache();
