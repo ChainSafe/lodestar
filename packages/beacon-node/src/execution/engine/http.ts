@@ -155,12 +155,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+      if (this.clientVersion === undefined) {
+        // This statement should only be called first time receiving response after start up
+        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
+          this.logger.error("Unable to get client version", {caller: "ExecutionEngineHttp constructor"}, e);
+        });
+      }
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
-    });
-
-    // Initial engine state is ONLINE. Need to explicitly call `getClientVersion` once on startup
-    this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-      this.logger.error("Unable to get client version", {caller: "ExecutionEngineHttp constructor"}, e);
     });
   }
 
@@ -437,11 +438,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeExecutionPayloadBody);
   }
 
-  getState(): ExecutionEngineState {
-    return this.state;
-  }
-
-  async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
+  private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
     const method = "engine_getClientVersionV1";
 
     const response = await this.rpc.fetchWithRetries<
@@ -460,10 +457,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
 
     return clientVersions;
-  }
-
-  get executionClientVersion(): ClientVersion | undefined {
-    return this.clientVersion;
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {

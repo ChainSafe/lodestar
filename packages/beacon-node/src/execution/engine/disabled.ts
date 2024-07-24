@@ -1,4 +1,4 @@
-import {ClientVersion, ExecutionEngineState, IExecutionEngine, PayloadIdCache} from "./interface.js";
+import {ExecutionEngineState, IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
   state = ExecutionEngineState.OFFLINE;
@@ -26,18 +26,6 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
   }
 
   getPayloadBodiesByRange(): Promise<never> {
-    throw Error("Execution engine disabled");
-  }
-
-  getClientVersion(): Promise<ClientVersion[]> {
-    throw Error("Execution engine disabled");
-  }
-
-  getState(): ExecutionEngineState {
-    throw Error("Execution engine disabled");
-  }
-
-  getExecutionClientVersion(): ClientVersion {
     throw Error("Execution engine disabled");
   }
 }
