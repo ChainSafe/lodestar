@@ -1,5 +1,5 @@
 import {Node} from "@chainsafe/persistent-merkle-tree";
-import {CompositeViewDU} from "@chainsafe/ssz";
+import {CompositeViewDU, ReusableListIterator} from "@chainsafe/ssz";
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
@@ -26,7 +26,7 @@ export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phas
 /**
  * This data is reused and never gc.
  */
-const eth1DataVotes = new Array<CompositeViewDU<typeof ssz.phase0.Eth1Data>>();
+const eth1DataVotes = new ReusableListIterator<CompositeViewDU<typeof ssz.phase0.Eth1Data>>();
 /**
  * Returns true if adding the given `eth1Data` to `state.eth1DataVotes` would
  * result in a change to `state.eth1Data`.
@@ -52,11 +52,11 @@ export function becomesNewEth1Data(
   // Then isEqualEth1DataView compares cached roots (HashObject as of Jan 2022) which is much cheaper
   // than doing structural equality, which requires tree -> value conversions
   let sameVotesCount = 0;
-  // const eth1DataVotes = state.eth1DataVotes.getAllReadonly();
-  eth1DataVotes.length = state.eth1DataVotes.length;
-  state.eth1DataVotes.getAllReadonly(eth1DataVotes);
-  for (let i = 0; i < eth1DataVotes.length; i++) {
-    if (isEqualEth1DataView(eth1DataVotes[i], newEth1Data)) {
+  eth1DataVotes.reset();
+  state.eth1DataVotes.getAllReadonlyIter(eth1DataVotes);
+  eth1DataVotes.clean();
+  for (const eth1DataVote of eth1DataVotes) {
+    if (isEqualEth1DataView(eth1DataVote, newEth1Data)) {
       sameVotesCount++;
     }
   }
