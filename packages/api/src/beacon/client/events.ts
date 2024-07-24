@@ -44,7 +44,7 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
         const errEs = err as unknown as EventSourceError;
 
         // Ignore noisy errors due to beacon node being offline
-        if (!errEs.message?.includes("ECONNREFUSED")) {
+        if (!/ECONNREFUSED|EAI_AGAIN/.test(errEs.message ?? "")) {
           // If there is no message it likely indicates that the server closed the connection
           onError?.(new Error(errEs.message ?? "Server closed connection"));
         }

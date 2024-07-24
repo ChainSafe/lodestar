@@ -194,6 +194,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
 
+  if (args.disableLightClientServer) {
+    beaconNodeOptions.set({chain: {disableLightClientServer: true}});
+  }
+
   if (args.private) {
     beaconNodeOptions.set({network: {private: true}});
   } else {
