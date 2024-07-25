@@ -39,7 +39,6 @@ export function getBaseViteConfig(
     // https://github.com/vitest-dev/vitest/issues/6203#issuecomment-2245836028
     define: {
       "process.argv": "[]",
-      "process.nextTick": "function noop(){}",
     },
     mode: "production",
     appType: "custom",
