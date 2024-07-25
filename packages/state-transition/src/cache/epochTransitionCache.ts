@@ -53,15 +53,6 @@ export interface EpochTransitionCache {
   currEpochUnslashedTargetStakeByIncrement: number;
 
   /**
-   * Validator indices that are either
-   * - active in previous epoch
-   * - slashed and not yet withdrawable
-   *
-   * getRewardsAndPenalties() and processInactivityUpdates() iterate this list
-   */
-  eligibleValidatorIndices: ValidatorIndex[];
-
-  /**
    * Indices which will receive the slashing penalty
    * ```
    * v.withdrawableEpoch === currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR / 2
@@ -215,7 +206,6 @@ export function beforeProcessEpoch(
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
-  const eligibleValidatorIndices: ValidatorIndex[] = [];
   const indicesToSlash: ValidatorIndex[] = [];
   const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
   const indicesEligibleForActivation: ValidatorIndex[] = [];
@@ -283,7 +273,6 @@ export function beforeProcessEpoch(
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
     if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
-      eligibleValidatorIndices.push(i);
       flag |= FLAG_ELIGIBLE_ATTESTER;
     }
 
@@ -470,7 +459,6 @@ export function beforeProcessEpoch(
       headStakeByIncrement: prevHeadUnslStake,
     },
     currEpochUnslashedTargetStakeByIncrement: currTargetUnslStake,
-    eligibleValidatorIndices,
     indicesToSlash,
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,
