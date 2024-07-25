@@ -47,6 +47,7 @@ describe("ExecutionEngine / http", () => {
         urls: [baseUrl],
         retries: defaultExecutionEngineHttpOpts.retries,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
+        disableClientVersionFetch: true,
       },
       {signal: controller.signal, logger: console as unknown as Logger}
     );
