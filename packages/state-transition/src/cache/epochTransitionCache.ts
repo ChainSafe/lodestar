@@ -125,10 +125,13 @@ export interface EpochTransitionCache {
    * - un-slashed validators
    * - prev attester flag set
    * With a status flag to check this conditions at once we just have to mask with an OR of the conditions.
+   * This is only for phase0 only.
    */
-
   proposerIndices: number[];
 
+  /**
+   * This is for phase0 only.
+   */
   inclusionDelays: number[];
 
   flags: number[];
@@ -191,9 +194,9 @@ const isActivePrevEpoch = new Array<boolean>();
 const isActiveCurrEpoch = new Array<boolean>();
 /** WARNING: reused, never gc'd */
 const isActiveNextEpoch = new Array<boolean>();
-/** WARNING: reused, never gc'd */
+/** WARNING: reused, never gc'd, from altair this is empty array */
 const proposerIndices = new Array<number>();
-/** WARNING: reused, never gc'd */
+/** WARNING: reused, never gc'd, from altair this is empty array */
 const inclusionDelays = new Array<number>();
 /** WARNING: reused, never gc'd */
 const flags = new Array<number>();
@@ -238,14 +241,10 @@ export function beforeProcessEpoch(
   // During the epoch transition, additional data is precomputed to avoid traversing any state a second
   // time. Attestations are a big part of this, and each validator has a "status" to represent its
   // precomputed participation.
-  // - proposerIndex: number; // -1 when not included by any proposer
-  // - inclusionDelay: number;
+  // - proposerIndex: number; // -1 when not included by any proposer, for phase0 only so it's declared inside phase0 block below
+  // - inclusionDelay: number;// for phase0 only so it's declared inside phase0 block below
   // - flags: number; // bitfield of AttesterFlags
-  proposerIndices.length = validatorCount;
-  inclusionDelays.length = validatorCount;
   flags.length = validatorCount;
-  proposerIndices.fill(-1);
-  inclusionDelays.fill(0);
   // flags.fill(0);
   // flags will be zero'd out below
   // In the first loop, set slashed+eligibility
@@ -368,6 +367,10 @@ export function beforeProcessEpoch(
   );
 
   if (forkSeq === ForkSeq.phase0) {
+    proposerIndices.length = validatorCount;
+    proposerIndices.fill(-1);
+    inclusionDelays.length = validatorCount;
+    inclusionDelays.fill(0);
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
       proposerIndices,
