@@ -12,7 +12,7 @@ import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {getLodestarClientVersion} from "../../util/graffiti.js";
+import {getLodestarClientVersion} from "../../util/metadata.js";
 import {
   ExecutionPayloadStatus,
   ExecutePayloadResponse,
@@ -158,7 +158,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       if (this.clientVersion === undefined) {
         // This statement should only be called first time receiving response after start up
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-          this.logger.error("Unable to get client version", {caller: "ExecutionEngineHttp constructor"}, e);
+          this.logger.error("Unable to get client version", e);
         });
       }
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
@@ -453,7 +453,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     if (clientVersions.length > 0) {
       this.clientVersion = clientVersions[0];
-      this.logger.info("Execution client version is updated", this.clientVersion);
+      this.logger.debug("Execution client version is updated", this.clientVersion);
     }
 
     return clientVersions;
@@ -468,7 +468,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-          this.logger.error("Unable to get client version", {caller: "updateEngineState"}, e);
+          this.logger.error("Unable to get client version", e);
         });
         break;
       case ExecutionEngineState.OFFLINE:

@@ -64,6 +64,7 @@ import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossi
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {ApiOptions} from "../../options.js";
+import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
@@ -399,11 +400,15 @@ export function getValidatorApi(
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
+      const consensusClientVersion = getLodestarClientVersion(opts);
+      const executionClientVersion = chain.executionEngine.clientVersion;
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, chain.executionEngine.clientVersion)),
+        graffiti: toGraffitiBuffer(
+          graffiti ?? getDefaultGraffiti(opts, consensusClientVersion, executionClientVersion)
+        ),
         commonBlockBody,
       });
 
@@ -467,11 +472,15 @@ export function getValidatorApi(
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
+      const consensusClientVersion = getLodestarClientVersion(opts);
+      const executionClientVersion = chain.executionEngine.clientVersion;
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, chain.executionEngine.clientVersion)),
+        graffiti: toGraffitiBuffer(
+          graffiti ?? getDefaultGraffiti(opts, consensusClientVersion, executionClientVersion)
+        ),
         feeRecipient,
         commonBlockBody,
       });
@@ -578,11 +587,13 @@ export function getValidatorApi(
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
+    const consensusClientVersion = getLodestarClientVersion(opts);
+    const executionClientVersion = chain.executionEngine.clientVersion;
     const commonBlockBody = await chain.produceCommonBlockBody({
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, chain.executionEngine.clientVersion)),
+      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, consensusClientVersion, executionClientVersion)),
     });
     logger.debug("Produced common block body", loggerContext);
 

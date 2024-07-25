@@ -43,19 +43,19 @@ export enum ExecutionEngineState {
  * ClientCode.XX is dedicated to other clients which do not have their own code
  */
 export enum ClientCode {
-  BU = "besu",
-  EJ = "ethereumJS",
-  EG = "erigon",
-  GE = "go-ethereum",
-  GR = "grandine",
-  LH = "lighthouse",
-  LS = "lodestar",
-  NM = "nethermind",
-  NB = "nimbus",
-  TK = "teku",
-  PM = "prysm",
-  RH = "reth",
-  XX = "unknown",
+  BU = "BU", // besu
+  EJ = "EJ", // ethereumJS
+  EG = "EG", // erigon
+  GE = "GE", // go-ethereum
+  GR = "GR", // grandine
+  LH = "LH", // lighthouse
+  LS = "LS", // lodestar
+  NM = "NM", // nethermind
+  NB = "NB", // nimbus
+  TK = "TK", // teku
+  PM = "PM", // prysm
+  RH = "RH", // reth
+  XX = "XX", // unknown
 }
 
 export type ExecutePayloadResponse =

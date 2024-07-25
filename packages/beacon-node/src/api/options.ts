@@ -3,6 +3,7 @@ import {beaconRestApiServerOpts, BeaconRestApiServerOpts} from "./rest/index.js"
 export type ApiOptions = {
   maxGindicesInProof?: number;
   rest: BeaconRestApiServerOpts;
+  commit?: string;
   version?: string;
   private?: boolean;
 };
