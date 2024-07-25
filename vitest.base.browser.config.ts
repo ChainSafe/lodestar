@@ -14,6 +14,19 @@ export default defineConfig({
       globals: {Buffer: true, process: true},
       protocolImports: true,
     }),
+    // TODO: Should be removed when the vite issue is fixed
+    // https://github.com/vitest-dev/vitest/issues/6203#issuecomment-2245836028
+    {
+      name: "defineArgv",
+      config() {
+        return {
+          define: {
+            "process.argv": "[]",
+            "process.nextTick": "function noop(){}",
+          },
+        };
+      },
+    },
   ],
   test: {
     include: ["**/*.test.ts"],
@@ -35,6 +48,7 @@ export default defineConfig({
       name: "chrome",
       headless: true,
       provider: "webdriverio",
+      screenshotFailures: false,
       providerOptions: {
         capabilities: {
           browserVersion: "latest",
