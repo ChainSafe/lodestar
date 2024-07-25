@@ -1,7 +1,5 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
-import {PublicKey} from "@chainsafe/bls/types";
 import {describe, it, expect, beforeEach} from "vitest";
+import {PublicKey, SecretKey, Signature} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
@@ -10,7 +8,7 @@ import {testLogger} from "../../../utils/logger.js";
 describe("BlsVerifier ", function () {
   // take time for creating thread pool
   const numKeys = 3;
-  const secretKeys = Array.from({length: numKeys}, (_, i) => bls.SecretKey.fromKeygen(Buffer.alloc(32, i)));
+  const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));
   const verifiers = [
     new BlsSingleThreadVerifier({metrics: null}),
     new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger()}),
@@ -46,7 +44,7 @@ describe("BlsVerifier ", function () {
       it("should return false if at least one signature is malformed", async () => {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
-        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).toThrow();
+        expect(() => Signature.fromBytes(malformedSignature, true, true)).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSets(sets)).toBe(false);
       });
@@ -79,7 +77,7 @@ describe("BlsVerifier ", function () {
       it("should return false for malformed signature", async () => {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
-        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).toThrow();
+        expect(() => Signature.fromBytes(malformedSignature, true, true)).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger} from "@lodestar/utils";
@@ -73,7 +73,7 @@ export async function decryptKeystoreDefinitions(
         (secretKeyBytes: Uint8Array) => {
           const signer: SignerLocal = {
             type: SignerType.Local,
-            secretKey: bls.SecretKey.fromBytes(secretKeyBytes),
+            secretKey: SecretKey.fromBytes(secretKeyBytes),
           };
 
           signers[index] = signer;
@@ -107,7 +107,7 @@ export async function decryptKeystoreDefinitions(
 
         const signer: SignerLocal = {
           type: SignerType.Local,
-          secretKey: bls.SecretKey.fromBytes(secretKeyBytes),
+          secretKey: SecretKey.fromBytes(secretKeyBytes),
         };
 
         signers[index] = signer;
