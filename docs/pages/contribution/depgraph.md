@@ -120,6 +120,9 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 ## `@lodestar/prover`
 [@lodestar/prover](https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover) is a web3 provider and a proxy to enable verification of JSON-RPC calls to the execution client using the [light-client protocol](https://github.com/ethereum/consensus-specs/tree/v1.4.0/specs/altair/light-client).
 
+## `@lodestar/reqresp`
+[@lodestar/reqresp](https://github.com/ChainSafe/lodestar/tree/unstable/packages/reqresp) is used as a TypeScript REST client for the [Ethereum Consensus Beacon APIs](https://github.com/ethereum/beacon-APIs/tree/v2.5.0).
+
 ## `@lodestar/spec-test-util`
 
 [@lodestar/spec-test-util](https://github.com/ChainSafe/lodestar/tree/unstable/packages/spec-test-util) is a Vitest test utility harness used for adhering to the [Ethereum Consensus specification tests](https://github.com/ethereum/consensus-specs/tree/v1.4.0/tests).
