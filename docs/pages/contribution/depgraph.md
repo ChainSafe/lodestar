@@ -96,6 +96,10 @@ Below is a brief summary of each package in alphabetical order.
 
 [@lodestar/db](https://github.com/ChainSafe/lodestar/tree/unstable/packages/db) is where all persistent data about the beacon node is stored. Any package that needs to read or write persistent beacon node data depends on `lodestar-db`.
 
+## `@lodestar/flare`
+
+[@lodestar/flare](https://github.com/ChainSafe/lodestar/tree/unstable/packages/flare) is a command tool used for easily triggering non-standard actions and debugging for researchers, developers and testers. Use with care.
+
 ## `@lodestar/fork-choice`
 
 [@lodestar/fork-choice](https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice) holds the methods for reading/writing the fork choice DAG. The `@lodestar/beacon-node` package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
