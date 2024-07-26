@@ -1,4 +1,4 @@
-∏# Lodestar Release Guidelines
+# Lodestar Release Guidelines
 
 Lodestar is a blockchain node securing the Ethereum Beacon chain network. It is run by external individuals and operator entities outside of the control of the Lodestar team. We, as most other core dev teams, choose a slow conservative approach to releasing to ensure those node runners always update to stable, safe, and performant versions of our software.
 
@@ -74,7 +74,7 @@ If there is a bug discovered during the testing period which significantly impac
 For example: After 3-5 days of testing, is performance equal to or better than latest stable?
 
 - **Yes**: Continue to the next release step
-- **No**: If it a small issue fixable quickly (hot-fix)?
+- **No**: If it a small issue fixable quickly (hotfix)?
   - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.0` branch, go to step 2, incrementing the rc version
   - **No**: abort the release. Close the `chore: v1.1.0 release` PR, delete the branch, and start the whole release process over.
 
@@ -106,11 +106,11 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 ### 6. Announce
 
 - Double check that Github release is correct
-- Publish to Social Media
+- Follow [Publish to Social Media](#publish-to-social-media) steps
 
-## Hot-fix release
+## Hotfix release
 
-If a stable version requires an immediate hot-fix before the next release, a hot-fix release is started.
+If a stable version requires an immediate hot-ix before the next release, a hotfix release is started.
 
 A similar process for a stable release is used, with the three differences.
 
@@ -171,7 +171,7 @@ If the hotfix does not address the purpose of the hotfix release, or there is an
 For example: After modified hotfix testing period, is the original bug resolved? Is performance equal to or better than latest stable?
 
 - **Yes**: Continue to the next release step
-- **No**: If it a small issue fixable quickly with another hot-fix?
+- **No**: If it a small issue fixable quickly with another hotfix?
   - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.1` hotfix branch, go to step 2, incrementing the rc version
   - **No**: Abort the release. Close the `chore: v1.1.v release` PR, delete the branch, and start the whole release process over.
 
@@ -180,7 +180,7 @@ For example: After modified hotfix testing period, is the original bug resolved?
 - Ensure step 3 testing is successful and there is sufficient consensus to release `v1.1.1`.
 - Approving the `chore: v1.1.1 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
 - Merge `chore: v1.1.1 release` PR to stable **with "merge commit"** strategy to preserve all history.
-- Merge stable `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections. See "Backporting merge conflicts from stable to unstable".
+- Merge `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections. See "Backporting merge conflicts from stable to unstable".
 
 Pull the latest commits on both `stable` and `unstable` branches:
 - `git checkout stable && git pull origin stable`
@@ -215,7 +215,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 ### 6. Announce
 
 - Double check that Github release is correct
-- Publish to Social Media
+- Follow [Publish to Social Media](#publish-to-social-media) steps
 
 ## Dev release
 
@@ -333,7 +333,7 @@ Lodestar used `master` as the single target for feature branches.
 - QA is done on `v1.1.x` branch
 - Fixes on rc are done on `v1.1.x`, then re-tag
 - Once released final `v1.1.0` tag is on a branch that is never merged
-- Hot-fixes are either cherry-picked from `master` or done on the `v1.1.x` branch, never merged
+- Hotfixes are either cherry-picked from `master` or done on the `v1.1.x` branch, never merged
 
 However, this had some issues:
 
