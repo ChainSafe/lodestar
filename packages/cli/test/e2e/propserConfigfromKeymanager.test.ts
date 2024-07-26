@@ -49,9 +49,12 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
   it("1 . run 'validator' import keys from API, getdefaultfeeRecipient", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
-    });
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
     // Produce and encrypt keystores
     // Import test keys
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
@@ -105,12 +108,17 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
     (await keymanagerClient.setGasLimit({pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit})).assertOk();
     gasLimit0 = (await keymanagerClient.getGasLimit({pubkey: pubkeys[0]})).value();
     expectDeepEquals(gasLimit0, {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit}, "gasLimit Check updated");
+
+    await stopValidator();
   });
 
   it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
-    });
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
 
     // next time check edited feeRecipient persists
     let feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
@@ -161,12 +169,17 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );
+
+    await stopValidator();
   });
 
   it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
-    });
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
 
     const feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
@@ -190,5 +203,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );
+    await stopValidator();
   });
 });

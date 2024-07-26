@@ -59,8 +59,9 @@ describe("import from fs then validate", function () {
   });
 
   it("run 'validator' check keys are loaded", async function () {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir});
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
 
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
+    await stopValidator();
   });
 });
