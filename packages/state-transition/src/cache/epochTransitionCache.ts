@@ -146,6 +146,11 @@ export interface EpochTransitionCache {
   nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
 
   /**
+   * We do not use up to `nextEpochShufflingActiveValidatorIndices.length`, use this to control that
+   */
+  totalNextEpochShufflingActiveIndices: number;
+
+  /**
    * Altair specific, this is total active balances for the next epoch.
    * This is only used in `afterProcessEpoch` to compute base reward and sync participant reward.
    * It's not efficient to calculate it at that time since it requires looping through all active validators,
@@ -191,6 +196,8 @@ const proposerIndices = new Array<number>();
 const inclusionDelays = new Array<number>();
 /** WARNING: reused, never gc'd */
 const flags = new Array<number>();
+/** WARNING: reused, never gc'd */
+const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
@@ -210,7 +217,6 @@ export function beforeProcessEpoch(
   const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
-  const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
 
   let totalActiveStakeByIncrement = 0;
 
@@ -220,6 +226,8 @@ export function beforeProcessEpoch(
   const validators = state.validators.getAllReadonlyValues();
   const validatorCount = validators.length;
 
+  nextEpochShufflingActiveValidatorIndices.length = validatorCount;
+  let totalNextEpochShufflingActiveIndices = 0;
   // pre-fill with true (most validators are active)
   isActivePrevEpoch.length = validatorCount;
   isActiveCurrEpoch.length = validatorCount;
@@ -336,7 +344,7 @@ export function beforeProcessEpoch(
     }
 
     if (isActiveNext2) {
-      nextEpochShufflingActiveValidatorIndices.push(i);
+      nextEpochShufflingActiveValidatorIndices[totalNextEpochShufflingActiveIndices++] = i;
     }
   }
 
@@ -464,6 +472,7 @@ export function beforeProcessEpoch(
     indicesEligibleForActivation,
     indicesToEject,
     nextEpochShufflingActiveValidatorIndices,
+    totalNextEpochShufflingActiveIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

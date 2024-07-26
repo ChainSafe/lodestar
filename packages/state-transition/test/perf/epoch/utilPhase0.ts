@@ -1,4 +1,4 @@
-import {AttesterFlags, FLAG_ELIGIBLE_ATTESTER, hasMarkers, toAttesterFlags} from "../../../src/index.js";
+import {AttesterFlags, toAttesterFlags} from "../../../src/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochTransitionCache} from "../../../src/types.js";
 
 /**
