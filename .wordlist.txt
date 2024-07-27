@@ -141,6 +141,7 @@ flamegraph
 flamegraphs
 getNetworkIdentity
 gnosis
+Hashicorp
 heapdump
 heaptrack
 holesky
