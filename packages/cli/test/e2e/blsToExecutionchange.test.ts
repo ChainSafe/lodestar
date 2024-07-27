@@ -1,5 +1,5 @@
 import path from "node:path";
-import {afterAll, describe, it, vi, beforeEach, afterEach} from "vitest";
+import {describe, it, vi, onTestFinished} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {sleep, retry} from "@lodestar/utils";
 import {getClient} from "@lodestar/api";
@@ -26,8 +26,11 @@ describe("bLSToExecutionChange cmd", function () {
         // Speed up test to make genesis happen faster
         "--params.SECONDS_PER_SLOT=2",
       ],
-      {pipeStdioToParent: true, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
+      {pipeStdioToParent: true, logPrefix: "dev"}
     );
+    onTestFinished(async () => {
+      await stopChildProcess(devBnProc);
+    });
 
     // Exit early if process exits
     devBnProc.on("exit", (code) => {
