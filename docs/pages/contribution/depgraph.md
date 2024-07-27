@@ -125,7 +125,7 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 
 ## `@lodestar/reqresp`
 
-[@lodestar/reqresp](https://github.com/ChainSafe/lodestar/tree/unstable/packages/reqresp) contains the implementation of the [Ethereum Consensus ReqResp protocol](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/p2p-interface.md#reqresp)
+[@lodestar/reqresp](https://github.com/ChainSafe/lodestar/tree/unstable/packages/reqresp) contains the implementation of the [Ethereum Consensus Req/Resp protocol](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/p2p-interface.md#reqresp)
 
 ## `@lodestar/spec-test-util`
 
