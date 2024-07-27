@@ -72,7 +72,9 @@ graph TD
     classDef nodemodule fill:grey,stroke-width:2px,stroke:black,color:white;
     linkStyle default stroke:grey, fill:none,stroke-width:1.5px;
 ```
+
 # Lodestar Monorepo
+
 For a list of all the packages in the monorepo and a description for each, click [here](https://github.com/ChainSafe/lodestar#architecture-overview).
 Below is a brief summary of each package in alphabetical order.
 
@@ -82,7 +84,7 @@ Below is a brief summary of each package in alphabetical order.
 
 ## `@lodestar/api`
 
-[@lodestar/api](https://github.com/ChainSafe/lodestar/tree/unstable/packages/api) contains the TypeScript REST client for the [Ethereum Consensus API](https://github.com/ethereum/beacon-apis).
+[@lodestar/api](https://github.com/ChainSafe/lodestar/tree/unstable/packages/api) contains the REST client for the [Ethereum Consensus API](https://github.com/ethereum/beacon-apis).
 
 ## `@lodestar/beacon-node`
 
@@ -118,6 +120,7 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 [@lodestar/params](https://github.com/ChainSafe/lodestar/tree/unstable/packages/params) contains the parameters for configuring an Ethereum Consensus network. For example, the [mainnet params](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#configuration).
 
 ## `@lodestar/prover`
+
 [@lodestar/prover](https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover) is a web3 provider and a proxy to enable verification of JSON-RPC calls to the execution client using the [light-client protocol](https://github.com/ethereum/consensus-specs/tree/v1.4.0/specs/altair/light-client).
 
 ## `@lodestar/reqresp`
@@ -147,25 +150,33 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 ---
 
 # External Dependencies
-Below is a brief summary, listed alphabetically, of each of our main external dependencies managed externally from our monorepository.
+
+Below is a brief summary, listed alphabetically, of each of our main external dependencies managed externally from our monorepo.
 
 ## `@chainsafe/blst-ts`
+
 [@chainsafe/blst-ts`](https://github.com/ChainSafe/blst-ts) is our TypeScript wrapper for [@supranational/blst](https://github.com/supranational/blst) native bindings, a highly performant BLS12-381 signature library.
 
 ## `@chainsafe/discv5`
+
 [@chainsafe/discv5](https://github.com/ChainSafe/discv5) is our monorepo containing our TypeScript implementation of the [discv5 Node Discovery Protocol v5](https://github.com/ethereum/devp2p/blob/master/discv5/discv5.md).
 
 ## `@chainsafe/js-libp2p-gossipsub`
+
 [@chainsafe/js-libp2p-gossipsub](https://github.com/ChainSafe/js-libp2p-gossipsub) is an implementation of pubsub based on mmeshsub and floodsub. Specified under [@libp2p/specs/pubsub/gossipsub](https://github.com/libp2p/specs/tree/master/pubsub/gossipsub).
 
 ## `@chainsafe/js-libp2p-noise`
+
 [@chainsafe/js-libp2p-noise](https://github.com/ChainSafe/js-libp2p-noise) contains the TypeScript implementation of the Noise protocol, an encryption protocol used in [@libp2p/specs/noise](https://github.com/libp2p/specs/blob/master/noise).
 
 ## `@chainsafe/js-libp2p-yamux`
+
 [@chainsafe/js-libp2p-yamux](https://github.com/ChainSafe/js-libp2p-yamux) contains the JavaScript implementation of the [Yamux multiplexer from Hashicorp](https://github.com/hashicorp/yamux/blob/master/spec.md) designed for usage with js-libp2p.
 
 ## `@chainsafe/ssz`
+
 [@chainsafe/ssz](https://github.com/ChainSafe/ssz) contains the packages as a monorepo related to the [Simple Serialize](https://github.com/ethereum/consensus-specs/blob/v1.4.0/ssz/simple-serialize.md).
 
 ## `@libp2p/js-libp2p`
+
 [@libp2p/js-libp2p](https://github.com/libp2p/js-libp2p) is the JavaScript implementation of the libp2p networking stack used in Ethereum's networking stack.
