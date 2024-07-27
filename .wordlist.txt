@@ -103,9 +103,9 @@ backfill
 beaconcha
 blockRoot
 blockchain
+blst
 bootnode
 bootnodes
-blst
 bundlers
 chainConfig
 chainsafe
