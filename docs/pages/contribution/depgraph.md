@@ -96,7 +96,7 @@ Below is a brief summary of each package in alphabetical order.
 
 ### `@lodestar/db`
 
-[@lodestar/db](https://github.com/ChainSafe/lodestar/tree/unstable/packages/db) is where all persistent data about the beacon node is stored. Any package that needs to read or write persistent beacon node data depends on `lodestar-db`.
+[@lodestar/db](https://github.com/ChainSafe/lodestar/tree/unstable/packages/db) is where all persistent data about the beacon node is stored. Any package that needs to read or write persistent beacon node data depends on `@lodestar/db`.
 
 ### `@lodestar/flare`
 
@@ -105,15 +105,15 @@ Below is a brief summary of each package in alphabetical order.
 ### `@lodestar/fork-choice`
 
 [@lodestar/fork-choice](https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice) holds the methods for reading/writing the fork choice DAG. The `@lodestar/beacon-node` package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
-For a good explanation on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md). This is an annotated version of the [Ethereum Consensus fork choice spec](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/fork-choice.md) which `lodestar-fork-choice` is based on.
+For a good explanation on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md). This is an annotated version of the [Ethereum Consensus fork choice spec](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/fork-choice.md) which `@lodestar/fork-choice` is based on.
 
 ### `@lodestar/light-client`
 
 [@lodestar/light-client](https://github.com/ChainSafe/lodestar/tree/unstable/packages/light-client) is our light client designed to interact with the Ethereum blockchain in a trust-minimized matter via the sync committee and the [light-client protocol](https://github.com/ethereum/consensus-specs/tree/v1.4.0/specs/altair/light-client).
 
-### `@lodestar/lodestar-logger`
+### `@lodestar/logger`
 
-[@lodestar/lodestar-logger](https://github.com/ChainSafe/lodestar/tree/unstable/packages/logger) is a common NodeJS logger for Lodestar binaries, which is required for worker threads to instantiate new loggers with consistent settings.
+[@lodestar/logger](https://github.com/ChainSafe/lodestar/tree/unstable/packages/logger) is a common NodeJS logger for Lodestar binaries, which is required for worker threads to instantiate new loggers with consistent settings.
 
 ### `@lodestar/params`
 
