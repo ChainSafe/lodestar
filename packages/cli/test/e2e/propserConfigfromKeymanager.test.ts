@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describe, it, beforeAll, vi} from "vitest";
+import {describe, it, beforeAll, vi, onTestFinished} from "vitest";
 import {rimraf} from "rimraf";
 import {ImportStatus} from "@lodestar/api/keymanager";
 import {Interchange} from "@lodestar/validator";
@@ -55,6 +55,10 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
         dataDir,
       }
     );
+    onTestFinished(async () => {
+      await stopValidator();
+    });
+
     // Produce and encrypt keystores
     // Import test keys
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
@@ -108,8 +112,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
     (await keymanagerClient.setGasLimit({pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit})).assertOk();
     gasLimit0 = (await keymanagerClient.getGasLimit({pubkey: pubkeys[0]})).value();
     expectDeepEquals(gasLimit0, {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit}, "gasLimit Check updated");
-
-    await stopValidator();
   });
 
   it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async () => {
@@ -119,6 +121,9 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
         dataDir,
       }
     );
+    onTestFinished(async () => {
+      await stopValidator();
+    });
 
     // next time check edited feeRecipient persists
     let feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
@@ -169,8 +174,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );
-
-    await stopValidator();
   });
 
   it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async () => {
@@ -180,6 +183,9 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
         dataDir,
       }
     );
+    onTestFinished(async () => {
+      await stopValidator();
+    });
 
     const feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
@@ -203,6 +209,5 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );
-    await stopValidator();
   });
 });
