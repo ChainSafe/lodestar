@@ -306,30 +306,40 @@
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^0.4.8"
 
-"@chainsafe/blst-darwin-arm64@2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst-darwin-arm64/-/blst-darwin-arm64-2.0.1.tgz#d96d6dd906a6c9c809d6f5b5539e031ccff63b25"
-  integrity sha512-ZmRLimvo+BoMcpalzuS3Pj0j6l2cSDU7qMBwjch49ljkrsr4/rls7COMW8MSyDyVUSfzg0agotAByYfs+Bg3ZQ==
+"@chainsafe/blst-darwin-arm64@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-darwin-arm64/-/blst-darwin-arm64-2.0.3.tgz#28ecbcdbaeaebb1cf07a4e8edeaf7b138bc96f22"
+  integrity sha512-7LGFMBXhB5eM8zLQgblm471NjqnOhI0dv+OohmgWBwjA3Ph4rxTd0CRorZMiqy770MbiLninnYSWiTbjXLY6eQ==
 
-"@chainsafe/blst-darwin-x64@2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst-darwin-x64/-/blst-darwin-x64-2.0.1.tgz#56018c5955337a5e2b754e941bdcda0a2c6f1a84"
-  integrity sha512-5DPtmKhia5/k0szjsrgxF7GCOE5pnSRcsLvtlChzkLY7KhfxnGt5XeNtCK6NoAAfcxzN8mZrwvvzDfsDmImTQg==
+"@chainsafe/blst-darwin-x64@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-darwin-x64/-/blst-darwin-x64-2.0.3.tgz#d50cfd591a5b1698202ee97242e0f28a8c76d2be"
+  integrity sha512-RRgMLuP8rmd84+ht35Rc/vMDsvK6NZgJlchqis1ve0/Na3550gqVgbVY7Y8YDuW8VpGAslII56rDZNqEl7tVmg==
 
-"@chainsafe/blst-linux-arm64-gnu@2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-arm64-gnu/-/blst-linux-arm64-gnu-2.0.1.tgz#23a66095eaf4c23a8c54ef7df27d9c80d45ebb32"
-  integrity sha512-REIW0uM9a97iasE+RX+M1yEmIywOF1ly9/xl7JTYYASXoDDQD2eL06k17N5kXE/382wU28fU/h6V2qmWcqiWAQ==
+"@chainsafe/blst-linux-arm64-gnu@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-arm64-gnu/-/blst-linux-arm64-gnu-2.0.3.tgz#05d0028d757a00126628fa6d498f3c8925dda259"
+  integrity sha512-zkCTMuv3pnWR2xtfcazt7PlJqnltH9yOHSjFy1U7/izowU1KUSSptcvJi+26i2tI5NNWbHVNCb8CqKbRxOdNTQ==
 
-"@chainsafe/blst-linux-x64-gnu@2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-x64-gnu/-/blst-linux-x64-gnu-2.0.1.tgz#1769640e9b9140ee3e4142520c00d09c9ebc66e9"
-  integrity sha512-zH7GkMI+wWVKGp5MA+8A2EGx9fe5/jktz/KB2SrGhBu956IXh7qCV9mMCOzA4mmpxSuxjzD4auXpQc/D4uApLw==
+"@chainsafe/blst-linux-arm64-musl@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-arm64-musl/-/blst-linux-arm64-musl-2.0.3.tgz#c6d924fc346d0e50f77d44dfdfe08a9010eceae3"
+  integrity sha512-aQA9W7TpqoYjMc6WiLJ1rMdrU+vG7kjaOr1ZdCijlBOVer3OP5qdBD16GfjeqaxIQsmMHzHkBf/isczONZ9sjw==
 
-"@chainsafe/blst-win32-x64-msvc@2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst-win32-x64-msvc/-/blst-win32-x64-msvc-2.0.1.tgz#dfebc2ea23875bc02ffac11d2d15bf6e644d59ed"
-  integrity sha512-RcOo1Sl1Ai5igp56l3I5kwWkesfbD14PBoUcoR61phvIHnhyZzOtVX6rhuCYwcl0IIgSDSWtNNMdSwX34GGmxA==
+"@chainsafe/blst-linux-x64-gnu@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-x64-gnu/-/blst-linux-x64-gnu-2.0.3.tgz#0edc16cab944f9f55529d742e157fcf85455a8ce"
+  integrity sha512-pZtZ9tVmmqInEqSF8+SJGtVynBw4pDOYNzUVSfpHcwBpyIl3TZzuewCQfh487FcJ52c2vXelpA8MucBuRDiDZg==
+
+"@chainsafe/blst-linux-x64-musl@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-linux-x64-musl/-/blst-linux-x64-musl-2.0.3.tgz#be61d9f50fe35bb4c8692e90583b998701b0409c"
+  integrity sha512-w/X5+QjDbJTiqlXkiv0TXnuWdkfMRvoTFJcy3RyM7s1ra1kvoB6JRjJMirUJUoJNcMhzThZqjWPeVVpiCrqrVw==
+
+"@chainsafe/blst-win32-x64-msvc@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst-win32-x64-msvc/-/blst-win32-x64-msvc-2.0.3.tgz#e4666de90c9fb4f26667decc6bd3f49e8e5b2e46"
+  integrity sha512-yHy8cF+PTpuOYiBx962gGH2+c2DY38x2Th7HijlBBFbytW+D/nMka1DTuuyuOVIb/un2aEVf7pVBUgXTbQHEwQ==
 
 "@chainsafe/blst@^0.2.0":
   version "0.2.11"
@@ -340,16 +350,18 @@
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
 
-"@chainsafe/blst@^2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-2.0.1.tgz#9e8ceb6766fcb231e4fa378eee6378275018a159"
-  integrity sha512-+sIlLzFb6htv1WH3XIF2WDN+qlstGpo8Zl5ibxzT6VsiBSswsH05AQMpd4uQfRO1uFKhEk9JDKi8bHvIDmN8Jg==
+"@chainsafe/blst@^2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-2.0.3.tgz#12ae2544cb04a8cade626a6d5263d08432bdda4a"
+  integrity sha512-VMyqXAwgNtiHWj1ksEnHFxD2pmw+0VqQLCeNFacE5xPfscPcj+EVjmexbYdUTae52SfVx1E0F83kk1xLY5GwPw==
   optionalDependencies:
-    "@chainsafe/blst-darwin-arm64" "2.0.1"
-    "@chainsafe/blst-darwin-x64" "2.0.1"
-    "@chainsafe/blst-linux-arm64-gnu" "2.0.1"
-    "@chainsafe/blst-linux-x64-gnu" "2.0.1"
-    "@chainsafe/blst-win32-x64-msvc" "2.0.1"
+    "@chainsafe/blst-darwin-arm64" "2.0.3"
+    "@chainsafe/blst-darwin-x64" "2.0.3"
+    "@chainsafe/blst-linux-arm64-gnu" "2.0.3"
+    "@chainsafe/blst-linux-arm64-musl" "2.0.3"
+    "@chainsafe/blst-linux-x64-gnu" "2.0.3"
+    "@chainsafe/blst-linux-x64-musl" "2.0.3"
+    "@chainsafe/blst-win32-x64-msvc" "2.0.3"
 
 "@chainsafe/discv5@^9.0.0":
   version "9.0.0"
@@ -11951,16 +11963,7 @@ string-argv@~0.3.1:
   resolved "https://registry.yarnpkg.com/string-argv/-/string-argv-0.3.2.tgz#2b6d0ef24b656274d957d54e0a4bbf6153dc02b6"
   integrity sha512-aqD2Q0144Z+/RqG52NeHEkZauTAUWJO8c6yTftGJKO3Tja5tUgIfmIl6kExvhtxSDP7fXB6DvzkfMpCd/F3G+Q==
 
-"string-width-cjs@npm:string-width@^4.2.0":
-  version "4.2.3"
-  resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
-  integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
-  dependencies:
-    emoji-regex "^8.0.0"
-    is-fullwidth-code-point "^3.0.0"
-    strip-ansi "^6.0.1"
-
-"string-width@^1.0.2 || 2 || 3 || 4", string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+"string-width-cjs@npm:string-width@^4.2.0", "string-width@^1.0.2 || 2 || 3 || 4", string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
   version "4.2.3"
   resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -13595,16 +13598,7 @@ workerpool@6.2.1:
   resolved "https://registry.yarnpkg.com/workerpool/-/workerpool-6.2.1.tgz#46fc150c17d826b86a008e5a4508656777e9c343"
   integrity sha512-ILEIE97kDZvF9Wb9f6h5aXK4swSlKGUcOEGiIYb2OOu/IrDU9iwj0fD//SsA6E5ibwJxpEvhullJY4Sl4GcpAw==
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
-  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
-  dependencies:
-    ansi-styles "^4.0.0"
-    string-width "^4.1.0"
-    strip-ansi "^6.0.0"
-
-wrap-ansi@^7.0.0:
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
