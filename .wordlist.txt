@@ -45,6 +45,7 @@ Grafana
 Grandine
 HTTPS
 HackMD
+Hashicorp
 Homebrew
 IPFS
 IPv
@@ -141,7 +142,6 @@ flamegraph
 flamegraphs
 getNetworkIdentity
 gnosis
-Hashicorp
 heapdump
 heaptrack
 holesky
