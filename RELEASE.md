@@ -110,7 +110,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 
 ## Hotfix release
 
-If a stable version requires an immediate hot-ix before the next release, a hotfix release is started.
+If a stable version requires an immediate fix before the next release, a hotfix release is started.
 
 A similar process for a stable release is used, with the three differences.
 
