@@ -12,65 +12,136 @@ Note: this dependency graph only applies to dependencies as they are used in the
 
 ```mermaid
 graph TD
-    lodestar["lodestar"]:::nodemodule
-    cli["lodestar-cli"]:::nodemodule
-    config["lodestar-config"]:::nodemodule
-    db["lodestar-db"]:::nodemodule
-    fork-choice["lodestar-fork-choice"]:::nodemodule
-    params["lodestar-params"]:::nodemodule
-    types["lodestar-types"]:::nodemodule
-    utils["lodestar-utils"]:::nodemodule
-    validator["lodestar-validator"]:::nodemodule
-    state-trans["lodestar-state-transition"]:::nodemodule
+    api["api"]:::nodemodule
+    light-client["light-client"]:::nodemodule
+    prover["prover"]:::nodemodule
+    logger["logger"]:::nodemodule
+    reqresp["reqresp"]:::nodemodule
+    beacon-node["beacon-node"]:::nodemodule
+    cli["cli"]:::nodemodule
+    config["config"]:::nodemodule
+    db["db"]:::nodemodule
+    fork-choice["fork-choice"]:::nodemodule
+    params["params"]:::nodemodule
+    types["types"]:::nodemodule
+    utils["utils"]:::nodemodule
+    validator["validator"]:::nodemodule
+    state-transition["state-transition"]:::nodemodule
+    ssz["ssz"]:::nodemodule
+    blst["blst"]:::nodemodule
+    discv5["discv5"]:::nodemodule
+    libp2p["libp2p"]:::nodemodule
+    libp2p-gossipsub["libp2p-gossipsub"]:::nodemodule
+    libp2p-noise["libp2p-noise"]:::nodemodule
+    libp2p-yamux["libp2p-yamux"]:::nodemodule
 
+    ssz-->api
+    ssz-->config
+    ssz-->types
+    ssz-->beacon-node
+    ssz-->validator
+    ssz-->light-client
+    ssz-->state-transition
+
+    blst-->beacon-node
+    blst-->state-transition
+
+    discv5-->beacon-node
+
+    libp2p-->beacon-node
+
+    libp2p-gossipsub-->libp2p
+    libp2p-noise-->libp2p
+    libp2p-yamux-->libp2p
+
+    api-->beacon-node
+    api-->validator
+    api-->light-client
+
+    light-client-->prover
+
+    params-->api
     params-->config
     params-->types
+    params-->beacon-node
+    params-->validator
+    params-->light-client
+    params-->prover
 
-    types-->lodestar
+    types-->api
+    types-->beacon-node
     types-->cli
     types-->config
     types-->validator
     types-->fork-choice
+    types-->light-client
+    types-->prover
 
-    config-->lodestar
+    config-->api
+    config-->beacon-node
     config-->cli
     config-->validator
     config-->fork-choice
-    config-->state-trans
+    config-->state-transition
     config-->db
+    config-->light-client
+    config-->prover
 
-    utils-->lodestar
+    utils-->api
+    utils-->beacon-node
     utils-->db
     utils-->cli
     utils-->validator
     utils-->fork-choice
-    utils-->state-trans
+    utils-->state-transition
+    utils-->light-client
 
-    state-trans-->lodestar
-    state-trans-->validator
-    state-trans-->fork-choice
+    logger-->beacon-node
+    logger-->validator
+    logger-->light-client
+    logger-->prover
+    logger-->cli
 
-    db-->lodestar
+    reqresp-->beacon-node
+
+    state-transition-->beacon-node
+    state-transition-->validator
+    state-transition-->fork-choice
+
+    db-->beacon-node
     db-->validator
 
-    fork-choice-->lodestar
+    fork-choice-->beacon-node
 
-    lodestar-->cli
+    beacon-node-->cli
     validator-->cli
+    light-client-->cli
 
+    click api "https://github.com/ChainSafe/lodestar/tree/unstable/packages/api"
+    click light-client "https://github.com/ChainSafe/lodestar/tree/unstable/packages/light-client"
+    click prover "https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover"
+    click logger "https://github.com/ChainSafe/lodestar/tree/unstable/packages/logger"
+    click reqresp "https://github.com/ChainSafe/lodestar/tree/unstable/packages/reqresp"
     click cli "https://github.com/ChainSafe/lodestar/tree/unstable/packages/cli"
-    click lodestar "https://github.com/ChainSafe/lodestar/tree/unstable/packages/beacon-node"
+    click beacon-node "https://github.com/ChainSafe/lodestar/tree/unstable/packages/beacon-node"
     click validator "https://github.com/ChainSafe/lodestar/tree/unstable/packages/validator"
     click db "https://github.com/ChainSafe/lodestar/tree/unstable/packages/db"
     click params "https://github.com/ChainSafe/lodestar/tree/unstable/packages/params"
-    click state-trans "https://github.com/ChainSafe/lodestar/tree/unstable/packages/state-transition"
+    click state-transition "https://github.com/ChainSafe/lodestar/tree/unstable/packages/state-transition"
     click fork-choice "https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice"
     click types "https://github.com/ChainSafe/lodestar/tree/unstable/packages/types"
     click utils "https://github.com/ChainSafe/lodestar/tree/unstable/packages/utils"
     click config "https://github.com/ChainSafe/lodestar/tree/unstable/packages/config"
+    click ssz "https://github.com/ChainSafe/ssz"
+    click blst "https://github.com/ChainSafe/blst-ts"
+    click discv5 "https://github.com/ChainSafe/discv5"
+    click libp2p "https://github.com/libp2p/js-libp2p"
+    click libp2p-gossipsub "https://github.com/ChainSafe/js-libp2p-gossipsub"
+    click libp2p-noise "https://github.com/ChainSafe/js-libp2p-noise"
+    click libp2p-yamux "https://github.com/ChainSafe/js-libp2p-yamux"
 
-    classDef nodemodule fill:grey,stroke-width:2px,stroke:black,color:white;
-    linkStyle default stroke:grey, fill:none,stroke-width:1.5px;
+    classDef nodemodule fill:grey,stroke-width:3px,font-size:48px,stroke:black,color:white;
+    linkStyle default stroke:grey,fill:none,stroke-width:2px;
 ```
 
 ## Lodestar Monorepo
@@ -180,3 +251,7 @@ Below is a brief summary, listed alphabetically, of each of our main external de
 ### `@libp2p/js-libp2p`
 
 [@libp2p/js-libp2p](https://github.com/libp2p/js-libp2p) is the JavaScript implementation of the libp2p networking stack used in Ethereum's networking stack.
+
+```
+
+```
