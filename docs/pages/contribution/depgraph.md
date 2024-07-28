@@ -140,8 +140,8 @@ graph TD
     click libp2p-noise "https://github.com/ChainSafe/js-libp2p-noise"
     click libp2p-yamux "https://github.com/ChainSafe/js-libp2p-yamux"
 
-    classDef nodemodule fill:grey,stroke-width:3px,font-size:48px,stroke:black,color:white;
-    linkStyle default stroke:grey,fill:none,stroke-width:2px;
+    classDef nodemodule fill:grey,stroke-width:4px,font-size:48px,stroke:black,color:white;
+    linkStyle default stroke:grey,fill:none,stroke-width:4px;
 ```
 
 ## Lodestar Monorepo
