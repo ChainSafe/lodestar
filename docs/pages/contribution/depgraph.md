@@ -251,7 +251,3 @@ Below is a brief summary, listed alphabetically, of each of our main external de
 ### `@libp2p/js-libp2p`
 
 [@libp2p/js-libp2p](https://github.com/libp2p/js-libp2p) is the JavaScript implementation of the libp2p networking stack used in Ethereum's networking stack.
-
-```
-
-```
