@@ -183,10 +183,12 @@ For example: After modified hotfix testing period, is the original bug resolved?
 - Merge `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections. See "Backporting merge conflicts from stable to unstable".
 
 Pull the latest commits on both `stable` and `unstable` branches:
+
 - `git checkout stable && git pull origin stable`
 - `git checkout unstable && git pull origin unstable`
 
 Merge `stable` into `unstable`, resolving conflicts:
+
 - `git checkout unstable && git merge stable`
 - Resolve conflicts
 - Sanity check locally before pushing by using: `git diff unstable origin/unstable`
