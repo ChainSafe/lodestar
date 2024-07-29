@@ -388,7 +388,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   }
 
   private getClientVersionV1(
-    _blockHex: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
+    _clientVersion: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
   ): EngineApiRpcReturnTypes["engine_getClientVersionV1"] {
     return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
   }
