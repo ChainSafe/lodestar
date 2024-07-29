@@ -54,6 +54,7 @@ JSObjects
 JWT
 KDE
 Kubernetes
+Kurtosis
 LGPL
 LGPLv
 LMD
