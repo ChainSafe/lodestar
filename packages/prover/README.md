@@ -1,4 +1,4 @@
-# Lodestar Eth Consensus Lightclient Prover
+# Lodestar Prover
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 [![ETH Beacon APIs Spec v2.5.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.5.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.5.0)
