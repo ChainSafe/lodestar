@@ -24,7 +24,7 @@ import {
   BlobsBundleRpc,
   ExecutionPayloadBodyRpc,
 } from "./types.js";
-import {ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
+import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
@@ -96,7 +96,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV3: this.getPayload.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
-      engine_getClientVersionV1: () => [],
+      engine_getClientVersionV1: this.getClientVersionV1.bind(this),
     };
   }
 
@@ -385,6 +385,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     this.payloadsForDeletion.set(payloadIdNbr, now);
 
     return payload.executionPayload;
+  }
+
+  private getClientVersionV1(
+    _blockHex: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getClientVersionV1"] {
+    return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
   }
 
   private timestampToFork(timestamp: number): ForkExecution {

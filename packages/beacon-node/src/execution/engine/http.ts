@@ -156,7 +156,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
       if (this.clientVersion === undefined) {
-        // This statement should only be called first time receiving response after start up
+        // This statement should only be called first time receiving response after startup
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
           this.logger.debug("Unable to get execution client version", {}, e);
           this.clientVersion = null;
@@ -452,12 +452,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       return {code, name: cv.name, version: cv.version, commit: cv.commit};
     });
 
-    if (clientVersions.length > 0) {
-      this.clientVersion = clientVersions[0];
-      this.logger.debug("Execution client version updated", this.clientVersion);
-    } else {
-      this.clientVersion = null;
+    if (clientVersions.length === 0) {
+      throw Error("Received empty client versions array");
     }
+
+    this.clientVersion = clientVersions[0];
+    this.logger.debug("Execution client version updated", this.clientVersion);
 
     return clientVersions;
   }
