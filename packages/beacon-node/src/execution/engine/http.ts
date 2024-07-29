@@ -74,10 +74,6 @@ export type ExecutionEngineHttpOpts = {
    * Lodestar commit to be used for `ClientVersion`
    */
   commit?: string;
-  /*
-   * Disable client version fetch and update. Use in testing only
-   */
-  disableClientVersionFetch?: boolean;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -158,19 +154,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
     });
 
-    if (!opts?.disableClientVersionFetch) {
-      this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
-        if (this.clientVersion === undefined) {
-          // This statement should only be called first time receiving response after start up
-          this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-            this.logger.error("Unable to get execution client version", {}, e);
-          });
-        }
-        this.updateEngineState(
-          getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state})
-        );
-      });
-    }
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+      if (this.clientVersion === undefined) {
+        // This statement should only be called first time receiving response after start up
+        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
+          this.logger.error("Unable to get execution client version", {}, e);
+        });
+      }
+      this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
+    });
   }
 
   /**
@@ -475,11 +467,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
-        if (!this.opts?.disableClientVersionFetch) {
-          this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-            this.logger.error("Unable to get execution client version", {}, e);
-          });
-        }
+        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
+          this.logger.error("Unable to get execution client version", {}, e);
+        });
         break;
       case ExecutionEngineState.OFFLINE:
         this.logger.error("Execution client went offline", {oldState, newState});

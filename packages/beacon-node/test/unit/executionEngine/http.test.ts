@@ -9,6 +9,7 @@ import {
   serializeExecutionPayload,
   serializeExecutionPayloadBody,
 } from "../../../src/execution/engine/types.js";
+import {RpcPayload} from "../../../src/eth1/interface.js";
 import {numToQuantity} from "../../../src/eth1/provider/utils.js";
 
 describe("ExecutionEngine / http", () => {
@@ -29,6 +30,10 @@ describe("ExecutionEngine / http", () => {
     const server = fastify({logger: false});
 
     server.post("/", async (req) => {
+      if ((req.body as RpcPayload).method === "engine_getClientVersionV1") {
+        // Ignore client version requests
+        return [];
+      }
       reqJsonRpcPayload = req.body;
       delete (reqJsonRpcPayload as {id?: number}).id;
       return returnValue;
@@ -47,7 +52,6 @@ describe("ExecutionEngine / http", () => {
         urls: [baseUrl],
         retries: defaultExecutionEngineHttpOpts.retries,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
-        disableClientVersionFetch: true,
       },
       {signal: controller.signal, logger: console as unknown as Logger}
     );
