@@ -1,5 +1,4 @@
 import {expect} from "vitest";
-import {init} from "@chainsafe/bls/switchable";
 import {isForkLightClient} from "@lodestar/params";
 import {altair, phase0, RootHex, Slot, ssz, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
@@ -78,8 +77,6 @@ const UPDATE_FILE_NAME = "^(update)_([0-9a-zA-Z_]+)$";
 export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
   return {
     testFunction: async (testcase) => {
-      await init("blst-native");
-
       // Grab only the ALTAIR_FORK_EPOCH, since the domains are the same as minimal
       const config = createBeaconConfig(
         pickConfigForkEpochs(testcase.config),

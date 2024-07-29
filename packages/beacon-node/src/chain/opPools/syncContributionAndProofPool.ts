@@ -1,6 +1,5 @@
-import type {Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {altair, Slot, Root, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
@@ -182,6 +181,6 @@ export function aggregate(bestContributionBySubnet: Map<number, SyncContribution
   }
   return {
     syncCommitteeBits,
-    syncCommitteeSignature: bls.Signature.aggregate(signatures).toBytes(),
+    syncCommitteeSignature: aggregateSignatures(signatures).toBytes(),
   };
 }

@@ -1,5 +1,5 @@
-import type {SecretKey} from "@chainsafe/bls/types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@chainsafe/blst";
 import {
   computeEpochAtSlot,
   computeSigningRoot,

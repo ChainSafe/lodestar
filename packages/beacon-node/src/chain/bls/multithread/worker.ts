@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import worker from "node:worker_threads";
 import {expose} from "@chainsafe/threads/worker";
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {PublicKey} from "@chainsafe/blst";
 import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch.js";
 import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
@@ -109,7 +108,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
 function deserializeSet(set: SerializedSet): SignatureSetDeserialized {
   return {
-    publicKey: bls.PublicKey.fromBytes(set.publicKey, CoordType.affine),
+    publicKey: PublicKey.fromBytes(set.publicKey),
     message: set.message,
     signature: set.signature,
   };

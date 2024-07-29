@@ -1,6 +1,5 @@
-import bls from "@chainsafe/bls";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
+import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "./errors.js";
@@ -42,7 +41,7 @@ export function deriveSecretKeys(args: SecretKeysArgs): SecretKey[] {
 
     return indexes.map((index) => {
       const {signing} = deriveEth2ValidatorKeys(masterSK, index);
-      return bls.SecretKey.fromBytes(signing);
+      return SecretKey.fromBytes(signing);
     });
   }
 

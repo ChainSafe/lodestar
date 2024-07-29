@@ -1,53 +1,31 @@
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, phase0, ValidatorIndex} from "@lodestar/types";
+import {BLSPubkey, Epoch, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {IBeaconChain, StateGetOpts} from "../../../../chain/index.js";
+import {IForkChoice} from "@lodestar/fork-choice";
+import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 
-export async function resolveStateId(
-  chain: IBeaconChain,
-  stateId: routes.beacon.StateId,
-  opts?: StateGetOpts
-): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
-  const stateRes = await resolveStateIdOrNull(chain, stateId, opts);
-  if (!stateRes) {
-    throw new ApiError(404, `No state found for id '${stateId}'`);
-  }
-
-  return stateRes;
-}
-
-async function resolveStateIdOrNull(
-  chain: IBeaconChain,
-  stateId: routes.beacon.StateId,
-  opts?: StateGetOpts
-): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
+export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.StateId): RootHex | Slot {
   if (stateId === "head") {
-    // TODO: This is not OK, head and headState must be fetched atomically
-    const head = chain.forkChoice.getHead();
-    const headState = chain.getHeadState();
-    return {state: headState, executionOptimistic: isOptimisticBlock(head), finalized: false};
+    return forkChoice.getHead().stateRoot;
   }
 
   if (stateId === "genesis") {
-    return chain.getStateBySlot(GENESIS_SLOT, opts);
+    return GENESIS_SLOT;
   }
 
   if (stateId === "finalized") {
-    const checkpoint = chain.forkChoice.getFinalizedCheckpoint();
-    return chain.getStateByCheckpoint(checkpoint);
+    return forkChoice.getFinalizedBlock().stateRoot;
   }
 
   if (stateId === "justified") {
-    const checkpoint = chain.forkChoice.getJustifiedCheckpoint();
-    return chain.getStateByCheckpoint(checkpoint);
+    return forkChoice.getJustifiedBlock().stateRoot;
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {
-    return chain.getStateByStateRoot(stateId, opts);
+    return stateId;
   }
 
   // id must be slot
@@ -56,7 +34,45 @@ async function resolveStateIdOrNull(
     throw new ValidationError(`Invalid block id '${stateId}'`, "blockId");
   }
 
-  return chain.getStateBySlot(blockSlot, opts);
+  return blockSlot;
+}
+
+export async function getStateResponse(
+  chain: IBeaconChain,
+  stateId: routes.beacon.StateId
+): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
+  const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
+
+  const res =
+    typeof rootOrSlot === "string"
+      ? await chain.getStateByStateRoot(rootOrSlot)
+      : await chain.getStateBySlot(rootOrSlot);
+
+  if (!res) {
+    throw new ApiError(404, `No state found for id '${stateId}'`);
+  }
+
+  return res;
+}
+
+export async function getStateResponseWithRegen(
+  chain: IBeaconChain,
+  stateId: routes.beacon.StateId
+): Promise<{state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
+  const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
+
+  const res =
+    typeof rootOrSlot === "string"
+      ? await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true})
+      : rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot
+        ? await chain.getStateBySlot(rootOrSlot, {allowRegen: true})
+        : null; // TODO implement historical state regen
+
+  if (!res) {
+    throw new ApiError(404, `No state found for id '${stateId}'`);
+  }
+
+  return res;
 }
 
 /**

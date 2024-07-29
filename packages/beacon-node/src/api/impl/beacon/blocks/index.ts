@@ -34,7 +34,7 @@ import {ApiModules} from "../../types.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
-import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
+import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -371,7 +371,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockHeader({blockId}) {
-      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
         data: toBeaconHeaderResponse(config, block, true),
         meta: {executionOptimistic, finalized},
@@ -379,7 +379,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockV2({blockId}) {
-      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
         data: block,
         meta: {
@@ -391,7 +391,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlindedBlock({blockId}) {
-      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       return {
         data: isForkExecution(fork)
@@ -406,7 +406,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockAttestations({blockId}) {
-      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
         data: Array.from(block.message.body.attestations),
         meta: {executionOptimistic, finalized},
@@ -445,7 +445,7 @@ export function getBeaconBlockApi({
       }
 
       // Slow path
-      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
         meta: {executionOptimistic, finalized},
@@ -464,7 +464,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars({blockId, indices}) {
-      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};

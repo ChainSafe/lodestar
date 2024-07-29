@@ -36,7 +36,7 @@ import {
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -126,7 +126,7 @@ export class BeaconChain implements IBeaconChain {
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: QueuedStateRegenerator;
-  readonly lightClientServer: LightClientServer;
+  readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
 
   // Ops pool
@@ -305,7 +305,9 @@ export class BeaconChain implements IBeaconChain {
       signal,
     });
 
-    const lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
+    if (!opts.disableLightClientServer) {
+      this.lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
+    }
 
     this.reprocessController = new ReprocessController(this.metrics);
 
@@ -316,7 +318,6 @@ export class BeaconChain implements IBeaconChain {
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
-    this.lightClientServer = lightClientServer;
 
     this.archiver = new Archiver(db, this, logger, signal, opts);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
@@ -429,7 +430,11 @@ export class BeaconChain implements IBeaconChain {
           {dontTransferCache: true},
           RegenCaller.restApi
         );
-        return {state, executionOptimistic: isOptimisticBlock(block), finalized: slot === finalizedBlock.slot};
+        return {
+          state,
+          executionOptimistic: isOptimisticBlock(block),
+          finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
+        };
       } else {
         // Just check if state is already in the cache. If it's not dialed to the correct slot,
         // do not bother in advancing the state. restApiCanTriggerRegen == false means do no work
@@ -439,7 +444,13 @@ export class BeaconChain implements IBeaconChain {
         }
 
         const state = this.regen.getStateSync(block.stateRoot);
-        return state && {state, executionOptimistic: isOptimisticBlock(block), finalized: slot === finalizedBlock.slot};
+        return (
+          state && {
+            state,
+            executionOptimistic: isOptimisticBlock(block),
+            finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
+          }
+        );
       }
     } else {
       // request for finalized state
@@ -457,10 +468,11 @@ export class BeaconChain implements IBeaconChain {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
+      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state,
         executionOptimistic: block != null && isOptimisticBlock(block),
-        finalized: state.epochCtx.epoch <= this.forkChoice.getFinalizedCheckpoint().epoch,
+        finalized: state.epochCtx.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
       };
     }
 
@@ -472,10 +484,11 @@ export class BeaconChain implements IBeaconChain {
     const cachedStateCtx = this.regen.getStateSync(stateRoot);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
         executionOptimistic: block != null && isOptimisticBlock(block),
-        finalized: cachedStateCtx.epochCtx.epoch <= this.forkChoice.getFinalizedCheckpoint().epoch,
+        finalized: cachedStateCtx.epochCtx.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
       };
     }
 
@@ -490,10 +503,11 @@ export class BeaconChain implements IBeaconChain {
     const cachedStateCtx = this.regen.getCheckpointStateSync(checkpoint);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
         executionOptimistic: block != null && isOptimisticBlock(block),
-        finalized: cachedStateCtx.epochCtx.epoch <= this.forkChoice.getFinalizedCheckpoint().epoch,
+        finalized: cachedStateCtx.epochCtx.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
       };
     }
 
