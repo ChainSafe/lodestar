@@ -9,16 +9,12 @@ export function toGraffitiBuffer(graffiti: string): Buffer {
 }
 
 export function getDefaultGraffiti(
-  opts: {private?: boolean},
-  consensusClientVersion?: ClientVersion,
-  executionClientVersion?: ClientVersion
+  consensusClientVersion: ClientVersion,
+  executionClientVersion: ClientVersion | undefined,
+  opts: {private?: boolean}
 ): string {
   if (opts.private) {
     return "";
-  }
-
-  if (consensusClientVersion === undefined) {
-    throw new Error("Consensus client version must be provided if opts.private is set to false");
   }
 
   if (executionClientVersion !== undefined) {

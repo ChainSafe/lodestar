@@ -119,6 +119,7 @@ export interface IExecutionEngine {
   readonly state: ExecutionEngineState;
 
   readonly clientVersion?: ClientVersion;
+
   payloadIdCache: PayloadIdCache;
   /**
    * A state transition function which applies changes to the self.execution_state.

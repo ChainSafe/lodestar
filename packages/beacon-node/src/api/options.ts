@@ -12,4 +12,5 @@ export const defaultApiOptions: ApiOptions = {
   maxGindicesInProof: 512,
   rest: beaconRestApiServerOpts,
   version: "dev",
+  private: false,
 };

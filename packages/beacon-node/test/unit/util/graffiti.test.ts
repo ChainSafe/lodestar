@@ -38,17 +38,17 @@ describe("Graffiti helper", () => {
     }; // Sample output of getLodestarClientVersion()
 
     it("should return empty if private option is set", () => {
-      const result = getDefaultGraffiti({private: true});
+      const result = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: true});
       expect(result).toBe("");
     });
 
     it("should return CL only info if EL client version is missing", () => {
-      const result = getDefaultGraffiti({private: false}, consensusClientVersion);
+      const result = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
       expect(result).toBe("LS80c2");
     });
 
     it("should return combined version codes and commits if executionClientVersion is provided", () => {
-      const result = getDefaultGraffiti({private: false}, consensusClientVersion, executionClientVersion);
+      const result = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
       expect(result).toBe("BU9b0eLS80c2");
     });
   });

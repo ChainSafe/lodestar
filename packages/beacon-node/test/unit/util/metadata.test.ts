@@ -2,7 +2,7 @@ import {describe, it, expect} from "vitest";
 import {getLodestarClientVersion} from "../../../src/util/metadata.js";
 import {ClientCode} from "../../../src/execution/index.js";
 
-describe("util / metadata ", () => {
+describe("util / metadata", () => {
   describe("getLodestarClientVersion", () => {
     it("should return empty version and commit", () => {
       const expected = {code: ClientCode.LS, name: "Lodestar", version: "", commit: ""};

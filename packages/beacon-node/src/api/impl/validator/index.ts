@@ -400,14 +400,12 @@ export function getValidatorApi(
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const consensusClientVersion = getLodestarClientVersion(opts);
-      const executionClientVersion = chain.executionEngine.clientVersion;
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
         randaoReveal,
         graffiti: toGraffitiBuffer(
-          graffiti ?? getDefaultGraffiti(opts, consensusClientVersion, executionClientVersion)
+          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
         ),
         commonBlockBody,
       });
@@ -472,14 +470,12 @@ export function getValidatorApi(
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const consensusClientVersion = getLodestarClientVersion(opts);
-      const executionClientVersion = chain.executionEngine.clientVersion;
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
         randaoReveal,
         graffiti: toGraffitiBuffer(
-          graffiti ?? getDefaultGraffiti(opts, consensusClientVersion, executionClientVersion)
+          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
         ),
         feeRecipient,
         commonBlockBody,
@@ -587,13 +583,13 @@ export function getValidatorApi(
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    const consensusClientVersion = getLodestarClientVersion(opts);
-    const executionClientVersion = chain.executionEngine.clientVersion;
     const commonBlockBody = await chain.produceCommonBlockBody({
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti ?? getDefaultGraffiti(opts, consensusClientVersion, executionClientVersion)),
+      graffiti: toGraffitiBuffer(
+        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+      ),
     });
     logger.debug("Produced common block body", loggerContext);
 
