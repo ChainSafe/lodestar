@@ -42,8 +42,8 @@ It is possible to start up the light-client as a standalone process.
 ```bash
 lodestar lightclient \
     --network sepolia \
-    --beacon-api-url https://lodestar-sepolia.chainsafe.io \
-    --checkpoint-root "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
+    --beaconApiUrl https://lodestar-sepolia.chainsafe.io \
+    --checkpointRoot "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
 ```
 
 ## Light-Client Programmatic Example
