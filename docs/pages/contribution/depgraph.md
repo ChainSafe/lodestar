@@ -6,8 +6,8 @@ title: Dependency Graph
 
 This is a diagram of the various Lodestar packages in the monorepo, how they fit together and interact with major external dependencies:
 
-:::info
-Note: this dependency graph only applies to dependencies as they are used in the `src/` folders of each package, not in `test/`
+:::note
+This dependency graph only applies to dependencies as they are used in the `src/` folders of each package, not in `test/`
 :::
 
 ```mermaid
