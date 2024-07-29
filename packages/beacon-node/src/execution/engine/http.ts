@@ -159,8 +159,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         // This statement should only be called first time receiving response after startup
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
           this.logger.debug("Unable to get execution client version", {}, e);
-          this.clientVersion = null;
         });
+        this.clientVersion = null;
       }
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
     });
