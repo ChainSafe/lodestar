@@ -43,7 +43,7 @@ describe("Graffiti helper", () => {
     });
 
     it("should return CL only info if EL client version is missing", () => {
-      const result = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
+      const result = getDefaultGraffiti(consensusClientVersion, undefined, {private: false});
       expect(result).toBe("LS80c2");
     });
 
