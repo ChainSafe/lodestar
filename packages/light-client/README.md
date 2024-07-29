@@ -18,13 +18,13 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 
 ## Requirements for Running a Light-Client
 
-Access to an beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/consensus-specs/tree/dev):
+Access to an beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/beacon-APIs/tree/v2.5.0/apis/beacon/light_client):
 
-- `/eth/v1/beacon/light_client/updates`
-- `/eth/v1/beacon/light_client/optimistic_update`
-- `/eth/v1/beacon/light_client/finality_update`
-- `/eth/v1/beacon/light_client/bootstrap/{block_root}`
-- `/eth/v0/beacon/light_client/committee_root`
+- `GET /eth/v1/beacon/light_client/updates`
+- `GET /eth/v1/beacon/light_client/optimistic_update`
+- `GET /eth/v1/beacon/light_client/finality_update`
+- `GET /eth/v1/beacon/light_client/bootstrap/{block_root}`
+- `GET /eth/v0/beacon/light_client/committee_root`
 
 System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/libraries/lightclient-prover/prover) being one of them.
 
