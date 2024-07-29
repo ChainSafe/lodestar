@@ -93,12 +93,12 @@ lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (opti
 
 ## Browser Integration
 
-If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.19.0` version.
+If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.20.0` version.
 
 Directly link the dist build with the `<script />` tag with tools like unpkg or other. e.g.
 
 ```html
-<script src="https://www.unpkg.com/@lodestar/light-client@1.18.0/dist/lightclient.es.min.js" type="module">
+<script src="https://www.unpkg.com/@lodestar/light-client@1.20.0/dist/lightclient.min.mjs" type="module">
 ```
 
 Then the lightclient package will be exposed to `globalThis`, in case of browser environment that will be `window`. You can access the package as `window.lodestar.lightclient`. All named exports will also be available from this interface. e.g. `window.lodestar.lightclient.transport`.
