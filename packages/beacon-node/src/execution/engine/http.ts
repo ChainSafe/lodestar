@@ -117,7 +117,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
   /** Cached EL client version from the latest getClientVersion call */
-  clientVersion?: ClientVersion;
+  clientVersion?: ClientVersion | null;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -159,6 +159,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         // This statement should only be called first time receiving response after start up
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
           this.logger.error("Unable to get execution client version", {}, e);
+          this.clientVersion = null;
         });
       }
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
@@ -454,6 +455,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (clientVersions.length > 0) {
       this.clientVersion = clientVersions[0];
       this.logger.debug("Execution client version updated", this.clientVersion);
+    } else {
+      this.clientVersion = null;
     }
 
     return clientVersions;
@@ -468,7 +471,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-          this.logger.error("Unable to get execution client version", {}, e);
+          this.logger.debug("Unable to get execution client version", {}, e);
+          this.clientVersion = null;
         });
         break;
       case ExecutionEngineState.OFFLINE:

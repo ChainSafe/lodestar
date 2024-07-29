@@ -118,7 +118,7 @@ export type VersionedHashes = Uint8Array[];
 export interface IExecutionEngine {
   readonly state: ExecutionEngineState;
 
-  readonly clientVersion?: ClientVersion;
+  readonly clientVersion?: ClientVersion | null;
 
   payloadIdCache: PayloadIdCache;
   /**

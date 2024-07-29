@@ -10,14 +10,14 @@ export function toGraffitiBuffer(graffiti: string): Buffer {
 
 export function getDefaultGraffiti(
   consensusClientVersion: ClientVersion,
-  executionClientVersion: ClientVersion | undefined,
+  executionClientVersion: ClientVersion | null | undefined,
   opts: {private?: boolean}
 ): string {
   if (opts.private) {
     return "";
   }
 
-  if (executionClientVersion !== undefined) {
+  if (executionClientVersion != null) {
     const {code: executionCode, commit: executionCommit} = executionClientVersion;
 
     // Follow the 2-byte commit format in https://github.com/ethereum/execution-apis/pull/517#issuecomment-1918512560
