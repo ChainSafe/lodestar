@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
 import {toHexString} from "@chainsafe/ssz";
 import {describe, it, expect} from "vitest";
+import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {computeDomain, computeSigningRoot, interopSecretKey, ZERO_HASH} from "@lodestar/state-transition";

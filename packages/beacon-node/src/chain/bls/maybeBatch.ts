@@ -1,5 +1,4 @@
-import {CoordType, PublicKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
 
@@ -16,12 +15,12 @@ export type SignatureSetDeserialized = {
 export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[]): boolean {
   try {
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return bls.Signature.verifyMultipleSignatures(
+      return verifyMultipleAggregateSignatures(
         sets.map((s) => ({
-          publicKey: s.publicKey,
-          message: s.message,
+          pk: s.publicKey,
+          msg: s.message,
           // true = validate signature
-          signature: bls.Signature.fromBytes(s.signature, CoordType.affine, true),
+          sig: Signature.fromBytes(s.signature, true),
         }))
       );
     }
@@ -34,8 +33,8 @@ export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[]):
     // If too few signature sets verify them without batching
     return sets.every((set) => {
       // true = validate signature
-      const sig = bls.Signature.fromBytes(set.signature, CoordType.affine, true);
-      return sig.verify(set.publicKey, set.message);
+      const sig = Signature.fromBytes(set.signature, true);
+      return verify(set.message, set.publicKey, sig);
     });
   } catch (_) {
     // A signature could be malformed, in that case fromBytes throws error
