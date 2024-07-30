@@ -173,7 +173,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
   beaconNodeOptions.set({metrics: {validatorMonitorLogs: args.validatorMonitorLogs}});
   // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {version}});
+  beaconNodeOptions.set({api: {commit, version}});
 
   // Combine bootnodes from different sources
   const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
@@ -199,7 +199,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   }
 
   if (args.private) {
-    beaconNodeOptions.set({network: {private: true}});
+    beaconNodeOptions.set({network: {private: true}, api: {private: true}});
   } else {
     const versionStr = `Lodestar/${version}`;
     const simpleVersionStr = version.split("/")[0];
@@ -209,6 +209,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string
     beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
+    // Set commit and version for ClientVersion
+    beaconNodeOptions.set({executionEngine: {commit, version}});
   }
 
   // Render final options

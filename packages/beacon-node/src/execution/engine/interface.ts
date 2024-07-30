@@ -38,6 +38,26 @@ export enum ExecutionEngineState {
   AUTH_FAILED = "AUTH_FAILED",
 }
 
+/**
+ * Client code as defined in https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#clientcode
+ * ClientCode.XX is dedicated to other clients which do not have their own code
+ */
+export enum ClientCode {
+  BU = "BU", // besu
+  EJ = "EJ", // ethereumJS
+  EG = "EG", // erigon
+  GE = "GE", // go-ethereum
+  GR = "GR", // grandine
+  LH = "LH", // lighthouse
+  LS = "LS", // lodestar
+  NM = "NM", // nethermind
+  NB = "NB", // nimbus
+  TK = "TK", // teku
+  PM = "PM", // prysm
+  RH = "RH", // reth
+  XX = "XX", // unknown
+}
+
 export type ExecutePayloadResponse =
   | {
       status: ExecutionPayloadStatus.SYNCING | ExecutionPayloadStatus.ACCEPTED;
@@ -80,6 +100,13 @@ export type BlobsBundle = {
   proofs: KZGProof[];
 };
 
+export type ClientVersion = {
+  code: ClientCode;
+  name: string;
+  version: string;
+  commit: string;
+};
+
 export type VersionedHashes = Uint8Array[];
 
 /**
@@ -90,6 +117,8 @@ export type VersionedHashes = Uint8Array[];
  */
 export interface IExecutionEngine {
   readonly state: ExecutionEngineState;
+
+  readonly clientVersion?: ClientVersion | null;
 
   payloadIdCache: PayloadIdCache;
   /**
