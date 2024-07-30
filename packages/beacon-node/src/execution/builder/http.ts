@@ -14,7 +14,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {getClient, ApiClient as BuilderApi} from "@lodestar/api/builder";
 import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
-import {toSafePrintableUrl} from "@lodestar/utils";
+import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
@@ -64,7 +64,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       },
       {config, metrics: metrics?.builderHttpClient}
     );
-    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
+    logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
     this.config = config;
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
