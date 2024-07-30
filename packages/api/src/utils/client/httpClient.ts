@@ -117,9 +117,10 @@ export class HttpClient implements IHttpClient {
       if (!this.urlsInits.some((opt) => opt.baseUrl === urlInit.baseUrl)) {
         this.urlsInits.push({
           ...urlInit,
+          baseUrl: urlInit.baseUrl,
           urlIndex: i,
           printableUrl: toPrintableUrl(urlInit.baseUrl),
-        } as UrlInitRequired);
+        });
       }
     }
 
