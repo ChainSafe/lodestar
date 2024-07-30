@@ -51,9 +51,9 @@ Alternatively, the ENR can also be retrieved from the beacon node API by queryin
 
 [ENR Viewer](https://enr-viewer.com/) provides a simple and convenient option to decode and inspect ENRs.
 
-## Peer Communication (gossipsub and ReqResp)
+## Peer Communication (gossipsub and Req/Resp)
 
-Gossipsub and ReqResp are the two mechanisms that beacon nodes use to exchange chain data. Gossipsub is used disseminate the most recent relevant data proactively throughout the network. ReqResp is used to directly ask specific peers for specific information (eg: during syncing).
+Gossipsub and Req/Resp are the two mechanisms that beacon nodes use to exchange chain data. Gossipsub is used disseminate the most recent relevant data proactively throughout the network. Req/Resp is used to directly ask specific peers for specific information (eg: during syncing).
 
 ### Gossipsub
 
@@ -63,13 +63,13 @@ In GossipSub, nodes can subscribe to topics, effectively joining the correspondi
 
 Messages are propagated through a blend of eager-push and lazy-pull models. Specifically, the protocol employs "mesh links" to carry full messages actively and "gossip links" to carry only message identifiers (lazy-pull propagation model). This hybrid approach allows for both active message propagation and reactive message retrieval​ which is an extension of the traditional hub-and-spoke pub/sub model.
 
-### ReqResp
+### Req/Resp
 
-ReqResp is the domain of protocols that establish a flexible, on-demand mechanism to retrieve historical data and data missed by gossip. This family of methods, implemented as separate libp2p protocols, operate between a single requester and responder. A method is initiated via a libp2p protocol ID, with the initiator sending a request message and the responder sending a response message. Every method defines a specific request and response message type, and a specific protocol ID. This framework also facilitates streaming responses and robust error handling.
+Req/Resp is the domain of protocols that establish a flexible, on-demand mechanism to retrieve historical data and data missed by gossip. This family of methods, implemented as separate libp2p protocols, operate between a single requester and responder. A method is initiated via a libp2p protocol ID, with the initiator sending a request message and the responder sending a response message. Every method defines a specific request and response message type, and a specific protocol ID. This framework also facilitates streaming responses and robust error handling.
 
 ## Data Transport (libp2p)
 
-Libp2p is a modular and extensible network stack that serves as the data transport layer below both gossipsub and ReqResp and facilitates the lower-level peer-to-peer communications. It provides a suite of protocols for various networking functionalities including network transports, connection encryption and protocol multiplexing. Its modular design allows for the easy addition, replacement, or upgrading of protocols, ensuring an adaptable and evolving networking stack.
+Libp2p is a modular and extensible network stack that serves as the data transport layer below both gossipsub and Req/Resp and facilitates the lower-level peer-to-peer communications. It provides a suite of protocols for various networking functionalities including network transports, connection encryption and protocol multiplexing. Its modular design allows for the easy addition, replacement, or upgrading of protocols, ensuring an adaptable and evolving networking stack.
 
 Libp2p operates at the lower levels of the OSI model, particularly at the Transport and Network layers. Libp2p supports both TCP and UDP protocols for establishing connections and data transmission. Combined with libp2p's modular design it can integrate with various networking technologies to facilitating both routing and addressing.
 
