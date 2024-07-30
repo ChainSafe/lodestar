@@ -210,7 +210,7 @@ export class OpPool {
 
     const endAttesterSlashings = stepsMetrics?.startTimer();
     const attesterSlashings: AttesterSlashing[] = [];
-    const maxAttesterSlashing = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
+    const maxAttesterSlashings = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
     attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
       /** Indices slashable in this attester slashing */
       const slashableIndices = new Set<ValidatorIndex>();
@@ -225,7 +225,7 @@ export class OpPool {
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
         }
-        if (attesterSlashings.length >= maxAttesterSlashing) {
+        if (attesterSlashings.length >= maxAttesterSlashings) {
           break attesterSlashing;
         }
       }

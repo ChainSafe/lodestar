@@ -8,7 +8,7 @@ import {
   GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
-  UNSET_DEPOSIT_RECEIPTS_START_INDEX,
+  UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 
@@ -312,7 +312,7 @@ export function initializeBeaconStateFromEth1(
     stateElectra.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
       ssz.electra.ExecutionPayloadHeader.defaultViewDU();
-    stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+    stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
   }
 
   state.commit();

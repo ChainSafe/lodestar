@@ -2,8 +2,7 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {Map} from "immutable";
 import {toBufferBE} from "bigint-buffer";
 import {digest} from "@chainsafe/as-sha256";
-import type {SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {ssz} from "@lodestar/types";
 import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
@@ -106,6 +105,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
 
   function generatePrivateKey(index: number): SecretKey {
     const secretKeyBytes = toBufferBE(bytesToBigInt(digest(intToBytes(index, 32))) % BigInt("38581184513"), 32);
-    return bls.SecretKey.fromBytes(secretKeyBytes);
+    const secret: SecretKey = SecretKey.fromBytes(secretKeyBytes);
+    return secret;
   }
 });
