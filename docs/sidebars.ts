@@ -53,12 +53,15 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Light Client",
-          items: ["libraries/lightclient-prover/lightclient-cli", "libraries/lightclient-prover/lightclient"],
+          items: [
+            {type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/lightclient"},
+            "libraries/lightclient-prover/lightclient-cli",
+          ],
         },
         {
           type: "category",
           label: "Prover",
-          items: ["libraries/lightclient-prover/prover"],
+          items: [{type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/prover"}],
         },
       ],
     },
