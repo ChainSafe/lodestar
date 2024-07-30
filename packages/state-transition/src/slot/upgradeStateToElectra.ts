@@ -1,5 +1,5 @@
 import {Epoch, ValidatorIndex, ssz} from "@lodestar/types";
-import {FAR_FUTURE_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
 import {
@@ -59,8 +59,8 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.historicalSummaries = stateElectraCloned.historicalSummaries;
 
   // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
-  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
-  stateElectraView.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_REQUESTS_START_INDEX
+  stateElectraView.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
   stateElectraView.depositBalanceToConsume = BigInt(0);
   stateElectraView.exitBalanceToConsume = BigInt(0);
 
@@ -138,8 +138,8 @@ export function upgradeStateToElectraOriginal(stateDeneb: CachedBeaconStateDeneb
   });
 
   // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
-  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
-  stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_REQUESTS_START_INDEX
+  stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
 
   const validatorsArr = stateElectra.validators.getAllReadonly();
 

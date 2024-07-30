@@ -1,6 +1,6 @@
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
-import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/blst";
+import {SecretKey, Signature, fastAggregateVerify, aggregateSignatures} from "@chainsafe/blst";
 import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
 import {
   FAR_FUTURE_EPOCH,
@@ -331,9 +331,9 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
 });
 
 describe("aggregateConsolidation", function () {
-  const sk0 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-  const sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
-  const sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 3));
+  const sk0 = SecretKey.fromBytes(Buffer.alloc(32, 1));
+  const sk1 = SecretKey.fromBytes(Buffer.alloc(32, 2));
+  const sk2 = SecretKey.fromBytes(Buffer.alloc(32, 3));
   const skArr = [sk0, sk1, sk2];
   const testCases: {
     name: string;
@@ -397,7 +397,7 @@ describe("aggregateConsolidation", function () {
       expect(finalAttestation.aggregationBits.uint8Array).toEqual(new Uint8Array(expectedAggregationBits));
       expect(finalAttestation.committeeBits.toBoolArray()).toEqual(expectedCommitteeBits);
       expect(finalAttestation.data).toEqual(attData);
-      expect(finalAttestation.signature).toEqual(bls.Signature.aggregate(sigArr).toBytes());
+      expect(finalAttestation.signature).toEqual(aggregateSignatures(sigArr).toBytes());
     });
   }
 });
