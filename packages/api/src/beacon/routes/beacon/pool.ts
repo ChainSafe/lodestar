@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPreElectra, ForkSeq, isForkElectra} from "@lodestar/params";
+import {isForkElectra} from "@lodestar/params";
 import {phase0, capella, CommitteeIndex, Slot, ssz, electra, AttesterSlashing} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {
@@ -171,7 +171,7 @@ export type Endpoints = {
    */
   submitPoolAttesterSlashings: Endpoint<
     "POST",
-    {attesterSlashing: AttesterSlashing<ForkPreElectra>},
+    {attesterSlashing: phase0.AttesterSlashing},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -334,44 +334,37 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "POST",
       req: {
         writeReqJson: ({signedAttestations}) => {
-          const fork = config.getForkName(signedAttestations[0].data.slot);
+          const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
-            body:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? AttestationListTypeElectra.toJson(signedAttestations as AttestationListElectra)
-                : AttestationListTypePhase0.toJson(signedAttestations as AttestationListPhase0),
+            body: isForkElectra(fork)
+              ? AttestationListTypeElectra.toJson(signedAttestations as AttestationListElectra)
+              : AttestationListTypePhase0.toJson(signedAttestations as AttestationListPhase0),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
-          const fork = toForkName(versionHeader);
-
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAttestations:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? AttestationListTypeElectra.fromJson(body)
-                : AttestationListTypePhase0.fromJson(body),
+            signedAttestations: isForkElectra(fork)
+              ? AttestationListTypeElectra.fromJson(body)
+              : AttestationListTypePhase0.fromJson(body),
           };
         },
         writeReqSsz: ({signedAttestations}) => {
-          const fork = config.getForkName(signedAttestations[0].data.slot);
+          const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
-            body:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? AttestationListTypeElectra.serialize(signedAttestations as AttestationListElectra)
-                : AttestationListTypePhase0.serialize(signedAttestations as AttestationListPhase0),
+            body: isForkElectra(fork)
+              ? AttestationListTypeElectra.serialize(signedAttestations as AttestationListElectra)
+              : AttestationListTypePhase0.serialize(signedAttestations as AttestationListPhase0),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
-          const fork = toForkName(versionHeader);
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAttestations:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? AttestationListTypeElectra.deserialize(body)
-                : AttestationListTypePhase0.deserialize(body),
+            signedAttestations: isForkElectra(fork)
+              ? AttestationListTypeElectra.deserialize(body)
+              : AttestationListTypePhase0.deserialize(body),
           };
         },
         schema: {
@@ -402,42 +395,35 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({attesterSlashing}) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
-            body:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
-                : ssz.phase0.AttesterSlashing.toJson(attesterSlashing),
+            body: isForkElectra(fork)
+              ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
+              : ssz.phase0.AttesterSlashing.toJson(attesterSlashing),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
-          const fork = toForkName(versionHeader);
-
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            attesterSlashing:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? ssz.electra.AttesterSlashing.fromJson(body)
-                : ssz.phase0.AttesterSlashing.fromJson(body),
+            attesterSlashing: isForkElectra(fork)
+              ? ssz.electra.AttesterSlashing.fromJson(body)
+              : ssz.phase0.AttesterSlashing.fromJson(body),
           };
         },
         writeReqSsz: ({attesterSlashing}) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
-            body:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
-                : ssz.electra.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
+            body: isForkElectra(fork)
+              ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
+              : ssz.electra.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
-          const fork = toForkName(versionHeader);
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            attesterSlashing:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? ssz.electra.AttesterSlashing.deserialize(body)
-                : ssz.phase0.AttesterSlashing.deserialize(body),
+            attesterSlashing: isForkElectra(fork)
+              ? ssz.electra.AttesterSlashing.deserialize(body)
+              : ssz.phase0.AttesterSlashing.deserialize(body),
           };
         },
         schema: {

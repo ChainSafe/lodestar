@@ -234,7 +234,7 @@ function attestationToAggregate(attestation: Attestation): AggregateFast {
 }
 
 /**
- * Unwrap AggregateFast to phase0.Attestation
+ * Unwrap AggregateFast to Attestation
  */
 function fastToAttestation(aggFast: AggregateFast): Attestation {
   return {...aggFast, signature: aggFast.signature.toBytes()};

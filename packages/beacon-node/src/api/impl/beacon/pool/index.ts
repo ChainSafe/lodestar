@@ -52,6 +52,7 @@ export function getBeaconPoolApi({
     },
 
     async getPoolAttesterSlashingsV2() {
+      // TODO Electra: Determine fork based on data returned by api
       return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: ForkName.phase0}};
     },
 
