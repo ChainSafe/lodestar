@@ -3,7 +3,6 @@ import {Transfer, expose} from "@chainsafe/threads/worker";
 import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {
-  BeaconStateTransitionMetrics,
   EpochTransitionStep,
   PubkeyIndexMap,
   StateCloneSource,
@@ -14,7 +13,12 @@ import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.j
 import {JobFnQueue} from "../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../util/queue/options.js";
 import {BeaconDb} from "../../db/index.js";
-import {HistoricalStateWorkerApi, HistoricalStateWorkerData} from "./types.js";
+import {
+  HistoricalStateRegenMetrics,
+  HistoricalStateWorkerApi,
+  HistoricalStateWorkerData,
+  RegenErrorType,
+} from "./types.js";
 import {getHistoricalState} from "./getHistoricalState.js";
 
 // most of this setup copied from networkCoreWorker.ts
@@ -35,13 +39,14 @@ const abortController = new AbortController();
 
 // Set up metrics, nodejs, state transition, queue
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
-let stateTransitionMetrics: BeaconStateTransitionMetrics | undefined;
+let historicalStateRegenMetrics: HistoricalStateRegenMetrics | undefined;
 let queueMetrics: QueueMetrics | undefined;
 if (metricsRegister) {
   const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
   abortController.signal.addEventListener("abort", closeMetrics, {once: true});
 
-  stateTransitionMetrics = {
+  historicalStateRegenMetrics = {
+    // state transition metrics
     epochTransitionTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",
@@ -119,6 +124,51 @@ if (metricsRegister) {
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
     registerValidatorStatuses: () => {},
+
+    // historical state regen metrics
+    regenTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_regen_time_seconds",
+      help: "Time to regenerate a historical state in seconds",
+      // Historical state regen can take up to 3h as of Aug 2024
+      // 5m, 10m, 30m, 1h, 3h
+      buckets: [5 * 60, 10 * 60, 30 * 60, 60 * 60, 180 * 60],
+    }),
+    loadStateTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_load_nearest_state_time_seconds",
+      help: "Time to load a nearest historical state from the database in seconds",
+      // 30s, 1m, 2m, 4m
+      buckets: [30, 60, 120, 240],
+    }),
+    stateTransitionTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_state_transition_time_seconds",
+      help: "Time to run state transition to regen historical state in seconds",
+      // 5m, 10m, 30m, 1h, 3h
+      buckets: [5 * 60, 10 * 60, 30 * 60, 60 * 60, 180 * 60],
+    }),
+    stateTransitionBlocks: metricsRegister.histogram({
+      name: "lodestar_historical_state_state_transition_blocks",
+      help: "Count of blocks processed during state transition to regen historical state",
+      // given archiveStateEpochFrequency=1024, it could process up to 32768 blocks
+      buckets: [10, 100, 1000, 10000, 30000],
+    }),
+    stateSerializationTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_serialization_time_seconds",
+      help: "Time to serialize a historical state in seconds",
+      buckets: [0.25, 0.5, 1, 2],
+    }),
+    regenRequestCount: metricsRegister.gauge({
+      name: "lodestar_historical_state_request_count",
+      help: "Count of total historical state requests",
+    }),
+    regenSuccessCount: metricsRegister.gauge({
+      name: "lodestar_historical_state_success_count",
+      help: "Count of successful historical state regen",
+    }),
+    regenErrorCount: metricsRegister.gauge<{reason: RegenErrorType}>({
+      name: "lodestar_historical_state_error_count",
+      help: "Count of failed historical state regen",
+      labelNames: ["reason"],
+    }),
   };
 
   queueMetrics = {
@@ -166,10 +216,15 @@ const api: HistoricalStateWorkerApi = {
     return metricsRegister?.metrics() ?? "";
   },
   async getHistoricalState(slot) {
-    const state = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, pubkey2index, stateTransitionMetrics)
+    historicalStateRegenMetrics?.regenRequestCount.inc();
+
+    const stateBytes = await queue.push<Uint8Array>(() =>
+      getHistoricalState(slot, config, db, pubkey2index, historicalStateRegenMetrics)
     );
-    return Transfer(state, [state.buffer]) as unknown as Uint8Array;
+    const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
+
+    historicalStateRegenMetrics?.regenSuccessCount.inc();
+    return result;
   },
 };
 

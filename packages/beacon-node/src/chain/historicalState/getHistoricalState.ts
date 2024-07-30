@@ -1,6 +1,5 @@
 import {
   BeaconStateAllForks,
-  BeaconStateTransitionMetrics,
   CachedBeaconStateAllForks,
   DataAvailableStatus,
   ExecutionPayloadStatus,
@@ -10,6 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
+import {HistoricalStateRegenMetrics, RegenErrorType} from "./types.js";
 
 /**
  * Populate a PubkeyIndexMap with any new entries based on a BeaconState
@@ -63,22 +63,49 @@ export async function getHistoricalState(
   config: BeaconConfig,
   db: IBeaconDb,
   pubkey2index: PubkeyIndexMap,
-  metrics?: BeaconStateTransitionMetrics
+  metrics?: HistoricalStateRegenMetrics
 ): Promise<Uint8Array> {
-  let state = await getNearestState(slot, config, db, pubkey2index);
+  const regenTimer = metrics?.regenTime.startTimer();
+
+  const loadStateTimer = metrics?.loadStateTime.startTimer();
+  let state = await getNearestState(slot, config, db, pubkey2index).catch((e) => {
+    metrics?.regenErrorCount.inc({reason: RegenErrorType.loadState});
+    throw e;
+  });
+  loadStateTimer?.();
+
+  const transitionTimer = metrics?.stateTransitionTime.startTimer();
+  let blockCount = 0;
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = stateTransition(
-      state,
-      block,
-      {
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-        executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailableStatus: DataAvailableStatus.available,
-      },
-      metrics
-    );
+    try {
+      state = stateTransition(
+        state,
+        block,
+        {
+          verifyProposer: false,
+          verifySignatures: false,
+          verifyStateRoot: false,
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailableStatus: DataAvailableStatus.available,
+        },
+        metrics
+      );
+    } catch (e) {
+      metrics?.regenErrorCount.inc({reason: RegenErrorType.blockProcessing});
+      throw e;
+    }
+    blockCount++;
+    if (Buffer.compare(state.hashTreeRoot(), block.message.stateRoot) !== 0) {
+      metrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
+    }
   }
-  return state.serialize();
+  metrics?.stateTransitionBlocks.observe(blockCount);
+  transitionTimer?.();
+
+  const serializeTimer = metrics?.stateSerializationTime.startTimer();
+  const stateBytes = state.serialize();
+  serializeTimer?.();
+
+  regenTimer?.();
+  return stateBytes;
 }
