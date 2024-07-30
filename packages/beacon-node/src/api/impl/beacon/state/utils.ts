@@ -66,7 +66,7 @@ export async function getStateResponseWithRegen(
       ? await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true})
       : rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot
         ? await chain.getStateBySlot(rootOrSlot, {allowRegen: true})
-        : null; // TODO implement historical state regen
+        : await chain.getHistoricalStateBySlot(rootOrSlot);
 
   if (!res) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
