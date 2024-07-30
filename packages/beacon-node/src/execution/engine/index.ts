@@ -1,4 +1,4 @@
-import {fromHex, toSafePrintableUrl} from "@lodestar/utils";
+import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IExecutionEngine} from "./interface.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
@@ -39,7 +39,7 @@ export function getExecutionEngineHttp(
     jwtId: opts.jwtId,
     jwtVersion: opts.jwtVersion,
   });
-  modules.logger.info("Execution client", {urls: opts.urls.map(toSafePrintableUrl).toString()});
+  modules.logger.info("Execution client", {urls: opts.urls.map(toPrintableUrl).toString()});
   return new ExecutionEngineHttp(rpc, modules, opts);
 }
 

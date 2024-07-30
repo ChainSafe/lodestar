@@ -1,5 +1,5 @@
 import {Signer, SignerLocal, SignerRemote, SignerType} from "@lodestar/validator";
-import {LogLevel, Logger, toSafePrintableUrl} from "@lodestar/utils";
+import {LogLevel, Logger, toPrintableUrl} from "@lodestar/utils";
 import {YargsError} from "../../../util/errors.js";
 import {IValidatorCliArgs} from "../options.js";
 
@@ -29,7 +29,7 @@ export function logSigners(logger: Pick<Logger, LogLevel.info>, signers: Signer[
   }
 
   for (const {url, pubkeys} of groupRemoteSignersByUrl(remoteSigners)) {
-    logger.info(`Remote signers on URL: ${toSafePrintableUrl(url)}`);
+    logger.info(`Remote signers on URL: ${toPrintableUrl(url)}`);
     for (const pubkey of pubkeys) {
       logger.info(pubkey);
     }
