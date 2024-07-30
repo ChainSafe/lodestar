@@ -1,5 +1,4 @@
-import {aggregateSignatures} from "@chainsafe/blst";
-import {Signature} from "@chainsafe/bls/types";
+import {aggregateSignatures, Signature} from "@chainsafe/blst";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {
   ForkName,

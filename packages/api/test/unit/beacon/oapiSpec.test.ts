@@ -86,6 +86,11 @@ const ignoredTopics = [
    topic block_gossip not implemented
    */
   "block_gossip",
+
+  // Modified in electra to include version
+  // should be removed from the ignore list after spec update
+  "attestation",
+  "attester_slashing",
 ];
 
 // eventstream types are defined as comments in the description of "examples".

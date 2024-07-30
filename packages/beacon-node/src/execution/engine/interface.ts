@@ -177,6 +177,4 @@ export interface IExecutionEngine {
   getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
-
-  getState(): ExecutionEngineState;
 }

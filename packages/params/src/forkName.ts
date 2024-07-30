@@ -80,3 +80,16 @@ export const forkBlobs = exclude(forkAll, [ForkName.phase0, ForkName.altair, For
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
   return isForkWithdrawals(fork) && fork !== ForkName.capella;
 }
+
+export type ForkPreElectra = ForkPreBlobs | ForkName.deneb;
+export type ForkElectra = Exclude<ForkName, ForkPreElectra>;
+export const forkElectra = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+]);
+export function isForkElectra(fork: ForkName): fork is ForkElectra {
+  return isForkBlobs(fork) && fork !== ForkName.deneb;
+}
