@@ -33,7 +33,8 @@ export interface BlockStateCache {
   prune(headStateRootHex: RootHex): void;
   deleteAllBeforeEpoch(finalizedEpoch: Epoch): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
-  getStates(): IterableIterator<CachedBeaconStateAllForks>; // Expose beacon states stored in cache. Use with caution
+  /** Expose beacon states stored in cache. Use with caution */
+  getStates(): IterableIterator<CachedBeaconStateAllForks>;
 }
 
 /**
@@ -75,7 +76,8 @@ export interface CheckpointStateCache {
   processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number>;
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
-  getStates(): IterableIterator<CachedBeaconStateAllForks>; // Expose beacon states stored in cache. Use with caution
+  /** Expose beacon states stored in cache. Use with caution */
+  getStates(): IterableIterator<CachedBeaconStateAllForks>;
 }
 
 export enum CacheItemType {

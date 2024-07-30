@@ -3,7 +3,7 @@ import assert from "node:assert";
 import {describe, it, vi, afterAll, afterEach} from "vitest";
 
 import {LogLevel, sleep} from "@lodestar/utils";
-import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {electra, Epoch, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
@@ -431,7 +431,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("Historical validator length for epoch 1 or 2 is not dropped properly");
     }
 
-    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
+    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
       throw Error("state.depositRequestsStartIndex is not set upon processing new deposit receipt");
     }
 

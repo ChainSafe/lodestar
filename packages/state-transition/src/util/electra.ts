@@ -28,15 +28,15 @@ export function isFullyWithdrawableValidator(
   balance: number,
   epoch: number
 ): boolean {
-  const {withdrawableEpoch, withdrawalCredentials: withdrawalCredential} = validatorCredential;
+  const {withdrawableEpoch, withdrawalCredentials} = validatorCredential;
 
   if (fork < ForkSeq.capella) {
     throw new Error(`isFullyWithdrawableValidator not supported at forkSeq=${fork} < ForkSeq.capella`);
   }
   const hasWithdrawableCredentials =
     fork >= ForkSeq.electra
-      ? hasExecutionWithdrawalCredential(withdrawalCredential)
-      : hasEth1WithdrawalCredential(withdrawalCredential);
+      ? hasExecutionWithdrawalCredential(withdrawalCredentials)
+      : hasEth1WithdrawalCredential(withdrawalCredentials);
 
   return hasWithdrawableCredentials && withdrawableEpoch <= epoch && balance > 0;
 }
@@ -46,18 +46,18 @@ export function isPartiallyWithdrawableValidator(
   validatorCredential: ValidatorInfo,
   balance: number
 ): boolean {
-  const {effectiveBalance, withdrawalCredentials: withdrawalCredential} = validatorCredential;
+  const {effectiveBalance, withdrawalCredentials} = validatorCredential;
 
   if (fork < ForkSeq.capella) {
     throw new Error(`isPartiallyWithdrawableValidator not supported at forkSeq=${fork} < ForkSeq.capella`);
   }
   const hasWithdrawableCredentials =
     fork >= ForkSeq.electra
-      ? hasExecutionWithdrawalCredential(withdrawalCredential)
-      : hasEth1WithdrawalCredential(withdrawalCredential);
+      ? hasExecutionWithdrawalCredential(withdrawalCredentials)
+      : hasEth1WithdrawalCredential(withdrawalCredentials);
 
   const validatorMaxEffectiveBalance =
-    fork >= ForkSeq.electra ? getValidatorMaxEffectiveBalance(withdrawalCredential) : MAX_EFFECTIVE_BALANCE;
+    fork >= ForkSeq.electra ? getValidatorMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE;
   const hasMaxEffectiveBalance = effectiveBalance === validatorMaxEffectiveBalance;
   const hasExcessBalance = balance > validatorMaxEffectiveBalance;
 
