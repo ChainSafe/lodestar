@@ -20,10 +20,10 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 
 Access to an beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/beacon-APIs/tree/v2.5.0/apis/beacon/light_client):
 
-- `GET /eth/v1/beacon/light_client/updates`
-- `GET /eth/v1/beacon/light_client/optimistic_update`
-- `GET /eth/v1/beacon/light_client/finality_update`
-- `GET /eth/v1/beacon/light_client/bootstrap/{block_root}`
+- [`GET /eth/v1/beacon/light_client/updates`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientUpdatesByRange)
+- [`GET /eth/v1/beacon/light_client/optimistic_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientOptimisticUpdate)
+- [`GET /eth/v1/beacon/light_client/finality_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientFinalityUpdate)
+- [`GET /eth/v1/beacon/light_client/bootstrap/{block_root}`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientBootstrap)
 
 System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/libraries/lightclient-prover/prover) being one of them.
 
