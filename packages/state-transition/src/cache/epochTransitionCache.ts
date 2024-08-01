@@ -148,7 +148,7 @@ export interface EpochTransitionCache {
   /**
    * We do not use up to `nextEpochShufflingActiveValidatorIndices.length`, use this to control that
    */
-  totalNextEpochShufflingActiveIndices: number;
+  nextEpochShufflingActiveIndicesLength: number;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -227,7 +227,7 @@ export function beforeProcessEpoch(
   const validatorCount = validators.length;
 
   nextEpochShufflingActiveValidatorIndices.length = validatorCount;
-  let totalNextEpochShufflingActiveIndices = 0;
+  let nextEpochShufflingActiveIndicesLength = 0;
   // pre-fill with true (most validators are active)
   isActivePrevEpoch.length = validatorCount;
   isActiveCurrEpoch.length = validatorCount;
@@ -344,7 +344,7 @@ export function beforeProcessEpoch(
     }
 
     if (isActiveNext2) {
-      nextEpochShufflingActiveValidatorIndices[totalNextEpochShufflingActiveIndices++] = i;
+      nextEpochShufflingActiveValidatorIndices[nextEpochShufflingActiveIndicesLength++] = i;
     }
   }
 
@@ -472,7 +472,7 @@ export function beforeProcessEpoch(
     indicesEligibleForActivation,
     indicesToEject,
     nextEpochShufflingActiveValidatorIndices,
-    totalNextEpochShufflingActiveIndices,
+    nextEpochShufflingActiveIndicesLength,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

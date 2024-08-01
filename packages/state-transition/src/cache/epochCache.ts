@@ -506,7 +506,7 @@ export class EpochCache {
     state: BeaconStateAllForks,
     epochTransitionCache: {
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
-      totalNextEpochShufflingActiveIndices: number;
+      nextEpochShufflingActiveIndicesLength: number;
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
@@ -518,7 +518,7 @@ export class EpochCache {
     this.nextShuffling = computeEpochShuffling(
       state,
       epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
-      epochTransitionCache.totalNextEpochShufflingActiveIndices,
+      epochTransitionCache.nextEpochShufflingActiveIndicesLength,
       nextEpoch
     );
 
