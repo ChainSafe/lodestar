@@ -9,6 +9,7 @@ import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -52,6 +53,7 @@ export class AttestationDutiesService {
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     chainHeadTracker: ChainHeaderTracker,
+    syncingStatusTracker: SyncingStatusTracker,
     private readonly metrics: Metrics | null,
     private readonly opts?: AttestationDutiesServiceOpts
   ) {
@@ -60,6 +62,7 @@ export class AttestationDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
+    syncingStatusTracker.runOnSynced((slot) => this.runDutiesTasks(computeEpochAtSlot(slot)));
 
     if (metrics) {
       metrics.attesterDutiesCount.addCollect(() => {

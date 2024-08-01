@@ -14,8 +14,10 @@ import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 
 vi.mock("../../../src/services/chainHeaderTracker.js");
+vi.mock("../../../src/services/syncingStatusTracker.js");
 
 describe("AttestationDutiesService", function () {
   const api = getApiClientStub();
@@ -24,6 +26,8 @@ describe("AttestationDutiesService", function () {
 
   // @ts-expect-error - Mocked class don't need parameters
   const chainHeadTracker = new ChainHeaderTracker() as Mocked<ChainHeaderTracker>;
+  // @ts-expect-error - Mocked class don't need parameters
+  const syncingStatusTracker = new SyncingStatusTracker() as Mocked<SyncingStatusTracker>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   // Sample validator
@@ -80,7 +84,15 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -137,7 +149,15 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);

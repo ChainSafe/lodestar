@@ -13,6 +13,7 @@ import {
   SyncDutySubnet,
 } from "../../../src/services/syncCommitteeDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
@@ -82,7 +83,16 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -145,7 +155,16 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -198,7 +217,16 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);

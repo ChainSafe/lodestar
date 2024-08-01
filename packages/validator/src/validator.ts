@@ -16,6 +16,7 @@ import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/exter
 import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
+import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
@@ -35,6 +36,7 @@ export type ValidatorModules = {
   api: ApiClient;
   clock: IClock;
   chainHeaderTracker: ChainHeaderTracker;
+  syncingStatusTracker: SyncingStatusTracker;
   logger: Logger;
   db: LodestarValidatorDatabaseController;
   metrics: Metrics | null;
@@ -89,6 +91,7 @@ export class Validator {
   private readonly api: ApiClient;
   private readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
+  readonly syncingStatusTracker: SyncingStatusTracker;
   private readonly logger: Logger;
   private readonly db: LodestarValidatorDatabaseController;
   private state: Status;
@@ -106,6 +109,7 @@ export class Validator {
     api,
     clock,
     chainHeaderTracker,
+    syncingStatusTracker,
     logger,
     db,
     metrics,
@@ -121,6 +125,7 @@ export class Validator {
     this.api = api;
     this.clock = clock;
     this.chainHeaderTracker = chainHeaderTracker;
+    this.syncingStatusTracker = syncingStatusTracker;
     this.logger = logger;
     this.controller = controller;
     this.db = db;
@@ -225,6 +230,7 @@ export class Validator {
     emitter.setMaxListeners(Infinity);
 
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
+    const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       useProduceBlockV3: opts.useProduceBlockV3,
@@ -239,6 +245,7 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
+      syncingStatusTracker,
       metrics,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
@@ -255,6 +262,7 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
+      syncingStatusTracker,
       metrics,
       {
         scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction,
@@ -274,6 +282,7 @@ export class Validator {
       api,
       clock,
       chainHeaderTracker,
+      syncingStatusTracker,
       logger,
       db,
       metrics,

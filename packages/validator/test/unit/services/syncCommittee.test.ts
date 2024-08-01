@@ -12,12 +12,14 @@ import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ZERO_HASH} from "../../utils/types.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 
 vi.mock("../../../src/services/validatorStore.js");
 vi.mock("../../../src/services/emitter.js");
 vi.mock("../../../src/services/chainHeaderTracker.js");
+vi.mock("../../../src/services/syncingStatusTracker.js");
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -28,6 +30,8 @@ describe("SyncCommitteeService", function () {
   const emitter = vi.mocked(new ValidatorEventEmitter());
   // @ts-expect-error - Mocked class don't need parameters
   const chainHeaderTracker = vi.mocked(new ChainHeaderTracker());
+  // @ts-expect-error - Mocked class don't need parameters
+  const syncingStatusTracker = vi.mocked(new SyncingStatusTracker());
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createChainForkConfig({
@@ -71,6 +75,7 @@ describe("SyncCommitteeService", function () {
           validatorStore,
           emitter,
           chainHeaderTracker,
+          syncingStatusTracker,
           null,
           opts
         );
