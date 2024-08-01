@@ -5,7 +5,7 @@ import {IClock} from "../util/clock.js";
 
 export type SyncingStatus = routes.node.SyncingStatus;
 
-type RunOnSyncedFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
+type RunOnResyncedFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 /**
  * Track the syncing status of connected beacon node
@@ -13,7 +13,7 @@ type RunOnSyncedFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 export class SyncingStatusTracker {
   private prevSyncingStatus: SyncingStatus | null = null;
 
-  private readonly fns: RunOnSyncedFn[] = [];
+  private readonly fns: RunOnResyncedFn[] = [];
 
   constructor(
     private readonly logger: Logger,
@@ -24,7 +24,7 @@ export class SyncingStatusTracker {
   }
 
   /** Run function when node status changes from syncing to synced */
-  runOnSynced(fn: RunOnSyncedFn): void {
+  runOnResynced(fn: RunOnResyncedFn): void {
     this.fns.push(fn);
   }
 

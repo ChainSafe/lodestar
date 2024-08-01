@@ -93,7 +93,7 @@ export class SyncCommitteeDutiesService {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
-    syncingStatusTracker.runOnSynced((slot) => this.runDutiesTasks(computeEpochAtSlot(slot)));
+    syncingStatusTracker.runOnResynced((slot) => this.runDutiesTasks(computeEpochAtSlot(slot)));
 
     if (metrics) {
       metrics.syncCommitteeDutiesCount.addCollect(() => {

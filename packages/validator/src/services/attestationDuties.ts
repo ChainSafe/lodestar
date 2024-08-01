@@ -62,7 +62,7 @@ export class AttestationDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
-    syncingStatusTracker.runOnSynced((slot) => this.runDutiesTasks(computeEpochAtSlot(slot)));
+    syncingStatusTracker.runOnResynced((slot) => this.runDutiesTasks(computeEpochAtSlot(slot)));
 
     if (metrics) {
       metrics.attesterDutiesCount.addCollect(() => {
