@@ -54,6 +54,8 @@ export class SyncingStatusTracker {
       this.prevSyncingStatus = syncingStatus;
     } catch (e) {
       this.logger.error("Failed to check syncing status", {}, e as Error);
+      // Error likely due to node being offline. In any case, handle failure to
+      // check syncing status the same way as if node was previously syncing
       this.prevSyncingStatus = null;
     }
   };
