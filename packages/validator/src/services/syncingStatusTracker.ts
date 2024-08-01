@@ -59,7 +59,7 @@ export class SyncingStatusTracker {
       // check syncing status the same way as if node was previously syncing
       this.prevSyncingStatus = e as Error;
 
-      this.logger.error("Failed to check syncing status", {}, this.prevSyncingStatus);
+      this.logger.error("Failed to check syncing status", {slot}, this.prevSyncingStatus);
     }
   };
 }
