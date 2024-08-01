@@ -11,7 +11,7 @@ type RunOnResyncedFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
  * Track the syncing status of connected beacon node
  */
 export class SyncingStatusTracker {
-  private prevSyncingStatus?: SyncingStatus | null;
+  private prevSyncingStatus?: SyncingStatus | Error;
 
   private readonly fns: RunOnResyncedFn[] = [];
 
@@ -33,43 +33,33 @@ export class SyncingStatusTracker {
     this.fns.push(fn);
   }
 
-  private checkSyncingStatus = async (currentSlot: Slot, signal: AbortSignal): Promise<void> => {
+  private checkSyncingStatus = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     try {
       const syncingStatus = (await this.api.node.getSyncingStatus()).value();
 
-      if (this.prevSyncingStatus === undefined) {
-        this.prevSyncingStatus = syncingStatus;
-        return; // Initial check, do not run any handlers
-      }
+      const prevErrorOrSyncing = this.prevSyncingStatus instanceof Error || this.prevSyncingStatus?.isSyncing === true;
 
-      const prevOfflineOrSyncing = this.prevSyncingStatus === null || this.prevSyncingStatus.isSyncing === true;
-
-      if (prevOfflineOrSyncing && syncingStatus.isSyncing === false) {
+      if (prevErrorOrSyncing && syncingStatus.isSyncing === false) {
         for (const fn of this.fns) {
-          fn(currentSlot, signal).catch((e) => this.logger.error("Error calling resynced event handler", e));
+          fn(slot, signal).catch((e) => this.logger.error("Error calling resynced event handler", e));
         }
       }
+      const {isSyncing, headSlot, syncDistance, isOptimistic, elOffline} = syncingStatus;
 
-      if (syncingStatus.isSyncing === true) {
-        this.logger.warn("Node is syncing", {
-          currentSlot,
-          headSlot: syncingStatus.headSlot,
-          syncDistance: syncingStatus.syncDistance,
-        });
-      } else if (prevOfflineOrSyncing) {
-        this.logger.info("Node is synced", {
-          currentSlot,
-          headSlot: syncingStatus.headSlot,
-        });
+      if (isSyncing === true) {
+        this.logger.warn("Node is syncing", {slot, headSlot, syncDistance});
+      } else if (this.prevSyncingStatus === undefined || prevErrorOrSyncing) {
+        this.logger.info("Node is synced", {slot, headSlot, isOptimistic, elOffline});
       }
-      this.logger.verbose("Node syncing status", {currentSlot, ...syncingStatus});
+      this.logger.verbose("Node syncing status", {slot, ...syncingStatus});
 
       this.prevSyncingStatus = syncingStatus;
     } catch (e) {
-      this.logger.error("Failed to check syncing status", {}, e as Error);
       // Error likely due to node being offline. In any case, handle failure to
       // check syncing status the same way as if node was previously syncing
-      this.prevSyncingStatus = null;
+      this.prevSyncingStatus = e as Error;
+
+      this.logger.error("Failed to check syncing status", {}, this.prevSyncingStatus);
     }
   };
 }
