@@ -33,7 +33,7 @@ export class SyncingStatusTracker {
     this.fns.push(fn);
   }
 
-  private checkSyncingStatus = async (slot: Slot, signal: AbortSignal): Promise<void> => {
+  private checkSyncingStatus = async (currentSlot: Slot, signal: AbortSignal): Promise<void> => {
     try {
       const syncingStatus = (await this.api.node.getSyncingStatus()).value();
 
@@ -46,23 +46,23 @@ export class SyncingStatusTracker {
 
       if (prevOfflineOrSyncing && syncingStatus.isSyncing === false) {
         for (const fn of this.fns) {
-          fn(slot, signal).catch((e) => this.logger.error("Error calling resynced event handler", e));
+          fn(currentSlot, signal).catch((e) => this.logger.error("Error calling resynced event handler", e));
         }
       }
 
       if (syncingStatus.isSyncing === true) {
         this.logger.warn("Node is syncing", {
-          currentSlot: slot,
+          currentSlot,
           headSlot: syncingStatus.headSlot,
           syncDistance: syncingStatus.syncDistance,
         });
       } else if (prevOfflineOrSyncing) {
         this.logger.info("Node is synced", {
-          currentSlot: slot,
+          currentSlot,
           headSlot: syncingStatus.headSlot,
         });
       }
-      this.logger.verbose("Node syncing status", {currentSlot: slot, ...syncingStatus});
+      this.logger.verbose("Node syncing status", {currentSlot, ...syncingStatus});
 
       this.prevSyncingStatus = syncingStatus;
     } catch (e) {
