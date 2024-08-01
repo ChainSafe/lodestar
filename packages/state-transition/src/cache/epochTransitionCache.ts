@@ -53,15 +53,6 @@ export interface EpochTransitionCache {
   currEpochUnslashedTargetStakeByIncrement: number;
 
   /**
-   * Validator indices that are either
-   * - active in previous epoch
-   * - slashed and not yet withdrawable
-   *
-   * getRewardsAndPenalties() and processInactivityUpdates() iterate this list
-   */
-  eligibleValidatorIndices: ValidatorIndex[];
-
-  /**
    * Indices which will receive the slashing penalty
    * ```
    * v.withdrawableEpoch === currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR / 2
@@ -125,10 +116,13 @@ export interface EpochTransitionCache {
    * - un-slashed validators
    * - prev attester flag set
    * With a status flag to check this conditions at once we just have to mask with an OR of the conditions.
+   * This is only for phase0 only.
    */
-
   proposerIndices: number[];
 
+  /**
+   * This is for phase0 only.
+   */
   inclusionDelays: number[];
 
   flags: number[];
@@ -150,6 +144,11 @@ export interface EpochTransitionCache {
    * | afterEpochTransitionCache                | read it                            |
    */
   nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+
+  /**
+   * We do not use up to `nextEpochShufflingActiveValidatorIndices.length`, use this to control that
+   */
+  nextEpochShufflingActiveIndicesLength: number;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -191,12 +190,14 @@ const isActivePrevEpoch = new Array<boolean>();
 const isActiveCurrEpoch = new Array<boolean>();
 /** WARNING: reused, never gc'd */
 const isActiveNextEpoch = new Array<boolean>();
-/** WARNING: reused, never gc'd */
+/** WARNING: reused, never gc'd, from altair this is empty array */
 const proposerIndices = new Array<number>();
-/** WARNING: reused, never gc'd */
+/** WARNING: reused, never gc'd, from altair this is empty array */
 const inclusionDelays = new Array<number>();
 /** WARNING: reused, never gc'd */
 const flags = new Array<number>();
+/** WARNING: reused, never gc'd */
+const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
@@ -212,12 +213,10 @@ export function beforeProcessEpoch(
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
-  const eligibleValidatorIndices: ValidatorIndex[] = [];
   const indicesToSlash: ValidatorIndex[] = [];
   const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
-  const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
 
   let totalActiveStakeByIncrement = 0;
 
@@ -227,6 +226,8 @@ export function beforeProcessEpoch(
   const validators = state.validators.getAllReadonlyValues();
   const validatorCount = validators.length;
 
+  nextEpochShufflingActiveValidatorIndices.length = validatorCount;
+  let nextEpochShufflingActiveIndicesLength = 0;
   // pre-fill with true (most validators are active)
   isActivePrevEpoch.length = validatorCount;
   isActiveCurrEpoch.length = validatorCount;
@@ -238,14 +239,10 @@ export function beforeProcessEpoch(
   // During the epoch transition, additional data is precomputed to avoid traversing any state a second
   // time. Attestations are a big part of this, and each validator has a "status" to represent its
   // precomputed participation.
-  // - proposerIndex: number; // -1 when not included by any proposer
-  // - inclusionDelay: number;
+  // - proposerIndex: number; // -1 when not included by any proposer, for phase0 only so it's declared inside phase0 block below
+  // - inclusionDelay: number;// for phase0 only so it's declared inside phase0 block below
   // - flags: number; // bitfield of AttesterFlags
-  proposerIndices.length = validatorCount;
-  inclusionDelays.length = validatorCount;
   flags.length = validatorCount;
-  proposerIndices.fill(-1);
-  inclusionDelays.fill(0);
   // flags.fill(0);
   // flags will be zero'd out below
   // In the first loop, set slashed+eligibility
@@ -284,7 +281,6 @@ export function beforeProcessEpoch(
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
     if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
-      eligibleValidatorIndices.push(i);
       flag |= FLAG_ELIGIBLE_ATTESTER;
     }
 
@@ -348,7 +344,7 @@ export function beforeProcessEpoch(
     }
 
     if (isActiveNext2) {
-      nextEpochShufflingActiveValidatorIndices.push(i);
+      nextEpochShufflingActiveValidatorIndices[nextEpochShufflingActiveIndicesLength++] = i;
     }
   }
 
@@ -368,6 +364,10 @@ export function beforeProcessEpoch(
   );
 
   if (forkSeq === ForkSeq.phase0) {
+    proposerIndices.length = validatorCount;
+    proposerIndices.fill(-1);
+    inclusionDelays.length = validatorCount;
+    inclusionDelays.fill(0);
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
       proposerIndices,
@@ -467,12 +467,12 @@ export function beforeProcessEpoch(
       headStakeByIncrement: prevHeadUnslStake,
     },
     currEpochUnslashedTargetStakeByIncrement: currTargetUnslStake,
-    eligibleValidatorIndices,
     indicesToSlash,
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,
     indicesToEject,
     nextEpochShufflingActiveValidatorIndices,
+    nextEpochShufflingActiveIndicesLength,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,
