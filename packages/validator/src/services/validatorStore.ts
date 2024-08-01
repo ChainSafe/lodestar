@@ -66,7 +66,7 @@ export type SignerRemote = {
 };
 
 type DefaultProposerConfig = {
-  graffiti: string;
+  graffiti?: string;
   strictFeeRecipientCheck: boolean;
   feeRecipient: Eth1Address;
   builder: {
@@ -167,7 +167,7 @@ export class ValidatorStore {
     }
 
     this.defaultProposerConfig = {
-      graffiti: defaultConfig.graffiti ?? "",
+      graffiti: defaultConfig.graffiti,
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
       feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
@@ -244,7 +244,7 @@ export class ValidatorStore {
     delete validatorData["feeRecipient"];
   }
 
-  getGraffiti(pubkeyHex: PubkeyHex): string {
+  getGraffiti(pubkeyHex: PubkeyHex): string | undefined {
     return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
   }
 

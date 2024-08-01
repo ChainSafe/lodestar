@@ -60,7 +60,11 @@ export class KeymanagerApi implements Api {
   }
 
   async getGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGraffiti"]> {
-    return {data: {pubkey, graffiti: this.validator.validatorStore.getGraffiti(pubkey)}};
+    const graffiti = this.validator.validatorStore.getGraffiti(pubkey);
+    if (graffiti === undefined) {
+      throw new ApiError(404, `No graffiti for pubkey ${pubkey}`);
+    }
+    return {data: {pubkey, graffiti}};
   }
 
   async setGraffiti({pubkey, graffiti}: GraffitiData): ReturnType<Api["setGraffiti"]> {

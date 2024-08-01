@@ -4,7 +4,6 @@ export * from "./file.js";
 export * from "./format.js";
 export * from "./fs.js";
 export * from "./gitData/index.js";
-export * from "./graffiti.js";
 export * from "./logger.js";
 export * from "./object.js";
 export * from "./passphrase.js";

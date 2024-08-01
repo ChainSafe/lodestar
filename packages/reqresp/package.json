@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/reqresp",
-  "description": "A Typescript implementation of the Ethereum Consensus ReqResp protocol",
+  "description": "A Typescript implementation of the Ethereum Consensus Req/Resp protocol",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
