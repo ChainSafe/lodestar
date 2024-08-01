@@ -518,7 +518,7 @@ export class BeaconChain implements IBeaconChain {
   getStateByCheckpoint(
     checkpoint: CheckpointWithHex
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null {
-    // TODO: this is not guaranteed to work with new state caches, should work on this before we turn n-historical state on
+    // finalized or justified checkpoint states maynot be available with PersistentCheckpointStateCache, use getCheckpointStateOrBytes() api to get Uint8Array
     const cachedStateCtx = this.regen.getCheckpointStateSync(checkpoint);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
@@ -527,6 +527,23 @@ export class BeaconChain implements IBeaconChain {
         state: cachedStateCtx,
         executionOptimistic: block != null && isOptimisticBlock(block),
         finalized: cachedStateCtx.epochCtx.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
+      };
+    }
+
+    return null;
+  }
+
+  async getStateOrBytesByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpoint);
+    if (cachedStateCtx) {
+      const block = this.forkChoice.getBlock(checkpoint.root);
+      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+      return {
+        state: cachedStateCtx,
+        executionOptimistic: block != null && isOptimisticBlock(block),
+        finalized: checkpoint.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
       };
     }
 
