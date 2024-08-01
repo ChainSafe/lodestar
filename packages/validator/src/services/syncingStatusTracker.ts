@@ -11,7 +11,7 @@ type RunOnResyncedFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
  * Track the syncing status of connected beacon node
  */
 export class SyncingStatusTracker {
-  private prevSyncingStatus: SyncingStatus | null = null;
+  private prevSyncingStatus?: SyncingStatus | null;
 
   private readonly fns: RunOnResyncedFn[] = [];
 
@@ -32,29 +32,29 @@ export class SyncingStatusTracker {
     try {
       const syncingStatus = (await this.api.node.getSyncingStatus()).value();
 
-      if (this.prevSyncingStatus === null) {
-        // Initial check, do not run any handlers
+      if (this.prevSyncingStatus === undefined) {
         this.prevSyncingStatus = syncingStatus;
-      } else {
-        if (this.prevSyncingStatus.isSyncing === true && syncingStatus.isSyncing === false) {
-          for (const fn of this.fns) {
-            fn(slot, signal).catch((e) => this.logger.error("Error calling sync event handler", e));
-          }
+        return; // Initial check, do not run any handlers
+      }
+
+      const prevOfflineOrSyncing = this.prevSyncingStatus === null || this.prevSyncingStatus.isSyncing === true;
+
+      if (prevOfflineOrSyncing && syncingStatus.isSyncing === false) {
+        for (const fn of this.fns) {
+          fn(slot, signal).catch((e) => this.logger.error("Error calling resynced event handler", e));
         }
-        this.prevSyncingStatus = syncingStatus;
       }
 
       if (syncingStatus.isSyncing === true) {
         this.logger.warn("Connected beacon node is syncing", {slot, ...syncingStatus});
       } else {
-        this.logger.debug("Connected beacon node is synced", {slot, ...syncingStatus});
+        this.logger.verbose("Connected beacon node is synced", {slot, ...syncingStatus});
       }
+
+      this.prevSyncingStatus = syncingStatus;
     } catch (e) {
       this.logger.error("Failed to check syncing status", {}, e as Error);
-      if (this.prevSyncingStatus) {
-        // Error likely due to node being offline, after restart it will be syncing
-        this.prevSyncingStatus.isSyncing = true;
-      }
+      this.prevSyncingStatus = null;
     }
   };
 }
