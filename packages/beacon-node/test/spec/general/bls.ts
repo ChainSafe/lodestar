@@ -1,8 +1,15 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
 import {fromHexString} from "@chainsafe/ssz";
+import {
+  PublicKey,
+  SecretKey,
+  Signature,
+  aggregateSerializedPublicKeys,
+  aggregateSignatures,
+  aggregateVerify,
+  fastAggregateVerify,
+  verify as _verify,
+} from "@chainsafe/blst";
 import {InputType} from "@lodestar/spec-test-util";
-import {toHexString} from "@lodestar/utils";
 import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -63,10 +70,14 @@ type BlsTestCase = {
  * output: BLS Signature -- expected output, single BLS signature or empty.
  * ```
  */
-function aggregate(input: string[]): string {
-  const pks = input.map((pkHex) => bls.Signature.fromHex(pkHex));
-  const agg = bls.Signature.aggregate(pks);
-  return agg.toHex();
+function aggregate(input: string[]): string | null {
+  try {
+    const pks = input.map((pkHex) => Signature.fromHex(pkHex));
+    const agg = aggregateSignatures(pks);
+    return agg.toHex();
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -80,7 +91,15 @@ function aggregate(input: string[]): string {
  */
 function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
-  return bls.verifyMultiple(pubkeys.map(fromHexString), messages.map(fromHexString), fromHexString(signature));
+  try {
+    return aggregateVerify(
+      messages.map(fromHexString),
+      pubkeys.map((pk) => PublicKey.fromHex(pk)),
+      Signature.fromHex(signature)
+    );
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -95,8 +114,11 @@ function eth_aggregate_pubkeys(input: string[]): string | null {
     if (pk === G1_POINT_AT_INFINITY) return null;
   }
 
-  const agg = bls.aggregatePublicKeys(input.map((hex) => fromHexString(hex)));
-  return toHexString(agg);
+  try {
+    return aggregateSerializedPublicKeys(input.map((hex) => fromHexString(hex))).toHex();
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -120,11 +142,15 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
     if (pk === G1_POINT_AT_INFINITY) return false;
   }
 
-  return bls.verifyAggregate(
-    pubkeys.map((hex) => fromHexString(hex)),
-    fromHexString(message),
-    fromHexString(signature)
-  );
+  try {
+    return fastAggregateVerify(
+      fromHexString(message),
+      pubkeys.map((hex) => PublicKey.fromHex(hex)),
+      Signature.fromHex(signature)
+    );
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -139,9 +165,10 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
 function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    return bls.Signature.fromBytes(fromHexString(signature), undefined, true).verifyAggregate(
-      pubkeys.map((hex) => bls.PublicKey.fromBytes(fromHexString(hex), CoordType.jacobian, true)),
-      fromHexString(message)
+    return fastAggregateVerify(
+      fromHexString(message),
+      pubkeys.map((hex) => PublicKey.fromHex(hex, true)),
+      Signature.fromHex(signature, true)
     );
   } catch (e) {
     return false;
@@ -156,8 +183,11 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
  */
 function sign(input: {privkey: string; message: string}): string | null {
   const {privkey, message} = input;
-  const signature = bls.sign(fromHexString(privkey), fromHexString(message));
-  return toHexString(signature);
+  try {
+    return SecretKey.fromHex(privkey).sign(fromHexString(message)).toHex();
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -169,5 +199,9 @@ function sign(input: {privkey: string; message: string}): string | null {
  */
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
   const {pubkey, message, signature} = input;
-  return bls.verify(fromHexString(pubkey), fromHexString(message), fromHexString(signature));
+  try {
+    return _verify(fromHexString(message), PublicKey.fromHex(pubkey), Signature.fromHex(signature));
+  } catch (e) {
+    return false;
+  }
 }

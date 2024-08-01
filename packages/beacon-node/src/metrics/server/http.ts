@@ -24,9 +24,9 @@ export async function getHttpMetricsServer(
   opts: HttpMetricsServerOpts,
   {
     register,
-    getOtherMetrics = async () => "",
+    getOtherMetrics = async () => [],
     logger,
-  }: {register: Registry; getOtherMetrics?: () => Promise<string>; logger: Logger}
+  }: {register: Registry; getOtherMetrics?: () => Promise<string[]>; logger: Logger}
 ): Promise<HttpMetricsServer> {
   // New registry to metric the metrics. Using the same registry would deadlock the .metrics promise
   const httpServerRegister = new RegistryMetricCreator();
@@ -53,7 +53,8 @@ export async function getHttpMetricsServer(
       } else {
         // Get scrape time metrics
         const httpServerMetrics = await httpServerRegister.metrics();
-        const metricsStr = `${metricsRes[0].result}\n\n${metricsRes[1]}\n\n${httpServerMetrics}`;
+        const metrics = [metricsRes[0].result, httpServerMetrics, ...metricsRes[1]];
+        const metricsStr = metrics.join("\n\n");
         res.writeHead(200, {"content-type": register.contentType}).end(metricsStr);
       }
     } else {

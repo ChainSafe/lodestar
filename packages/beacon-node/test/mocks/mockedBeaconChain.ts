@@ -117,6 +117,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
+        getClientVersion: vi.fn(),
       },
       executionBuilder: {},
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment

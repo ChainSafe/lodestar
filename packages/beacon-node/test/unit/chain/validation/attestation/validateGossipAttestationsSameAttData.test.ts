@@ -1,6 +1,5 @@
-import bls from "@chainsafe/bls";
-import type {PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -49,7 +48,7 @@ describe("validateGossipAttestationsSameAttData", () => {
       const bytes = new Uint8Array(32);
       const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       dataView.setUint32(0, i + 1, true);
-      const secretKey = bls.SecretKey.fromBytes(bytes);
+      const secretKey = SecretKey.fromKeygen(bytes);
       const publicKey = secretKey.toPublicKey();
       keypair = {secretKey, publicKey};
       keypairs.set(i, keypair);

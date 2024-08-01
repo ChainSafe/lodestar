@@ -1,7 +1,7 @@
 import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
 import {toBufferBE} from "bigint-buffer";
-import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@chainsafe/blst";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {toHex} from "@lodestar/utils";
@@ -19,7 +19,7 @@ describe("BlockDutiesService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   beforeAll(async () => {
-    const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
+    const secretKeys = Array.from({length: 3}, (_, i) => SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore = await initValidatorStore(secretKeys, api);
   });
