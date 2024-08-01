@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describe, it, beforeAll, vi} from "vitest";
+import {describe, it, beforeAll, vi, onTestFinished} from "vitest";
 import {rimraf} from "rimraf";
 import {ImportStatus} from "@lodestar/api/keymanager";
 import {Interchange} from "@lodestar/validator";
@@ -49,9 +49,16 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
   it("1 . run 'validator' import keys from API, getdefaultfeeRecipient", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
+    onTestFinished(async () => {
+      await stopValidator();
     });
+
     // Produce and encrypt keystores
     // Import test keys
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
@@ -108,8 +115,14 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   });
 
   it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
+    onTestFinished(async () => {
+      await stopValidator();
     });
 
     // next time check edited feeRecipient persists
@@ -164,8 +177,14 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   });
 
   it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
+    onTestFinished(async () => {
+      await stopValidator();
     });
 
     const feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();

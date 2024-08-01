@@ -1,5 +1,4 @@
 import childProcess from "node:child_process";
-import {afterEach} from "vitest";
 import {retry} from "@lodestar/utils";
 import {ApiClient, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
@@ -72,8 +71,6 @@ export async function startValidatorWithKeyManager(
     await beaconServer.close();
     await gracefullyStopChildProcess(validatorProc, 3000);
   };
-
-  afterEach(stopValidator);
 
   return {
     validator: validatorProc,

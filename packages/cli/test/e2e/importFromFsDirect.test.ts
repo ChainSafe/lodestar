@@ -37,21 +37,23 @@ describe("import from fs same cmd as validate", function () {
 
   // Check that there are not keys loaded without adding extra args `--importKeystores`
   it("run 'validator' there are no keys loaded", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {
       dataDir,
       logPrefix: "case-1",
     });
 
     await expectKeys(keymanagerClient, [], "Wrong listKeys response data");
+    await stopValidator();
   });
 
   // Run validator with extra arguments to load keystores in same step
   it("run 'validator' check keys are loaded", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager(
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
       [`--importKeystores=${importFromDir}`, `--importKeystoresPassword=${passphraseFilepath}`],
       {dataDir, logPrefix: "case-2"}
     );
 
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
+    await stopValidator();
   });
 });

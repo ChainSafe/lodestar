@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, expect, beforeAll, vi} from "vitest";
+import {describe, it, expect, beforeAll, vi, onTestFinished} from "vitest";
 import {rimraf} from "rimraf";
 import {execCliCommand} from "@lodestar/test-utils";
 import {getKeystoresStr} from "@lodestar/test-utils";
@@ -59,7 +59,10 @@ describe("import from fs then validate", function () {
   });
 
   it("run 'validator' check keys are loaded", async function () {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir});
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+    onTestFinished(async () => {
+      await stopValidator();
+    });
 
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
   });
