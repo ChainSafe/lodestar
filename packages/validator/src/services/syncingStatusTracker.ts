@@ -51,10 +51,18 @@ export class SyncingStatusTracker {
       }
 
       if (syncingStatus.isSyncing === true) {
-        this.logger.warn("Connected beacon node is syncing", {slot, ...syncingStatus});
-      } else {
-        this.logger.verbose("Connected beacon node is synced", {slot, ...syncingStatus});
+        this.logger.warn("Node is syncing", {
+          currentSlot: slot,
+          headSlot: syncingStatus.headSlot,
+          syncDistance: syncingStatus.syncDistance,
+        });
+      } else if (prevOfflineOrSyncing) {
+        this.logger.info("Node is synced", {
+          currentSlot: slot,
+          headSlot: syncingStatus.headSlot,
+        });
       }
+      this.logger.verbose("Node syncing status", {currentSlot: slot, ...syncingStatus});
 
       this.prevSyncingStatus = syncingStatus;
     } catch (e) {
