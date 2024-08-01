@@ -23,7 +23,12 @@ export class SyncingStatusTracker {
     this.clock.runEverySlot(this.checkSyncingStatus);
   }
 
-  /** Run function when node status changes from syncing to synced */
+  /**
+   * Run function when node status changes from syncing to synced
+   *
+   * Note: does not consider if execution client is offline or syncing and
+   * hence it is not useful to schedule tasks that require a non-optimistic node.
+   */
   runOnResynced(fn: RunOnResyncedFn): void {
     this.fns.push(fn);
   }
