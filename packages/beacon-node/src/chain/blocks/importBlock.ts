@@ -385,56 +385,58 @@ export async function importBlock(
   // Send block events, only for recent enough blocks
 
   if (this.clock.currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
-    // NOTE: Skip looping if there are no listeners from the API
-
-    if (this.emitter.listenerCount(routes.events.EventType.block)) {
-      this.emitter.emit(routes.events.EventType.block, {
-        block: blockRootHex,
-        slot: blockSlot,
-        executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
-      });
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
-      for (const voluntaryExit of block.message.body.voluntaryExits) {
-        this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
-      }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.blsToExecutionChange)) {
-      for (const blsToExecutionChange of (block.message.body as capella.BeaconBlockBody).blsToExecutionChanges ?? []) {
-        this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
-      }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
-      for (const attestation of block.message.body.attestations) {
-        this.emitter.emit(routes.events.EventType.attestation, attestation);
-      }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
-      for (const attesterSlashing of block.message.body.attesterSlashings) {
-        this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
-      }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
-      for (const proposerSlashing of block.message.body.proposerSlashings) {
-        this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
-      }
-    }
-    if (
-      blockInput.type === BlockInputType.availableData &&
-      this.emitter.listenerCount(routes.events.EventType.blobSidecar)
-    ) {
-      const {blobs} = blockInput.blockData;
-      for (const blobSidecar of blobs) {
-        const {index, kzgCommitment} = blobSidecar;
-        this.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot: blockRootHex,
+    // We want to import block asap so call all event handler in the next event loop
+    callInNextEventLoop(() => {
+      // NOTE: Skip emitting if there are no listeners from the API
+      if (this.emitter.listenerCount(routes.events.EventType.block)) {
+        this.emitter.emit(routes.events.EventType.block, {
+          block: blockRootHex,
           slot: blockSlot,
-          index,
-          kzgCommitment: toHexString(kzgCommitment),
-          versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+          executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
         });
       }
-    }
+      if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
+        for (const voluntaryExit of block.message.body.voluntaryExits) {
+          this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+        }
+      }
+      if (this.emitter.listenerCount(routes.events.EventType.blsToExecutionChange)) {
+        for (const blsToExecutionChange of (block.message as capella.BeaconBlock).body.blsToExecutionChanges ?? []) {
+          this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+        }
+      }
+      if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
+        for (const attestation of block.message.body.attestations) {
+          this.emitter.emit(routes.events.EventType.attestation, attestation);
+        }
+      }
+      if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
+        for (const attesterSlashing of block.message.body.attesterSlashings) {
+          this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+        }
+      }
+      if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
+        for (const proposerSlashing of block.message.body.proposerSlashings) {
+          this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+        }
+      }
+      if (
+        blockInput.type === BlockInputType.availableData &&
+        this.emitter.listenerCount(routes.events.EventType.blobSidecar)
+      ) {
+        const {blobs} = blockInput.blockData;
+        for (const blobSidecar of blobs) {
+          const {index, kzgCommitment} = blobSidecar;
+          this.emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot: blockRootHex,
+            slot: blockSlot,
+            index,
+            kzgCommitment: toHexString(kzgCommitment),
+            versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+          });
+        }
+      }
+    });
   }
 
   // Register stat metrics about the block after importing it
