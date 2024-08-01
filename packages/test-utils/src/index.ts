@@ -5,4 +5,3 @@ export * from "./keystores.js";
 export * from "./path.js";
 export * from "./timeout.js";
 export * from "./http.js";
-export * from "./interfaces.js";

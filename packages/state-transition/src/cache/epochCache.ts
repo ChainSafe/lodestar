@@ -338,11 +338,16 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    const currentShuffling = cachedCurrentShuffling ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const currentShuffling =
+      cachedCurrentShuffling ??
+      computeEpochShuffling(state, currentActiveIndices, currentActiveIndices.length, currentEpoch);
     const previousShuffling =
       cachedPreviousShuffling ??
-      (isGenesis ? currentShuffling : computeEpochShuffling(state, previousActiveIndices, previousEpoch));
-    const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+      (isGenesis
+        ? currentShuffling
+        : computeEpochShuffling(state, previousActiveIndices, previousActiveIndices.length, previousEpoch));
+    const nextShuffling =
+      cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextActiveIndices.length, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
@@ -501,6 +506,7 @@ export class EpochCache {
     state: BeaconStateAllForks,
     epochTransitionCache: {
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+      nextEpochShufflingActiveIndicesLength: number;
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
@@ -512,6 +518,7 @@ export class EpochCache {
     this.nextShuffling = computeEpochShuffling(
       state,
       epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
+      epochTransitionCache.nextEpochShufflingActiveIndicesLength,
       nextEpoch
     );
 
