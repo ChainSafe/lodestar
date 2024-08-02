@@ -165,9 +165,11 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache.add(cp, item);
   }
 
-  updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void {
+  updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void {
     // the resulting state will be added to block state cache so we transfer the cache in this flow
     const cloneOpts = {dontTransferCache: true};
+    const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
+    const logCtx = {newHeadSlot, newHeadBlockRoot, newHeadStateRoot, maybeHeadSlot: maybeHeadState.slot};
     const headState =
       newHeadStateRoot === toHexString(maybeHeadState.hashTreeRoot())
         ? maybeHeadState
@@ -177,7 +179,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       this.blockStateCache.setHeadState(headState);
     } else {
       // Trigger regen on head change if necessary
-      this.logger.warn("Head state not available, triggering regen", {stateRoot: newHeadStateRoot});
+      this.logger.warn("Head state not available, triggering regen", logCtx);
       // it's important to reload state to regen head state here
       const allowDiskReload = true;
       // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
@@ -186,7 +188,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       this.blockStateCache.setHeadState(null);
       this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, cloneOpts, allowDiskReload).then(
         (headStateRegen) => this.blockStateCache.setHeadState(headStateRegen),
-        (e) => this.logger.error("Error on head state regen", {}, e)
+        (e) => this.logger.error("Error on head state regen", logCtx, e)
       );
     }
   }
