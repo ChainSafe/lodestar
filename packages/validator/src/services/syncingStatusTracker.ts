@@ -36,15 +36,8 @@ export class SyncingStatusTracker {
   private checkSyncingStatus = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     try {
       const syncingStatus = (await this.api.node.getSyncingStatus()).value();
-
-      const prevErrorOrSyncing = this.prevSyncingStatus instanceof Error || this.prevSyncingStatus?.isSyncing === true;
-
-      if (prevErrorOrSyncing && syncingStatus.isSyncing === false) {
-        for (const fn of this.fns) {
-          fn(slot, signal).catch((e) => this.logger.error("Error calling resynced event handler", e));
-        }
-      }
       const {isSyncing, headSlot, syncDistance, isOptimistic, elOffline} = syncingStatus;
+      const prevErrorOrSyncing = this.prevSyncingStatus instanceof Error || this.prevSyncingStatus?.isSyncing === true;
 
       if (isSyncing === true) {
         this.logger.warn("Node is syncing", {slot, headSlot, syncDistance});
@@ -54,6 +47,14 @@ export class SyncingStatusTracker {
       this.logger.verbose("Node syncing status", {slot, ...syncingStatus});
 
       this.prevSyncingStatus = syncingStatus;
+
+      if (prevErrorOrSyncing && isSyncing === false) {
+        await Promise.all(
+          this.fns.map((fn) =>
+            fn(slot, signal).catch((e) => this.logger.error("Error calling resynced event handler", e))
+          )
+        );
+      }
     } catch (e) {
       // Error likely due to node being offline. In any case, handle failure to
       // check syncing status the same way as if node was previously syncing
