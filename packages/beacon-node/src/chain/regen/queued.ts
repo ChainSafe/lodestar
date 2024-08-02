@@ -169,11 +169,16 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     // the resulting state will be added to block state cache so we transfer the cache in this flow
     const cloneOpts = {dontTransferCache: true};
     const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
-    const logCtx = {newHeadSlot, newHeadBlockRoot, newHeadStateRoot, maybeHeadSlot: maybeHeadState.slot};
+    const maybeHeadStateRoot = toHexString(maybeHeadState.hashTreeRoot());
+    const logCtx = {
+      newHeadSlot,
+      newHeadBlockRoot,
+      newHeadStateRoot,
+      maybeHeadSlot: maybeHeadState.slot,
+      maybeHeadStateRoot,
+    };
     const headState =
-      newHeadStateRoot === toHexString(maybeHeadState.hashTreeRoot())
-        ? maybeHeadState
-        : this.blockStateCache.get(newHeadStateRoot, cloneOpts);
+      newHeadStateRoot === maybeHeadStateRoot ? maybeHeadState : this.blockStateCache.get(newHeadStateRoot, cloneOpts);
 
     if (headState) {
       this.blockStateCache.setHeadState(headState);
