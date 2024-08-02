@@ -134,7 +134,7 @@ describe("SyncingStatusTracker", function () {
     await clock.tickSlotFns(2, controller.signal);
 
     // info log should only be printed out once, not every slot
-    expect(logger.info).not.toHaveBeenCalledTimes(2);
+    expect(logger.info).toHaveBeenCalledOnce();
     expect(logger.verbose).toHaveBeenCalledWith("Node syncing status", {
       slot: 2,
       headSlot: 2,
