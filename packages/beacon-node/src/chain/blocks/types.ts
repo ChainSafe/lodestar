@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {deneb, Slot, RootHex, SignedBeaconBlock} from "@lodestar/types";
-import {ForkSeq, ForkName} from "@lodestar/params";
+import {ForkSeq, ForkName, ForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 export enum BlockInputType {
