@@ -56,7 +56,10 @@ describe("AttestationDutiesService", function () {
       mockApiResponse({data: [validatorResponse], meta: {executionOptimistic: false, finalized: false}})
     );
   });
-  afterEach(() => controller.abort());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    controller.abort();
+  });
 
   it("Should fetch indexes and duties", async function () {
     // Reply with some duties

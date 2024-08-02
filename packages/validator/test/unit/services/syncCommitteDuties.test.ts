@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeAll, beforeEach, afterEach} from "vitest";
+import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
 import {when} from "vitest-when";
 import {toBufferBE} from "bigint-buffer";
 import {toHexString} from "@chainsafe/ssz";
@@ -64,7 +64,10 @@ describe("SyncCommitteeDutiesService", function () {
       mockApiResponse({data: validatorResponses, meta: {executionOptimistic: false, finalized: false}})
     );
   });
-  afterEach(() => controller.abort());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    controller.abort();
+  });
 
   it("Should fetch indexes and duties", async function () {
     // Reply with some duties
