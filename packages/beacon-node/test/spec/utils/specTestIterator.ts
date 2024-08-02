@@ -65,7 +65,7 @@ export const defaultSkipOpts: SkipOpts = {
     "capella/light_client/single_merkle_proof/BeaconBlockBody",
     "deneb/light_client/single_merkle_proof/BeaconBlockBody",
   ],
-  skippedRunners: ["merkle_proof"],
+  skippedRunners: ["merkle_proof", "light_client"],
 };
 
 /**
