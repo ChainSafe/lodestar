@@ -166,8 +166,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void {
-    // the resulting state will be added to block state cache so we transfer the cache in this flow
-    const cloneOpts = {dontTransferCache: true};
     const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
     const maybeHeadStateRoot = toHexString(maybeHeadState.hashTreeRoot());
     const logCtx = {
@@ -178,19 +176,26 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       maybeHeadStateRoot,
     };
     const headState =
-      newHeadStateRoot === maybeHeadStateRoot ? maybeHeadState : this.blockStateCache.get(newHeadStateRoot, cloneOpts);
+      newHeadStateRoot === maybeHeadStateRoot
+        ? maybeHeadState
+        : // maybeHeadState was already in block state cache so we don't transfer the cache
+          this.blockStateCache.get(newHeadStateRoot, {dontTransferCache: true});
 
     if (headState) {
       this.blockStateCache.setHeadState(headState);
     } else {
       // Trigger regen on head change if necessary
       this.logger.warn("Head state not available, triggering regen", logCtx);
-      // it's important to reload state to regen head state here
-      const allowDiskReload = true;
-      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
-      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
-      // for legacy StateContextCache only
+      // for the old BlockStateCacheImpl only
+      //     - head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
+      //       up memory for regen step below. During regen, node won't be functional but eventually head will be available
+      // for the new FIFOBlockStateCache, this has no affect
       this.blockStateCache.setHeadState(null);
+
+      // for the new FIFOBlockStateCache, it's important to reload state to regen head state here if needed
+      const allowDiskReload = true;
+      // transfer cache here because we want to regen state asap
+      const cloneOpts = {dontTransferCache: false};
       this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, cloneOpts, allowDiskReload).then(
         (headStateRegen) => this.blockStateCache.setHeadState(headStateRegen),
         (e) => this.logger.error("Error on head state regen", logCtx, e)
