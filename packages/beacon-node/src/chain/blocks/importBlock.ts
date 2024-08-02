@@ -213,7 +213,7 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
-    this.regen.updateHeadState(newHead.stateRoot, postState);
+    this.regen.updateHeadState(newHead, postState);
 
     this.emitter.emit(routes.events.EventType.head, {
       block: newHead.blockRoot,
