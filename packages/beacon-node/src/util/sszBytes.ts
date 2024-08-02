@@ -111,6 +111,13 @@ export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null 
 }
 
 /**
+ * Alias of `getSeenAttDataKeyPhase0` specifically for batch handling indexing in gossip queue
+ */
+export function getGossipAttestationIndex(data: Uint8Array): AttDataBase64 | null {
+  return getSeenAttDataKeyPhase0(data);
+}
+
+/**
  * Extract aggregation bits from attestation serialized bytes.
  * Return null if data is not long enough to extract aggregation bits.
  */
