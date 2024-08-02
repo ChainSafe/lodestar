@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
 import {batchItems, IClock, LoggerVc} from "../util/index.js";
@@ -62,7 +62,12 @@ export class AttestationDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
-    syncingStatusTracker.runOnResynced((slot) => this.runDutiesTasks(computeEpochAtSlot(slot)));
+    syncingStatusTracker.runOnResynced(async (slot) => {
+      // Skip on first slot of epoch since tasks are already scheduled
+      if (!isStartSlotOfEpoch(slot)) {
+        return this.runDutiesTasks(computeEpochAtSlot(slot));
+      }
+    });
 
     if (metrics) {
       metrics.attesterDutiesCount.addCollect(() => {

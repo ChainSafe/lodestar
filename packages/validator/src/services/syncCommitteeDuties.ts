@@ -4,6 +4,7 @@ import {
   computeEpochAtSlot,
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
+  isStartSlotOfEpoch,
   isSyncCommitteeAggregator,
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
@@ -93,7 +94,12 @@ export class SyncCommitteeDutiesService {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
-    syncingStatusTracker.runOnResynced((slot) => this.runDutiesTasks(computeEpochAtSlot(slot)));
+    syncingStatusTracker.runOnResynced(async (slot) => {
+      // Skip on first slot of epoch since tasks are already scheduled
+      if (!isStartSlotOfEpoch(slot)) {
+        return this.runDutiesTasks(computeEpochAtSlot(slot));
+      }
+    });
 
     if (metrics) {
       metrics.syncCommitteeDutiesCount.addCollect(() => {
