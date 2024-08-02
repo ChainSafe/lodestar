@@ -83,7 +83,7 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
     const dutiesService = new SyncCommitteeDutiesService(
       altair0Config,
       loggerVc,
@@ -154,7 +154,7 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
     const dutiesService = new SyncCommitteeDutiesService(
       altair0Config,
       loggerVc,
@@ -216,7 +216,7 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
     const dutiesService = new SyncCommitteeDutiesService(
       altair0Config,
       loggerVc,
@@ -274,7 +274,7 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
     const dutiesService = new SyncCommitteeDutiesService(
       altair0Config,
       loggerVc,

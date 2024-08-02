@@ -80,7 +80,7 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
     const dutiesService = new AttestationDutiesService(
       loggerVc,
       api,
@@ -136,7 +136,7 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
     const dutiesService = new AttestationDutiesService(
       loggerVc,
       api,
@@ -172,7 +172,7 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
     const dutiesService = new AttestationDutiesService(
       loggerVc,
       api,

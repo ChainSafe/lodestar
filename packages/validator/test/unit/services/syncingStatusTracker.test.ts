@@ -16,7 +16,7 @@ describe("SyncingStatusTracker", function () {
   beforeEach(() => {
     controller = new AbortController();
     clock = new ClockMock();
-    syncingStatusTracker = new SyncingStatusTracker(logger, api, clock);
+    syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, null);
     callOnResynced = vi.fn().mockResolvedValue(undefined);
     syncingStatusTracker.runOnResynced(callOnResynced);
   });

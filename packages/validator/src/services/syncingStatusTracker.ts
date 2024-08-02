@@ -2,13 +2,14 @@ import {ApiClient, routes} from "@lodestar/api";
 import {Logger} from "@lodestar/utils";
 import {Slot} from "@lodestar/types";
 import {IClock} from "../util/clock.js";
+import {BeaconHealth, Metrics} from "../metrics.js";
 
 export type SyncingStatus = routes.node.SyncingStatus;
 
 type RunOnResyncedFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 /**
- * Track the syncing status of connected beacon node
+ * Track the syncing status of connected beacon node(s)
  */
 export class SyncingStatusTracker {
   private prevSyncingStatus?: SyncingStatus | Error;
@@ -18,7 +19,8 @@ export class SyncingStatusTracker {
   constructor(
     private readonly logger: Logger,
     private readonly api: ApiClient,
-    private readonly clock: IClock
+    private readonly clock: IClock,
+    private readonly metrics: Metrics | null
   ) {
     this.clock.runEverySlot(this.checkSyncingStatus);
   }
@@ -47,6 +49,9 @@ export class SyncingStatusTracker {
       this.logger.verbose("Node syncing status", {slot, ...syncingStatus});
 
       this.prevSyncingStatus = syncingStatus;
+      this.metrics?.beaconHealth.set(
+        !isSyncing && !isOptimistic && !elOffline ? BeaconHealth.READY : BeaconHealth.SYNCING
+      );
 
       if (prevErrorOrSyncing && isSyncing === false) {
         await Promise.all(
@@ -59,6 +64,7 @@ export class SyncingStatusTracker {
       // Error likely due to node being offline. In any case, handle failure to
       // check syncing status the same way as if node was previously syncing
       this.prevSyncingStatus = e as Error;
+      this.metrics?.beaconHealth.set(BeaconHealth.ERROR);
 
       this.logger.error("Failed to check syncing status", {slot}, this.prevSyncingStatus);
     }

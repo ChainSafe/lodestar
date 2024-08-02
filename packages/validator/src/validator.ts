@@ -20,7 +20,7 @@ import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {BeaconHealth, Metrics} from "./metrics.js";
+import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
@@ -150,12 +150,6 @@ export class Validator {
 
       if (metrics) {
         this.db.setMetrics(metrics.db);
-
-        this.clock.runEverySlot(() =>
-          this.fetchBeaconHealth()
-            .then((health) => metrics.beaconHealth.set(health))
-            .catch((e) => this.logger.error("Error on fetchBeaconHealth", {}, e))
-        );
       }
 
       // "start" the validator
@@ -230,7 +224,7 @@ export class Validator {
     emitter.setMaxListeners(Infinity);
 
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
-    const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock);
+    const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       useProduceBlockV3: opts.useProduceBlockV3,
@@ -390,21 +384,6 @@ export class Validator {
     }
 
     return this.validatorStore.signVoluntaryExit(publicKey, validator.index, exitEpoch);
-  }
-
-  private async fetchBeaconHealth(): Promise<BeaconHealth> {
-    try {
-      const {status: healthCode} = await this.api.node.getHealth();
-
-      if (healthCode === routes.node.NodeHealth.READY) return BeaconHealth.READY;
-      if (healthCode === routes.node.NodeHealth.SYNCING) return BeaconHealth.SYNCING;
-      if (healthCode === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
-        return BeaconHealth.NOT_INITIALIZED_OR_ISSUES;
-      else return BeaconHealth.UNKNOWN;
-    } catch (e) {
-      // TODO: Filter by network error type
-      return BeaconHealth.ERROR;
-    }
   }
 }
 
