@@ -160,6 +160,10 @@ export interface IBeaconChain {
   getStateByCheckpoint(
     checkpoint: CheckpointWithHex
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
+  /** Return state bytes by checkpoint */
+  getStateOrBytesByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**
    * Since we can have multiple parallel chains,

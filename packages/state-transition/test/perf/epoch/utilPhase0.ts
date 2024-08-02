@@ -1,4 +1,4 @@
-import {AttesterFlags, FLAG_ELIGIBLE_ATTESTER, hasMarkers, toAttesterFlags} from "../../../src/index.js";
+import {AttesterFlags, toAttesterFlags} from "../../../src/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochTransitionCache} from "../../../src/types.js";
 
 /**
@@ -14,18 +14,11 @@ export function generateBalanceDeltasEpochTransitionCache(
   const vc = state.validators.length;
 
   const {proposerIndices, inclusionDelays, flags} = generateStatuses(state.validators.length, flagFactors);
-  const eligibleValidatorIndices: number[] = [];
-  for (let i = 0; i < flags.length; i++) {
-    if (hasMarkers(flags[i], FLAG_ELIGIBLE_ATTESTER)) {
-      eligibleValidatorIndices.push(i);
-    }
-  }
 
   const cache: Partial<EpochTransitionCache> = {
     proposerIndices,
     inclusionDelays,
     flags,
-    eligibleValidatorIndices,
     totalActiveStakeByIncrement: vc,
     baseRewardPerIncrement: 726,
     prevEpochUnslashedStake: {

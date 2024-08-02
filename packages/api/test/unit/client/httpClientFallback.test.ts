@@ -17,7 +17,7 @@ describe("httpClient fallback", () => {
 
   // Using fetchSub instead of actually setting up servers because there are some strange
   // race conditions, where the server stub doesn't count the call in time before the test is over.
-  const fetchStub = vi.fn<Parameters<typeof fetch>, ReturnType<typeof fetch>>();
+  const fetchStub = vi.fn<(...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>>();
 
   let httpClient: HttpClient;
 
