@@ -33,7 +33,8 @@ export interface BlockStateCache {
   prune(headStateRootHex: RootHex): void;
   deleteAllBeforeEpoch(finalizedEpoch: Epoch): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
-  getStates(): IterableIterator<CachedBeaconStateAllForks>; // Expose beacon states stored in cache. Use with caution
+  /** Expose beacon states stored in cache. Use with caution */
+  getStates(): IterableIterator<CachedBeaconStateAllForks>;
 }
 
 /**
