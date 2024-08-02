@@ -49,6 +49,7 @@ export class SyncingStatusTracker {
       this.logger.verbose("Node syncing status", {slot, ...syncingStatus});
 
       this.prevSyncingStatus = syncingStatus;
+
       this.metrics?.beaconHealth.set(
         !isSyncing && !isOptimistic && !elOffline ? BeaconHealth.READY : BeaconHealth.SYNCING
       );
@@ -64,6 +65,7 @@ export class SyncingStatusTracker {
       // Error likely due to node being offline. In any case, handle failure to
       // check syncing status the same way as if node was previously syncing
       this.prevSyncingStatus = e as Error;
+
       this.metrics?.beaconHealth.set(BeaconHealth.ERROR);
 
       this.logger.error("Failed to check syncing status", {slot}, this.prevSyncingStatus);
