@@ -93,8 +93,8 @@ export class BeaconSync implements IBeaconSync {
     // If we are pre/at genesis, signal ready
     if (currentSlot <= GENESIS_SLOT) {
       return {
-        headSlot: "0",
-        syncDistance: "0",
+        headSlot: 0,
+        syncDistance: 0,
         isSyncing: false,
         isOptimistic: false,
         elOffline,
@@ -107,16 +107,16 @@ export class BeaconSync implements IBeaconSync {
         case SyncState.SyncingHead:
         case SyncState.Stalled:
           return {
-            headSlot: String(head.slot),
-            syncDistance: String(currentSlot - head.slot),
+            headSlot: head.slot,
+            syncDistance: currentSlot - head.slot,
             isSyncing: true,
             isOptimistic: isOptimisticBlock(head),
             elOffline,
           };
         case SyncState.Synced:
           return {
-            headSlot: String(head.slot),
-            syncDistance: "0",
+            headSlot: head.slot,
+            syncDistance: 0,
             isSyncing: false,
             isOptimistic: isOptimisticBlock(head),
             elOffline,
