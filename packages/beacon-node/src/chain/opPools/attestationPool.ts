@@ -2,9 +2,11 @@ import {BitArray} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {Slot, RootHex, isElectraAttestation, Attestation} from "@lodestar/types";
 import {MapDef, assert} from "@lodestar/utils";
+import {ForkSeq} from "@lodestar/params";
+import {ChainForkConfig} from "@lodestar/config";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import {isElectraAggregate, pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
  * The number of slots that will be stored in the pool.
@@ -28,14 +30,14 @@ type AggregateFastPhase0 = {
   signature: Signature;
 };
 
-type AggregateFastElectra = AggregateFastPhase0 & {committeeBits: BitArray};
+export type AggregateFastElectra = AggregateFastPhase0 & {committeeBits: BitArray};
 
-type AggregateFast = AggregateFastPhase0 | AggregateFastElectra;
+export type AggregateFast = AggregateFastPhase0 | AggregateFastElectra;
 
 /** Hex string of DataRoot `TODO` */
 type DataRootHex = string;
 
-type CommitteeIndex = number;
+type CommitteeIndex = number | null;
 
 /**
  * A pool of `Attestation` that is specially designed to store "unaggregated" attestations from
@@ -68,6 +70,7 @@ export class AttestationPool {
   private lowestPermissibleSlot = 0;
 
   constructor(
+    private readonly config: ChainForkConfig,
     private readonly clock: IClock,
     private readonly cutOffSecFromSlot: number,
     private readonly preaggregateSlotDistance = 0
@@ -103,6 +106,7 @@ export class AttestationPool {
    */
   add(committeeIndex: CommitteeIndex, attestation: Attestation, attDataRootHex: RootHex): InsertOutcome {
     const slot = attestation.data.slot;
+    const fork = this.config.getForkSeq(slot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     // Reject any attestations that are too old.
@@ -121,8 +125,15 @@ export class AttestationPool {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
 
-    // this should not happen because attestation should be validated before reaching this
-    assert.notNull(committeeIndex, "Committee index should not be null in attestation pool");
+    // TODO Electra: Use `isForkElectra` after the other PR is merged
+    if (fork >= ForkSeq.electra) {
+      // Electra only: this should not happen because attestation should be validated before reaching this
+      assert.notNull(committeeIndex, "Committee index should not be null in attestation pool post-electra");
+      assert.true(isElectraAttestation(attestation), "Attestation should be type electra.Attestation");
+    } else {
+      assert.true(!isElectraAttestation(attestation), "Attestation should be type phase0.Attestation");
+      committeeIndex = null; // For pre-electra, committee index info is encoded in attDataRootIndex
+    }
 
     // Pre-aggregate the contribution with existing items
     let aggregateByIndex = aggregateByRoot.get(attDataRootHex);
@@ -144,12 +155,21 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
-  // TODO Electra: Change attestation pool to accomodate pre-electra request
   getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): Attestation | null {
+    const fork = this.config.getForkSeq(slot);
+    const isAfterElectra = fork >= ForkSeq.electra;
+    committeeIndex = isAfterElectra ? committeeIndex : null;
+
     const aggregate = this.aggregateByIndexByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
       // TODO: Add metric for missing aggregates
       return null;
+    }
+
+    if (isAfterElectra) {
+      assert.true(isElectraAggregate(aggregate), "Aggregate should be type AggregateFastElectra");
+    } else {
+      assert.true(!isElectraAggregate(aggregate), "Aggregate should be type AggregateFastPhase0");
     }
 
     return fastToAttestation(aggregate);

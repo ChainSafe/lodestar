@@ -1068,8 +1068,23 @@ export function getValidatorApi(
     },
 
     // TODO Electra: Implement getAggregatedAttestation to properly handle pre-electra
-    async getAggregatedAttestation() {
-      throw new Error("Not implemented. Use getAggregatedAttestationV2 for now.");
+    async getAggregatedAttestation({attestationDataRoot, slot}) {
+      notWhileSyncing();
+
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      const dataRootHex = toHex(attestationDataRoot);
+      const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
+
+      if (!aggregate) {
+        throw new ApiError(404, `No aggregated attestation for slot=${slot},  dataRoot=${dataRootHex}`);
+      }
+
+      metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
+
+      return {
+        data: aggregate,
+      };
     },
 
     async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {

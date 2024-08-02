@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {Epoch, ssz} from "@lodestar/types";
-import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {Epoch, isElectraAttestation, ssz} from "@lodestar/types";
+import {ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -26,7 +26,9 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      let attestations = chain.aggregatedAttestationPool
+        .getAll(slot)
+        .filter((attestation) => !isElectraAttestation(attestation));
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
@@ -39,6 +41,12 @@ export function getBeaconPoolApi({
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
+      const isAfterElectra = ForkSeq[fork] >= ForkSeq.electra;
+      attestations = attestations.filter(
+        (attestation) =>
+          (isAfterElectra && isElectraAttestation(attestation)) ||
+          (!isAfterElectra && !isElectraAttestation(attestation))
+      );
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);

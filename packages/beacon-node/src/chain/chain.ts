@@ -133,7 +133,7 @@ export class BeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
-  readonly aggregatedAttestationPool = new AggregatedAttestationPool();
+  readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
   readonly opPool = new OpPool();
@@ -226,7 +226,13 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
-    this.attestationPool = new AttestationPool(clock, preAggregateCutOffTime, this.opts?.preaggregateSlotDistance);
+    this.attestationPool = new AttestationPool(
+      this.config,
+      clock,
+      preAggregateCutOffTime,
+      this.opts?.preaggregateSlotDistance
+    );
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,
       preAggregateCutOffTime,
