@@ -500,7 +500,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Percent of attestations having correct head.",
+      "description": "Percent of attestations having incorrect head.",
       "fieldConfig": {
         "defaults": {
           "color": {
