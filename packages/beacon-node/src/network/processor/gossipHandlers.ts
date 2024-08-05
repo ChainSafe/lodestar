@@ -454,10 +454,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         }
       }
 
-      chain.emitter.emit(routes.events.EventType.attestation, {
-        version: fork,
-        data: signedAggregateAndProof.message.aggregate,
-      });
+      chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
     [GossipType.beacon_attestation]: async ({
       gossipData,
@@ -509,7 +506,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         }
       }
 
-      chain.emitter.emit(routes.events.EventType.attestation, {version: fork, data: attestation});
+      chain.emitter.emit(routes.events.EventType.attestation, attestation);
     },
 
     [GossipType.attester_slashing]: async ({
@@ -529,7 +526,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
 
-      chain.emitter.emit(routes.events.EventType.attesterSlashing, {version: topic.fork, data: attesterSlashing});
+      chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
     },
 
     [GossipType.proposer_slashing]: async ({
@@ -717,7 +714,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           }
         }
 
-        chain.emitter.emit(routes.events.EventType.attestation, {version: fork, data: attestation});
+        chain.emitter.emit(routes.events.EventType.attestation, attestation);
       }
 
       if (batchableBls) {
