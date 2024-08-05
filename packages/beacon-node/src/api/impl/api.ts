@@ -21,6 +21,6 @@ export function getApi(opts: ApiOptions, modules: ApiModules): BeaconApiMethods 
     lodestar: getLodestarApi(modules),
     node: getNodeApi(opts, modules),
     proof: getProofApi(opts, modules),
-    validator: getValidatorApi(modules),
+    validator: getValidatorApi(opts, modules),
   };
 }

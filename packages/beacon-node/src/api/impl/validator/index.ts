@@ -53,7 +53,7 @@ import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {toGraffitiBuffer} from "../../../util/graffiti.js";
+import {getDefaultGraffiti, toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
@@ -63,6 +63,8 @@ import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
+import {ApiOptions} from "../../options.js";
+import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
@@ -110,14 +112,10 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
  */
-export function getValidatorApi({
-  chain,
-  config,
-  logger,
-  metrics,
-  network,
-  sync,
-}: ApiModules): ApplicationMethods<routes.validator.Endpoints> {
+export function getValidatorApi(
+  opts: ApiOptions,
+  {chain, config, logger, metrics, network, sync}: ApiModules
+): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
 
   /**
@@ -348,7 +346,7 @@ export function getValidatorApi({
   async function produceBuilderBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti?: string,
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
       skipHeadChecksAndUpdate,
@@ -406,7 +404,9 @@ export function getValidatorApi({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || ""),
+        graffiti: toGraffitiBuffer(
+          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+        ),
         commonBlockBody,
       });
 
@@ -432,7 +432,7 @@ export function getValidatorApi({
   async function produceEngineFullBlockOrContents(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti?: string,
     {
       feeRecipient,
       strictFeeRecipientCheck,
@@ -474,7 +474,9 @@ export function getValidatorApi({
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || ""),
+        graffiti: toGraffitiBuffer(
+          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+        ),
         feeRecipient,
         commonBlockBody,
       });
@@ -522,7 +524,7 @@ export function getValidatorApi({
   async function produceEngineOrBuilderBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
+    graffiti?: string,
     // TODO deneb: skip randao verification
     _skipRandaoVerification?: boolean,
     builderBoostFactor?: bigint,
@@ -585,7 +587,9 @@ export function getValidatorApi({
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti || ""),
+      graffiti: toGraffitiBuffer(
+        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+      ),
     });
     logger.debug("Produced common block body", loggerContext);
 

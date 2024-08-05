@@ -1,6 +1,5 @@
-import {PointFormat, Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
@@ -108,7 +107,7 @@ export class SyncCommitteeMessagePool {
     return {
       ...contribution,
       aggregationBits: contribution.aggregationBits,
-      signature: contribution.signature.toBytes(PointFormat.compressed),
+      signature: contribution.signature.toBytes(),
     };
   }
 
@@ -136,7 +135,7 @@ function aggregateSignatureInto(
   }
 
   contribution.aggregationBits.set(indexInSubcommittee, true);
-  contribution.signature = bls.Signature.aggregate([
+  contribution.signature = aggregateSignatures([
     contribution.signature,
     signatureFromBytesNoCheck(signature.signature),
   ]);

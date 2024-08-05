@@ -1,5 +1,6 @@
-import type {SecretKey} from "@chainsafe/bls/types";
+import {SecretKey} from "@chainsafe/blst";
 import {routes} from "@lodestar/api/beacon";
+import {toHex} from "@lodestar/utils";
 import {AssertionResult, ValidatorClientKeys, Assertion, ValidatorClient} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
@@ -38,7 +39,7 @@ export const nodeAssertion: Assertion<"node", {health: number; keyManagerKeys: s
     }
 
     const expectedPublicKeys = node.validator
-      ? getAllKeys(node.validator.keys).map((k) => k.toPublicKey().toHex())
+      ? getAllKeys(node.validator.keys).map((k) => toHex(k.toPublicKey().toBytes()))
       : [];
 
     if (!arrayEquals(keyManagerKeys.sort(), expectedPublicKeys.sort())) {

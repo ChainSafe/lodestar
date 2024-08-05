@@ -142,6 +142,10 @@ export interface IBeaconChain {
   getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
   getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 
+  getHistoricalStateBySlot(
+    slot: Slot
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+
   /** Returns a local state canonical at `slot` */
   getStateBySlot(
     slot: Slot,
@@ -156,6 +160,10 @@ export interface IBeaconChain {
   getStateByCheckpoint(
     checkpoint: CheckpointWithHex
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
+  /** Return state bytes by checkpoint */
+  getStateOrBytesByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**
    * Since we can have multiple parallel chains,

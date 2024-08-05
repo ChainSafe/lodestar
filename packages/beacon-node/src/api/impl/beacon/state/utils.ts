@@ -3,11 +3,14 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
-export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.StateId): RootHex | Slot {
+export function resolveStateId(
+  forkChoice: IForkChoice,
+  stateId: routes.beacon.StateId
+): RootHex | Slot | CheckpointWithHex {
   if (stateId === "head") {
     return forkChoice.getHead().stateRoot;
   }
@@ -17,11 +20,11 @@ export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.S
   }
 
   if (stateId === "finalized") {
-    return forkChoice.getFinalizedBlock().stateRoot;
+    return forkChoice.getFinalizedCheckpoint();
   }
 
   if (stateId === "justified") {
-    return forkChoice.getJustifiedBlock().stateRoot;
+    return forkChoice.getJustifiedCheckpoint();
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {
@@ -39,17 +42,19 @@ export function resolveStateId(forkChoice: IForkChoice, stateId: routes.beacon.S
 
 export async function getStateResponse(
   chain: IBeaconChain,
-  stateId: routes.beacon.StateId
+  inStateId: routes.beacon.StateId
 ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
-  const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
+  const stateId = resolveStateId(chain.forkChoice, inStateId);
 
   const res =
-    typeof rootOrSlot === "string"
-      ? await chain.getStateByStateRoot(rootOrSlot)
-      : await chain.getStateBySlot(rootOrSlot);
+    typeof stateId === "string"
+      ? await chain.getStateByStateRoot(stateId)
+      : typeof stateId === "number"
+        ? await chain.getStateBySlot(stateId)
+        : chain.getStateByCheckpoint(stateId);
 
   if (!res) {
-    throw new ApiError(404, `No state found for id '${stateId}'`);
+    throw new ApiError(404, `No state found for id '${inStateId}'`);
   }
 
   return res;
@@ -57,19 +62,21 @@ export async function getStateResponse(
 
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
-  stateId: routes.beacon.StateId
+  inStateId: routes.beacon.StateId
 ): Promise<{state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
-  const rootOrSlot = resolveStateId(chain.forkChoice, stateId);
+  const stateId = resolveStateId(chain.forkChoice, inStateId);
 
   const res =
-    typeof rootOrSlot === "string"
-      ? await chain.getStateByStateRoot(rootOrSlot, {allowRegen: true})
-      : rootOrSlot >= chain.forkChoice.getFinalizedBlock().slot
-        ? await chain.getStateBySlot(rootOrSlot, {allowRegen: true})
-        : null; // TODO implement historical state regen
+    typeof stateId === "string"
+      ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
+      : typeof stateId === "number"
+        ? stateId >= chain.forkChoice.getFinalizedBlock().slot
+          ? await chain.getStateBySlot(stateId, {allowRegen: true})
+          : await chain.getHistoricalStateBySlot(stateId)
+        : await chain.getStateOrBytesByCheckpoint(stateId);
 
   if (!res) {
-    throw new ApiError(404, `No state found for id '${stateId}'`);
+    throw new ApiError(404, `No state found for id '${inStateId}'`);
   }
 
   return res;

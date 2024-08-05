@@ -62,6 +62,11 @@ export type EngineApiRpcParamTypes = {
    *  2. count: QUANTITY, 64 bits - Number of blocks to return
    */
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+
+  /**
+   * Object - Instance of ClientVersion
+   */
+  engine_getClientVersionV1: [ClientVersionRpc];
 };
 
 export type PayloadStatus = {
@@ -100,6 +105,8 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+
+  engine_getClientVersionV1: ClientVersionRpc[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -155,6 +162,17 @@ export type PayloadAttributesRpc = {
   withdrawals?: WithdrawalRpc[];
   /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
   parentBeaconBlockRoot?: DATA;
+};
+
+export type ClientVersionRpc = {
+  /** ClientCode */
+  code: string;
+  /** string, Human-readable name of the client */
+  name: string;
+  /** string, the version string of the current implementation */
+  version: string;
+  /** DATA, 4 bytes - first four bytes of the latest commit hash of this build  */
+  commit: DATA;
 };
 
 export interface BlobsBundleRpc {

@@ -18,13 +18,12 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 
 ## Requirements for Running a Light-Client
 
-Access to an beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/consensus-specs/tree/dev):
+Access to an beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/beacon-APIs/tree/v2.5.0/apis/beacon/light_client):
 
-- `/eth/v1/beacon/light_client/updates`
-- `/eth/v1/beacon/light_client/optimistic_update`
-- `/eth/v1/beacon/light_client/finality_update`
-- `/eth/v1/beacon/light_client/bootstrap/{block_root}`
-- `/eth/v0/beacon/light_client/committee_root`
+- [`GET /eth/v1/beacon/light_client/updates`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientUpdatesByRange)
+- [`GET /eth/v1/beacon/light_client/optimistic_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientOptimisticUpdate)
+- [`GET /eth/v1/beacon/light_client/finality_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientFinalityUpdate)
+- [`GET /eth/v1/beacon/light_client/bootstrap/{block_root}`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientBootstrap)
 
 System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/libraries/lightclient-prover/prover) being one of them.
 
@@ -42,8 +41,8 @@ It is possible to start up the light-client as a standalone process.
 ```bash
 lodestar lightclient \
     --network sepolia \
-    --beacon-api-url https://lodestar-sepolia.chainsafe.io \
-    --checkpoint-root "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
+    --beaconApiUrl https://lodestar-sepolia.chainsafe.io \
+    --checkpointRoot "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
 ```
 
 ## Light-Client Programmatic Example
@@ -93,12 +92,12 @@ lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (opti
 
 ## Browser Integration
 
-If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.19.0` version.
+If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.20.0` version.
 
 Directly link the dist build with the `<script />` tag with tools like unpkg or other. e.g.
 
 ```html
-<script src="https://www.unpkg.com/@lodestar/light-client@1.18.0/dist/lightclient.es.min.js" type="module">
+<script src="https://www.unpkg.com/@lodestar/light-client@1.20.0/dist/lightclient.min.mjs" type="module">
 ```
 
 Then the lightclient package will be exposed to `globalThis`, in case of browser environment that will be `window`. You can access the package as `window.lodestar.lightclient`. All named exports will also be available from this interface. e.g. `window.lodestar.lightclient.transport`.

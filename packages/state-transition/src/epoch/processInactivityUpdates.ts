@@ -24,30 +24,31 @@ export function processInactivityUpdates(state: CachedBeaconStateAltair, cache: 
 
   const {config, inactivityScores} = state;
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
-  const {flags, eligibleValidatorIndices} = cache;
+  const {flags} = cache;
   const inActivityLeak = isInInactivityLeak(state);
 
   // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
-  const {FLAG_PREV_TARGET_ATTESTER_UNSLASHED, hasMarkers} = attesterStatusUtil;
+  const {FLAG_PREV_TARGET_ATTESTER_UNSLASHED, FLAG_ELIGIBLE_ATTESTER, hasMarkers} = attesterStatusUtil;
 
   const inactivityScoresArr = inactivityScores.getAll();
 
-  for (let j = 0; j < eligibleValidatorIndices.length; j++) {
-    const i = eligibleValidatorIndices[j];
+  for (let i = 0; i < flags.length; i++) {
     const flag = flags[i];
-    let inactivityScore = inactivityScoresArr[i];
+    if (hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
+      let inactivityScore = inactivityScoresArr[i];
 
-    const prevInactivityScore = inactivityScore;
-    if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-      inactivityScore -= Math.min(1, inactivityScore);
-    } else {
-      inactivityScore += INACTIVITY_SCORE_BIAS;
-    }
-    if (!inActivityLeak) {
-      inactivityScore -= Math.min(INACTIVITY_SCORE_RECOVERY_RATE, inactivityScore);
-    }
-    if (inactivityScore !== prevInactivityScore) {
-      inactivityScores.set(i, inactivityScore);
+      const prevInactivityScore = inactivityScore;
+      if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+        inactivityScore -= Math.min(1, inactivityScore);
+      } else {
+        inactivityScore += INACTIVITY_SCORE_BIAS;
+      }
+      if (!inActivityLeak) {
+        inactivityScore -= Math.min(INACTIVITY_SCORE_RECOVERY_RATE, inactivityScore);
+      }
+      if (inactivityScore !== prevInactivityScore) {
+        inactivityScores.set(i, inactivityScore);
+      }
     }
   }
 }
