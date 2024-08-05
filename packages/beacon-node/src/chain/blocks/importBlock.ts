@@ -428,18 +428,12 @@ export async function importBlock(
     }
     if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
       for (const attestation of block.message.body.attestations) {
-        this.emitter.emit(routes.events.EventType.attestation, {
-          version: this.config.getForkName(blockSlot),
-          data: attestation,
-        });
+        this.emitter.emit(routes.events.EventType.attestation, attestation);
       }
     }
     if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
       for (const attesterSlashing of block.message.body.attesterSlashings) {
-        this.emitter.emit(routes.events.EventType.attesterSlashing, {
-          version: this.config.getForkName(blockSlot),
-          data: attesterSlashing,
-        });
+        this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
       }
     }
     if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {

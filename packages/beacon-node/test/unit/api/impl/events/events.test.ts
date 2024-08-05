@@ -2,7 +2,6 @@ import {describe, it, expect, beforeEach, afterEach, vi, MockedObject} from "vit
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
 import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
@@ -67,10 +66,7 @@ describe("Events api impl", function () {
     it("should ignore not sent topics", async function () {
       const events = getEvents([routes.events.EventType.head]);
 
-      chainEventEmmitter.emit(routes.events.EventType.attestation, {
-        version: ForkName.phase0,
-        data: ssz.phase0.Attestation.defaultValue(),
-      });
+      chainEventEmmitter.emit(routes.events.EventType.attestation, ssz.phase0.Attestation.defaultValue());
       chainEventEmmitter.emit(routes.events.EventType.head, headEventData);
 
       expect(events).toHaveLength(1);
