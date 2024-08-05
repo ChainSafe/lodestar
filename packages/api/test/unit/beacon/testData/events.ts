@@ -31,21 +31,18 @@ export const eventTestData: EventData = {
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     executionOptimistic: false,
   },
-  [EventType.attestation]: {
-    version: ForkName.altair,
-    data: ssz.phase0.Attestation.fromJson({
-      aggregation_bits: "0x01",
-      signature:
-        "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      data: {
-        slot: "1",
-        index: "1",
-        beacon_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        source: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
-        target: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
-      },
-    }),
-  },
+  [EventType.attestation]: ssz.phase0.Attestation.fromJson({
+    aggregation_bits: "0x01",
+    signature:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    data: {
+      slot: "1",
+      index: "1",
+      beacon_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      source: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
+      target: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
+    },
+  }),
   [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit.fromJson({
     message: {epoch: "1", validator_index: "1"},
     signature:
@@ -75,47 +72,44 @@ export const eventTestData: EventData = {
         "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     },
   }),
-  [EventType.attesterSlashing]: {
-    version: ForkName.altair,
-    data: ssz.phase0.AttesterSlashing.fromJson({
-      attestation_1: {
-        attesting_indices: ["0", "1"],
-        data: {
-          slot: "0",
-          index: "0",
-          beacon_block_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          source: {
-            epoch: "0",
-            root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          },
-          target: {
-            epoch: "0",
-            root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          },
+  [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing.fromJson({
+    attestation_1: {
+      attesting_indices: ["0", "1"],
+      data: {
+        slot: "0",
+        index: "0",
+        beacon_block_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        source: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
         },
-        signature:
-          "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      },
-      attestation_2: {
-        attesting_indices: ["0", "1"],
-        data: {
-          slot: "0",
-          index: "0",
-          beacon_block_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          source: {
-            epoch: "0",
-            root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          },
-          target: {
-            epoch: "0",
-            root: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          },
+        target: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
         },
-        signature:
-          "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       },
-    }),
-  },
+      signature:
+        "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+    attestation_2: {
+      attesting_indices: ["0", "1"],
+      data: {
+        slot: "0",
+        index: "0",
+        beacon_block_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        source: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        },
+        target: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        },
+      },
+      signature:
+        "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+  }),
   [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange.fromJson({
     message: {
       validator_index: "1",

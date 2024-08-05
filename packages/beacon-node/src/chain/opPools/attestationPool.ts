@@ -144,6 +144,7 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
+  // TODO Electra: Change attestation pool to accomodate pre-electra request
   getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): Attestation | null {
     const aggregate = this.aggregateByIndexByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
@@ -233,7 +234,7 @@ function attestationToAggregate(attestation: Attestation): AggregateFast {
 }
 
 /**
- * Unwrap AggregateFast to phase0.Attestation
+ * Unwrap AggregateFast to Attestation
  */
 function fastToAttestation(aggFast: AggregateFast): Attestation {
   return {...aggFast, signature: aggFast.signature.toBytes()};

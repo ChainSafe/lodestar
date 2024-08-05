@@ -1067,7 +1067,12 @@ export function getValidatorApi(
       };
     },
 
-    async getAggregatedAttestation({attestationDataRoot, slot, committeeIndex}) {
+    // TODO Electra: Implement getAggregatedAttestation to properly handle pre-electra
+    async getAggregatedAttestation() {
+      throw new Error("Not implemented. Use getAggregatedAttestationV2 for now.");
+    },
+
+    async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
       notWhileSyncing();
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -1078,7 +1083,7 @@ export function getValidatorApi(
       if (!aggregate) {
         throw new ApiError(
           404,
-          `No aggregated attestation for slot=${slot} committeeIndex=${committeeIndex}, dataRoot=${dataRootHex}`
+          `No aggregated attestation for slot=${slot}, committeeIndex=${committeeIndex}, dataRoot=${dataRootHex}`
         );
       }
 
@@ -1091,6 +1096,10 @@ export function getValidatorApi(
     },
 
     async publishAggregateAndProofs({signedAggregateAndProofs}) {
+      await this.publishAggregateAndProofsV2({signedAggregateAndProofs});
+    },
+
+    async publishAggregateAndProofsV2({signedAggregateAndProofs}) {
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;

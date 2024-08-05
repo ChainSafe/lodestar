@@ -236,7 +236,8 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
+      // TODO Electra: Ensure calling V2 works in pre-electra
+      (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
@@ -269,7 +270,7 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const res = await this.api.validator.getAggregatedAttestation({
+    const res = await this.api.validator.getAggregatedAttestationV2({
       attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
       slot: attestation.slot,
       committeeIndex,
@@ -300,7 +301,7 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
+        (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {

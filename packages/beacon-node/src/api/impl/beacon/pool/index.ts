@@ -27,7 +27,18 @@ export function getBeaconPoolApi({
     async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
-      const fork = chain.config.getForkName(slot ?? attestations[0].data.slot) ?? ForkName.phase0;
+
+      if (committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
+      }
+
+      return {data: attestations};
+    },
+
+    async getPoolAttestationsV2({slot, committeeIndex}) {
+      // Already filtered by slot
+      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
@@ -38,6 +49,11 @@ export function getBeaconPoolApi({
 
     async getPoolAttesterSlashings() {
       return {data: chain.opPool.getAllAttesterSlashings()};
+    },
+
+    async getPoolAttesterSlashingsV2() {
+      // TODO Electra: Determine fork based on data returned by api
+      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: ForkName.phase0}};
     },
 
     async getPoolProposerSlashings() {
@@ -53,6 +69,10 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations({signedAttestations}) {
+      await this.submitPoolAttestationsV2({signedAttestations});
+    },
+
+    async submitPoolAttestationsV2({signedAttestations}) {
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
@@ -79,7 +99,7 @@ export function getBeaconPoolApi({
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
-            chain.emitter.emit(routes.events.EventType.attestation, {data: attestation, version: ForkName.phase0});
+            chain.emitter.emit(routes.events.EventType.attestation, attestation);
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
@@ -113,6 +133,11 @@ export function getBeaconPoolApi({
       await validateApiAttesterSlashing(chain, attesterSlashing);
       chain.opPool.insertAttesterSlashing(attesterSlashing);
       await network.publishAttesterSlashing(attesterSlashing);
+    },
+
+    async submitPoolAttesterSlashingsV2({attesterSlashing}) {
+      // TODO Electra: Refactor submitPoolAttesterSlashings and submitPoolAttesterSlashingsV2
+      await this.submitPoolAttesterSlashings({attesterSlashing});
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
