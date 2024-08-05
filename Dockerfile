@@ -1,7 +1,7 @@
 
 # --platform=$BUILDPLATFORM is used build javascript source with host arch
 # Otherwise TS builds on emulated archs and can be extremely slow (+1h)
-FROM --platform=${BUILDPLATFORM:-amd64} node:22.4-alpine as build_src
+FROM --platform=${BUILDPLATFORM:-amd64} node:22.4 as build_src
 ARG COMMIT
 WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
@@ -28,7 +28,7 @@ RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /
 COPY --from=build_src /usr/app .
 
 # Do yarn --force to trigger a rebuild of the native packages
-# Emmulates `yarn rebuild` which is not available in v1 https://yarnpkg.com/cli/rebuild 
+# Emmulates `yarn rebuild` which is not available in v1 https://yarnpkg.com/cli/rebuild
 RUN yarn install --non-interactive --frozen-lockfile --production --force
 # Rebuild leveldb bindings (required for arm64 build)
 RUN cd node_modules/classic-level && yarn rebuild
