@@ -285,6 +285,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
+  // TODO Electra: Update to adapt electra.AttesterSlashing
   getAllAttesterSlashings(): phase0.AttesterSlashing[] {
     return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
   }

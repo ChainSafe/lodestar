@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkBlobs, ForkSeq} from "@lodestar/params";
+import {isForkBlobs, isForkElectra} from "@lodestar/params";
 import {
   altair,
   BLSSignature,
@@ -203,7 +203,7 @@ export const AttesterDutyListType = ArrayOf(AttesterDutyType);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
 export const SyncDutyListType = ArrayOf(SyncDutyType);
 export const SignedAggregateAndProofListPhase0Type = ArrayOf(ssz.phase0.SignedAggregateAndProof);
-export const SignedAggregateAndProofListElectaType = ArrayOf(ssz.electra.SignedAggregateAndProof);
+export const SignedAggregateAndProofListElectraType = ArrayOf(ssz.electra.SignedAggregateAndProof);
 export const SignedContributionAndProofListType = ArrayOf(ssz.altair.SignedContributionAndProof);
 export const BeaconCommitteeSubscriptionListType = ArrayOf(BeaconCommitteeSubscriptionType);
 export const SyncCommitteeSubscriptionListType = ArrayOf(SyncCommitteeSubscriptionType);
@@ -221,8 +221,8 @@ export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
 export type SyncDuty = ValueOf<typeof SyncDutyType>;
 export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
 export type SignedAggregateAndProofListPhase0 = ValueOf<typeof SignedAggregateAndProofListPhase0Type>;
-export type SignedAggregateAndProofListElecta = ValueOf<typeof SignedAggregateAndProofListElectaType>;
-export type SignedAggregateAndProofList = SignedAggregateAndProofListPhase0 | SignedAggregateAndProofListElecta;
+export type SignedAggregateAndProofListElectra = ValueOf<typeof SignedAggregateAndProofListElectraType>;
+export type SignedAggregateAndProofList = SignedAggregateAndProofListPhase0 | SignedAggregateAndProofListElectra;
 export type SignedContributionAndProofList = ValueOf<typeof SignedContributionAndProofListType>;
 export type BeaconCommitteeSubscription = ValueOf<typeof BeaconCommitteeSubscriptionType>;
 export type BeaconCommitteeSubscriptionList = ValueOf<typeof BeaconCommitteeSubscriptionListType>;
@@ -403,9 +403,26 @@ export type Endpoints = {
       /** HashTreeRoot of AttestationData that validator want's aggregated */
       attestationDataRoot: Root;
       slot: Slot;
+    },
+    {query: {attestation_data_root: string; slot: number}},
+    phase0.Attestation,
+    EmptyMeta
+  >;
+
+  /**
+   * Get aggregated attestation
+   * Aggregates all attestations matching given attestation data root, slot and committee index
+   * Returns an aggregated `Attestation` object with same `AttestationData` root.
+   */
+  getAggregatedAttestationV2: Endpoint<
+    "GET",
+    {
+      /** HashTreeRoot of AttestationData that validator want's aggregated */
+      attestationDataRoot: Root;
+      slot: Slot;
       committeeIndex: number;
     },
-    {query: {attestation_data_root: string; slot: number; committeeIndex: number}},
+    {query: {attestation_data_root: string; slot: number; committee_index: number}},
     Attestation,
     VersionMeta
   >;
@@ -415,6 +432,18 @@ export type Endpoints = {
    * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
    */
   publishAggregateAndProofs: Endpoint<
+    "POST",
+    {signedAggregateAndProofs: SignedAggregateAndProofListPhase0},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Publish multiple aggregate and proofs
+   * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+   */
+  publishAggregateAndProofsV2: Endpoint<
     "POST",
     {signedAggregateAndProofs: SignedAggregateAndProofList},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
@@ -800,26 +829,47 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/validator/aggregate_attestation",
       method: "GET",
       req: {
-        writeReq: ({attestationDataRoot, slot, committeeIndex}) => ({
-          query: {attestation_data_root: toHexString(attestationDataRoot), slot, committeeIndex},
+        writeReq: ({attestationDataRoot, slot}) => ({
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot},
         }),
         parseReq: ({query}) => ({
           attestationDataRoot: fromHexString(query.attestation_data_root),
           slot: query.slot,
-          committeeIndex: query.committeeIndex,
         }),
         schema: {
           query: {
             attestation_data_root: Schema.StringRequired,
             slot: Schema.UintRequired,
-            committeeIndex: Schema.UintRequired,
           },
         },
       },
       resp: {
-        data: WithVersion((fork) =>
-          ForkSeq[fork] >= ForkSeq.electra ? ssz.electra.Attestation : ssz.phase0.Attestation
-        ),
+        data: ssz.phase0.Attestation,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getAggregatedAttestationV2: {
+      url: "/eth/v2/validator/aggregate_attestation",
+      method: "GET",
+      req: {
+        writeReq: ({attestationDataRoot, slot, committeeIndex}) => ({
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot, committee_index: committeeIndex},
+        }),
+        parseReq: ({query}) => ({
+          attestationDataRoot: fromHexString(query.attestation_data_root),
+          slot: query.slot,
+          committeeIndex: query.committee_index,
+        }),
+        schema: {
+          query: {
+            attestation_data_root: Schema.StringRequired,
+            slot: Schema.UintRequired,
+            committee_index: Schema.UintRequired,
+          },
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => (isForkElectra(fork) ? ssz.electra.Attestation : ssz.phase0.Attestation)),
         meta: VersionCodec,
       },
     },
@@ -827,60 +877,64 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/validator/aggregate_and_proofs",
       method: "POST",
       req: {
+        writeReqJson: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListPhase0Type.toJson(signedAggregateAndProofs),
+        }),
+        parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body)}),
+        writeReqSsz: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs),
+        }),
+        parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    publishAggregateAndProofsV2: {
+      url: "/eth/v2/validator/aggregate_and_proofs",
+      method: "POST",
+      req: {
         writeReqJson: ({signedAggregateAndProofs}) => {
           const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
           return {
-            body:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? SignedAggregateAndProofListElectaType.toJson(
-                    signedAggregateAndProofs as SignedAggregateAndProofListElecta
-                  )
-                : SignedAggregateAndProofListPhase0Type.toJson(
-                    signedAggregateAndProofs as SignedAggregateAndProofListPhase0
-                  ),
+            body: isForkElectra(fork)
+              ? SignedAggregateAndProofListElectraType.toJson(
+                  signedAggregateAndProofs as SignedAggregateAndProofListElectra
+                )
+              : SignedAggregateAndProofListPhase0Type.toJson(
+                  signedAggregateAndProofs as SignedAggregateAndProofListPhase0
+                ),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
-          const fork =
-            versionHeader !== undefined
-              ? toForkName(versionHeader)
-              : config.getForkName(
-                  Number(
-                    (body as {message: {aggregate: {data: {slot: string}}}}[])[0]?.message.aggregate.data.slot ?? 0
-                  )
-                );
-
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAggregateAndProofs:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? SignedAggregateAndProofListElectaType.fromJson(body)
-                : SignedAggregateAndProofListPhase0Type.fromJson(body),
+            signedAggregateAndProofs: isForkElectra(fork)
+              ? SignedAggregateAndProofListElectraType.fromJson(body)
+              : SignedAggregateAndProofListPhase0Type.fromJson(body),
           };
         },
         writeReqSsz: ({signedAggregateAndProofs}) => {
           const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
           return {
-            body:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? SignedAggregateAndProofListElectaType.serialize(
-                    signedAggregateAndProofs as SignedAggregateAndProofListElecta
-                  )
-                : SignedAggregateAndProofListPhase0Type.serialize(
-                    signedAggregateAndProofs as SignedAggregateAndProofListPhase0
-                  ),
+            body: isForkElectra(fork)
+              ? SignedAggregateAndProofListElectraType.serialize(
+                  signedAggregateAndProofs as SignedAggregateAndProofListElectra
+                )
+              : SignedAggregateAndProofListPhase0Type.serialize(
+                  signedAggregateAndProofs as SignedAggregateAndProofListPhase0
+                ),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, true);
-          const fork = toForkName(versionHeader);
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAggregateAndProofs:
-              ForkSeq[fork] >= ForkSeq.electra
-                ? SignedAggregateAndProofListElectaType.deserialize(body)
-                : SignedAggregateAndProofListPhase0Type.deserialize(body),
+            signedAggregateAndProofs: isForkElectra(fork)
+              ? SignedAggregateAndProofListElectraType.deserialize(body)
+              : SignedAggregateAndProofListPhase0Type.deserialize(body),
           };
         },
         schema: {

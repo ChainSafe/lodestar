@@ -28,7 +28,7 @@ export type AggregateAndProofValidationResult = {
 export async function validateApiAggregateAndProof(
   fork: ForkName,
   chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof
+  signedAggregateAndProof: SignedAggregateAndProof
 ): Promise<AggregateAndProofValidationResult> {
   const skipValidationKnownAttesters = true;
   const prioritizeBls = true;
