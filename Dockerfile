@@ -4,7 +4,7 @@
 FROM --platform=${BUILDPLATFORM:-amd64} node:22.4 as build_src
 ARG COMMIT
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
@@ -21,9 +21,9 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 
 # Copy built src + node_modules to build native packages for archs different than host.
 # Note: This step is redundant for the host arch
-FROM node:22.4-alpine as build_deps
+FROM node:22.4 as build_deps
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache g++ make python3 py3-setuptools && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build_src /usr/app .
 
@@ -35,7 +35,7 @@ RUN cd node_modules/classic-level && yarn rebuild
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
-FROM node:22.4-alpine
+FROM node:22.4
 WORKDIR /usr/app
 COPY --from=build_deps /usr/app .
 
