@@ -414,7 +414,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockAttestationsV2({blockId}) {
-      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
         data: Array.from(block.message.body.attestations),
         meta: {executionOptimistic, finalized, version: config.getForkName(block.message.slot)},
