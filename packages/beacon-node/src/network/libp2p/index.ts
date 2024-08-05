@@ -6,7 +6,6 @@ import {identify} from "@chainsafe/libp2p-identify";
 import {bootstrap} from "@libp2p/bootstrap";
 import {mdns} from "@libp2p/mdns";
 import {createLibp2p} from "libp2p";
-import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
 import {noise} from "@chainsafe/libp2p-noise";
@@ -86,7 +85,7 @@ export async function createNodeJsLibp2p(
         },
       }),
     ],
-    streamMuxers: [yamux({maxInboundStreams: 256}), mplex({maxInboundStreams: 256})],
+    streamMuxers: [yamux({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
