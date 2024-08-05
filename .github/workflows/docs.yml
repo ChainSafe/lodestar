@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Ref to deploy, defaults to `unstable`"
+        description: 'Ref to deploy, defaults to `unstable`'
         required: false
-        default: "unstable"
+        default: 'unstable'
         type: string
 
 jobs:
@@ -31,9 +31,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.4
+          node-version: 22
           check-latest: true
-          cache: yarn
+          cache: yarn          
 
       - name: Node.js version
         id: node
