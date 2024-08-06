@@ -1397,7 +1397,7 @@ export function createLodestarMetrics(
     regenFnDeletePubkeyTime: register.histogram({
       name: "lodestar_regen_fn_delete_pubkey_time_seconds",
       help: "Histrogram of time spent on deleting pubkeys from all state cache items in seconds",
-      buckets: [0.01, 0.1, 0.5, 1, 2, 5],
+      buckets: [0.01, 0.1, 0.5, 1],
     }),
     regenFnNumStatesUpdated: register.histogram({
       name: "lodestar_regen_state_cache_state_updated_count",

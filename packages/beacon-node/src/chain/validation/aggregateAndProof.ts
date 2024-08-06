@@ -180,7 +180,7 @@ async function validateAggregateAndProof(
   }
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
 
-  const indexedAttestationContent = {
+  const indexedAttestationContent: IndexedAttestation = {
     attestingIndices,
     data: attData,
     signature: aggregate.signature,

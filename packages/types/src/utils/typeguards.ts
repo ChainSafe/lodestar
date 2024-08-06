@@ -1,4 +1,4 @@
-import {ForkBlobs, ForkExecution, ForkElectra} from "@lodestar/params";
+import {ForkBlobs, ForkExecution, ForkPostElectra} from "@lodestar/params";
 import {
   BlockContents,
   SignedBeaconBlock,
@@ -68,6 +68,6 @@ export function isSignedBlockContents<F extends ForkBlobs>(
   return (data as SignedBlockContents<F>).kzgProofs !== undefined;
 }
 
-export function isElectraAttestation<F extends ForkElectra>(attestation: Attestation): attestation is Attestation<F> {
-  return (attestation as Attestation<F>).committeeBits !== undefined;
+export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {
+  return (attestation as Attestation<ForkPostElectra>).committeeBits !== undefined;
 }

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkBlobs, isForkElectra} from "@lodestar/params";
+import {isForkBlobs, isForkPostElectra} from "@lodestar/params";
 import {
   altair,
   BLSSignature,
@@ -869,7 +869,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithVersion((fork) => (isForkElectra(fork) ? ssz.electra.Attestation : ssz.phase0.Attestation)),
+        data: WithVersion((fork) => (isForkPostElectra(fork) ? ssz.electra.Attestation : ssz.phase0.Attestation)),
         meta: VersionCodec,
       },
     },
@@ -898,7 +898,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedAggregateAndProofs}) => {
           const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
           return {
-            body: isForkElectra(fork)
+            body: isForkPostElectra(fork)
               ? SignedAggregateAndProofListElectraType.toJson(
                   signedAggregateAndProofs as SignedAggregateAndProofListElectra
                 )
@@ -911,7 +911,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAggregateAndProofs: isForkElectra(fork)
+            signedAggregateAndProofs: isForkPostElectra(fork)
               ? SignedAggregateAndProofListElectraType.fromJson(body)
               : SignedAggregateAndProofListPhase0Type.fromJson(body),
           };
@@ -919,7 +919,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqSsz: ({signedAggregateAndProofs}) => {
           const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
           return {
-            body: isForkElectra(fork)
+            body: isForkPostElectra(fork)
               ? SignedAggregateAndProofListElectraType.serialize(
                   signedAggregateAndProofs as SignedAggregateAndProofListElectra
                 )
@@ -932,7 +932,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAggregateAndProofs: isForkElectra(fork)
+            signedAggregateAndProofs: isForkPostElectra(fork)
               ? SignedAggregateAndProofListElectraType.deserialize(body)
               : SignedAggregateAndProofListPhase0Type.deserialize(body),
           };
