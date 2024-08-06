@@ -595,7 +595,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   }
 
   getStates(): IterableIterator<CachedBeaconStateAllForks> {
-    throw new Error("Method not implemented.");
+    const items = Array.from(this.cache.values())
+      .filter(isInMemoryCacheItem)
+      .map((item) => item.state);
+
+    return items.values();
   }
 
   /** ONLY FOR DEBUGGING PURPOSES. For spec tests on error */

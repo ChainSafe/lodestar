@@ -1120,11 +1120,10 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const cpEpoch = cp.epoch;
-    const electraEpoch = headState?.config.ELECTRA_FORK_EPOCH ?? Infinity;
 
     if (headState === null) {
       this.logger.verbose("Head state is null");
-    } else if (cpEpoch >= electraEpoch) {
+    } else if (cpEpoch >= this.config.ELECTRA_FORK_EPOCH) {
       // Get the validator.length from the state at cpEpoch
       // We are confident the last element in the list is from headEpoch
       // Thus we query from the end of the list. (cpEpoch - headEpoch - 1) is negative number
