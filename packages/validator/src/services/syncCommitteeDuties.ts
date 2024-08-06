@@ -1,6 +1,12 @@
 import {toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeSyncPeriodAtEpoch,
+  computeSyncPeriodAtSlot,
+  isStartSlotOfEpoch,
+  isSyncCommitteeAggregator,
+} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
@@ -9,6 +15,7 @@ import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "./utils.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -80,12 +87,19 @@ export class SyncCommitteeDutiesService {
     private readonly api: ApiClient,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    syncingStatusTracker: SyncingStatusTracker,
     metrics: Metrics | null,
     private readonly opts?: SyncCommitteeDutiesServiceOpts
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
+    syncingStatusTracker.runOnResynced(async (slot) => {
+      // Skip on first slot of epoch since tasks are already scheduled
+      if (!isStartSlotOfEpoch(slot)) {
+        return this.runDutiesTasks(computeEpochAtSlot(slot));
+      }
+    });
 
     if (metrics) {
       metrics.syncCommitteeDutiesCount.addCollect(() => {

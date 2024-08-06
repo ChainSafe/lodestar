@@ -328,5 +328,5 @@ export const SignedBlockContents = new ContainerType(
     kzgProofs: KZGProofs,
     blobs: Blobs,
   },
-  {typeName: "BlockContents", jsonCase: "eth2"}
+  {typeName: "SignedBlockContents", jsonCase: "eth2"}
 );

@@ -126,3 +126,10 @@ export function computeSyncPeriodAtSlot(slot: Slot): SyncPeriod {
 export function computeSyncPeriodAtEpoch(epoch: Epoch): SyncPeriod {
   return Math.floor(epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
 }
+
+/**
+ * Determine if the given slot is start slot of an epoch
+ */
+export function isStartSlotOfEpoch(slot: Slot): boolean {
+  return slot % SLOTS_PER_EPOCH === 0;
+}
