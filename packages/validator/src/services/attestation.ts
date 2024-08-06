@@ -159,13 +159,13 @@ export class AttestationService {
     this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
-    const isAfterElectra = computeEpochAtSlot(slot) >= this.config.ELECTRA_FORK_EPOCH;
+    const isPostElectra = computeEpochAtSlot(slot) >= this.config.ELECTRA_FORK_EPOCH;
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
     await Promise.all(
       Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
-        const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: isAfterElectra ? 0 : index};
+        const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: isPostElectra ? 0 : index};
         return this.produceAndPublishAggregates(attestationData, index, dutiesSameCommittee);
       })
     );
@@ -196,11 +196,11 @@ export class AttestationService {
     const signedAttestations: Attestation[] = [];
     const headRootHex = toHexString(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
-    const isAfterElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
+    const isPostElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
 
     await Promise.all(
       duties.map(async ({duty}) => {
-        const index = isAfterElectra ? 0 : duty.committeeIndex;
+        const index = isPostElectra ? 0 : duty.committeeIndex;
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
         const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
 

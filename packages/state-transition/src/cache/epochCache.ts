@@ -914,7 +914,7 @@ export class EpochCache {
   }
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
-    if (this.isAfterElectra()) {
+    if (this.isPostElectra()) {
       return this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
     } else {
       return this.pubkey2index.get(pubkey);
@@ -927,7 +927,7 @@ export class EpochCache {
    *
    */
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    if (this.isAfterElectra()) {
+    if (this.isPostElectra()) {
       this.addUnFinalizedPubkey(index, pubkey);
     } else {
       // deposit mechanism pre ELECTRA follows a safe distance with assumption
@@ -1049,7 +1049,7 @@ export class EpochCache {
   }
 
   effectiveBalanceIncrementsSet(index: number, effectiveBalance: number): void {
-    if (this.isAfterElectra()) {
+    if (this.isPostElectra()) {
       // TODO: electra
       // getting length and setting getEffectiveBalanceIncrementsByteLen is not fork safe
       // so each time we add an index, we should new the Uint8Array to keep it forksafe
@@ -1074,8 +1074,8 @@ export class EpochCache {
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
 
-  isAfterElectra(): boolean {
-    return this.epoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity);
+  isPostElectra(): boolean {
+    return this.epoch >= this.config.ELECTRA_FORK_EPOCH;
   }
 
   getValidatorCountAtEpoch(targetEpoch: Epoch): number | undefined {

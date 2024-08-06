@@ -43,7 +43,7 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
 
 export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, exitBalance: Gwei): number {
   let earliestExitEpoch = Math.max(state.earliestExitEpoch, computeActivationExitEpoch(state.epochCtx.epoch));
-  const perEpochChurn = getActivationExitChurnLimit(state);
+  const perEpochChurn = getActivationExitChurnLimit(state.epochCtx);
 
   // New epoch for exits.
   let exitBalanceToConsume =
@@ -72,7 +72,7 @@ export function computeConsolidationEpochAndUpdateChurn(
     state.earliestConsolidationEpoch,
     computeActivationExitEpoch(state.epochCtx.epoch)
   );
-  const perEpochConsolidationChurn = getConsolidationChurnLimit(state);
+  const perEpochConsolidationChurn = getConsolidationChurnLimit(state.epochCtx);
 
   // New epoch for consolidations
   let consolidationBalanceToConsume =

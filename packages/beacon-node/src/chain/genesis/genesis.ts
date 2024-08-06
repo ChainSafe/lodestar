@@ -174,13 +174,7 @@ export class GenesisBuilder implements IGenesisBuilder {
         };
       });
 
-    const {activatedValidatorCount} = applyDeposits(
-      this.config.getForkSeq(this.state.slot),
-      this.config,
-      this.state,
-      newDeposits,
-      this.depositTree
-    );
+    const {activatedValidatorCount} = applyDeposits(this.config, this.state, newDeposits, this.depositTree);
     this.activatedValidatorCount += activatedValidatorCount;
 
     // TODO: If necessary persist deposits here to this.db.depositData, this.db.depositDataRoot

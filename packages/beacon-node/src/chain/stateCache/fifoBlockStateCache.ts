@@ -191,7 +191,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
   }
 
   getStates(): IterableIterator<CachedBeaconStateAllForks> {
-    throw new Error("Method not implemented.");
+    return this.cache.values();
   }
 
   /**

@@ -16,7 +16,7 @@ export function processConsolidationRequest(
   }
 
   // If there is too little available consolidation churn limit, consolidation requests are ignored
-  if (getConsolidationChurnLimit(state) <= MIN_ACTIVATION_BALANCE) {
+  if (getConsolidationChurnLimit(state.epochCtx) <= MIN_ACTIVATION_BALANCE) {
     return;
   }
 

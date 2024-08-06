@@ -129,12 +129,12 @@ export function applyTimestamp(config: ChainForkConfig, state: CachedBeaconState
  * @returns active validator indices
  */
 export function applyDeposits(
-  fork: ForkSeq,
   config: ChainForkConfig,
   state: CachedBeaconStateAllForks,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositDataRootViewDU
 ): {activatedValidatorCount: number} {
+  const fork = config.getForkSeq(state.slot);
   const depositDataRootList: Root[] = [];
 
   const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
@@ -258,7 +258,7 @@ export function initializeBeaconStateFromEth1(
   applyEth1BlockHash(state, eth1BlockHash);
 
   // Process deposits
-  applyDeposits(fork, config, state, deposits, fullDepositDataRootList);
+  applyDeposits(config, state, deposits, fullDepositDataRootList);
 
   // Commit before reading all validators in `getActiveValidatorIndices()`
   state.commit();

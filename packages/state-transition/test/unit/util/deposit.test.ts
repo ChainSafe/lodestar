@@ -10,7 +10,7 @@ describe("getEth1DepositCount", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const preElectraState = createCachedBeaconStateTest(stateView);
 
-    if (preElectraState.epochCtx.isAfterElectra()) {
+    if (preElectraState.epochCtx.isPostElectra()) {
       throw Error("Not a pre-Electra state");
     }
 
@@ -39,7 +39,7 @@ describe("getEth1DepositCount", () => {
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     ) as CachedBeaconStateElectra;
 
-    if (!postElectraState.epochCtx.isAfterElectra()) {
+    if (!postElectraState.epochCtx.isPostElectra()) {
       throw Error("Not a post-Electra state");
     }
 
@@ -73,7 +73,7 @@ describe("getEth1DepositCount", () => {
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     ) as CachedBeaconStateElectra;
 
-    if (!postElectraState.epochCtx.isAfterElectra()) {
+    if (!postElectraState.epochCtx.isPostElectra()) {
       throw Error("Not a post-Electra state");
     }
 

@@ -92,8 +92,8 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   // TODO-electra: can we improve this?
   stateElectraView.commit();
   const tmpElectraState = getCachedBeaconState(stateElectraView, stateDeneb);
-  stateElectraView.exitBalanceToConsume = BigInt(getActivationExitChurnLimit(tmpElectraState));
-  stateElectraView.consolidationBalanceToConsume = BigInt(getConsolidationChurnLimit(tmpElectraState));
+  stateElectraView.exitBalanceToConsume = BigInt(getActivationExitChurnLimit(tmpElectraState.epochCtx));
+  stateElectraView.consolidationBalanceToConsume = BigInt(getConsolidationChurnLimit(tmpElectraState.epochCtx));
 
   preActivation.sort((i0, i1) => {
     const res = validatorsArr[i0].activationEligibilityEpoch - validatorsArr[i1].activationEligibilityEpoch;
