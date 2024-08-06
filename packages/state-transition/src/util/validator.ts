@@ -7,7 +7,7 @@ import {
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
-import {BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateElectra, EpochCache} from "../types.js";
 import {hasCompoundingWithdrawalCredential} from "./electra.js";
 
 /**
@@ -57,22 +57,22 @@ export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: num
 /**
  * Get combined churn limit of activation-exit and consolidation
  */
-export function getBalanceChurnLimit(state: CachedBeaconStateElectra): number {
+export function getBalanceChurnLimit(epochCtx: EpochCache): number {
   const churnLimitByTotalActiveBalance = Math.floor(
-    (state.epochCtx.totalActiveBalanceIncrements / state.config.CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT
+    (epochCtx.totalActiveBalanceIncrements / epochCtx.config.CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT
   ); // TODO Electra: verify calculation
 
-  const churn = Math.max(churnLimitByTotalActiveBalance, state.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA);
+  const churn = Math.max(churnLimitByTotalActiveBalance, epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA);
 
   return churn - (churn % EFFECTIVE_BALANCE_INCREMENT);
 }
 
-export function getActivationExitChurnLimit(state: CachedBeaconStateElectra): number {
-  return Math.min(state.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimit(state));
+export function getActivationExitChurnLimit(epochCtx: EpochCache): number {
+  return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimit(epochCtx));
 }
 
-export function getConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
-  return getBalanceChurnLimit(state) - getActivationExitChurnLimit(state);
+export function getConsolidationChurnLimit(epochCtx: EpochCache): number {
+  return getBalanceChurnLimit(epochCtx) - getActivationExitChurnLimit(epochCtx);
 }
 
 export function getValidatorMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {

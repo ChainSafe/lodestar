@@ -129,9 +129,8 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
  * Deserialize a gossip serialized data into an Attestation object.
  */
 export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
-  const sszType = sszTypesFor(fork).Attestation;
   try {
-    return sszType.deserialize(serializedData);
+    return sszTypesFor(fork).Attestation.deserialize(serializedData);
   } catch (e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }

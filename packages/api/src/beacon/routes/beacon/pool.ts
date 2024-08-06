@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkElectra} from "@lodestar/params";
+import {isForkPostElectra} from "@lodestar/params";
 import {phase0, capella, CommitteeIndex, Slot, ssz, electra, AttesterSlashing} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {
@@ -262,7 +262,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
       },
       resp: {
-        data: WithVersion((fork) => (isForkElectra(fork) ? AttestationListTypeElectra : AttestationListTypePhase0)),
+        data: WithVersion((fork) => (isForkPostElectra(fork) ? AttestationListTypeElectra : AttestationListTypePhase0)),
         meta: VersionCodec,
       },
     },
@@ -281,7 +281,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: EmptyRequestCodec,
       resp: {
         data: WithVersion((fork) =>
-          isForkElectra(fork) ? AttesterSlashingListTypeElectra : AttesterSlashingListTypePhase0
+          isForkPostElectra(fork) ? AttesterSlashingListTypeElectra : AttesterSlashingListTypePhase0
         ),
         meta: VersionCodec,
       },
@@ -336,7 +336,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedAttestations}) => {
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
-            body: isForkElectra(fork)
+            body: isForkPostElectra(fork)
               ? AttestationListTypeElectra.toJson(signedAttestations as AttestationListElectra)
               : AttestationListTypePhase0.toJson(signedAttestations as AttestationListPhase0),
             headers: {[MetaHeader.Version]: fork},
@@ -345,7 +345,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAttestations: isForkElectra(fork)
+            signedAttestations: isForkPostElectra(fork)
               ? AttestationListTypeElectra.fromJson(body)
               : AttestationListTypePhase0.fromJson(body),
           };
@@ -353,7 +353,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqSsz: ({signedAttestations}) => {
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
-            body: isForkElectra(fork)
+            body: isForkPostElectra(fork)
               ? AttestationListTypeElectra.serialize(signedAttestations as AttestationListElectra)
               : AttestationListTypePhase0.serialize(signedAttestations as AttestationListPhase0),
             headers: {[MetaHeader.Version]: fork},
@@ -362,7 +362,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAttestations: isForkElectra(fork)
+            signedAttestations: isForkPostElectra(fork)
               ? AttestationListTypeElectra.deserialize(body)
               : AttestationListTypePhase0.deserialize(body),
           };
@@ -395,7 +395,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({attesterSlashing}) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
-            body: isForkElectra(fork)
+            body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
               : ssz.phase0.AttesterSlashing.toJson(attesterSlashing),
             headers: {[MetaHeader.Version]: fork},
@@ -404,7 +404,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            attesterSlashing: isForkElectra(fork)
+            attesterSlashing: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.fromJson(body)
               : ssz.phase0.AttesterSlashing.fromJson(body),
           };
@@ -412,7 +412,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqSsz: ({attesterSlashing}) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
-            body: isForkElectra(fork)
+            body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
               : ssz.electra.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
             headers: {[MetaHeader.Version]: fork},
@@ -421,7 +421,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            attesterSlashing: isForkElectra(fork)
+            attesterSlashing: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.deserialize(body)
               : ssz.phase0.AttesterSlashing.deserialize(body),
           };

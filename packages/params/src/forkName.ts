@@ -82,14 +82,14 @@ export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
 }
 
 export type ForkPreElectra = ForkPreBlobs | ForkName.deneb;
-export type ForkElectra = Exclude<ForkName, ForkPreElectra>;
-export const forkElectra = exclude(forkAll, [
+export type ForkPostElectra = Exclude<ForkName, ForkPreElectra>;
+export const forkPostElectra = exclude(forkAll, [
   ForkName.phase0,
   ForkName.altair,
   ForkName.bellatrix,
   ForkName.capella,
   ForkName.deneb,
 ]);
-export function isForkElectra(fork: ForkName): fork is ForkElectra {
+export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
   return isForkBlobs(fork) && fork !== ForkName.deneb;
 }

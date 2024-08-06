@@ -14,7 +14,7 @@ import {getCurrentEpoch} from "../util/epoch.js";
  * TODO Electra: Update ssz library to support batch push to `pendingBalanceDeposits`
  */
 export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): void {
-  const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state));
+  const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state.epochCtx));
   const currentEpoch = getCurrentEpoch(state);
   let processedAmount = 0n;
   let nextDepositIndex = 0;
