@@ -68,6 +68,6 @@ export function isSignedBlockContents<F extends ForkBlobs>(
   return (data as SignedBlockContents<F>).kzgProofs !== undefined;
 }
 
-export function isElectraAttestation<F extends ForkElectra>(attestation: Attestation): attestation is Attestation<F> {
+export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {
   return (attestation as Attestation<F>).committeeBits !== undefined;
 }
