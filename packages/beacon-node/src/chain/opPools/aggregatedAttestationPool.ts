@@ -3,6 +3,7 @@ import {BitArray, toHexString} from "@chainsafe/ssz";
 import {
   ForkName,
   ForkSeq,
+  isForkPostElectra,
   MAX_ATTESTATIONS,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_COMMITTEES_PER_SLOT,
@@ -126,7 +127,6 @@ export class AggregatedAttestationPool {
     committee: Uint32Array
   ): InsertOutcome {
     const slot = attestation.data.slot;
-    const fork = this.config.getForkSeq(slot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     // Reject any attestations that are too old.
@@ -143,17 +143,17 @@ export class AggregatedAttestationPool {
 
     let committeeIndex;
 
-    if (fork >= ForkSeq.electra) {
+    if (isForkPostElectra(this.config.getForkName(slot))) {
       if (isElectraAttestation(attestation)) {
         committeeIndex = attestation.committeeBits.getSingleTrueBit();
       } else {
-        throw new Error("");
+        throw new Error(`Expect electra attestation but received phase0 attestation. Slot: ${slot}`);
       }
     } else {
       if (!isElectraAttestation(attestation)) {
         committeeIndex = attestation.data.index;
       } else {
-        throw new Error("");
+        throw new Error(`Expect phase0 attestation but received electra attestation. Slot: ${slot}`);
       }
     }
     // this should not happen because attestation should be validated before reaching this
@@ -524,12 +524,10 @@ export class MatchingDataAttestationGroup {
    */
   getAttestationsForBlock(fork: ForkName, notSeenAttestingIndices: Set<number>): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
-    const forkSeq = ForkSeq[fork];
-    const isPostElectra = forkSeq >= ForkSeq.electra;
     for (const {attestation} of this.attestations) {
       if (
-        (isAfterElectra && !isElectraAttestation(attestation)) ||
-        (!isAfterElectra && isElectraAttestation(attestation))
+        (isForkPostElectra(fork) && !isElectraAttestation(attestation)) ||
+        (!isForkPostElectra(fork) && isElectraAttestation(attestation))
       ) {
         // TODO Electra: log warning
         continue;
@@ -549,7 +547,7 @@ export class MatchingDataAttestationGroup {
       }
     }
 
-    const maxAttestation = isAfterElectra ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
+    const maxAttestation = isForkPostElectra(fork) ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
     if (attestations.length <= maxAttestation) {
       return attestations;
     } else {
