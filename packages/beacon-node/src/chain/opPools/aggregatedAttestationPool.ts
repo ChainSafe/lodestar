@@ -525,7 +525,7 @@ export class MatchingDataAttestationGroup {
   getAttestationsForBlock(fork: ForkName, notSeenAttestingIndices: Set<number>): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
     const forkSeq = ForkSeq[fork];
-    const isAfterElectra = forkSeq >= ForkSeq.electra;
+    const isPostElectra = forkSeq >= ForkSeq.electra;
     for (const {attestation} of this.attestations) {
       if (
         (isAfterElectra && !isElectraAttestation(attestation)) ||
