@@ -68,8 +68,12 @@ export function switchToCompoundingValidator(state: CachedBeaconStateElectra, in
   const validator = state.validators.get(index);
 
   if (hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
-    validator.withdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX;
-    validator.withdrawalCredentials.slice()
+    // directly modifying the byte leads to ssz missing the modification resulting into
+    // wrong root compute, although slicing can be avoided but anyway this is not going
+    // to be a hot path so its better to clean slice and avoid side effects
+    const newWithdrawalCredentials = validator.withdrawalCredentials.slice();
+    newWithdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX;
+    validator.withdrawalCredentials = newWithdrawalCredentials;
     queueExcessActiveBalance(state, index);
   }
 }
