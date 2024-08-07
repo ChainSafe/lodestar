@@ -227,7 +227,7 @@ export class BeaconChain implements IBeaconChain {
 
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(
-      this.config,
+      config,
       clock,
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
