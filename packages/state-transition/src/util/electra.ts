@@ -69,6 +69,7 @@ export function switchToCompoundingValidator(state: CachedBeaconStateElectra, in
 
   if (hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
     validator.withdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX;
+    validator.withdrawalCredentials.slice()
     queueExcessActiveBalance(state, index);
   }
 }
