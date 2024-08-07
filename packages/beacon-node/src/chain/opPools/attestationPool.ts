@@ -2,7 +2,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {Slot, RootHex, isElectraAttestation, Attestation} from "@lodestar/types";
 import {MapDef, assert} from "@lodestar/utils";
-import {ForkSeq} from "@lodestar/params";
+import {isForkPostElectra} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -37,6 +37,7 @@ export type AggregateFast = AggregateFastPhase0 | AggregateFastElectra;
 /** Hex string of DataRoot `TODO` */
 type DataRootHex = string;
 
+/** CommitteeIndex must be null for pre-electra. Must not be null post-electra */
 type CommitteeIndex = number | null;
 
 /**
@@ -106,7 +107,7 @@ export class AttestationPool {
    */
   add(committeeIndex: CommitteeIndex, attestation: Attestation, attDataRootHex: RootHex): InsertOutcome {
     const slot = attestation.data.slot;
-    const fork = this.config.getForkSeq(slot);
+    const fork = this.config.getForkName(slot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     // Reject any attestations that are too old.
@@ -125,8 +126,7 @@ export class AttestationPool {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
 
-    // TODO Electra: Use `isForkElectra` after the other PR is merged
-    if (fork >= ForkSeq.electra) {
+    if (isForkPostElectra(fork)) {
       // Electra only: this should not happen because attestation should be validated before reaching this
       assert.notNull(committeeIndex, "Committee index should not be null in attestation pool post-electra");
       assert.true(isElectraAttestation(attestation), "Attestation should be type electra.Attestation");
@@ -156,9 +156,8 @@ export class AttestationPool {
    * For validator API to get an aggregate
    */
   getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): Attestation | null {
-    const fork = this.config.getForkSeq(slot);
-    const isAfterElectra = fork >= ForkSeq.electra;
-    committeeIndex = isAfterElectra ? committeeIndex : null;
+    const fork = this.config.getForkName(slot);
+    committeeIndex = isForkPostElectra(fork) ? committeeIndex : null;
 
     const aggregate = this.aggregateByIndexByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
@@ -166,7 +165,7 @@ export class AttestationPool {
       return null;
     }
 
-    if (isAfterElectra) {
+    if (isForkPostElectra(fork)) {
       assert.true(isElectraAggregate(aggregate), "Aggregate should be type AggregateFastElectra");
     } else {
       assert.true(!isElectraAggregate(aggregate), "Aggregate should be type AggregateFastPhase0");
