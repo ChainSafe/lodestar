@@ -1077,7 +1077,7 @@ export function getValidatorApi(
       const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
 
       if (!aggregate) {
-        throw new ApiError(404, `No aggregated attestation for slot=${slot},  dataRoot=${dataRootHex}`);
+       throw new ApiError(404, `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}`);
       }
 
       metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
