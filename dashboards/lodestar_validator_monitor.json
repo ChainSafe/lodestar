@@ -500,7 +500,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Percent of attestations having correct head.",
+      "description": "Percent of attestations having incorrect head.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1896,7 +1896,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41"
+            "value": "unstable-lg1k-hzax41-dkr"
           }
         ],
         "hide": 0,

@@ -1,4 +1,4 @@
-import {describe, it, expect, afterEach, beforeEach} from "vitest";
+import {describe, it, expect, afterEach, beforeEach, vi} from "vitest";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
@@ -15,21 +15,17 @@ import {PeerIdStr} from "../../../src/util/peerId.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
-describe(
-  "network / reqresp / main thread",
-  function () {
-    runTests({useWorker: false});
-  },
-  {timeout: 3000}
-);
+describe("network / reqresp / main thread", function () {
+  vi.setConfig({testTimeout: 3000});
 
-describe(
-  "network / reqresp / worker",
-  function () {
-    runTests({useWorker: true});
-  },
-  {timeout: 30_000}
-);
+  runTests({useWorker: false});
+});
+
+describe("network / reqresp / worker", function () {
+  vi.setConfig({testTimeout: 30_000});
+
+  runTests({useWorker: true});
+});
 
 function runTests({useWorker}: {useWorker: boolean}): void {
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately

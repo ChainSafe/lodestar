@@ -101,34 +101,6 @@ export async function importBlock(
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
-  // We want to import block asap so call all event handler in the next event loop
-  callInNextEventLoop(async () => {
-    this.emitter.emit(routes.events.EventType.block, {
-      block: blockRootHex,
-      slot: blockSlot,
-      executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
-    });
-
-    // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
-    // out of data range blocks and import then in forkchoice although one would not be able to
-    // attest and propose with such head similar to optimistic sync
-    if (blockInput.type === BlockInputType.availableData) {
-      const {blobsSource, blobs} = blockInput.blockData;
-
-      this.metrics?.importBlock.blobsBySource.inc({blobsSource});
-      for (const blobSidecar of blobs) {
-        const {index, kzgCommitment} = blobSidecar;
-        this.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot: blockRootHex,
-          slot: blockSlot,
-          index,
-          kzgCommitment: toHexString(kzgCommitment),
-          versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
-        });
-      }
-    }
-  });
-
   // 3. Import attestations to fork choice
   //
   // - For each attestation
@@ -241,7 +213,7 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
-    this.regen.updateHeadState(newHead.stateRoot, postState);
+    this.regen.updateHeadState(newHead, postState);
 
     this.emitter.emit(routes.events.EventType.head, {
       block: newHead.blockRoot,
@@ -305,7 +277,7 @@ export async function importBlock(
       // we want to import block asap so do this in the next event loop
       callInNextEventLoop(() => {
         try {
-          this.lightClientServer.onImportBlockHead(
+          this.lightClientServer?.onImportBlockHead(
             block.message as BeaconBlock<ForkLightClient>,
             postState as CachedBeaconStateAltair,
             parentBlockSlot
@@ -413,32 +385,58 @@ export async function importBlock(
   // Send block events, only for recent enough blocks
 
   if (this.clock.currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
-    // NOTE: Skip looping if there are no listeners from the API
-    if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
-      for (const voluntaryExit of block.message.body.voluntaryExits) {
-        this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+    // We want to import block asap so call all event handler in the next event loop
+    callInNextEventLoop(() => {
+      // NOTE: Skip emitting if there are no listeners from the API
+      if (this.emitter.listenerCount(routes.events.EventType.block)) {
+        this.emitter.emit(routes.events.EventType.block, {
+          block: blockRootHex,
+          slot: blockSlot,
+          executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+        });
       }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.blsToExecutionChange)) {
-      for (const blsToExecutionChange of (block.message.body as capella.BeaconBlockBody).blsToExecutionChanges ?? []) {
-        this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+      if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
+        for (const voluntaryExit of block.message.body.voluntaryExits) {
+          this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+        }
       }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
-      for (const attestation of block.message.body.attestations) {
-        this.emitter.emit(routes.events.EventType.attestation, attestation);
+      if (this.emitter.listenerCount(routes.events.EventType.blsToExecutionChange)) {
+        for (const blsToExecutionChange of (block.message as capella.BeaconBlock).body.blsToExecutionChanges ?? []) {
+          this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+        }
       }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
-      for (const attesterSlashing of block.message.body.attesterSlashings) {
-        this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+      if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
+        for (const attestation of block.message.body.attestations) {
+          this.emitter.emit(routes.events.EventType.attestation, attestation);
+        }
       }
-    }
-    if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
-      for (const proposerSlashing of block.message.body.proposerSlashings) {
-        this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
+        for (const attesterSlashing of block.message.body.attesterSlashings) {
+          this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+        }
       }
-    }
+      if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
+        for (const proposerSlashing of block.message.body.proposerSlashings) {
+          this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+        }
+      }
+      if (
+        blockInput.type === BlockInputType.availableData &&
+        this.emitter.listenerCount(routes.events.EventType.blobSidecar)
+      ) {
+        const {blobs} = blockInput.blockData;
+        for (const blobSidecar of blobs) {
+          const {index, kzgCommitment} = blobSidecar;
+          this.emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot: blockRootHex,
+            slot: blockSlot,
+            index,
+            kzgCommitment: toHexString(kzgCommitment),
+            versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+          });
+        }
+      }
+    });
   }
 
   // Register stat metrics about the block after importing it
@@ -451,6 +449,13 @@ export async function importBlock(
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
     );
+  }
+  // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
+  // out of data range blocks and import then in forkchoice although one would not be able to
+  // attest and propose with such head similar to optimistic sync
+  if (blockInput.type === BlockInputType.availableData) {
+    const {blobsSource} = blockInput.blockData;
+    this.metrics?.importBlock.blobsBySource.inc({blobsSource});
   }
 
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);

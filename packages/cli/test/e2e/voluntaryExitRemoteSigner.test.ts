@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describe, it, beforeAll, afterAll, beforeEach, afterEach, vi} from "vitest";
+import {describe, it, beforeAll, afterAll, vi, onTestFinished} from "vitest";
 import {retry} from "@lodestar/utils";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
@@ -10,6 +10,7 @@ import {
   startExternalSigner,
   StartedExternalSigner,
   getKeystoresStr,
+  stopChildProcess,
 } from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
@@ -50,8 +51,11 @@ describe("voluntaryExit using remote signer", function () {
         // Allow voluntary exists to be valid immediately
         "--params.SHARD_COMMITTEE_PERIOD=0",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
+      {pipeStdioToParent: false, logPrefix: "dev"}
     );
+    onTestFinished(async () => {
+      await stopChildProcess(devBnProc);
+    });
 
     // Exit early if process exits
     devBnProc.on("exit", (code) => {

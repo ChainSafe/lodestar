@@ -107,8 +107,8 @@ await env.tracker.assert(
 
 await env.tracker.assert("BN Not Synced", async () => {
   const expectedSyncStatus: routes.node.SyncingStatus = {
-    headSlot: "2",
-    syncDistance: "0",
+    headSlot: 2,
+    syncDistance: 0,
     isSyncing: false,
     isOptimistic: false,
     elOffline: false,

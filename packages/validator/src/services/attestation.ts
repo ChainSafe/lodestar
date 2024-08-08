@@ -10,6 +10,7 @@ import {ValidatorStore} from "./validatorStore.js";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
 import {groupAttDutiesByCommitteeIndex} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
 export type AttestationServiceOpts = {
@@ -40,12 +41,22 @@ export class AttestationService {
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     chainHeadTracker: ChainHeaderTracker,
+    syncingStatusTracker: SyncingStatusTracker,
     private readonly metrics: Metrics | null,
     private readonly opts?: AttestationServiceOpts
   ) {
-    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics, {
-      distributedAggregationSelection: opts?.distributedAggregationSelection,
-    });
+    this.dutiesService = new AttestationDutiesService(
+      logger,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      metrics,
+      {
+        distributedAggregationSelection: opts?.distributedAggregationSelection,
+      }
+    );
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);

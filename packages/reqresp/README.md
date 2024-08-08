@@ -7,7 +7,7 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Typescript REST client for the [Ethereum Consensus API spec](https://github.com/ethereum/beacon-apis)
+Typescript implementation of the [Ethereum Consensus Req/Resp protocol](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/p2p-interface.md#reqresp)
 
 ## Usage
 

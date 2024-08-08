@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@chainsafe/blst";
 import {ssz} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
@@ -10,12 +10,14 @@ import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
 vi.mock("../../../src/services/emitter.js");
 vi.mock("../../../src/services/chainHeaderTracker.js");
+vi.mock("../../../src/services/syncingStatusTracker.js");
 
 describe("AttestationService", function () {
   const api = getApiClientStub();
@@ -24,11 +26,13 @@ describe("AttestationService", function () {
   const emitter = vi.mocked(new ValidatorEventEmitter());
   // @ts-expect-error - Mocked class don't need parameters
   const chainHeadTracker = vi.mocked(new ChainHeaderTracker());
+  // @ts-expect-error - Mocked class don't need parameters
+  const syncingStatusTracker = vi.mocked(new SyncingStatusTracker());
 
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   beforeAll(() => {
-    const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.mockReturnValue(true);
@@ -62,6 +66,7 @@ describe("AttestationService", function () {
           validatorStore,
           emitter,
           chainHeadTracker,
+          syncingStatusTracker,
           null,
           opts
         );

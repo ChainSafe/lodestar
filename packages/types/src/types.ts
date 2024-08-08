@@ -124,12 +124,8 @@ type TypesByFork = {
     BuilderBid: deneb.BuilderBid;
     SignedBuilderBid: deneb.SignedBuilderBid;
     SSEPayloadAttributes: deneb.SSEPayloadAttributes;
-    BlockContents: {block: BeaconBlock<ForkName.deneb>; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
-    SignedBlockContents: {
-      signedBlock: SignedBeaconBlock<ForkName.deneb>;
-      kzgProofs: deneb.KZGProofs;
-      blobs: deneb.Blobs;
-    };
+    BlockContents: deneb.BlockContents;
+    SignedBlockContents: deneb.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: deneb.BlobsBundle;
     Contents: deneb.Contents;

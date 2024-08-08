@@ -1,4 +1,4 @@
-import type {PublicKey} from "@chainsafe/bls/types";
+import {PublicKey} from "@chainsafe/blst";
 import {DOMAIN_AGGREGATE_AND_PROOF} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {Epoch, phase0} from "@lodestar/types";
