@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
-import {describe, it} from "vitest";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {describe, expect, it} from "vitest";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 // eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
@@ -9,14 +9,17 @@ import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {
   ApiAttestation,
   GossipAttestation,
+  getSeenAttDataKeyFromGossipAttestation,
+  getSeenAttDataKeyFromSignedAggregateAndProof,
   validateApiAttestation,
   validateAttestation,
 } from "../../../../../src/chain/validation/index.js";
-import {getSeenAttDataKeyPhase0} from "../../../../../src/util/sszBytes.js";
+import {getAttDataFromAttestationSerialized} from "../../../../../src/util/sszBytes.js";
 import {memoOnce} from "../../../../utils/cache.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
 import {AttestationValidDataOpts, getAttestationValidData} from "../../../../utils/validationData/attestation.js";
 
+// TODO: more tests for electra
 describe("validateAttestation", () => {
   const vc = 64;
   const stateSlot = 100;
@@ -52,7 +55,7 @@ describe("validateAttestation", () => {
     const {chain, subnet} = getValidData();
     await expectGossipError(
       chain,
-      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0, seenAttestationKey: "invalid"},
+      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0, attDataBase64: "invalid"},
       subnet,
       GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE
     );
@@ -72,7 +75,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.BAD_TARGET_EPOCH
@@ -91,7 +94,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.PAST_SLOT
@@ -110,7 +113,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.FUTURE_SLOT
@@ -135,7 +138,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
@@ -155,7 +158,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
@@ -179,7 +182,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
@@ -199,7 +202,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.INVALID_TARGET_ROOT
@@ -226,7 +229,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
@@ -245,7 +248,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       invalidSubnet,
       AttestationErrorCode.INVALID_SUBNET_ID
@@ -265,7 +268,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
@@ -287,7 +290,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
       },
       subnet,
       AttestationErrorCode.INVALID_SIGNATURE
@@ -313,4 +316,54 @@ describe("validateAttestation", () => {
     const fork = chain.config.getForkName(stateSlot);
     await expectRejectedWithLodestarError(validateAttestation(fork, chain, attestationOrBytes, subnet), errorCode);
   }
+});
+
+describe("getSeenAttDataKey", () => {
+  const slot = 100;
+  const index = 0;
+  const blockRoot = Buffer.alloc(32, 1);
+
+  it("phase0", () => {
+    const attestationData = ssz.phase0.AttestationData.defaultValue();
+    attestationData.slot = slot;
+    attestationData.index = index;
+    attestationData.beaconBlockRoot = blockRoot;
+    const attestation = ssz.phase0.Attestation.defaultValue();
+    attestation.data = attestationData;
+    const attDataBase64 = Buffer.from(ssz.phase0.AttestationData.serialize(attestationData)).toString("base64");
+    const attestationBytes = ssz.phase0.Attestation.serialize(attestation);
+    const gossipAttestation = {attDataBase64, serializedData: attestationBytes, attSlot: slot} as GossipAttestation;
+
+    const signedAggregateAndProof = ssz.phase0.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregate.data.slot = slot;
+    signedAggregateAndProof.message.aggregate.data.index = index;
+    signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
+    const aggregateAndProofBytes = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
+
+    expect(getSeenAttDataKeyFromGossipAttestation(ForkSeq.phase0, gossipAttestation)).toEqual(
+      getSeenAttDataKeyFromSignedAggregateAndProof(ForkSeq.phase0, aggregateAndProofBytes)
+    );
+  });
+
+  it("electra", () => {
+    const attestationData = ssz.phase0.AttestationData.defaultValue();
+    attestationData.slot = slot;
+    attestationData.index = index;
+    attestationData.beaconBlockRoot = blockRoot;
+    const attestation = ssz.electra.Attestation.defaultValue();
+    attestation.data = attestationData;
+    const attDataBase64 = Buffer.from(ssz.phase0.AttestationData.serialize(attestationData)).toString("base64");
+    const attestationBytes = ssz.electra.Attestation.serialize(attestation);
+    const gossipAttestation = {attDataBase64, serializedData: attestationBytes, attSlot: slot} as GossipAttestation;
+
+    const signedAggregateAndProof = ssz.electra.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregate.data.slot = slot;
+    signedAggregateAndProof.message.aggregate.data.index = index;
+    signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
+    const aggregateAndProofBytes = ssz.electra.SignedAggregateAndProof.serialize(signedAggregateAndProof);
+
+    expect(getSeenAttDataKeyFromGossipAttestation(ForkSeq.electra, gossipAttestation)).toEqual(
+      getSeenAttDataKeyFromSignedAggregateAndProof(ForkSeq.electra, aggregateAndProofBytes)
+    );
+  });
 });

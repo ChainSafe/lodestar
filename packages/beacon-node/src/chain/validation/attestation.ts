@@ -29,12 +29,15 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/in
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
-  SeenAttDataKey,
   getAggregationBitsFromAttestationSerialized,
-  getSeenAttDataKey,
+  getAttDataFromAttestationSerialized,
+  getAttDataFromSignedAggregateAndProofElectra,
+  getCommitteeBitsFromAttestationSerialized,
+  getCommitteeBitsFromSignedAggregateAndProofElectra,
+  getAttDataFromSignedAggregateAndProofPhase0,
   getSignatureFromAttestationSerialized,
 } from "../../util/sszBytes.js";
-import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
+import {AttestationDataCacheEntry, SeenAttDataKey} from "../seenCache/seenAttestationData.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {IBeaconChain} from "../interface.js";
@@ -66,7 +69,7 @@ export type GossipAttestation = {
   attSlot: Slot;
   // for old LIFO linear gossip queue we don't have attDataBase64
   // for indexed gossip queue we have attDataBase64
-  seenAttestationKey?: SeenAttDataKey | null;
+  attDataBase64?: SeenAttDataKey | null;
 };
 
 export type Step0Result = AttestationValidationResult & {
@@ -269,11 +272,7 @@ async function validateGossipAttestationNoSignatureCheck(
   if (attestationOrBytes.serializedData) {
     // gossip
     const attSlot = attestationOrBytes.attSlot;
-    attDataKey =
-      // we always have seenAttestationKey from the IndexedGossipQueue, getSeenAttDataKey() just for backward
-      // compatible in case beaconAttestationBatchValidation is false
-      // TODO: remove beaconAttestationBatchValidation flag since the batch attestation is stable
-      attestationOrBytes.seenAttestationKey ?? getSeenAttDataKey(ForkSeq[fork], attestationOrBytes.serializedData);
+    attDataKey = getSeenAttDataKeyFromGossipAttestation(ForkSeq[fork], attestationOrBytes);
     const cachedAttData = attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, attDataKey) : null;
     if (cachedAttData === null) {
       const attestation = sszDeserializeAttestation(fork, attestationOrBytes.serializedData);
@@ -788,4 +787,46 @@ export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, co
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
   const committeesSinceEpochStart = shuffling.committeesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+}
+
+/**
+ * Return fork-dependent seen attestation key
+ *   - for pre-electra, it's the AttestationData base64
+ *   - for electra and later, it's the AttestationData base64 + committeeBits base64
+ *
+ * we always have attDataBase64 from the IndexedGossipQueue, getAttDataFromAttestationSerialized() just for backward compatible when beaconAttestationBatchValidation is false
+ * TODO: remove beaconAttestationBatchValidation flag since the batch attestation is stable
+ */
+export function getSeenAttDataKeyFromGossipAttestation(
+  forkSeq: ForkSeq,
+  attestation: GossipAttestation
+): SeenAttDataKey | null {
+  const {attDataBase64, serializedData} = attestation;
+  if (forkSeq >= ForkSeq.electra) {
+    const attData = attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
+    const committeeBits = getCommitteeBitsFromAttestationSerialized(serializedData);
+    return attData && committeeBits ? attDataBase64 + committeeBits : null;
+  }
+
+  // pre-electra
+  return attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
+}
+
+/**
+ * Extract attestation data key from SignedAggregateAndProof Uint8Array to use cached data from SeenAttestationDatas
+ *   - for pre-electra, it's the AttestationData base64
+ *   - for electra and later, it's the AttestationData base64 + committeeBits base64
+ */
+export function getSeenAttDataKeyFromSignedAggregateAndProof(
+  forkSeq: ForkSeq,
+  aggregateAndProof: Uint8Array
+): SeenAttDataKey | null {
+  if (forkSeq >= ForkSeq.electra) {
+    const attData = getAttDataFromSignedAggregateAndProofElectra(aggregateAndProof);
+    const committeeBits = getCommitteeBitsFromSignedAggregateAndProofElectra(aggregateAndProof);
+    return attData && committeeBits ? attData + committeeBits : null;
+  }
+
+  // pre-electra
+  return getAttDataFromSignedAggregateAndProofPhase0(aggregateAndProof);
 }
