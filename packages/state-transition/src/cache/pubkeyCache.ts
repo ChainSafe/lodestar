@@ -1,6 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
 import {ValidatorIndex, phase0} from "@lodestar/types";
-import {BeaconStateAllForks} from "./types.js";
 
 export type Index2PubkeyCache = PublicKey[];
 
