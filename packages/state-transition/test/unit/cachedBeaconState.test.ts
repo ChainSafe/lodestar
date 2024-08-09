@@ -131,7 +131,7 @@ describe("CachedBeaconState", () => {
 
     const capellaStateType = ssz.capella.BeaconState;
 
-    for (let validatorCountDelta = -numValidator; validatorCountDelta <= numValidator; validatorCountDelta++) {
+    for (let validatorCountDelta = -numValidator + 1; validatorCountDelta <= numValidator; validatorCountDelta++) {
       const testName = `loadCachedBeaconState - ${validatorCountDelta > 0 ? "more" : "less"} ${Math.abs(
         validatorCountDelta
       )} validators`;

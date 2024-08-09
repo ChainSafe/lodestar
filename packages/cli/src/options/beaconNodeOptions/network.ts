@@ -63,13 +63,13 @@ export function parseListenArgs(args: NetworkArgs) {
   // If listenAddress is explicitly set, use it
   // If listenAddress6 is not set, use defaultListenAddress
   const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
-  const port = listenAddress ? (args.port ?? defaultP2pPort) : undefined;
-  const discoveryPort = listenAddress ? (args.discoveryPort ?? args.port ?? defaultP2pPort) : undefined;
+  const port = listenAddress ? args.port ?? defaultP2pPort : undefined;
+  const discoveryPort = listenAddress ? args.discoveryPort ?? args.port ?? defaultP2pPort : undefined;
 
   // Only use listenAddress6 if it is explicitly set
   const listenAddress6 = args.listenAddress6;
-  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort6) : undefined;
-  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6) : undefined;
+  const port6 = listenAddress6 ? args.port6 ?? defaultP2pPort6 : undefined;
+  const discoveryPort6 = listenAddress6 ? args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6 : undefined;
 
   return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
 }
