@@ -4,8 +4,8 @@ import {deneb, electra, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz}
 import {fromHex, toHex} from "@lodestar/utils";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {
-  getSeenAttDataKeyPhase0,
-  getSeenAttDataKeyFromSignedAggregateAndProofPhase0,
+  getAttDataFromAttestationSerialized,
+  getAttDataFromSignedAggregateAndProofPhase0,
   getAggregationBitsFromAttestationSerialized as getAggregationBitsFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
@@ -15,7 +15,8 @@ import {
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromBlobSidecarSerialized,
   getCommitteeBitsFromAttestationSerialized,
-  getSeenAttDataKeyFromSignedAggregateAndProofElectra,
+  getCommitteeBitsFromSignedAggregateAndProofElectra,
+  getAttDataFromSignedAggregateAndProofElectra,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
@@ -53,7 +54,9 @@ describe("attestation SSZ serialized picking", () => {
         expect(getAggregationBitsFromAttestationSerialized(ForkName.electra, bytes)?.toBoolArray()).toEqual(
           attestation.aggregationBits.toBoolArray()
         );
-        expect(getCommitteeBitsFromAttestationSerialized(bytes)).toEqual(attestation.committeeBits);
+        expect(getCommitteeBitsFromAttestationSerialized(bytes)).toEqual(
+          Buffer.from(attestation.committeeBits.uint8Array).toString("base64")
+        );
         expect(getSignatureFromAttestationSerialized(bytes)).toEqual(attestation.signature);
       } else {
         expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, bytes)?.toBoolArray()).toEqual(
@@ -63,7 +66,7 @@ describe("attestation SSZ serialized picking", () => {
       }
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
-      expect(getSeenAttDataKeyPhase0(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
+      expect(getAttDataFromAttestationSerialized(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
     });
   }
 
@@ -81,10 +84,10 @@ describe("attestation SSZ serialized picking", () => {
     }
   });
 
-  it("getAttDataBase64FromAttestationSerialized - invalid data", () => {
+  it("getAttDataFromAttestationSerialized - invalid data", () => {
     const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 131];
     for (const size of invalidAttDataBase64DataSizes) {
-      expect(getSeenAttDataKeyPhase0(Buffer.alloc(size))).toBeNull();
+      expect(getAttDataFromAttestationSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 
@@ -128,9 +131,7 @@ describe("phase0 SignedAggregateAndProof SSZ serialized picking", () => {
       );
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(signedAggregateAndProof.message.aggregate.data);
-      expect(getSeenAttDataKeyFromSignedAggregateAndProofPhase0(bytes)).toBe(
-        Buffer.from(attDataBase64).toString("base64")
-      );
+      expect(getAttDataFromSignedAggregateAndProofPhase0(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
     });
   }
 
@@ -151,7 +152,7 @@ describe("phase0 SignedAggregateAndProof SSZ serialized picking", () => {
   it("getAttDataBase64FromSignedAggregateAndProofSerialized - invalid data", () => {
     const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 339];
     for (const size of invalidAttDataBase64DataSizes) {
-      expect(getSeenAttDataKeyFromSignedAggregateAndProofPhase0(Buffer.alloc(size))).toBeNull();
+      expect(getAttDataFromSignedAggregateAndProofPhase0(Buffer.alloc(size))).toBeNull();
     }
   });
 });
@@ -182,8 +183,11 @@ describe("electra SignedAggregateAndProof SSZ serialized picking", () => {
       const committeeBits = ssz.electra.CommitteeBits.serialize(
         signedAggregateAndProof.message.aggregate.committeeBits
       );
-      const seenKey = Buffer.concat([attDataBase64, committeeBits]).toString("base64");
-      expect(getSeenAttDataKeyFromSignedAggregateAndProofElectra(bytes)).toBe(seenKey);
+
+      expect(getAttDataFromSignedAggregateAndProofElectra(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
+      expect(getCommitteeBitsFromSignedAggregateAndProofElectra(bytes)).toBe(
+        Buffer.from(committeeBits).toString("base64")
+      );
     });
   }
 
@@ -204,7 +208,7 @@ describe("electra SignedAggregateAndProof SSZ serialized picking", () => {
   it("getAttDataBase64FromSignedAggregateAndProofSerialized - invalid data", () => {
     const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 339];
     for (const size of invalidAttDataBase64DataSizes) {
-      expect(getSeenAttDataKeyFromSignedAggregateAndProofPhase0(Buffer.alloc(size))).toBeNull();
+      expect(getAttDataFromSignedAggregateAndProofPhase0(Buffer.alloc(size))).toBeNull();
     }
   });
   it("getSlotFromSignedAggregateAndProofSerialized - invalid data - large slots", () => {

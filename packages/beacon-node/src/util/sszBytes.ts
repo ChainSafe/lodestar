@@ -10,11 +10,10 @@ import {
 } from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
-export type SeenAttDataKey = AttDataBase64 | AttDataCommitteeBitsBase64;
 // pre-electra, AttestationData is used to cache attestations
 export type AttDataBase64 = string;
-// electra, AttestationData + CommitteeBits are used to cache attestations
-export type AttDataCommitteeBitsBase64 = string;
+// electra, CommitteeBits
+export type CommitteeBitsBase64 = string;
 
 // pre-electra
 // class Attestation(Container):
@@ -71,50 +70,22 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
 }
 
 /**
- * Extract attestation data key from an attestation Uint8Array in order to index gossip queue and cache later in SeenAttestationDatas
- */
-export function getSeenAttDataKey(forkSeq: ForkSeq, data: Uint8Array): SeenAttDataKey | null {
-  return forkSeq >= ForkSeq.electra ? getSeenAttDataKeyElectra(data) : getSeenAttDataKeyPhase0(data);
-}
-
-/**
- * Extract attestation data + committeeBits base64 from electra attestation serialized bytes.
+ * Extract attestation data base64 from all forks' attestation serialized bytes.
  * Return null if data is not long enough to extract attestation data.
  */
-export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): AttDataCommitteeBitsBase64 | null {
-  const attestationData = getSeenAttDataKeyPhase0(electraAttestationBytes);
-
-  if (attestationData === null) {
-    return null;
-  }
-
-  const committeeBits = getCommitteeBitsFromAttestationSerialized(electraAttestationBytes);
-
-  if (committeeBits === null) {
-    return null;
-  }
-
-  return attestationData + toBase64(committeeBits.uint8Array);
-}
-
-/**
- * Extract attestation data base64 from phase0 attestation serialized bytes.
- * Return null if data is not long enough to extract attestation data.
- */
-export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null {
+export function getAttDataFromAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
   if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE) {
     return null;
   }
 
-  // base64 is a bit efficient than hex
-  return toBase64(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE));
+  return toBase64(data.subarray(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE));
 }
 
 /**
- * Alias of `getSeenAttDataKeyPhase0` specifically for batch handling indexing in gossip queue
+ * Alias of `getAttDataFromAttestationSerialized` specifically for batch handling indexing in gossip queue
  */
 export function getGossipAttestationIndex(data: Uint8Array): AttDataBase64 | null {
-  return getSeenAttDataKeyPhase0(data);
+  return getAttDataFromAttestationSerialized(data);
 }
 
 /**
@@ -153,7 +124,7 @@ export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSign
  * Extract committee bits from Electra attestation serialized bytes.
  * Return null if data is not long enough to extract committee bits.
  */
-export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
+export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): CommitteeBitsBase64 | null {
   const committeeBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
 
   if (data.length < committeeBitsStartIndex + COMMITTEE_BITS_SIZE) {
@@ -162,7 +133,7 @@ export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): Bit
 
   const uint8Array = data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_SIZE);
 
-  return new BitArray(uint8Array, MAX_COMMITTEES_PER_SLOT);
+  return toBase64(uint8Array);
 }
 
 //
@@ -212,49 +183,49 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
 }
 
 /**
- * Extract attestation data key from SignedAggregateAndProof Uint8Array to use cached data from SeenAttestationDatas
- */
-export function getSeenAttDataKeyFromSignedAggregateAndProof(
-  forkSeq: ForkSeq,
-  data: Uint8Array
-): SeenAttDataKey | null {
-  return forkSeq >= ForkSeq.electra
-    ? getSeenAttDataKeyFromSignedAggregateAndProofElectra(data)
-    : getSeenAttDataKeyFromSignedAggregateAndProofPhase0(data);
-}
-
-/**
- * Extract AttestationData + CommitteeBits from SignedAggregateAndProof for electra
+ * Extract AttestationData base64 from SignedAggregateAndProof for electra
  * Return null if data is not long enough
  */
-export function getSeenAttDataKeyFromSignedAggregateAndProofElectra(data: Uint8Array): SeenAttDataKey | null {
+export function getAttDataFromSignedAggregateAndProofElectra(data: Uint8Array): AttDataBase64 | null {
   const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET;
   const endIndex = startIndex + ATTESTATION_DATA_SIZE;
 
   if (data.length < endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE) {
     return null;
   }
+  return toBase64(data.subarray(startIndex, endIndex));
+}
 
-  // base64 is a bit efficient than hex
+/**
+ * Extract CommitteeBits base64 from SignedAggregateAndProof for electra
+ * Return null if data is not long enough
+ */
+export function getCommitteeBitsFromSignedAggregateAndProofElectra(data: Uint8Array): CommitteeBitsBase64 | null {
+  const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
+  const endIndex = startIndex + COMMITTEE_BITS_SIZE;
 
-  return Buffer.concat([
-    data.subarray(startIndex, endIndex),
-    data.subarray(endIndex + SIGNATURE_SIZE, endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE),
-  ]).toString("base64");
+  if (data.length < endIndex) {
+    return null;
+  }
+
+  return toBase64(data.subarray(startIndex, endIndex));
 }
 
 /**
  * Extract attestation data base64 from signed aggregate and proof serialized bytes.
  * Return null if data is not long enough to extract attestation data.
  */
-export function getSeenAttDataKeyFromSignedAggregateAndProofPhase0(data: Uint8Array): AttDataBase64 | null {
+export function getAttDataFromSignedAggregateAndProofPhase0(data: Uint8Array): AttDataBase64 | null {
   if (data.length < SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE) {
     return null;
   }
 
   // base64 is a bit efficient than hex
   return toBase64(
-    data.slice(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE)
+    data.subarray(
+      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET,
+      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE
+    )
   );
 }
 
@@ -323,6 +294,9 @@ function checkSlotHighBytes(data: Uint8Array, offset: number): boolean {
   return (data[offset + 4] | data[offset + 5] | data[offset + 6] | data[offset + 7]) === 0;
 }
 
+/**
+ * base64 is a bit efficient than hex
+ */
 function toBase64(data: Uint8Array): string {
   return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("base64");
 }
