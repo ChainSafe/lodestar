@@ -69,7 +69,7 @@ export async function verifyBlocksStateTransitionOnly(
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
     });
-    const stateRoot = postState.hashTreeRoot(blockHCGroup);
+    const stateRoot = postState.batchHashTreeRoot(blockHCGroup);
     hashTreeRootTimer?.();
 
     // Check state root matches

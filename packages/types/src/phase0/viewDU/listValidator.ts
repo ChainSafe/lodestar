@@ -96,7 +96,8 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
           const indexInBatch = (i - j) % PARALLEL_FACTOR;
           const viewChanged = viewsChanged.get(viewIndex);
           if (viewChanged) {
-            viewChanged.commitNoHash();
+            // should not have any params here in order not to compute root
+            viewChanged.commit();
             const branchNodeStruct = viewChanged.node;
             byteArrayIntoHashObject(validatorRoots[indexInBatch], 0, branchNodeStruct);
             nodesChanged.push({index: viewIndex, node: viewChanged.node});

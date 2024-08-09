@@ -237,8 +237,8 @@ export class PrepareNextSlotScheduler {
     });
     if (isEpochTransition) {
       // balances are completely changed per epoch and it's not much different so we can reuse the HashComputationGroup
-      state.balances.hashTreeRoot(balancesHCGroup);
-      // it's more performant to use normal hashTreeRoot() for the rest of the state
+      state.balances.batchHashTreeRoot(balancesHCGroup);
+      // TODO: it's more performant to use normal hashTreeRoot() for the rest of the state
       // this saves ~10ms per ~100ms as monitored on mainnet as of Jul 2024
       state.node.rootHashObject;
     } else {
