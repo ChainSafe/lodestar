@@ -84,7 +84,7 @@ describe("attestation SSZ serialized picking", () => {
     }
   });
 
-  it("getAttDataBase64FromAttestationSerialized - invalid data", () => {
+  it("getAttDataFromAttestationSerialized - invalid data", () => {
     const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 131];
     for (const size of invalidAttDataBase64DataSizes) {
       expect(getAttDataFromAttestationSerialized(Buffer.alloc(size))).toBeNull();

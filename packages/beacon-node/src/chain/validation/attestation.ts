@@ -13,7 +13,14 @@ import {
   IndexedAttestation,
 } from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq, DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  SLOTS_PER_EPOCH,
+  ForkName,
+  ForkSeq,
+  DOMAIN_BEACON_ATTESTER,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -272,7 +279,7 @@ async function validateGossipAttestationNoSignatureCheck(
   if (attestationOrBytes.serializedData) {
     // gossip
     const attSlot = attestationOrBytes.attSlot;
-    attDataKey = getSeenAttDataKeyFromGossipAttestation(ForkSeq[fork], attestationOrBytes);
+    attDataKey = getSeenAttDataKeyFromGossipAttestation(fork, attestationOrBytes);
     const cachedAttData = attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, attDataKey) : null;
     if (cachedAttData === null) {
       const attestation = sszDeserializeAttestation(fork, attestationOrBytes.serializedData);
@@ -798,11 +805,11 @@ export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, co
  * TODO: remove beaconAttestationBatchValidation flag since the batch attestation is stable
  */
 export function getSeenAttDataKeyFromGossipAttestation(
-  forkSeq: ForkSeq,
+  fork: ForkName,
   attestation: GossipAttestation
 ): SeenAttDataKey | null {
   const {attDataBase64, serializedData} = attestation;
-  if (forkSeq >= ForkSeq.electra) {
+  if (isForkPostElectra(fork)) {
     const attData = attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
     const committeeBits = getCommitteeBitsFromAttestationSerialized(serializedData);
     return attData && committeeBits ? attDataBase64 + committeeBits : null;
@@ -818,10 +825,10 @@ export function getSeenAttDataKeyFromGossipAttestation(
  *   - for electra and later, it's the AttestationData base64 + committeeBits base64
  */
 export function getSeenAttDataKeyFromSignedAggregateAndProof(
-  forkSeq: ForkSeq,
+  fork: ForkName,
   aggregateAndProof: Uint8Array
 ): SeenAttDataKey | null {
-  if (forkSeq >= ForkSeq.electra) {
+  if (isForkPostElectra(fork)) {
     const attData = getAttDataFromSignedAggregateAndProofElectra(aggregateAndProof);
     const committeeBits = getCommitteeBitsFromSignedAggregateAndProofElectra(aggregateAndProof);
     return attData && committeeBits ? attData + committeeBits : null;

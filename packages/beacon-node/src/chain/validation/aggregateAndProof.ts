@@ -71,9 +71,7 @@ async function validateAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  const seenAttDataKey = serializedData
-    ? getSeenAttDataKeyFromSignedAggregateAndProof(ForkSeq[fork], serializedData)
-    : null;
+  const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
   const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, seenAttDataKey) : null;
 
   let attIndex;

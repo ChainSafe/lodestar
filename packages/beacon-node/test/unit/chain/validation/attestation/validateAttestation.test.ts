@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {describe, expect, it} from "vitest";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 // eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
@@ -340,8 +340,8 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkSeq.phase0, gossipAttestation)).toEqual(
-      getSeenAttDataKeyFromSignedAggregateAndProof(ForkSeq.phase0, aggregateAndProofBytes)
+    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.phase0, gossipAttestation)).toEqual(
+      getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.phase0, aggregateAndProofBytes)
     );
   });
 
@@ -362,8 +362,8 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.electra.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkSeq.electra, gossipAttestation)).toEqual(
-      getSeenAttDataKeyFromSignedAggregateAndProof(ForkSeq.electra, aggregateAndProofBytes)
+    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.electra, gossipAttestation)).toEqual(
+      getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.electra, aggregateAndProofBytes)
     );
   });
 });
