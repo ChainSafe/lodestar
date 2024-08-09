@@ -264,12 +264,6 @@ export class EpochCache {
     {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
-    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
-    // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
-    if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(state, pubkey2index, index2pubkey);
-    }
-
     const currentEpoch = computeEpochAtSlot(state.slot);
     const isGenesis = currentEpoch === GENESIS_EPOCH;
     const previousEpoch = isGenesis ? GENESIS_EPOCH : currentEpoch - 1;
@@ -281,6 +275,12 @@ export class EpochCache {
 
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
+
+    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
+    // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
+    if (!opts?.skipSyncPubkeys) {
+      syncPubkeys(validators, pubkey2index, index2pubkey);
+    }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
     const totalSlashingsByIncrement = getTotalSlashingsByIncrement(state);
