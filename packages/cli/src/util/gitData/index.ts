@@ -23,11 +23,11 @@ export function readAndGetGitData(): GitData {
       branch:
         currentGitData.branch && currentGitData.branch.length > 0
           ? currentGitData.branch
-          : (persistedGitData.branch ?? ""),
+          : persistedGitData.branch ?? "",
       commit:
         currentGitData.commit && currentGitData.commit.length > 0
           ? currentGitData.commit
-          : (persistedGitData.commit ?? ""),
+          : persistedGitData.commit ?? "",
     };
   } catch (e) {
     return {
