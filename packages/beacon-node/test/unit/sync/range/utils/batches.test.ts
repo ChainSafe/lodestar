@@ -227,7 +227,7 @@ describe("sync / range / batches", () => {
     batch.startDownloading(peer);
     if (status === BatchStatus.Downloading) return batch;
 
-    batch.downloadingSuccess([]);
+    batch.downloadingSuccess({blocks: [], pendingDataColumns: []});
     if (status === BatchStatus.AwaitingProcessing) return batch;
 
     batch.startProcessing();
