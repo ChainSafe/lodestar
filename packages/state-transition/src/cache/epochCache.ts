@@ -44,6 +44,7 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
+import {CachedBeaconStateAllForks} from "./stateCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -330,11 +331,11 @@ export class EpochCache {
 
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
-    const previousDecisionRoot = getShufflingDecisionBlock(state, previousEpoch);
+    const previousDecisionRoot = getShufflingDecisionBlock(config, state, previousEpoch);
     const cachedPreviousShuffling = shufflingCache?.getSync(previousEpoch, previousDecisionRoot);
-    const currentDecisionRoot = getShufflingDecisionBlock(state, currentEpoch);
+    const currentDecisionRoot = getShufflingDecisionBlock(config, state, currentEpoch);
     const cachedCurrentShuffling = shufflingCache?.getSync(currentEpoch, currentDecisionRoot);
-    const nextDecisionRoot = getShufflingDecisionBlock(state, nextEpoch);
+    const nextDecisionRoot = getShufflingDecisionBlock(config, state, nextEpoch);
     const cachedNextShuffling = shufflingCache?.getSync(nextEpoch, nextDecisionRoot);
 
     for (let i = 0; i < validatorCount; i++) {
@@ -584,7 +585,7 @@ export class EpochCache {
    * 1) update previous/current/next values of cached items
    */
   afterProcessEpoch(
-    state: BeaconStateAllForks,
+    state: CachedBeaconStateAllForks,
     epochTransitionCache: {
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
       nextEpochShufflingActiveIndicesLength: number;
@@ -644,7 +645,7 @@ export class EpochCache {
     /**
      * Calculate look-ahead values for n+2 (will be n+1 after transition finishes)
      */
-    this.nextDecisionRoot = getShufflingDecisionBlock(state, this.nextEpoch);
+    this.nextDecisionRoot = getShufflingDecisionBlock(state.config, state, this.nextEpoch);
     this.nextActiveIndices = epochTransitionCache.nextEpochShufflingActiveValidatorIndices;
     this.nextActiveIndicesLength = epochTransitionCache.nextEpochShufflingActiveIndicesLength;
     if (this.shufflingCache) {

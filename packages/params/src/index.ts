@@ -109,6 +109,8 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const BASE_REWARDS_PER_EPOCH = 4;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
+export const ZERO_HASH = Buffer.alloc(32, 0);
+export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
 // Withdrawal prefixes
 // Since the prefixes are just 1 byte, we define and use them as number

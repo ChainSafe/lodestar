@@ -1,17 +1,20 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
+  GENESIS_SLOT,
   MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
+import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
 
 export interface IShufflingCache {
   /**
@@ -145,7 +148,18 @@ export function computeEpochShuffling(
   };
 }
 
-export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
+function getDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
   return toHexString(getBlockRootAtSlot(state, pivotSlot));
+}
+
+/**
+ * Get the shuffling decision block root for the given epoch of given state
+ *   - Special case close to genesis block, return the genesis block root
+ *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
+ */
+export function getShufflingDecisionBlock(config: BeaconConfig, state: BeaconStateAllForks, epoch: Epoch): RootHex {
+  return state.slot > GENESIS_SLOT
+    ? getDecisionBlock(state, epoch)
+    : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
 }

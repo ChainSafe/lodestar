@@ -212,7 +212,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.stateReloadDuration.startTimer();
-      const newCachedState = loadCachedBeaconState(seedState, stateBytes, this.shufflingCache, {}, validatorsBytes);
+      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {}, validatorsBytes);
       newCachedState.commit();
       const stateRoot = toHexString(newCachedState.hashTreeRoot());
       timer?.();

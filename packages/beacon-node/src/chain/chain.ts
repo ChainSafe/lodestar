@@ -254,19 +254,13 @@ export class BeaconChain implements IBeaconChain {
             config,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
-            shufflingCache: this.shufflingCache,
           });
-    // If shufflingCache was not passed to EpochCache, add it now and cache shuffling from context. Happens in most
-    // situations including checkpoint sync
-    if (!cachedState.epochCtx.shufflingCache) {
-      cachedState.epochCtx.shufflingCache = this.shufflingCache;
-      this.shufflingCache.set(cachedState.epochCtx.currentShuffling, cachedState.epochCtx.currentDecisionRoot);
-      if (cachedState.epochCtx.currentShuffling !== cachedState.epochCtx.previousShuffling) {
-        this.shufflingCache.set(cachedState.epochCtx.previousShuffling, cachedState.epochCtx.previousDecisionRoot);
-      }
-      if (cachedState.epochCtx.nextShuffling) {
-        this.shufflingCache.set(cachedState.epochCtx.nextShuffling, cachedState.epochCtx.nextDecisionRoot);
-      }
+
+    cachedState.epochCtx.shufflingCache = this.shufflingCache;
+    this.shufflingCache.set(cachedState.epochCtx.previousShuffling, cachedState.epochCtx.previousDecisionRoot);
+    this.shufflingCache.set(cachedState.epochCtx.currentShuffling, cachedState.epochCtx.currentDecisionRoot);
+    if (cachedState.epochCtx.nextShuffling !== null) {
+      this.shufflingCache.set(cachedState.epochCtx.nextShuffling, cachedState.epochCtx.nextDecisionRoot);
     }
 
     // Persist single global instance of state caches
@@ -903,15 +897,8 @@ export class BeaconChain implements IBeaconChain {
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
 
-    // resolve the promise to unblock other calls of the same epoch and dependent root
-    const decisionRoot = getShufflingDecisionBlock(state, attEpoch);
-    const shuffling = await this.shufflingCache.get(attEpoch, decisionRoot);
-    if (!shuffling) {
-      // This will be essentially unreachable considering regen should build the shuffling for this epoch
-      // but need to handle anyhow
-      throw Error(`UNREACHABLE: Shuffling not found for attestation epoch ${attEpoch} decisionRoot ${decisionRoot}`);
-    }
-    return shuffling;
+    // should always be the current epoch of the active context so no need to await a result from the ShufflingCache
+    return state.epochCtx.getShufflingAtEpoch(attEpoch);
   }
 
   /**

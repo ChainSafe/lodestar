@@ -13,9 +13,9 @@ const MAX_EPOCHS = 4;
 
 /**
  * With default chain option of maxSkipSlots = 32, there should be no shuffling promise. If that happens a lot, it could blow up Lodestar,
- * with MAX_EPOCHS = 4, only allow 2 promise at a time. Note that regen already bounds number of concurrent requests at 1 already.
+ * with MAX_EPOCHS = 2, only allow 2 promise at a time. Note that regen already bounds number of concurrent requests at 1 already.
  */
-const MAX_PROMISES = 4;
+const MAX_PROMISES = 2;
 
 const DEFAULT_MIN_TIME_DELAY_IN_MS = 5;
 
