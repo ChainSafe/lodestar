@@ -523,9 +523,9 @@
     uint8arrays "^5.0.0"
     wherearewe "^2.0.1"
 
-"@chainsafe/libp2p-yamux@github://twoeths/js-libp2p-yamux#te/yield_data_2":
+"@chainsafe/libp2p-yamux@github://twoeths/js-libp2p-yamux#te_master":
   version "6.0.2"
-  resolved "https://codeload.github.com/twoeths/js-libp2p-yamux/tar.gz/1f257fefb30b39be65c2741015f92e0c3eb78617"
+  resolved "https://codeload.github.com/twoeths/js-libp2p-yamux/tar.gz/7b73bb41d651137ca17f77825636a80c192e7fc2"
   dependencies:
     "@libp2p/interface" "^1.5.0"
     "@libp2p/utils" "^5.2.5"
