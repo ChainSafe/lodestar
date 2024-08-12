@@ -128,7 +128,7 @@ export enum AttestationErrorCode {
   /** Too many skipped slots. */
   TOO_MANY_SKIPPED_SLOTS = "ATTESTATION_ERROR_TOO_MANY_SKIPPED_SLOTS",
   /**
-   * Electra: The aggregated attestation doesn't have only one committee bit set.
+   * Electra: The aggregated attestation does not have exactly one committee bit set.
    */
   NOT_EXACTLY_ONE_COMMITTEE_BIT_SET = "ATTESTATION_ERROR_NOT_EXACTLY_ONE_COMMITTEE_BIT_SET",
   /**

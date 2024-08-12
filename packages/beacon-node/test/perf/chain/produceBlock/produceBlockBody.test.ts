@@ -25,7 +25,7 @@ describe("produceBlockBody", () => {
 
   before(async () => {
     db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
-    state = stateOg.clone() as CachedBeaconStateAltair;
+    state = stateOg.clone();
     chain = new BeaconChain(
       {
         proposerBoost: true,
