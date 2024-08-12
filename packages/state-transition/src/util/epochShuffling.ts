@@ -30,13 +30,20 @@ export interface IShufflingCache {
     epoch: Epoch,
     decisionRoot: RootHex,
     state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[]
+    activeIndices: ValidatorIndex[],
+    activeIndicesLength: number
   ): EpochShuffling;
 
   /**
    * Queue asynchronous build for an EpochShuffling
    */
-  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void;
+  build(
+    epoch: Epoch,
+    decisionRoot: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ValidatorIndex[],
+    activeIndicesLength: number
+  ): void;
 
   /**
    * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will

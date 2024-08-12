@@ -35,8 +35,8 @@ describe("epoch shufflings", () => {
   itBench({
     id: `computeEpochShuffling - vc ${numValidators}`,
     fn: () => {
-      const {activeIndices} = state.epochCtx.nextShuffling;
-      computeEpochShuffling(state, activeIndices, activeIndices.length, nextEpoch);
+      const {nextActiveIndices} = state.epochCtx;
+      computeEpochShuffling(state, nextActiveIndices, nextActiveIndices.length, nextEpoch);
     },
   });
 
