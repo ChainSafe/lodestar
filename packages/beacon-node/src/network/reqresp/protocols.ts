@@ -23,6 +23,12 @@ export const MetadataV2 = toProtocol({
   contextBytesType: ContextBytesType.Empty,
 });
 
+export const MetadataV3 = toProtocol({
+  method: ReqRespMethod.Metadata,
+  version: Version.V3,
+  contextBytesType: ContextBytesType.Empty,
+});
+
 export const Ping = toProtocol({
   method: ReqRespMethod.Ping,
   version: Version.V1,

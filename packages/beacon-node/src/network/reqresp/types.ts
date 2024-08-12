@@ -97,7 +97,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.Status]: () => ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
-  [ReqRespMethod.Metadata]: (_, version) => (version == Version.V1 ? ssz.phase0.Metadata : ssz.altair.Metadata),
+  [ReqRespMethod.Metadata]: (_, version) =>
+    version == Version.V1 ? ssz.phase0.Metadata : version == Version.V2 ? ssz.altair.Metadata : ssz.electra.Metadata,
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
@@ -126,6 +127,7 @@ export type RequestTypedContainer = {
 export enum Version {
   V1 = 1,
   V2 = 2,
+  V3 = 3,
 }
 
 export type OutgoingRequestArgs = {

@@ -141,7 +141,7 @@ type TypesByFork = {
     BeaconBlockBody: electra.BeaconBlockBody;
     BeaconState: electra.BeaconState;
     SignedBeaconBlock: electra.SignedBeaconBlock;
-    Metadata: altair.Metadata;
+    Metadata: electra.Metadata;
     LightClientHeader: electra.LightClientHeader;
     LightClientBootstrap: electra.LightClientBootstrap;
     LightClientUpdate: electra.LightClientUpdate;
@@ -156,12 +156,8 @@ type TypesByFork = {
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
-    BlockContents: {block: BeaconBlock<ForkName.electra>; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
-    SignedBlockContents: {
-      signedBlock: SignedBeaconBlock<ForkName.electra>;
-      kzgProofs: deneb.KZGProofs;
-      blobs: deneb.Blobs;
-    };
+    BlockContents: electra.BlockContents;
+    SignedBlockContents: electra.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: deneb.BlobsBundle;
     Contents: deneb.Contents;

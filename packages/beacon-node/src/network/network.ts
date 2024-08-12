@@ -684,6 +684,7 @@ export class Network implements INetwork {
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
+    this.logger.warn("onPeerConnected", {peer: data.peer, dataColumns: data.dataColumns.join(",")});
     this.connectedPeers.set(data.peer, data.dataColumns);
   };
 

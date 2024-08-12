@@ -2,7 +2,7 @@ import {Connection, PeerId} from "@libp2p/interface";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
-import {Metadata, altair, phase0} from "@lodestar/types";
+import {Metadata, electra, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
@@ -308,6 +308,11 @@ export class PeerManager {
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
     const metadata = this.connectedPeers.get(peer.toString())?.metadata;
+    this.logger.warn("onPing", {
+      seqNumber,
+      metaSeqNumber: metadata?.seqNumber,
+      cond: !metadata || metadata.seqNumber < seqNumber,
+    });
     if (!metadata || metadata.seqNumber < seqNumber) {
       void this.requestMetadata(peer);
     }
@@ -320,12 +325,22 @@ export class PeerManager {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
+    this.logger.warn("onMetadata", {peer: peer.toString(), peerData: peerData !== undefined});
+    console.log("onMetadata", metadata);
     if (peerData) {
+      const oldMetadata = peerData.metadata;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
-        syncnets: (metadata as Partial<altair.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
+        syncnets: (metadata as Partial<electra.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
+        csc:
+          (metadata as Partial<electra.Metadata>).csc ??
+          this.discovery?.["peerIdToCustodySubnetCount"].get(peer.toString()) ??
+          this.config.CUSTODY_REQUIREMENT,
       };
+      if (oldMetadata === null || oldMetadata.csc !== peerData.metadata.csc) {
+        void this.requestStatus(peer, this.statusCache.get());
+      }
     }
   }
 
@@ -392,10 +407,10 @@ export class PeerManager {
     }
     if (getConnection(this.libp2p, peer.toString())) {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      const custodySubnetCount =
-        peerData?.custodySubnetCount ?? this.discovery?.["peerIdToCustodySubnetCount"].get(peer.toString());
+      console.log("onStatus", peerData?.metadata);
+      const custodySubnetCount = peerData?.metadata?.csc;
 
-      const peerCustodySubnetCount = custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT;
+      const peerCustodySubnetCount = custodySubnetCount ?? 4;
       const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
 
       const matchingSubnetsNum = this.custodySubnets.reduce(
@@ -407,6 +422,7 @@ export class PeerManager {
 
       this.logger.warn(`onStatus ${custodySubnetCount == undefined ? "undefined custody count assuming 4" : ""}`, {
         nodeId: toHexString(nodeId),
+        myNodeId: toHexString(this.nodeId),
         peerId: peer.toString(),
         custodySubnetCount,
         hasAllColumns,
@@ -438,14 +454,17 @@ export class PeerManager {
 
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
+      this.logger.warn("requestMetadata", {peer: peer.toString()});
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
+      console.log("requestMetadata", e);
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
 
   private async requestPing(peer: PeerId): Promise<void> {
     try {
+      this.logger.warn("requestPing", {peer: peer.toString()});
       this.onPing(peer, await this.reqResp.sendPing(peer));
 
       // If peer replies a PING request also update lastReceivedMsg
@@ -643,7 +662,6 @@ export class PeerManager {
     // If that happens, it's okay. Only the "outbound" connection triggers immediate action
     const now = Date.now();
     const nodeId = computeNodeId(remotePeer);
-    const custodySubnetCount = this.discovery?.["peerIdToCustodySubnetCount"].get(remotePeer.toString()) ?? null;
     const peerData: PeerData = {
       lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
       // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
@@ -657,12 +675,11 @@ export class PeerManager {
       agentVersion: null,
       agentClient: null,
       encodingPreference: null,
-      custodySubnetCount,
     };
     this.connectedPeers.set(remotePeer.toString(), peerData);
 
     if (direction === "outbound") {
-      //this.pingAndStatusTimeouts();
+      // this.pingAndStatusTimeouts();
       void this.requestPing(remotePeer);
       void this.requestStatus(remotePeer, this.statusCache.get());
     }

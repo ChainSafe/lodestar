@@ -10,9 +10,18 @@ import {
 
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as altariSsz} from "../altair/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
 const {BLSSignature, Root, ColumnIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
+
+export const Metadata = new ContainerType(
+  {
+    ...altariSsz.Metadata.fields,
+    csc: UintNum64,
+  },
+  {typeName: "Metadata", jsonCase: "eth2"}
+);
 
 export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL);
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
@@ -199,4 +208,18 @@ export const SSEPayloadAttributes = new ContainerType(
     ...denebSsz.SSEPayloadAttributes.fields,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
+);
+
+export const BlockContents = new ContainerType(
+  {
+    ...denebSsz.BlockContents.fields,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
+
+export const SignedBlockContents = new ContainerType(
+  {
+    ...denebSsz.SignedBlockContents.fields,
+  },
+  {typeName: "SignedBlockContents", jsonCase: "eth2"}
 );
