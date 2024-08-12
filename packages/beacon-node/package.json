@@ -101,7 +101,7 @@
     "@chainsafe/libp2p-gossipsub": "^13.0.0",
     "@chainsafe/libp2p-identify": "^1.0.0",
     "@chainsafe/libp2p-noise": "^15.0.0",
-    "@chainsafe/libp2p-yamux": "github://twoeths/js-libp2p-yamux#te_master",
+    "@chainsafe/libp2p-yamux": "github://twoeths/js-libp2p-yamux#te_v6.0.2",
     "@chainsafe/persistent-merkle-tree": "^0.7.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/ssz": "^0.15.1",
