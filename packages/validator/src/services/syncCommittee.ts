@@ -11,6 +11,7 @@ import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuti
 import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 
 export type SyncCommitteeServiceOpts = {
   scAfterBlockDelaySlotFraction?: number;
@@ -31,12 +32,22 @@ export class SyncCommitteeService {
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     private readonly chainHeaderTracker: ChainHeaderTracker,
+    readonly syncingStatusTracker: SyncingStatusTracker,
     private readonly metrics: Metrics | null,
     private readonly opts?: SyncCommitteeServiceOpts
   ) {
-    this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, metrics, {
-      distributedAggregationSelection: opts?.distributedAggregationSelection,
-    });
+    this.dutiesService = new SyncCommitteeDutiesService(
+      config,
+      logger,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      metrics,
+      {
+        distributedAggregationSelection: opts?.distributedAggregationSelection,
+      }
+    );
 
     // At most every slot, check existing duties from SyncCommitteeDutiesService and run tasks
     clock.runEverySlot(this.runSyncCommitteeTasks);

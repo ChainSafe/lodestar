@@ -1,6 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
-import {ValidatorIndex} from "@lodestar/types";
-import {BeaconStateAllForks} from "./types.js";
+import {ValidatorIndex, phase0} from "@lodestar/types";
 
 export type Index2PubkeyCache = PublicKey[];
 
@@ -53,7 +52,7 @@ export class PubkeyIndexMap {
  * If pubkey caches are empty: SLOW CODE - 🐢
  */
 export function syncPubkeys(
-  state: BeaconStateAllForks,
+  validators: phase0.Validator[],
   pubkey2index: PubkeyIndexMap,
   index2pubkey: Index2PubkeyCache
 ): void {
@@ -61,16 +60,14 @@ export function syncPubkeys(
     throw new Error(`Pubkey indices have fallen out of sync: ${pubkey2index.size} != ${index2pubkey.length}`);
   }
 
-  // Get the validators sub tree once for all the loop
-  const validators = state.validators;
-
-  const newCount = state.validators.length;
+  const newCount = validators.length;
+  index2pubkey.length = newCount;
   for (let i = pubkey2index.size; i < newCount; i++) {
-    const pubkey = validators.getReadonly(i).pubkey;
+    const pubkey = validators[i].pubkey;
     pubkey2index.set(pubkey, i);
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key is the state consider validated.
     // > Do not do any validation here
-    index2pubkey.push(PublicKey.fromBytes(pubkey)); // Optimize for aggregation
+    index2pubkey[i] = PublicKey.fromBytes(pubkey); // Optimize for aggregation
   }
 }

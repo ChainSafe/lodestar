@@ -21,6 +21,9 @@ export function getApiClientStub(): ApiClientStub {
       submitPoolSyncCommitteeSignatures: vi.fn(),
       submitPoolAttestations: vi.fn(),
     },
+    node: {
+      getSyncingStatus: vi.fn(),
+    },
     validator: {
       getProposerDuties: vi.fn(),
       getAttesterDuties: vi.fn(),
