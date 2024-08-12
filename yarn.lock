@@ -523,17 +523,16 @@
     uint8arrays "^5.0.0"
     wherearewe "^2.0.1"
 
-"@chainsafe/libp2p-yamux@^6.0.2":
+"@chainsafe/libp2p-yamux@github://twoeths/js-libp2p-yamux#te/yield_data_2":
   version "6.0.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-yamux/-/libp2p-yamux-6.0.2.tgz#ba94c38ebfe2761d20b0986ff8d832fc05c2ce15"
-  integrity sha512-S5OkLHqYhEVMQQ4BTgnRANEIbGTQhaC23glCgBwGdeoTRtMpIozwDiPfljFLCm0RYWdCRJw9oFztO95KUHjptA==
+  resolved "https://codeload.github.com/twoeths/js-libp2p-yamux/tar.gz/1f257fefb30b39be65c2741015f92e0c3eb78617"
   dependencies:
-    "@libp2p/interface" "^1.1.3"
+    "@libp2p/interface" "^1.5.0"
     "@libp2p/utils" "^5.2.5"
     get-iterator "^2.0.1"
     it-foreach "^2.0.6"
-    it-pipe "^3.0.1"
     it-pushable "^3.2.3"
+    it-stream-types "^2.0.1"
     uint8arraylist "^2.4.8"
 
 "@chainsafe/netmask@^2.0.0":
@@ -1661,19 +1660,7 @@
     progress-events "^1.0.0"
     uint8arraylist "^2.4.8"
 
-"@libp2p/interface@^1.1.3":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@libp2p/interface/-/interface-1.2.0.tgz#3b5fdc5d96cffe17a8c88cc29ed78c70516b0a7f"
-  integrity sha512-ImnGNl3El/AukgaojACT8i9SNW1FOsrThcQU/qA3w5tEBR5p84Uwgzl/nxa4X5vGinItUJ9jLEJmtkQJENoiGQ==
-  dependencies:
-    "@multiformats/multiaddr" "^12.2.1"
-    it-pushable "^3.2.3"
-    it-stream-types "^2.0.1"
-    multiformats "^13.1.0"
-    progress-events "^1.0.0"
-    uint8arraylist "^2.4.8"
-
-"@libp2p/interface@^1.2.0", "@libp2p/interface@^1.6.3":
+"@libp2p/interface@^1.2.0", "@libp2p/interface@^1.5.0", "@libp2p/interface@^1.6.3":
   version "1.6.3"
   resolved "https://registry.yarnpkg.com/@libp2p/interface/-/interface-1.6.3.tgz#3673e05d5bfc139e4fc81d8ce44468ce9a98ffc4"
   integrity sha512-Tm8W5Q2FsjcSdeA5BvP/GTUq/lp3SjeW6GPmWbbIasBJdv67UGHahu8YDFTME90IxTijnikkfGNkOPsd/4UuvA==
