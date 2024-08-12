@@ -34,7 +34,8 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
+  const {config, options, beaconPaths, network, version, commit, nodeId, peerId, logger} =
+    await beaconHandlerInit(args);
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
@@ -81,6 +82,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       logger,
       processShutdownCallback,
       peerId,
+      nodeId,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
@@ -190,7 +192,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   }
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
+  const {peerId, enr, nodeId} = await initPeerIdAndEnr(config, args, beaconPaths.beaconDir, logger);
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
 
@@ -216,7 +218,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  return {config, options, beaconPaths, network, version, commit, peerId, logger};
+  return {config, options, beaconPaths, network, version, commit, nodeId, peerId, logger};
 }
 
 export function initLogger(

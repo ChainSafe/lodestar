@@ -181,7 +181,7 @@ export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs) {
   );
 
   const logger = initLogger(args, beaconPaths.dataDir, config, "bootnode.log");
-  const {peerId, enr} = await initPeerIdAndEnr(args as unknown as BeaconArgs, bootnodeDir, logger, true);
+  const {peerId, enr} = await initPeerIdAndEnr(config, args as unknown as BeaconArgs, bootnodeDir, logger, true);
 
   return {discv5Args, metricsArgs, bootnodeDir, network, version, commit, peerId, enr, logger};
 }

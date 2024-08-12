@@ -18,6 +18,8 @@ import {
   BackfilledRanges,
   BlobSidecarsRepository,
   BlobSidecarsArchiveRepository,
+  DataColumnSidecarsRepository,
+  DataColumnSidecarsArchiveRepository,
   BLSToExecutionChangeRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
@@ -34,6 +36,8 @@ export class BeaconDb implements IBeaconDb {
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  dataColumnSidecars: DataColumnSidecarsRepository;
+  dataColumnSidecarsArchive: DataColumnSidecarsArchiveRepository;
 
   stateArchive: StateArchiveRepository;
   checkpointState: CheckpointStateRepository;
@@ -67,6 +71,8 @@ export class BeaconDb implements IBeaconDb {
 
     this.blobSidecars = new BlobSidecarsRepository(config, db);
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
+    this.dataColumnSidecars = new DataColumnSidecarsRepository(config, db);
+    this.dataColumnSidecarsArchive = new DataColumnSidecarsArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);

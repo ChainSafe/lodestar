@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {deneb, Slot, RootHex, SignedBeaconBlock} from "@lodestar/types";
+import {deneb, Slot, RootHex, SignedBeaconBlock, electra, ColumnIndex} from "@lodestar/types";
 import {ForkSeq, ForkName} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
@@ -29,23 +29,45 @@ export enum BlobsSource {
   byRoot = "req_resp_by_root",
 }
 
+export enum DataColumnsSource {
+  gossip = "gossip",
+  api = "api",
+  byRange = "req_resp_by_range",
+  byRoot = "req_resp_by_root",
+}
+
 export enum GossipedInputType {
   block = "block",
   blob = "blob",
+  dataColumn = "dataColumn",
 }
 
-type BlobsCacheMap = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
+export type BlobsCacheMap = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
+export type DataColumnsCacheMap = Map<
+  number,
+  {dataColumnSidecar: electra.DataColumnSidecar; dataColumnBytes: Uint8Array | null}
+>;
 
 type ForkBlobsInfo = {fork: ForkName.deneb};
 type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
-export type BlockInputData = BlockInputDataBlobs;
 
-export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
+type ForkDataColumnsInfo = {fork: ForkName.electra};
+type DataColumnsData = {
+  // marker of that columns are to be custodied
+  dataColumnsLen: number;
+  dataColumnsIndex: Uint8Array;
+  dataColumns: electra.DataColumnSidecars;
+  dataColumnsBytes: (Uint8Array | null)[];
+  dataColumnsSource: DataColumnsSource;
+};
+export type BlockInputDataDataColumns = ForkDataColumnsInfo & DataColumnsData;
+export type BlockInputData = BlockInputDataBlobs | BlockInputDataDataColumns;
+
 type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (data: T) => void};
-
 type CachedBlobs = {blobsCache: BlobsCacheMap} & Availability<BlockInputDataBlobs>;
-export type CachedData = ForkBlobsInfo & CachedBlobs;
+type CachedDataColumns = {dataColumnsCache: DataColumnsCacheMap} & Availability<BlockInputDataDataColumns>;
+export type CachedData = (ForkBlobsInfo & CachedBlobs) | (ForkDataColumnsInfo & CachedDataColumns);
 
 export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preData | BlockInputType.outOfRangeData}
@@ -159,6 +181,26 @@ export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlobsData, "
     blobsBytes.push(blobBytes);
   }
   return {blobs, blobsBytes};
+}
+
+export function getBlockInputDataColumns(
+  dataColumnsCache: DataColumnsCacheMap,
+  columnIndexes: ColumnIndex[]
+): Omit<DataColumnsData, "dataColumnsLen" | "dataColumnsIndex" | "dataColumnsSource"> {
+  const dataColumns = [];
+  const dataColumnsBytes = [];
+
+  for (const index of columnIndexes) {
+    const dataColumnCache = dataColumnsCache.get(index);
+    if (dataColumnCache === undefined) {
+      // check if the index is correct as per the custody columns
+      throw Error(`Missing dataColumnCache at index=${index}`);
+    }
+    const {dataColumnSidecar, dataColumnBytes} = dataColumnCache;
+    dataColumns.push(dataColumnSidecar);
+    dataColumnsBytes.push(dataColumnBytes);
+  }
+  return {dataColumns, dataColumnsBytes};
 }
 
 export enum AttestationImportOpt {

@@ -79,7 +79,7 @@ export type UnknownBlock = PendingBlockCommon & {
   parentBlockRootHex: null;
 } & (
     | {unknownBlockType: PendingBlockType.UNKNOWN_BLOCK; blockInput: null}
-    | {unknownBlockType: PendingBlockType.UNKNOWN_BLOBS; blockInput: BlockInput & {type: BlockInputType.dataPromise}}
+    | {unknownBlockType: PendingBlockType.UNKNOWN_DATA; blockInput: BlockInput & {type: BlockInputType.dataPromise}}
     | {unknownBlockType: PendingBlockType.UNKNOWN_BLOCKINPUT; blockInput: NullBlockInput}
   );
 
@@ -111,5 +111,5 @@ export enum PendingBlockType {
   UNKNOWN_PARENT = "unknown_parent",
 
   UNKNOWN_BLOCKINPUT = "unknown_blockinput",
-  UNKNOWN_BLOBS = "unknown_blobs",
+  UNKNOWN_DATA = "unknown_data",
 }

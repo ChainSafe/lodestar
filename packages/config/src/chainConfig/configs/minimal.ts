@@ -46,6 +46,12 @@ export const chainConfig: ChainConfig = {
   DENEB_FORK_VERSION: b("0x04000001"),
   DENEB_FORK_EPOCH: Infinity,
 
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x05000001"),
+  ELECTRA_FORK_EPOCH: Infinity,
+  EIP7594_FORK_VERSION: b("0x05000001"),
+  EIP7594_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // [customized] Faster for testing purposes
@@ -96,4 +102,9 @@ export const chainConfig: ChainConfig = {
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+
+  // Electra
+  SAMPLES_PER_SLOT: 8,
+  CUSTODY_REQUIREMENT: 1,
+  NODE_CUSTODY_REQUIREMENT: 1,
 };

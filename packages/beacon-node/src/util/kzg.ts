@@ -14,11 +14,23 @@ function ckzgNotLoaded(): never {
 
 export let ckzg: {
   freeTrustedSetup(): void;
-  loadTrustedSetup(filePath: string): void;
+  loadTrustedSetup(precompute: number, filePath: string): void;
   blobToKzgCommitment(blob: Uint8Array): Uint8Array;
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
+  computeCells(blob: Uint8Array): Uint8Array[];
+  computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
+  cellsToBlob(cells: Uint8Array[]): Uint8Array;
+  recoverAllCells(cellIds: number[], cells: Uint8Array[]): Uint8Array[];
+  verifyCellKzgProof(commitmentBytes: Uint8Array, cellId: number, cell: Uint8Array, proofBytes: Uint8Array): boolean;
+  verifyCellKzgProofBatch(
+    commitmentsBytes: Uint8Array[],
+    rowIndices: number[],
+    columnIndices: number[],
+    cells: Uint8Array[],
+    proofsBytes: Uint8Array[]
+  ): boolean;
 } = {
   freeTrustedSetup: ckzgNotLoaded,
   loadTrustedSetup: ckzgNotLoaded,
@@ -26,6 +38,12 @@ export let ckzg: {
   computeBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProofBatch: ckzgNotLoaded,
+  computeCells: ckzgNotLoaded,
+  computeCellsAndKzgProofs: ckzgNotLoaded,
+  cellsToBlob: ckzgNotLoaded,
+  recoverAllCells: ckzgNotLoaded,
+  verifyCellKzgProof: ckzgNotLoaded,
+  verifyCellKzgProofBatch: ckzgNotLoaded,
 };
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -59,7 +77,11 @@ export enum TrustedFileMode {
  * We persist the trusted setup as serialized bytes to save space over TXT or JSON formats.
  * However the current c-kzg API **requires** to read from a file with a specific .txt format
  */
-export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode.Txt, filePath?: string): void {
+export function loadEthereumTrustedSetup(
+  mode: TrustedFileMode = TrustedFileMode.Txt,
+  precompute = 0, // default to 0 for testing
+  filePath?: string
+): void {
   try {
     let setupFilePath;
     if (mode === TrustedFileMode.Bin) {
@@ -75,7 +97,7 @@ export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode
 
     try {
       // in unit tests, calling loadTrustedSetup() twice has error so we have to free and retry
-      ckzg.loadTrustedSetup(setupFilePath);
+      ckzg.loadTrustedSetup(precompute, setupFilePath);
     } catch (e) {
       if ((e as Error).message !== "Error trusted setup is already loaded") {
         throw e;

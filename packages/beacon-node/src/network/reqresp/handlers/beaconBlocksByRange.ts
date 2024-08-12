@@ -69,7 +69,7 @@ export async function* onBeaconBlocksByRange(
 }
 
 export function validateBeaconBlocksByRangeRequest(
-  request: deneb.BlobSidecarsByRangeRequest
+  request: phase0.BeaconBlocksByRangeRequest
 ): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
   let {count} = request;

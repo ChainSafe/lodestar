@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
-import {phase0, RootHex} from "@lodestar/types";
+import {phase0, RootHex, ColumnIndex} from "@lodestar/types";
 import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {PeerIdStr} from "../util/peerId.js";
@@ -27,7 +27,7 @@ export enum NetworkEvent {
 }
 
 export type NetworkEventData = {
-  [NetworkEvent.peerConnected]: {peer: PeerIdStr; status: phase0.Status};
+  [NetworkEvent.peerConnected]: {peer: PeerIdStr; status: phase0.Status; dataColumns: ColumnIndex[]};
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};

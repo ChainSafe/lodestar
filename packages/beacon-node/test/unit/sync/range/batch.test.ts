@@ -42,7 +42,7 @@ describe("sync / range / batch", () => {
     // retry download: AwaitingDownload -> Downloading
     // downloadingSuccess: Downloading -> AwaitingProcessing
     batch.startDownloading(peer);
-    batch.downloadingSuccess(blocksDownloaded);
+    batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
 
     // startProcessing: AwaitingProcessing -> Processing
@@ -57,7 +57,7 @@ describe("sync / range / batch", () => {
     // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
     // processingSuccess: Processing -> AwaitingValidation
     batch.startDownloading(peer);
-    batch.downloadingSuccess(blocksDownloaded);
+    batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     batch.startProcessing();
     batch.processingSuccess();
     expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
@@ -68,7 +68,7 @@ describe("sync / range / batch", () => {
 
     // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation
     batch.startDownloading(peer);
-    batch.downloadingSuccess(blocksDownloaded);
+    batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     batch.startProcessing();
     batch.processingSuccess();
     expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
@@ -79,7 +79,7 @@ describe("sync / range / batch", () => {
     const batch = new Batch(startEpoch, config);
 
     expectThrowsLodestarError(
-      () => batch.downloadingSuccess(blocksDownloaded),
+      () => batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: []}),
       new BatchError({
         code: BatchErrorCode.WRONG_STATUS,
         startEpoch,

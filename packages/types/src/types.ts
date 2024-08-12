@@ -4,6 +4,7 @@ import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
+import {ts as electra} from "./electra/index.js";
 import {Slot} from "./primitive/types.js";
 
 export * from "./primitive/types.js";
@@ -12,6 +13,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
+export {ts as electra} from "./electra/index.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
@@ -126,6 +128,36 @@ type TypesByFork = {
     SSEPayloadAttributes: deneb.SSEPayloadAttributes;
     BlockContents: deneb.BlockContents;
     SignedBlockContents: deneb.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: deneb.BlobsBundle;
+    Contents: deneb.Contents;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+  };
+  [ForkName.electra]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: electra.BeaconBlock;
+    BeaconBlockBody: electra.BeaconBlockBody;
+    BeaconState: electra.BeaconState;
+    SignedBeaconBlock: electra.SignedBeaconBlock;
+    Metadata: electra.Metadata;
+    LightClientHeader: electra.LightClientHeader;
+    LightClientBootstrap: electra.LightClientBootstrap;
+    LightClientUpdate: electra.LightClientUpdate;
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
+    LightClientStore: electra.LightClientStore;
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
+    ExecutionPayload: electra.ExecutionPayload;
+    ExecutionPayloadHeader: electra.ExecutionPayloadHeader;
+    BuilderBid: electra.BuilderBid;
+    SignedBuilderBid: electra.SignedBuilderBid;
+    SSEPayloadAttributes: electra.SSEPayloadAttributes;
+    BlockContents: electra.BlockContents;
+    SignedBlockContents: electra.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: deneb.BlobsBundle;
     Contents: deneb.Contents;

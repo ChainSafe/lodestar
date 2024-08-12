@@ -72,7 +72,11 @@ describe("sync / range / chain", () => {
         }
       };
 
-      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
+      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
+        peer,
+        request,
+        partialDownload
+      ) => {
         const blocks: BlockInput[] = [];
         for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
           if (skippedSlots?.has(i)) {
@@ -94,7 +98,7 @@ describe("sync / range / chain", () => {
             )
           );
         }
-        return blocks;
+        return {blocks, pendingDataColumns: null};
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -111,7 +115,7 @@ describe("sync / range / chain", () => {
         );
 
         const peers = [peer];
-        for (const peer of peers) initialSync.addPeer(peer, target);
+        for (const peer of peers) initialSync.addPeer(peer, target, []);
 
         initialSync.startSyncing(startEpoch);
       });
@@ -124,7 +128,11 @@ describe("sync / range / chain", () => {
     const peers = [peer];
 
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
-    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
+    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
+      peer,
+      request,
+      partialDownload
+    ) => {
       const blocks: BlockInput[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         blocks.push(
@@ -139,7 +147,7 @@ describe("sync / range / chain", () => {
           )
         );
       }
-      return blocks;
+      return {blocks, pendingDataColumns: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -157,7 +165,7 @@ describe("sync / range / chain", () => {
 
       // Add peers after some time
       setTimeout(() => {
-        for (const peer of peers) initialSync.addPeer(peer, target);
+        for (const peer of peers) initialSync.addPeer(peer, target, []);
       }, 20);
 
       initialSync.startSyncing(startEpoch);
@@ -181,9 +189,9 @@ function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.block.message.slot).join(",")});
       return fns.processChainSegment(blocks, syncType);
     },
-    downloadBeaconBlocksByRange(peer, request) {
+    downloadBeaconBlocksByRange(peer, request, partialDownload) {
       logger.debug("mock downloadBeaconBlocksByRange", request);
-      return fns.downloadBeaconBlocksByRange(peer, request);
+      return fns.downloadBeaconBlocksByRange(peer, request, null);
     },
     reportPeer(peer, action, actionName) {
       logger.debug("mock reportPeer", {peer: peer.toString(), action, actionName});

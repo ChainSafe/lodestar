@@ -199,6 +199,26 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 }
 
 /**
+ * {
+    index: ColumnIndex [ fixed - 8 bytes],
+    column: DataColumn BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL * <some non fixed length>,
+    kzgCommitments: denebSsz.BlobKzgCommitments,
+    kzgProofs: denebSsz.KZGProofs,
+    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
+    kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
+  }
+ */
+
+const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR = 20;
+export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
+}
+
+/**
  * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
  *
  * If the high bytes are not zero, return null

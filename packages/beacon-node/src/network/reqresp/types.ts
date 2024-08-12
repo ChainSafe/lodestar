@@ -1,7 +1,7 @@
 import {Type} from "@chainsafe/ssz";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
-import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz, sszTypesFor, electra} from "@lodestar/types";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -16,6 +16,8 @@ export enum ReqRespMethod {
   BeaconBlocksByRoot = "beacon_blocks_by_root",
   BlobSidecarsByRange = "blob_sidecars_by_range",
   BlobSidecarsByRoot = "blob_sidecars_by_root",
+  DataColumnSidecarsByRange = "data_column_sidecars_by_range",
+  DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
@@ -32,6 +34,8 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecarsByRootRequest;
+  [ReqRespMethod.DataColumnSidecarsByRange]: electra.DataColumnSidecarsByRangeRequest;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: electra.DataColumnSidecarsByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -48,6 +52,9 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRange]: electra.DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: electra.DataColumnSidecar;
+
   [ReqRespMethod.LightClientBootstrap]: altair.LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
@@ -62,10 +69,14 @@ export const requestSszTypeByMethod: {
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,
   [ReqRespMethod.Metadata]: null,
+
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
   [ReqRespMethod.BlobSidecarsByRoot]: ssz.deneb.BlobSidecarsByRootRequest,
+  [ReqRespMethod.DataColumnSidecarsByRange]: ssz.electra.DataColumnSidecarsByRangeRequest,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: ssz.electra.DataColumnSidecarsByRootRequest,
+
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
@@ -86,7 +97,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.Status]: () => ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
-  [ReqRespMethod.Metadata]: (_, version) => (version == Version.V1 ? ssz.phase0.Metadata : ssz.altair.Metadata),
+  [ReqRespMethod.Metadata]: (_, version) =>
+    version == Version.V1 ? ssz.phase0.Metadata : version == Version.V2 ? ssz.altair.Metadata : ssz.electra.Metadata,
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
@@ -94,6 +106,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientFinalityUpdate,
+  [ReqRespMethod.DataColumnSidecarsByRange]: () => ssz.electra.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: () => ssz.electra.DataColumnSidecar,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
 };
@@ -113,6 +127,7 @@ export type RequestTypedContainer = {
 export enum Version {
   V1 = 1,
   V2 = 2,
+  V3 = 3,
 }
 
 export type OutgoingRequestArgs = {

@@ -73,6 +73,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
+  const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -105,6 +106,12 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Deneb
     DENEB_FORK_VERSION: denebForkRelevant,
     DENEB_FORK_EPOCH: denebForkRelevant,
+
+    // electra
+    ELECTRA_FORK_VERSION: electraForkRelevant,
+    ELECTRA_FORK_EPOCH: electraForkRelevant,
+    EIP7594_FORK_VERSION: electraForkRelevant,
+    EIP7594_FORK_EPOCH: electraForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -217,5 +224,18 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+
+    // # ElectraPreset
+    /////////////////
+    FIELD_ELEMENTS_PER_CELL: electraForkRelevant,
+    FIELD_ELEMENTS_PER_EXT_BLOB: electraForkRelevant,
+    KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: electraForkRelevant,
+    MAX_REQUEST_DATA_COLUMN_SIDECARS: electraForkRelevant,
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: electraForkRelevant,
+
+    // Electra
+    SAMPLES_PER_SLOT: electraForkRelevant,
+    CUSTODY_REQUIREMENT: electraForkRelevant,
+    NODE_CUSTODY_REQUIREMENT: electraForkRelevant,
   };
 }

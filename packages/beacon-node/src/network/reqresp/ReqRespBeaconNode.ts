@@ -192,7 +192,11 @@ export class ReqRespBeaconNode extends ReqResp {
         peerId,
         ReqRespMethod.Metadata,
         // Before altair, prioritize V2. After altair only request V2
-        this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
+        this.currentRegisteredFork >= ForkSeq.electra
+          ? [Version.V3]
+          : this.currentRegisteredFork >= ForkSeq.altair
+            ? [Version.V3, Version.V2]
+            : [(Version.V3, Version.V2, Version.V1)],
         null
       ),
       responseSszTypeByMethod[ReqRespMethod.Metadata]
@@ -252,6 +256,14 @@ export class ReqRespBeaconNode extends ReqResp {
       protocolsAtFork.push(
         [protocols.BlobSidecarsByRoot(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
         [protocols.BlobSidecarsByRange(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
+      );
+    }
+
+    if (ForkSeq[fork] >= ForkSeq.electra) {
+      protocolsAtFork.push(
+        [protocols.MetadataV3(this.config), this.onMetadata.bind(this)],
+        [protocols.DataColumnSidecarsByRoot(this.config), this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot)],
+        [protocols.DataColumnSidecarsByRange(this.config), this.getHandler(ReqRespMethod.DataColumnSidecarsByRange)]
       );
     }
 
