@@ -145,12 +145,12 @@ export class AggregatedAttestationPool {
 
     if (isForkPostElectra(this.config.getForkName(slot))) {
       if (!isElectraAttestation(attestation)) {
-        throw new Error(`Expect electra attestation at slot ${slot} but received phase0 attestation.`);
+        throw new Error("Attestation should be type electra.Attestation");
       }
       committeeIndex = attestation.committeeBits.getSingleTrueBit();
     } else {
       if (isElectraAttestation(attestation)) {
-        throw new Error(`Expect phase0 attestation at slot ${slot} but received electra attestation.`);
+        throw new Error("Attestation should be type phase0.Attestation");
       }
       committeeIndex = attestation.data.index;
     }
