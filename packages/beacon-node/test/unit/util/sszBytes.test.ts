@@ -88,7 +88,7 @@ describe("attestation SSZ serialized picking", () => {
     }
   });
 
-  it("getAggregateionBitsFromAttestationSerialized - invalid data", () => {
+  it("getAggregationBitsFromAttestationSerialized - invalid data", () => {
     const invalidAggregationBitsDataSizes = [0, 4, 100, 128, 227];
     for (const size of invalidAggregationBitsDataSizes) {
       expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, Buffer.alloc(size))).toBeNull();

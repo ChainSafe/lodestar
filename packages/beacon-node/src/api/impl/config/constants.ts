@@ -46,7 +46,7 @@ import {
 
 /**
  * Hand-picked list of constants declared in consensus-spec .md files.
- * This list is asserted to be up-to-date with the test `test/e2e/api/specConstants.test.ts`
+ * This list is asserted to be up-to-date with the test `test/e2e/api/impl/config.test.ts`
  */
 export const specConstants = {
   // phase0/beacon-chain.md

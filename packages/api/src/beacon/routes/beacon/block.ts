@@ -8,11 +8,11 @@ import {
   deneb,
   isSignedBlockContents,
   SignedBeaconBlock,
+  BeaconBlockBody,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   sszTypesFor,
-  BeaconBlockBody,
 } from "@lodestar/types";
 import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";

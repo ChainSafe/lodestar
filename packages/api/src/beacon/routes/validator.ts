@@ -880,11 +880,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedAggregateAndProofs}) => ({
           body: SignedAggregateAndProofListPhase0Type.toJson(signedAggregateAndProofs),
         }),
-        parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body)}),
+        parseReqJson: ({body}) => ({
+          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body),
+        }),
         writeReqSsz: ({signedAggregateAndProofs}) => ({
           body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs),
         }),
-        parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body)}),
+        parseReqSsz: ({body}) => ({
+          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body),
+        }),
         schema: {
           body: Schema.ObjectArray,
         },

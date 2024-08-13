@@ -317,9 +317,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/attestations",
       method: "POST",
       req: {
-        writeReqJson: ({signedAttestations}) => ({
-          body: AttestationListTypePhase0.toJson(signedAttestations),
-        }),
+        writeReqJson: ({signedAttestations}) => ({body: AttestationListTypePhase0.toJson(signedAttestations)}),
         parseReqJson: ({body}) => ({signedAttestations: AttestationListTypePhase0.fromJson(body)}),
         writeReqSsz: ({signedAttestations}) => ({body: AttestationListTypePhase0.serialize(signedAttestations)}),
         parseReqSsz: ({body}) => ({signedAttestations: AttestationListTypePhase0.deserialize(body)}),
@@ -414,7 +412,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           return {
             body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
-              : ssz.electra.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
+              : ssz.phase0.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
             headers: {[MetaHeader.Version]: fork},
           };
         },
