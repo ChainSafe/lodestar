@@ -138,7 +138,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   submitPoolAttesterSlashingsV2: {
-    args: {attesterSlashing: ssz.electra.AttesterSlashing.defaultValue()},
+    args: {attesterSlashing: ssz.phase0.AttesterSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolProposerSlashings: {

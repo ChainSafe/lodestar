@@ -74,7 +74,7 @@ describe("eth1 / util / deposits", function () {
         expectedReturnedIndexes: [],
       },
       {
-        id: "No deposits to be included post Electra after deposit_receipts_start_index",
+        id: "No deposits to be included post Electra after deposit_requests_start_index",
         depositCount: 2030,
         eth1DepositIndex: 2025,
         depositIndexes: Array.from({length: 2030}, (_, i) => i),
@@ -82,7 +82,7 @@ describe("eth1 / util / deposits", function () {
         postElectra: true,
       },
       {
-        id: "Should return deposits post Electra before deposit_receipts_start_index",
+        id: "Should return deposits post Electra before deposit_requests_start_index",
         depositCount: 2022,
         eth1DepositIndex: 2018,
         depositIndexes: Array.from({length: 2022}, (_, i) => i),
@@ -90,7 +90,7 @@ describe("eth1 / util / deposits", function () {
         postElectra: true,
       },
       {
-        id: "Should return deposits less than MAX_DEPOSITS post Electra before deposit_receipts_start_index",
+        id: "Should return deposits less than MAX_DEPOSITS post Electra before deposit_requests_start_index",
         depositCount: 10 * MAX_DEPOSITS,
         eth1DepositIndex: 0,
         depositIndexes: Array.from({length: 10 * MAX_DEPOSITS}, (_, i) => i),

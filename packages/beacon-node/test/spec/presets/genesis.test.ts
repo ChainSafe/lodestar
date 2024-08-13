@@ -60,9 +60,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         deposits,
         undefined,
         testcase["execution_payload_header"] &&
-          executionPayloadHeaderType.toViewDU(
-            testcase["execution_payload_header"] as ExecutionPayloadHeader<ForkName.electra>
-          )
+          executionPayloadHeaderType.toViewDU(testcase["execution_payload_header"])
       );
     },
     // eth1.yaml

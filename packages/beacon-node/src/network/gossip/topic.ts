@@ -93,7 +93,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
-      return ssz.phase0.AttesterSlashing;
+      return sszTypesFor(topic.fork).AttesterSlashing;
     case GossipType.voluntary_exit:
       return ssz.phase0.SignedVoluntaryExit;
     case GossipType.sync_committee_contribution_and_proof:
