@@ -534,8 +534,8 @@ export class ValidatorStore {
       return {
         aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
         data: attestationData,
-        committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
         signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+        committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
       };
     } else {
       return {
@@ -801,7 +801,7 @@ export class ValidatorStore {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
 
-    const isPostElectra = computeEpochAtSlot(duty.slot) >= this.config.ELECTRA_FORK_EPOCH;
+    const isPostElectra = this.config.getForkSeq(duty.slot) >= ForkSeq.electra;
     if (!isPostElectra && duty.committeeIndex != data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
@@ -809,9 +809,6 @@ export class ValidatorStore {
     }
     if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
-    }
-    if (this.config.getForkSeq(duty.slot) >= ForkSeq.electra && data.index !== 0) {
-      throw Error(`Attestataion data index must be 0 post electra: index ${data.index}`);
     }
   }
 
