@@ -1,4 +1,4 @@
-import {CachedBeaconStateElectra} from "../types.js";
+import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/balance.js";
 import {getActiveBalance} from "../util/validator.js";
 import {switchToCompoundingValidator} from "../util/electra.js";
@@ -16,12 +16,14 @@ import {switchToCompoundingValidator} from "../util/electra.js";
  * Dequeue all processed consolidations from `state.pendingConsolidation`
  *
  */
-export function processPendingConsolidations(state: CachedBeaconStateElectra): void {
+export function processPendingConsolidations(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
   let nextPendingConsolidation = 0;
+  const validators = state.validators;
+  const cachedBalances = cache.balances;
 
   for (const pendingConsolidation of state.pendingConsolidations.getAllReadonly()) {
     const {sourceIndex, targetIndex} = pendingConsolidation;
-    const sourceValidator = state.validators.getReadonly(sourceIndex);
+    const sourceValidator = validators.getReadonly(sourceIndex);
 
     if (sourceValidator.slashed) {
       nextPendingConsolidation++;
@@ -37,6 +39,10 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra): v
     const activeBalance = getActiveBalance(state, sourceIndex);
     decreaseBalance(state, sourceIndex, activeBalance);
     increaseBalance(state, targetIndex, activeBalance);
+    if (cachedBalances) {
+      cachedBalances[sourceIndex] -= activeBalance;
+      cachedBalances[targetIndex] += activeBalance;
+    }
 
     nextPendingConsolidation++;
   }

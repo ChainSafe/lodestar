@@ -133,7 +133,7 @@ export function processEpoch(
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processPendingBalanceDeposits,
       });
-      processPendingBalanceDeposits(stateElectra);
+      processPendingBalanceDeposits(stateElectra, cache);
       timer?.();
     }
 
@@ -141,7 +141,7 @@ export function processEpoch(
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processPendingConsolidations,
       });
-      processPendingConsolidations(stateElectra);
+      processPendingConsolidations(stateElectra, cache);
       timer?.();
     }
   }
