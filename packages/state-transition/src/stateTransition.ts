@@ -228,20 +228,20 @@ function processSlotsWithTransientCache(
       epochTransitionTimer?.();
 
       // Upgrade state if exactly at epoch boundary
-      const stateSlot = computeEpochAtSlot(postState.slot);
-      if (stateSlot === config.ALTAIR_FORK_EPOCH) {
+      const stateEpoch = computeEpochAtSlot(postState.slot);
+      if (stateEpoch === config.ALTAIR_FORK_EPOCH) {
         postState = upgradeStateToAltair(postState as CachedBeaconStatePhase0) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.BELLATRIX_FORK_EPOCH) {
+      if (stateEpoch === config.BELLATRIX_FORK_EPOCH) {
         postState = upgradeStateToBellatrix(postState as CachedBeaconStateAltair) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.CAPELLA_FORK_EPOCH) {
+      if (stateEpoch === config.CAPELLA_FORK_EPOCH) {
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.DENEB_FORK_EPOCH) {
+      if (stateEpoch === config.DENEB_FORK_EPOCH) {
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.ELECTRA_FORK_EPOCH) {
+      if (stateEpoch === config.ELECTRA_FORK_EPOCH) {
         postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
     } else {
