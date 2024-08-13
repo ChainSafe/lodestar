@@ -45,7 +45,7 @@ export function getAttestationsSignatureSets(
   return signedBlock.message.body.attestations.map((attestation) =>
     getIndexedAttestationSignatureSet(
       state,
-      state.epochCtx.getIndexedAttestation(state.epochCtx.config.getForkSeq(signedBlock.message.slot), attestation)
+      state.epochCtx.getIndexedAttestation(state.config.getForkSeq(signedBlock.message.slot), attestation)
     )
   );
 }
