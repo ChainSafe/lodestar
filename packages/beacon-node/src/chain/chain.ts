@@ -1,5 +1,5 @@
 import path from "node:path";
-import {CompositeTypeAny, fromHexString, TreeView, Type, toHexString} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -35,7 +35,7 @@ import {
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
+import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -592,7 +592,7 @@ export class BeaconChain implements IBeaconChain {
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
     const {slot, parentBlockRoot} = blockAttributes;
     const state = await this.regen.getBlockSlotState(
-      toHexString(parentBlockRoot),
+      toRootHex(parentBlockRoot),
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
@@ -641,7 +641,7 @@ export class BeaconChain implements IBeaconChain {
     shouldOverrideBuilder?: boolean;
   }> {
     const state = await this.regen.getBlockSlotState(
-      toHexString(parentBlockRoot),
+      toRootHex(parentBlockRoot),
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
@@ -673,7 +673,7 @@ export class BeaconChain implements IBeaconChain {
         : this.config.getExecutionForkTypes(slot).BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
     this.logger.debug("Computing block post state from the produced body", {
       slot,
-      bodyRoot: toHexString(bodyRoot),
+      bodyRoot: toRootHex(bodyRoot),
       blockType,
     });
 
@@ -1152,10 +1152,10 @@ export class BeaconChain implements IBeaconChain {
     const preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
-      throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
+      throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
 
-    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
+    const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
 
     return computeBlockRewards(block, preState.clone(), postState?.clone());
   }
@@ -1173,7 +1173,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const {executionOptimistic, finalized} = stateResult;
-    const stateRoot = toHexString(stateResult.state.hashTreeRoot());
+    const stateRoot = toRootHex(stateResult.state.hashTreeRoot());
 
     const cachedState = this.regen.getStateSync(stateRoot);
 
@@ -1193,7 +1193,7 @@ export class BeaconChain implements IBeaconChain {
     const preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
-      throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
+      throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
 
     return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);

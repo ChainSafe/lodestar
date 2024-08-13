@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {phase0, RootHex, ssz} from "@lodestar/types";
 import {
@@ -6,6 +5,7 @@ import {
   isAggregatorFromCommitteeLength,
   createAggregateSignatureSetFromComponents,
 } from "@lodestar/state-transition";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -111,7 +111,7 @@ async function validateAggregateAndProof(
   // is a non-strict superset has _not_ already been seen.
   const attDataRootHex = cachedAttData
     ? cachedAttData.attDataRootHex
-    : toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
+    : toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
     chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRootHex, aggregationBits)

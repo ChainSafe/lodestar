@@ -1,8 +1,8 @@
-import {BitArray, toHexString} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
@@ -64,7 +64,7 @@ export class SyncCommitteeMessagePool {
   // TODO: indexInSubcommittee: number should be indicesInSyncCommittee
   add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;
-    const rootHex = toHexString(beaconBlockRoot);
+    const rootHex = toRootHex(beaconBlockRoot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     // Reject if too old.
@@ -99,7 +99,7 @@ export class SyncCommitteeMessagePool {
    * This is for the aggregator to produce ContributionAndProof.
    */
   getContribution(subnet: SubcommitteeIndex, slot: Slot, prevBlockRoot: Root): altair.SyncCommitteeContribution | null {
-    const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
+    const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toRootHex(prevBlockRoot));
     if (!contribution) {
       return null;
     }

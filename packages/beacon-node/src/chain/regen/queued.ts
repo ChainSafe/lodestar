@@ -1,8 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -89,7 +88,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     block: BeaconBlock,
     opts: StateCloneOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
-    const parentRoot = toHexString(block.parentRoot);
+    const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = this.forkChoice.getBlockHex(parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -167,7 +166,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void {
     const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
-    const maybeHeadStateRoot = toHexString(maybeHeadState.hashTreeRoot());
+    const maybeHeadStateRoot = toRootHex(maybeHeadState.hashTreeRoot());
     const logCtx = {
       newHeadSlot,
       newHeadBlockRoot,

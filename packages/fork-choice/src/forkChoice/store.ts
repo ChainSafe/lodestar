@@ -1,4 +1,4 @@
-import {toHexString} from "@chainsafe/ssz";
+import {toRootHex} from "@lodestar/utils";
 import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, Slot, RootHex, ValidatorIndex} from "@lodestar/types";
 import {CheckpointHexWithTotalBalance, CheckpointHexWithBalance} from "./interface.js";
@@ -103,7 +103,7 @@ export function toCheckpointWithHex(checkpoint: phase0.Checkpoint): CheckpointWi
   return {
     epoch: checkpoint.epoch,
     root,
-    rootHex: toHexString(root),
+    rootHex: toRootHex(root),
   };
 }
 

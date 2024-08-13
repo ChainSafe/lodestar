@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
 import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
@@ -298,7 +297,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             case BlockErrorCode.DATA_UNAVAILABLE: {
               const slot = signedBlock.message.slot;
               const forkTypes = config.getForkTypes(slot);
-              const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+              const rootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
               events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
 
@@ -747,12 +746,12 @@ export async function validateGossipFnRetryUnknownRoot<T>(
       ) {
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
-          const rootHex = toHexString(blockRoot);
+          const rootHex = toRootHex(blockRoot);
           network.searchUnknownSlotRoot({slot, root: rootHex});
         }
 
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
-          const foundBlock = await chain.waitForBlock(slot, toHexString(blockRoot));
+          const foundBlock = await chain.waitForBlock(slot, toRootHex(blockRoot));
           // Returns true if the block was found on time. In that case, try to get it from the fork-choice again.
           // Otherwise, throw the error below.
           if (foundBlock) {

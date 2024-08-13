@@ -17,7 +17,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
@@ -75,19 +75,19 @@ export function initializeForkChoice(
     ProtoArray.initialize(
       {
         slot: blockHeader.slot,
-        parentRoot: toHexString(blockHeader.parentRoot),
-        stateRoot: toHexString(blockHeader.stateRoot),
-        blockRoot: toHexString(checkpoint.root),
+        parentRoot: toRootHex(blockHeader.parentRoot),
+        stateRoot: toRootHex(blockHeader.stateRoot),
+        blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimisitcally assume is timely
 
         justifiedEpoch: justifiedCheckpoint.epoch,
-        justifiedRoot: toHexString(justifiedCheckpoint.root),
+        justifiedRoot: toRootHex(justifiedCheckpoint.root),
         finalizedEpoch: finalizedCheckpoint.epoch,
-        finalizedRoot: toHexString(finalizedCheckpoint.root),
+        finalizedRoot: toRootHex(finalizedCheckpoint.root),
         unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
-        unrealizedJustifiedRoot: toHexString(justifiedCheckpoint.root),
+        unrealizedJustifiedRoot: toRootHex(justifiedCheckpoint.root),
         unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
-        unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
+        unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
         ...(isExecutionStateType(state) && isMergeTransitionComplete(state)
           ? {

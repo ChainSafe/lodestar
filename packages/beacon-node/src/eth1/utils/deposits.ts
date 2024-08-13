@@ -1,9 +1,9 @@
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {toHexString} from "@chainsafe/ssz";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {FilterOptions} from "@lodestar/db";
+import {toRootHex} from "@lodestar/utils";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 
@@ -51,8 +51,8 @@ export function getDepositsWithProofs(
   if (!ssz.Root.equals(depositRoot, eth1Data.depositRoot)) {
     throw new Eth1Error({
       code: Eth1ErrorCode.WRONG_DEPOSIT_ROOT,
-      root: toHexString(depositRoot),
-      expectedRoot: toHexString(eth1Data.depositRoot),
+      root: toRootHex(depositRoot),
+      expectedRoot: toRootHex(eth1Data.depositRoot),
     });
   }
 
