@@ -13,7 +13,6 @@ import {
   PubkeyIndexMap,
   EpochShuffling,
   computeEndSlotAtEpoch,
-  getShufflingDecisionBlock,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
