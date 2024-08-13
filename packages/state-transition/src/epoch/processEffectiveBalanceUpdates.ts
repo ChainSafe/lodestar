@@ -39,7 +39,9 @@ export function processEffectiveBalanceUpdates(
 
   // update effective balances with hysteresis
 
-  // epochTransitionCache.balances is set in processRewardsAndPenalties(), so it's recycled here for performance.
+  // epochTransitionCache.balances is initialized in processRewardsAndPenalties()
+  // and updated in processPendingBalanceDeposits() and processPendingConsolidations()
+  // so it's recycled here for performance.
   const balances = cache.balances ?? state.balances.getAll();
 
   for (let i = 0, len = balances.length; i < len; i++) {
