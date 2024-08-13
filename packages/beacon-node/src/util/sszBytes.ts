@@ -295,7 +295,7 @@ function checkSlotHighBytes(data: Uint8Array, offset: number): boolean {
 }
 
 /**
- * base64 is a bit efficient than hex
+ * base64 is a bit more efficient than hex
  */
 function toBase64(data: Uint8Array): string {
   return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("base64");
