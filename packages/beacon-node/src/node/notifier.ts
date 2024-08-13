@@ -1,10 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {ErrorAborted, Logger, sleep, prettyBytes, prettyBytesShort} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
+import {ExecutionEngineState} from "../execution/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";
@@ -53,6 +54,14 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const clockSlot = chain.clock.currentSlot;
       const clockEpoch = computeEpochAtSlot(clockSlot);
 
+      if (
+        clockEpoch >= config.BELLATRIX_FORK_EPOCH &&
+        computeStartSlotAtEpoch(clockEpoch) === clockSlot &&
+        chain.executionEngine.state === ExecutionEngineState.OFFLINE
+      ) {
+        logger.warn("Execution client is offline");
+      }
+
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
@@ -92,7 +101,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       switch (sync.state) {
         case SyncState.SyncingFinalized:
         case SyncState.SyncingHead: {
-          const slotsPerSecond = headSlotTimeSeries.computeLinearSpeed();
+          const slotsPerSecond = Math.max(headSlotTimeSeries.computeLinearSpeed(), 0);
           const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
           const timeLeft = isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";

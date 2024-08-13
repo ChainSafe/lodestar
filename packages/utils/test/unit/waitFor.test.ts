@@ -36,8 +36,8 @@ describe("waitFor", () => {
   });
 });
 
-describe("waitForElapsedTime", () => {
-  it("should true for the first time", () => {
+describe("createElapsedTimeTracker", () => {
+  it("should return true for the first time", () => {
     const callIfTimePassed = createElapsedTimeTracker({minElapsedTime: 1000});
 
     expect(callIfTimePassed()).toBe(true);
@@ -48,6 +48,18 @@ describe("waitForElapsedTime", () => {
     callIfTimePassed();
 
     await sleep(150);
+
+    expect(callIfTimePassed()).toBe(true);
+  });
+
+  it("should return true after the minElapsedTime has passed with intermediate calls", async () => {
+    const callIfTimePassed = createElapsedTimeTracker({minElapsedTime: 100});
+    callIfTimePassed();
+
+    await sleep(75);
+    // Time has not elapsed yet but it should not reset timer
+    expect(callIfTimePassed()).toBe(false);
+    await sleep(75);
 
     expect(callIfTimePassed()).toBe(true);
   });

@@ -6,7 +6,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {Api, ServerApi} from "@lodestar/api";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -21,6 +21,7 @@ import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
+import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -33,7 +34,7 @@ export type BeaconNodeModules = {
   metrics: Metrics | null;
   network: Network;
   chain: IBeaconChain;
-  api: {[K in keyof Api]: ServerApi<Api[K]>};
+  api: BeaconApiMethods;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer: HttpMetricsServer | null;
@@ -95,7 +96,7 @@ export class BeaconNode {
   monitoring: MonitoringService | null;
   network: Network;
   chain: IBeaconChain;
-  api: {[K in keyof Api]: ServerApi<Api[K]>};
+  api: BeaconApiMethods;
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
@@ -194,6 +195,17 @@ export class BeaconNode {
         )
       : null;
 
+    const historicalStateRegen = await HistoricalStateRegen.init({
+      opts: {
+        genesisTime: anchorState.genesisTime,
+        dbLocation: opts.db.name,
+      },
+      config,
+      metrics,
+      logger: logger.child({module: LoggerModule.chain}),
+      signal,
+    });
+
     const chain = new BeaconChain(opts.chain, {
       config,
       db,
@@ -216,6 +228,7 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
+      historicalStateRegen,
     });
 
     // Load persisted data from disk to in-memory caches
@@ -274,7 +287,7 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: () => network.scrapeMetrics(),
+          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), historicalStateRegen.scrapeMetrics()]),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;

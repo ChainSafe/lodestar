@@ -1,5 +1,5 @@
-import {SecretKey} from "@chainsafe/bls/types";
-import {Api} from "@lodestar/api";
+import {SecretKey} from "@chainsafe/blst";
+import {ApiClient} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {Signer, SignerType, ValidatorStore} from "../../src/index.js";
@@ -13,7 +13,7 @@ import {SlashingProtectionMock} from "./slashingProtectionMock.js";
  */
 export async function initValidatorStore(
   secretKeys: SecretKey[],
-  api: Api,
+  api: ApiClient,
   customChainConfig: ChainConfig = chainConfig,
   valProposerConfig: ValidatorProposerConfig = {defaultConfig: {builder: {}}, proposerConfig: {}}
 ): Promise<ValidatorStore> {

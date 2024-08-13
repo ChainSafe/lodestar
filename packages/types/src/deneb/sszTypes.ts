@@ -312,3 +312,21 @@ export const SSEPayloadAttributes = new ContainerType(
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );
+
+export const BlockContents = new ContainerType(
+  {
+    block: BeaconBlock,
+    kzgProofs: KZGProofs,
+    blobs: Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
+
+export const SignedBlockContents = new ContainerType(
+  {
+    signedBlock: SignedBeaconBlock,
+    kzgProofs: KZGProofs,
+    blobs: Blobs,
+  },
+  {typeName: "SignedBlockContents", jsonCase: "eth2"}
+);

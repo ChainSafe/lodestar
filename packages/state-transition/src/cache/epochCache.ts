@@ -1,5 +1,4 @@
-import {CoordType} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {PublicKey} from "@chainsafe/blst";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
@@ -265,12 +264,6 @@ export class EpochCache {
     {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
-    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
-    // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
-    if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(state, pubkey2index, index2pubkey);
-    }
-
     const currentEpoch = computeEpochAtSlot(state.slot);
     const isGenesis = currentEpoch === GENESIS_EPOCH;
     const previousEpoch = isGenesis ? GENESIS_EPOCH : currentEpoch - 1;
@@ -282,6 +275,12 @@ export class EpochCache {
 
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
+
+    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
+    // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
+    if (!opts?.skipSyncPubkeys) {
+      syncPubkeys(validators, pubkey2index, index2pubkey);
+    }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
     const totalSlashingsByIncrement = getTotalSlashingsByIncrement(state);
@@ -339,11 +338,16 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    const currentShuffling = cachedCurrentShuffling ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const currentShuffling =
+      cachedCurrentShuffling ??
+      computeEpochShuffling(state, currentActiveIndices, currentActiveIndices.length, currentEpoch);
     const previousShuffling =
       cachedPreviousShuffling ??
-      (isGenesis ? currentShuffling : computeEpochShuffling(state, previousActiveIndices, previousEpoch));
-    const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+      (isGenesis
+        ? currentShuffling
+        : computeEpochShuffling(state, previousActiveIndices, previousActiveIndices.length, previousEpoch));
+    const nextShuffling =
+      cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextActiveIndices.length, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
@@ -502,6 +506,7 @@ export class EpochCache {
     state: BeaconStateAllForks,
     epochTransitionCache: {
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+      nextEpochShufflingActiveIndicesLength: number;
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
@@ -513,6 +518,7 @@ export class EpochCache {
     this.nextShuffling = computeEpochShuffling(
       state,
       epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
+      epochTransitionCache.nextEpochShufflingActiveIndicesLength,
       nextEpoch
     );
 
@@ -762,7 +768,7 @@ export class EpochCache {
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
     this.pubkey2index.set(pubkey, index);
-    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
+    this.index2pubkey[index] = PublicKey.fromBytes(pubkey); // Optimize for aggregation
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

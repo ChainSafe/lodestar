@@ -1,5 +1,5 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {allForks, phase0, Slot, RootHex} from "@lodestar/types";
+import {fromHexString} from "@chainsafe/ssz";
+import {phase0, Slot, RootHex, BeaconBlock} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -10,7 +10,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Logger, sleep} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
@@ -18,13 +18,14 @@ import {IBeaconDb} from "../../db/index.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {CheckpointStateCache, BlockStateCache} from "../stateCache/types.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {IStateRegeneratorInternal, RegenCaller, StateCloneOpts} from "./interface.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 
 export type RegenModules = {
   db: IBeaconDb;
   forkChoice: IForkChoice;
-  stateCache: BlockStateCache;
+  blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
@@ -49,7 +50,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    * - reload state if needed in this flow
    */
   async getPreState(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts,
     regenCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
@@ -88,7 +89,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, opts, regenCaller, allowDiskReload);
+    return this.getBlockSlotState(toRootHex(cp.root), checkpointStartSlot, opts, regenCaller, allowDiskReload);
   }
 
   /**
@@ -150,7 +151,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
     // Trivial case, state at stateRoot is already cached
-    const cachedStateCtx = this.modules.stateCache.get(stateRoot, opts);
+    const cachedStateCtx = this.modules.blockStateCache.get(stateRoot, opts);
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
@@ -167,7 +168,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {checkpointStateCache} = this.modules;
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
-      state = this.modules.stateCache.get(b.stateRoot, opts);
+      state = this.modules.blockStateCache.get(b.stateRoot, opts);
       if (state) {
         break;
       }
@@ -223,7 +224,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           this.modules.metrics
         );
 
-        const stateRoot = toHexString(state.hashTreeRoot());
+        const stateRoot = toRootHex(state.hashTreeRoot());
         if (b.stateRoot !== stateRoot) {
           throw new RegenError({
             slot: b.slot,
@@ -235,11 +236,11 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 
         if (allowDiskReload) {
           // also with allowDiskReload flag, we "reload" it to the state cache too
-          this.modules.stateCache.add(state);
+          this.modules.blockStateCache.add(state);
         }
 
         // this avoids keeping our node busy processing blocks
-        await sleep(0);
+        await nextEventLoop();
       } catch (e) {
         throw new RegenError({
           code: RegenErrorCode.STATE_TRANSITION_ERROR,
@@ -325,7 +326,7 @@ async function processSlotsToNearestCheckpoint(
     emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
 
     // this avoids keeping our node busy processing blocks
-    await sleep(0);
+    await nextEventLoop();
   }
   return postState;
 }

@@ -1,5 +1,5 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {allForks, Epoch, Slot, SyncPeriod} from "@lodestar/types";
+import {BeaconState, Epoch, Slot, SyncPeriod} from "@lodestar/types";
 
 /**
  * Return the epoch number at the given slot.
@@ -42,14 +42,14 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
 /**
  * Return the current epoch of the given state.
  */
-export function getCurrentEpoch(state: Pick<allForks.BeaconState, "slot">): Epoch {
+export function getCurrentEpoch(state: Pick<BeaconState, "slot">): Epoch {
   return computeEpochAtSlot(state.slot);
 }
 
 /**
  * Return the previous epoch of the given state.
  */
-export function getPreviousEpoch(state: Pick<allForks.BeaconState, "slot">): Epoch {
+export function getPreviousEpoch(state: Pick<BeaconState, "slot">): Epoch {
   const currentEpoch = getCurrentEpoch(state);
   if (currentEpoch === GENESIS_EPOCH) {
     return GENESIS_EPOCH;
@@ -69,4 +69,11 @@ export function computeSyncPeriodAtSlot(slot: Slot): SyncPeriod {
  */
 export function computeSyncPeriodAtEpoch(epoch: Epoch): SyncPeriod {
   return Math.floor(epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+}
+
+/**
+ * Determine if the given slot is start slot of an epoch
+ */
+export function isStartSlotOfEpoch(slot: Slot): boolean {
+  return slot % SLOTS_PER_EPOCH === 0;
 }

@@ -12,6 +12,7 @@ import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -53,7 +54,9 @@ export type Eth2GossipsubOpts = {
   gossipsubDLow?: number;
   gossipsubDHigh?: number;
   gossipsubAwaitHandler?: boolean;
+  disableFloodPublish?: boolean;
   skipParamsLog?: boolean;
+  disableLightClientServer?: boolean;
 };
 
 /**
@@ -90,7 +93,7 @@ export class Eth2Gossipsub extends GossipSub {
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(modules.libp2p.services.components, {
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
-      allowPublishToZeroPeers: allowPublishToZeroPeers,
+      allowPublishToZeroTopicPeers: allowPublishToZeroPeers,
       D: gossipsubD ?? GOSSIP_D,
       Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
       Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
@@ -122,12 +125,17 @@ export class Eth2Gossipsub extends GossipSub {
         isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
       metricsRegister: metricsRegister as MetricsRegister | null,
-      metricsTopicStrToLabel: metricsRegister ? getMetricsTopicStrToLabel(config) : undefined,
+      metricsTopicStrToLabel: metricsRegister
+        ? getMetricsTopicStrToLabel(config, {disableLightClientServer: opts.disableLightClientServer ?? false})
+        : undefined,
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
       // serialize message once and send to all peers when publishing
       batchPublish: true,
+      // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
+      // publish to some more topic peers to make sure we always publish to at least GOSSIP_D peers
+      floodPublish: !opts?.disableFloodPublish,
     });
     this.scoreParams = scoreParams;
     this.config = config;
@@ -284,7 +292,7 @@ export class Eth2Gossipsub extends GossipSub {
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    callInNextEventLoop(() => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
         topic,
         msg,
@@ -294,16 +302,16 @@ export class Eth2Gossipsub extends GossipSub {
         seenTimestampSec,
         startProcessUnixSec: null,
       });
-    }, 0);
+    });
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    callInNextEventLoop(() => {
       this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
-    }, 0);
+    });
   }
 }
 
@@ -316,11 +324,14 @@ function attSubnetLabel(subnet: number): string {
   else return `0${subnet}`;
 }
 
-function getMetricsTopicStrToLabel(config: BeaconConfig): TopicStrToLabel {
+function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(fork, {subscribeAllSubnets: true});
+    const topics = getCoreTopicsAtFork(fork, {
+      subscribeAllSubnets: true,
+      disableLightClientServer: opts.disableLightClientServer,
+    });
     for (const topic of topics) {
       metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, fork}), topic.type);
     }

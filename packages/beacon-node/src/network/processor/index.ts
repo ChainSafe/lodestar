@@ -18,6 +18,7 @@ import {
   GossipValidatorFn,
 } from "../gossip/interface.js";
 import {PeerIdStr} from "../peers/index.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
@@ -452,22 +453,22 @@ export class NetworkProcessor {
 
     if (Array.isArray(messageOrArray)) {
       for (const [i, msg] of messageOrArray.entries()) {
-        setTimeout(() => {
+        callInNextEventLoop(() => {
           this.events.emit(NetworkEvent.gossipMessageValidationResult, {
             msgId: msg.msgId,
             propagationSource: msg.propagationSource,
             acceptance: acceptanceArr[i],
           });
-        }, 0);
+        });
       }
     } else {
-      setTimeout(() => {
+      callInNextEventLoop(() => {
         this.events.emit(NetworkEvent.gossipMessageValidationResult, {
           msgId: messageOrArray.msgId,
           propagationSource: messageOrArray.propagationSource,
           acceptance: acceptanceArr[0],
         });
-      }, 0);
+      });
     }
   }
 

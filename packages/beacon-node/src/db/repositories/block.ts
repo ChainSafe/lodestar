@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
-import {allForks, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
@@ -9,7 +9,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
  *
  * Used to store unfinalized blocks
  */
-export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaconBlock> {
+export class BlockRepository extends Repository<Uint8Array, SignedBeaconBlock> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_block;
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
@@ -19,15 +19,15 @@ export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaco
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: allForks.SignedBeaconBlock): Uint8Array {
+  getId(value: SignedBeaconBlock): Uint8Array {
     return this.config.getForkTypes(value.message.slot).BeaconBlock.hashTreeRoot(value.message);
   }
 
-  encodeValue(value: allForks.SignedBeaconBlock): Buffer {
+  encodeValue(value: SignedBeaconBlock): Buffer {
     return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Buffer;
   }
 
-  decodeValue(data: Buffer): allForks.SignedBeaconBlock {
+  decodeValue(data: Buffer): SignedBeaconBlock {
     return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
   }
 }

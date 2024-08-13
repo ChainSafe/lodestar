@@ -20,7 +20,7 @@ import {getMockedClock} from "./clock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
-  getHeadState: Mock<[]>;
+  getHeadState: Mock;
   forkChoice: MockedForkChoice;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
@@ -31,10 +31,10 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
   bls: {
-    verifySignatureSets: Mock<[boolean]>;
-    verifySignatureSetsSameMessage: Mock<[boolean]>;
+    verifySignatureSets: Mock<() => boolean>;
+    verifySignatureSetsSameMessage: Mock<() => boolean>;
     close: Mock;
-    canAcceptWork: Mock<[boolean]>;
+    canAcceptWork: Mock<() => boolean>;
   };
   lightClientServer: Mocked<LightClientServer>;
 };
@@ -51,6 +51,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getHeadRoot: vi.fn(),
       getDependentRoot: vi.fn(),
       getBlockHex: vi.fn(),
+      getBlock: vi.fn(),
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
       iterateAncestorBlocks: vi.fn(),
@@ -116,6 +117,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
+        getClientVersion: vi.fn(),
       },
       executionBuilder: {},
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -128,10 +130,12 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),
       produceCommonBlockBody: vi.fn(),
+      getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
+      predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
       getHeadState: vi.fn(),
       updateBuilderStatus: vi.fn(),

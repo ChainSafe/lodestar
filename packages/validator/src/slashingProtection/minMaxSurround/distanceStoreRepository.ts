@@ -45,13 +45,13 @@ class SpanDistanceRepository {
     await this.db.batchPut(
       values.map((value) => ({
         key: this.encodeKey(pubkey, value.source),
-        value: Buffer.from(this.type.serialize(value.distance)),
+        value: this.type.serialize(value.distance),
       })),
       this.dbReqOpts
     );
   }
 
   private encodeKey(pubkey: BLSPubkey, epoch: Epoch): Uint8Array {
-    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(epoch), 8, "be")]));
+    return encodeKey(this.bucket, Buffer.concat([pubkey, intToBytes(BigInt(epoch), 8, "be")]));
   }
 }

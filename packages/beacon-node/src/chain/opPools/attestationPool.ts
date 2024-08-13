@@ -1,7 +1,6 @@
-import {PointFormat, Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
-import {BitArray, toHexString} from "@chainsafe/ssz";
-import {phase0, Slot, Root, RootHex} from "@lodestar/types";
+import {BitArray} from "@chainsafe/ssz";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {phase0, Slot, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -128,12 +127,11 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
-  getAggregate(slot: Slot, dataRoot: Root): phase0.Attestation {
-    const dataRootHex = toHexString(dataRoot);
+  getAggregate(slot: Slot, dataRootHex: RootHex): phase0.Attestation | null {
     const aggregate = this.attestationByRootBySlot.get(slot)?.get(dataRootHex);
     if (!aggregate) {
       // TODO: Add metric for missing aggregates
-      throw Error(`No attestation for slot=${slot} dataRoot=${dataRootHex}`);
+      return null;
     }
 
     return fastToAttestation(aggregate);
@@ -192,10 +190,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
   }
 
   aggregate.aggregationBits.set(bitIndex, true);
-  aggregate.signature = bls.Signature.aggregate([
-    aggregate.signature,
-    signatureFromBytesNoCheck(attestation.signature),
-  ]);
+  aggregate.signature = aggregateSignatures([aggregate.signature, signatureFromBytesNoCheck(attestation.signature)]);
   return InsertOutcome.Aggregated;
 }
 
@@ -218,6 +213,6 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   return {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
-    signature: aggFast.signature.toBytes(PointFormat.compressed),
+    signature: aggFast.signature.toBytes(),
   };
 }

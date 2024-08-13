@@ -137,24 +137,24 @@ function computeTotalAttestationsRewardsAltair(
   transitionCache: EpochTransitionCache,
   idealRewards: IdealAttestationsReward[],
   penalties: AttestationsPenalty[],
-  validatorIds?: (ValidatorIndex | string)[] // validatorIds filter
+  validatorIds: (ValidatorIndex | string)[] = []
 ): TotalAttestationsReward[] {
   const rewards = [];
-  const {statuses} = transitionCache;
+  const {flags} = transitionCache;
   const {epochCtx, config} = state;
   const validatorIndices = validatorIds
-    ?.map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(id)))
+    .map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(id)))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
 
-  for (let i = 0; i < statuses.length; i++) {
-    if (validatorIndices !== undefined && !validatorIndices.includes(i)) {
+  for (let i = 0; i < flags.length; i++) {
+    if (validatorIndices.length && !validatorIndices.includes(i)) {
       continue;
     }
 
-    const status = statuses[i];
-    if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+    const flag = flags[i];
+    if (!hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
       continue;
     }
 
@@ -162,13 +162,13 @@ function computeTotalAttestationsRewardsAltair(
 
     const currentRewards = {...defaultAttestationsReward, validatorIndex: i};
 
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       currentRewards.source = idealRewards[effectiveBalanceIncrement].source;
     } else {
       currentRewards.source = penalties[effectiveBalanceIncrement].source * -1; // Negative reward to indicate penalty
     }
 
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       currentRewards.target = idealRewards[effectiveBalanceIncrement].target;
     } else {
       currentRewards.target = penalties[effectiveBalanceIncrement].target * -1;
@@ -179,7 +179,7 @@ function computeTotalAttestationsRewardsAltair(
       currentRewards.inactivity = Math.floor(inactivityPenaltyNumerator / inactivityPenaltyDenominator) * -1;
     }
 
-    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
+    if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
       currentRewards.head = idealRewards[effectiveBalanceIncrement].head;
     }
 

@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Epoch, RootHex} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 
 /** The number of validator balance sets that are cached within `CheckpointBalancesCache`. */
 const MAX_BALANCE_CACHE_SIZE = 4;
@@ -33,7 +33,7 @@ export class CheckpointBalancesCache {
     const epoch = state.epochCtx.epoch;
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
-      epochBoundarySlot === state.slot ? blockRootHex : toHexString(getBlockRootAtSlot(state, epochBoundarySlot));
+      epochBoundarySlot === state.slot ? blockRootHex : toRootHex(getBlockRootAtSlot(state, epochBoundarySlot));
 
     const index = this.items.findIndex((item) => item.epoch === epoch && item.rootHex == epochBoundaryRoot);
     if (index === -1) {

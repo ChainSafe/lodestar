@@ -1,6 +1,6 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
-import {BlockSource} from "../../chain/blocks/types.js";
+import {BeaconState} from "@lodestar/types";
+import {BlockSource, BlobsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
@@ -28,7 +28,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
-  anchorState?: Pick<allForks.BeaconState, "genesisTime">
+  anchorState?: Pick<BeaconState, "genesisTime">
 ) {
   if (metadata) {
     register.static<LodestarMetadata>({
@@ -482,9 +482,9 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
-      signatureDeserializationMainThreadDuration: register.histogram({
-        name: "lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds",
-        help: "Total time spent deserializing signatures on main thread",
+      aggregateWithRandomnessMainThreadDuration: register.histogram({
+        name: "lodestar_bls_thread_pool_aggregate_with_randomness_main_thread_time_seconds",
+        help: "Total time performing aggregateWithRandomness on main thread",
         buckets: [0.001, 0.005, 0.01, 0.1],
       }),
       pubkeysAggregationMainThreadDuration: register.histogram({
@@ -799,6 +799,11 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
+      }),
+      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
+        name: "lodestar_import_blobs_by_source_total",
+        help: "Total number of imported blobs by source",
+        labelNames: ["blobsSource"],
       }),
     },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({

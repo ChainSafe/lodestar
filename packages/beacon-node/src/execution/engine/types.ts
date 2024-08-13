@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
+import {capella, deneb, Wei, bellatrix, Root, ExecutionPayload} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -62,6 +62,11 @@ export type EngineApiRpcParamTypes = {
    *  2. count: QUANTITY, 64 bits - Number of blocks to return
    */
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+
+  /**
+   * Object - Instance of ClientVersion
+   */
+  engine_getClientVersionV1: [ClientVersionRpc];
 };
 
 export type PayloadStatus = {
@@ -100,6 +105,8 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+
+  engine_getClientVersionV1: ClientVersionRpc[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -157,13 +164,24 @@ export type PayloadAttributesRpc = {
   parentBeaconBlockRoot?: DATA;
 };
 
+export type ClientVersionRpc = {
+  /** ClientCode */
+  code: string;
+  /** string, Human-readable name of the client */
+  name: string;
+  /** string, the version string of the current implementation */
+  version: string;
+  /** DATA, 4 bytes - first four bytes of the latest commit hash of this build  */
+  commit: DATA;
+};
+
 export interface BlobsBundleRpc {
   commitments: DATA[]; // each 48 bytes
   blobs: DATA[]; // each 4096 * 32 = 131072 bytes
   proofs: DATA[]; // some ELs could also provide proofs, each 48 bytes
 }
 
-export function serializeExecutionPayload(fork: ForkName, data: allForks.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -209,7 +227,7 @@ export function parseExecutionPayload(
   fork: ForkName,
   response: ExecutionPayloadResponse
 ): {
-  executionPayload: allForks.ExecutionPayload;
+  executionPayload: ExecutionPayload;
   executionPayloadValue: Wei;
   blobsBundle?: BlobsBundle;
   shouldOverrideBuilder?: boolean;

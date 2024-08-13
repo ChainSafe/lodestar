@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
-import {MapDef, pruneSetToMax} from "@lodestar/utils";
+import {MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Metrics} from "../metrics/metrics.js";
 import {computeAnchorCheckpoint} from "./initState.js";
@@ -206,5 +205,5 @@ function isPromiseCacheItem(item: CacheItem): item is PromiseCacheItem {
 function getDecisionBlock(state: CachedBeaconStateAllForks, epoch: Epoch): RootHex {
   return state.slot > GENESIS_SLOT
     ? getShufflingDecisionBlock(state, epoch)
-    : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(state.config, state).blockHeader));
+    : toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(state.config, state).blockHeader));
 }

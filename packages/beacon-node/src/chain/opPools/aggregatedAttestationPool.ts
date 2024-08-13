@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {toHexString} from "@chainsafe/ssz";
+import {aggregateSignatures} from "@chainsafe/blst";
 import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
 import {
@@ -11,7 +10,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {toHex, MapDef} from "@lodestar/utils";
+import {toHex, MapDef, toRootHex} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import {InsertOutcome} from "./types.js";
@@ -383,7 +382,7 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
 
   const signature1 = signatureFromBytesNoCheck(attestation1.attestation.signature);
   const signature2 = signatureFromBytesNoCheck(attestation2.attestation.signature);
-  attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
+  attestation1.attestation.signature = aggregateSignatures([signature1, signature2]).toBytes();
 }
 
 /**
@@ -573,7 +572,7 @@ function isValidShuffling(
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
   const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
-  const stateDependentRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
+  const stateDependentRoot = toRootHex(getBlockRootAtSlot(state, pivotSlot));
 
   // Use fork choice's view of the block DAG to quickly evaluate whether the attestation's
   // pivot block is the same as the current state's pivot block. If it is, then the

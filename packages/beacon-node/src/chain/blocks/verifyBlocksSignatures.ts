@@ -1,9 +1,10 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
-import {Logger, sleep} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {Metrics} from "../../metrics/metrics.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -18,7 +19,7 @@ export async function verifyBlocksSignatures(
   logger: Logger,
   metrics: Metrics | null,
   preState0: CachedBeaconStateAllForks,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: SignedBeaconBlock[],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
@@ -36,14 +37,16 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(preState0, block, {skipProposerSignature: opts.validProposerSignature})
+          getBlockSignatureSets(preState0, block, {
+            skipProposerSignature: opts.validProposerSignature,
+          })
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
-    // segments it will block the event loop for 1400 ms, which is too much. This sleep will allow the event loop to
+    // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
     // yield, which will cause one block's state transition to run. However, the tradeoff is okay and doesn't slow sync
     if ((i + 1) % 8 === 0) {
-      await sleep(0);
+      await nextEventLoop();
     }
   }
 

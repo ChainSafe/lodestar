@@ -16,6 +16,7 @@ When using MacOS, there are a couple of extra prerequisites that are required.
 
 ## Getting Started
 
+- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html).
 - :gear: Run `yarn` to install dependencies.
 - :gear: Run `yarn build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
@@ -46,6 +47,10 @@ Contributing to tests:
   - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
+
+## Devcontainer
+
+A [devcontainer](https://containers.dev/) [configuration](https://github.com/ChainSafe/lodestar/blob/unstable/.devcontainer/devcontainer.json) is provided to help speed up linux based development environment setup. It will be used by [GitHub Codespaces](https://github.com/features/codespaces) or directly inside VS Code via your local through this [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
 
 ### Common Issues
 

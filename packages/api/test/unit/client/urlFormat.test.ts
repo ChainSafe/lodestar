@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {
-  compileRouteUrlFormater,
+  compileRouteUrlFormatter,
   toColonNotationPath,
   Token,
   TokenType,
@@ -59,10 +59,10 @@ describe("utils / urlFormat", () => {
 
       expect(toColonNotationPath(urlTemplate)).toBe(colonNotation);
 
-      const utlFormater = compileRouteUrlFormater(urlTemplate);
+      const urlFormatter = compileRouteUrlFormatter(urlTemplate);
 
       for (const [_, {args, url}] of cases.entries()) {
-        expect(utlFormater(args)).toBe(url);
+        expect(urlFormatter(args)).toBe(url);
       }
     });
   }

@@ -1,6 +1,7 @@
 .__testdb*
 node_modules/
 lib
+dist
 .nyc_output/
 coverage/**
 .DS_Store
@@ -21,10 +22,13 @@ validators
 **/coverage
 **/node_modules
 **/lib
+**/dist
 **/.nyc_output
 .tmp
-.vscode
 .npmrc
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json
 
 # Tests artifacts
 packages/*/spec-tests*
@@ -44,8 +48,8 @@ docs/pages/**/*-cli.md
 docs/pages/assets
 docs/pages/images
 docs/pages/security.md
-docs/pages/lightclient-prover/lightclient.md
-docs/pages/lightclient-prover/prover.md
+docs/pages/libraries/lightclient-prover/lightclient.md
+docs/pages/libraries/lightclient-prover/prover.md
 docs/pages/api/api-reference.md
 docs/pages/contribution/getting-started.md
 ## Docusaurus

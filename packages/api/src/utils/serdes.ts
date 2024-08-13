@@ -67,9 +67,21 @@ export function toU64StrOpt(u64: U64 | undefined): U64Str | undefined {
   return u64 !== undefined ? toU64Str(u64) : undefined;
 }
 
+export function toValidatorIdsStr(ids?: (string | number)[]): string[] | undefined {
+  return ids?.map((id) => (typeof id === "string" ? id : toU64Str(id)));
+}
+
+export function fromValidatorIdsStr(ids?: string[]): (string | number)[] | undefined {
+  return ids?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id)));
+}
+
 const GRAFFITI_HEX_LENGTH = 66;
 
-export function toGraffitiHex(utf8: string): string {
+export function toGraffitiHex(utf8?: string): string | undefined {
+  if (utf8 === undefined) {
+    return undefined;
+  }
+
   const hex = toHexString(new TextEncoder().encode(utf8));
 
   if (hex.length > GRAFFITI_HEX_LENGTH) {
@@ -85,11 +97,24 @@ export function toGraffitiHex(utf8: string): string {
   return hex;
 }
 
-export function fromGraffitiHex(hex: string): string {
+export function fromGraffitiHex(hex?: string): string | undefined {
+  if (hex === undefined) {
+    return undefined;
+  }
   try {
     return new TextDecoder("utf8").decode(fromHexString(hex));
   } catch {
     // allow malformed graffiti hex string
     return hex;
   }
+}
+
+export function toBoolean(value: string): boolean {
+  value = value.toLowerCase();
+
+  if (value !== "true" && value !== "false") {
+    throw Error(`Invalid boolean ${value}`);
+  }
+
+  return value === "true";
 }

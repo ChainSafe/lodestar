@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType, Signature} from "@chainsafe/bls/types";
+import {Signature} from "@chainsafe/blst";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Slot, capella} from "@lodestar/types";
@@ -30,7 +29,7 @@ export function pruneBySlot(map: Map<Slot, unknown>, slot: Slot, slotsRetained: 
  * No need to verify Signature is valid, already run sig-verify = false
  */
 export function signatureFromBytesNoCheck(signature: Uint8Array): Signature {
-  return bls.Signature.fromBytes(signature, CoordType.affine, false);
+  return Signature.fromBytes(signature);
 }
 
 /**

@@ -60,6 +60,7 @@ export function selectBlockProductionSource({
     case routes.validator.BuilderSelection.ExecutionOnly:
       return ProducedBlockSource.engine;
 
+    case routes.validator.BuilderSelection.Default:
     case routes.validator.BuilderSelection.MaxProfit:
       return builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
         (builderBoostFactor === BigInt(0) || engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100))

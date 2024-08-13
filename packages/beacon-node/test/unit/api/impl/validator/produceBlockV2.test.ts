@@ -14,6 +14,7 @@ import {toGraffitiBuffer} from "../../../../../src/util/graffiti.js";
 import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
+import {defaultApiOptions} from "../../../../../src/api/options.js";
 
 describe("api/validator - produceBlockV2", function () {
   let api: ReturnType<typeof getValidatorApi>;
@@ -22,7 +23,7 @@ describe("api/validator - produceBlockV2", function () {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getValidatorApi(modules);
+    api = getValidatorApi(defaultApiOptions, modules);
 
     state = generateCachedBellatrixState();
   });
@@ -47,9 +48,11 @@ describe("api/validator - produceBlockV2", function () {
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
+    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
     modules.chain.recomputeForkChoiceHead.mockReturnValue(
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
+    modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,
@@ -57,7 +60,7 @@ describe("api/validator - produceBlockV2", function () {
     });
 
     // check if expectedFeeRecipient is passed to produceBlock
-    await api.produceBlockV2(slot, randaoReveal, graffiti, {feeRecipient});
+    await api.produceBlockV2({slot, randaoReveal, graffiti, feeRecipient});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
@@ -68,7 +71,7 @@ describe("api/validator - produceBlockV2", function () {
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
     // pick it from beaconProposerCache
-    await api.produceBlockV2(slot, randaoReveal, graffiti);
+    await api.produceBlockV2({slot, randaoReveal, graffiti});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
@@ -87,7 +90,7 @@ describe("api/validator - produceBlockV2", function () {
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
 
     const headSlot = 0;
-    modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
+    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
 
     modules.chain.recomputeForkChoiceHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
     modules.chain["opPool"].getSlashingsAndExits.mockReturnValue([[], [], [], []]);
@@ -115,7 +118,7 @@ describe("api/validator - produceBlockV2", function () {
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
-      proposerPubKey: Uint8Array.from(Buffer.alloc(32, 1)),
+      proposerPubKey: new Uint8Array(32).fill(1),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -125,7 +128,7 @@ describe("api/validator - produceBlockV2", function () {
       ZERO_HASH_HEX,
       {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
-        prevRandao: Uint8Array.from(Buffer.alloc(32, 0)),
+        prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: feeRecipient,
       }
     );
@@ -139,7 +142,7 @@ describe("api/validator - produceBlockV2", function () {
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
-      proposerPubKey: Uint8Array.from(Buffer.alloc(32, 1)),
+      proposerPubKey: new Uint8Array(32).fill(1),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -149,7 +152,7 @@ describe("api/validator - produceBlockV2", function () {
       ZERO_HASH_HEX,
       {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
-        prevRandao: Uint8Array.from(Buffer.alloc(32, 0)),
+        prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: "0x fee recipient address",
       }
     );

@@ -1,6 +1,6 @@
-import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi, MockedObject} from "vitest";
+import {SecretKey} from "@chainsafe/blst";
 import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
@@ -18,7 +18,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   const cutOffTime = 1;
 
   beforeAll(async () => {
-    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
+    const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
     syncCommittee = {
       slot,
       beaconBlockRoot,
@@ -40,10 +40,9 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
 
   it("should propagate SyncCommitteeContribution", () => {
     clockStub.secFromSlot.mockReturnValue(0);
-    const blockRootHex = toHexString(syncCommittee.beaconBlockRoot);
-    let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, blockRootHex);
+    let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).not.toBeNull();
-    const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
+    const newSecretKey = SecretKey.fromBytes(Buffer.alloc(32, 2));
     const newSyncCommittee: altair.SyncCommitteeMessage = {
       slot: syncCommittee.slot,
       beaconBlockRoot,
@@ -53,7 +52,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     };
     const newIndicesInSubSyncCommittee = [1];
     cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
-    contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, blockRootHex);
+    contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).not.toBeNull();
     if (contribution) {
       expect(contribution.slot).toBe(syncCommittee.slot);

@@ -1,7 +1,6 @@
 import path from "node:path";
-import bls from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
-import {toHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
@@ -72,7 +71,7 @@ export async function getSignersFromArgs(
     const indexes = parseRange(args.mnemonicIndexes);
     return indexes.map((index) => ({
       type: SignerType.Local,
-      secretKey: bls.SecretKey.fromBytes(deriveEth2ValidatorKeys(masterSK, index).signing),
+      secretKey: SecretKey.fromBytes(deriveEth2ValidatorKeys(masterSK, index).signing),
     }));
   }
 
@@ -99,6 +98,7 @@ export async function getSignersFromArgs(
       ignoreLockFile: args.force,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "imported_keystores.cache"),
+      disableThreadPool: args["disableKeystoresThreadPool"],
       logger,
       signal,
     });
@@ -133,6 +133,7 @@ export async function getSignersFromArgs(
       ignoreLockFile: args.force,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
+      disableThreadPool: args["disableKeystoresThreadPool"],
       logger,
       signal,
     });
@@ -148,7 +149,7 @@ export async function getSignersFromArgs(
 export function getSignerPubkeyHex(signer: Signer): string {
   switch (signer.type) {
     case SignerType.Local:
-      return toHexString(signer.secretKey.toPublicKey().toBytes());
+      return signer.secretKey.toPublicKey().toHex();
 
     case SignerType.Remote:
       return signer.pubkey;

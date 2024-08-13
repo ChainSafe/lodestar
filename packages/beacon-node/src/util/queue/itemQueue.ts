@@ -1,5 +1,5 @@
-import {sleep} from "@lodestar/utils";
 import {LinkedList} from "../array.js";
+import {callInNextEventLoop, nextEventLoop} from "../../util/eventLoop.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
 import {defaultQueueOpts, QueueMetrics, JobQueueOpts, QueueType} from "./options.js";
 
@@ -66,7 +66,7 @@ export class JobItemQueue<Args extends any[], R> {
       if (this.jobs.length === 1 && this.opts.noYieldIfOneItem) {
         void this.runJob();
       } else if (this.runningJobs < this.opts.maxConcurrency) {
-        setTimeout(this.runJob, 0);
+        callInNextEventLoop(this.runJob);
       }
     });
   }
@@ -106,7 +106,7 @@ export class JobItemQueue<Args extends any[], R> {
       // Yield to the macro queue
       if (Date.now() - this.lastYield > this.opts.yieldEveryMs) {
         this.lastYield = Date.now();
-        await sleep(0);
+        await nextEventLoop();
       }
     } catch (e) {
       job.reject(e as Error);

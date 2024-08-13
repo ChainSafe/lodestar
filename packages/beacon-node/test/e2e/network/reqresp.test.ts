@@ -1,9 +1,9 @@
-import {describe, it, expect, afterEach, beforeEach} from "vitest";
+import {describe, it, expect, afterEach, beforeEach, vi} from "vitest";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
-import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
+import {altair, phase0, Root, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
@@ -15,21 +15,17 @@ import {PeerIdStr} from "../../../src/util/peerId.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
-describe(
-  "network / reqresp / main thread",
-  function () {
-    runTests({useWorker: false});
-  },
-  {timeout: 3000}
-);
+describe("network / reqresp / main thread", function () {
+  vi.setConfig({testTimeout: 3000});
 
-describe(
-  "network / reqresp / worker",
-  function () {
-    runTests({useWorker: true});
-  },
-  {timeout: 30_000}
-);
+  runTests({useWorker: false});
+});
+
+describe("network / reqresp / worker", function () {
+  vi.setConfig({testTimeout: 30_000});
+
+  runTests({useWorker: true});
+});
 
 function runTests({useWorker}: {useWorker: boolean}): void {
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
@@ -328,7 +324,7 @@ function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): Respo
   return wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
 }
 
-function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: allForks.SignedBeaconBlock): ResponseOutgoing {
+function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconBlock): ResponseOutgoing {
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
     fork: config.getForkName(block.message.slot),

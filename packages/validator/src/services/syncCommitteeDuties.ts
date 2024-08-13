@@ -1,14 +1,21 @@
 import {toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeSyncPeriodAtEpoch,
+  computeSyncPeriodAtSlot,
+  isStartSlotOfEpoch,
+  isSyncCommitteeAggregator,
+} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "./utils.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -77,15 +84,22 @@ export class SyncCommitteeDutiesService {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    syncingStatusTracker: SyncingStatusTracker,
     metrics: Metrics | null,
     private readonly opts?: SyncCommitteeDutiesServiceOpts
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
+    syncingStatusTracker.runOnResynced(async (slot) => {
+      // Skip on first slot of epoch since tasks are already scheduled
+      if (!isStartSlotOfEpoch(slot)) {
+        return this.runDutiesTasks(computeEpochAtSlot(slot));
+      }
+    });
 
     if (metrics) {
       metrics.syncCommitteeDutiesCount.addCollect(() => {
@@ -222,8 +236,7 @@ export class SyncCommitteeDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (syncCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      const res = await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions);
-      ApiError.assert(res, "Failed to subscribe to sync committee subnets");
+      (await this.api.validator.prepareSyncCommitteeSubnets({subscriptions: syncCommitteeSubscriptions})).assertOk();
     }
   }
 
@@ -236,13 +249,12 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const res = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr);
-    ApiError.assert(res, "Failed to obtain SyncDuties");
+    const duties = (await this.api.validator.getSyncCommitteeDuties({epoch, indices: indexArr})).value();
 
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
-    for (const duty of res.response.data) {
+    for (const duty of duties) {
       const {validatorIndex} = duty;
       if (!this.validatorStore.hasValidatorIndex(validatorIndex)) {
         continue;

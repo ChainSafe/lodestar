@@ -8,7 +8,7 @@ import {
   ValidatorProposerConfig,
   defaultOptions,
 } from "@lodestar/validator";
-import {routes} from "@lodestar/api";
+import {WireFormat, routes} from "@lodestar/api";
 import {getMetrics} from "@lodestar/validator";
 import {
   RegistryMetricCreator,
@@ -19,14 +19,14 @@ import {
 import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, cleanOldLogFiles, getDefaultGraffiti, mkdir, parseLoggerArgs} from "../../util/index.js";
+import {YargsError, cleanOldLogFiles, mkdir, parseLoggerArgs} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/proposerConfig.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
-import {logSigners} from "./signers/logSigners.js";
+import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
@@ -93,13 +93,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
-    if (args["keymanager"]) {
-      logger.warn("No local keystores or remote signers found with current args, expecting to be added via keymanager");
-    } else {
-      throw new YargsError(
-        "No local keystores and remote signers found with current args, start with --keymanager if intending to add them later (via keymanager)"
-      );
-    }
+    warnOrExitNoSigners(args, logger);
   }
 
   logSigners(logger, signers);
@@ -158,7 +152,13 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       db,
       config,
       slashingProtection,
-      api: args.beaconNodes,
+      api: {
+        clientOrUrls: args.beaconNodes,
+        globalInit: {
+          requestWireFormat: parseWireFormat(args, "http.requestWireFormat"),
+          responseWireFormat: parseWireFormat(args, "http.responseWireFormat"),
+        },
+      },
       logger,
       processShutdownCallback,
       signers,
@@ -172,6 +172,11 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       useProduceBlockV3: args.useProduceBlockV3,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
       blindedLocal: args.blindedLocal,
+      externalSigner: {
+        url: args["externalSigner.url"],
+        fetch: args["externalSigner.fetch"],
+        fetchInterval: args["externalSigner.fetchInterval"],
+      },
     },
     metrics
   );
@@ -221,7 +226,7 @@ function getProposerConfigFromArgs(
   }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
 ): ValidatorProposerConfig {
   const defaultConfig = {
-    graffiti: args.graffiti ?? getDefaultGraffiti(),
+    graffiti: args.graffiti,
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
     builder: {
@@ -269,4 +274,20 @@ function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.B
   }
 
   return broadcastValidation as routes.beacon.BroadcastValidation;
+}
+
+function parseWireFormat(args: IValidatorCliArgs, key: keyof IValidatorCliArgs): WireFormat | undefined {
+  const wireFormat = args[key];
+
+  if (wireFormat !== undefined) {
+    switch (wireFormat) {
+      case WireFormat.json:
+      case WireFormat.ssz:
+        break;
+      default:
+        throw new YargsError(`Invalid input for ${key}, must be one of "${WireFormat.json}" or "${WireFormat.ssz}"`);
+    }
+  }
+
+  return wireFormat;
 }

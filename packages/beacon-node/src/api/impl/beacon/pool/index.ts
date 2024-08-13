@@ -1,4 +1,5 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {Epoch, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
@@ -21,14 +22,14 @@ export function getBeaconPoolApi({
   logger,
   metrics,
   network,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ServerApi<routes.beacon.pool.Api> {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ApplicationMethods<routes.beacon.pool.Endpoints> {
   return {
-    async getPoolAttestations(filters) {
+    async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(filters?.slot);
+      let attestations = chain.aggregatedAttestationPool.getAll(slot);
 
-      if (filters?.committeeIndex !== undefined) {
-        attestations = attestations.filter((attestation) => filters.committeeIndex === attestation.data.index);
+      if (committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
       }
 
       return {data: attestations};
@@ -46,16 +47,16 @@ export function getBeaconPoolApi({
       return {data: chain.opPool.getAllVoluntaryExits()};
     },
 
-    async getPoolBlsToExecutionChanges() {
+    async getPoolBLSToExecutionChanges() {
       return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
     },
 
-    async submitPoolAttestations(attestations) {
+    async submitPoolAttestations({signedAttestations}) {
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
-        attestations.map(async (attestation, i) => {
+        signedAttestations.map(async (attestation, i) => {
           try {
             const fork = chain.config.getForkName(chain.clock.currentSlot);
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -107,26 +108,26 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashings(attesterSlashing) {
+    async submitPoolAttesterSlashings({attesterSlashing}) {
       await validateApiAttesterSlashing(chain, attesterSlashing);
       chain.opPool.insertAttesterSlashing(attesterSlashing);
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
-    async submitPoolProposerSlashings(proposerSlashing) {
+    async submitPoolProposerSlashings({proposerSlashing}) {
       await validateApiProposerSlashing(chain, proposerSlashing);
       chain.opPool.insertProposerSlashing(proposerSlashing);
       await network.publishProposerSlashing(proposerSlashing);
     },
 
-    async submitPoolVoluntaryExit(voluntaryExit) {
-      await validateApiVoluntaryExit(chain, voluntaryExit);
-      chain.opPool.insertVoluntaryExit(voluntaryExit);
-      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
-      await network.publishVoluntaryExit(voluntaryExit);
+    async submitPoolVoluntaryExit({signedVoluntaryExit}) {
+      await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+      chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
+      await network.publishVoluntaryExit(signedVoluntaryExit);
     },
 
-    async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
+    async submitPoolBLSToExecutionChange({blsToExecutionChanges}) {
       const errors: Error[] = [];
 
       await Promise.all(
@@ -145,7 +146,7 @@ export function getBeaconPoolApi({
           } catch (e) {
             errors.push(e as Error);
             logger.error(
-              `Error on submitPoolBlsToExecutionChange [${i}]`,
+              `Error on submitPoolBLSToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
               e as Error
             );
@@ -154,7 +155,7 @@ export function getBeaconPoolApi({
       );
 
       if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolBlsToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
+        throw Error("Multiple errors on submitPoolBLSToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
       } else if (errors.length === 1) {
         throw errors[0];
       }
@@ -170,7 +171,7 @@ export function getBeaconPoolApi({
      *
      * https://github.com/ethereum/beacon-APIs/pull/135
      */
-    async submitPoolSyncCommitteeSignatures(signatures) {
+    async submitPoolSyncCommitteeSignatures({signatures}) {
       // Fetch states for all slots of the `signatures`
       const slots = new Set<Epoch>();
       for (const signature of signatures) {

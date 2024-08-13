@@ -1,5 +1,5 @@
 import path from "node:path";
-import {Registry} from "prom-client";
+import {getHeapStatistics} from "node:v8";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
@@ -28,12 +28,20 @@ import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
+const EIGHT_GB = 8 * 1024 * 1024 * 1024;
 
 /**
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
+
+  const heapSizeLimit = getHeapStatistics().heap_size_limit;
+  if (heapSizeLimit < EIGHT_GB) {
+    logger.warn(
+      `Node.js heap size limit is too low, consider increasing it to at least ${EIGHT_GB}. See https://chainsafe.github.io/lodestar/faqs/#running-a-beacon-node for more details.`
+    );
+  }
 
   // initialize directories
   mkdir(beaconPaths.dataDir);
@@ -52,13 +60,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  // additional metrics registries
-  const metricsRegistries: Registry[] = [];
-  let networkRegistry: Registry | undefined;
-  if (options.metrics.enabled) {
-    networkRegistry = new Registry();
-    metricsRegistries.push(networkRegistry);
-  }
   const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
@@ -83,7 +84,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
-      metricsRegistries,
     });
 
     // dev debug option to have access to the BN instance
@@ -92,20 +92,22 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     }
 
     // Prune invalid SSZ objects every interval
-    const {persistInvalidSszObjectsDir} = args;
-    const pruneInvalidSSZObjectsInterval = persistInvalidSszObjectsDir
-      ? setInterval(() => {
-          try {
-            pruneOldFilesInDir(
-              persistInvalidSszObjectsDir,
-              (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
-            );
-          } catch (e) {
-            logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
-          }
-          // Run every ~1 hour
-        }, HOURS_TO_MS)
-      : null;
+    const {persistInvalidSszObjectsDir, persistInvalidSszObjects} = options.chain;
+    const pruneInvalidSSZObjectsInterval =
+      persistInvalidSszObjectsDir && persistInvalidSszObjects
+        ? setInterval(() => {
+            try {
+              const deletedFileCount = pruneOldFilesInDir(
+                persistInvalidSszObjectsDir,
+                (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
+              );
+              logger.info("Pruned invalid SSZ objects", {deletedFileCount});
+            } catch (e) {
+              logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
+            }
+            // Run every ~1 hour
+          }, HOURS_TO_MS)
+        : null;
 
     // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {
@@ -171,7 +173,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
   beaconNodeOptions.set({metrics: {validatorMonitorLogs: args.validatorMonitorLogs}});
   // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {version}});
+  beaconNodeOptions.set({api: {commit, version}});
 
   // Combine bootnodes from different sources
   const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
@@ -192,8 +194,12 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
 
+  if (args.disableLightClientServer) {
+    beaconNodeOptions.set({chain: {disableLightClientServer: true}});
+  }
+
   if (args.private) {
-    beaconNodeOptions.set({network: {private: true}});
+    beaconNodeOptions.set({network: {private: true}, api: {private: true}});
   } else {
     const versionStr = `Lodestar/${version}`;
     const simpleVersionStr = version.split("/")[0];
@@ -203,6 +209,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string
     beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
+    // Set commit and version for ClientVersion
+    beaconNodeOptions.set({executionEngine: {commit, version}});
   }
 
   // Render final options

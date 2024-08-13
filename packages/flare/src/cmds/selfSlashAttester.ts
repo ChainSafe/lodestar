@@ -1,6 +1,5 @@
-import bls from "@chainsafe/bls";
-import type {SecretKey} from "@chainsafe/bls/types";
-import {ApiError, getClient} from "@lodestar/api";
+import {SecretKey, aggregateSignatures} from "@chainsafe/blst";
+import {getClient} from "@lodestar/api";
 import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
@@ -22,7 +21,7 @@ export const selfSlashAttester: CliCommand<SelfSlashArgs, Record<never, never>, 
   describe: "Self slash validators of a provided mnemonic with AttesterSlashing",
   examples: [
     {
-      command: "self-slash-proposer --network goerli",
+      command: "self-slash-proposer --network holesky",
       description: "Self slash validators of a provided mnemonic",
     },
   ],
@@ -62,10 +61,9 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   const client = getClient({baseUrl: args.server}, {config: chainConfig});
 
   // Get genesis data to perform correct signatures
-  const res = await client.beacon.getGenesis();
-  ApiError.assert(res, "Can not fetch genesis data from beacon node");
+  const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
 
-  const config = createBeaconConfig(chainConfig, res.response.data.genesisValidatorsRoot);
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   // TODO: Allow to customize the ProposerSlashing payloads
 
@@ -81,11 +79,9 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const res = await client.beacon.getStateValidators("head", {id: pksHex});
-    ApiError.assert(res, "Can not fetch state validators from beacon node");
+    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pksHex})).value();
 
     // All validators in the batch will be part of the same AttesterSlashing
-    const validators = res.response.data;
     const attestingIndices = validators.map((v) => v.index);
 
     // Submit all ProposerSlashing for range at once
@@ -134,7 +130,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       },
     };
 
-    ApiError.assert(await client.beacon.submitPoolAttesterSlashings(attesterSlashing));
+    (await client.beacon.submitPoolAttesterSlashings({attesterSlashing})).assertOk();
 
     successCount += attestingIndices.length;
     const indexesStr = attestingIndices.join(",");
@@ -152,5 +148,5 @@ function signAttestationDataBigint(
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBigint, data, proposerDomain);
 
   const sigs = sks.map((sk) => sk.sign(signingRoot));
-  return bls.Signature.aggregate(sigs).toBytes();
+  return aggregateSignatures(sigs).toBytes();
 }

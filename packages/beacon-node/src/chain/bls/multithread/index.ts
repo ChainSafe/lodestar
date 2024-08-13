@@ -7,8 +7,7 @@ import {spawn, Worker} from "@chainsafe/threads";
 // @ts-ignore
 // eslint-disable-next-line
 self = undefined;
-import bls from "@chainsafe/bls";
-import {Implementation, PointFormat, PublicKey} from "@chainsafe/bls/types";
+import {PublicKey} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
@@ -17,6 +16,7 @@ import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {LinkedList} from "../../../util/array.js";
+import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode, WorkResultError} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -115,7 +115,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
 
-  private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
   private readonly jobs = new LinkedList<JobQueueItem>();
   private bufferedJobs: {
@@ -135,14 +134,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.metrics = metrics;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
-    // TODO: Allow to customize implementation
-    const implementation = bls.implementation;
-
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
-    this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
-    this.workers = this.createWorkers(implementation, blsPoolSize);
+    this.workers = this.createWorkers(blsPoolSize);
 
     if (metrics) {
       metrics.blsThreadPool.queueLength.addCollect(() => {
@@ -264,11 +259,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     );
   }
 
-  private createWorkers(implementation: Implementation, poolSize: number): WorkerDescriptor[] {
+  private createWorkers(poolSize: number): WorkerDescriptor[] {
     const workers: WorkerDescriptor[] = [];
 
     for (let i = 0; i < poolSize; i++) {
-      const workerData: WorkerData = {implementation, workerId: i};
+      const workerData: WorkerData = {workerId: i};
       const worker = new Worker(path.join(workerDir, "worker.js"), {
         workerData,
       } as ConstructorParameters<typeof Worker>[1]);
@@ -352,7 +347,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       } else {
         this.jobs.push(job);
       }
-      setTimeout(this.runJob, 0);
+      callInNextEventLoop(this.runJob);
     }
   }
 
@@ -399,7 +394,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = jobItemWorkReq(job, this.format, this.metrics);
+          workReq = jobItemWorkReq(job, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 
@@ -515,7 +510,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    setTimeout(this.runJob, 0);
+    callInNextEventLoop(this.runJob);
   };
 
   /**
@@ -550,7 +545,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      setTimeout(this.runJob, 0);
+      callInNextEventLoop(this.runJob);
     }
   };
 

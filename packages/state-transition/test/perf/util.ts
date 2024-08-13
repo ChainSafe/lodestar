@@ -1,12 +1,12 @@
-import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
+import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {phase0, ssz, Slot, BeaconState} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
+  ForkName,
   MAX_ATTESTATIONS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
@@ -63,7 +63,7 @@ export const perfStateEpoch = epoch;
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getPubkeys(vc = numValidators) {
   const pubkeysMod = interopPubkeysCached(keypairsMod);
-  const pubkeysModObj = pubkeysMod.map((pk) => bls.PublicKey.fromBytes(pk, CoordType.jacobian));
+  const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.fromBytes(pk));
   const pubkeys = Array.from({length: vc}, (_, i) => pubkeysMod[i % keypairsMod]);
   return {pubkeysMod, pubkeysModObj, pubkeys};
 }
@@ -255,7 +255,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
   if (!altairState) {
     const pubkeys = pubkeysArg || getPubkeys().pubkeys;
     const statePhase0 = buildPerformanceStatePhase0(pubkeys);
-    const state = statePhase0 as allForks.BeaconState as altair.BeaconState;
+    const state = statePhase0 as BeaconState as BeaconState<ForkName.altair>;
 
     state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
     state.currentEpochParticipation = state.previousEpochParticipation;

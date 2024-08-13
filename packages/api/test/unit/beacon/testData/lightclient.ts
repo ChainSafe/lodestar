@@ -1,29 +1,28 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {Api} from "../../../../src/beacon/routes/lightclient.js";
+import {Endpoints} from "../../../../src/beacon/routes/lightclient.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const root = Uint8Array.from(Buffer.alloc(32, 1));
+const root = new Uint8Array(32).fill(1);
 
 const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
 const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
 const header = ssz.altair.LightClientHeader.defaultValue();
 const signatureSlot = ssz.Slot.defaultValue();
 
-export const testData: GenericServerTestCases<Api> = {
-  getUpdates: {
-    args: [1, 2],
-    res: [{version: ForkName.bellatrix, data: lightClientUpdate}],
+export const testData: GenericServerTestCases<Endpoints> = {
+  getLightClientUpdatesByRange: {
+    args: {startPeriod: 1, count: 2},
+    res: {data: [lightClientUpdate], meta: {versions: [ForkName.bellatrix]}},
   },
-  getOptimisticUpdate: {
-    args: [],
-    res: {version: ForkName.bellatrix, data: {syncAggregate, attestedHeader: header, signatureSlot}},
+  getLightClientOptimisticUpdate: {
+    args: undefined,
+    res: {data: {syncAggregate, attestedHeader: header, signatureSlot}, meta: {version: ForkName.bellatrix}},
   },
-  getFinalityUpdate: {
-    args: [],
+  getLightClientFinalityUpdate: {
+    args: undefined,
     res: {
-      version: ForkName.bellatrix,
       data: {
         syncAggregate,
         attestedHeader: header,
@@ -31,21 +30,22 @@ export const testData: GenericServerTestCases<Api> = {
         finalityBranch: lightClientUpdate.finalityBranch,
         signatureSlot: lightClientUpdate.attestedHeader.beacon.slot + 1,
       },
+      meta: {version: ForkName.bellatrix},
     },
   },
-  getBootstrap: {
-    args: [toHexString(root)],
+  getLightClientBootstrap: {
+    args: {blockRoot: toHexString(root)},
     res: {
-      version: ForkName.bellatrix,
       data: {
         header,
         currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
         currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
       },
+      meta: {version: ForkName.bellatrix},
     },
   },
-  getCommitteeRoot: {
-    args: [1, 2],
-    res: {data: [Uint8Array.from(Buffer.alloc(32, 0)), Uint8Array.from(Buffer.alloc(32, 1))]},
+  getLightClientCommitteeRoot: {
+    args: {startPeriod: 1, count: 2},
+    res: {data: [new Uint8Array(32), new Uint8Array(32).fill(1)]},
   },
 };

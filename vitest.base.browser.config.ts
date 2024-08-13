@@ -3,15 +3,30 @@ import {defineConfig} from "vitest/config";
 const __dirname = new URL(".", import.meta.url).pathname;
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import topLevelAwait from "vite-plugin-top-level-await";
+import {blsBrowserPlugin} from "./scripts/vite/plugins/blsBrowserPlugin.js";
 
 export default defineConfig({
   plugins: [
     topLevelAwait(),
+    blsBrowserPlugin(),
     nodePolyfills({
       include: ["buffer", "process", "util", "string_decoder", "url", "querystring", "events"],
       globals: {Buffer: true, process: true},
       protocolImports: true,
     }),
+    // TODO: Should be removed when the vite issue is fixed
+    // https://github.com/vitest-dev/vitest/issues/6203#issuecomment-2245836028
+    {
+      name: "defineArgv",
+      config() {
+        return {
+          define: {
+            "process.argv": "[]",
+            "process.nextTick": "function noop(){}",
+          },
+        };
+      },
+    },
   ],
   test: {
     include: ["**/*.test.ts"],
@@ -33,7 +48,7 @@ export default defineConfig({
       name: "chrome",
       headless: true,
       provider: "webdriverio",
-      slowHijackESM: false,
+      screenshotFailures: false,
       providerOptions: {
         capabilities: {
           browserVersion: "latest",

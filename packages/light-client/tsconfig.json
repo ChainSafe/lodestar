@@ -1,4 +1,5 @@
 {
   "extends": "../../tsconfig.json",
+  "exclude": ["src/index.browser.ts", "test/unit/webEsmBundle.browser.test.ts"],
   "compilerOptions": {}
 }

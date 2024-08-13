@@ -3,7 +3,7 @@ import {randomBytes} from "node:crypto";
 import {describe, it, expect, beforeEach, vi} from "vitest";
 import tmp from "tmp";
 import {Keystore} from "@chainsafe/bls-keystore";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {loadKeystoreCache, writeKeystoreCache} from "../../../../../src/cmds/validator/keymanager/keystoreCache.js";
@@ -12,7 +12,7 @@ import {LocalKeystoreDefinition} from "../../../../../src/cmds/validator/keymana
 const numberOfSigners = 10;
 
 describe("keystoreCache", () => {
-  vi.setConfig({testTimeout: 10000, hookTimeout: 50000});
+  vi.setConfig({testTimeout: 20_000, hookTimeout: 50_000});
   let definitions: LocalKeystoreDefinition[];
   let signers: SignerLocal[];
   let secretKeys: Uint8Array[];
@@ -27,7 +27,7 @@ describe("keystoreCache", () => {
     keystoreCacheFile = tmp.tmpNameSync({postfix: ".cache"});
 
     for (let i = 0; i < numberOfSigners; i++) {
-      const secretKey = bls.SecretKey.fromBytes(interopSecretKey(i).toBytes());
+      const secretKey = SecretKey.fromBytes(interopSecretKey(i).toBytes());
       const keystorePath = tmp.tmpNameSync({postfix: ".json"});
       const password = secretKey.toHex();
       const keystore = await Keystore.create(

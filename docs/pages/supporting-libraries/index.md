@@ -4,7 +4,7 @@
 
 ### LibP2P
 
-- [`@chainsafe/js-libp2p-noise`](https://github.com/NodeFactoryIo/js-libp2p-noise) - [Noise](https://noiseprotocol.org/noise.html) handshake for `js-libp2p`
+- [`@chainsafe/js-libp2p-noise`](https://github.com/ChainSafe/js-libp2p-noise) - [Noise](https://noiseprotocol.org/noise.html) handshake for `js-libp2p`
 - [`@chainsafe/js-libp2p-gossipsub`](https://github.com/ChainSafe/js-libp2p-gossipsub) - [Gossipsub](https://github.com/libp2p/specs/tree/master/pubsub/gossipsub) protocol for `js-libp2p`
 - [`@chainsafe/libp2p-yamux`](https://github.com/ChainSafe/js-libp2p-yamux)
 

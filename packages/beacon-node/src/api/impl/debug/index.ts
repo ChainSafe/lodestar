@@ -1,17 +1,16 @@
-import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
-import {resolveStateId} from "../beacon/state/utils.js";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
+import {BeaconState} from "@lodestar/types";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
 
-export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.debug.Api> {
+export function getDebugApi({
+  chain,
+  config,
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.debug.Endpoints> {
   return {
-    async getDebugChainHeads() {
-      const heads = chain.forkChoice.getHeads();
-      return {
-        data: heads.map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot})),
-      };
-    },
-
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
       return {
@@ -36,26 +35,24 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
       return {data: nodes};
     },
 
-    async getState(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
-      if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return state.serialize() as any;
+    async getStateV2({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      let slot: number, data: Uint8Array | BeaconState;
+      if (state instanceof Uint8Array) {
+        slot = getStateSlotFromBytes(state);
+        data = state;
       } else {
-        return {data: state.toValue()};
+        slot = state.slot;
+        data = context?.returnBytes ? state.serialize() : state.toValue();
       }
-    },
-
-    async getStateV2(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
-      if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return state.serialize() as any;
-      } else {
-        return {data: state.toValue(), version: config.getForkName(state.slot)};
-      }
+      return {
+        data,
+        meta: {
+          version: config.getForkName(slot),
+          executionOptimistic,
+          finalized,
+        },
+      };
     },
   };
 }

@@ -12,6 +12,7 @@ import {
   ProtoArray,
   ExecutionStatus,
   EpochDifference,
+  DataAvailabilityStatus,
 } from "../../../src/index.js";
 
 const rootStateBytePrefix = 0xaa;
@@ -41,6 +42,7 @@ describe("Forkchoice", function () {
 
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
@@ -103,6 +105,7 @@ describe("Forkchoice", function () {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
   };
 

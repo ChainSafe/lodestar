@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, Slot, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochTransitionCache, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
@@ -51,6 +51,7 @@ export enum StateHashTreeRootSource {
   stateTransition = "state_transition",
   blockTransition = "block_transition",
   prepareNextSlot = "prepare_next_slot",
+  prepareNextEpoch = "prepare_next_epoch",
   computeNewStateRoot = "compute_new_state_root",
 }
 
@@ -59,7 +60,7 @@ export enum StateHashTreeRootSource {
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
   options: StateTransitionOpts = {
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -194,8 +195,16 @@ function processSlotsWithTransientCache(
 
       processEpoch(fork, postState, epochTransitionCache, metrics);
 
-      const {currentEpoch, statuses, balances} = epochTransitionCache;
-      metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);
+      const {currentEpoch, inclusionDelays, flags, isActiveCurrEpoch, isActivePrevEpoch, balances} =
+        epochTransitionCache;
+      metrics?.registerValidatorStatuses(
+        currentEpoch,
+        inclusionDelays,
+        flags,
+        isActiveCurrEpoch,
+        isActivePrevEpoch,
+        balances
+      );
 
       postState.slot++;
 

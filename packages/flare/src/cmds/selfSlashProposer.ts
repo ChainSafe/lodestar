@@ -1,5 +1,5 @@
-import type {SecretKey} from "@chainsafe/bls/types";
-import {ApiError, getClient} from "@lodestar/api";
+import {SecretKey} from "@chainsafe/blst";
+import {getClient} from "@lodestar/api";
 import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
@@ -21,7 +21,7 @@ export const selfSlashProposer: CliCommand<SelfSlashArgs, Record<never, never>, 
   describe: "Self slash validators of a provided mnemonic with ProposerSlashing",
   examples: [
     {
-      command: "self-slash-proposer --network goerli",
+      command: "self-slash-proposer --network holesky",
       description: "Self slash validators of a provided mnemonic",
     },
   ],
@@ -60,9 +60,8 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
   const client = getClient({baseUrl: args.server}, {config: chainConfig});
 
   // Get genesis data to perform correct signatures
-  const res = await client.beacon.getGenesis();
-  ApiError.assert(res, "Can not fetch genesis data from beacon node");
-  const config = createBeaconConfig(chainConfig, res.response.data.genesisValidatorsRoot);
+  const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   // TODO: Allow to customize the ProposerSlashing payloads
 
@@ -78,9 +77,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const res = await client.beacon.getStateValidators("head", {id: pksHex});
-    ApiError.assert(res, "Can not fetch state validators from beacon node");
-    const validators = res.response.data;
+    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pksHex})).value();
 
     // Submit all ProposerSlashing for range at once
     await Promise.all(
@@ -124,7 +121,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
             },
           };
 
-          ApiError.assert(await client.beacon.submitPoolProposerSlashings(proposerSlashing));
+          (await client.beacon.submitPoolProposerSlashings({proposerSlashing})).assertOk();
 
           console.log(`Submitted self ProposerSlashing for validator ${index} - ${++successCount}/${totalCount}`);
         } catch (e) {

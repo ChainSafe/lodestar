@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {DatabaseController, Repository} from "@lodestar/db";
-import {ssz, SyncPeriod, allForks} from "@lodestar/types";
+import {LightClientUpdate, ssz, SyncPeriod} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const SLOT_BYTE_COUNT = 8;
@@ -10,7 +10,7 @@ const SLOT_BYTE_COUNT = 8;
  *
  * Used to prepare light client updates
  */
-export class BestLightClientUpdateRepository extends Repository<SyncPeriod, allForks.LightClientUpdate> {
+export class BestLightClientUpdateRepository extends Repository<SyncPeriod, LightClientUpdate> {
   constructor(config: ChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
     // Pick some type but won't be used
     const bucket = Bucket.lightClient_bestLightClientUpdate;
@@ -18,7 +18,7 @@ export class BestLightClientUpdateRepository extends Repository<SyncPeriod, allF
   }
 
   // Overrides for multi-fork
-  encodeValue(value: allForks.LightClientUpdate): Uint8Array {
+  encodeValue(value: LightClientUpdate): Uint8Array {
     // Not easy to have a fixed slot position for all forks in attested header, so lets
     // prefix by attestedHeader's slot bytes
     const slotBytes = ssz.Slot.serialize(value.attestedHeader.beacon.slot);
@@ -33,7 +33,7 @@ export class BestLightClientUpdateRepository extends Repository<SyncPeriod, allF
     return prefixedData;
   }
 
-  decodeValue(data: Uint8Array): allForks.LightClientUpdate {
+  decodeValue(data: Uint8Array): LightClientUpdate {
     // First slot is written
     const slot = ssz.Slot.deserialize(data.subarray(0, SLOT_BYTE_COUNT));
     return this.config.getLightClientForkTypes(slot).LightClientUpdate.deserialize(data.subarray(SLOT_BYTE_COUNT));

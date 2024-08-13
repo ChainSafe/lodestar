@@ -2,8 +2,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger, toSafePrintableUrl} from "@lodestar/utils";
-import {getClient, Api, routes, ApiError} from "@lodestar/api";
+import {Logger, toPrintableUrl} from "@lodestar/utils";
+import {getClient, ApiClient, routes, ApiRequestInit, defaultInit} from "@lodestar/api";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
 import {waitForGenesis} from "./genesis.js";
@@ -12,13 +12,15 @@ import {AttestationService} from "./services/attestation.js";
 import {IndicesService} from "./services/indices.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepareBeaconProposer.js";
+import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
 import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
+import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {BeaconHealth, Metrics} from "./metrics.js";
+import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
@@ -31,9 +33,10 @@ export type ValidatorModules = {
   attestationService: AttestationService;
   syncCommitteeService: SyncCommitteeService;
   config: BeaconConfig;
-  api: Api;
+  api: ApiClient;
   clock: IClock;
   chainHeaderTracker: ChainHeaderTracker;
+  syncingStatusTracker: SyncingStatusTracker;
   logger: Logger;
   db: LodestarValidatorDatabaseController;
   metrics: Metrics | null;
@@ -44,7 +47,10 @@ export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   db: LodestarValidatorDatabaseController;
   config: ChainForkConfig;
-  api: Api | string | string[];
+  api: {
+    clientOrUrls: ApiClient | string | string[];
+    globalInit?: ApiRequestInit;
+  };
   signers: Signer[];
   logger: Logger;
   processShutdownCallback: ProcessShutdownCallback;
@@ -59,6 +65,7 @@ export type ValidatorOptions = {
   useProduceBlockV3?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
+  externalSigner?: ExternalSignerOptions;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -81,9 +88,10 @@ export class Validator {
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly config: BeaconConfig;
-  private readonly api: Api;
+  private readonly api: ApiClient;
   private readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
+  readonly syncingStatusTracker: SyncingStatusTracker;
   private readonly logger: Logger;
   private readonly db: LodestarValidatorDatabaseController;
   private state: Status;
@@ -101,6 +109,7 @@ export class Validator {
     api,
     clock,
     chainHeaderTracker,
+    syncingStatusTracker,
     logger,
     db,
     metrics,
@@ -116,6 +125,7 @@ export class Validator {
     this.api = api;
     this.clock = clock;
     this.chainHeaderTracker = chainHeaderTracker;
+    this.syncingStatusTracker = syncingStatusTracker;
     this.logger = logger;
     this.controller = controller;
     this.db = db;
@@ -123,21 +133,29 @@ export class Validator {
     if (opts.closed) {
       this.state = Status.closed;
     } else {
-      // "start" the validator
-      // Instantiates block and attestation services and runs them once the chain has been started.
-      this.state = Status.running;
-      this.clock.start(this.controller.signal);
-      this.chainHeaderTracker.start(this.controller.signal);
+      // Add notifier to warn user if primary node is unhealthy as there might
+      // not be any errors in the logs due to fallback nodes handling the requests
+      const {httpClient} = this.api;
+      if (httpClient.urlsInits.length > 1) {
+        const primaryNodeUrl = toPrintableUrl(httpClient.urlsInits[0].baseUrl);
+
+        this.clock.runEveryEpoch(async () => {
+          // Only emit warning if URL score is 0 to prevent false positives
+          // if just a single request fails which might happen due to other reasons
+          if (httpClient.urlsScore[0] === 0) {
+            this.logger.warn("Primary beacon node is unhealthy", {url: primaryNodeUrl});
+          }
+        });
+      }
 
       if (metrics) {
         this.db.setMetrics(metrics.db);
-
-        this.clock.runEverySlot(() =>
-          this.fetchBeaconHealth()
-            .then((health) => metrics.beaconHealth.set(health))
-            .catch((e) => this.logger.error("Error on fetchBeaconHealth", {}, e))
-        );
       }
+
+      // "start" the validator
+      this.state = Status.running;
+      this.clock.start(this.controller.signal);
+      this.chainHeaderTracker.start(this.controller.signal);
     }
   }
 
@@ -155,22 +173,20 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
 
-    let api: Api;
-    if (typeof opts.api === "string" || Array.isArray(opts.api)) {
-      // This new api instance can make do with default timeout as a faster timeout is
-      // not necessary since this instance won't be used for validator duties
+    let api: ApiClient;
+    const {clientOrUrls, globalInit} = opts.api;
+    if (typeof clientOrUrls === "string" || Array.isArray(clientOrUrls)) {
       api = getClient(
         {
-          urls: typeof opts.api === "string" ? [opts.api] : opts.api,
+          urls: typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls,
           // Validator would need the beacon to respond within the slot
           // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
-          timeoutMs: config.SECONDS_PER_SLOT * 1000,
-          getAbortSignal: () => controller.signal,
+          globalInit: {timeoutMs: config.SECONDS_PER_SLOT * 1000, signal: controller.signal, ...globalInit},
         },
         {config, logger, metrics: metrics?.restApiClient}
       );
     } else {
-      api = opts.api;
+      api = clientOrUrls;
     }
 
     const indicesService = new IndicesService(logger, api, metrics);
@@ -200,6 +216,7 @@ export class Validator {
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
+    pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts.externalSigner);
 
     const emitter = new ValidatorEventEmitter();
     // Validator event emitter can have more than 10 listeners in a normal course of operation
@@ -207,6 +224,7 @@ export class Validator {
     emitter.setMaxListeners(Infinity);
 
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
+    const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       useProduceBlockV3: opts.useProduceBlockV3,
@@ -221,6 +239,7 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
+      syncingStatusTracker,
       metrics,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
@@ -237,6 +256,7 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
+      syncingStatusTracker,
       metrics,
       {
         scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction,
@@ -256,6 +276,7 @@ export class Validator {
       api,
       clock,
       chainHeaderTracker,
+      syncingStatusTracker,
       logger,
       db,
       metrics,
@@ -267,23 +288,27 @@ export class Validator {
   static async initializeFromBeaconNode(opts: ValidatorOptions, metrics?: Metrics | null): Promise<Validator> {
     const {logger, config} = opts;
 
-    let api: Api;
-    if (typeof opts.api === "string" || Array.isArray(opts.api)) {
-      const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
+    let api: ApiClient;
+    const {clientOrUrls, globalInit} = opts.api;
+    if (typeof clientOrUrls === "string" || Array.isArray(clientOrUrls)) {
+      const urls = typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls;
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
-      api = getClient({urls, getAbortSignal: () => opts.abortController.signal}, {config, logger});
-      logger.info("Beacon node", {urls: urls.map(toSafePrintableUrl).toString()});
+      api = getClient({urls, globalInit: {signal: opts.abortController.signal, ...globalInit}}, {config, logger});
+      logger.info("Beacon node", {
+        urls: urls.map(toPrintableUrl).toString(),
+        requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
+        responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
+      });
     } else {
-      api = opts.api;
+      api = clientOrUrls;
     }
 
     const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node");
 
     const res = await api.config.getSpec();
-    ApiError.assert(res, "Can not fetch spec from beacon node");
-    assertEqualParams(config, res.response.data);
+    assertEqualParams(config, res.value());
     logger.info("Verified connected beacon node and validator have same the config");
 
     await assertEqualGenesis(opts, genesis);
@@ -304,6 +329,7 @@ export class Validator {
       strictFeeRecipientCheck,
     });
 
+    // Instantiates block and attestation services and runs them once the chain has been started.
     return Validator.init(opts, genesis, metrics);
   }
 
@@ -337,7 +363,7 @@ export class Validator {
   async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
     const signedVoluntaryExit = await this.signVoluntaryExit(publicKey, exitEpoch);
 
-    ApiError.assert(await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit));
+    (await this.api.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }
@@ -346,12 +372,10 @@ export class Validator {
    * Create a signed voluntary exit message for the given validator by its key.
    */
   async signVoluntaryExit(publicKey: string, exitEpoch?: number): Promise<phase0.SignedVoluntaryExit> {
-    const res = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
-    ApiError.assert(res, "Can not fetch state validators from beacon node");
+    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
 
-    const stateValidators = res.response.data;
-    const stateValidator = stateValidators[0];
-    if (stateValidator === undefined) {
+    const validator = validators[0];
+    if (validator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
 
@@ -359,24 +383,7 @@ export class Validator {
       exitEpoch = computeEpochAtSlot(getCurrentSlot(this.config, this.clock.genesisTime));
     }
 
-    return this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
-  }
-
-  private async fetchBeaconHealth(): Promise<BeaconHealth> {
-    try {
-      const {status: healthCode} = await this.api.node.getHealth();
-      // API always returns http status codes
-      // Need to find a way to return a custom enum type
-      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.READY) return BeaconHealth.READY;
-      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.SYNCING)
-        return BeaconHealth.SYNCING;
-      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
-        return BeaconHealth.NOT_INITIALIZED_OR_ISSUES;
-      else return BeaconHealth.UNKNOWN;
-    } catch (e) {
-      // TODO: Filter by network error type
-      return BeaconHealth.ERROR;
-    }
+    return this.validatorStore.signVoluntaryExit(publicKey, validator.index, exitEpoch);
   }
 }
 

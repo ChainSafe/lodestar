@@ -16,6 +16,9 @@ module.exports = {
     project: "./tsconfig.json",
     sourceType: "module",
   },
+  ignorePatterns: [
+    "webEsmBundle.browser.test.ts"
+  ],
   plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "prettier"],
   extends: [
     "eslint:recommended",
@@ -194,7 +197,14 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["**/*.config.js", "**/*.config.mjs", "**/*.config.cjs", "**/*.config.ts"],
+      files: [
+        "**/*.config.js",
+        "**/*.config.mjs",
+        "**/*.config.cjs",
+        "**/*.config.ts",
+        "scripts/vitest/**/*.ts",
+        "scripts/vite/**/*.ts",
+      ],
       rules: {
         "@typescript-eslint/naming-convention": "off",
         // Allow require in CJS modules

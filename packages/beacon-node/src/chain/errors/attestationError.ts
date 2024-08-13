@@ -1,5 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {
@@ -167,7 +167,7 @@ export class AttestationError extends GossipActionError<AttestationErrorType> {
     const type = this.type;
     switch (type.code) {
       case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-        return {code: type.code, root: toHexString(type.root)};
+        return {code: type.code, root: toRootHex(type.root)};
       case AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION:
         // TODO: The stack trace gets lost here
         return {code: type.code, error: type.error.message};

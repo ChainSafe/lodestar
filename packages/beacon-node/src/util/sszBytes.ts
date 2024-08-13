@@ -1,6 +1,5 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {BLSSignature, RootHex, Slot} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
@@ -25,6 +24,10 @@ const SLOT_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
 const SIGNATURE_SIZE = 96;
 
+// shared Buffers to convert bytes to hex/base64
+const blockRootBuf = Buffer.alloc(ROOT_SIZE);
+const attDataBuf = Buffer.alloc(ATTESTATION_DATA_SIZE);
+
 /**
  * Extract slot from attestation serialized bytes.
  * Return null if data is not long enough to extract slot.
@@ -46,7 +49,10 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
     return null;
   }
 
-  return toHex(data.subarray(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE));
+  blockRootBuf.set(
+    data.subarray(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE)
+  );
+  return "0x" + blockRootBuf.toString("hex");
 }
 
 /**
@@ -59,9 +65,8 @@ export function getAttDataBase64FromAttestationSerialized(data: Uint8Array): Att
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE)).toString(
-    "base64"
-  );
+  attDataBuf.set(data.subarray(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE));
+  return attDataBuf.toString("base64");
 }
 
 /**
@@ -132,12 +137,13 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
     return null;
   }
 
-  return toHex(
+  blockRootBuf.set(
     data.subarray(
       SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET,
       SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET + ROOT_SIZE
     )
   );
+  return "0x" + blockRootBuf.toString("hex");
 }
 
 /**
@@ -150,9 +156,13 @@ export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(
-    data.slice(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE)
-  ).toString("base64");
+  attDataBuf.set(
+    data.subarray(
+      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET,
+      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE
+    )
+  );
+  return attDataBuf.toString("base64");
 }
 
 /**
@@ -200,9 +210,22 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR);
 }
 
-function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
-  // TODO: Optimize
-  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
-  return dv.getUint32(offset, true);
+/**
+ * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
+ *
+ * If the high bytes are not zero, return null
+ */
+function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
+  return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
+}
+
+/**
+ * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
+ */
+function getSlotFromOffsetTrusted(data: Uint8Array, offset: number): Slot {
+  return (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0;
+}
+
+function checkSlotHighBytes(data: Uint8Array, offset: number): boolean {
+  return (data[offset + 4] | data[offset + 5] | data[offset + 6] | data[offset + 7]) === 0;
 }

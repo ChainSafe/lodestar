@@ -1,10 +1,4 @@
-import {
-  AttesterFlags,
-  FLAG_ELIGIBLE_ATTESTER,
-  hasMarkers,
-  AttesterStatus,
-  toAttesterFlags,
-} from "../../../src/index.js";
+import {AttesterFlags, toAttesterFlags} from "../../../src/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochTransitionCache} from "../../../src/types.js";
 
 /**
@@ -19,17 +13,12 @@ export function generateBalanceDeltasEpochTransitionCache(
 ): EpochTransitionCache {
   const vc = state.validators.length;
 
-  const statuses = generateStatuses(state.validators.length, flagFactors);
-  const eligibleValidatorIndices: number[] = [];
-  for (let i = 0; i < statuses.length; i++) {
-    if (hasMarkers(statuses[i].flags, FLAG_ELIGIBLE_ATTESTER)) {
-      eligibleValidatorIndices.push(i);
-    }
-  }
+  const {proposerIndices, inclusionDelays, flags} = generateStatuses(state.validators.length, flagFactors);
 
   const cache: Partial<EpochTransitionCache> = {
-    statuses,
-    eligibleValidatorIndices,
+    proposerIndices,
+    inclusionDelays,
+    flags,
     totalActiveStakeByIncrement: vc,
     baseRewardPerIncrement: 726,
     prevEpochUnslashedStake: {
@@ -45,19 +34,21 @@ export function generateBalanceDeltasEpochTransitionCache(
 
 export type FlagFactors = Record<keyof AttesterFlags, number> | number;
 
-function generateStatuses(vc: number, flagFactors: FlagFactors): AttesterStatus[] {
+function generateStatuses(
+  vc: number,
+  flagFactors: FlagFactors
+): {proposerIndices: number[]; inclusionDelays: number[]; flags: number[]} {
   const totalProposers = 32;
-  const statuses = new Array<AttesterStatus>(vc);
+  const proposerIndices = new Array<number>(vc);
+  const inclusionDelays = new Array<number>(vc);
+  const flags = new Array(vc).fill(0);
 
   for (let i = 0; i < vc; i++) {
     // Set to number to set all validators to the same value
     if (typeof flagFactors === "number") {
-      statuses[i] = {
-        flags: flagFactors,
-        proposerIndex: i % totalProposers,
-        inclusionDelay: 1 + (i % 4),
-        active: true,
-      };
+      proposerIndices[i] = i % totalProposers;
+      inclusionDelays[i] = 1 + (i % 4);
+      flags[i] = flagFactors;
     } else {
       // Use a factor to set some validators to this flag
       const flagsObj: AttesterFlags = {
@@ -70,14 +61,11 @@ function generateStatuses(vc: number, flagFactors: FlagFactors): AttesterStatus[
         unslashed: i < vc * flagFactors.unslashed, // 6
         eligibleAttester: i < vc * flagFactors.eligibleAttester, // 7
       };
-      statuses[i] = {
-        flags: toAttesterFlags(flagsObj),
-        proposerIndex: i % totalProposers,
-        inclusionDelay: 1 + (i % 4),
-        active: true,
-      };
+      proposerIndices[i] = i % totalProposers;
+      inclusionDelays[i] = 1 + (i % 4);
+      flags[i] = toAttesterFlags(flagsObj);
     }
   }
 
-  return statuses;
+  return {proposerIndices, inclusionDelays, flags};
 }

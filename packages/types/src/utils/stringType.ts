@@ -44,6 +44,9 @@ export class StringType<T extends string = string> extends BasicType<T> {
   // JSON
 
   fromJson(json: unknown): T {
+    if (typeof json !== "string") {
+      throw Error(`JSON invalid type ${typeof json} expected string`);
+    }
     return json as T;
   }
 

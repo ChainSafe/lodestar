@@ -1,5 +1,5 @@
 import {Epoch, bellatrix} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
@@ -19,7 +19,7 @@ const REGISTRATION_CHUNK_SIZE = 512;
 export function pollPrepareBeaconProposer(
   config: BeaconConfig,
   logger: LoggerVc,
-  api: Api,
+  api: ApiClient,
   clock: IClock,
   validatorStore: ValidatorStore,
   _metrics: Metrics | null
@@ -40,11 +40,11 @@ export function pollPrepareBeaconProposer(
       try {
         const proposers = indices.map(
           (index): routes.validator.ProposerPreparationData => ({
-            validatorIndex: String(index as number),
+            validatorIndex: index,
             feeRecipient: validatorStore.getFeeRecipientByIndex(index),
           })
         );
-        ApiError.assert(await api.validator.prepareBeaconProposer(proposers));
+        (await api.validator.prepareBeaconProposer({proposers})).assertOk();
         logger.debug("Registered proposers with beacon node", {epoch, count: proposers.length});
       } catch (e) {
         logger.error("Failed to register proposers with beacon node", {epoch}, e as Error);
@@ -65,7 +65,7 @@ export function pollPrepareBeaconProposer(
 export function pollBuilderValidatorRegistration(
   config: BeaconConfig,
   logger: LoggerVc,
-  api: Api,
+  api: ApiClient,
   clock: IClock,
   validatorStore: ValidatorStore,
   _metrics: Metrics | null
@@ -102,7 +102,7 @@ export function pollBuilderValidatorRegistration(
               return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
             })
           );
-          ApiError.assert(await api.validator.registerValidator(registrations));
+          (await api.validator.registerValidator({registrations})).assertOk();
           logger.info("Published validator registrations to builder", {epoch, count: registrations.length});
         } catch (e) {
           logger.error("Failed to publish validator registrations to builder", {epoch}, e as Error);

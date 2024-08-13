@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
-import {Api, ReqTypes, getReturnTypes} from "../../../../src/beacon/routes/config.js";
+import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/config.js";
 import {getClient} from "../../../../src/beacon/client/config.js";
 import {getRoutes} from "../../../../src/beacon/server/config.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
@@ -9,10 +9,10 @@ import {testData} from "../testData/config.js";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("beacon / config", () => {
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
+  runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
   it("Serialize Partial Spec object", () => {
-    const returnTypes = getReturnTypes();
+    const {getSpec} = getDefinitions(config);
 
     const partialJsonSpec: Record<string, string> = {
       PRESET_BASE: "mainnet",
@@ -22,9 +22,9 @@ describe("beacon / config", () => {
       MIN_GENESIS_TIME: "1606824000",
     };
 
-    const jsonRes = returnTypes.getSpec.toJson({data: partialJsonSpec});
-    const specRes = returnTypes.getSpec.fromJson(jsonRes);
+    const jsonRes = getSpec.resp.data.toJson(partialJsonSpec);
+    const specRes = getSpec.resp.data.fromJson(jsonRes);
 
-    expect(specRes).toEqual({data: partialJsonSpec});
+    expect(specRes).toEqual(partialJsonSpec);
   });
 });

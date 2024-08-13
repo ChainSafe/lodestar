@@ -10,7 +10,7 @@ import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
-import {toCheckpointHex} from "../../../../src/chain/index.js";
+import {FIFOBlockStateCache, toCheckpointHex} from "../../../../src/chain/index.js";
 
 describe("PersistentCheckpointStateCache", function () {
   let root0a: Buffer, root0b: Buffer, root1: Buffer, root2: Buffer;
@@ -87,7 +87,12 @@ describe("PersistentCheckpointStateCache", function () {
     fileApisBuffer = new Map();
     const datastore = getTestDatastore(fileApisBuffer);
     cache = new PersistentCheckpointStateCache(
-      {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
+      {
+        datastore,
+        logger: testLogger(),
+        shufflingCache: new ShufflingCache(),
+        blockStateCache: new FIFOBlockStateCache({}, {}),
+      },
       {maxCPStateEpochsInMemory: 2, processLateBlock: true}
     );
     cache.add(cp0a, states["cp0a"]);
@@ -157,7 +162,12 @@ describe("PersistentCheckpointStateCache", function () {
       fileApisBuffer = new Map();
       const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
-        {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
+        {
+          datastore,
+          logger: testLogger(),
+          shufflingCache: new ShufflingCache(),
+          blockStateCache: new FIFOBlockStateCache({}, {}),
+        },
         {maxCPStateEpochsInMemory: 2, processLateBlock: true}
       );
       cache.add(cp0a, states["cp0a"]);
@@ -229,7 +239,12 @@ describe("PersistentCheckpointStateCache", function () {
       fileApisBuffer = new Map();
       const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
-        {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
+        {
+          datastore,
+          logger: testLogger(),
+          shufflingCache: new ShufflingCache(),
+          blockStateCache: new FIFOBlockStateCache({}, {}),
+        },
         {maxCPStateEpochsInMemory: 2, processLateBlock: true}
       );
       cache.add(cp0a, states["cp0a"]);
@@ -530,7 +545,12 @@ describe("PersistentCheckpointStateCache", function () {
       fileApisBuffer = new Map();
       const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
-        {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
+        {
+          datastore,
+          logger: testLogger(),
+          shufflingCache: new ShufflingCache(),
+          blockStateCache: new FIFOBlockStateCache({}, {}),
+        },
         {maxCPStateEpochsInMemory: 1, processLateBlock: true}
       );
       cache.add(cp0a, states["cp0a"]);
@@ -797,7 +817,12 @@ describe("PersistentCheckpointStateCache", function () {
         fileApisBuffer = new Map();
         const datastore = getTestDatastore(fileApisBuffer);
         cache = new PersistentCheckpointStateCache(
-          {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
+          {
+            datastore,
+            logger: testLogger(),
+            shufflingCache: new ShufflingCache(),
+            blockStateCache: new FIFOBlockStateCache({}, {}),
+          },
           {maxCPStateEpochsInMemory: 0, processLateBlock: true}
         );
         cache.add(cp0a, states["cp0a"]);
@@ -883,7 +908,12 @@ describe("PersistentCheckpointStateCache", function () {
         fileApisBuffer = new Map();
         const datastore = getTestDatastore(fileApisBuffer);
         cache = new PersistentCheckpointStateCache(
-          {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
+          {
+            datastore,
+            logger: testLogger(),
+            shufflingCache: new ShufflingCache(),
+            blockStateCache: new FIFOBlockStateCache({}, {}),
+          },
           {maxCPStateEpochsInMemory: 0, processLateBlock: true}
         );
 

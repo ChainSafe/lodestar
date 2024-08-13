@@ -5,7 +5,7 @@ import {
   StateHashTreeRootSource,
   stateTransition,
 } from "@lodestar/state-transition";
-import {allForks, Gwei, Root} from "@lodestar/types";
+import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -17,10 +17,10 @@ import {Metrics} from "../../metrics/index.js";
 export function computeNewStateRoot(
   metrics: Metrics | null,
   state: CachedBeaconStateAllForks,
-  block: allForks.FullOrBlindedBeaconBlock
+  block: BeaconBlock | BlindedBeaconBlock
 ): {newStateRoot: Root; proposerReward: Gwei} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
-  const blockEmptySig = {message: block, signature: ZERO_HASH} as allForks.FullOrBlindedSignedBeaconBlock;
+  const blockEmptySig = {message: block, signature: ZERO_HASH};
 
   const postState = stateTransition(
     state,

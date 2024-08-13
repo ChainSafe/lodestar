@@ -19,7 +19,7 @@ describe("PrepareNextSlot scheduler", () => {
   let regenStub: MockedBeaconChain["regen"];
   let loggerStub: MockedLogger;
   let beaconProposerCacheStub: MockedBeaconChain["beaconProposerCache"];
-  let getForkStub: MockInstance<[number], ForkName>;
+  let getForkStub: MockInstance<(_: number) => ForkName>;
   let updateBuilderStatus: MockedBeaconChain["updateBuilderStatus"];
   let executionEngineStub: MockedBeaconChain["executionEngine"];
   const emitPayloadAttributes = true;
@@ -120,6 +120,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
     getForkStub.mockReturnValue(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);

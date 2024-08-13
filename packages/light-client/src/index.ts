@@ -1,13 +1,23 @@
 import mitt from "mitt";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
-import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientHeader,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  phase0,
+  RootHex,
+  Slot,
+  SyncPeriod,
+} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
-import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
+import {getConsoleLogger, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightclientSpec} from "./spec/index.js";
 import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
@@ -32,7 +42,7 @@ export type LightclientInitArgs = {
   opts?: LightclientOpts;
   genesisData: GenesisData;
   transport: LightClientTransport;
-  bootstrap: allForks.LightClientBootstrap;
+  bootstrap: LightClientBootstrap;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -114,7 +124,7 @@ export class Lightclient {
         : genesisData.genesisValidatorsRoot;
 
     this.config = createBeaconConfig(config, this.genesisValidatorsRoot);
-    this.logger = logger ?? getLcLoggerConsole();
+    this.logger = logger ?? getConsoleLogger();
     this.transport = transport;
     this.runStatus = {code: RunStatusCode.uninitialized};
 
@@ -190,11 +200,11 @@ export class Lightclient {
     this.updateRunStatus({code: RunStatusCode.stopped});
   }
 
-  getHead(): allForks.LightClientHeader {
+  getHead(): LightClientHeader {
     return this.lightclientSpec.store.optimisticHeader;
   }
 
-  getFinalized(): allForks.LightClientHeader {
+  getFinalized(): LightClientHeader {
     return this.lightclientSpec.store.finalizedHeader;
   }
 
@@ -293,7 +303,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(optimisticUpdate: allForks.LightClientOptimisticUpdate): void {
+  private processOptimisticUpdate(optimisticUpdate: LightClientOptimisticUpdate): void {
     this.lightclientSpec.onOptimisticUpdate(this.currentSlotWithTolerance(), optimisticUpdate);
   }
 
@@ -301,11 +311,11 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: allForks.LightClientFinalityUpdate): void {
+  private processFinalizedUpdate(finalizedUpdate: LightClientFinalityUpdate): void {
     this.lightclientSpec.onFinalityUpdate(this.currentSlotWithTolerance(), finalizedUpdate);
   }
 
-  private processSyncCommitteeUpdate(update: allForks.LightClientUpdate): void {
+  private processSyncCommitteeUpdate(update: LightClientUpdate): void {
     this.lightclientSpec.onUpdate(this.currentSlotWithTolerance(), update);
   }
 
@@ -318,3 +328,9 @@ export class Lightclient {
     this.emitter.emit(LightclientEvent.statusChange, this.runStatus.code);
   }
 }
+
+// To export these name spaces to the bundle JS
+import * as utils from "./utils.js";
+import * as validation from "./validation.js";
+import * as transport from "./transport.js";
+export {utils, validation, transport};

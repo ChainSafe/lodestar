@@ -89,6 +89,7 @@ describe("FIFOBlockStateCache", function () {
 
   for (const {name, headState, addAsHeadArr, keptStates, prunedState} of testCases) {
     it(name, () => {
+      expect(cache.getSeedState().hashTreeRoot()).toEqual(state1.hashTreeRoot());
       // move to head this state
       cache.setHeadState(headState);
       expect(cache.size).toEqualWithMessage(2, "Size must be same as initial 2");

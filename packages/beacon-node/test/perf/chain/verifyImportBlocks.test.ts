@@ -84,7 +84,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       const state = stateOg.value.clone();
       const chain = new BeaconChain(
         {
-          proposerBoostEnabled: true,
+          proposerBoost: true,
+          proposerBoostReorg: false,
           computeUnrealized: false,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
@@ -112,7 +113,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     },
     fn: async (chain) => {
       const blocksImport = blocks.value.map((block) =>
-        getBlockInput.preDeneb(chain.config, block, BlockSource.byRange, null)
+        getBlockInput.preData(chain.config, block, BlockSource.byRange, null)
       );
 
       await chain.processChainSegment(blocksImport, {

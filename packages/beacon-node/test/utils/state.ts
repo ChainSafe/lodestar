@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   BeaconStateAllForks,
@@ -8,11 +8,11 @@ import {
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
 } from "@lodestar/state-transition";
-import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
+import {BeaconState, altair, bellatrix, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
@@ -20,7 +20,7 @@ import {getConfig} from "./config.js";
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
  */
-type TestBeaconState = Partial<allForks.BeaconState>;
+type TestBeaconState = Partial<BeaconState>;
 
 /**
  * Generate beaconState, by default it will generate a mostly empty state with "just enough" to be valid-ish
@@ -55,7 +55,7 @@ export function generateState(
     opts.validators ??
     (withPubkey
       ? Array.from({length: numValidators}, (_, i) => {
-          const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+          const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
           return generateValidator({
             ...validatorOpts,
             pubkey: sk.toPublicKey().toBytes(),
@@ -156,4 +156,5 @@ export const zeroProtoBlock: ProtoBlock = {
   timeliness: false,
 
   ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+  dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 };

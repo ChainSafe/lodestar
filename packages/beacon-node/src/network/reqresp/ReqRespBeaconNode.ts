@@ -13,7 +13,7 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {Metadata, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
@@ -21,6 +21,7 @@ import {PeersData} from "../peers/peersData.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {StatusCache} from "../statusCache.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {onOutgoingReqRespError} from "./score.js";
 import {
   GetReqRespHandlerFn,
@@ -50,7 +51,7 @@ export interface ReqRespBeaconNodeModules {
   getHandler: GetReqRespHandlerFn;
 }
 
-export type ReqRespBeaconNodeOpts = ReqRespOpts;
+export type ReqRespBeaconNodeOpts = ReqRespOpts & {disableLightClientServer?: boolean};
 
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
@@ -71,6 +72,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
   private readonly config: BeaconConfig;
   protected readonly logger: Logger;
+  protected readonly disableLightClientServer: boolean;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
     const {events, peersData, peerRpcScores, metadata, metrics, logger} = modules;
@@ -94,6 +96,7 @@ export class ReqRespBeaconNode extends ReqResp {
       }
     );
 
+    this.disableLightClientServer = options.disableLightClientServer ?? false;
     this.peerRpcScores = peerRpcScores;
     this.peersData = peersData;
     this.config = modules.config;
@@ -183,7 +186,7 @@ export class ReqRespBeaconNode extends ReqResp {
     );
   }
 
-  async sendMetadata(peerId: PeerId): Promise<allForks.Metadata> {
+  async sendMetadata(peerId: PeerId): Promise<Metadata> {
     return collectExactOneTyped(
       this.sendReqRespRequest(
         peerId,
@@ -232,7 +235,7 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     }
 
-    if (ForkSeq[fork] >= ForkSeq.altair) {
+    if (ForkSeq[fork] >= ForkSeq.altair && !this.disableLightClientServer) {
       // Should be okay to enable before altair, but for consistency only enable afterwards
       protocolsAtFork.push(
         [protocols.LightClientBootstrap(this.config), this.getHandler(ReqRespMethod.LightClientBootstrap)],
@@ -259,7 +262,7 @@ export class ReqRespBeaconNode extends ReqResp {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
     // disconnects in the same synchronous call, preventing the stream from ending cleanly
-    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}), 0);
+    callInNextEventLoop(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}));
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDescriptor): void {

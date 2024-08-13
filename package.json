@@ -2,8 +2,9 @@
   "name": "root",
   "private": true,
   "engines": {
-    "node": ">=20.1.0 <21"
+    "node": ">=20.1.0 <21 || >=22 <22.5"
   },
+  "packageManager": "yarn@1.22.22+sha256.c17d3797fb9a9115bf375e31bfd30058cac6bc9c3b8807a3d8cb2094794b51ca",
   "workspaces": [
     "packages/*"
   ],
@@ -11,12 +12,14 @@
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
     "build": "lerna run build",
+    "build:bundle": "lerna run build:bundle",
     "build:watch": "lerna exec --parallel -- 'yarn run build:watch'",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
     "lint": "eslint --report-unused-disable-directives --color --ext .ts packages/*/src packages/*/test",
     "lint:fix": "yarn lint --fix",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
     "check-build": "lerna run check-build",
+    "check-bundle": "lerna run check-bundle",
     "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types",
     "check-spelling": "pyspelling -c .pyspelling.yml -v",
@@ -48,11 +51,11 @@
     "@chainsafe/eslint-plugin-node": "^11.2.3",
     "@dapplion/benchmark": "^0.2.4",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^20.11.28",
+    "@types/node": "^20.12.8",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",
-    "@vitest/coverage-v8": "^1.4.0",
-    "@vitest/browser": "^1.4.0",
+    "@vitest/browser": "^2.0.4",
+    "@vitest/coverage-v8": "^2.0.4",
     "crypto-browserify": "^3.12.0",
     "dotenv": "^16.4.5",
     "electron": "^26.2.2",
@@ -64,30 +67,34 @@
     "https-browserify": "^1.0.0",
     "jsdom": "^23.0.1",
     "lerna": "^7.3.0",
-    "libp2p": "1.1.1",
+    "libp2p": "1.4.3",
     "mocha": "^10.2.0",
     "node-gyp": "^9.4.0",
     "npm-run-all": "^4.1.5",
     "path-browserify": "^1.0.1",
     "prettier": "^3.2.5",
     "process": "^0.11.10",
+    "rollup-plugin-visualizer": "^5.12.0",
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "supertest": "^6.3.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.2",
     "typescript-docs-verifier": "^2.5.0",
-    "vite-plugin-node-polyfills": "^0.21.0",
-    "vite-plugin-top-level-await": "^1.4.1",
-    "vitest": "^1.4.0",
-    "vitest-when": "^0.3.1",
+    "vite": "^5.3.4",
+    "vite-plugin-dts": "^3.9.1",
+    "vite-plugin-node-polyfills": "^0.22.0",
+    "vite-plugin-top-level-await": "^1.4.2",
+    "vitest": "^2.0.4",
+    "vitest-when": "^0.4.1",
     "wait-port": "^1.1.0",
-    "webdriverio": "^8.34.1"
+    "webdriverio": "^8.36.1"
   },
   "resolutions": {
     "@puppeteer/browsers": "^2.1.0",
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
-    "vite": "^5.0.0"
+    "vite": "^5.3.4",
+    "testcontainers/**/nan": "^2.19.0"
   }
 }

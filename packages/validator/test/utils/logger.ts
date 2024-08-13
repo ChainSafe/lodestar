@@ -1,3 +1,5 @@
+import {vi, Mocked} from "vitest";
+import {Logger} from "@lodestar/logger";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {getLoggerVc} from "../../src/util/index.js";
 import {ClockMock} from "./clock.js";
@@ -13,3 +15,15 @@ import {ClockMock} from "./clock.js";
 export const testLogger = getEnvLogger;
 
 export const loggerVc = getLoggerVc(getEnvLogger(), new ClockMock());
+
+export type MockedLogger = Mocked<Logger>;
+
+export function getMockedLogger(): MockedLogger {
+  return {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    verbose: vi.fn(),
+  };
+}

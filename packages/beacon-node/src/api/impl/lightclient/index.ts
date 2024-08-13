@@ -1,53 +1,63 @@
-import {fromHexString} from "@chainsafe/ssz";
-import {routes, ServerApi} from "@lodestar/api";
-import {SyncPeriod} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
 import {ApiModules} from "../types.js";
-
+import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 // TODO: Import from lightclient/server package
 
 export function getLightclientApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.lightclient.Api> {
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.lightclient.Endpoints> {
   return {
-    async getUpdates(startPeriod: SyncPeriod, count: number) {
+    async getLightClientUpdatesByRange({startPeriod, count}) {
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
-      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
-      return updates.map((update) => ({
-        version: config.getForkName(update.attestedHeader.beacon.slot),
-        data: update,
-      }));
+      const updates = await Promise.all(periods.map((period) => lightClientServer.getUpdate(period)));
+      return {
+        data: updates,
+        meta: {versions: updates.map((update) => config.getForkName(update.attestedHeader.beacon.slot))},
+      };
     },
 
-    async getOptimisticUpdate() {
-      const data = chain.lightClientServer.getOptimisticUpdate();
-      if (data === null) {
+    async getLightClientOptimisticUpdate() {
+      assertLightClientServer(chain.lightClientServer);
+
+      const update = chain.lightClientServer.getOptimisticUpdate();
+      if (update === null) {
         throw Error("No optimistic update available");
       }
-      return {version: config.getForkName(data.attestedHeader.beacon.slot), data};
+      return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
     },
 
-    async getFinalityUpdate() {
-      const data = chain.lightClientServer.getFinalityUpdate();
-      if (data === null) {
+    async getLightClientFinalityUpdate() {
+      assertLightClientServer(chain.lightClientServer);
+
+      const update = chain.lightClientServer.getFinalityUpdate();
+      if (update === null) {
         throw Error("No finality update available");
       }
-      return {version: config.getForkName(data.attestedHeader.beacon.slot), data};
+      return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
     },
 
-    async getBootstrap(blockRoot) {
-      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
-      return {version: config.getForkName(bootstrapProof.header.beacon.slot), data: bootstrapProof};
+    async getLightClientBootstrap({blockRoot}) {
+      assertLightClientServer(chain.lightClientServer);
+
+      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHex(blockRoot));
+      return {data: bootstrapProof, meta: {version: config.getForkName(bootstrapProof.header.beacon.slot)}};
     },
 
-    async getCommitteeRoot(startPeriod: SyncPeriod, count: number) {
+    async getLightClientCommitteeRoot({startPeriod, count}) {
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
-      const committeeHashes = await Promise.all(
-        periods.map((period) => chain.lightClientServer.getCommitteeRoot(period))
-      );
+      const committeeHashes = await Promise.all(periods.map((period) => lightClientServer.getCommitteeRoot(period)));
       return {data: committeeHashes};
     },
   };

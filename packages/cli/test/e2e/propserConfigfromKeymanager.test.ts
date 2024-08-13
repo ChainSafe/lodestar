@@ -1,8 +1,8 @@
 import path from "node:path";
-import {describe, it, beforeAll, vi} from "vitest";
+import {describe, it, beforeAll, vi, onTestFinished} from "vitest";
 import {rimraf} from "rimraf";
+import {ImportStatus} from "@lodestar/api/keymanager";
 import {Interchange} from "@lodestar/validator";
-import {ApiError} from "@lodestar/api";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
@@ -49,164 +49,163 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
   it("1 . run 'validator' import keys from API, getdefaultfeeRecipient", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
+    onTestFinished(async () => {
+      await stopValidator();
     });
+
     // Produce and encrypt keystores
     // Import test keys
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
-    await keymanagerClient.importKeystores(keystoresStr, passphrases, slashingProtectionStr);
+    const importRes = await keymanagerClient.importKeystores({
+      keystores: keystoresStr,
+      passwords: passphrases,
+      slashingProtection: slashingProtectionStr,
+    });
+    expectDeepEquals(
+      importRes.value(),
+      keystoresStr.map(() => ({status: ImportStatus.imported})),
+      "Wrong importKeystores response"
+    );
 
     //////////////// Fee Recipient
 
-    let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
-    ApiError.assert(feeRecipient0);
+    let feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      feeRecipient0.response.data,
+      feeRecipient0,
       {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
       "FeeRecipient Check default"
     );
 
     // Set feeClient to updatedOptions
-    ApiError.assert(await keymanagerClient.setFeeRecipient(pubkeys[0], updatedOptions.suggestedFeeRecipient));
-    feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
-    ApiError.assert(feeRecipient0);
+    (
+      await keymanagerClient.setFeeRecipient({pubkey: pubkeys[0], ethaddress: updatedOptions.suggestedFeeRecipient})
+    ).assertOk();
+    feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      feeRecipient0.response.data,
+      feeRecipient0,
       {pubkey: pubkeys[0], ethaddress: updatedOptions.suggestedFeeRecipient},
       "FeeRecipient Check updated"
     );
 
     //////////////// Graffiti
 
-    let graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
-    ApiError.assert(graffiti0);
-    expectDeepEquals(
-      graffiti0.response.data,
-      {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},
-      "Graffiti Check default"
-    );
+    let graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
+    expectDeepEquals(graffiti0, {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti}, "Graffiti Check default");
 
     // Set Graffiti to updatedOptions
-    ApiError.assert(await keymanagerClient.setGraffiti(pubkeys[0], updatedOptions.graffiti));
-    graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
-    ApiError.assert(graffiti0);
-    expectDeepEquals(
-      graffiti0.response.data,
-      {pubkey: pubkeys[0], graffiti: updatedOptions.graffiti},
-      "FeeRecipient Check updated"
-    );
+    (await keymanagerClient.setGraffiti({pubkey: pubkeys[0], graffiti: updatedOptions.graffiti})).assertOk();
+    graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
+    expectDeepEquals(graffiti0, {pubkey: pubkeys[0], graffiti: updatedOptions.graffiti}, "FeeRecipient Check updated");
 
     /////////// GasLimit
 
-    let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
-    ApiError.assert(gasLimit0);
-    expectDeepEquals(
-      gasLimit0.response.data,
-      {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
-      "gasLimit Check default"
-    );
+    let gasLimit0 = (await keymanagerClient.getGasLimit({pubkey: pubkeys[0]})).value();
+    expectDeepEquals(gasLimit0, {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit}, "gasLimit Check default");
 
     // Set GasLimit to updatedOptions
-    ApiError.assert(await keymanagerClient.setGasLimit(pubkeys[0], updatedOptions.gasLimit));
-    gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
-    ApiError.assert(gasLimit0);
-    expectDeepEquals(
-      gasLimit0.response.data,
-      {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
-      "gasLimit Check updated"
-    );
+    (await keymanagerClient.setGasLimit({pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit})).assertOk();
+    gasLimit0 = (await keymanagerClient.getGasLimit({pubkey: pubkeys[0]})).value();
+    expectDeepEquals(gasLimit0, {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit}, "gasLimit Check updated");
   });
 
   it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
+    onTestFinished(async () => {
+      await stopValidator();
     });
 
     // next time check edited feeRecipient persists
-    let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
-    ApiError.assert(feeRecipient0);
+    let feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      feeRecipient0.response.data,
+      feeRecipient0,
       {pubkey: pubkeys[0], ethaddress: updatedOptions.suggestedFeeRecipient},
       "FeeRecipient Check default persists"
     );
 
     // after deletion  feeRecipient restored to default
-    ApiError.assert(await keymanagerClient.deleteFeeRecipient(pubkeys[0]));
-    feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
-    ApiError.assert(feeRecipient0);
+    (await keymanagerClient.deleteFeeRecipient({pubkey: pubkeys[0]})).assertOk();
+    feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      feeRecipient0.response.data,
+      feeRecipient0,
       {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
       "FeeRecipient Check default after delete"
     );
 
     // graffiti persists
-    let graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
-    ApiError.assert(graffiti0);
+    let graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      graffiti0.response.data,
+      graffiti0,
       {pubkey: pubkeys[0], graffiti: updatedOptions.graffiti},
       "FeeRecipient Check default persists"
     );
 
     // after deletion  graffiti restored to default
-    ApiError.assert(await keymanagerClient.deleteGraffiti(pubkeys[0]));
-    graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
-    ApiError.assert(graffiti0);
+    (await keymanagerClient.deleteGraffiti({pubkey: pubkeys[0]})).assertOk();
+    graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      graffiti0.response.data,
+      graffiti0,
       {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},
       "FeeRecipient Check default after delete"
     );
 
     // gasLimit persists
-    let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
-    ApiError.assert(gasLimit0);
+    let gasLimit0 = (await keymanagerClient.getGasLimit({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      gasLimit0.response.data,
+      gasLimit0,
       {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
       "gasLimit Check updated persists"
     );
 
-    ApiError.assert(await keymanagerClient.deleteGasLimit(pubkeys[0]));
-    gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
-    ApiError.assert(gasLimit0);
+    (await keymanagerClient.deleteGasLimit({pubkey: pubkeys[0]})).assertOk();
+    gasLimit0 = (await keymanagerClient.getGasLimit({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      gasLimit0.response.data,
+      gasLimit0,
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );
   });
 
   it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
-      dataDir,
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--graffiti ${defaultOptions.graffiti}`],
+      {
+        dataDir,
+      }
+    );
+    onTestFinished(async () => {
+      await stopValidator();
     });
 
-    const feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
-    ApiError.assert(feeRecipient0);
+    const feeRecipient0 = (await keymanagerClient.listFeeRecipient({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      feeRecipient0.response.data,
+      feeRecipient0,
       {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
       "FeeRecipient Check default persists"
     );
 
-    ApiError.assert(await keymanagerClient.deleteGraffiti(pubkeys[0]));
-    const graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
-    ApiError.assert(graffiti0);
+    (await keymanagerClient.deleteGraffiti({pubkey: pubkeys[0]})).assertOk();
+    const graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      graffiti0.response.data,
+      graffiti0,
       {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},
       "FeeRecipient Check default persists"
     );
 
-    ApiError.assert(await keymanagerClient.deleteGasLimit(pubkeys[0]));
-    const gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
-    ApiError.assert(gasLimit0);
+    (await keymanagerClient.deleteGasLimit({pubkey: pubkeys[0]})).assertOk();
+    const gasLimit0 = (await keymanagerClient.getGasLimit({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
-      gasLimit0.response.data,
+      gasLimit0,
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );

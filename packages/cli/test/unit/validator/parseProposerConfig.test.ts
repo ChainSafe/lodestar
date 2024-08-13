@@ -26,7 +26,7 @@ const testValue = {
       feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       builder: {
         gasLimit: 35000000,
-        selection: routes.validator.BuilderSelection.MaxProfit,
+        selection: routes.validator.BuilderSelection.BuilderAlways,
         boostFactor: BigInt(18446744073709551616),
       },
     },
@@ -37,8 +37,8 @@ const testValue = {
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
       gasLimit: 30000000,
-      selection: routes.validator.BuilderSelection.BuilderAlways,
-      boostFactor: BigInt(100),
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: BigInt(50),
     },
   },
 };

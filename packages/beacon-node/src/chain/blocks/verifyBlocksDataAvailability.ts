@@ -1,11 +1,12 @@
-import {computeTimeAtSlot, DataAvailableStatus} from "@lodestar/state-transition";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {deneb, UintNum64} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {validateBlobSidecars} from "../validation/blobSidecar.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation} from "./types.js";
+import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation, getBlockInput} from "./types.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block
@@ -27,23 +28,30 @@ export async function verifyBlocksDataAvailability(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger; metrics: Metrics | null},
   blocks: BlockInput[],
   opts: ImportBlockOpts
-): Promise<{dataAvailabilityStatuses: DataAvailableStatus[]; availableTime: number}> {
+): Promise<{
+  dataAvailabilityStatuses: DataAvailabilityStatus[];
+  availableTime: number;
+  availableBlockInputs: BlockInput[];
+}> {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
-  const dataAvailabilityStatuses: DataAvailableStatus[] = [];
+  const dataAvailabilityStatuses: DataAvailabilityStatus[] = [];
   const seenTime = opts.seenTimestampSec !== undefined ? opts.seenTimestampSec * 1000 : Date.now();
+
+  const availableBlockInputs: BlockInput[] = [];
 
   for (const blockInput of blocks) {
     // Validate status of only not yet finalized blocks, we don't need yet to propogate the status
     // as it is not used upstream anywhere
-    const dataAvailabilityStatus = await maybeValidateBlobs(chain, blockInput, opts);
+    const {dataAvailabilityStatus, availableBlockInput} = await maybeValidateBlobs(chain, blockInput, opts);
     dataAvailabilityStatuses.push(dataAvailabilityStatus);
+    availableBlockInputs.push(availableBlockInput);
   }
 
-  const availableTime = blocks[blocks.length - 1].type === BlockInputType.blobsPromise ? Date.now() : seenTime;
-  if (blocks.length === 1 && opts.seenTimestampSec !== undefined && blocks[0].type !== BlockInputType.preDeneb) {
+  const availableTime = blocks[blocks.length - 1].type === BlockInputType.dataPromise ? Date.now() : seenTime;
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined && blocks[0].type !== BlockInputType.preData) {
     const recvToAvailableTime = availableTime / 1000 - opts.seenTimestampSec;
     const numBlobs = (blocks[0].block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments.length;
 
@@ -55,33 +63,36 @@ export async function verifyBlocksDataAvailability(
     });
   }
 
-  return {dataAvailabilityStatuses, availableTime};
+  return {dataAvailabilityStatuses, availableTime, availableBlockInputs};
 }
 
 async function maybeValidateBlobs(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
   opts: ImportBlockOpts
-): Promise<DataAvailableStatus> {
+): Promise<{dataAvailabilityStatus: DataAvailabilityStatus; availableBlockInput: BlockInput}> {
   switch (blockInput.type) {
-    case BlockInputType.preDeneb:
-      return DataAvailableStatus.preDeneb;
+    case BlockInputType.preData:
+      return {dataAvailabilityStatus: DataAvailabilityStatus.PreData, availableBlockInput: blockInput};
 
-    case BlockInputType.postDeneb:
+    case BlockInputType.outOfRangeData:
+      return {dataAvailabilityStatus: DataAvailabilityStatus.OutOfRange, availableBlockInput: blockInput};
+
+    case BlockInputType.availableData:
       if (opts.validBlobSidecars === BlobSidecarValidation.Full) {
-        return DataAvailableStatus.available;
+        return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: blockInput};
       }
 
     // eslint-disable-next-line no-fallthrough
-    case BlockInputType.blobsPromise: {
+    case BlockInputType.dataPromise: {
       // run full validation
       const {block} = blockInput;
       const blockSlot = block.message.slot;
 
       const blobsData =
-        blockInput.type === BlockInputType.postDeneb
-          ? blockInput
-          : await raceWithCutoff(chain, blockInput, blockInput.availabilityPromise);
+        blockInput.type === BlockInputType.availableData
+          ? blockInput.blockData
+          : await raceWithCutoff(chain, blockInput, blockInput.cachedData.availabilityPromise);
       const {blobs} = blobsData;
 
       const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
@@ -92,7 +103,14 @@ async function maybeValidateBlobs(
       const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
       validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
 
-      return DataAvailableStatus.available;
+      const availableBlockInput = getBlockInput.availableData(
+        chain.config,
+        blockInput.block,
+        blockInput.source,
+        blockInput.blockBytes,
+        blobsData
+      );
+      return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: availableBlockInput};
     }
   }
 }

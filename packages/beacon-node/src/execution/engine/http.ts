@@ -1,4 +1,4 @@
-import {Root, RootHex, allForks, Wei} from "@lodestar/types";
+import {ExecutionPayload, Root, RootHex, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
@@ -12,6 +12,7 @@ import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {getLodestarClientVersion} from "../../util/metadata.js";
 import {
   ExecutionPayloadStatus,
   ExecutePayloadResponse,
@@ -21,6 +22,8 @@ import {
   BlobsBundle,
   VersionedHashes,
   ExecutionEngineState,
+  ClientVersion,
+  ClientCode,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
@@ -63,6 +66,14 @@ export type ExecutionEngineHttpOpts = {
    * A version string that will be set in `clv` field of jwt claims
    */
   jwtVersion?: string;
+  /**
+   * Lodestar version to be used for `ClientVersion`
+   */
+  version?: string;
+  /**
+   * Lodestar commit to be used for `ClientVersion`
+   */
+  commit?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -103,7 +114,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
   // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
-  private state: ExecutionEngineState = ExecutionEngineState.ONLINE;
+  state: ExecutionEngineState = ExecutionEngineState.ONLINE;
+
+  /** Cached EL client version from the latest getClientVersion call */
+  clientVersion?: ClientVersion | null;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -126,7 +140,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   constructor(
     private readonly rpc: IJsonRpcHttpClient,
-    {metrics, signal, logger}: ExecutionEngineModules
+    {metrics, signal, logger}: ExecutionEngineModules,
+    private readonly opts?: ExecutionEngineHttpOpts
   ) {
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
@@ -140,6 +155,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+      if (this.clientVersion === undefined) {
+        this.clientVersion = null;
+        // This statement should only be called first time receiving response after startup
+        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
+          this.logger.debug("Unable to get execution client version", {}, e);
+        });
+      }
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
     });
   }
@@ -171,7 +193,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(
     fork: ForkName,
-    executionPayload: allForks.ExecutionPayload,
+    executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root
   ): Promise<ExecutePayloadResponse> {
@@ -364,7 +386,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fork: ForkName,
     payloadId: PayloadId
   ): Promise<{
-    executionPayload: allForks.ExecutionPayload;
+    executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
     shouldOverrideBuilder?: boolean;
@@ -417,8 +439,27 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeExecutionPayloadBody);
   }
 
-  getState(): ExecutionEngineState {
-    return this.state;
+  private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
+    const method = "engine_getClientVersionV1";
+
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: [clientVersion]});
+
+    const clientVersions = response.map((cv) => {
+      const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
+      return {code, name: cv.name, version: cv.version, commit: cv.commit};
+    });
+
+    if (clientVersions.length === 0) {
+      throw Error("Received empty client versions array");
+    }
+
+    this.clientVersion = clientVersions[0];
+    this.logger.debug("Execution client version updated", this.clientVersion);
+
+    return clientVersions;
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {
@@ -429,6 +470,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
+        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
+          this.logger.debug("Unable to get execution client version", {}, e);
+          this.clientVersion = null;
+        });
         break;
       case ExecutionEngineState.OFFLINE:
         this.logger.error("Execution client went offline", {oldState, newState});
