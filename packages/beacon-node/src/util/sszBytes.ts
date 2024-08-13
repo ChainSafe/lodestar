@@ -1,6 +1,5 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {BLSSignature, RootHex, Slot} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
@@ -50,7 +49,9 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
     return null;
   }
 
-  blockRootBuf.set(data.subarray(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE));
+  blockRootBuf.set(
+    data.subarray(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE)
+  );
   return "0x" + blockRootBuf.toString("hex");
 }
 
@@ -136,7 +137,12 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
     return null;
   }
 
-  blockRootBuf.set(data.subarray(SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET + ROOT_SIZE));
+  blockRootBuf.set(
+    data.subarray(
+      SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET,
+      SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET + ROOT_SIZE
+    )
+  );
   return "0x" + blockRootBuf.toString("hex");
 }
 
@@ -150,7 +156,12 @@ export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint
   }
 
   // base64 is a bit efficient than hex
-  attDataBuf.set(data.subarray(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE));
+  attDataBuf.set(
+    data.subarray(
+      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET,
+      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE
+    )
+  );
   return attDataBuf.toString("base64");
 }
 

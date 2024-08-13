@@ -56,6 +56,14 @@ export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): s
   }
 }
 
+// shared BUffer to convert root to hex
+const rootBuf = Buffer.alloc(32);
+
+export function toRootHex(root: Uint8Array): string {
+  rootBuf.set(root);
+  return `0x${rootBuf.toString("hex")}`;
+}
+
 export function fromHex(hex: string): Uint8Array {
   const b = Buffer.from(hex.replace("0x", ""), "hex");
   return new Uint8Array(b.buffer, b.byteOffset, b.length);

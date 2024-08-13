@@ -33,7 +33,7 @@ export function fastMsgIdFn(rpcMsg: RPC.Message): string {
 export function msgIdToStrFn(msgId: Uint8Array): string {
   // this is the same logic to `toHex(msgId)` with better performance
   sharedMsgIdBuf.set(msgId);
-  return "0x" + sharedMsgIdBuf.toString("hex");
+  return `0x${sharedMsgIdBuf.toString("hex")}`;
 }
 
 /**

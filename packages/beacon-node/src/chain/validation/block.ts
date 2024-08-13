@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   computeStartSlotAtEpoch,
@@ -8,7 +7,7 @@ import {
   isExecutionEnabled,
   getBlockProposerSignatureSet,
 } from "@lodestar/state-transition";
-import {sleep} from "@lodestar/utils";
+import {sleep, toRootHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
@@ -55,7 +54,7 @@ export async function validateGossipBlock(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = toHexString(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
+  const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
   if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
@@ -71,7 +70,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-  const parentRoot = toHexString(block.parentRoot);
+  const parentRoot = toRootHex(block.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,

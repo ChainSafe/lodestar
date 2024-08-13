@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {QueueErrorCode} from "../../util/queue/index.js";
@@ -151,8 +150,8 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
       return {
         code: type.code,
         slot: type.postState.slot,
-        root: toHexString(type.root),
-        expectedRoot: toHexString(type.expectedRoot),
+        root: toRootHex(type.root),
+        expectedRoot: toRootHex(type.expectedRoot),
       };
 
     default:
