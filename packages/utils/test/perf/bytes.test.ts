@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import { toHex, toRootHex } from "../../src/bytes.js";
+import {toHex, toRootHex} from "../../src/bytes.js";
 
 describe("bytes utils", function () {
   const runsFactor = 1000;
@@ -12,9 +12,8 @@ describe("bytes utils", function () {
         toHex(blockRoot);
       }
     },
-    runsFactor
+    runsFactor,
   });
-
 
   itBench({
     id: "block root to RootHex using toRootHex",
@@ -23,6 +22,6 @@ describe("bytes utils", function () {
         toRootHex(blockRoot);
       }
     },
-    runsFactor
+    runsFactor,
   });
 });
