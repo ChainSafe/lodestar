@@ -21,6 +21,7 @@ import {
   ForkPreBlobs,
   ForkBlobs,
   ForkExecution,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
@@ -814,7 +815,7 @@ export function getValidatorApi(
       const attEpoch = computeEpochAtSlot(slot);
       const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
       const headBlockRoot = fromHex(headBlockRootHex);
-      const fork = config.getForkSeq(slot);
+      const fork = config.getForkName(slot);
 
       const beaconBlockRoot =
         slot >= headSlot
@@ -846,7 +847,7 @@ export function getValidatorApi(
       return {
         data: {
           slot,
-          index: fork >= ForkSeq.electra ? 0 : committeeIndex,
+          index: isForkPostElectra(fork) ? 0 : committeeIndex,
           beaconBlockRoot,
           source: attEpochState.currentJustifiedCheckpoint,
           target: {epoch: attEpoch, root: targetRoot},

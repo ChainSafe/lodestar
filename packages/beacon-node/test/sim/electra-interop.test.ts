@@ -252,7 +252,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   /**
    * Want to test two things:
-   * 1) Send two raw deposit transactions, and see if two new validators with corrent balances show up in the state.validators and unfinalized cache
+   * 1) Send two raw deposit transactions, and see if two new validators with correct balances show up in the state.validators and unfinalized cache
    * 2) Upon state-transition, see if the two new validators move from unfinalized cache to finalized cache
    */
   async function runNodeWithEL({
