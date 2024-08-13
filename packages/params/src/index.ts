@@ -108,6 +108,9 @@ export const {
   MAX_ATTESTATIONS_ELECTRA,
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
+
+  PTC_SIZE,
+  MAX_PAYLOAD_ATTESTATIONS,
 } = activePreset;
 
 ////////////
@@ -145,6 +148,8 @@ export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
 export const DOMAIN_CONSOLIDATION = Uint8Array.from([11, 0, 0, 0]);
+export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]); //DomainType('0x0C000000') # (New in EIP-7732)
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([27, 0, 0, 0]); // DomainType('0x1B000000') # (New in EIP-7732)
 
 // Application specific domains
 
@@ -268,3 +273,9 @@ export const NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA = 87;
 export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
 export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
 export const FINALIZED_ROOT_INDEX_ELECTRA = 169;
+
+// ebps
+export const PAYLOAD_ABSENT = 0;
+export const PAYLOAD_PRESENT = 1;
+export const PAYLOAD_WITHHELD = 2;
+export const PAYLOAD_INVALID_STATUS = 3;

@@ -1,4 +1,4 @@
-import {ForkBlobs, ForkExecution, ForkPostElectra} from "@lodestar/params";
+import {ForkBlobs, ForkExecution, ForkPostElectra, ForkExecutionPreEpbs} from "@lodestar/params";
 import {
   BlockContents,
   SignedBeaconBlock,
@@ -24,7 +24,7 @@ export function isExecutionPayload<F extends ForkExecution>(
   return (payload as ExecutionPayload<F>).transactions !== undefined;
 }
 
-export function isExecutionPayloadHeader<F extends ForkExecution>(
+export function isExecutionPayloadHeader<F extends ForkExecutionPreEpbs>(
   payload: ExecutionPayload<F> | ExecutionPayloadHeader<F>
 ): payload is ExecutionPayloadHeader<F> {
   // we just check transactionsRoot for determining as it the base field
@@ -44,16 +44,16 @@ export function isBlindedBeaconBlock<F extends ForkExecution>(
   return (block as BeaconBlock).body !== null && isBlindedBeaconBlockBody((block as BeaconBlock).body);
 }
 
-export function isBlindedSignedBeaconBlock<F extends ForkExecution>(
+export function isBlindedSignedBeaconBlock<F extends ForkExecutionPreEpbs>(
   signedBlock: SignedBeaconBlock | SignedBeaconBlockOrContents
 ): signedBlock is SignedBlindedBeaconBlock<F> {
   return (signedBlock as SignedBlindedBeaconBlock<F>).message.body.executionPayloadHeader !== undefined;
 }
 
-export function isBlindedBeaconBlockBody<F extends ForkExecution>(
+export function isBlindedBeaconBlockBody<F extends ForkExecutionPreEpbs>(
   body: BeaconBlockBody | BlindedBeaconBlockBody
 ): body is BlindedBeaconBlockBody<F> {
-  return (body as BlindedBeaconBlockBody).executionPayloadHeader !== undefined;
+  return (body as BlindedBeaconBlockBody<F>).executionPayloadHeader !== undefined;
 }
 
 export function isBlockContents<F extends ForkBlobs>(

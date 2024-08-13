@@ -97,6 +97,10 @@ export type BeaconPreset = {
   PENDING_CONSOLIDATIONS_LIMIT: number;
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: number;
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: number;
+
+  // EBPS
+  PTC_SIZE: number;
+  MAX_PAYLOAD_ATTESTATIONS: number;
 };
 
 /**
@@ -197,6 +201,10 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   PENDING_CONSOLIDATIONS_LIMIT: "number",
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: "number",
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: "number",
+
+  // EBPS
+  PTC_SIZE: "number",
+  MAX_PAYLOAD_ATTESTATIONS: "number",
 };
 
 type BeaconPresetTypes = {

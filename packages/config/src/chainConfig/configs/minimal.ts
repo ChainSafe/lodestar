@@ -49,6 +49,10 @@ export const chainConfig: ChainConfig = {
   ELECTRA_FORK_VERSION: b("0x05000001"),
   ELECTRA_FORK_EPOCH: Infinity,
 
+  // Ebps
+  EBPS_FORK_VERSION: b("0x05000001"),
+  EBPS_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // [customized] Faster for testing purposes
