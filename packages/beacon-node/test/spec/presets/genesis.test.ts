@@ -19,7 +19,7 @@ import {getConfig} from "../../utils/config.js";
 import {RunnerType} from "../utils/types.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
-import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
+// import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
 
@@ -43,15 +43,10 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
       }
 
       const config = getConfig(fork);
-      const shufflingCache = new ShufflingCache();
-      const immutableData = createEmptyEpochCacheImmutableData(
-        config,
-        {
-          // TODO: Should the genesisValidatorsRoot be random here?
-          genesisValidatorsRoot: Buffer.alloc(32, 0),
-        },
-        shufflingCache
-      );
+      const immutableData = createEmptyEpochCacheImmutableData(config, {
+        // TODO: Should the genesisValidatorsRoot be random here?
+        genesisValidatorsRoot: Buffer.alloc(32, 0),
+      });
 
       const executionPayloadHeaderType =
         fork !== ForkName.phase0 && fork !== ForkName.altair
