@@ -75,6 +75,7 @@ export function processAttestationsAltair(
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
     let totalBalanceIncrementsWithWeight = 0;
+    const validators = state.validators;
     for (const index of attestingIndices) {
       const flags = epochParticipation.get(index);
 
@@ -104,7 +105,7 @@ export function processAttestationsAltair(
       // TODO: describe issue. Compute progressive target balances
       // When processing each attestation, increase the cummulative target balance. Only applies post-altair
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
-        const validator = state.validators.getReadonly(index);
+        const validator = validators.getReadonly(index);
         if (!validator.slashed) {
           if (inCurrentEpoch) {
             epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
