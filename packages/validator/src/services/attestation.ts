@@ -1,5 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
@@ -159,7 +160,7 @@ export class AttestationService {
     this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
-    const isPostElectra = computeEpochAtSlot(slot) >= this.config.ELECTRA_FORK_EPOCH;
+    const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.

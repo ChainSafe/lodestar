@@ -152,7 +152,7 @@ export const ExecutionPayload = new ContainerType(
     ...denebSsz.ExecutionPayload.fields,
     depositRequests: DepositRequests, // New in ELECTRA
     withdrawalRequests: WithdrawalRequests, // New in ELECTRA
-    consolidationRequests: ConsolidationRequests, // [New in Electra]
+    consolidationRequests: ConsolidationRequests, // New in ELECTRA
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -333,14 +333,14 @@ export const BeaconState = new ContainerType(
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
     depositRequestsStartIndex: UintBn64, // New in ELECTRA:EIP6110
-    depositBalanceToConsume: Gwei, // New in Electra:EIP7251
-    exitBalanceToConsume: Gwei, // New in Electra:EIP7251
-    earliestExitEpoch: Epoch, // New in Electra:EIP7251
-    consolidationBalanceToConsume: Gwei, // New in Electra:EIP7251
-    earliestConsolidationEpoch: Epoch, // New in Electra:EIP7251
-    pendingBalanceDeposits: PendingBalanceDeposits, // New in Electra:EIP7251
-    pendingPartialWithdrawals: new ListCompositeType(PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // New in Electra:EIP7251
-    pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // New in Electra:EIP7251
+    depositBalanceToConsume: Gwei, // New in ELECTRA:EIP7251
+    exitBalanceToConsume: Gwei, // New in ELECTRA:EIP7251
+    earliestExitEpoch: Epoch, // New in ELECTRA:EIP7251
+    consolidationBalanceToConsume: Gwei, // New in ELECTRA:EIP7251
+    earliestConsolidationEpoch: Epoch, // New in ELECTRA:EIP7251
+    pendingBalanceDeposits: PendingBalanceDeposits, // New in ELECTRA:EIP7251
+    pendingPartialWithdrawals: new ListCompositeType(PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // New in ELECTRA:EIP7251
+    pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // New in ELECTRA:EIP7251
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

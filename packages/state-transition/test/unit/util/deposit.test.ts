@@ -2,7 +2,7 @@ import {describe, it, expect} from "vitest";
 import {ssz} from "@lodestar/types";
 import {createChainForkConfig} from "@lodestar/config";
 import {MAX_DEPOSITS} from "@lodestar/params";
-import {CachedBeaconStateElectra, getEth1DepositCount} from "../../../src/index.js";
+import {getEth1DepositCount} from "../../../src/index.js";
 import {createCachedBeaconStateTest} from "../../utils/state.js";
 
 describe("getEth1DepositCount", () => {
@@ -37,7 +37,7 @@ describe("getEth1DepositCount", () => {
         ELECTRA_FORK_EPOCH: 0,
       }),
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
-    ) as CachedBeaconStateElectra;
+    );
 
     if (!postElectraState.epochCtx.isPostElectra()) {
       throw Error("Not a post-Electra state");
@@ -71,7 +71,7 @@ describe("getEth1DepositCount", () => {
         ELECTRA_FORK_EPOCH: 0,
       }),
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
-    ) as CachedBeaconStateElectra;
+    );
 
     if (!postElectraState.epochCtx.isPostElectra()) {
       throw Error("Not a post-Electra state");

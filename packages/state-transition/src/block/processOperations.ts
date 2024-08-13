@@ -72,7 +72,7 @@ export function processOperations(
     }
 
     for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
-      processWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
+      processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest);
     }
 
     for (const elConsolidationRequest of bodyElectra.executionPayload.consolidationRequests) {

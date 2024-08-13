@@ -11,7 +11,7 @@ import {computeActivationExitEpoch} from "../util/epoch.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "../util/validator.js";
 
 /**
- * Upgrade a state from Capella to Deneb.
+ * Upgrade a state from Deneb to Electra.
  */
 export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): CachedBeaconStateElectra {
   const {config} = stateDeneb;
