@@ -144,11 +144,10 @@ export class AggregatedAttestationPool {
     let committeeIndex;
 
     if (isForkPostElectra(this.config.getForkName(slot))) {
-      if (isElectraAttestation(attestation)) {
-        committeeIndex = attestation.committeeBits.getSingleTrueBit();
-      } else {
+      if (!isElectraAttestation(attestation)) {
         throw new Error(`Expect electra attestation but received phase0 attestation. Slot: ${slot}`);
       }
+      committeeIndex = attestation.committeeBits.getSingleTrueBit();
     } else {
       if (!isElectraAttestation(attestation)) {
         committeeIndex = attestation.data.index;
