@@ -231,9 +231,8 @@ function getAggregatedAttestationPool(
   numMissedVotes: number,
   numBadVotes: number
 ): AggregatedAttestationPool {
-  const config = createChainForkConfig({
-    ...defaultChainConfig,
-  });
+  const config = createChainForkConfig(defaultChainConfig);
+
   const pool = new AggregatedAttestationPool(config);
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
     const slot = state.slot - 1 - epochSlot;

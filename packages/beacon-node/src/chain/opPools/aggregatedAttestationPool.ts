@@ -145,15 +145,14 @@ export class AggregatedAttestationPool {
 
     if (isForkPostElectra(this.config.getForkName(slot))) {
       if (!isElectraAttestation(attestation)) {
-        throw new Error(`Expect electra attestation but received phase0 attestation. Slot: ${slot}`);
+        throw new Error(`Expect electra attestation at slot ${slot} but received phase0 attestation.`);
       }
       committeeIndex = attestation.committeeBits.getSingleTrueBit();
     } else {
-      if (!isElectraAttestation(attestation)) {
-        committeeIndex = attestation.data.index;
-      } else {
-        throw new Error(`Expect phase0 attestation but received electra attestation. Slot: ${slot}`);
+      if (isElectraAttestation(attestation)) {
+        throw new Error(`Expect phase0 attestation at slot ${slot} but received electra attestation.`);
       }
+      committeeIndex = attestation.data.index;
     }
     // this should not happen because attestation should be validated before reaching this
     assert.notNull(committeeIndex, "Committee index should not be null in aggregated attestation pool");
