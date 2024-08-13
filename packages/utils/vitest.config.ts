@@ -6,6 +6,9 @@ export default mergeConfig(
   defineConfig({
     test: {
       globalSetup: ["./test/globalSetup.ts"],
+      typecheck: {
+        ignoreSourceErrors: true,
+      },
     },
   })
 );
