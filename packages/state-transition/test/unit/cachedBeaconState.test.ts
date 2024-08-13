@@ -8,7 +8,6 @@ import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
-import {IShufflingCache} from "../../src/index.js";
 
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {
@@ -129,14 +128,9 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
-        const newCachedState = loadCachedBeaconState(
-          seedState,
-          stateBytes,
-          seedState.epochCtx.shufflingCache as IShufflingCache,
-          {
-            skipSyncCommitteeCache: true,
-          }
-        );
+        const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
+          skipSyncCommitteeCache: true,
+        });
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
