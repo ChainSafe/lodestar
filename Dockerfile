@@ -1,7 +1,7 @@
 
 # --platform=$BUILDPLATFORM is used build javascript source with host arch
 # Otherwise TS builds on emulated archs and can be extremely slow (+1h)
-FROM --platform=${BUILDPLATFORM:-amd64} node:22.4-slim as build_src
+FROM --platform=${BUILDPLATFORM:-amd64} node:22.4-slim AS build_src
 ARG COMMIT
 WORKDIR /usr/app
 RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -21,7 +21,7 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 
 # Copy built src + node_modules to build native packages for archs different than host.
 # Note: This step is redundant for the host arch
-FROM node:22.4-slim as build_deps
+FROM node:22.4-slim AS build_deps
 WORKDIR /usr/app
 RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
 
