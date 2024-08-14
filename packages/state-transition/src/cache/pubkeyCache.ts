@@ -6,6 +6,11 @@ export type Index2PubkeyCache = PublicKey[];
 type PubkeyHex = string;
 
 /**
+ * BLSPubkey is of type Bytes48, we can use a single buffer to compute hex for all pubkeys
+ */
+const pubkeyBuf = Buffer.alloc(48);
+
+/**
  * toHexString() creates hex strings via string concatenation, which are very memory inefficient.
  * Memory benchmarks show that Buffer.toString("hex") produces strings with 10x less memory.
  *
@@ -21,7 +26,8 @@ function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
     return hex;
   }
 
-  return Buffer.from(hex.buffer, hex.byteOffset, hex.byteLength).toString("hex");
+  pubkeyBuf.set(hex);
+  return pubkeyBuf.toString("hex");
 }
 
 export class PubkeyIndexMap {
