@@ -1,3 +1,4 @@
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {
   computeEpochAtSlot,
   isExecutionStateType,
@@ -18,7 +19,6 @@ import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
-import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
@@ -29,7 +29,7 @@ const PREPARE_EPOCH_LIMIT = 1;
 /**
  * The same HashComputationGroup to be used for all epoch transition.
  */
-const balancesHCGroup = new HashComputationGroup();
+const epochHCGroup = new HashComputationGroup();
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -236,11 +236,7 @@ export class PrepareNextSlotScheduler {
       source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
     if (isEpochTransition) {
-      // balances are completely changed per epoch and it's not much different so we can reuse the HashComputationGroup
-      state.balances.batchHashTreeRoot(balancesHCGroup);
-      // TODO: it's more performant to use normal hashTreeRoot() for the rest of the state
-      // this saves ~10ms per ~100ms as monitored on mainnet as of Jul 2024
-      state.node.rootHashObject;
+      state.batchHashTreeRoot(epochHCGroup);
     } else {
       // normal slot, not worth to batch hash
       state.node.rootHashObject;
