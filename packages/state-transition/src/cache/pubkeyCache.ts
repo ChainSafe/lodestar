@@ -4,41 +4,36 @@ import {ValidatorIndex, phase0} from "@lodestar/types";
 export type Index2PubkeyCache = PublicKey[];
 
 type PubkeyHex = string;
-const PUBKEY_LENGTH = 48;
+type PubkeyBase64 = string;
+const PUBKEY_BYTE_LENGTH = 48;
+const PUBKEY_HEX_CHAR_LENGTH = 96;
 
 /**
  * BLSPubkey is of type Bytes48, we can use a single buffer to compute hex for all pubkeys
  */
-const pubkeyBuf = Buffer.alloc(PUBKEY_LENGTH);
+const pubkeyBuf = Buffer.alloc(PUBKEY_BYTE_LENGTH);
 
 /**
  * toHexString() creates hex strings via string concatenation, which are very memory inefficient.
  * Memory benchmarks show that Buffer.toString("hex") produces strings with 10x less memory.
  *
- * Does not prefix to save memory, thus the prefix is removed from an already string representation.
+ * Aug 2024: using base64 is 33% more memory efficient than hex
  *
  * See https://github.com/ChainSafe/lodestar/issues/3446
  */
-function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
-  if (typeof hex === "string") {
-    if (hex.startsWith("0x")) {
-      hex = hex.slice(2);
-    }
-    return hex;
-  }
-
-  if (hex.length === PUBKEY_LENGTH) {
-    pubkeyBuf.set(hex);
-    return pubkeyBuf.toString("hex");
+function toMemoryEfficientHexStr(pubkey: Uint8Array): PubkeyBase64 {
+  if (pubkey.length === PUBKEY_BYTE_LENGTH) {
+    pubkeyBuf.set(pubkey);
+    return pubkeyBuf.toString("base64");
   } else {
     // only happens in unit tests
-    return Buffer.from(hex.buffer, hex.byteOffset, hex.byteLength).toString("hex");
+    return Buffer.from(pubkey.buffer, pubkey.byteOffset, pubkey.byteLength).toString("base64");
   }
 }
 
 export class PubkeyIndexMap {
-  // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
-  readonly map = new Map<PubkeyHex, ValidatorIndex>();
+  // TODO: We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
+  readonly map = new Map<PubkeyBase64, ValidatorIndex>();
 
   get size(): number {
     return this.map.size;
@@ -48,6 +43,21 @@ export class PubkeyIndexMap {
    * Must support reading with string for API support where pubkeys are already strings
    */
   get(key: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
+    if (typeof key === "string") {
+      if (key.startsWith("0x")) {
+        key = key.slice(2);
+      }
+      if (key.length === PUBKEY_HEX_CHAR_LENGTH) {
+        // we don't receive api requests frequently, so the below conversion to Buffer then base64 should not be an issue
+        pubkeyBuf.write(key, "hex");
+        return this.map.get(toMemoryEfficientHexStr(pubkeyBuf));
+      } else {
+        // base64 is only for internal use, don't support it
+        return undefined;
+      }
+    }
+
+    // Uint8Array
     return this.map.get(toMemoryEfficientHexStr(key));
   }
 

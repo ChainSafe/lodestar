@@ -2,13 +2,14 @@ import crypto from "node:crypto";
 import {toHexString} from "@chainsafe/ssz";
 import {testRunnerMemory} from "./testRunnerMemory.js";
 
-// Results in Linux Dec 2021
+// Results in Mac M1 Aug 2024
 //
-// Bytes32 toHexString()                        - 902.8 bytes / instance
-// Bytes32 Buffer.toString(hex)                 - 86.9 bytes / instance
-// Bytes32 Buffer.toString(hex) from Uint8Array - 87.6 bytes / instance
-// Bytes32 Buffer.toString(hex) + 0x            - 121.7 bytes / instance
-// Bytes32 randomBytes32Template()              - 924.7 bytes / instance
+// Bytes32 toHexString()                           - 903.4 bytes / instance
+// Bytes32 Buffer.toString(hex)                    - 90.2 bytes / instance
+// Bytes32 Buffer.toString(hex) from Uint8Array    - 89.1 bytes / instance
+// Bytes32 Buffer.toString(base64) from Uint8Array - 72.0 bytes / instance
+// Bytes32 Buffer.toString(hex) + 0x               - 119.7 bytes / instance
+// Bytes32 randomBytes32Template()                 - 924.9 bytes / instance
 
 testRunnerMemoryBpi([
   {
@@ -22,6 +23,10 @@ testRunnerMemoryBpi([
   {
     id: "Bytes32 Buffer.toString(hex) from Uint8Array",
     getInstance: () => Buffer.from(randomBytesUint8Array(32)).toString("hex"),
+  },
+  {
+    id: "Bytes32 Buffer.toString(base64) from Uint8Array",
+    getInstance: () => Buffer.from(randomBytesUint8Array(32)).toString("base64"),
   },
   {
     id: "Bytes32 Buffer.toString(hex) + 0x",
