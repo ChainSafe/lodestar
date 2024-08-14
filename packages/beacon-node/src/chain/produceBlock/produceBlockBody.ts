@@ -32,7 +32,7 @@ import {
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep, Logger} from "@lodestar/utils";
+import {toHex, sleep, Logger, toRootHex} from "@lodestar/utils";
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
@@ -273,7 +273,7 @@ export async function produceBlockBody<T extends BlockType>(
             prepType,
             payloadId,
             fetchedTime,
-            executionHeadBlockHash: toHex(engineRes.executionPayload.blockHash),
+            executionHeadBlockHash: toRootHex(engineRes.executionPayload.blockHash),
           });
           if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
@@ -290,7 +290,7 @@ export async function produceBlockBody<T extends BlockType>(
             }
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-            const blockHash = toHex(executionPayload.blockHash);
+            const blockHash = toRootHex(executionPayload.blockHash);
             const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
             blobsResult = {type: BlobsResultType.produced, contents, blockHash};
 
@@ -380,7 +380,7 @@ export async function prepareExecutionPayload(
   const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
 
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
-    headBlockHash: toHex(parentHash),
+    headBlockHash: toRootHex(parentHash),
     finalizedBlockHash,
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
@@ -414,7 +414,7 @@ export async function prepareExecutionPayload(
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
-      toHex(parentHash),
+      toRootHex(parentHash),
       safeBlockHash,
       finalizedBlockHash,
       attributes

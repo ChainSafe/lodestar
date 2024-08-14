@@ -35,7 +35,7 @@ import {
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -691,7 +691,7 @@ export class BeaconChain implements IBeaconChain {
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
         : this.config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
-    const blockRootHex = toHex(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
 
     // track the produced block for consensus broadcast validations
     if (blockType === BlockType.Full) {
@@ -729,7 +729,7 @@ export class BeaconChain implements IBeaconChain {
    *   )
    */
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
-    const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
+    const blockHash = toRootHex(beaconBlock.body.executionPayload.blockHash);
     const contents = this.producedContentsCache.get(blockHash);
     if (!contents) {
       throw Error(`No contents for executionPayload.blockHash ${blockHash}`);
@@ -926,7 +926,7 @@ export class BeaconChain implements IBeaconChain {
           checkpointRoot: checkpoint.rootHex,
           stateId,
           stateSlot: state.slot,
-          stateRoot: toHex(state.hashTreeRoot()),
+          stateRoot: toRootHex(state.hashTreeRoot()),
         });
       }
 
@@ -997,7 +997,7 @@ export class BeaconChain implements IBeaconChain {
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${typeName}_${toHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${typeName}_${toRootHex(root)}.ssz`);
 
     await ensureDir(dirpath);
 

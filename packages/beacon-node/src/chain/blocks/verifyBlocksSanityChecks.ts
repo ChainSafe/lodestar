@@ -2,7 +2,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
-import {toHexString, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
@@ -85,9 +85,7 @@ export function verifyBlocksSanityChecks(
 
     // Not already known
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
-    const blockHash = toHexString(
-      chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
-    );
+    const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
     if (chain.forkChoice.hasBlockHex(blockHash)) {
       if (opts.ignoreIfKnown) {
         continue;

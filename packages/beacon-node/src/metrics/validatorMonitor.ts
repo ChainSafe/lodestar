@@ -8,7 +8,7 @@ import {
   getBlockRootAtSlot,
   ParticipationFlags,
 } from "@lodestar/state-transition";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toHex} from "@lodestar/utils";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
 import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -392,7 +392,7 @@ export function createValidatorMonitor(
 
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
         summary.blockProposals.push({
-          blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+          blockRoot: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
           blockSlot: block.slot,
           poolSubmitDelaySec: delaySec,
           successfullyImported: false,
@@ -416,7 +416,7 @@ export function createValidatorMonitor(
           proposal.successfullyImported = true;
         } else {
           summary.blockProposals.push({
-            blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+            blockRoot: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
             blockSlot: block.slot,
             poolSubmitDelaySec: null,
             successfullyImported: true,
@@ -445,7 +445,7 @@ export function createValidatorMonitor(
 
           const attestationSummary = validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root));
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root));
           if (
             attestationSummary.poolSubmitDelayMinSec === null ||
             attestationSummary.poolSubmitDelayMinSec > delaySec
@@ -494,7 +494,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .aggregateInclusionDelaysSec.push(delaySec);
         }
       }
@@ -533,7 +533,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .aggregateInclusionDelaysSec.push(delaySec);
         }
       }
@@ -577,7 +577,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .blockInclusions.push({
               blockRoot: inclusionBlockRoot,
               blockSlot: inclusionBlockSlot,
@@ -650,7 +650,7 @@ export function createValidatorMonitor(
       if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
         const {previousEpochParticipation} = headState as CachedBeaconStateAltair;
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
-        const prevEpochTargetRoot = toHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
+        const prevEpochTargetRoot = toRootHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
@@ -1041,7 +1041,7 @@ export class RootHexCache {
   getBlockRootAtSlot(slot: Slot): RootHex {
     let root = this.blockRootSlotCache.get(slot);
     if (!root) {
-      root = toHex(getBlockRootAtSlot(this.state, slot));
+      root = toRootHex(getBlockRootAtSlot(this.state, slot));
       this.blockRootSlotCache.set(slot, root);
     }
     return root;
