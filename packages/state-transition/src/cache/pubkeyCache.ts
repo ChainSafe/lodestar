@@ -4,11 +4,12 @@ import {ValidatorIndex, phase0} from "@lodestar/types";
 export type Index2PubkeyCache = PublicKey[];
 
 type PubkeyHex = string;
+const PUBKEY_LENGTH = 48;
 
 /**
  * BLSPubkey is of type Bytes48, we can use a single buffer to compute hex for all pubkeys
  */
-const pubkeyBuf = Buffer.alloc(48);
+const pubkeyBuf = Buffer.alloc(PUBKEY_LENGTH);
 
 /**
  * toHexString() creates hex strings via string concatenation, which are very memory inefficient.
@@ -26,8 +27,13 @@ function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
     return hex;
   }
 
-  pubkeyBuf.set(hex);
-  return pubkeyBuf.toString("hex");
+  if (hex.length === PUBKEY_LENGTH) {
+    pubkeyBuf.set(hex);
+    return pubkeyBuf.toString("hex");
+  } else {
+    // only happens in unit tests
+    return Buffer.from(hex.buffer, hex.byteOffset, hex.byteLength).toString("hex");
+  }
 }
 
 export class PubkeyIndexMap {
