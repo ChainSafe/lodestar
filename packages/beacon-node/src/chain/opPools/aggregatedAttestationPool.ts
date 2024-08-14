@@ -145,7 +145,7 @@ export class AggregatedAttestationPool {
 
     if (isForkPostElectra(this.config.getForkName(slot))) {
       if (!isElectraAttestation(attestation)) {
-        throw new Error("Attestation should be type electra.Attestation");
+        throw Error(`Attestation should be type electra.Attestation for slot ${slot}`);
       }
       committeeIndex = attestation.committeeBits.getSingleTrueBit();
     } else {
