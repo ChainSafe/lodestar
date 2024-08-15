@@ -167,7 +167,7 @@ export function getDiffs(val1: Diffable, val2: Diffable, objectPath: string): Di
  *       { key3: new Uint8Array([1, 2, 3]) }
  *     ]
  *   },
- *   key4: new Uint8Array([1, 2, 3]),
+ *   key4: new Uint32Array([1, 2, 3]),
  *   key5: 362436
  * };
  *
@@ -178,7 +178,7 @@ export function getDiffs(val1: Diffable, val2: Diffable, objectPath: string): Di
  *       { key3: new Uint8Array([1, 2, 4]) }
  *     ]
  *   },
- *   key4: new Uint8Array([1, 2, 4])
+ *   key4: new Uint32Array([1, 2, 4])
  *   key5: true
  * };
  *
@@ -192,9 +192,9 @@ export function getDiffs(val1: Diffable, val2: Diffable, objectPath: string): Di
  * val.key1.key2[1].key3
  *   - 0x010203
  *   - 0x010204
- * val.key4
- *   - 0x010203
- *   - 0x010204
+ * val.key4[2]
+ *   - 0x00000003
+ *   - 0x00000004
  * val.key5
  *   val1.key5 is not the same type as val2.key5
  *   - 362436
