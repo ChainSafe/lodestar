@@ -1,6 +1,6 @@
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {testRunnerMemory} from "@lodestar/beacon-node/test/memory/testRunnerMemory";
 import {newZeroedArray} from "../../src/index.js";
+import {testRunnerMemoryBpi} from "./testRunnerMemory.js";
 
 // Results in Linux Feb 2022
 //
@@ -42,21 +42,3 @@ testRunnerMemoryBpi([
     },
   },
 ]);
-
-/**
- * Test bytes per instance in different representations of raw binary data
- */
-function testRunnerMemoryBpi(testCases: {getInstance: (bytes: number) => unknown; id: string}[]): void {
-  const longestId = Math.max(...testCases.map(({id}) => id.length));
-
-  for (const {id, getInstance} of testCases) {
-    const bpi = testRunnerMemory({
-      getInstance,
-      convergeFactor: 1 / 100,
-      sampleEvery: 5,
-    });
-
-    // eslint-disable-next-line no-console
-    console.log(`${id.padEnd(longestId)} - ${bpi.toFixed(1)} bytes / instance`);
-  }
-}
