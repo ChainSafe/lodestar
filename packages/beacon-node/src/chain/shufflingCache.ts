@@ -1,5 +1,5 @@
 import {BeaconStateAllForks, EpochShuffling, IShufflingCache, computeEpochShuffling} from "@lodestar/state-transition";
-import {Epoch, RootHex} from "@lodestar/types";
+import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {LodestarError, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
@@ -149,7 +149,7 @@ export class ShufflingCache implements IShufflingCache {
     epoch: number,
     decisionRoot: string,
     state: BeaconStateAllForks,
-    activeIndices: number[],
+    activeIndices: ValidatorIndex[],
     activeIndicesLength: number
   ): EpochShuffling {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
@@ -175,7 +175,7 @@ export class ShufflingCache implements IShufflingCache {
     epoch: number,
     decisionRoot: string,
     state: BeaconStateAllForks,
-    activeIndices: number[],
+    activeIndices: ValidatorIndex[],
     activeIndicesLength: number
   ): void {
     this.insertPromise(epoch, decisionRoot);

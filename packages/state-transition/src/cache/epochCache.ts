@@ -593,7 +593,7 @@ export class EpochCache {
     }
   ): void {
     const upcomingEpoch = this.nextEpoch;
-    const epochAfterNext = upcomingEpoch + 1;
+    const epochAfterUpcoming = upcomingEpoch + 1;
 
     // move current to previous
     this.previousShuffling = this.currentShuffling;
@@ -626,13 +626,24 @@ export class EpochCache {
     this.proposers = computeProposers(upcomingProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
 
     // calculate next values
-    this.nextDecisionRoot = getShufflingDecisionBlock(state.config, state, epochAfterNext);
-    this.nextActiveIndices = epochTransitionCache.nextEpochShufflingActiveValidatorIndices;
+    this.nextDecisionRoot = getShufflingDecisionBlock(state.config, state, epochAfterUpcoming);
     this.nextActiveIndicesLength = epochTransitionCache.nextEpochShufflingActiveIndicesLength;
+    this.nextActiveIndices = new Array<number>(this.nextActiveIndicesLength);
+
+    if (this.nextActiveIndicesLength > epochTransitionCache.nextEpochShufflingActiveValidatorIndices.length) {
+      throw new Error(
+        `Invalid activeValidatorCount: ${this.nextActiveIndicesLength} > ${epochTransitionCache.nextEpochShufflingActiveValidatorIndices.length}`
+      );
+    }
+    // only the first `activeValidatorCount` elements are copied to `activeIndices`
+    for (let i = 0; i < this.nextActiveIndicesLength; i++) {
+      this.nextActiveIndices[i] = epochTransitionCache.nextEpochShufflingActiveValidatorIndices[i];
+    }
+
     if (this.shufflingCache) {
       this.nextShuffling = null;
       this.shufflingCache?.build(
-        epochAfterNext,
+        epochAfterUpcoming,
         this.nextDecisionRoot,
         state,
         this.nextActiveIndices,
@@ -643,12 +654,12 @@ export class EpochCache {
         state,
         this.nextActiveIndices,
         this.nextActiveIndicesLength,
-        epochAfterNext
+        epochAfterUpcoming
       );
     }
 
     // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
-    this.proposersNextEpoch = {computed: false, seed: getSeed(state, epochAfterNext, DOMAIN_BEACON_PROPOSER)};
+    this.proposersNextEpoch = {computed: false, seed: getSeed(state, epochAfterUpcoming, DOMAIN_BEACON_PROPOSER)};
 
     // TODO: DEDUPLICATE from createEpochCache
     //
