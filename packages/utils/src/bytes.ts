@@ -63,6 +63,10 @@ const rootBuf = Buffer.alloc(32);
  * Convert a Uint8Array, length 32, to 0x-prefixed hex string
  */
 export function toRootHex(root: Uint8Array): string {
+  if (root.length !== 32) {
+    throw Error(`Expect root to be 32 bytes, got ${root.length}`);
+  }
+
   rootBuf.set(root);
   return `0x${rootBuf.toString("hex")}`;
 }

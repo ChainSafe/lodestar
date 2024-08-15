@@ -1,7 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Slot, phase0, ssz} from "@lodestar/types";
 
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
+import {toRootHex} from "@lodestar/utils";
 import {computeEpochAtSlot} from "../util/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
 import {isValidIndexedAttestation} from "./index.js";
@@ -113,5 +113,5 @@ export function isTimelyTarget(fork: ForkSeq, inclusionDistance: Slot): boolean 
 }
 
 export function checkpointToStr(checkpoint: phase0.Checkpoint): string {
-  return `${toHexString(checkpoint.root)}:${checkpoint.epoch}`;
+  return `${toRootHex(checkpoint.root)}:${checkpoint.epoch}`;
 }

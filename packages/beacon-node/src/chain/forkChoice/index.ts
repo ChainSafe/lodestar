@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
@@ -91,7 +90,7 @@ export function initializeForkChoice(
 
         ...(isExecutionStateType(state) && isMergeTransitionComplete(state)
           ? {
-              executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
+              executionPayloadBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
               executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }

@@ -1,5 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkDigest, Root, Slot, phase0, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 
 // TODO: Why this value? (From Lighthouse)
 const FUTURE_SLOT_TOLERANCE = 1;
@@ -82,6 +83,6 @@ export function renderIrrelevantPeerType(type: IrrelevantPeerType): string {
     case IrrelevantPeerCode.DIFFERENT_CLOCKS:
       return `DIFFERENT_CLOCKS slotDiff: ${type.slotDiff}`;
     case IrrelevantPeerCode.DIFFERENT_FINALIZED:
-      return `DIFFERENT_FINALIZED root: ${toHexString(type.remoteRoot)} expected: ${toHexString(type.expectedRoot)}`;
+      return `DIFFERENT_FINALIZED root: ${toRootHex(type.remoteRoot)} expected: ${toRootHex(type.expectedRoot)}`;
   }
 }

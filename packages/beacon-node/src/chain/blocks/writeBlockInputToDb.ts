@@ -1,4 +1,4 @@
-import {toHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {BlockInput, BlockInputType} from "./types.js";
 
@@ -15,7 +15,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
   for (const blockInput of blocksInput) {
     const {block, blockBytes} = blockInput;
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toHex(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
     if (blockBytes) {
       // skip serializing data if we already have it
       this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
@@ -59,7 +59,7 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
   for (const blockInput of blockInputs) {
     const {block, type} = blockInput;
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toHex(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
     if (!this.forkChoice.hasBlockHex(blockRootHex)) {
       blockToRemove.push(block);
 
