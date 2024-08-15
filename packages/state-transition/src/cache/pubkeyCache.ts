@@ -21,7 +21,7 @@ const pubkeyBuf = Buffer.alloc(PUBKEY_BYTE_LENGTH);
  *
  * See https://github.com/ChainSafe/lodestar/issues/3446
  */
-function toMemoryEfficientHexStr(pubkey: Uint8Array): PubkeyBase64 {
+function toMemoryEfficientString(pubkey: Uint8Array): PubkeyBase64 {
   if (pubkey.length === PUBKEY_BYTE_LENGTH) {
     pubkeyBuf.set(pubkey);
     return pubkeyBuf.toString("base64");
@@ -50,7 +50,7 @@ export class PubkeyIndexMap {
       if (key.length === PUBKEY_HEX_CHAR_LENGTH) {
         // we don't receive api requests frequently, so the below conversion to Buffer then base64 should not be an issue
         pubkeyBuf.write(key, "hex");
-        return this.map.get(toMemoryEfficientHexStr(pubkeyBuf));
+        return this.map.get(toMemoryEfficientString(pubkeyBuf));
       } else {
         // base64 is only for internal use, don't support it
         return undefined;
@@ -58,11 +58,11 @@ export class PubkeyIndexMap {
     }
 
     // Uint8Array
-    return this.map.get(toMemoryEfficientHexStr(key));
+    return this.map.get(toMemoryEfficientString(key));
   }
 
   set(key: Uint8Array, value: ValidatorIndex): void {
-    this.map.set(toMemoryEfficientHexStr(key), value);
+    this.map.set(toMemoryEfficientString(key), value);
   }
 }
 
