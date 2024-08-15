@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {Logger, toHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
@@ -137,7 +137,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
       canonicalBlocks.map(async (block) => {
         const blockBuffer = await db.block.getBinary(block.root);
         if (!blockBuffer) {
-          throw Error(`No block found for slot ${block.slot} root ${toHex(block.root)}`);
+          throw Error(`No block found for slot ${block.slot} root ${toRootHex(block.root)}`);
         }
         return {
           key: block.slot,
@@ -177,7 +177,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
         .map(async (block) => {
           const bytes = await db.blobSidecars.getBinary(block.root);
           if (!bytes) {
-            throw Error(`No blobSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
+            throw Error(`No blobSidecars found for slot ${block.slot} root ${toRootHex(block.root)}`);
           }
           return {key: block.slot, value: bytes};
         })

@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {aggregateSignatures} from "@chainsafe/blst";
 import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
@@ -11,7 +10,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {toHex, MapDef} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import {InsertOutcome} from "./types.js";
@@ -515,7 +514,7 @@ export function getValidateAttestationDataFn(
     }
 
     // the isValidAttestationData does not depend on slot and index
-    const beaconBlockRootHex = toHex(attData.beaconBlockRoot);
+    const beaconBlockRootHex = toRootHex(attData.beaconBlockRoot);
     const cacheKey = beaconBlockRootHex + targetEpoch;
     let isValid = cachedValidatedAttestationData.get(cacheKey);
     if (isValid === undefined) {
@@ -560,7 +559,7 @@ export function isValidAttestationData(
   if (stateEpoch < 2 || targetEpoch < 2) {
     return true;
   }
-  const beaconBlockRootHex = toHex(data.beaconBlockRoot);
+  const beaconBlockRootHex = toRootHex(data.beaconBlockRoot);
   return isValidShuffling(forkChoice, state, beaconBlockRootHex, targetEpoch);
 }
 
@@ -573,7 +572,7 @@ function isValidShuffling(
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
   const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
-  const stateDependentRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
+  const stateDependentRoot = toRootHex(getBlockRootAtSlot(state, pivotSlot));
 
   // Use fork choice's view of the block DAG to quickly evaluate whether the attestation's
   // pivot block is the same as the current state's pivot block. If it is, then the

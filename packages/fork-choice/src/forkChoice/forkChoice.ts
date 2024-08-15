@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Logger, fromHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
 import {
@@ -472,7 +472,7 @@ export class ForkChoice implements IForkChoice {
     dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock {
     const {parentRoot, slot} = block;
-    const parentRootHex = toHexString(parentRoot);
+    const parentRootHex = toRootHex(parentRoot);
     // Parent block must be known
     const parentBlock = this.protoArray.getBlock(parentRootHex);
     if (!parentBlock) {
@@ -529,7 +529,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
-    const blockRootHex = toHexString(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
 
     // Assign proposer score boost if the block is timely
     // before attesting interval = before 1st interval
@@ -628,14 +628,14 @@ export class ForkChoice implements IForkChoice {
       slot: slot,
       blockRoot: blockRootHex,
       parentRoot: parentRootHex,
-      targetRoot: toHexString(targetRoot),
-      stateRoot: toHexString(block.stateRoot),
+      targetRoot: toRootHex(targetRoot),
+      stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
 
       justifiedEpoch: stateJustifiedEpoch,
-      justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
+      justifiedRoot: toRootHex(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
-      finalizedRoot: toHexString(state.finalizedCheckpoint.root),
+      finalizedRoot: toRootHex(state.finalizedCheckpoint.root),
       unrealizedJustifiedEpoch: unrealizedJustifiedCheckpoint.epoch,
       unrealizedJustifiedRoot: unrealizedJustifiedCheckpoint.rootHex,
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
@@ -694,7 +694,7 @@ export class ForkChoice implements IForkChoice {
     // to genesis just by being present in the chain.
     const attestationData = attestation.data;
     const {slot, beaconBlockRoot} = attestationData;
-    const blockRootHex = toHexString(beaconBlockRoot);
+    const blockRootHex = toRootHex(beaconBlockRoot);
     const targetEpoch = attestationData.target.epoch;
     if (ssz.Root.equals(beaconBlockRoot, ZERO_HASH)) {
       return;
@@ -770,11 +770,11 @@ export class ForkChoice implements IForkChoice {
 
   /** Returns `true` if the block is known **and** a descendant of the finalized root. */
   hasBlock(blockRoot: Root): boolean {
-    return this.hasBlockHex(toHexString(blockRoot));
+    return this.hasBlockHex(toRootHex(blockRoot));
   }
   /** Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root. */
   getBlock(blockRoot: Root): ProtoBlock | null {
-    return this.getBlockHex(toHexString(blockRoot));
+    return this.getBlockHex(toRootHex(blockRoot));
   }
 
   /**
@@ -793,7 +793,7 @@ export class ForkChoice implements IForkChoice {
    * Same to hasBlock but without checking if the block is a descendant of the finalized root.
    */
   hasBlockUnsafe(blockRoot: Root): boolean {
-    return this.hasBlockHexUnsafe(toHexString(blockRoot));
+    return this.hasBlockHexUnsafe(toRootHex(blockRoot));
   }
 
   /**
@@ -1221,7 +1221,7 @@ export class ForkChoice implements IForkChoice {
     forceImport?: boolean
   ): void {
     const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
-    const targetRootHex = toHexString(attestationData.target.root);
+    const targetRootHex = toRootHex(attestationData.target.root);
 
     // Attestation must be from the current of previous epoch.
     if (targetEpoch > epochNow) {

@@ -1,7 +1,7 @@
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {deneb, RootHex} from "@lodestar/types";
-import {toHex, fromHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
@@ -20,7 +20,7 @@ export async function* onBlobSidecarsByRoot(
 
   for (const blobIdentifier of requestBody) {
     const {blockRoot, index} = blobIdentifier;
-    const blockRootHex = toHex(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
     const block = chain.forkChoice.getBlockHex(blockRootHex);
 
     // NOTE: Only support non-finalized blocks.

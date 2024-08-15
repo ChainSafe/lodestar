@@ -16,6 +16,7 @@ import {
   ForkSeq,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
@@ -135,7 +136,7 @@ export class OpPool {
     if (!rootHash) rootHash = ssz.phase0.AttesterSlashing.hashTreeRoot(attesterSlashing);
     // TODO: Do once and cache attached to the AttesterSlashing object
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-    this.attesterSlashings.set(toHexString(rootHash), {
+    this.attesterSlashings.set(toRootHex(rootHash), {
       attesterSlashing,
       intersectingIndices,
     });

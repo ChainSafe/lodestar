@@ -3,7 +3,7 @@ import path from "node:path";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {Repository} from "@lodestar/db";
-import {toHex} from "@lodestar/utils";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
@@ -202,7 +202,7 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
     case "getPreState": {
       const slot = regenRequest.args[0].slot;
       return {
-        root: toHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
+        root: toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
         slot,
       };
     }

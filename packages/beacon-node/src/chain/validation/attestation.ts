@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, Root, Slot, RootHex, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq, DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
@@ -13,6 +12,7 @@ import {
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
+import {toRootHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -437,7 +437,7 @@ async function validateGossipAttestationNoSignatureCheck(
     );
 
     // add cached attestation data before verifying signature
-    attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
+    attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
     if (attDataBase64) {
       chain.seenAttestationDatas.add(attSlot, attDataBase64, {
         committeeIndices,
@@ -643,7 +643,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): Pro
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
-      root: toHexString(beaconBlockRoot),
+      root: toRootHex(beaconBlockRoot),
     });
   }
 
@@ -671,7 +671,7 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
     // https://github.com/ethereum/consensus-specs/pull/2001#issuecomment-699246659
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_TARGET_ROOT,
-      targetRoot: toHexString(targetRoot),
+      targetRoot: toRootHex(targetRoot),
       expected: null,
     });
   } else {
@@ -687,11 +687,11 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
           headBlock.blockRoot;
 
     // TODO: Do a fast comparision to convert and compare byte by byte
-    if (expectedTargetRoot !== toHexString(targetRoot)) {
+    if (expectedTargetRoot !== toRootHex(targetRoot)) {
       // Reject any attestation with an invalid target root.
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.INVALID_TARGET_ROOT,
-        targetRoot: toHexString(targetRoot),
+        targetRoot: toRootHex(targetRoot),
         expected: expectedTargetRoot,
       });
     }

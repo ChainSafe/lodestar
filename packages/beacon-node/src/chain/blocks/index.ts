@@ -1,4 +1,4 @@
-import {toHex, isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -127,7 +127,7 @@ export async function processBlocks(
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;
         const forkTypes = this.config.getForkTypes(blockSlot);
-        const invalidRoot = toHex(postState.hashTreeRoot());
+        const invalidRoot = toRootHex(postState.hashTreeRoot());
 
         const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
         this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
