@@ -527,7 +527,6 @@ export class MatchingDataAttestationGroup {
         (isForkPostElectra(fork) && !isElectraAttestation(attestation)) ||
         (!isForkPostElectra(fork) && isElectraAttestation(attestation))
       ) {
-        // TODO Electra: log warning
         continue;
       }
 
@@ -539,7 +538,6 @@ export class MatchingDataAttestationGroup {
         }
       }
 
-      // if fork >= electra, should return electra-only attestations
       if (notSeenAttesterCount > 0) {
         attestations.push({attestation, notSeenAttesterCount});
       }

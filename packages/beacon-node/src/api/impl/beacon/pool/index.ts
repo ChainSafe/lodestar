@@ -16,6 +16,7 @@ import {
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
+import {ApiError} from "../../errors.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -27,9 +28,13 @@ export function getBeaconPoolApi({
     async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations: Attestation[] = chain.aggregatedAttestationPool.getAll(slot);
+      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
 
-      if (attestations.some((att) => isElectraAttestation(att))) {
-        throw new Error(`Aggregated attestation pool contains electra attestations at slot ${slot}`);
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getPoolAttestationsV2 to retrieve pool attestations for post-electra fork=${fork}`
+        );
       }
 
       if (committeeIndex !== undefined) {

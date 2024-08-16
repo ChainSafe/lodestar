@@ -21,6 +21,7 @@ import {
   ForkPreBlobs,
   ForkBlobs,
   ForkExecution,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
@@ -1074,6 +1075,14 @@ export function getValidatorApi(
 
       const dataRootHex = toHex(attestationDataRoot);
       const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
+      const fork = chain.config.getForkName(slot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getAggregatedAttestationV2 to retrieve aggregated attestations for post-electra fork=${fork}`
+        );
+      }
 
       if (!aggregate) {
         throw new ApiError(404, `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}`);
