@@ -24,7 +24,6 @@ export type PeerData = {
   agentVersion: string | null;
   agentClient: ClientKind | null;
   encodingPreference: Encoding | null;
-  custodySubnetCount: number | null;
 };
 
 /**

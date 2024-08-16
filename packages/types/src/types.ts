@@ -164,40 +164,6 @@ type TypesByFork = {
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
   };
-  [ForkName.electra]: {
-    BeaconBlockHeader: phase0.BeaconBlockHeader;
-    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: electra.BeaconBlock;
-    BeaconBlockBody: electra.BeaconBlockBody;
-    BeaconState: electra.BeaconState;
-    SignedBeaconBlock: electra.SignedBeaconBlock;
-    Metadata: altair.Metadata;
-    LightClientHeader: electra.LightClientHeader;
-    LightClientBootstrap: electra.LightClientBootstrap;
-    LightClientUpdate: electra.LightClientUpdate;
-    LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
-    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
-    LightClientStore: electra.LightClientStore;
-    BlindedBeaconBlock: electra.BlindedBeaconBlock;
-    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
-    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
-    ExecutionPayload: electra.ExecutionPayload;
-    ExecutionPayloadHeader: electra.ExecutionPayloadHeader;
-    BuilderBid: electra.BuilderBid;
-    SignedBuilderBid: electra.SignedBuilderBid;
-    SSEPayloadAttributes: electra.SSEPayloadAttributes;
-    BlockContents: {block: BeaconBlock<ForkName.electra>; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
-    SignedBlockContents: {
-      signedBlock: SignedBeaconBlock<ForkName.electra>;
-      kzgProofs: deneb.KZGProofs;
-      blobs: deneb.Blobs;
-    };
-    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
-    BlobsBundle: deneb.BlobsBundle;
-    Contents: deneb.Contents;
-    SyncCommittee: altair.SyncCommittee;
-    SyncAggregate: altair.SyncAggregate;
-  };
 };
 
 export type TypesFor<F extends ForkName, K extends keyof TypesByFork[F] | void = void> = K extends void

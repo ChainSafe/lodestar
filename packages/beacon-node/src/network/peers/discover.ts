@@ -23,8 +23,6 @@ const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 
-const MAX_CACHED_NODEIDS = 10000;
-
 export type PeerDiscoveryOpts = {
   maxPeers: number;
   discv5FirstQueryDelayMs: number;
@@ -356,11 +354,6 @@ export class PeerDiscovery {
     }
     // async due to some crypto that's no longer necessary
     const peerId = await enr.peerId();
-
-    const nodeId = fromHexString(enr.nodeId);
-    this.peerIdToNodeId.set(peerId.toString(), nodeId);
-    pruneSetToMax(this.peerIdToNodeId, MAX_CACHED_NODEIDS);
-
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {

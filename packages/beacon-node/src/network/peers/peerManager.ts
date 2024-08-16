@@ -675,7 +675,6 @@ export class PeerManager {
       agentVersion: null,
       agentClient: null,
       encodingPreference: null,
-      custodySubnetCount,
     };
     this.connectedPeers.set(remotePeer.toString(), peerData);
 
