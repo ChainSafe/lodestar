@@ -33,20 +33,13 @@ export interface IShufflingCache {
     epoch: Epoch,
     decisionRoot: RootHex,
     state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[],
-    activeIndicesLength: number
+    activeIndices: ValidatorIndex[]
   ): EpochShuffling;
 
   /**
    * Queue asynchronous build for an EpochShuffling
    */
-  build(
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[],
-    activeIndicesLength: number
-  ): void;
+  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void;
 
   /**
    * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will
@@ -104,12 +97,13 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
 export function computeEpochShuffling(
   state: BeaconStateAllForks,
   activeIndices: ValidatorIndex[],
-  activeValidatorCount: number,
   epoch: Epoch
 ): EpochShuffling {
-  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const _activeIndices = new Uint32Array(activeIndices);
+  const activeValidatorCount = activeIndices.length;
+
   const shuffling = _activeIndices.slice();
+  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   unshuffleList(shuffling, seed);
 
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);

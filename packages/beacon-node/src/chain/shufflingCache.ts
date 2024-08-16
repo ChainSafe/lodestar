@@ -13,7 +13,7 @@ const MAX_EPOCHS = 4;
 
 /**
  * With default chain option of maxSkipSlots = 32, there should be no shuffling promise. If that happens a lot, it could blow up Lodestar,
- * with MAX_EPOCHS = 2, only allow 2 promise at a time. Note that regen already bounds number of concurrent requests at 1 already.
+ * with MAX_EPOCHS = 4, only allow 2 promise at a time. Note that regen already bounds number of concurrent requests at 1 already.
  */
 const MAX_PROMISES = 2;
 
@@ -149,15 +149,14 @@ export class ShufflingCache implements IShufflingCache {
     epoch: number,
     decisionRoot: string,
     state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[],
-    activeIndicesLength: number
+    activeIndices: ValidatorIndex[]
   ): EpochShuffling {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem && isShufflingCacheItem(cacheItem)) {
       // this.metrics?.shufflingCache.cacheHitEpochTransition();
       return cacheItem.shuffling;
     }
-    const shuffling = computeEpochShuffling(state, activeIndices, activeIndicesLength, epoch);
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
     if (cacheItem) {
       // this.metrics?.shufflingCache.shufflingPromiseNotResolvedEpochTransition();
       cacheItem.resolveFn(shuffling);
@@ -171,20 +170,14 @@ export class ShufflingCache implements IShufflingCache {
   /**
    * Queue asynchronous build for an EpochShuffling
    */
-  build(
-    epoch: number,
-    decisionRoot: string,
-    state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[],
-    activeIndicesLength: number
-  ): void {
+  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void {
     this.insertPromise(epoch, decisionRoot);
     /**
      * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
      * on a NICE thread with a rust implementation
      */
     setTimeout(() => {
-      const shuffling = computeEpochShuffling(state, activeIndices, activeIndicesLength, epoch);
+      const shuffling = computeEpochShuffling(state, activeIndices, epoch);
       this.set(shuffling, decisionRoot);
       // wait until after the first slot to help with attestation and block proposal performance
     }, this.minTimeDelayToBuild);

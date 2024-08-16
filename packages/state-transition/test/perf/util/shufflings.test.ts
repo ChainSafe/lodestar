@@ -36,7 +36,7 @@ describe("epoch shufflings", () => {
     id: `computeEpochShuffling - vc ${numValidators}`,
     fn: () => {
       const {nextActiveIndices} = state.epochCtx;
-      computeEpochShuffling(state, nextActiveIndices, nextActiveIndices.length, nextEpoch);
+      computeEpochShuffling(state, nextActiveIndices, nextEpoch);
     },
   });
 
