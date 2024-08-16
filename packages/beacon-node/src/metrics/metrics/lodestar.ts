@@ -1293,7 +1293,7 @@ export function createLodestarMetrics(
         help: "Count of shuffling cache promises that were requested before the promise was resolved",
       }),
       nextShufflingOnEpochCache: register.gauge({
-        name: "lodestar_shuffling_cache_promise_not_resolved_count",
+        name: "lodestar_shuffling_cache_next_shuffling_on_epoch_cache",
         help: "The next shuffling was already pulled to the epoch cache before the epoch transition",
       }),
       shufflingPromiseResolutionTime: register.histogram({
