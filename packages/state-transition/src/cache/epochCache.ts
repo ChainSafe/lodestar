@@ -379,10 +379,13 @@ export class EpochCache {
     let currentShuffling: EpochShuffling;
     if (cachedCurrentShuffling) {
       currentShuffling = cachedCurrentShuffling;
+    } else if (shufflingCache) {
+      currentShuffling = shufflingCache.getSync(currentEpoch, currentDecisionRoot, {
+        state,
+        activeIndices: currentActiveIndices,
+      });
     } else {
       currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-      shufflingCache?.set(currentShuffling, currentDecisionRoot);
-      // shufflingCache?.metrics?.shufflingCache.miss();
     }
 
     let previousShuffling: EpochShuffling;
@@ -391,19 +394,25 @@ export class EpochCache {
     } else if (isGenesis) {
       // TODO: (@matthewkeil) does this need to be added to the cache at previousEpoch and previousDecisionRoot?
       previousShuffling = currentShuffling;
+    } else if (shufflingCache) {
+      previousShuffling = shufflingCache.getSync(previousEpoch, previousDecisionRoot, {
+        state,
+        activeIndices: previousActiveIndices,
+      });
     } else {
       previousShuffling = computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-      shufflingCache?.set(previousShuffling, previousDecisionRoot);
-      // shufflingCache?.metrics?.shufflingCache.miss();
     }
 
     let nextShuffling: EpochShuffling;
     if (cachedNextShuffling) {
       nextShuffling = cachedNextShuffling;
+    } else if (shufflingCache) {
+      nextShuffling = shufflingCache.getSync(nextEpoch, nextDecisionRoot, {
+        state,
+        activeIndices: nextActiveIndices,
+      });
     } else {
       nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
-      shufflingCache?.set(nextShuffling, nextDecisionRoot);
-      // shufflingCache?.metrics?.shufflingCache.miss();
     }
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
@@ -596,7 +605,6 @@ export class EpochCache {
     if (this.nextShuffling) {
       // was already pulled by the api or another method on EpochCache
       this.currentShuffling = this.nextShuffling;
-      // shufflingCache?.metrics?.shufflingCache.nextShufflingOnEpochCache();
     } else {
       this.currentShuffling =
         this.shufflingCache?.getSync(upcomingEpoch, this.nextDecisionRoot, {

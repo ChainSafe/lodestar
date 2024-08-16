@@ -37,6 +37,7 @@ type ShufflingCacheItem = {
 
 type PromiseCacheItem = {
   type: CacheItemType.promise;
+  timeInserted: number;
   promise: Promise<EpochShuffling>;
   resolveFn: (shuffling: EpochShuffling) => void;
 };
@@ -102,6 +103,7 @@ export class ShufflingCache implements IShufflingCache {
 
     const cacheItem: PromiseCacheItem = {
       type: CacheItemType.promise,
+      timeInserted: Date.now(),
       promise,
       resolveFn,
     };
@@ -117,15 +119,15 @@ export class ShufflingCache implements IShufflingCache {
   async get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (cacheItem === undefined) {
-      // this.metrics?.shufflingCache.miss();
+      this.metrics?.shufflingCache.miss.inc();
       return null;
     }
 
     if (isShufflingCacheItem(cacheItem)) {
-      // this.metrics?.shufflingCache.cacheHit();
+      this.metrics?.shufflingCache.hit.inc();
       return cacheItem.shuffling;
     } else {
-      // this.metrics?.shufflingCache.shufflingPromiseNotResolved();
+      this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
       return cacheItem.promise;
     }
   }
@@ -144,23 +146,22 @@ export class ShufflingCache implements IShufflingCache {
   ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (!cacheItem) {
-      // this.metrics?.shufflingCache.miss();
+      this.metrics?.shufflingCache.miss.inc();
     } else if (isShufflingCacheItem(cacheItem)) {
-      // this.metrics?.shufflingCache.cacheHit();
+      this.metrics?.shufflingCache.hit.inc();
       return cacheItem.shuffling;
     } else if (buildProps) {
       // TODO: (@matthewkeil) This should possible log a warning??
-      // this.metrics?.shufflingCache.shufflingPromiseNotResolvedAndThrownAway();
+      this.metrics?.shufflingCache.shufflingPromiseNotResolvedAndThrownAway.inc();
     } else {
-      // this.metrics?.shufflingCache.shufflingPromiseNotResolved();
+      this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
     }
 
     let shuffling: EpochShuffling | null = null;
     if (buildProps) {
+      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
       shuffling = computeEpochShuffling(buildProps.state, buildProps.activeIndices, epoch);
-      if (cacheItem) {
-        cacheItem.resolveFn(shuffling);
-      }
+      timer?.();
       this.set(shuffling, decisionRoot);
     }
     return shuffling as T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
@@ -176,7 +177,9 @@ export class ShufflingCache implements IShufflingCache {
      * on a NICE thread with a rust implementation
      */
     setTimeout(() => {
+      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+      timer?.();
       this.set(shuffling, decisionRoot);
       // wait until after the first slot to help with attestation and block proposal performance
     }, this.minTimeDelayToBuild);
@@ -187,18 +190,19 @@ export class ShufflingCache implements IShufflingCache {
    * resolve the promise with the built shuffling
    */
   set(shuffling: EpochShuffling, decisionRoot: string): void {
-    const items = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
+    const shufflingAtEpoch = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
     // if a pending shuffling promise exists, resolve it
-    const item = items.get(decisionRoot);
-    if (item) {
-      if (isPromiseCacheItem(item)) {
-        item.resolveFn(shuffling);
+    const cacheItem = shufflingAtEpoch.get(decisionRoot);
+    if (cacheItem) {
+      if (isPromiseCacheItem(cacheItem)) {
+        cacheItem.resolveFn(shuffling);
+        this.metrics?.shufflingCache.shufflingPromiseResolutionTime.observe(Date.now() - cacheItem.timeInserted);
       } else {
-        // metric for throwing away previously calculated shuffling
+        this.metrics?.shufflingCache.shufflingRecalculated.inc();
       }
     }
     // set the shuffling
-    items.set(decisionRoot, {type: CacheItemType.shuffling, shuffling});
+    shufflingAtEpoch.set(decisionRoot, {type: CacheItemType.shuffling, shuffling});
     // prune the cache
     pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
   }

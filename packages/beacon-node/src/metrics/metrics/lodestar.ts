@@ -630,16 +630,6 @@ export function createLodestarMetrics(
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
-      shufflingCacheHit: register.gauge<{caller: RegenCaller}>({
-        name: "lodestar_gossip_attestation_shuffling_cache_hit_count",
-        help: "Count of gossip attestation verification shuffling cache hit",
-        labelNames: ["caller"],
-      }),
-      shufflingCacheMiss: register.gauge<{caller: RegenCaller}>({
-        name: "lodestar_gossip_attestation_shuffling_cache_miss_count",
-        help: "Count of gossip attestation verification shuffling cache miss",
-        labelNames: ["caller"],
-      }),
       shufflingCacheRegenHit: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_shuffling_cache_regen_hit_count",
         help: "Count of gossip attestation verification shuffling cache regen hit",
@@ -1278,21 +1268,39 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_size",
         help: "Shuffling cache size",
       }),
-      processStateInsertNew: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_insert_new_total",
-        help: "Total number of times processState is called resulting a new shuffling",
-      }),
-      processStateUpdatePromise: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_update_promise_total",
-        help: "Total number of times processState is called resulting a promise being updated with shuffling",
-      }),
-      processStateNoOp: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_no_op_total",
-        help: "Total number of times processState is called resulting no changes",
-      }),
       insertPromiseCount: register.gauge({
         name: "lodestar_shuffling_cache_insert_promise_count",
         help: "Total number of times insertPromise is called",
+      }),
+      hit: register.gauge({
+        name: "lodestar_gossip_attestation_shuffling_cache_hit_count",
+        help: "Count of shuffling cache hit",
+      }),
+      miss: register.gauge({
+        name: "lodestar_gossip_attestation_shuffling_cache_miss_count",
+        help: "Count of shuffling cache miss",
+      }),
+      shufflingRecalculated: register.gauge({
+        name: "lodestar_shuffling_cache_recalculated_shuffling_count",
+        help: "Count of shuffling cache promises that were discarded and the shuffling was built synchronously",
+      }),
+      shufflingPromiseNotResolvedAndThrownAway: register.gauge({
+        name: "lodestar_shuffling_cache_promise_not_resolved_and_thrown_away_count",
+        help: "Count of shuffling cache promises that were discarded and the shuffling was built synchronously",
+      }),
+      shufflingPromiseNotResolved: register.gauge({
+        name: "lodestar_shuffling_cache_promise_not_resolved_count",
+        help: "Count of shuffling cache promises that were requested before the promise was resolved",
+      }),
+      shufflingPromiseResolutionTime: register.histogram({
+        name: "lodestar_shuffling_cache_promise_resolution_time",
+        help: "Count of shuffling cache promises that were requested before the promise was resolved",
+        buckets: [1, 10, 100, 1000],
+      }),
+      shufflingCalculationTime: register.histogram({
+        name: "lodestar_shuffling_cache_shuffling_calculation_time",
+        help: "Count of shuffling cache promises that were requested before the promise was resolved",
+        buckets: [0.5, 0.75, 1, 1.25, 1.5],
       }),
     },
 
