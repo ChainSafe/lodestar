@@ -11,9 +11,9 @@ import {
   ForkLightClient,
   ForkBlobs,
 } from "@lodestar/params";
-import { Slot, Version, SSZTypesFor, sszTypesFor } from "@lodestar/types";
-import { ChainConfig } from "../chainConfig/index.js";
-import { ForkConfig, ForkInfo } from "./types.js";
+import {Slot, Version, SSZTypesFor, sszTypesFor} from "@lodestar/types";
+import {ChainConfig} from "../chainConfig/index.js";
+import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
 
@@ -70,7 +70,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = { phase0, altair, bellatrix, capella, deneb, electra };
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);

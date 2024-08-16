@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { fromHexString as b } from "@chainsafe/ssz";
-import { PresetName } from "@lodestar/params";
-import { ChainConfig } from "../types.js";
+import {fromHexString as b} from "@chainsafe/ssz";
+import {PresetName} from "@lodestar/params";
+import {ChainConfig} from "../types.js";
 
 // Mainnet config
 // https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml

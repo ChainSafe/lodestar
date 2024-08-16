@@ -1,7 +1,7 @@
-import { Libp2p } from "libp2p";
-import { Message, TopicValidatorResult } from "@libp2p/interface";
-import { PeerIdStr } from "@chainsafe/libp2p-gossipsub/types";
-import { ForkName } from "@lodestar/params";
+import {Libp2p} from "libp2p";
+import {Message, TopicValidatorResult} from "@libp2p/interface";
+import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
+import {ForkName} from "@lodestar/params";
 import {
   altair,
   capella,
@@ -13,12 +13,12 @@ import {
   Slot,
   electra,
 } from "@lodestar/types";
-import { BeaconConfig } from "@lodestar/config";
-import { Logger } from "@lodestar/utils";
-import { IBeaconChain } from "../../chain/index.js";
-import { JobItemQueue } from "../../util/queue/index.js";
-import { AttestationError, AttestationErrorType } from "../../chain/errors/attestationError.js";
-import { GossipActionError } from "../../chain/errors/gossipValidation.js";
+import {BeaconConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/utils";
+import {IBeaconChain} from "../../chain/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
+import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
+import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -50,21 +50,21 @@ export interface IGossipTopic {
 }
 
 export type GossipTopicTypeMap = {
-  [GossipType.beacon_block]: { type: GossipType.beacon_block };
-  [GossipType.blob_sidecar]: { type: GossipType.blob_sidecar; index: number };
-  [GossipType.data_column_sidecar]: { type: GossipType.data_column_sidecar; index: number };
-  [GossipType.beacon_aggregate_and_proof]: { type: GossipType.beacon_aggregate_and_proof };
-  [GossipType.beacon_attestation]: { type: GossipType.beacon_attestation; subnet: number };
-  [GossipType.voluntary_exit]: { type: GossipType.voluntary_exit };
-  [GossipType.proposer_slashing]: { type: GossipType.proposer_slashing };
-  [GossipType.attester_slashing]: { type: GossipType.attester_slashing };
+  [GossipType.beacon_block]: {type: GossipType.beacon_block};
+  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; index: number};
+  [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; index: number};
+  [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
+  [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
+  [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
+  [GossipType.proposer_slashing]: {type: GossipType.proposer_slashing};
+  [GossipType.attester_slashing]: {type: GossipType.attester_slashing};
   [GossipType.sync_committee_contribution_and_proof]: {
     type: GossipType.sync_committee_contribution_and_proof;
   };
-  [GossipType.sync_committee]: { type: GossipType.sync_committee; subnet: number };
-  [GossipType.light_client_finality_update]: { type: GossipType.light_client_finality_update };
-  [GossipType.light_client_optimistic_update]: { type: GossipType.light_client_optimistic_update };
-  [GossipType.bls_to_execution_change]: { type: GossipType.bls_to_execution_change };
+  [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: number};
+  [GossipType.light_client_finality_update]: {type: GossipType.light_client_finality_update};
+  [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
+  [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};
 };
 
 export type GossipTopicMap = {
@@ -76,7 +76,7 @@ export type GossipTopicMap = {
  */
 export type GossipTopic = GossipTopicMap[keyof GossipTopicMap];
 
-export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends { type: infer K extends GossipType }
+export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer K extends GossipType}
   ? GossipTypeMap[K]
   : never;
 
@@ -153,7 +153,7 @@ export type GossipValidatorFn = (messageInfo: GossipMessageInfo) => Promise<Topi
 
 export type GossipValidatorBatchFn = (messageInfos: GossipMessageInfo[]) => Promise<TopicValidatorResult[]>;
 
-export type ValidatorFnsByType = { [K in GossipType]: GossipValidatorFn };
+export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
 export type GossipJobQueues = {
   [K in GossipType]: JobItemQueue<Parameters<GossipValidatorFn>, ResolvedType<GossipValidatorFn>>;

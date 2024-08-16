@@ -1,7 +1,7 @@
-import { ChainConfig, chainConfigToJson } from "@lodestar/config";
-import { activePreset, BeaconPreset, presetToJson } from "@lodestar/params";
+import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {activePreset, BeaconPreset, presetToJson} from "@lodestar/params";
 
-export class NotEqualParamsError extends Error { }
+export class NotEqualParamsError extends Error {}
 
 type ConfigWithPreset = ChainConfig & BeaconPreset;
 

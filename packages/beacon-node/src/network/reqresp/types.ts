@@ -1,7 +1,7 @@
-import { Type } from "@chainsafe/ssz";
-import { ForkLightClient, ForkName, isForkLightClient } from "@lodestar/params";
-import { Protocol, ProtocolHandler, ReqRespRequest } from "@lodestar/reqresp";
-import { Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz, sszTypesFor, electra } from "@lodestar/types";
+import {Type} from "@chainsafe/ssz";
+import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
+import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
+import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz, sszTypesFor, electra} from "@lodestar/types";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -93,7 +93,7 @@ const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version
   }
 };
 
-export const responseSszTypeByMethod: { [K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]> } = {
+export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
   [ReqRespMethod.Status]: () => ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
@@ -121,7 +121,7 @@ function onlyLightclientFork(fork: ForkName): ForkLightClient {
 }
 
 export type RequestTypedContainer = {
-  [K in ReqRespMethod]: { method: K; body: RequestBodyByMethod[K] };
+  [K in ReqRespMethod]: {method: K; body: RequestBodyByMethod[K]};
 }[ReqRespMethod];
 
 export enum Version {

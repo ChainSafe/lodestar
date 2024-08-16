@@ -1,7 +1,7 @@
-import { BitArray, deserializeUint8ArrayBitListFromBytes } from "@chainsafe/ssz";
-import { BLSSignature, RootHex, Slot } from "@lodestar/types";
-import { toHex } from "@lodestar/utils";
-import { BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB } from "@lodestar/params";
+import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
+import {BLSSignature, RootHex, Slot} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
@@ -71,7 +71,7 @@ export function getAggregationBitsFromAttestationSerialized(data: Uint8Array): B
     return null;
   }
 
-  const { uint8Array, bitLen } = deserializeUint8ArrayBitListFromBytes(
+  const {uint8Array, bitLen} = deserializeUint8ArrayBitListFromBytes(
     data,
     VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE,
     data.length

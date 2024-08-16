@@ -1,4 +1,4 @@
-import { Libp2p as ILibp2p } from "libp2p";
+import {Libp2p as ILibp2p} from "libp2p";
 import {
   Libp2pEvents,
   ComponentLogger,
@@ -13,9 +13,9 @@ import {
   PeerStore,
   Upgrader,
 } from "@libp2p/interface";
-import type { AddressManager, ConnectionManager, Registrar, TransportManager } from "@libp2p/interface-internal";
-import type { Datastore } from "interface-datastore";
-import { Identify } from "@chainsafe/libp2p-identify";
+import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
+import type {Datastore} from "interface-datastore";
+import {Identify} from "@chainsafe/libp2p-identify";
 import {
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -28,17 +28,17 @@ import {
   phase0,
   electra,
 } from "@lodestar/types";
-import { PeerIdStr } from "../util/peerId.js";
-import { CustodyConfig } from "../util/dataColumns.js";
-import { INetworkEventBus } from "./events.js";
-import { INetworkCorePublic } from "./core/types.js";
-import { GossipType } from "./gossip/interface.js";
-import { PendingGossipsubMessage } from "./processor/types.js";
-import { PeerAction } from "./peers/index.js";
-import { NodeId } from "./subnets/interface.js";
+import {PeerIdStr} from "../util/peerId.js";
+import {CustodyConfig} from "../util/dataColumns.js";
+import {INetworkEventBus} from "./events.js";
+import {INetworkCorePublic} from "./core/types.js";
+import {GossipType} from "./gossip/interface.js";
+import {PendingGossipsubMessage} from "./processor/types.js";
+import {PeerAction} from "./peers/index.js";
+import {NodeId} from "./subnets/interface.js";
 
-export type WithBytes<T> = { data: T; bytes: Uint8Array };
-export type WithOptionalBytes<T> = { data: T; bytes: Uint8Array | null };
+export type WithBytes<T> = {data: T; bytes: Uint8Array};
+export type WithOptionalBytes<T> = {data: T; bytes: Uint8Array | null};
 
 /**
  * The architecture of the network looks like so:
@@ -126,4 +126,4 @@ export type LodestarComponents = {
   metrics?: Metrics;
 };
 
-export type Libp2p = ILibp2p<{ components: LodestarComponents; identify: Identify }>;
+export type Libp2p = ILibp2p<{components: LodestarComponents; identify: Identify}>;

@@ -1,4 +1,4 @@
-import { ValueOf } from "@chainsafe/ssz";
+import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
 export type Metadata = ValueOf<typeof ssz.Metadata>;

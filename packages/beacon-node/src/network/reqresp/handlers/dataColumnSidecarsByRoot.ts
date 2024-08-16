@@ -1,9 +1,9 @@
-import { ResponseError, ResponseOutgoing, RespStatus } from "@lodestar/reqresp";
-import { NUMBER_OF_COLUMNS } from "@lodestar/params";
-import { electra, RootHex, ssz } from "@lodestar/types";
-import { toHex, fromHex } from "@lodestar/utils";
-import { IBeaconChain } from "../../../chain/index.js";
-import { IBeaconDb } from "../../../db/index.js";
+import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {electra, RootHex, ssz} from "@lodestar/types";
+import {toHex, fromHex} from "@lodestar/utils";
+import {IBeaconChain} from "../../../chain/index.js";
+import {IBeaconDb} from "../../../db/index.js";
 import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
@@ -28,7 +28,7 @@ export async function* onDataColumnSidecarsByRoot(
   } | null = null;
 
   for (const dataColumnIdentifier of requestBody) {
-    const { blockRoot, index } = dataColumnIdentifier;
+    const {blockRoot, index} = dataColumnIdentifier;
     const blockRootHex = toHex(blockRoot);
     const block = chain.forkChoice.getBlockHex(blockRootHex);
 
@@ -59,14 +59,14 @@ export async function* onDataColumnSidecarsByRoot(
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
       );
 
-      lastFetchedSideCars = { blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex };
+      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex};
     }
 
     const dataIndex = lastFetchedSideCars.dataColumnsIndex[index] - 1;
     if (dataIndex < 0) {
       throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
     }
-    const { columnsSize } = lastFetchedSideCars;
+    const {columnsSize} = lastFetchedSideCars;
 
     if (dataIndex === undefined || dataIndex === 0) {
       throw Error(

@@ -1,10 +1,10 @@
-import { BitArray } from "@chainsafe/ssz";
-import { ForkSeq } from "@lodestar/params";
-import { computeStartSlotAtEpoch } from "@lodestar/state-transition";
-import { altair, Epoch, phase0, ssz, electra } from "@lodestar/types";
-import { BeaconConfig } from "@lodestar/config";
-import { FAR_FUTURE_EPOCH } from "../constants/index.js";
-import { getCurrentAndNextFork } from "./forks.js";
+import {BitArray} from "@chainsafe/ssz";
+import {ForkSeq} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {altair, Epoch, phase0, ssz, electra} from "@lodestar/types";
+import {BeaconConfig} from "@lodestar/config";
+import {FAR_FUTURE_EPOCH} from "../constants/index.js";
+import {getCurrentAndNextFork} from "./forks.js";
 
 export enum ENRKey {
   tcp = "tcp",
@@ -119,7 +119,7 @@ export class MetadataController {
 }
 
 export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
-  const { currentFork, nextFork } = getCurrentAndNextFork(config, clockEpoch);
+  const {currentFork, nextFork} = getCurrentAndNextFork(config, clockEpoch);
 
   return {
     // Current fork digest

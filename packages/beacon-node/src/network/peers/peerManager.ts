@@ -1,26 +1,26 @@
-import { Connection, PeerId } from "@libp2p/interface";
-import { BitArray, toHexString } from "@chainsafe/ssz";
-import { SYNC_COMMITTEE_SUBNET_COUNT } from "@lodestar/params";
-import { BeaconConfig } from "@lodestar/config";
-import { Metadata, electra, phase0 } from "@lodestar/types";
-import { withTimeout } from "@lodestar/utils";
-import { LoggerNode } from "@lodestar/logger/node";
-import { GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent } from "../../constants/index.js";
-import { IClock } from "../../util/clock.js";
-import { NetworkEvent, INetworkEventBus, NetworkEventData } from "../events.js";
-import { Libp2p } from "../interface.js";
-import { ReqRespMethod } from "../reqresp/ReqRespBeaconNode.js";
-import { getConnection, getConnectionsMap, prettyPrintPeerId } from "../util.js";
-import { NodeId, SubnetsService, computeNodeId } from "../subnets/index.js";
-import { SubnetType } from "../metadata.js";
-import { Eth2Gossipsub } from "../gossip/gossipsub.js";
-import { StatusCache } from "../statusCache.js";
-import { NetworkCoreMetrics } from "../core/metrics.js";
-import { LodestarDiscv5Opts } from "../discv5/types.js";
-import { getCustodyColumnSubnets, getCustodyColumns } from "../../util/dataColumns.js";
-import { PeerDiscovery, SubnetDiscvQueryMs } from "./discover.js";
-import { PeersData, PeerData } from "./peersData.js";
-import { getKnownClientFromAgentVersion, ClientKind } from "./client.js";
+import {Connection, PeerId} from "@libp2p/interface";
+import {BitArray, toHexString} from "@chainsafe/ssz";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
+import {Metadata, electra, phase0} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
+import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
+import {IClock} from "../../util/clock.js";
+import {NetworkEvent, INetworkEventBus, NetworkEventData} from "../events.js";
+import {Libp2p} from "../interface.js";
+import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {NodeId, SubnetsService, computeNodeId} from "../subnets/index.js";
+import {SubnetType} from "../metadata.js";
+import {Eth2Gossipsub} from "../gossip/gossipsub.js";
+import {StatusCache} from "../statusCache.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
+import {getCustodyColumnSubnets, getCustodyColumns} from "../../util/dataColumns.js";
+import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
+import {PeersData, PeerData} from "./peersData.js";
+import {getKnownClientFromAgentVersion, ClientKind} from "./client.js";
 import {
   getConnectedPeerIds,
   hasSomeConnectedPeer,
@@ -28,7 +28,7 @@ import {
   prioritizePeers,
   renderIrrelevantPeerType,
 } from "./utils/index.js";
-import { IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores } from "./score/index.js";
+import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -177,7 +177,7 @@ export class PeerManager {
       Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT)
     );
 
-    const { metrics } = modules;
+    const {metrics} = modules;
     if (metrics) {
       metrics.peers.addCollect(() => this.runPeerCountMetrics(metrics));
     }
@@ -202,13 +202,13 @@ export class PeerManager {
     // opts.discv5 === null, discovery is disabled
     const discovery = opts.discv5
       ? await PeerDiscovery.init(modules, {
-        maxPeers: opts.maxPeers,
-        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
-        discv5: opts.discv5,
-        connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
-        onlyConnectToBiggerDataNodes: opts.onlyConnectToBiggerDataNodes,
-        onlyConnectToMinimalCustodyOverlapNodes: opts.onlyConnectToMinimalCustodyOverlapNodes,
-      })
+          maxPeers: opts.maxPeers,
+          discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
+          discv5: opts.discv5,
+          connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
+          onlyConnectToBiggerDataNodes: opts.onlyConnectToBiggerDataNodes,
+          onlyConnectToMinimalCustodyOverlapNodes: opts.onlyConnectToMinimalCustodyOverlapNodes,
+        })
       : null;
 
     return new PeerManager(modules, opts, discovery);
@@ -282,7 +282,7 @@ export class PeerManager {
   /**
    * Must be called when network ReqResp receives incoming requests
    */
-  private onRequest = ({ peer, request }: NetworkEventData[NetworkEvent.reqRespRequest]): void => {
+  private onRequest = ({peer, request}: NetworkEventData[NetworkEvent.reqRespRequest]): void => {
     try {
       const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) {
@@ -325,7 +325,7 @@ export class PeerManager {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
-    this.logger.warn("onMetadata", { peer: peer.toString(), peerData: peerData !== undefined });
+    this.logger.warn("onMetadata", {peer: peer.toString(), peerData: peerData !== undefined});
     console.log("onMetadata", metadata);
     if (peerData) {
       const oldMetadata = peerData.metadata;
@@ -349,12 +349,12 @@ export class PeerManager {
    */
   private onGoodbye(peer: PeerId, goodbye: phase0.Goodbye): void {
     const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
-    this.logger.verbose("Received goodbye request", { peer: prettyPrintPeerId(peer), goodbye, reason });
-    this.metrics?.peerGoodbyeReceived.inc({ reason });
+    this.logger.verbose("Received goodbye request", {peer: prettyPrintPeerId(peer), goodbye, reason});
+    this.metrics?.peerGoodbyeReceived.inc({reason});
 
     const conn = getConnection(this.libp2p, peer.toString());
     if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
-      this.metrics?.peerLongConnectionDisconnect.inc({ reason });
+      this.metrics?.peerLongConnectionDisconnect.inc({reason});
     }
 
     // TODO: Consider register that we are banned, if discovery keeps attempting to connect to the same peers
@@ -383,7 +383,7 @@ export class PeerManager {
         });
       }
     } catch (e) {
-      this.logger.error("Irrelevant peer - unexpected error", { peer: prettyPrintPeerId(peer) }, e as Error);
+      this.logger.error("Irrelevant peer - unexpected error", {peer: prettyPrintPeerId(peer)}, e as Error);
       isIrrelevant = true;
     }
 
@@ -400,9 +400,9 @@ export class PeerManager {
       this.libp2p.peerStore
         .merge(peer, {
           // ttl = undefined means it's never expired
-          tags: { [PEER_RELEVANT_TAG]: { ttl: undefined, value: PEER_RELEVANT_TAG_VALUE } },
+          tags: {[PEER_RELEVANT_TAG]: {ttl: undefined, value: PEER_RELEVANT_TAG_VALUE}},
         })
-        .catch((e) => this.logger.verbose("cannot tag peer", { peerId: peer.toString() }, e as Error));
+        .catch((e) => this.logger.verbose("cannot tag peer", {peerId: peer.toString()}, e as Error));
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
     if (getConnection(this.libp2p, peer.toString())) {
@@ -441,20 +441,20 @@ export class PeerManager {
       if (this.opts.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
         this.logger.debug(
           `ignoring peercontected onlyConnectToMinimalCustodyOverlapNodes=true hasMinCustodyMatchingColumns=${hasMinCustodyMatchingColumns}`,
-          { nodeId: toHexString(nodeId), peerId: peer.toString() }
+          {nodeId: toHexString(nodeId), peerId: peer.toString()}
         );
         return;
       }
 
       // coule be optimized by directly using the previously calculated subnet
       const dataColumns = getCustodyColumns(nodeId, peerCustodySubnetCount);
-      this.networkEventBus.emit(NetworkEvent.peerConnected, { peer: peer.toString(), status, dataColumns });
+      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status, dataColumns});
     }
   }
 
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
-      this.logger.warn("requestMetadata", { peer: peer.toString() });
+      this.logger.warn("requestMetadata", {peer: peer.toString()});
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
       console.log("requestMetadata", e);
@@ -464,7 +464,7 @@ export class PeerManager {
 
   private async requestPing(peer: PeerId): Promise<void> {
     try {
-      this.logger.warn("requestPing", { peer: peer.toString() });
+      this.logger.warn("requestPing", {peer: peer.toString()});
       this.onPing(peer, await this.reqResp.sendPing(peer));
 
       // If peer replies a PING request also update lastReceivedMsg
@@ -521,7 +521,7 @@ export class PeerManager {
       }
     }
 
-    const { peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries } = prioritizePeers(
+    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
@@ -539,9 +539,9 @@ export class PeerManager {
     );
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
-    for (const { type, queries } of [
-      { type: SubnetType.attnets, queries: attnetQueries },
-      { type: SubnetType.syncnets, queries: syncnetQueries },
+    for (const {type, queries} of [
+      {type: SubnetType.attnets, queries: attnetQueries},
+      {type: SubnetType.syncnets, queries: syncnetQueries},
     ]) {
       if (queries.length > 0) {
         let count = 0;
@@ -555,14 +555,14 @@ export class PeerManager {
           });
         }
 
-        this.metrics?.peersRequestedSubnetsToQuery.inc({ type }, queries.length);
-        this.metrics?.peersRequestedSubnetsPeerCount.inc({ type }, count);
+        this.metrics?.peersRequestedSubnetsToQuery.inc({type}, queries.length);
+        this.metrics?.peersRequestedSubnetsPeerCount.inc({type}, count);
       }
     }
 
     // disconnect first to have more slots before we dial new peers
     for (const [reason, peers] of peersToDisconnect) {
-      this.metrics?.peersRequestedToDisconnect.inc({ reason }, peers.length);
+      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
       for (const peer of peers) {
         void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
       }
@@ -645,10 +645,10 @@ export class PeerManager {
    * dialed or connecting to us.
    */
   private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
-    const { direction, status, remotePeer } = evt.detail;
-    this.logger.verbose("peer connected", { peer: prettyPrintPeerId(remotePeer), direction, status });
+    const {direction, status, remotePeer} = evt.detail;
+    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
-    this.metrics?.peerConnectedEvent.inc({ direction, status });
+    this.metrics?.peerConnectedEvent.inc({direction, status});
     // libp2p may emit closed connection, we don't want to handle it
     // see https://github.com/libp2p/js-libp2p/issues/1565
     if (this.connectedPeers.has(remotePeer.toString()) || status !== "open") {
@@ -695,7 +695,7 @@ export class PeerManager {
         }
       })
       .catch((err) => {
-        this.logger.debug("Error setting agentVersion for the peer", { peerId: peerData.peerId.toString() }, err);
+        this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
       });
   };
 
@@ -703,41 +703,41 @@ export class PeerManager {
    * The libp2p Upgrader has ended a connection
    */
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
-    const { direction, status, remotePeer } = evt.detail;
+    const {direction, status, remotePeer} = evt.detail;
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(remotePeer.toString());
 
-    this.logger.verbose("peer disconnected", { peer: prettyPrintPeerId(remotePeer), direction, status });
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, { peer: remotePeer.toString() });
-    this.metrics?.peerDisconnectedEvent.inc({ direction });
+    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(remotePeer), direction, status});
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: remotePeer.toString()});
+    this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
-      .merge(remotePeer, { tags: { [PEER_RELEVANT_TAG]: undefined } })
-      .catch((e) => this.logger.verbose("cannot untag peer", { peerId: remotePeer.toString() }, e as Error));
+      .merge(remotePeer, {tags: {[PEER_RELEVANT_TAG]: undefined}})
+      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: remotePeer.toString()}, e as Error));
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
     try {
       await this.libp2p.hangUp(peer);
     } catch (e) {
-      this.logger.debug("Unclean disconnect", { peer: prettyPrintPeerId(peer) }, e as Error);
+      this.logger.debug("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
     }
   }
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
     try {
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
-      this.metrics?.peerGoodbyeSent.inc({ reason });
+      this.metrics?.peerGoodbyeSent.inc({reason});
 
       const conn = getConnection(this.libp2p, peer.toString());
       if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
-        this.metrics?.peerLongConnectionDisconnect.inc({ reason });
+        this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
 
       // Wrap with shorter timeout than regular ReqResp requests to speed up shutdown
       await withTimeout(() => this.reqResp.sendGoodbye(peer, BigInt(goodbye)), 1_000);
     } catch (e) {
-      this.logger.verbose("Failed to send goodbye", { peer: prettyPrintPeerId(peer) }, e as Error);
+      this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
       await this.disconnect(peer);
     }
@@ -776,19 +776,19 @@ export class PeerManager {
 
         // TODO: Consider optimizing by doing observe in batch
         metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
-        metrics.peerScoreByClient.observe({ client }, this.peerRpcScores.getScore(peerId));
-        metrics.peerGossipScoreByClient.observe({ client }, this.peerRpcScores.getGossipScore(peerId));
+        metrics.peerScoreByClient.observe({client}, this.peerRpcScores.getScore(peerId));
+        metrics.peerGossipScoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
         metrics.peerConnectionLength.observe((now - openCnx.timeline.open) / 1000);
         total++;
       }
     }
 
     for (const [direction, peers] of peersByDirection.entries()) {
-      metrics.peersByDirection.set({ direction }, peers);
+      metrics.peersByDirection.set({direction}, peers);
     }
 
     for (const [client, peers] of peersByClient.entries()) {
-      metrics.peersByClient.set({ client }, peers);
+      metrics.peersByClient.set({client}, peers);
     }
 
     let syncPeers = 0;

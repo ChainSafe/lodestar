@@ -1,9 +1,9 @@
-import { GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS } from "@lodestar/params";
-import { ResponseError, ResponseOutgoing, RespStatus } from "@lodestar/reqresp";
-import { electra, Slot, ssz, ColumnIndex } from "@lodestar/types";
-import { fromHex } from "@lodestar/utils";
-import { IBeaconChain } from "../../../chain/index.js";
-import { IBeaconDb } from "../../../db/index.js";
+import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
+import {electra, Slot, ssz, ColumnIndex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {IBeaconChain} from "../../../chain/index.js";
+import {IBeaconDb} from "../../../db/index.js";
 import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   COLUMN_SIZE_IN_WRAPPER_INDEX,
@@ -16,7 +16,7 @@ export async function* onDataColumnSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
-  const { startSlot, count, columns } = validateDataColumnSidecarsByRangeRequest(request);
+  const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
 
   const finalized = db.dataColumnSidecarsArchive;
@@ -26,7 +26,7 @@ export async function* onDataColumnSidecarsByRange(
   // Finalized range of blobs
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
-    for await (const { key, value: dataColumnSideCarsBytesWrapped } of finalized.binaryEntriesStream({
+    for await (const {key, value: dataColumnSideCarsBytesWrapped} of finalized.binaryEntriesStream({
       gte: startSlot,
       lt: endSlot,
     })) {
@@ -120,8 +120,8 @@ export function* iterateDataColumnBytesFromWrapper(
 export function validateDataColumnSidecarsByRangeRequest(
   request: electra.DataColumnSidecarsByRangeRequest
 ): electra.DataColumnSidecarsByRangeRequest {
-  const { startSlot, columns } = request;
-  let { count } = request;
+  const {startSlot, columns} = request;
+  let {count} = request;
 
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
@@ -135,5 +135,5 @@ export function validateDataColumnSidecarsByRangeRequest(
     count = MAX_REQUEST_BLOCKS_DENEB;
   }
 
-  return { startSlot, count, columns };
+  return {startSlot, count, columns};
 }

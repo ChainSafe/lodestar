@@ -1,8 +1,8 @@
-import { PeerId } from "@libp2p/interface";
-import { electra } from "@lodestar/types";
-import { Encoding } from "@lodestar/reqresp";
-import { NodeId } from "../subnets/interface.js";
-import { ClientKind } from "./client.js";
+import {PeerId} from "@libp2p/interface";
+import {electra} from "@lodestar/types";
+import {Encoding} from "@lodestar/reqresp";
+import {NodeId} from "../subnets/interface.js";
+import {ClientKind} from "./client.js";
 
 type PeerIdStr = string;
 

@@ -1,22 +1,22 @@
-import { Multiaddr } from "@multiformats/multiaddr";
-import type { PeerId, PeerInfo } from "@libp2p/interface";
-import { ENR } from "@chainsafe/enr";
-import { toHexString } from "@chainsafe/ssz";
-import { BeaconConfig } from "@lodestar/config";
-import { pruneSetToMax, sleep } from "@lodestar/utils";
-import { ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT } from "@lodestar/params";
-import { LoggerNode } from "@lodestar/logger/node";
-import { ssz } from "@lodestar/types";
-import { NetworkCoreMetrics } from "../core/metrics.js";
-import { Libp2p } from "../interface.js";
-import { ENRKey, SubnetType } from "../metadata.js";
-import { getConnectionsMap, prettyPrintPeerId } from "../util.js";
-import { Discv5Worker } from "../discv5/index.js";
-import { LodestarDiscv5Opts } from "../discv5/types.js";
-import { NodeId, computeNodeId } from "../subnets/interface.js";
-import { getCustodyColumnSubnets } from "../../util/dataColumns.js";
-import { deserializeEnrSubnets, zeroAttnets, zeroSyncnets } from "./utils/enrSubnetsDeserialize.js";
-import { IPeerRpcScoreStore, ScoreState } from "./score/index.js";
+import {Multiaddr} from "@multiformats/multiaddr";
+import type {PeerId, PeerInfo} from "@libp2p/interface";
+import {ENR} from "@chainsafe/enr";
+import {toHexString} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
+import {pruneSetToMax, sleep} from "@lodestar/utils";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {LoggerNode} from "@lodestar/logger/node";
+import {ssz} from "@lodestar/types";
+import {NetworkCoreMetrics} from "../core/metrics.js";
+import {Libp2p} from "../interface.js";
+import {ENRKey, SubnetType} from "../metadata.js";
+import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {Discv5Worker} from "../discv5/index.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
+import {NodeId, computeNodeId} from "../subnets/interface.js";
+import {getCustodyColumnSubnets} from "../../util/dataColumns.js";
+import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
+import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -50,7 +50,7 @@ enum QueryStatusCode {
   NotActive,
   Active,
 }
-type QueryStatus = { code: QueryStatusCode.NotActive } | { code: QueryStatusCode.Active; count: number };
+type QueryStatus = {code: QueryStatusCode.NotActive} | {code: QueryStatusCode.Active; count: number};
 
 export enum DiscoveredPeerStatus {
   bad_score = "bad_score",
@@ -104,7 +104,7 @@ export class PeerDiscovery {
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private peerIdToCustodySubnetCount = new Map<PeerIdStr, number>();
-  private randomNodeQuery: QueryStatus = { code: QueryStatusCode.NotActive };
+  private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, SubnetRequestInfo>> = {
     attnets: new Map(),
@@ -121,7 +121,7 @@ export class PeerDiscovery {
   private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
-    const { libp2p, peerRpcScores, metrics, logger, config, nodeId } = modules;
+    const {libp2p, peerRpcScores, metrics, logger, config, nodeId} = modules;
     this.libp2p = libp2p;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
@@ -150,7 +150,7 @@ export class PeerDiscovery {
     if (numBootEnrs === 0) {
       this.logger.error("PeerDiscovery: discv5 has no boot enr");
     } else {
-      this.logger.verbose("PeerDiscovery: number of bootEnrs", { bootEnrs: numBootEnrs });
+      this.logger.verbose("PeerDiscovery: number of bootEnrs", {bootEnrs: numBootEnrs});
     }
 
     if (this.connectToDiscv5BootnodesOnStart) {
@@ -170,11 +170,11 @@ export class PeerDiscovery {
         metrics.discovery.peersToConnect.set(this.peersToConnect);
         for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
           const subnetPeersToConnect = Array.from(this.subnetRequests[type].values()).reduce(
-            (acc, { peersToConnect }) => acc + peersToConnect,
+            (acc, {peersToConnect}) => acc + peersToConnect,
             0
           );
-          metrics.discovery.subnetPeersToConnect.set({ type }, subnetPeersToConnect);
-          metrics.discovery.subnetsToConnect.set({ type }, this.subnetRequests[type].size);
+          metrics.discovery.subnetPeersToConnect.set({type}, subnetPeersToConnect);
+          metrics.discovery.subnetsToConnect.set({type}, this.subnetRequests[type].size);
         }
       });
     }
@@ -300,15 +300,15 @@ export class PeerDiscovery {
 
     // Run a general discv5 query if one is not already in progress
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
-      this.metrics?.discovery.findNodeQueryRequests.inc({ action: "ignore" });
+      this.metrics?.discovery.findNodeQueryRequests.inc({action: "ignore"});
       return;
     } else {
-      this.metrics?.discovery.findNodeQueryRequests.inc({ action: "start" });
+      this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
 
     // Use async version to prevent blocking the event loop
     // Time to completion of this function is not critical, in case this async call add extra lag
-    this.randomNodeQuery = { code: QueryStatusCode.Active, count: 0 };
+    this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
@@ -317,7 +317,7 @@ export class PeerDiscovery {
     } catch (e) {
       this.logger.error("Error on discv5.findNode()", {}, e as Error);
     } finally {
-      this.randomNodeQuery = { code: QueryStatusCode.NotActive };
+      this.randomNodeQuery = {code: QueryStatusCode.NotActive};
       timer?.();
     }
   }
@@ -326,12 +326,12 @@ export class PeerDiscovery {
    * Progressively called by libp2p as a result of peer discovery or updates to its peer store
    */
   private onDiscoveredPeer = (evt: CustomEvent<PeerInfo>): void => {
-    const { id, multiaddrs } = evt.detail;
+    const {id, multiaddrs} = evt.detail;
 
     // libp2p may send us PeerInfos without multiaddrs https://github.com/libp2p/js-libp2p/issues/1873
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!multiaddrs || multiaddrs.length === 0) {
-      this.metrics?.discovery.discoveredStatus.inc({ status: DiscoveredPeerStatus.no_multiaddrs });
+      this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
       return;
     }
 
@@ -339,12 +339,12 @@ export class PeerDiscovery {
     const syncnets = zeroSyncnets;
     const custodySubnetCount = this.peerIdToCustodySubnetCount.get(id.toString());
     if (custodySubnetCount === undefined) {
-      this.logger.warn("onDiscoveredPeer with unknown custodySubnetCount assuming 4", { peerId: id.toString() });
+      this.logger.warn("onDiscoveredPeer with unknown custodySubnetCount assuming 4", {peerId: id.toString()});
     }
 
     const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, custodySubnetCount ?? 4);
-    this.logger.debug("Discovered peer via libp2p", { peer: prettyPrintPeerId(id), status });
-    this.metrics?.discovery.discoveredStatus.inc({ status });
+    this.logger.debug("Discovered peer via libp2p", {peer: prettyPrintPeerId(id), status});
+    this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
   /**
@@ -364,8 +364,8 @@ export class PeerDiscovery {
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {
-      this.logger.error("Discv5 worker sent enr without tcp multiaddr", { enr: enr.encodeTxt() });
-      this.metrics?.discovery.discoveredStatus.inc({ status: DiscoveredPeerStatus.error });
+      this.logger.error("Discv5 worker sent enr without tcp multiaddr", {enr: enr.encodeTxt()});
+      this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.error});
       return;
     }
     // Are this fields mandatory?
@@ -386,8 +386,8 @@ export class PeerDiscovery {
     this.peerIdToCustodySubnetCount.set(peerId.toString(), custodySubnetCount);
 
     const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets, custodySubnetCount);
-    this.logger.debug("Discovered peer via discv5", { peer: prettyPrintPeerId(peerId), status });
-    this.metrics?.discovery.discoveredStatus.inc({ status });
+    this.logger.debug("Discovered peer via discv5", {peer: prettyPrintPeerId(peerId), status});
+    this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
   /**
@@ -401,7 +401,7 @@ export class PeerDiscovery {
     custodySubnetCount: number
   ): DiscoveredPeerStatus {
     const nodeId = computeNodeId(peerId);
-    this.logger.warn("handleDiscoveredPeer", { nodeId: toHexString(nodeId), peerId: peerId.toString() });
+    this.logger.warn("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
@@ -426,7 +426,7 @@ export class PeerDiscovery {
       const cachedPeer: CachedENR = {
         peerId,
         multiaddrTCP,
-        subnets: { attnets, syncnets },
+        subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
         custodySubnetCount,
       };
@@ -477,7 +477,7 @@ export class PeerDiscovery {
     }
 
     for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
-      for (const [subnet, { toUnixMs, peersToConnect }] of this.subnetRequests[type].entries()) {
+      for (const [subnet, {toUnixMs, peersToConnect}] of this.subnetRequests[type].entries()) {
         if (toUnixMs < Date.now() || peersToConnect === 0) {
           // Prune all requests so that we don't have to loop again
           // if we have low subnet peers then PeerManager will update us again with subnet + toUnixMs + peersToConnect
@@ -487,7 +487,7 @@ export class PeerDiscovery {
           // if we have enough subnet peers, no need to dial more or we may have performance issues
           // see https://github.com/ChainSafe/lodestar/issues/5741#issuecomment-1643113577
           if (peer.subnets[type][subnet]) {
-            this.subnetRequests[type].set(subnet, { toUnixMs, peersToConnect: Math.max(peersToConnect - 1, 0) });
+            this.subnetRequests[type].set(subnet, {toUnixMs, peersToConnect: Math.max(peersToConnect - 1, 0)});
             return true;
           }
         }
@@ -517,15 +517,15 @@ export class PeerDiscovery {
     // are not successful.
     this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
 
-    const { peerId, multiaddrTCP } = cachedPeer;
+    const {peerId, multiaddrTCP} = cachedPeer;
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
-    await this.libp2p.peerStore.merge(peerId, { multiaddrs: [multiaddrTCP] });
+    await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
 
     // Note: PeerDiscovery adds the multiaddrTCP beforehand
     const peerIdShort = prettyPrintPeerId(peerId);
-    this.logger.debug("Dialing discovered peer", { peer: peerIdShort });
+    this.logger.debug("Dialing discovered peer", {peer: peerIdShort});
 
     this.metrics?.discovery.dialAttempts.inc();
     const timer = this.metrics?.discovery.dialTime.startTimer();
@@ -534,12 +534,12 @@ export class PeerDiscovery {
     // Note: You must listen to the connected events to listen for a successful conn upgrade
     try {
       await this.libp2p.dial(peerId);
-      timer?.({ status: "success" });
-      this.logger.debug("Dialed discovered peer", { peer: peerIdShort });
+      timer?.({status: "success"});
+      this.logger.debug("Dialed discovered peer", {peer: peerIdShort});
     } catch (e) {
-      timer?.({ status: "error" });
+      timer?.({status: "error"});
       formatLibp2pDialError(e as Error);
-      this.logger.debug("Error dialing discovered peer", { peer: peerIdShort }, e as Error);
+      this.logger.debug("Error dialing discovered peer", {peer: peerIdShort}, e as Error);
     }
   }
 

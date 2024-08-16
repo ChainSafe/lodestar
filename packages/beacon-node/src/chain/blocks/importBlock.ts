@@ -1,5 +1,5 @@
-import { toHexString } from "@chainsafe/ssz";
-import { capella, ssz, altair, BeaconBlock } from "@lodestar/types";
+import {toHexString} from "@chainsafe/ssz";
+import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
 import {
   ForkName,
   ForkLightClient,
@@ -15,21 +15,21 @@ import {
   isStateValidatorsNodesPopulated,
   RootCache,
 } from "@lodestar/state-transition";
-import { routes } from "@lodestar/api";
-import { ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus } from "@lodestar/fork-choice";
-import { isErrorAborted } from "@lodestar/utils";
-import { ZERO_HASH_HEX } from "../../constants/index.js";
-import { toCheckpointHex } from "../stateCache/index.js";
-import { isOptimisticBlock } from "../../util/forkChoice.js";
-import { isQueueErrorAborted } from "../../util/queue/index.js";
-import { kzgCommitmentToVersionedHash } from "../../util/blobs.js";
-import { ChainEvent, ReorgEventData } from "../emitter.js";
-import { REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC } from "../reprocess.js";
-import type { BeaconChain } from "../chain.js";
-import { callInNextEventLoop } from "../../util/eventLoop.js";
-import { FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType } from "./types.js";
-import { getCheckpointFromState } from "./utils/checkpoint.js";
-import { writeBlockInputToDb } from "./writeBlockInputToDb.js";
+import {routes} from "@lodestar/api";
+import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
+import {isErrorAborted} from "@lodestar/utils";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {toCheckpointHex} from "../stateCache/index.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import type {BeaconChain} from "../chain.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
+import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -65,9 +65,9 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const { blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus } = fullyVerifiedBlock;
-  const { block, source } = blockInput;
-  const { slot: blockSlot } = block.message;
+  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus} = fullyVerifiedBlock;
+  const {block, source} = blockInput;
+  const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
@@ -105,8 +105,8 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
-  this.metrics?.importBlock.bySource.inc({ source });
-  this.logger.verbose("Added block to forkchoice and state cache", { slot: blockSlot, root: blockRootHex });
+  this.metrics?.importBlock.bySource.inc({source});
+  this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // We want to import block asap so call all event handler in the next event loop
   callInNextEventLoop(async () => {
@@ -120,13 +120,13 @@ export async function importBlock(
     // out of data range blocks and import then in forkchoice although one would not be able to
     // attest and propose with such head similar to optimistic sync
     if (blockInput.type === BlockInputType.availableData) {
-      const { blockData } = blockInput;
+      const {blockData} = blockInput;
       if (blockData.fork === ForkName.deneb) {
-        const { blobsSource, blobs } = blockData;
+        const {blobsSource, blobs} = blockData;
 
-        this.metrics?.importBlock.blobsBySource.inc({ blobsSource });
+        this.metrics?.importBlock.blobsBySource.inc({blobsSource});
         for (const blobSidecar of blobs) {
-          const { index, kzgCommitment } = blobSidecar;
+          const {index, kzgCommitment} = blobSidecar;
           this.emitter.emit(routes.events.EventType.blobSidecar, {
             blockRoot: blockRootHex,
             slot: blockSlot,
@@ -156,18 +156,18 @@ export async function importBlock(
   ) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
-    const invalidAttestationErrorsByCode = new Map<string, { error: Error; count: number }>();
+    const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        const { target, beaconBlockRoot } = attestation.data;
+        const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         this.seenAggregatedAttestations.add(
           target.epoch,
           attDataRoot,
-          { aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length },
+          {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
           true
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
@@ -204,22 +204,22 @@ export async function importBlock(
         if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
           let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
           if (errWithCount === undefined) {
-            errWithCount = { error: e as Error, count: 1 };
+            errWithCount = {error: e as Error, count: 1};
             invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
           } else {
             errWithCount.count++;
           }
         } else {
           // always log other errors
-          this.logger.warn("Error processing attestation from block", { slot: blockSlot }, e as Error);
+          this.logger.warn("Error processing attestation from block", {slot: blockSlot}, e as Error);
         }
       }
     }
 
-    for (const { error, count } of invalidAttestationErrorsByCode.values()) {
+    for (const {error, count} of invalidAttestationErrorsByCode.values()) {
       this.logger.warn(
         "Error processing attestations from block",
-        { slot: blockSlot, erroredAttestations: count },
+        {slot: blockSlot, erroredAttestations: count},
         error
       );
     }
@@ -240,7 +240,7 @@ export async function importBlock(
         // all AttesterSlashings are valid before reaching this
         this.forkChoice.onAttesterSlashing(slashing);
       } catch (e) {
-        this.logger.warn("Error processing AttesterSlashing from block", { slot: blockSlot }, e as Error);
+        this.logger.warn("Error processing AttesterSlashing from block", {slot: blockSlot}, e as Error);
       }
     }
   }
@@ -323,7 +323,7 @@ export async function importBlock(
             parentBlockSlot
           );
         } catch (e) {
-          this.logger.verbose("Error lightClientServer.onImportBlock", { slot: blockSlot }, e as Error);
+          this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
         }
       });
     }
@@ -364,20 +364,20 @@ export async function importBlock(
         )
         .catch((e) => {
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-            this.logger.error("Error pushing notifyForkchoiceUpdate()", { headBlockHash, finalizedBlockHash }, e);
+            this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
           }
         });
     }
   }
 
   if (!isStateValidatorsNodesPopulated(postState)) {
-    this.logger.verbose("After importBlock caching postState without SSZ cache", { slot: postState.slot });
+    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
   if (parentEpoch < blockEpoch) {
     // current epoch and previous epoch are likely cached in previous states
     this.shufflingCache.processState(postState, postState.epochCtx.nextShuffling.epoch);
-    this.logger.verbose("Processed shuffling for next epoch", { parentEpoch, blockEpoch, slot: blockSlot });
+    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
   }
 
   if (blockSlot % SLOTS_PER_EPOCH === 0) {
@@ -393,7 +393,7 @@ export async function importBlock(
 
     const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
-    this.metrics?.currentValidators.set({ status: "active" }, activeValidatorsCount);
+    this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
     const parentBlockSummary = this.forkChoice.getBlock(checkpointState.latestBlockHeader.parentRoot);
 
@@ -465,9 +465,9 @@ export async function importBlock(
         this.emitter.listenerCount(routes.events.EventType.blobSidecar)
       ) {
         if (blockInput.blockData.fork === ForkName.deneb) {
-          const { blobs } = blockInput.blockData;
+          const {blobs} = blockInput.blockData;
           for (const blobSidecar of blobs) {
-            const { index, kzgCommitment } = blobSidecar;
+            const {index, kzgCommitment} = blobSidecar;
             this.emitter.emit(routes.events.EventType.blobSidecar, {
               blockRoot: blockRootHex,
               slot: blockSlot,
@@ -499,8 +499,8 @@ export async function importBlock(
   // attest and propose with such head similar to optimistic sync
   if (blockInput.type === BlockInputType.availableData) {
     if (blockInput.blockData.fork === ForkName.deneb) {
-      const { blobsSource } = blockInput.blockData;
-      this.metrics?.importBlock.blobsBySource.inc({ blobsSource });
+      const {blobsSource} = blockInput.blockData;
+      this.metrics?.importBlock.blobsBySource.inc({blobsSource});
     } else {
       // TODO add data columns metrics
     }
@@ -511,7 +511,7 @@ export async function importBlock(
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
   callInNextEventLoop(() => {
-    this.reprocessController.onBlockImported({ slot: blockSlot, root: blockRootHex }, advancedSlot);
+    this.reprocessController.onBlockImported({slot: blockSlot, root: blockRootHex}, advancedSlot);
   });
 
   if (opts.seenTimestampSec !== undefined) {
@@ -521,7 +521,7 @@ export async function importBlock(
     this.metrics?.gossipBlock.blockImport.recvToValidation.observe(recvToValidation);
     this.metrics?.gossipBlock.blockImport.validationTime.observe(validationTime);
 
-    this.logger.debug("Imported block", { slot: blockSlot, recvToValLatency, recvToValidation, validationTime });
+    this.logger.debug("Imported block", {slot: blockSlot, recvToValLatency, recvToValidation, validationTime});
   }
 
   this.logger.verbose("Block processed", {
