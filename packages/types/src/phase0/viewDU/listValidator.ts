@@ -40,6 +40,7 @@ const validatorRoots: Uint8Array[] = [];
 for (let i = 0; i < PARALLEL_FACTOR; i++) {
   validatorRoots.push(batchLevel3Bytes.subarray(i * 32, (i + 1) * 32));
 }
+const validatorRoot = new Uint8Array(32);
 
 export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNodeStructType> {
   constructor(
@@ -114,8 +115,11 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
       const viewIndex = indicesChanged[i];
       const viewChanged = viewsChanged.get(viewIndex);
       if (viewChanged) {
-        // commit and hash
+        // commit
         viewChanged.commit();
+        // compute root for each validator
+        viewChanged.type.hashTreeRootInto(viewChanged.value, validatorRoot, 0);
+        byteArrayIntoHashObject(validatorRoot, 0, viewChanged.node);
         nodesChanged.push({index: viewIndex, node: viewChanged.node});
         // Set new node in nodes array to ensure data represented in the tree and fast nodes access is equal
         this.nodes[viewIndex] = viewChanged.node;
