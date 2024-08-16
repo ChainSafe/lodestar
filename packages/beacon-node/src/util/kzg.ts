@@ -19,7 +19,7 @@ export let ckzg: {
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
-  // Deprecated: Use `computeCellsAndKzgProofs`
+  /** @deprecated Use `computeCellsAndKzgProofs` */
   computeCells(blob: Uint8Array): Uint8Array[];
   computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
   // Deprecated: Now being done internally in `recoverCellsAndKzgProofs`
