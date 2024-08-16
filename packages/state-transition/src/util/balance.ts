@@ -1,10 +1,10 @@
+import {ReusableListIterator} from "@chainsafe/ssz";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {Gwei, ValidatorIndex, phase0} from "@lodestar/types";
 import {bigIntMax} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "..";
 import {CachedBeaconStateAllForks} from "../types.js";
-import {ReusableListIterator} from "@chainsafe/ssz";
 
 /**
  * Return the combined effective balance of the [[indices]].

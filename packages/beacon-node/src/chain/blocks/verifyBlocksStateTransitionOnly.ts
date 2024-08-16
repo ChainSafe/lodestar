@@ -69,6 +69,7 @@ export async function verifyBlocksStateTransitionOnly(
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
     });
+    // state root is computed inside stateTransition(), so it should take no time here
     const stateRoot = postState.batchHashTreeRoot(blockHCGroup);
     hashTreeRootTimer?.();
 

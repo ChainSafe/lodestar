@@ -1,3 +1,4 @@
+import {ReusableListIterator} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
@@ -16,7 +17,6 @@ import {
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../index.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
-import {ReusableListIterator} from "@chainsafe/ssz";
 
 export type EpochTransitionCacheOpts = {
   /**
@@ -332,7 +332,10 @@ export function beforeProcessEpoch(
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
     else if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
-      indicesEligibleForActivation.push({validatorIndex: i, activationEligibilityEpoch: validator.activationEligibilityEpoch});
+      indicesEligibleForActivation.push({
+        validatorIndex: i,
+        activationEligibilityEpoch: validator.activationEligibilityEpoch,
+      });
     }
 
     // To optimize process_registry_updates():
