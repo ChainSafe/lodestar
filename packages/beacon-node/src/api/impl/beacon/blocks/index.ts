@@ -410,7 +410,10 @@ export function getBeaconBlockApi({
       const fork = config.getForkName(block.message.slot);
 
       if (isForkPostElectra(fork)) {
-        throw new ApiError(400, `Use getBlockAttestationsV2 to retrieve electra+ block attestations fork=${fork}`);
+        throw new ApiError(
+          400,
+          `Use getBlockAttestationsV2 to retrieve block attestations for post-electra fork=${fork}`
+        );
       }
 
       return {
