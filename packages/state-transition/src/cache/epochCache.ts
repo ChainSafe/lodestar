@@ -605,6 +605,7 @@ export class EpochCache {
     if (this.nextShuffling) {
       // was already pulled by the api or another method on EpochCache
       this.currentShuffling = this.nextShuffling;
+      this.shufflingCache?.metrics?.shufflingCache.nextShufflingOnEpochCache.inc();
     } else {
       this.currentShuffling =
         this.shufflingCache?.getSync(upcomingEpoch, this.nextDecisionRoot, {

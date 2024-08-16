@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
-import {intDiv, toRootHex} from "@lodestar/utils";
+import {GaugeExtra, intDiv, NoLabels, toRootHex} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
   GENESIS_SLOT,
@@ -20,7 +20,14 @@ export interface ShufflingBuildProps {
   state: BeaconStateAllForks;
   activeIndices: ValidatorIndex[];
 }
+
+export interface PublicShufflingCacheMetrics {
+  shufflingCache: {
+    nextShufflingOnEpochCache: GaugeExtra<NoLabels>;
+  };
+}
 export interface IShufflingCache {
+  metrics: PublicShufflingCacheMetrics | null;
   /**
    * Gets a cached shuffling via the epoch and decision root. If the state and
    * activeIndices are passed and a shuffling is not available it will be built
