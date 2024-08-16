@@ -9,11 +9,10 @@ import {
 } from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
-export type SeenAttDataKey = AttDataBase64 | AttDataCommitteeBitsBase64;
 // pre-electra, AttestationData is used to cache attestations
 export type AttDataBase64 = string;
-// electra, AttestationData + CommitteeBits are used to cache attestations
-export type AttDataCommitteeBitsBase64 = string;
+// electra, CommitteeBits
+export type CommitteeBitsBase64 = string;
 
 // pre-electra
 // class Attestation(Container):
@@ -48,6 +47,7 @@ const SIGNATURE_SIZE = 96;
 // shared Buffers to convert bytes to hex/base64
 const blockRootBuf = Buffer.alloc(ROOT_SIZE);
 const attDataBuf = Buffer.alloc(ATTESTATION_DATA_SIZE);
+const committeeBitsDataBuf = Buffer.alloc(COMMITTEE_BITS_SIZE);
 
 /**
  * Extract slot from attestation serialized bytes.
@@ -77,37 +77,10 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
 }
 
 /**
- * Extract attestation data key from an attestation Uint8Array in order to index gossip queue and cache later in SeenAttestationDatas
- */
-export function getSeenAttDataKey(forkSeq: ForkSeq, data: Uint8Array): SeenAttDataKey | null {
-  return forkSeq >= ForkSeq.electra ? getSeenAttDataKeyElectra(data) : getSeenAttDataKeyPhase0(data);
-}
-
-/**
- * Extract attestation data + committeeBits base64 from electra attestation serialized bytes.
+ * Extract attestation data base64 from all forks' attestation serialized bytes.
  * Return null if data is not long enough to extract attestation data.
  */
-export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): AttDataCommitteeBitsBase64 | null {
-  const attestationData = getSeenAttDataKeyPhase0(electraAttestationBytes);
-
-  if (attestationData === null) {
-    return null;
-  }
-
-  const committeeBits = getCommitteeBitsFromAttestationSerialized(electraAttestationBytes);
-
-  if (committeeBits === null) {
-    return null;
-  }
-
-  return attestationData + toBase64(committeeBits.uint8Array);
-}
-
-/**
- * Extract attestation data base64 from phase0 attestation serialized bytes.
- * Return null if data is not long enough to extract attestation data.
- */
-export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null {
+export function getAttDataFromAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
   if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE) {
     return null;
   }
@@ -115,6 +88,13 @@ export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null 
   // base64 is a bit efficient than hex
   attDataBuf.set(data.subarray(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE));
   return attDataBuf.toString("base64");
+}
+
+/**
+ * Alias of `getAttDataFromAttestationSerialized` specifically for batch handling indexing in gossip queue
+ */
+export function getGossipAttestationIndex(data: Uint8Array): AttDataBase64 | null {
+  return getAttDataFromAttestationSerialized(data);
 }
 
 /**
@@ -153,16 +133,15 @@ export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSign
  * Extract committee bits from Electra attestation serialized bytes.
  * Return null if data is not long enough to extract committee bits.
  */
-export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
+export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): CommitteeBitsBase64 | null {
   const committeeBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
 
   if (data.length < committeeBitsStartIndex + COMMITTEE_BITS_SIZE) {
     return null;
   }
 
-  const uint8Array = data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_SIZE);
-
-  return new BitArray(uint8Array, MAX_COMMITTEES_PER_SLOT);
+  committeeBitsDataBuf.set(data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_SIZE));
+  return committeeBitsDataBuf.toString("base64");
 }
 
 //
@@ -213,42 +192,39 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
 }
 
 /**
- * Extract attestation data key from SignedAggregateAndProof Uint8Array to use cached data from SeenAttestationDatas
- */
-export function getSeenAttDataKeyFromSignedAggregateAndProof(
-  forkSeq: ForkSeq,
-  data: Uint8Array
-): SeenAttDataKey | null {
-  return forkSeq >= ForkSeq.electra
-    ? getSeenAttDataKeyFromSignedAggregateAndProofElectra(data)
-    : getSeenAttDataKeyFromSignedAggregateAndProofPhase0(data);
-}
-
-/**
- * Extract AttestationData + CommitteeBits from SignedAggregateAndProof for electra
+ * Extract AttestationData base64 from SignedAggregateAndProof for electra
  * Return null if data is not long enough
  */
-export function getSeenAttDataKeyFromSignedAggregateAndProofElectra(data: Uint8Array): SeenAttDataKey | null {
+export function getAttDataFromSignedAggregateAndProofElectra(data: Uint8Array): AttDataBase64 | null {
   const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET;
   const endIndex = startIndex + ATTESTATION_DATA_SIZE;
 
   if (data.length < endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE) {
     return null;
   }
+  return toBase64(data.subarray(startIndex, endIndex));
+}
 
-  // base64 is a bit efficient than hex
+/**
+ * Extract CommitteeBits base64 from SignedAggregateAndProof for electra
+ * Return null if data is not long enough
+ */
+export function getCommitteeBitsFromSignedAggregateAndProofElectra(data: Uint8Array): CommitteeBitsBase64 | null {
+  const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
+  const endIndex = startIndex + COMMITTEE_BITS_SIZE;
 
-  return Buffer.concat([
-    data.subarray(startIndex, endIndex),
-    data.subarray(endIndex + SIGNATURE_SIZE, endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE),
-  ]).toString("base64");
+  if (data.length < endIndex) {
+    return null;
+  }
+
+  return toBase64(data.subarray(startIndex, endIndex));
 }
 
 /**
  * Extract attestation data base64 from signed aggregate and proof serialized bytes.
  * Return null if data is not long enough to extract attestation data.
  */
-export function getSeenAttDataKeyFromSignedAggregateAndProofPhase0(data: Uint8Array): AttDataBase64 | null {
+export function getAttDataFromSignedAggregateAndProofPhase0(data: Uint8Array): AttDataBase64 | null {
   if (data.length < SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE) {
     return null;
   }
