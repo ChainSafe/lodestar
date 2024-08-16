@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
-import {ProverContextJs, VerifierContextJs} from "@crate-crypto/peerdas-kzg";
+import {ProverContextJs, VerifierContextJs} from "@crate-crypto/node-eth-kzg";
 import {fromHex, toHex} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
