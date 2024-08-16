@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
-import {fileURLToPath} from "node:url";
-import {fromHex, toHex} from "@lodestar/utils";
+import { fileURLToPath } from "node:url";
+import { fromHex, toHex } from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -19,11 +19,17 @@ export let ckzg: {
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
+  // Deprecated: Use `computeCellsAndKzgProofs`
   computeCells(blob: Uint8Array): Uint8Array[];
   computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
+  // Deprecated
   cellsToBlob(cells: Uint8Array[]): Uint8Array;
+  // Deprecated: Use recoverCellsAndKzgProofs
   recoverAllCells(cellIds: number[], cells: Uint8Array[]): Uint8Array[];
+  recoverCellsAndKzgProofs(cellIndices: number[], cells: Uint8Array[]): [Uint8Array[], Uint8Array[]];
+  // Deprecated: not used
   verifyCellKzgProof(commitmentBytes: Uint8Array, cellId: number, cell: Uint8Array, proofBytes: Uint8Array): boolean;
+  // This API will no longer take rowIndices in the future, in particular the rowIndices is no longer used
   verifyCellKzgProofBatch(
     commitmentsBytes: Uint8Array[],
     rowIndices: number[],
@@ -44,6 +50,14 @@ export let ckzg: {
   recoverAllCells: ckzgNotLoaded,
   verifyCellKzgProof: ckzgNotLoaded,
   verifyCellKzgProofBatch: ckzgNotLoaded,
+  recoverCellsAndKzgProofs(cellIndices: number[], cells: Uint8Array[]): [Uint8Array[], Uint8Array[]] {
+    // First recover all of the cells
+    const recoveredCells = this.recoverAllCells(cellIndices, cells);
+    // Convert the cells to a Blob
+    const blob = this.cellsToBlob(recoveredCells);
+    // Compute Cells and Proofs
+    return this.computeCellsAndKzgProofs(blob);
+  },
 };
 
 // Global variable __dirname no longer available in ES6 modules.
