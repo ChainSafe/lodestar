@@ -34,7 +34,7 @@ export interface IShufflingCache {
     epoch: Epoch,
     decisionRoot: RootHex,
     buildProps?: T
-  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | undefined;
+  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
 
   /**
    * Queue asynchronous build for an EpochShuffling

@@ -141,7 +141,7 @@ export class ShufflingCache implements IShufflingCache {
     epoch: Epoch,
     decisionRoot: RootHex,
     buildProps?: T
-  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | undefined {
+  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (!cacheItem) {
       // this.metrics?.shufflingCache.miss();
@@ -149,12 +149,13 @@ export class ShufflingCache implements IShufflingCache {
       // this.metrics?.shufflingCache.cacheHit();
       return cacheItem.shuffling;
     } else if (buildProps) {
+      // TODO: (@matthewkeil) This should possible log a warning??
       // this.metrics?.shufflingCache.shufflingPromiseNotResolvedAndThrownAway();
     } else {
       // this.metrics?.shufflingCache.shufflingPromiseNotResolved();
     }
 
-    let shuffling: EpochShuffling | undefined;
+    let shuffling: EpochShuffling | null = null;
     if (buildProps) {
       shuffling = computeEpochShuffling(buildProps.state, buildProps.activeIndices, epoch);
       if (cacheItem) {
@@ -162,7 +163,7 @@ export class ShufflingCache implements IShufflingCache {
       }
       this.set(shuffling, decisionRoot);
     }
-    return shuffling as T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | undefined;
+    return shuffling as T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
   }
 
   /**
