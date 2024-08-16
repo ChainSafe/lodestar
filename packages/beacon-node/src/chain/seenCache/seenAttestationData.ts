@@ -2,8 +2,13 @@ import {BitArray} from "@chainsafe/ssz";
 import {CommitteeIndex, phase0, RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
-import {SeenAttDataKey} from "../../util/sszBytes.js";
 import {InsertOutcome} from "../opPools/types.js";
+
+export type SeenAttDataKey = AttDataBase64 | AttDataCommitteeBitsBase64;
+// pre-electra, AttestationData is used to cache attestations
+type AttDataBase64 = string;
+// electra, AttestationData + CommitteeBits are used to cache attestations
+type AttDataCommitteeBitsBase64 = string;
 
 export type AttestationDataCacheEntry = {
   // part of shuffling data, so this does not take memory

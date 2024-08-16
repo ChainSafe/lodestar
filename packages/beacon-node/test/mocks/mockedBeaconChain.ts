@@ -124,7 +124,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       // @ts-expect-error
       eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
-      aggregatedAttestationPool: new AggregatedAttestationPool(),
+      aggregatedAttestationPool: new AggregatedAttestationPool(config),
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),

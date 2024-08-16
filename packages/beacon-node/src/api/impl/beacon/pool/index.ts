@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {Epoch, ssz} from "@lodestar/types";
-import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {Attestation, Epoch, isElectraAttestation, ssz} from "@lodestar/types";
+import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -16,6 +16,7 @@ import {
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
+import {ApiError} from "../../errors.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -26,7 +27,15 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      let attestations: Attestation[] = chain.aggregatedAttestationPool.getAll(slot);
+      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getPoolAttestationsV2 to retrieve pool attestations for post-electra fork=${fork}`
+        );
+      }
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
@@ -39,6 +48,11 @@ export function getBeaconPoolApi({
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
+      const isPostElectra = isForkPostElectra(fork);
+
+      attestations = attestations.filter((attestation) =>
+        isPostElectra ? isElectraAttestation(attestation) : !isElectraAttestation(attestation)
+      );
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);

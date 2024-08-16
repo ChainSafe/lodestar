@@ -9,11 +9,11 @@ import {
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {getSeenAttDataKeyFromSignedAggregateAndProof} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {
   getAttestationDataSigningRoot,
   getCommitteeIndices,
+  getSeenAttDataKeyFromSignedAggregateAndProof,
   getShufflingForAttestationVerification,
   verifyHeadBlockAndTargetRoot,
   verifyPropagationSlotRange,
@@ -71,9 +71,7 @@ async function validateAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  const seenAttDataKey = serializedData
-    ? getSeenAttDataKeyFromSignedAggregateAndProof(ForkSeq[fork], serializedData)
-    : null;
+  const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
   const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, seenAttDataKey) : null;
 
   let attIndex;
