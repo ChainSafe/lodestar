@@ -1,4 +1,10 @@
-import {BeaconStateAllForks, EpochShuffling, IShufflingCache, computeEpochShuffling} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  EpochShuffling,
+  IShufflingCache,
+  ShufflingBuildProps,
+  computeEpochShuffling,
+} from "@lodestar/state-transition";
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {LodestarError, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
@@ -116,26 +122,12 @@ export class ShufflingCache implements IShufflingCache {
     }
 
     if (isShufflingCacheItem(cacheItem)) {
+      // this.metrics?.shufflingCache.cacheHit();
       return cacheItem.shuffling;
     } else {
+      // this.metrics?.shufflingCache.shufflingPromiseNotResolved();
       return cacheItem.promise;
     }
-  }
-
-  /**
-   * Will synchronously get a shuffling if it is available or will return null if not.
-   */
-  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (cacheItem) {
-      if (isShufflingCacheItem(cacheItem)) {
-        // this.metrics?.shufflingCache.hit()
-        return cacheItem.shuffling;
-      }
-      //   this.metrics?.shufflingCache.shufflingPromiseNotResolved();
-    }
-    // this.metrics?.shufflingCache.miss();
-    return null;
   }
 
   /**
@@ -145,26 +137,32 @@ export class ShufflingCache implements IShufflingCache {
    * NOTE: If a shuffling is already queued and not calculated it will build and resolve
    * the promise but the already queued build will happen at some later time
    */
-  getOrBuildSync(
-    epoch: number,
-    decisionRoot: string,
-    state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[]
-  ): EpochShuffling {
+  getSync<T extends ShufflingBuildProps | undefined>(
+    epoch: Epoch,
+    decisionRoot: RootHex,
+    buildProps?: T
+  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | undefined {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (cacheItem && isShufflingCacheItem(cacheItem)) {
-      // this.metrics?.shufflingCache.cacheHitEpochTransition();
+    if (!cacheItem) {
+      // this.metrics?.shufflingCache.miss();
+    } else if (isShufflingCacheItem(cacheItem)) {
+      // this.metrics?.shufflingCache.cacheHit();
       return cacheItem.shuffling;
-    }
-    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-    if (cacheItem) {
-      // this.metrics?.shufflingCache.shufflingPromiseNotResolvedEpochTransition();
-      cacheItem.resolveFn(shuffling);
+    } else if (buildProps) {
+      // this.metrics?.shufflingCache.shufflingPromiseNotResolvedAndThrownAway();
     } else {
-      // this.metrics?.shufflingCache.cacheMissEpochTransition();
+      // this.metrics?.shufflingCache.shufflingPromiseNotResolved();
     }
-    this.set(shuffling, decisionRoot);
-    return shuffling;
+
+    let shuffling: EpochShuffling | undefined;
+    if (buildProps) {
+      shuffling = computeEpochShuffling(buildProps.state, buildProps.activeIndices, epoch);
+      if (cacheItem) {
+        cacheItem.resolveFn(shuffling);
+      }
+      this.set(shuffling, decisionRoot);
+    }
+    return shuffling as T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | undefined;
   }
 
   /**

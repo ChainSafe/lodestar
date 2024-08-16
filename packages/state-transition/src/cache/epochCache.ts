@@ -329,11 +329,11 @@ export class EpochCache {
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
     const previousDecisionRoot = getShufflingDecisionBlock(config, state, previousEpoch);
-    const cachedPreviousShuffling = shufflingCache?.getSync(previousEpoch, previousDecisionRoot);
+    const cachedPreviousShuffling = shufflingCache?.getSync(previousEpoch, previousDecisionRoot) ?? null;
     const currentDecisionRoot = getShufflingDecisionBlock(config, state, currentEpoch);
-    const cachedCurrentShuffling = shufflingCache?.getSync(currentEpoch, currentDecisionRoot);
+    const cachedCurrentShuffling = shufflingCache?.getSync(currentEpoch, currentDecisionRoot) ?? null;
     const nextDecisionRoot = getShufflingDecisionBlock(config, state, nextEpoch);
-    const cachedNextShuffling = shufflingCache?.getSync(nextEpoch, nextDecisionRoot);
+    const cachedNextShuffling = shufflingCache?.getSync(nextEpoch, nextDecisionRoot) ?? null;
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -599,14 +599,12 @@ export class EpochCache {
       // shufflingCache?.metrics?.shufflingCache.nextShufflingOnEpochCache();
     } else {
       this.currentShuffling =
-        this.shufflingCache?.getOrBuildSync(
-          upcomingEpoch,
-          this.nextDecisionRoot,
+        this.shufflingCache?.getSync(upcomingEpoch, this.nextDecisionRoot, {
           state,
           // have to use the "nextActiveIndices" that were saved in the last transition here to calculate
           // the upcoming shuffling if it is not already built (similar condition to the below computation)
-          this.nextActiveIndices
-        ) ??
+          activeIndices: this.nextActiveIndices,
+        }) ??
         // allow for this case during testing where the ShufflingCache is not present, may affect perf testing
         // so should be taken into account when structuring tests.  Should not affect unit or other tests though
         computeEpochShuffling(state, this.nextActiveIndices, upcomingEpoch);

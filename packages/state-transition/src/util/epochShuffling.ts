@@ -16,25 +16,25 @@ import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
 
+export interface ShufflingBuildProps {
+  state: BeaconStateAllForks;
+  activeIndices: ValidatorIndex[];
+}
 export interface IShufflingCache {
   /**
-   * Will synchronously get a shuffling if it is available or will return null if not.
-   */
-  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null;
-
-  /**
-   * Gets a cached shuffling via the epoch and decision root.  If the shuffling is not
-   * available it will build it synchronously and return the shuffling.
+   * Gets a cached shuffling via the epoch and decision root. If the state and
+   * activeIndices are passed and a shuffling is not available it will be built
+   * synchronously. If the state is not passed and the shuffling is not available
+   * nothing will be returned.
    *
    * NOTE: If a shuffling is already queued and not calculated it will build and resolve
    * the promise but the already queued build will happen at some later time
    */
-  getOrBuildSync(
+  getSync<T extends ShufflingBuildProps | undefined>(
     epoch: Epoch,
     decisionRoot: RootHex,
-    state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[]
-  ): EpochShuffling;
+    buildProps?: T
+  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | undefined;
 
   /**
    * Queue asynchronous build for an EpochShuffling
