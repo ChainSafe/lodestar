@@ -48,9 +48,11 @@ export function getBeaconPoolApi({
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
-      const attestationFilterPredicate = (att: Attestation): boolean =>
-        isForkPostElectra(fork) ? isElectraAttestation(att) : !isElectraAttestation(att);
-      attestations = attestations.filter(attestationFilterPredicate);
+      const isPostElectra = isForkPostElectra(fork);
+
+      attestations = attestations.filter((attestation) =>
+        isPostElectra ? isElectraAttestation(attestation) : !isElectraAttestation(attestation)
+      );
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);

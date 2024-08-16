@@ -150,7 +150,7 @@ export class AggregatedAttestationPool {
       committeeIndex = attestation.committeeBits.getSingleTrueBit();
     } else {
       if (isElectraAttestation(attestation)) {
-        throw new Error("Attestation should be type phase0.Attestation");
+        throw Error(`Attestation should be type phase0.Attestation for slot ${slot}`);
       }
       committeeIndex = attestation.data.index;
     }
@@ -522,10 +522,11 @@ export class MatchingDataAttestationGroup {
    */
   getAttestationsForBlock(fork: ForkName, notSeenAttestingIndices: Set<number>): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
+    const isPostElectra = isForkPostElectra(fork);
     for (const {attestation} of this.attestations) {
       if (
-        (isForkPostElectra(fork) && !isElectraAttestation(attestation)) ||
-        (!isForkPostElectra(fork) && isElectraAttestation(attestation))
+        (isPostElectra && !isElectraAttestation(attestation)) ||
+        (!isPostElectra && isElectraAttestation(attestation))
       ) {
         continue;
       }
@@ -543,7 +544,7 @@ export class MatchingDataAttestationGroup {
       }
     }
 
-    const maxAttestation = isForkPostElectra(fork) ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
+    const maxAttestation = isPostElectra ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
     if (attestations.length <= maxAttestation) {
       return attestations;
     } else {

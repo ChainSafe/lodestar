@@ -157,7 +157,8 @@ export class AttestationPool {
    */
   getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): Attestation | null {
     const fork = this.config.getForkName(slot);
-    committeeIndex = isForkPostElectra(fork) ? committeeIndex : null;
+    const isPostElectra = isForkPostElectra(fork);
+    committeeIndex = isPostElectra ? committeeIndex : null;
 
     const aggregate = this.aggregateByIndexByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
@@ -165,7 +166,7 @@ export class AttestationPool {
       return null;
     }
 
-    if (isForkPostElectra(fork)) {
+    if (isPostElectra) {
       assert.true(isElectraAggregate(aggregate), "Aggregate should be type AggregateFastElectra");
     } else {
       assert.true(!isElectraAggregate(aggregate), "Aggregate should be type AggregateFastPhase0");
