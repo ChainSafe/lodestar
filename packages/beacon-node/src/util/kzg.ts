@@ -1,8 +1,8 @@
 import path from "node:path";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
-import { ProverContextJs, VerifierContextJs } from "@crate-crypto/peerdas-kzg";
-import { fromHex, toHex } from "@lodestar/utils";
+import {fileURLToPath} from "node:url";
+import {ProverContextJs, VerifierContextJs} from "@crate-crypto/peerdas-kzg";
+import {fromHex, toHex} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -209,7 +209,7 @@ export function computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8
   }
 }
 
-// This API is not correct imo, its concatenating all of the proofs and cells, which is a c-kzg 
+// This API is not correct imo, its concatenating all of the proofs and cells, which is a c-kzg
 // specific thing.
 // export function verifyCellKzgProofBatch(
 //   commitmentsBytes: Uint8Array[],
