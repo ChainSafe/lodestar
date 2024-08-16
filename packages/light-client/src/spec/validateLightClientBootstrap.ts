@@ -7,6 +7,8 @@ import {isValidLightClientHeader} from "./utils.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
+const CURRENT_SYNC_COMMITTEE_INDEX_ELECTRA = 22;
+const CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
 
 export function validateLightClientBootstrap(
   config: ChainForkConfig,

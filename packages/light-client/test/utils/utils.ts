@@ -18,6 +18,8 @@ import {getConsoleLogger} from "../../src/utils/logger.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
+const CURRENT_SYNC_COMMITTEE_INDEX_ELECTRA = 22;
+const CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
 
 /**
  * To enable debug logs run with
