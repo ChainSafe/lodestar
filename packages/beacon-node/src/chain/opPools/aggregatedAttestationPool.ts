@@ -3,6 +3,7 @@ import {BitArray, toHexString} from "@chainsafe/ssz";
 import {
   ForkName,
   ForkSeq,
+  isForkPostElectra,
   MAX_ATTESTATIONS,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_COMMITTEES_PER_SLOT,
@@ -30,6 +31,7 @@ import {
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
 import {MapDef, toRootHex, assert} from "@lodestar/utils";
+import {ChainForkConfig} from "@lodestar/config";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import {InsertOutcome} from "./types.js";
@@ -101,6 +103,8 @@ export class AggregatedAttestationPool {
   >(() => new Map<DataRootHex, Map<CommitteeIndex, MatchingDataAttestationGroup>>());
   private lowestPermissibleSlot = 0;
 
+  constructor(private readonly config: ChainForkConfig) {}
+
   /** For metrics to track size of the pool */
   getAttestationCount(): {attestationCount: number; attestationDataCount: number} {
     let attestationCount = 0;
@@ -136,10 +140,20 @@ export class AggregatedAttestationPool {
       attestationGroupByIndex = new Map<CommitteeIndex, MatchingDataAttestationGroup>();
       attestationGroupByIndexByDataHash.set(dataRootHex, attestationGroupByIndex);
     }
-    const committeeIndex = isElectraAttestation(attestation)
-      ? // this attestation is added to pool after validation
-        attestation.committeeBits.getSingleTrueBit()
-      : attestation.data.index;
+
+    let committeeIndex;
+
+    if (isForkPostElectra(this.config.getForkName(slot))) {
+      if (!isElectraAttestation(attestation)) {
+        throw Error(`Attestation should be type electra.Attestation for slot ${slot}`);
+      }
+      committeeIndex = attestation.committeeBits.getSingleTrueBit();
+    } else {
+      if (isElectraAttestation(attestation)) {
+        throw Error(`Attestation should be type phase0.Attestation for slot ${slot}`);
+      }
+      committeeIndex = attestation.data.index;
+    }
     // this should not happen because attestation should be validated before reaching this
     assert.notNull(committeeIndex, "Committee index should not be null in aggregated attestation pool");
     let attestationGroup = attestationGroupByIndex.get(committeeIndex);
@@ -390,6 +404,10 @@ export class AggregatedAttestationPool {
 
   /**
    * Get all attestations optionally filtered by `attestation.data.slot`
+   * Note this function is not fork aware and can potentially return a mix
+   * of phase0.Attestations and electra.Attestations.
+   * Caller of this function is expected to filtered result if they desire
+   * a homogenous array.
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
   getAll(bySlot?: Slot): Attestation[] {
@@ -504,8 +522,15 @@ export class MatchingDataAttestationGroup {
    */
   getAttestationsForBlock(fork: ForkName, notSeenAttestingIndices: Set<number>): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
-    const forkSeq = ForkSeq[fork];
+    const isPostElectra = isForkPostElectra(fork);
     for (const {attestation} of this.attestations) {
+      if (
+        (isPostElectra && !isElectraAttestation(attestation)) ||
+        (!isPostElectra && isElectraAttestation(attestation))
+      ) {
+        continue;
+      }
+
       let notSeenAttesterCount = 0;
       const {aggregationBits} = attestation;
       for (const notSeenIndex of notSeenAttestingIndices) {
@@ -514,13 +539,12 @@ export class MatchingDataAttestationGroup {
         }
       }
 
-      // if fork >= electra, should return electra-only attestations
-      if (notSeenAttesterCount > 0 && (forkSeq < ForkSeq.electra || isElectraAttestation(attestation))) {
+      if (notSeenAttesterCount > 0) {
         attestations.push({attestation, notSeenAttesterCount});
       }
     }
 
-    const maxAttestation = forkSeq >= ForkSeq.electra ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
+    const maxAttestation = isPostElectra ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
     if (attestations.length <= maxAttestation) {
       return attestations;
     } else {
