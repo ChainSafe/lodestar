@@ -16,6 +16,7 @@ import {generateState, zeroProtoBlock} from "../../utils/state.js";
 import {testLogger} from "../../utils/logger.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {memoOnce} from "../../utils/cache.js";
+import {computeNodeId} from "../../../src/network/subnets/index.js";
 
 let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
@@ -98,6 +99,7 @@ describe.skip("mdns", function () {
     const network = await Network.init({
       ...modules,
       ...(await createNetworkModules(mu, peerId, {...opts, mdns: true})),
+      nodeId: computeNodeId(peerId),
       logger,
     });
 

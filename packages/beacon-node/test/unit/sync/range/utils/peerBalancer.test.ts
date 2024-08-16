@@ -3,6 +3,7 @@ import {config} from "@lodestar/config/default";
 import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer.js";
 import {getRandPeerIdStr} from "../../../../utils/peer.js";
+import {PeerIdStr} from "../../../../../src/util/peerId.js";
 
 describe("sync / range / peerBalancer", () => {
   it("bestPeerToRetryBatch", async () => {
@@ -14,6 +15,8 @@ describe("sync / range / peerBalancer", () => {
       const batch0 = new Batch(0, config);
       const batch1 = new Batch(1, config);
 
+      const custodyColumn = new Map<PeerIdStr, {custodyColumns: number[]}>();
+
       // Batch zero has a failedDownloadAttempt with peer0
       batch0.startDownloading(peer1);
       batch0.downloadingError();
@@ -21,7 +24,7 @@ describe("sync / range / peerBalancer", () => {
       // peer2 is busy downloading batch1
       batch1.startDownloading(peer2);
 
-      const peerBalancer = new ChainPeersBalancer([peer1, peer2, peer3], [batch0, batch1]);
+      const peerBalancer = new ChainPeersBalancer([peer1, peer2, peer3], custodyColumn, [batch0, batch1]);
 
       expect(peerBalancer.bestPeerToRetryBatch(batch0)).toBe(peer3);
 
@@ -41,11 +44,13 @@ describe("sync / range / peerBalancer", () => {
       const batch0 = new Batch(0, config);
       const batch1 = new Batch(1, config);
 
+      const custodyColumn = new Map<PeerIdStr, {custodyColumns: number[]}>();
+
       // peer1 and peer2 are busy downloading
       batch0.startDownloading(peer1);
       batch1.startDownloading(peer2);
 
-      const peerBalancer = new ChainPeersBalancer([peer1, peer2, peer3, peer4], [batch0, batch1]);
+      const peerBalancer = new ChainPeersBalancer([peer1, peer2, peer3, peer4], custodyColumn, [batch0, batch1]);
 
       const idlePeers = peerBalancer.idlePeers();
 

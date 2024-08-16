@@ -1,9 +1,9 @@
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB} from "@lodestar/params";
-import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
-import {electra, Slot, ssz, ColumnIndex} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
-import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import { GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS } from "@lodestar/params";
+import { ResponseError, ResponseOutgoing, RespStatus } from "@lodestar/reqresp";
+import { electra, Slot, ssz, ColumnIndex } from "@lodestar/types";
+import { fromHex } from "@lodestar/utils";
+import { IBeaconChain } from "../../../chain/index.js";
+import { IBeaconDb } from "../../../db/index.js";
 import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   COLUMN_SIZE_IN_WRAPPER_INDEX,
@@ -16,7 +16,7 @@ export async function* onDataColumnSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
-  const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(request);
+  const { startSlot, count, columns } = validateDataColumnSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
 
   const finalized = db.dataColumnSidecarsArchive;
@@ -26,7 +26,7 @@ export async function* onDataColumnSidecarsByRange(
   // Finalized range of blobs
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
-    for await (const {key, value: dataColumnSideCarsBytesWrapped} of finalized.binaryEntriesStream({
+    for await (const { key, value: dataColumnSideCarsBytesWrapped } of finalized.binaryEntriesStream({
       gte: startSlot,
       lt: endSlot,
     })) {
@@ -76,8 +76,7 @@ export function* iterateDataColumnBytesFromWrapper(
   chain: IBeaconChain,
   dataColumnSidecarsBytesWrapped: Uint8Array,
   blockSlot: Slot,
-  // use the columns include to see if you want to yield in response
-  _columns: ColumnIndex[]
+  columns: ColumnIndex[]
 ): Iterable<ResponseOutgoing> {
   const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
     COLUMN_SIZE_IN_WRAPPER_INDEX,
@@ -85,10 +84,25 @@ export function* iterateDataColumnBytesFromWrapper(
   );
   const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
   const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
+  const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
+    CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
+    CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
+  );
 
   const columnsLen = allDataColumnSidecarsBytes.length / columnsSize;
+  // no columns possibly no blob
+  if (columnsLen === 0) {
+    return;
+  }
 
-  for (let index = 0; index < columnsLen; index++) {
+  const fork = chain.config.getForkName(blockSlot);
+
+  for (const column of columns) {
+    // get the index at which the column is
+    const index = dataColumnsIndex[column] - 1;
+    if (index < 0) {
+      throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${column} not custodied`);
+    }
     const dataColumnSidecarBytes = allDataColumnSidecarsBytes.slice(index * columnsSize, (index + 1) * columnsSize);
     if (dataColumnSidecarBytes.length !== columnsSize) {
       throw new ResponseError(
@@ -98,7 +112,7 @@ export function* iterateDataColumnBytesFromWrapper(
     }
     yield {
       data: dataColumnSidecarBytes,
-      fork: chain.config.getForkName(blockSlot),
+      fork,
     };
   }
 }
@@ -106,8 +120,8 @@ export function* iterateDataColumnBytesFromWrapper(
 export function validateDataColumnSidecarsByRangeRequest(
   request: electra.DataColumnSidecarsByRangeRequest
 ): electra.DataColumnSidecarsByRangeRequest {
-  const {startSlot, columns} = request;
-  let {count} = request;
+  const { startSlot, columns } = request;
+  let { count } = request;
 
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
@@ -121,5 +135,5 @@ export function validateDataColumnSidecarsByRangeRequest(
     count = MAX_REQUEST_BLOCKS_DENEB;
   }
 
-  return {startSlot, count, columns};
+  return { startSlot, count, columns };
 }

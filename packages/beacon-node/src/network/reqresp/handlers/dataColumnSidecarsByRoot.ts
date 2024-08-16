@@ -1,9 +1,9 @@
-import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {electra, RootHex, ssz} from "@lodestar/types";
-import {toHex, fromHex} from "@lodestar/utils";
-import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import { ResponseError, ResponseOutgoing, RespStatus } from "@lodestar/reqresp";
+import { NUMBER_OF_COLUMNS } from "@lodestar/params";
+import { electra, RootHex, ssz } from "@lodestar/types";
+import { toHex, fromHex } from "@lodestar/utils";
+import { IBeaconChain } from "../../../chain/index.js";
+import { IBeaconDb } from "../../../db/index.js";
 import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
@@ -23,12 +23,12 @@ export async function* onDataColumnSidecarsByRoot(
   let lastFetchedSideCars: {
     blockRoot: RootHex;
     bytes: Uint8Array;
-    custodyColumns: Uint8Array;
+    dataColumnsIndex: Uint8Array;
     columnsSize: number;
   } | null = null;
 
   for (const dataColumnIdentifier of requestBody) {
-    const {blockRoot, index} = dataColumnIdentifier;
+    const { blockRoot, index } = dataColumnIdentifier;
     const blockRootHex = toHex(blockRoot);
     const block = chain.forkChoice.getBlockHex(blockRootHex);
 
@@ -54,16 +54,19 @@ export async function* onDataColumnSidecarsByRoot(
       const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
       const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
 
-      const custodyColumns = dataColumnSidecarsBytesWrapped.slice(
+      const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
       );
 
-      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, custodyColumns};
+      lastFetchedSideCars = { blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex };
     }
 
-    const dataIndex = lastFetchedSideCars.custodyColumns[index];
-    const {columnsSize} = lastFetchedSideCars;
+    const dataIndex = lastFetchedSideCars.dataColumnsIndex[index] - 1;
+    if (dataIndex < 0) {
+      throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
+    }
+    const { columnsSize } = lastFetchedSideCars;
 
     if (dataIndex === undefined || dataIndex === 0) {
       throw Error(
@@ -73,8 +76,8 @@ export async function* onDataColumnSidecarsByRoot(
 
     // dataIndex is 1 based index
     const dataColumnSidecarBytes = lastFetchedSideCars.bytes.slice(
-      (dataIndex - 1) * columnsSize,
-      dataIndex * columnsSize
+      dataIndex * columnsSize,
+      (dataIndex + 1) * columnsSize
     );
     if (dataColumnSidecarBytes.length !== columnsSize) {
       throw Error(

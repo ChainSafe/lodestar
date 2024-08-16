@@ -15,7 +15,7 @@ import {
   filterStateValidatorsByStatus,
   getStateValidatorIndex,
   getValidatorStatus,
-  resolveStateId,
+  getStateResponse,
   toValidatorResponse,
 } from "./utils.js";
 
@@ -26,7 +26,7 @@ export function getBeaconStateApi({
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
-    return resolveStateId(chain, stateId);
+    return getStateResponse(chain, stateId);
   }
 
   return {
@@ -76,7 +76,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidators({stateId, validatorIds = [], statuses = []}) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
       const {pubkey2index} = chain.getHeadState().epochCtx;
@@ -131,7 +131,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidator({stateId, validatorId}) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
@@ -152,7 +152,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidatorBalances({stateId, validatorIds = []}) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
 
       if (validatorIds.length) {
         const headState = chain.getHeadState();
@@ -193,7 +193,7 @@ export function getBeaconStateApi({
     },
 
     async getEpochCommittees({stateId, ...filters}) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
 
       const stateCached = state as CachedBeaconStateAltair;
       if (stateCached.epochCtx === undefined) {
@@ -235,7 +235,7 @@ export function getBeaconStateApi({
      */
     async getEpochSyncCommittees({stateId, epoch}) {
       // TODO: Should pick a state with the provided epoch too
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
 
       // TODO: If possible compute the syncCommittees in advance of the fork and expose them here.
       // So the validators can prepare and potentially attest the first block. Not critical tho, it's very unlikely

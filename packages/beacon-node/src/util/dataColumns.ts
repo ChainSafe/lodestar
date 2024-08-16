@@ -1,16 +1,19 @@
-import {digest} from "@chainsafe/as-sha256";
-import {NUMBER_OF_COLUMNS, DATA_COLUMN_SIDECAR_SUBNET_COUNT} from "@lodestar/params";
-import {ColumnIndex} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
-import {NodeId} from "../network/subnets/index.js";
+import { digest } from "@chainsafe/as-sha256";
+import { NUMBER_OF_COLUMNS, DATA_COLUMN_SIDECAR_SUBNET_COUNT } from "@lodestar/params";
+import { ColumnIndex } from "@lodestar/types";
+import { ChainForkConfig } from "@lodestar/config";
+import { ssz } from "@lodestar/types";
+import { NodeId } from "../network/subnets/index.js";
 
-export type CustodyConfig = {custodyColumnsIndex: Uint8Array; custodyColumnsLen: number; custodyColumns: ColumnIndex[]};
+export type CustodyConfig = { custodyColumnsIndex: Uint8Array; custodyColumnsLen: number; custodyColumns: ColumnIndex[] };
 
 export function getCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
-  const custodyColumns = getCustodyColumns(nodeId, config.CUSTODY_REQUIREMENT);
+  const custodyColumns = getCustodyColumns(
+    nodeId,
+    Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)
+  );
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
-  return {...custodyMeta, custodyColumns};
+  return { ...custodyMeta, custodyColumns };
 }
 
 export function getCustodyColumnsMeta(custodyColumns: ColumnIndex[]): {
@@ -22,10 +25,10 @@ export function getCustodyColumnsMeta(custodyColumns: ColumnIndex[]): {
   const custodyColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
   let custodyAtIndex = 1;
   for (const columnIndex of custodyColumns) {
-    custodyColumns[columnIndex] = custodyAtIndex;
+    custodyColumnsIndex[columnIndex] = custodyAtIndex;
     custodyAtIndex++;
   }
-  return {custodyColumnsIndex, custodyColumnsLen: custodyColumns.length};
+  return { custodyColumnsIndex, custodyColumnsLen: custodyColumns.length };
 }
 
 // optimize by having a size limited index/map

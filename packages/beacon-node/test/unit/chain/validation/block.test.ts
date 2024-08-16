@@ -16,7 +16,7 @@ describe("gossip block validation", function () {
   let chain: MockedBeaconChain;
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
-  let verifySignature: Mock<[boolean]>;
+  let verifySignature: Mock<() => boolean>;
   let job: SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;

@@ -1,9 +1,8 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
 import {fromHexString} from "@chainsafe/ssz";
+import {PublicKey} from "@chainsafe/blst";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toSafePrintableUrl} from "@lodestar/utils";
+import {toPrintableUrl} from "@lodestar/utils";
 
 import {LoggerVc} from "../util/index.js";
 import {externalSignerGetKeys} from "../util/externalSignerClient.js";
@@ -36,7 +35,7 @@ export function pollExternalSignerPubkeys(
   async function fetchExternalSignerPubkeys(): Promise<void> {
     // External signer URL is already validated earlier
     const externalSignerUrl = externalSigner.url as string;
-    const printableUrl = toSafePrintableUrl(externalSignerUrl);
+    const printableUrl = toPrintableUrl(externalSignerUrl);
 
     try {
       logger.debug("Fetching public keys from external signer", {url: printableUrl});
@@ -79,6 +78,6 @@ export function pollExternalSignerPubkeys(
 function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
     const pubkeyBytes = fromHexString(pubkeyHex);
-    bls.PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+    PublicKey.fromBytes(pubkeyBytes, true);
   }
 }

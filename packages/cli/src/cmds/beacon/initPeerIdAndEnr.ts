@@ -89,6 +89,9 @@ export function overwriteEnrWithCliArgs(
   }
   enr.set("custody_subnet_count", ssz.UintNum64.serialize(config.CUSTODY_REQUIREMENT));
 
+  // csc is big ending but since 1 bytes suffices for now so its the same
+  enr.set("csc", ssz.Uint8.serialize(Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)));
+
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
     const isLocal = isLocalMultiAddr(mu);
     if (args.nat) {

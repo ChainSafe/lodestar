@@ -1,3 +1,7 @@
+import {nodeId as computeENRNodeId, IDScheme} from "@chainsafe/enr";
+import type {PeerId} from "@libp2p/interface";
+import {peerIdFromString} from "@libp2p/peer-id";
+import {fromHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
 import {RequestedSubnet} from "../peers/utils/index.js";
@@ -48,3 +52,16 @@ export type GossipSubscriber = {
 
 // uint256 in the spec
 export type NodeId = Bytes32;
+export function computeNodeId(peerIdOrStr: PeerId | PeerIdStr) {
+  let peerId;
+  if (typeof peerId === "string") {
+    peerId = peerIdFromString(peerId);
+  } else {
+    peerId = peerIdOrStr as PeerId;
+  }
+
+  if (peerId.publicKey === undefined) {
+    throw Error("Undefined publicKey");
+  }
+  return fromHexString(computeENRNodeId(IDScheme.v4, peerId.publicKey.slice(4)));
+}

@@ -77,7 +77,11 @@ export function fromValidatorIdsStr(ids?: string[]): (string | number)[] | undef
 
 const GRAFFITI_HEX_LENGTH = 66;
 
-export function toGraffitiHex(utf8: string): string {
+export function toGraffitiHex(utf8?: string): string | undefined {
+  if (utf8 === undefined) {
+    return undefined;
+  }
+
   const hex = toHexString(new TextEncoder().encode(utf8));
 
   if (hex.length > GRAFFITI_HEX_LENGTH) {
@@ -93,7 +97,10 @@ export function toGraffitiHex(utf8: string): string {
   return hex;
 }
 
-export function fromGraffitiHex(hex: string): string {
+export function fromGraffitiHex(hex?: string): string | undefined {
+  if (hex === undefined) {
+    return undefined;
+  }
   try {
     return new TextDecoder("utf8").decode(fromHexString(hex));
   } catch {

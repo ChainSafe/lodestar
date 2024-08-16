@@ -11,9 +11,9 @@ import {
   ForkLightClient,
   ForkBlobs,
 } from "@lodestar/params";
-import {Slot, Version, ssz, SSZTypesFor, sszTypesFor} from "@lodestar/types";
-import {ChainConfig} from "../chainConfig/index.js";
-import {ForkConfig, ForkInfo} from "./types.js";
+import { Slot, Version, SSZTypesFor, sszTypesFor } from "@lodestar/types";
+import { ChainConfig } from "../chainConfig/index.js";
+import { ForkConfig, ForkInfo } from "./types.js";
 
 export * from "./types.js";
 
@@ -62,15 +62,15 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const electra: ForkInfo = {
     name: ForkName.electra,
     seq: ForkSeq.electra,
-    epoch: config.ELECTRA_FORK_EPOCH,
-    version: config.ELECTRA_FORK_VERSION,
+    epoch: config.EIP7594_FORK_EPOCH,
+    version: config.EIP7594_FORK_VERSION,
     prevVersion: config.DENEB_FORK_VERSION,
     prevForkName: ForkName.deneb,
   };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra};
+  const forks = { phase0, altair, bellatrix, capella, deneb, electra };
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -107,21 +107,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       if (!isForkExecution(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
       }
-      return ssz.allForksExecution[forkName];
+      return sszTypesFor(forkName);
     },
     getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
       const forkName = this.getForkName(slot);
       if (!isForkLightClient(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
       }
-      return ssz.allForksLightClient[forkName];
+      return sszTypesFor(forkName);
     },
     getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
       const forkName = this.getForkName(slot);
       if (!isForkBlobs(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
       }
-      return ssz.allForksBlobs[forkName];
+      return sszTypesFor(forkName);
     },
   };
 }

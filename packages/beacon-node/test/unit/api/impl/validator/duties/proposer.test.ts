@@ -10,6 +10,7 @@ import {generateState, zeroProtoBlock} from "../../../../../utils/state.js";
 import {generateValidators} from "../../../../../utils/validator.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
 import {SyncState} from "../../../../../../src/sync/interface.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 
 describe("get proposers api impl", function () {
   let api: ReturnType<typeof getValidatorApi>;
@@ -20,7 +21,7 @@ describe("get proposers api impl", function () {
   beforeEach(function () {
     vi.useFakeTimers({now: 0});
     modules = getApiTestModules({clock: "real"});
-    api = getValidatorApi(modules);
+    api = getValidatorApi(defaultApiOptions, modules);
 
     state = generateState(
       {

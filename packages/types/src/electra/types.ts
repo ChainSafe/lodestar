@@ -1,5 +1,7 @@
-import {ValueOf} from "@chainsafe/ssz";
+import { ValueOf } from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
+
+export type Metadata = ValueOf<typeof ssz.Metadata>;
 
 export type Cell = ValueOf<typeof ssz.Cell>;
 export type DataColumn = ValueOf<typeof ssz.DataColumn>;
@@ -37,3 +39,7 @@ export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;
 export type LightClientFinalityUpdate = ValueOf<typeof ssz.LightClientFinalityUpdate>;
 export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimisticUpdate>;
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
+
+export type BlockContents = ValueOf<typeof ssz.BlockContents>;
+export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
+export type Contents = Omit<BlockContents, "block">;

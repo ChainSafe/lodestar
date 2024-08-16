@@ -1,7 +1,7 @@
 import {describe, it, expect, beforeAll} from "vitest";
 import {toBufferBE} from "bigint-buffer";
-import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@chainsafe/blst";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {testLogger} from "../../utils/logger.js";
 import {IndicesService} from "../../../src/services/indices.js";
@@ -14,8 +14,8 @@ describe("IndicesService", function () {
 
   beforeAll(() => {
     const secretKeys = [
-      bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32)),
-      bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
+      SecretKey.fromBytes(toBufferBE(BigInt(98), 32)),
+      SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
     ];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
   });

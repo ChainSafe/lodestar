@@ -304,13 +304,13 @@ export type Endpoints = {
       /** The validator's randao reveal value */
       randaoReveal: BLSSignature;
       /** Arbitrary data validator wants to include in block */
-      graffiti: string;
+      graffiti?: string;
     } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
     {
       params: {slot: number};
       query: {
         randao_reveal: string;
-        graffiti: string;
+        graffiti?: string;
         fee_recipient?: string;
         builder_selection?: string;
         strict_fee_recipient_check?: boolean;
@@ -333,7 +333,7 @@ export type Endpoints = {
       /** The validator's randao reveal value */
       randaoReveal: BLSSignature;
       /** Arbitrary data validator wants to include in block */
-      graffiti: string;
+      graffiti?: string;
       skipRandaoVerification?: boolean;
       builderBoostFactor?: UintBn64;
     } & ExtraProduceBlockOpts,
@@ -341,7 +341,7 @@ export type Endpoints = {
       params: {slot: number};
       query: {
         randao_reveal: string;
-        graffiti: string;
+        graffiti?: string;
         skip_randao_verification?: string;
         fee_recipient?: string;
         builder_selection?: string;
@@ -359,9 +359,9 @@ export type Endpoints = {
     {
       slot: Slot;
       randaoReveal: BLSSignature;
-      graffiti: string;
+      graffiti?: string;
     },
-    {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
+    {params: {slot: number}; query: {randao_reveal: string; graffiti?: string}},
     BlindedBeaconBlock,
     VersionMeta
   >;

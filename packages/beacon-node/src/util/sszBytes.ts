@@ -1,7 +1,7 @@
-import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
-import {BLSSignature, RootHex, Slot} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
+import { BitArray, deserializeUint8ArrayBitListFromBytes } from "@chainsafe/ssz";
+import { BLSSignature, RootHex, Slot } from "@lodestar/types";
+import { toHex } from "@lodestar/utils";
+import { BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB } from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
@@ -71,7 +71,7 @@ export function getAggregationBitsFromAttestationSerialized(data: Uint8Array): B
     return null;
   }
 
-  const {uint8Array, bitLen} = deserializeUint8ArrayBitListFromBytes(
+  const { uint8Array, bitLen } = deserializeUint8ArrayBitListFromBytes(
     data,
     VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE,
     data.length
@@ -218,11 +218,24 @@ export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot |
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
 }
 
-function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
-  // TODO: Optimize
-  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
-  return dv.getUint32(offset, true);
+/**
+ * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
+ *
+ * If the high bytes are not zero, return null
+ */
+function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
+  return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
+}
+
+/**
+ * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
+ */
+function getSlotFromOffsetTrusted(data: Uint8Array, offset: number): Slot {
+  return (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0;
+}
+
+function checkSlotHighBytes(data: Uint8Array, offset: number): boolean {
+  return (data[offset + 4] | data[offset + 5] | data[offset + 6] | data[offset + 7]) === 0;
 }
 
 function toBase64(data: Uint8Array): string {

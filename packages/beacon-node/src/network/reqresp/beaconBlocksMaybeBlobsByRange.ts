@@ -1,7 +1,8 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, electra} from "@lodestar/types";
-import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import { toHexString } from "@chainsafe/ssz";
+import { ChainForkConfig } from "@lodestar/config";
+import { deneb, Epoch, phase0, SignedBeaconBlock, Slot, electra, ssz } from "@lodestar/types";
+import { ForkSeq, NUMBER_OF_COLUMNS, ForkName } from "@lodestar/params";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 import {
   BlobsSource,
@@ -11,23 +12,29 @@ import {
   BlockInputDataBlobs,
   BlockInputDataDataColumns,
   DataColumnsSource,
+  BlockInputType,
+  getBlockInputDataColumns,
 } from "../../chain/blocks/types.js";
-import {PeerIdStr} from "../../util/peerId.js";
-import {INetwork, WithBytes} from "../interface.js";
-import {CustodyConfig} from "../../util/dataColumns.js";
+import { PeerIdStr } from "../../util/peerId.js";
+import { INetwork, WithBytes, WithOptionalBytes } from "../interface.js";
+import { CustodyConfig } from "../../util/dataColumns.js";
+import { getEmptyBlockInputCacheEntry } from "../../chain/seenCache/seenGossipBlockInput.js";
+import { computeNodeId } from "../subnets/index.js";
 
+export type PartialDownload = null | { blocks: BlockInput[]; pendingDataColumns: number[] };
 export async function beaconBlocksMaybeBlobsByRange(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
   request: phase0.BeaconBlocksByRangeRequest,
-  currentEpoch: Epoch
-): Promise<BlockInput[]> {
+  currentEpoch: Epoch,
+  partialDownload: PartialDownload
+): Promise<{ blocks: BlockInput[]; pendingDataColumns: null | number[] }> {
   // Code below assumes the request is in the same epoch
   // Range sync satisfies this condition, but double check here for sanity
-  const {startSlot, count} = request;
+  const { startSlot, count } = request;
   if (count < 1) {
-    return [];
+    return { blocks: [], pendingDataColumns: null };
   }
   const endSlot = startSlot + count - 1;
 
@@ -43,8 +50,11 @@ export async function beaconBlocksMaybeBlobsByRange(
 
   // Note: Assumes all blocks in the same epoch
   if (forkSeq < ForkSeq.deneb) {
-    const blocks = await network.sendBeaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.preData(config, block.data, BlockSource.byRange, block.bytes));
+    const beaconBlocks = await network.sendBeaconBlocksByRange(peerId, request);
+    const blocks = beaconBlocks.map((block) =>
+      getBlockInput.preData(config, block.data, BlockSource.byRange, block.bytes)
+    );
+    return { blocks, pendingDataColumns: null };
   }
 
   // Only request blobs if they are recent enough
@@ -55,27 +65,69 @@ export async function beaconBlocksMaybeBlobsByRange(
         network.sendBlobSidecarsByRange(peerId, request),
       ]);
 
-      return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, endSlot, BlockSource.byRange, BlobsSource.byRange);
+      const blocks = matchBlockWithBlobs(
+        config,
+        allBlocks,
+        allBlobSidecars,
+        endSlot,
+        BlockSource.byRange,
+        BlobsSource.byRange
+      );
+      return { blocks, pendingDataColumns: null };
     } else {
-      const {custodyConfig} = network;
+      const { custodyConfig } = network;
       // get columns
-      const {custodyColumns: columns} = custodyConfig;
-      const dataColumnRequest = {...request, columns};
-      const [allBlocks, allDataColumnSidecars] = await Promise.all([
-        network.sendBeaconBlocksByRange(peerId, request),
-        network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
-      ]);
+      const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.custodyColumns;
+      const peerColumns = network.getConnectedPeerCustody(peerId);
 
-      return matchBlockWithDataColumns(
+      // get match
+      const columns = peerColumns.reduce((acc, elem) => {
+        if (neededColumns.includes(elem)) {
+          acc.push(elem);
+        }
+        return acc;
+      }, [] as number[]);
+
+      if (columns.length === 0 && partialDownload !== null) {
+        // this peer has nothing to offer and should not have been selected for batch download
+        // throw error?
+        return partialDownload;
+      }
+
+      const pendingDataColumns = neededColumns.reduce((acc, elem) => {
+        if (!columns.includes(elem)) {
+          acc.push(elem);
+        }
+        return acc;
+      }, [] as number[]);
+
+      const dataColumnRequest = { ...request, columns };
+      const [allBlocks, allDataColumnSidecars] = await Promise.all([
+        partialDownload
+          ? partialDownload.blocks.map((blockInput) => ({ data: blockInput.block, bytes: blockInput.blockBytes! }))
+          : network.sendBeaconBlocksByRange(peerId, request),
+        columns.length === 0 ? [] : network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
+      ]);
+      console.log({
+        beaconBlocksRequest: ssz.phase0.BeaconBlocksByRangeRequest.toJson(request),
+        dataColumnRequest: ssz.electra.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest),
+      });
+
+      const blocks = matchBlockWithDataColumns(
+        network,
         peerId,
         config,
         custodyConfig,
+        columns,
         allBlocks,
         allDataColumnSidecars,
         endSlot,
         BlockSource.byRange,
-        DataColumnsSource.byRange
+        DataColumnsSource.byRange,
+        partialDownload
       );
+
+      return { blocks, pendingDataColumns: pendingDataColumns.length > 0 ? pendingDataColumns : null };
     }
   }
 
@@ -132,11 +184,11 @@ export function matchBlockWithBlobs(
         fork: config.getForkName(block.data.message.slot),
         blobs: blobSidecars,
         blobsSource,
-        blobsBytes: Array.from({length: blobKzgCommitmentsLen}, () => null),
+        blobsBytes: Array.from({ length: blobKzgCommitmentsLen }, () => null),
       } as BlockInputDataBlobs;
 
       // TODO DENEB: instead of null, pass payload in bytes
-      blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, null, blockData));
+      blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, block.bytes, blockData));
     }
   }
 
@@ -148,8 +200,7 @@ export function matchBlockWithBlobs(
     allBlobSidecars[blobSideCarIndex].signedBlockHeader.message.slot <= endSlot
   ) {
     throw Error(
-      `Unmatched blobSidecars, blocks=${allBlocks.length}, blobs=${
-        allBlobSidecars.length
+      `Unmatched blobSidecars, blocks=${allBlocks.length}, blobs=${allBlobSidecars.length
       } lastMatchedSlot=${lastMatchedSlot}, pending blobSidecars slots=${allBlobSidecars
         .slice(blobSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)
@@ -160,18 +211,24 @@ export function matchBlockWithBlobs(
 }
 
 export function matchBlockWithDataColumns(
+  network: INetwork,
   peerId: PeerIdStr,
   config: ChainForkConfig,
   custodyConfig: CustodyConfig,
-  allBlocks: WithBytes<SignedBeaconBlock>[],
+  requestedColumns: number[],
+  allBlocks: WithOptionalBytes<SignedBeaconBlock>[],
   allDataColumnSidecars: electra.DataColumnSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,
-  dataColumnsSource: DataColumnsSource
+  dataColumnsSource: DataColumnsSource,
+  prevPartialDownload: null | PartialDownload
 ): BlockInput[] {
   const blockInputs: BlockInput[] = [];
   let dataColumnSideCarIndex = 0;
   let lastMatchedSlot = -1;
+  const { custodyColumns, custodyColumnsLen, custodyColumnsIndex } = custodyConfig;
+  const neededColumns = prevPartialDownload?.pendingDataColumns ?? custodyColumns;
+  const shouldHaveAllData = neededColumns.reduce((acc, elem) => acc && requestedColumns.includes(elem), true);
 
   // Match dataColumnSideCar with the block as some blocks would have no dataColumns and hence
   // would be omitted from the response. If there are any inconsitencies in the
@@ -198,6 +255,7 @@ export function matchBlockWithDataColumns(
       }
 
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+      console.log("matchBlockWithDataColumns", { blobKzgCommitmentsLen });
       if (blobKzgCommitmentsLen === 0) {
         if (dataColumnSidecars.length > 0) {
           throw Error(
@@ -216,34 +274,68 @@ export function matchBlockWithDataColumns(
         blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, null, blockData));
       } else {
         // Quick inspect how many blobSidecars was expected
-        const {custodyColumns: columnIndexes, custodyColumnsLen, custodyColumnsIndex} = custodyConfig;
         const dataColumnIndexes = dataColumnSidecars.map((dataColumnSidecar) => dataColumnSidecar.index);
-        const custodyIndexesPresent = columnIndexes.reduce(
+        const requestedColumnsPresent = requestedColumns.reduce(
           (acc, columnIndex) => acc && dataColumnIndexes.includes(columnIndex),
           true
         );
 
-        if (
-          dataColumnSidecars.length < custodyColumnsLen ||
-          dataColumnSidecars.length > NUMBER_OF_COLUMNS ||
-          !custodyIndexesPresent
-        ) {
+        if (dataColumnSidecars.length !== requestedColumns.length || !requestedColumnsPresent) {
+          console.log(
+            "matchBlockWithDataColumns",
+            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${custodyColumnsLen} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`,
+            {
+              allBlocks: allBlocks.length,
+              allDataColumnSidecars: allDataColumnSidecars.length,
+              peerId,
+              nodeId: toHexString(computeNodeId(peerId)),
+              blobKzgCommitmentsLen,
+            }
+          );
           throw Error(
-            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${columnIndexes.length} dataColumnSidecars=${dataColumnSidecars.length} custodyIndexesPresent=${custodyIndexesPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} expected=${columnIndexes.join(",")}`
+            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} blobKzgCommitmentsLen=${blobKzgCommitmentsLen} with numColumns=${custodyColumnsLen} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`
           );
         }
 
-        const blockData = {
-          fork: config.getForkName(block.data.message.slot),
-          dataColumnsLen: custodyColumnsLen,
-          dataColumnsIndex: custodyColumnsIndex,
-          dataColumns: dataColumnSidecars,
-          dataColumnsSource,
-          dataColumnsBytes: Array.from({length: dataColumnSidecars.length}, () => null),
-        } as BlockInputDataDataColumns;
+        let cachedData;
+        if (prevPartialDownload !== null) {
+          const prevBlockInput = prevPartialDownload.blocks[i];
+          if (prevBlockInput.type !== BlockInputType.dataPromise) {
+            throw Error(`prevBlockInput.type=${prevBlockInput.type} in prevPartialDownload`);
+          }
+          cachedData = prevBlockInput.cachedData;
+        } else {
+          cachedData = getEmptyBlockInputCacheEntry(config.getForkName(block.data.message.slot)).cachedData;
+          if (cachedData === undefined) {
+            throw Error("Invalid cachedData=undefined from getEmptyBlockInputCacheEntry");
+          }
+        }
 
-        // TODO DENEB: instead of null, pass payload in bytes
-        blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, null, blockData));
+        if (cachedData.fork !== ForkName.electra) {
+          throw Error("Invalid fork for cachedData on dataColumns");
+        }
+
+        for (const dataColumnSidecar of dataColumnSidecars) {
+          cachedData.dataColumnsCache.set(dataColumnSidecar.index, { dataColumnSidecar, dataColumnBytes: null });
+        }
+
+        if (shouldHaveAllData) {
+          const { dataColumns, dataColumnsBytes } = getBlockInputDataColumns(cachedData.dataColumnsCache, custodyColumns);
+
+          const blockData = {
+            fork: config.getForkName(block.data.message.slot),
+            dataColumnsLen: custodyColumnsLen,
+            dataColumnsIndex: custodyColumnsIndex,
+            dataColumns,
+            dataColumnsSource,
+            dataColumnsBytes,
+          } as BlockInputDataDataColumns;
+
+          // TODO DENEB: instead of null, pass payload in bytes
+          blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, block.bytes, blockData));
+        } else {
+          blockInputs.push(getBlockInput.dataPromise(config, block.data, blockSource, block.bytes, cachedData));
+        }
       }
     }
   }
@@ -256,8 +348,7 @@ export function matchBlockWithDataColumns(
     allDataColumnSidecars[dataColumnSideCarIndex].signedBlockHeader.message.slot <= endSlot
   ) {
     throw Error(
-      `Unmatched blobSidecars, blocks=${allBlocks.length}, blobs=${
-        allDataColumnSidecars.length
+      `Unmatched blobSidecars, blocks=${allBlocks.length}, blobs=${allDataColumnSidecars.length
       } lastMatchedSlot=${lastMatchedSlot}, pending blobSidecars slots=${allDataColumnSidecars
         .slice(dataColumnSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)

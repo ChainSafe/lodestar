@@ -2,8 +2,8 @@ import {CompactMultiProof, createProof, ProofType} from "@chainsafe/persistent-m
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ApiModules} from "../types.js";
-import {resolveStateId} from "../beacon/state/utils.js";
-import {resolveBlockId} from "../beacon/blocks/utils.js";
+import {getStateResponse} from "../beacon/state/utils.js";
+import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {ApiOptions} from "../../options.js";
 
 export function getProofApi(
@@ -21,7 +21,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const {state} = await resolveStateId(chain, stateId);
+      const {state} = await getStateResponse(chain, stateId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       state.commit();
@@ -40,7 +40,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const {block} = await resolveBlockId(chain, blockId);
+      const {block} = await getBlockResponse(chain, blockId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;

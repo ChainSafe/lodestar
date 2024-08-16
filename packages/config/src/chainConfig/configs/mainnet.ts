@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString as b} from "@chainsafe/ssz";
-import {PresetName} from "@lodestar/params";
-import {ChainConfig} from "../types.js";
+import { fromHexString as b } from "@chainsafe/ssz";
+import { PresetName } from "@lodestar/params";
+import { ChainConfig } from "../types.js";
 
 // Mainnet config
 // https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml
@@ -52,6 +52,8 @@ export const chainConfig: ChainConfig = {
   // Electra
   ELECTRA_FORK_VERSION: b("0x05000000"),
   ELECTRA_FORK_EPOCH: Infinity,
+  EIP7594_FORK_VERSION: b("0x05000000"),
+  EIP7594_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -106,4 +108,5 @@ export const chainConfig: ChainConfig = {
   // Electra
   SAMPLES_PER_SLOT: 8,
   CUSTODY_REQUIREMENT: 1,
+  NODE_CUSTODY_REQUIREMENT: 1,
 };

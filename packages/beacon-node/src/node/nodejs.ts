@@ -1,29 +1,30 @@
-import {setMaxListeners} from "node:events";
-import {Registry} from "prom-client";
+import { setMaxListeners } from "node:events";
+import { Registry } from "prom-client";
 
-import {PeerId} from "@libp2p/interface";
-import {BeaconConfig} from "@lodestar/config";
-import {phase0} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
-import type {LoggerNode} from "@lodestar/logger/node";
-import {BeaconApiMethods} from "@lodestar/api/beacon/server";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {ProcessShutdownCallback} from "@lodestar/validator";
+import { PeerId } from "@libp2p/interface";
+import { BeaconConfig } from "@lodestar/config";
+import { phase0 } from "@lodestar/types";
+import { sleep } from "@lodestar/utils";
+import type { LoggerNode } from "@lodestar/logger/node";
+import { BeaconApiMethods } from "@lodestar/api/beacon/server";
+import { BeaconStateAllForks } from "@lodestar/state-transition";
+import { ProcessShutdownCallback } from "@lodestar/validator";
 
-import {IBeaconDb} from "../db/index.js";
-import {Network, getReqRespHandlers} from "../network/index.js";
-import {BeaconSync, IBeaconSync} from "../sync/index.js";
-import {BackfillSync} from "../sync/backfill/index.js";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, Metrics, HttpMetricsServer, getHttpMetricsServer} from "../metrics/index.js";
-import {MonitoringService} from "../monitoring/index.js";
-import {getApi, BeaconRestApiServer} from "../api/index.js";
-import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
-import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
-import {NodeId} from "../network/subnets/interface.js";
-import {IBeaconNodeOptions} from "./options.js";
-import {runNodeNotifier} from "./notifier.js";
+import { IBeaconDb } from "../db/index.js";
+import { Network, getReqRespHandlers } from "../network/index.js";
+import { BeaconSync, IBeaconSync } from "../sync/index.js";
+import { BackfillSync } from "../sync/backfill/index.js";
+import { BeaconChain, IBeaconChain, initBeaconMetrics } from "../chain/index.js";
+import { createMetrics, Metrics, HttpMetricsServer, getHttpMetricsServer } from "../metrics/index.js";
+import { MonitoringService } from "../monitoring/index.js";
+import { getApi, BeaconRestApiServer } from "../api/index.js";
+import { initializeExecutionEngine, initializeExecutionBuilder } from "../execution/index.js";
+import { initializeEth1ForBlockProduction } from "../eth1/index.js";
+import { initCKZG, loadEthereumTrustedSetup, TrustedFileMode } from "../util/kzg.js";
+import { HistoricalStateRegen } from "../chain/historicalState/index.js";
+import { NodeId } from "../network/subnets/interface.js";
+import { IBeaconNodeOptions } from "./options.js";
+import { runNodeNotifier } from "./notifier.js";
 
 export * from "./options.js";
 
@@ -180,28 +181,39 @@ export class BeaconNode {
         opts.metrics,
         config,
         anchorState,
-        logger.child({module: LoggerModule.vmon}),
+        logger.child({ module: LoggerModule.vmon }),
         metricsRegistries
       );
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
-      signal.addEventListener("abort", metrics.close, {once: true});
+      signal.addEventListener("abort", metrics.close, { once: true });
     }
 
     const monitoring = opts.monitoring.endpoint
       ? new MonitoringService(
-          "beacon",
-          {...opts.monitoring, endpoint: opts.monitoring.endpoint},
-          {register: (metrics as Metrics).register, logger: logger.child({module: LoggerModule.monitoring})}
-        )
+        "beacon",
+        { ...opts.monitoring, endpoint: opts.monitoring.endpoint },
+        { register: (metrics as Metrics).register, logger: logger.child({ module: LoggerModule.monitoring }) }
+      )
       : null;
+
+    const historicalStateRegen = await HistoricalStateRegen.init({
+      opts: {
+        genesisTime: anchorState.genesisTime,
+        dbLocation: opts.db.name,
+      },
+      config,
+      metrics,
+      logger: logger.child({ module: LoggerModule.chain }),
+      signal,
+    });
 
     const chain = new BeaconChain(opts.chain, {
       nodeId,
       config,
       db,
-      logger: logger.child({module: LoggerModule.chain}),
+      logger: logger.child({ module: LoggerModule.chain }),
       processShutdownCallback,
       metrics,
       anchorState,
@@ -209,17 +221,18 @@ export class BeaconNode {
         config,
         db,
         metrics,
-        logger: logger.child({module: LoggerModule.eth1}),
+        logger: logger.child({ module: LoggerModule.eth1 }),
         signal,
       }),
       executionEngine: initializeExecutionEngine(opts.executionEngine, {
         metrics,
         signal,
-        logger: logger.child({module: LoggerModule.execution}),
+        logger: logger.child({ module: LoggerModule.execution }),
       }),
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
+      historicalStateRegen,
     });
 
     // Load persisted data from disk to in-memory caches
@@ -230,14 +243,14 @@ export class BeaconNode {
     const network = await Network.init({
       opts: opts.network,
       config,
-      logger: logger.child({module: LoggerModule.network}),
+      logger: logger.child({ module: LoggerModule.network }),
       metrics,
       chain,
       db,
       peerId,
       nodeId,
       peerStoreDir,
-      getReqRespHandler: getReqRespHandlers({db, chain}),
+      getReqRespHandler: getReqRespHandlers({ db, chain }),
     });
 
     const sync = new BeaconSync(opts.sync, {
@@ -247,27 +260,27 @@ export class BeaconNode {
       metrics,
       network,
       wsCheckpoint,
-      logger: logger.child({module: LoggerModule.sync}),
+      logger: logger.child({ module: LoggerModule.sync }),
     });
 
     const backfillSync =
       opts.sync.backfillBatchSize > 0
         ? await BackfillSync.init(opts.sync, {
-            config,
-            db,
-            chain,
-            metrics,
-            network,
-            wsCheckpoint,
-            anchorState,
-            logger: logger.child({module: LoggerModule.backfill}),
-            signal,
-          })
+          config,
+          db,
+          chain,
+          metrics,
+          network,
+          wsCheckpoint,
+          anchorState,
+          logger: logger.child({ module: LoggerModule.backfill }),
+          signal,
+        })
         : null;
 
     const api = getApi(opts.api, {
       config,
-      logger: logger.child({module: LoggerModule.api}),
+      logger: logger.child({ module: LoggerModule.api }),
       db,
       sync,
       network,
@@ -278,15 +291,15 @@ export class BeaconNode {
     // only start server if metrics are explicitly enabled
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
-          register: (metrics as Metrics).register,
-          getOtherMetrics: () => network.scrapeMetrics(),
-          logger: logger.child({module: LoggerModule.metrics}),
-        })
+        register: (metrics as Metrics).register,
+        getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), historicalStateRegen.scrapeMetrics()]),
+        logger: logger.child({ module: LoggerModule.metrics }),
+      })
       : null;
 
     const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
-      logger: logger.child({module: LoggerModule.rest}),
+      logger: logger.child({ module: LoggerModule.rest }),
       api,
       metrics: metrics ? metrics.apiRest : null,
     });
@@ -295,7 +308,7 @@ export class BeaconNode {
       await restApi.listen();
     }
 
-    void runNodeNotifier({network, chain, sync, config, logger, signal});
+    void runNodeNotifier({ network, chain, sync, config, logger, signal });
 
     return new this({
       opts,

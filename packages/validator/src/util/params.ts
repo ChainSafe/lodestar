@@ -1,7 +1,7 @@
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
-import {activePreset, BeaconPreset, presetToJson} from "@lodestar/params";
+import { ChainConfig, chainConfigToJson } from "@lodestar/config";
+import { activePreset, BeaconPreset, presetToJson } from "@lodestar/params";
 
-export class NotEqualParamsError extends Error {}
+export class NotEqualParamsError extends Error { }
 
 type ConfigWithPreset = ChainConfig & BeaconPreset;
 
@@ -110,6 +110,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // electra
     ELECTRA_FORK_VERSION: electraForkRelevant,
     ELECTRA_FORK_EPOCH: electraForkRelevant,
+    EIP7594_FORK_VERSION: electraForkRelevant,
+    EIP7594_FORK_EPOCH: electraForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -234,5 +236,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Electra
     SAMPLES_PER_SLOT: electraForkRelevant,
     CUSTODY_REQUIREMENT: electraForkRelevant,
+    NODE_CUSTODY_REQUIREMENT: electraForkRelevant,
   };
 }

@@ -349,7 +349,7 @@ export class SeenGossipBlockInput {
   }
 }
 
-function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
+export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
   // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
   let resolveBlockInput: ((block: BlockInput) => void) | null = null;

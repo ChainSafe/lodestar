@@ -1,17 +1,17 @@
-import {BitArray} from "@chainsafe/ssz";
-import {ForkSeq} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {altair, Epoch, phase0, ssz} from "@lodestar/types";
-import {BeaconConfig} from "@lodestar/config";
-import {FAR_FUTURE_EPOCH} from "../constants/index.js";
-import {getCurrentAndNextFork} from "./forks.js";
+import { BitArray } from "@chainsafe/ssz";
+import { ForkSeq } from "@lodestar/params";
+import { computeStartSlotAtEpoch } from "@lodestar/state-transition";
+import { altair, Epoch, phase0, ssz, electra } from "@lodestar/types";
+import { BeaconConfig } from "@lodestar/config";
+import { FAR_FUTURE_EPOCH } from "../constants/index.js";
+import { getCurrentAndNextFork } from "./forks.js";
 
 export enum ENRKey {
   tcp = "tcp",
   eth2 = "eth2",
   attnets = "attnets",
   syncnets = "syncnets",
-  custody_subnet_count = "custody_subnet_count",
+  csc = "csc",
 }
 export enum SubnetType {
   attnets = "attnets",
@@ -19,7 +19,7 @@ export enum SubnetType {
 }
 
 export type MetadataOpts = {
-  metadata?: altair.Metadata;
+  metadata?: electra.Metadata;
 };
 
 export type MetadataModules = {
@@ -35,12 +35,15 @@ export type MetadataModules = {
 export class MetadataController {
   private onSetValue: (key: string, value: Uint8Array) => void;
   private config: BeaconConfig;
-  private _metadata: altair.Metadata;
+  private _metadata: electra.Metadata;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.config = modules.config;
     this.onSetValue = modules.onSetValue;
-    this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
+    this._metadata = opts.metadata ?? {
+      ...ssz.electra.Metadata.defaultValue(),
+      csc: Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT),
+    };
   }
 
   upstreamValues(currentEpoch: Epoch): void {
@@ -53,6 +56,10 @@ export class MetadataController {
       // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
       // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
       this.onSetValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
+    }
+
+    if (this.config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.electra) {
+      this.onSetValue(ENRKey.csc, ssz.Uint8.serialize(this._metadata.csc));
     }
   }
 
@@ -79,8 +86,17 @@ export class MetadataController {
     this._metadata.attnets = attnets;
   }
 
+  get csc(): number {
+    return this._metadata.csc;
+  }
+
+  set csc(csc: number) {
+    this.onSetValue(ENRKey.csc, ssz.Uint8.serialize(csc));
+    this._metadata.csc = csc;
+  }
+
   /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */
-  get json(): altair.Metadata {
+  get json(): electra.Metadata {
     return this._metadata;
   }
 
@@ -103,7 +119,7 @@ export class MetadataController {
 }
 
 export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
-  const {currentFork, nextFork} = getCurrentAndNextFork(config, clockEpoch);
+  const { currentFork, nextFork } = getCurrentAndNextFork(config, clockEpoch);
 
   return {
     // Current fork digest

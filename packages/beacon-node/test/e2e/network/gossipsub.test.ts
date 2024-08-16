@@ -1,4 +1,4 @@
-import {describe, it, expect, afterEach} from "vitest";
+import {describe, it, expect, afterEach, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -8,26 +8,22 @@ import {GossipType, GossipHandlers, GossipHandlerParamGeneric} from "../../../sr
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 
-describe(
-  "gossipsub / main thread",
-  function () {
-    runTests({useWorker: false});
-  },
-  {timeout: 3000}
-);
+describe("gossipsub / main thread", function () {
+  vi.setConfig({testTimeout: 3000});
+
+  runTests({useWorker: false});
+});
 
 /**
  * This is nice to have to investigate networking issue in local environment.
  * Since we use vitest to run tests in parallel, including this causes the test to be unstable.
  * See https://github.com/ChainSafe/lodestar/issues/6358
  */
-describe.skip(
-  "gossipsub / worker",
-  function () {
-    runTests({useWorker: true});
-  },
-  {timeout: 10_000}
-);
+describe.skip("gossipsub / worker", function () {
+  vi.setConfig({testTimeout: 3000});
+
+  runTests({useWorker: true});
+});
 
 function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];

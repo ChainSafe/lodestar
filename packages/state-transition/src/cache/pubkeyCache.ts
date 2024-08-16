@@ -1,5 +1,4 @@
-import {CoordType, PublicKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {PublicKey} from "@chainsafe/blst";
 import {ValidatorIndex} from "@lodestar/types";
 import {BeaconStateAllForks} from "./types.js";
 
@@ -72,6 +71,6 @@ export function syncPubkeys(
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key is the state consider validated.
     // > Do not do any validation here
-    index2pubkey.push(bls.PublicKey.fromBytes(pubkey, CoordType.jacobian)); // Optimize for aggregation
+    index2pubkey.push(PublicKey.fromBytes(pubkey)); // Optimize for aggregation
   }
 }

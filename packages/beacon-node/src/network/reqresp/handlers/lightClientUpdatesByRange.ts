@@ -9,11 +9,14 @@ import {
 } from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 
 export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
+  assertLightClientServer(chain.lightClientServer);
+
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
   for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     try {

@@ -1,10 +1,17 @@
-import {digest as sha256Digest} from "@chainsafe/as-sha256";
-import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {VERSIONED_HASH_VERSION_KZG, KZG_COMMITMENT_GINDEX0, KZG_COMMITMENTS_GINDEX, ForkName, ForkAll, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, electra} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {computeCellsAndKzgProofs} from "./kzg.js";
+import { digest as sha256Digest } from "@chainsafe/as-sha256";
+import { Tree } from "@chainsafe/persistent-merkle-tree";
+import {
+  VERSIONED_HASH_VERSION_KZG,
+  KZG_COMMITMENT_GINDEX0,
+  KZG_COMMITMENTS_GINDEX,
+  ForkName,
+  ForkAll,
+  NUMBER_OF_COLUMNS,
+} from "@lodestar/params";
+import { deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, electra } from "@lodestar/types";
+import { ChainForkConfig } from "@lodestar/config";
+import { signedBlockToSignedHeader } from "@lodestar/state-transition";
+import { ckzg } from "./kzg.js";
 
 type VersionHash = Uint8Array;
 
@@ -36,7 +43,7 @@ export function computeKzgCommitmentsInclusionProof(
 export function computeBlobSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: deneb.Contents & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
+  contents: deneb.Contents & { kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[] }
 ): deneb.BlobSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -52,14 +59,14 @@ export function computeBlobSidecars(
     const kzgCommitmentInclusionProof =
       contents.kzgCommitmentInclusionProofs?.[index] ?? computeInclusionProof(fork, signedBlock.message.body, index);
 
-    return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
+    return { index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof };
   });
 }
 
 export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: deneb.Contents & {kzgCommitmentsInclusionProof?: electra.KzgCommitmentsInclusionProof}
+  contents: deneb.Contents & { kzgCommitmentsInclusionProof?: electra.KzgCommitmentsInclusionProof }
 ): electra.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -73,11 +80,11 @@ export function computeDataColumnSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
   const kzgCommitmentsInclusionProof =
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const cellsAndProofs = contents.blobs.map((blob) => computeCellsAndKzgProofs(blob));
-  const dataColumnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, j) => {
+  const cellsAndProofs = contents.blobs.map((blob) => ckzg.computeCellsAndKzgProofs(blob));
+  const dataColumnSidecars = Array.from({ length: NUMBER_OF_COLUMNS }, (_, j) => {
     // j'th column
-    const column = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][0][j]);
-    const kzgProofs = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][1][j]);
+    const column = Array.from({ length: contents.blobs.length }, (_, i) => cellsAndProofs[i][0][j]);
+    const kzgProofs = Array.from({ length: contents.blobs.length }, (_, i) => cellsAndProofs[i][1][j]);
 
     const dataColumnSidecar = {
       index: j,

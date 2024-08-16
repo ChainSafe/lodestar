@@ -2,8 +2,6 @@ import {Connection, PeerId} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {fromHexString} from "@chainsafe/ssz";
-import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -19,7 +17,7 @@ import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
 import {NetworkOptions} from "../options.js";
-import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
+import {CommitteeSubscription, IAttnetsService, computeNodeId} from "../subnets/interface.js";
 import {MetadataController} from "../metadata.js";
 import {createNodeJsLibp2p} from "../libp2p/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -194,13 +192,13 @@ export class NetworkCore implements INetworkCore {
     // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
-    const enr = opts.discv5?.enr;
-    const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
+    const nodeId = computeNodeId(peerId);
     const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
       {
+        nodeId,
         libp2p,
         gossip: gossip,
         reqResp,
@@ -499,9 +497,12 @@ export class NetworkCore implements INetworkCore {
   private subscribeCoreTopicsAtFork(fork: ForkName): void {
     if (this.subscribedForks.has(fork)) return;
     this.subscribedForks.add(fork);
-    const {subscribeAllSubnets} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
+    for (const topic of getCoreTopicsAtFork(fork, {
+      subscribeAllSubnets,
+      disableLightClientServer,
+    })) {
       this.gossip.subscribeTopic({...topic, fork});
     }
   }
@@ -509,9 +510,12 @@ export class NetworkCore implements INetworkCore {
   private unsubscribeCoreTopicsAtFork(fork: ForkName): void {
     if (!this.subscribedForks.has(fork)) return;
     this.subscribedForks.delete(fork);
-    const {subscribeAllSubnets} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
+    for (const topic of getCoreTopicsAtFork(fork, {
+      subscribeAllSubnets,
+      disableLightClientServer,
+    })) {
       this.gossip.unsubscribeTopic({...topic, fork});
     }
   }

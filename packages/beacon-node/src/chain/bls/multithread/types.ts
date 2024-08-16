@@ -1,7 +1,6 @@
 import {VerifySignatureOpts} from "../interface.js";
 
 export type WorkerData = {
-  implementation: "herumi" | "blst-native";
   workerId: number;
 };
 

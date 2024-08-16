@@ -67,7 +67,7 @@ jobs:
 
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 22
+          node: 22.4
 
       - name: Generate changelog
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md

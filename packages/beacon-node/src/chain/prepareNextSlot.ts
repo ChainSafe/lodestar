@@ -115,26 +115,6 @@ export class PrepareNextSlotScheduler {
         RegenCaller.precomputeEpoch
       );
 
-      // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
-      //  + when gossip block comes, we need to validate and run state transition
-      //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
-      if (isEpochTransition) {
-        this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
-        if (previousHits === 0) {
-          this.metrics?.precomputeNextEpochTransition.waste.inc();
-        }
-        this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
-        this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
-          nextEpoch,
-          headSlot,
-          prepareSlot,
-          previousHits,
-        });
-
-        precomputeEpochTransitionTimer?.();
-      }
-
       if (isExecutionStateType(prepareState)) {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
@@ -198,7 +178,7 @@ export class PrepareNextSlotScheduler {
           });
         }
 
-        this.computeStateHashTreeRoot(updatedPrepareState);
+        this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
@@ -213,7 +193,27 @@ export class PrepareNextSlotScheduler {
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
       } else {
-        this.computeStateHashTreeRoot(prepareState);
+        this.computeStateHashTreeRoot(prepareState, isEpochTransition);
+      }
+
+      // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
+      //  + when gossip block comes, we need to validate and run state transition
+      //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
+      if (isEpochTransition) {
+        this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
+        if (previousHits === 0) {
+          this.metrics?.precomputeNextEpochTransition.waste.inc();
+        }
+        this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
+        this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
+          nextEpoch,
+          headSlot,
+          prepareSlot,
+          previousHits,
+        });
+
+        precomputeEpochTransitionTimer?.();
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
@@ -223,11 +223,11 @@ export class PrepareNextSlotScheduler {
     }
   };
 
-  computeStateHashTreeRoot(state: CachedBeaconStateAllForks): void {
+  computeStateHashTreeRoot(state: CachedBeaconStateAllForks, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
     // see https://github.com/ChainSafe/lodestar/issues/6194
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
-      source: StateHashTreeRootSource.prepareNextSlot,
+      source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
     state.hashTreeRoot();
     hashTreeRootTimer?.();

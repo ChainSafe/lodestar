@@ -1,5 +1,5 @@
-import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
+import {aggregateSignatures} from "@chainsafe/blst";
 import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
 import {
@@ -383,7 +383,7 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
 
   const signature1 = signatureFromBytesNoCheck(attestation1.attestation.signature);
   const signature2 = signatureFromBytesNoCheck(attestation2.attestation.signature);
-  attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
+  attestation1.attestation.signature = aggregateSignatures([signature1, signature2]).toBytes();
 }
 
 /**

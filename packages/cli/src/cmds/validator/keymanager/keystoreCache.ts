@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {PointFormat} from "@chainsafe/bls/types";
+import {SecretKey} from "@chainsafe/blst";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {fromHex, toHex} from "@lodestar/utils";
 import {writeFile600Perm} from "../../../util/file.js";
@@ -40,8 +39,8 @@ export async function loadKeystoreCache(
   const result: SignerLocal[] = [];
   for (const [index, k] of keystores.entries()) {
     const secretKeyBytes = Uint8Array.prototype.slice.call(secretKeyConcatenatedBytes, index * 32, (index + 1) * 32);
-    const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
-    const publicKey = secretKey.toPublicKey().toBytes(PointFormat.compressed);
+    const secretKey = SecretKey.fromBytes(secretKeyBytes);
+    const publicKey = secretKey.toPublicKey().toBytes();
 
     if (toHex(publicKey) !== toHex(fromHex(k.pubkey))) {
       throw new Error(

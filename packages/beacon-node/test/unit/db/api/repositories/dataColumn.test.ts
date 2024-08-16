@@ -1,9 +1,10 @@
-import {rimraf} from "rimraf";
-import {describe, it, expect, beforeEach, afterEach, beforeAll} from "vitest";
-import {ssz} from "@lodestar/types";
-import {createChainForkConfig} from "@lodestar/config";
-import {LevelDbController} from "@lodestar/db";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import { rimraf } from "rimraf";
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { ByteVectorType } from "@chainsafe/ssz";
+import { ssz, electra } from "@lodestar/types";
+import { createChainForkConfig } from "@lodestar/config";
+import { LevelDbController } from "@lodestar/db";
+import { NUMBER_OF_COLUMNS } from "@lodestar/params";
 
 import {
   DataColumnSidecarsRepository,
@@ -12,9 +13,9 @@ import {
   COLUMN_SIZE_IN_WRAPPER_INDEX,
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
 } from "../../../../../src/db/repositories/dataColumnSidecars.js";
-import {testLogger} from "../../../../utils/logger.js";
-import {computeDataColumnSidecars} from "../../../../../src/util/blobs.js";
-import {loadEthereumTrustedSetup, initCKZG} from "../../../../../src/util/kzg.js";
+import { testLogger } from "../../../../utils/logger.js";
+import { computeDataColumnSidecars } from "../../../../../src/util/blobs.js";
+import { loadEthereumTrustedSetup, initCKZG } from "../../../../../src/util/kzg.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const config = createChainForkConfig({
@@ -29,7 +30,7 @@ describe("block archive repository", function () {
   let db: LevelDbController;
 
   beforeEach(async function () {
-    db = await LevelDbController.create({name: testDir}, {logger: testLogger()});
+    db = await LevelDbController.create({ name: testDir }, { logger: testLogger() });
     dataColumnRepo = new DataColumnSidecarsRepository(config, db);
   });
   afterEach(async function () {
@@ -65,18 +66,21 @@ describe("block archive repository", function () {
     const columnsSize =
       ssz.electra.DataColumnSidecar.minSize +
       blobKzgCommitmentsLen *
-        (ssz.electra.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+      (ssz.electra.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
 
     const numColumns = NUMBER_OF_COLUMNS;
-    const custodyColumns = new Uint8Array(numColumns);
+    const blobsLen = (singedBlock.message as electra.BeaconBlock).body.blobKzgCommitments.length;
 
+    // const dataColumnsSize = ssz.electra.DataColumnSidecar.minSize + blobsLen * (ssz.electra.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+
+    // const dataColumnsLen = blockInput.blockData;
     const writeData = {
       blockRoot,
       slot,
-      numColumns,
+      blobsLen,
       columnsSize,
-      custodyColumns,
-      dataColumnSidecars,
+      dataColumnsIndex: new ByteVectorType(NUMBER_OF_COLUMNS),
+      dataColumnSidecars: ssz.electra.DataColumnSidecars,
     };
 
     await dataColumnRepo.add(writeData);
