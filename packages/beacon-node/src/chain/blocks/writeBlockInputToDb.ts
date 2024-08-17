@@ -13,17 +13,11 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
   const fnPromises: Promise<void>[] = [];
 
   for (const blockInput of blocksInput) {
-    const {block, blockBytes} = blockInput;
+    const {block} = blockInput;
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
-    if (blockBytes) {
-      // skip serializing data if we already have it
-      this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-      fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
-    } else {
-      this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-      fnPromises.push(this.db.block.add(block));
-    }
+    this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
+    fnPromises.push(this.db.block.add(block));
     this.logger.debug("Persist block to hot DB", {
       slot: block.message.slot,
       root: blockRootHex,

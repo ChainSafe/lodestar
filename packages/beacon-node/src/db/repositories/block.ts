@@ -4,6 +4,7 @@ import {ssz} from "@lodestar/types";
 import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {
   FullOrBlindedSignedBeaconBlock,
+  blindedOrFullBlockToBlinded,
   serializeFullOrBlindedSignedBeaconBlock,
   deserializeFullOrBlindedSignedBeaconBlock,
 } from "../../util/fullOrBlindedBlock.js";
@@ -35,5 +36,14 @@ export class BlockRepository extends Repository<Uint8Array, FullOrBlindedSignedB
 
   decodeValue(data: Uint8Array): FullOrBlindedSignedBeaconBlock {
     return deserializeFullOrBlindedSignedBeaconBlock(this.config, data);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  async putBinary(_: Uint8Array, __: Uint8Array): Promise<void> {
+    throw new Error("cannot .putBinary into BlockRepository. must use .add so can be saved blinded");
+  }
+
+  async add(value: FullOrBlindedSignedBeaconBlock): Promise<void> {
+    return super.add(blindedOrFullBlockToBlinded(value));
   }
 }
