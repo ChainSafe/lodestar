@@ -237,8 +237,11 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      // TODO Electra: Ensure calling V2 works in pre-electra
-      (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
+      if (isPostElectra) {
+        (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
+      } else {
+        (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
+      }
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
@@ -264,6 +267,7 @@ export class AttestationService {
     duties: AttDutyAndProof[]
   ): Promise<void> {
     const logCtx = {slot: attestation.slot, index: committeeIndex};
+    const isPostElectra = this.config.getForkSeq(attestation.slot) >= ForkSeq.electra;
 
     // No validator is aggregator, skip
     if (duties.every(({selectionProof}) => selectionProof === null)) {
@@ -271,11 +275,16 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const res = await this.api.validator.getAggregatedAttestationV2({
-      attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
-      slot: attestation.slot,
-      committeeIndex,
-    });
+    const res = isPostElectra
+      ? await this.api.validator.getAggregatedAttestationV2({
+          attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
+          slot: attestation.slot,
+          committeeIndex,
+        })
+      : await this.api.validator.getAggregatedAttestation({
+          attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
+          slot: attestation.slot,
+        });
     const aggregate = res.value();
     this.metrics?.numParticipantsInAggregate.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
 
@@ -302,7 +311,11 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
+        if (isPostElectra) {
+          (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
+        } else {
+          (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
+        }
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {
