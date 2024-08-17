@@ -10,7 +10,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {toHex, MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import {InsertOutcome} from "./types.js";
@@ -514,7 +514,7 @@ export function getValidateAttestationDataFn(
     }
 
     // the isValidAttestationData does not depend on slot and index
-    const beaconBlockRootHex = toHex(attData.beaconBlockRoot);
+    const beaconBlockRootHex = toRootHex(attData.beaconBlockRoot);
     const cacheKey = beaconBlockRootHex + targetEpoch;
     let isValid = cachedValidatedAttestationData.get(cacheKey);
     if (isValid === undefined) {
@@ -559,7 +559,7 @@ export function isValidAttestationData(
   if (stateEpoch < 2 || targetEpoch < 2) {
     return true;
   }
-  const beaconBlockRootHex = toHex(data.beaconBlockRoot);
+  const beaconBlockRootHex = toRootHex(data.beaconBlockRoot);
   return isValidShuffling(forkChoice, state, beaconBlockRootHex, targetEpoch);
 }
 

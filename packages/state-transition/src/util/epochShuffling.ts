@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
+import {intDiv, toRootHex} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
   MAX_COMMITTEES_PER_SLOT,
@@ -108,5 +107,5 @@ export function computeEpochShuffling(
 
 export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
-  return toHexString(getBlockRootAtSlot(state, pivotSlot));
+  return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }

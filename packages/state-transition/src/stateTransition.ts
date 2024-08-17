@@ -1,6 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochTransitionCache, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
 import {
@@ -123,7 +123,7 @@ export function stateTransition(
 
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
-        `Invalid state root at slot ${block.slot}, expected=${toHexString(block.stateRoot)}, actual=${toHexString(
+        `Invalid state root at slot ${block.slot}, expected=${toRootHex(block.stateRoot)}, actual=${toRootHex(
           stateRoot
         )}`
       );

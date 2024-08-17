@@ -7,7 +7,7 @@ import {
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
 import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution} from "@lodestar/params";
-import {sleep, fromHex, toHex} from "@lodestar/utils";
+import {sleep, fromHex, toRootHex} from "@lodestar/utils";
 import {
   deneb,
   isSignedBlockContents,
@@ -97,9 +97,9 @@ export function getBeaconBlockApi({
     // state transition to produce the stateRoot
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
-    const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+    const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
     // bodyRoot should be the same to produced block
-    const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
+    const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
@@ -147,7 +147,7 @@ export function getBeaconBlockApi({
             );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_UNKNOWN,
-              parentRoot: toHex(signedBlock.message.parentRoot),
+              parentRoot: toRootHex(signedBlock.message.parentRoot),
             });
           }
 
@@ -243,7 +243,7 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const slot = signedBlindedBlock.message.slot;
-    const blockRoot = toHex(
+    const blockRoot = toRootHex(
       chain.config
         .getExecutionForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
@@ -258,7 +258,7 @@ export function getBeaconBlockApi({
       chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const contents = executionPayload
-        ? chain.producedContentsCache.get(toHex(executionPayload.blockHash)) ?? null
+        ? chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null
         : null;
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
@@ -354,7 +354,7 @@ export function getBeaconBlockApi({
             }
             finalized = false;
 
-            if (summary.blockRoot !== toHex(canonicalRoot)) {
+            if (summary.blockRoot !== toRootHex(canonicalRoot)) {
               const block = await db.block.get(fromHex(summary.blockRoot));
               if (block) {
                 result.push(toBeaconHeaderResponse(config, block));
@@ -473,7 +473,7 @@ export function getBeaconBlockApi({
       }
 
       if (!blobSidecars) {
-        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHex(blockRoot)}`);
+        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
       }
 
       return {

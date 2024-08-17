@@ -1,4 +1,4 @@
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {ssz, capella} from "@lodestar/types";
 import {
   MAX_EFFECTIVE_BALANCE,
@@ -6,6 +6,7 @@ import {
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
 } from "@lodestar/params";
 
+import {toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella} from "../types.js";
 import {decreaseBalance, hasEth1WithdrawalCredential, isCapellaPayloadHeader} from "../util/index.js";
 
@@ -21,9 +22,9 @@ export function processWithdrawals(
     const actualWithdrawalsRoot = payload.withdrawalsRoot;
     if (!byteArrayEquals(expectedWithdrawalsRoot, actualWithdrawalsRoot)) {
       throw Error(
-        `Invalid withdrawalsRoot of executionPayloadHeader, expected=${toHexString(
+        `Invalid withdrawalsRoot of executionPayloadHeader, expected=${toRootHex(
           expectedWithdrawalsRoot
-        )}, actual=${toHexString(actualWithdrawalsRoot)}`
+        )}, actual=${toRootHex(actualWithdrawalsRoot)}`
       );
     }
   } else {
