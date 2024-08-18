@@ -324,7 +324,7 @@ export function getValidatorApi(
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {
-      throw new ApiError(400, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
+      throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
 
     if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
@@ -336,7 +336,7 @@ export function getValidatorApi(
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {
-      throw new ApiError(400, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
+      throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
 
     if (protoBeaconBlock.dataAvailabilityStatus === DataAvailabilityStatus.OutOfRange)
@@ -880,7 +880,12 @@ export function getValidatorApi(
       notOnOutOfRangeData(beaconBlockRoot);
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
-      if (!contribution) throw new ApiError(500, "No contribution available");
+      if (!contribution) {
+        throw new ApiError(
+          404,
+          `No sync committee contribution for slot=${slot}, subnet=${subcommitteeIndex}, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`
+        );
+      }
 
       metrics?.production.producedSyncContributionParticipants.observe(
         contribution.aggregationBits.getTrueBitIndexes().length
