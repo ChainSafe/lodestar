@@ -4,6 +4,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
+import {deserializeFullOrBlindedSignedBeaconBlock} from "../../../util/fullOrBlindedBlock.js";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,
@@ -38,8 +39,11 @@ export async function* onBeaconBlocksByRoot(
         slot = slotFromBytes;
       }
 
+      const block = await chain.fullOrBlindedSignedBeaconBlockToFull(
+        deserializeFullOrBlindedSignedBeaconBlock(chain.config, blockBytes)
+      );
       yield {
-        data: blockBytes,
+        data: chain.config.getForkTypes(slot).SignedBeaconBlock.serialize(block),
         fork: chain.config.getForkName(slot),
       };
     }

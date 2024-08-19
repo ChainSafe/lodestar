@@ -1006,7 +1006,9 @@ export class BeaconChain implements IBeaconChain {
   async fullOrBlindedSignedBeaconBlockToFull(
     block: SignedBeaconBlock | SignedBlindedBeaconBlock
   ): Promise<SignedBeaconBlock> {
-    if (!isBlindedBeaconBlock(block)) return block;
+    if (!isBlindedBeaconBlock(block)) {
+      return block;
+    }
     const blockHash = toHex(blindedOrFullBlockHashTreeRoot(this.config, block.message));
     const [payload] = await this.executionEngine.getPayloadBodiesByHash([blockHash]);
     if (!payload) {
