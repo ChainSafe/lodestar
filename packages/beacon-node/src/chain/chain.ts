@@ -13,6 +13,7 @@ import {
   PubkeyIndexMap,
   EpochShuffling,
   computeEndSlotAtEpoch,
+  blindedOrFullBlockHashTreeRoot,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -32,10 +33,11 @@ import {
   ExecutionPayload,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -47,6 +49,8 @@ import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BufferPool} from "../util/bufferPool.js";
+import {Eth1Error, Eth1ErrorCode} from "../eth1/errors.js";
+import {blindedOrFullBlockToFull} from "../util/fullOrBlindedBlock.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {
@@ -560,9 +564,11 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getCanonicalBlockAtSlot(
-    slot: Slot
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+  async getCanonicalBlockAtSlot(slot: Slot): Promise<{
+    block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+    executionOptimistic: boolean;
+    finalized: boolean;
+  } | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
@@ -582,9 +588,11 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false, finalized: true};
   }
 
-  async getBlockByRoot(
-    root: string
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+  async getBlockByRoot(root: string): Promise<{
+    block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+    executionOptimistic: boolean;
+    finalized: boolean;
+  } | null> {
     const block = this.forkChoice.getBlockHex(root);
     if (block) {
       const data = await this.db.block.get(fromHex(root));
@@ -993,6 +1001,21 @@ export class BeaconChain implements IBeaconChain {
 
     // If there's no state available in the same branch of checkpoint use blockState regardless of its epoch
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
+  }
+
+  async fullOrBlindedSignedBeaconBlockToFull(
+    block: SignedBeaconBlock | SignedBlindedBeaconBlock
+  ): Promise<SignedBeaconBlock> {
+    if (!isBlindedBeaconBlock(block)) return block;
+    const blockHash = toHex(blindedOrFullBlockHashTreeRoot(this.config, block.message));
+    const [payload] = await this.executionEngine.getPayloadBodiesByHash([blockHash]);
+    if (!payload) {
+      throw new Eth1Error(
+        {code: Eth1ErrorCode.INVALID_PAYLOAD_BODY, blockHash},
+        `Execution PayloadBody not found by eth1 engine for ${blockHash}`
+      );
+    }
+    return blindedOrFullBlockToFull(this.config, block, payload);
   }
 
   private async persistSszObject(
