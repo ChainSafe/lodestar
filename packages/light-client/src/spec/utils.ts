@@ -9,6 +9,7 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
   NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
   isForkPostElectra,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
 } from "@lodestar/params";
 import {
   ssz,
@@ -24,6 +25,7 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 
 import {isValidMerkleBranch, computeEpochAtSlot, computeSyncPeriodAtSlot} from "../utils/index.js";
+import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
 import {LightClientStore} from "./store.js";
 
 export const GENESIS_SLOT = 0;
@@ -44,7 +46,9 @@ export function getSafetyThreshold(maxActiveParticipants: number): number {
 }
 
 export function getZeroSyncCommitteeBranch(fork: ForkName): Uint8Array[] {
-  const nextSyncCommitteeDepth = isForkPostElectra(fork) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH;
+  const nextSyncCommitteeDepth = isForkPostElectra(fork)
+    ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA
+    : NEXT_SYNC_COMMITTEE_DEPTH;
 
   return Array.from({length: nextSyncCommitteeDepth}, () => ZERO_HASH);
 }
@@ -52,7 +56,8 @@ export function getZeroSyncCommitteeBranch(fork: ForkName): Uint8Array[] {
 export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
-    update.nextSyncCommitteeBranch !== getZeroSyncCommitteeBranch(isElectraLightClientUpdate(update) ? ForkName.electra : ForkName.altair) &&
+    update.nextSyncCommitteeBranch !==
+      getZeroSyncCommitteeBranch(isElectraLightClientUpdate(update) ? ForkName.electra : ForkName.altair) &&
     update.nextSyncCommitteeBranch.some((branch) => !byteArrayEquals(branch, ZERO_HASH))
   );
 }
@@ -169,7 +174,7 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
     if (
       (header as LightClientHeader<ForkName.electra>).execution.depositRequestsRoot !== undefined ||
       (header as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot !== undefined ||
-      (header as LightClientHeader<ForkName.electra>).execution.consolidationRequestsRoot !== undefined 
+      (header as LightClientHeader<ForkName.electra>).execution.consolidationRequestsRoot !== undefined
     ) {
       return false;
     }
@@ -193,6 +198,14 @@ export function upgradeLightClientUpdate(
 ): LightClientUpdate {
   update.attestedHeader = upgradeLightClientHeader(config, targetFork, update.attestedHeader);
   update.finalizedHeader = upgradeLightClientHeader(config, targetFork, update.finalizedHeader);
+  update.nextSyncCommitteeBranch = normalizeMerkleBranch(
+    update.nextSyncCommitteeBranch,
+    isForkPostElectra(targetFork) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH
+  );
+  update.finalityBranch = normalizeMerkleBranch(
+    update.finalityBranch,
+    isForkPostElectra(targetFork) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH
+  );
 
   return update;
 }
@@ -204,6 +217,10 @@ export function upgradeLightClientFinalityUpdate(
 ): LightClientFinalityUpdate {
   finalityUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader);
   finalityUpdate.finalizedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader);
+  finalityUpdate.finalityBranch = normalizeMerkleBranch(
+    finalityUpdate.finalityBranch,
+    isForkPostElectra(targetFork) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH
+  );
 
   return finalityUpdate;
 }

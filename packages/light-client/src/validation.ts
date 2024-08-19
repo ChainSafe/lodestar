@@ -1,6 +1,14 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
-import {altair, isElectraLightClientUpdate, LightClientFinalityUpdate, LightClientUpdate, Root, Slot, ssz} from "@lodestar/types";
+import {
+  altair,
+  isElectraLightClientUpdate,
+  LightClientFinalityUpdate,
+  LightClientUpdate,
+  Root,
+  Slot,
+  ssz,
+} from "@lodestar/types";
 import {
   FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,
@@ -42,7 +50,11 @@ export function assertValidLightClientUpdate(
   if (isFinalized) {
     assertValidFinalityProof(update);
   } else {
-    assertZeroHashes(update.finalityBranch, isElectraLightClientUpdate(update) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH, "finalityBranches");
+    assertZeroHashes(
+      update.finalityBranch,
+      isElectraLightClientUpdate(update) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH,
+      "finalityBranches"
+    );
   }
 
   // DIFF FROM SPEC:
