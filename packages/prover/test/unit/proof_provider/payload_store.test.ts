@@ -1,10 +1,9 @@
 import {describe, it, expect, beforeEach, vi, MockedObject} from "vitest";
 import {when} from "vitest-when";
 import {ApiClient, ApiResponse, HttpStatusCode, routes} from "@lodestar/api";
-import {hash} from "@lodestar/utils";
+import {hash, toRootHex} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 import {ExecutionPayload, SignedBeaconBlock, capella} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
@@ -133,7 +132,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, slotNumber, false);
       const nonExistingBlockHash = createHash("non-existing-block-hash");
 
-      await expect(store.get(toHexString(nonExistingBlockHash))).resolves.toBeUndefined();
+      await expect(store.get(toRootHex(nonExistingBlockHash))).resolves.toBeUndefined();
     });
 
     describe("block hash as blockId", () => {
@@ -141,7 +140,7 @@ describe("proof_provider/payload_store", function () {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, slotNumber, false);
 
-        await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
+        await expect(store.get(toRootHex(payload1.blockHash))).resolves.toEqual(payload1);
       });
     });
 
@@ -216,7 +215,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, slotNumber, false);
 
       // Unfinalized blocks are not indexed by block hash
-      await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
+      await expect(store.get(toRootHex(payload1.blockHash))).resolves.toEqual(payload1);
       expect(store.finalized).toEqual(undefined);
     });
 
