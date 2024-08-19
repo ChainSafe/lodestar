@@ -10,7 +10,7 @@ import {
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
 import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
 import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";
-import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_NEXT_SYNC_COMMITTEE_BRANCH, ZERO_SYNC_COMMITTEE} from "./utils.js";
+import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_SYNC_COMMITTEE, getZeroSyncCommitteeBranch} from "./utils.js";
 
 export {isBetterUpdate, toLightClientUpdateSummary} from "./isBetterUpdate.js";
 export type {LightClientUpdateSummary} from "./isBetterUpdate.js";
@@ -37,7 +37,7 @@ export class LightclientSpec {
     this.onUpdate(currentSlot, {
       attestedHeader: finalityUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
-      nextSyncCommitteeBranch: ZERO_NEXT_SYNC_COMMITTEE_BRANCH,
+      nextSyncCommitteeBranch: getZeroSyncCommitteeBranch(this.config.getForkName(finalityUpdate.signatureSlot)),
       finalizedHeader: finalityUpdate.finalizedHeader,
       finalityBranch: finalityUpdate.finalityBranch,
       syncAggregate: finalityUpdate.syncAggregate,
@@ -49,7 +49,7 @@ export class LightclientSpec {
     this.onUpdate(currentSlot, {
       attestedHeader: optimisticUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
-      nextSyncCommitteeBranch: ZERO_NEXT_SYNC_COMMITTEE_BRANCH,
+      nextSyncCommitteeBranch: getZeroSyncCommitteeBranch(this.config.getForkName(optimisticUpdate.signatureSlot)),
       finalizedHeader: {beacon: ZERO_HEADER},
       finalityBranch: ZERO_FINALITY_BRANCH,
       syncAggregate: optimisticUpdate.syncAggregate,
