@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
-import {altair, LightClientFinalityUpdate, LightClientUpdate, Root, Slot, ssz} from "@lodestar/types";
+import {altair, isElectraLightClientUpdate, LightClientFinalityUpdate, LightClientUpdate, Root, Slot, ssz} from "@lodestar/types";
 import {
   FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,
@@ -8,6 +8,9 @@ import {
   NEXT_SYNC_COMMITTEE_DEPTH,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
 } from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
@@ -39,7 +42,7 @@ export function assertValidLightClientUpdate(
   if (isFinalized) {
     assertValidFinalityProof(update);
   } else {
-    assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_DEPTH, "finalityBranches");
+    assertZeroHashes(update.finalityBranch, isElectraLightClientUpdate(update) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH, "finalityBranches");
   }
 
   // DIFF FROM SPEC:
@@ -99,8 +102,8 @@ export function assertValidSyncCommitteeProof(update: LightClientUpdate): void {
     !isValidMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
       update.nextSyncCommitteeBranch,
-      NEXT_SYNC_COMMITTEE_DEPTH,
-      NEXT_SYNC_COMMITTEE_INDEX,
+      isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
+      isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_INDEX_ELECTRA : NEXT_SYNC_COMMITTEE_INDEX,
       update.attestedHeader.beacon.stateRoot
     )
   ) {
