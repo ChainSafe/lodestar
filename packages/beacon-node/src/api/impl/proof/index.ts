@@ -1,6 +1,7 @@
 import {CompactMultiProof, createProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {isBlindedBeaconBlock} from "@lodestar/types";
 import {ApiModules} from "../types.js";
 import {getStateResponse} from "../beacon/state/utils.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
@@ -43,7 +44,9 @@ export function getProofApi(
       const {block} = await getBlockResponse(chain, blockId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
-      const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
+      const blockNode = isBlindedBeaconBlock(block.message)
+        ? config.getExecutionForkTypes(block.message.slot).BlindedBeaconBlock.toView(block.message).node
+        : config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
 
       const proof = createProof(blockNode, {type: ProofType.compactMulti, descriptor});
 

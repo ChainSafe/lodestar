@@ -8,7 +8,8 @@ import {
   getBlockRootAtSlot,
   computeEpochAtSlot,
   getCurrentSlot,
-  beaconBlockToBlinded,
+  blindedOrFullSignedBlockHashTreeRoot,
+  fullOrBlindedBlockToBlinded,
 } from "@lodestar/state-transition";
 import {
   GENESIS_SLOT,
@@ -33,7 +34,6 @@ import {
   ProducedBlockSource,
   bellatrix,
   BLSSignature,
-  isBlindedBeaconBlock,
   isBlockContents,
   phase0,
   Wei,
@@ -135,12 +135,9 @@ export function getValidatorApi(
       if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
         genesisBlockRoot = state.blockRoots.get(0);
       }
-
       const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
       if (blockRes) {
-        genesisBlockRoot = config
-          .getForkTypes(blockRes.block.message.slot)
-          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
+        genesisBlockRoot = blindedOrFullSignedBlockHashTreeRoot(config, blockRes.block);
       }
     }
 
@@ -767,13 +764,13 @@ export function getValidatorApi(
         } else {
           if (isBlockContents(data)) {
             const {block} = data;
-            const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
+            const blindedBlock = fullOrBlindedBlockToBlinded(config, block);
             return {
               data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
             };
           } else {
-            const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
+            const blindedBlock = fullOrBlindedBlockToBlinded(config, data);
             return {
               data: blindedBlock,
               meta: {...meta, executionPayloadBlinded: true},
@@ -790,17 +787,8 @@ export function getValidatorApi(
       if (!isForkExecution(version)) {
         throw Error(`Invalid fork=${version} for produceBlindedBlock`);
       }
-
-      if (isBlockContents(data)) {
-        const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
-        return {data: blindedBlock, meta: {version}};
-      } else if (isBlindedBeaconBlock(data)) {
-        return {data, meta: {version}};
-      } else {
-        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
-        return {data: blindedBlock, meta: {version}};
-      }
+      const blindedBlock = fullOrBlindedBlockToBlinded(config, isBlockContents(data) ? data.block : data);
+      return {data: blindedBlock, meta: {version}};
     },
 
     async produceAttestationData({committeeIndex, slot}) {
