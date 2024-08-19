@@ -1,8 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  BeaconBlock,
   bellatrix,
-  BlindedBeaconBlock,
   capella,
   deneb,
   ExecutionPayload,
