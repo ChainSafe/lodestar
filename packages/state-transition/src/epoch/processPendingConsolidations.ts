@@ -47,5 +47,8 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
     nextPendingConsolidation++;
   }
 
+  // TODO: remove once this PR is included in a release
+  // https://github.com/ChainSafe/ssz/pull/394
+  state.pendingConsolidations.getAllReadonly();
   state.pendingConsolidations = state.pendingConsolidations.sliceFrom(nextPendingConsolidation);
 }
