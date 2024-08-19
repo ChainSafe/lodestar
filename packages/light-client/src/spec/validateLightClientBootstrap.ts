@@ -2,9 +2,9 @@ import {byteArrayEquals} from "@chainsafe/ssz";
 import {LightClientBootstrap, Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {toHex} from "@lodestar/utils";
+import {isForkPostElectra} from "@lodestar/params";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch.js";
 import {isValidLightClientHeader} from "./utils.js";
-import { isForkPostElectra } from "@lodestar/params";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
