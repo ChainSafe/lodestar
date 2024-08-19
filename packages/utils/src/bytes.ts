@@ -59,6 +59,18 @@ export function toRootHex(root: Uint8Array): string {
   return `0x${rootBuf.toString("hex")}`;
 }
 
+// Shared buffer to convert pubkey to hex
+const pubkeyBuf = Buffer.alloc(48);
+
+export function toPubkeyHex(pubkey: Uint8Array): string {
+  if (pubkey.length !== 48) {
+    throw Error(`Expect pubkey to be 48 bytes, got ${pubkey.length}`);
+  }
+
+  pubkeyBuf.set(pubkey);
+  return `0x${pubkeyBuf.toString("hex")}`;
+}
+
 export function fromHex(hex: string): Uint8Array {
   const b = Buffer.from(hex.replace("0x", ""), "hex");
   return new Uint8Array(b.buffer, b.byteOffset, b.length);

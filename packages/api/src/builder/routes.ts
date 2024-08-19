@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {
   ssz,
   bellatrix,
@@ -14,6 +14,7 @@ import {
 import {ForkName, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
+import {toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 import {
@@ -105,7 +106,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: {
         writeReq: ({slot, parentHash, proposerPubkey: proposerPubKey}) => ({
-          params: {slot, parent_hash: toHexString(parentHash), pubkey: toHexString(proposerPubKey)},
+          params: {slot, parent_hash: toRootHex(parentHash), pubkey: toPubkeyHex(proposerPubKey)},
         }),
         parseReq: ({params}) => ({
           slot: params.slot,

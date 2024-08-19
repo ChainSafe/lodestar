@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {Match, AssertionResult, Assertion} from "../interfaces.js";
 
 export function createForkAssertion(fork: ForkName, epoch: Epoch): Assertion<string, string> {
@@ -15,8 +15,8 @@ export function createForkAssertion(fork: ForkName, epoch: Epoch): Assertion<str
       const errors: AssertionResult[] = [];
 
       const state = (await node.beacon.api.debug.getStateV2({stateId: "head"})).value();
-      const expectedForkVersion = toHexString(forkConfig.getForkInfo(slot).version);
-      const currentForkVersion = toHexString(state.fork.currentVersion);
+      const expectedForkVersion = toHex(forkConfig.getForkInfo(slot).version);
+      const currentForkVersion = toHex(state.fork.currentVersion);
 
       if (expectedForkVersion !== currentForkVersion) {
         errors.push([

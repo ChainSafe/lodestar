@@ -1,4 +1,4 @@
-import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
+import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {
   computeEpochAtSlot,
@@ -37,6 +37,7 @@ import {
   ValidatorIndex,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
@@ -453,8 +454,8 @@ export class ValidatorStore {
 
     logger?.debug("Signing the block proposal", {
       slot: signingSlot,
-      blockRoot: toHexString(blockRoot),
-      signingRoot: toHexString(signingRoot),
+      blockRoot: toRootHex(blockRoot),
+      signingRoot: toRootHex(signingRoot),
     });
 
     try {
@@ -706,7 +707,7 @@ export class ValidatorStore {
     regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
     slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
-    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toHexString(pubkeyMaybeHex);
+    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);
     const {feeRecipient, gasLimit} = regAttributes;
     const regFullKey = `${feeRecipient}-${gasLimit}`;
     const validatorData = this.validators.get(pubkeyHex);
@@ -731,7 +732,7 @@ export class ValidatorStore {
     signableMessage: SignableMessage
   ): Promise<BLSSignature> {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
 
     const signer = this.validators.get(pubkeyHex)?.signer;
     if (!signer) {
@@ -770,7 +771,7 @@ export class ValidatorStore {
 
   private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
     const signer = this.validators.get(pubkeyHex)?.signer;
     if (!signer) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
@@ -791,7 +792,7 @@ export class ValidatorStore {
   }
 
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
-    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
+    const pubkeyHex = typeof pubKey === "string" ? pubKey : toPubkeyHex(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
       throw new Error(`Doppelganger state for key ${pubkeyHex} is not safe`);
     }
@@ -801,7 +802,7 @@ export class ValidatorStore {
 function getSignerPubkeyHex(signer: Signer): PubkeyHex {
   switch (signer.type) {
     case SignerType.Local:
-      return toHexString(signer.secretKey.toPublicKey().toBytes());
+      return toHex(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

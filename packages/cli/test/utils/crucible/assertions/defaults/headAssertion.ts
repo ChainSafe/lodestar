@@ -1,5 +1,5 @@
 import {RootHex, Slot} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {AssertionResult, Assertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
@@ -15,7 +15,7 @@ export const headAssertion: Assertion<"head", HeadSummary> = {
     const head = (await node.beacon.api.beacon.getBlockHeader({blockId: "head"})).value();
 
     return {
-      blockRoot: toHexString(head.root),
+      blockRoot: toHex(head.root),
       slot: head.header.message.slot,
     };
   },

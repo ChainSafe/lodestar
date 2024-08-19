@@ -1,7 +1,7 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
-import {Logger, MapDef, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
@@ -192,7 +192,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       return stateOrStateBytesData?.clone(opts?.dontTransferCache) ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
-    const logMeta = {persistedKey: toHexString(persistedKey)};
+    const logMeta = {persistedKey: toHex(persistedKey)};
     this.logger.debug("Reload: read state successful", logMeta);
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
     const seedState = this.findSeedStateToReload(cp);
@@ -336,7 +336,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.logger.verbose("Added checkpoint state to memory but a persisted key existed", {
         epoch: cp.epoch,
         rootHex: cpHex.rootHex,
-        persistedKey: toHexString(persistedKey),
+        persistedKey: toHex(persistedKey),
       });
     } else {
       this.cache.set(key, {type: CacheItemType.inMemory, state});
@@ -675,7 +675,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           stateSlot: state.slot,
           rootHex,
           epochBoundaryHex,
-          persistedKey: persistedKey ? toHexString(persistedKey) : "",
+          persistedKey: persistedKey ? toHex(persistedKey) : "",
         };
 
         if (persistedRootHexes.has(rootHex)) {
@@ -702,7 +702,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
               ...logMeta,
-              persistedKey: toHexString(persistedKey),
+              persistedKey: toHex(persistedKey),
             });
           }
           // overwrite cpKey, this means the state is deleted from memory

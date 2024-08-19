@@ -4,7 +4,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {ChainConfig} from "@lodestar/config";
 import {RootHex, Slot} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {toHexString} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
@@ -124,10 +124,10 @@ describe("proposer boost reorg", function () {
     expect(reorgEventData.oldHeadBlock).toEqual(reorgBlockRoot);
     expect(reorgEventData.newHeadBlock).toEqual(newBlockEventData.block);
     expect(reorgEventData.depth).toEqual(2);
-    expect(toHexString(newBlock?.block.message.parentRoot)).toEqual(commonAncestorRoot);
+    expect(toHex(newBlock?.block.message.parentRoot)).toEqual(commonAncestorRoot);
     logger.info("New block", {
       slot: newBlock.block.message.slot,
-      parentRoot: toHexString(newBlock.block.message.parentRoot),
+      parentRoot: toHex(newBlock.block.message.parentRoot),
     });
   });
 });

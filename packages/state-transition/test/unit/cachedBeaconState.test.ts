@@ -1,8 +1,8 @@
 import {describe, it, expect} from "vitest";
 import {Epoch, ssz, RootHex} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
+import {toHex} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
@@ -22,7 +22,7 @@ describe("CachedBeaconState", () => {
     const prevRoot = state2.currentJustifiedCheckpoint.root;
     const newRoot = Buffer.alloc(32, 1);
     state1.currentJustifiedCheckpoint.root = newRoot;
-    expect(toHexString(state2.currentJustifiedCheckpoint.root)).toBe(toHexString(prevRoot));
+    expect(toHex(state2.currentJustifiedCheckpoint.root)).toBe(toHex(prevRoot));
 
     state1.epochCtx.epoch = 1;
     expect(state2.epochCtx.epoch).toBe(0);
@@ -38,7 +38,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.hashTreeRoot())).toBe(toHexString(cp2.hashTreeRoot()));
+    expect(toHex(cp1.hashTreeRoot())).toBe(toHex(cp2.hashTreeRoot()));
   });
 
   it("Auto-commit on serialize", () => {
@@ -50,7 +50,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.serialize())).toBe(toHexString(cp2.serialize()));
+    expect(toHex(cp1.serialize())).toBe(toHex(cp2.serialize()));
   });
 
   describe("loadCachedBeaconState", () => {

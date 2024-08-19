@@ -1,8 +1,7 @@
 import path from "node:path";
-import {toHexString} from "@chainsafe/ssz";
 import {InterchangeFormatVersion} from "@lodestar/validator";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {CliCommand} from "@lodestar/utils";
+import {CliCommand, toPubkeyHex} from "@lodestar/utils";
 import {YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
 import {parseLoggerArgs} from "../../../util/logger.js";
 import {GlobalArgs} from "../../../options/index.js";
@@ -86,7 +85,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
           if (!isValidatePubkeyHex(pubkeyHex)) {
             throw new YargsError(`Invalid pubkey ${pubkeyHex}`);
           }
-          const existingPubkey = allPubkeys.find((pubkey) => toHexString(pubkey) === pubkeyHex);
+          const existingPubkey = allPubkeys.find((pubkey) => toPubkeyHex(pubkey) === pubkeyHex);
           if (!existingPubkey) {
             logger.warn("Pubkey not found in slashing protection db", {pubkey: pubkeyHex});
           } else {

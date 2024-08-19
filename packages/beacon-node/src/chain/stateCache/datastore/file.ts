@@ -1,6 +1,7 @@
 import path from "node:path";
-import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 
@@ -28,18 +29,18 @@ export class FileCPStateDatastore implements CPStateDatastore {
 
   async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array): Promise<DatastoreKey> {
     const serializedCheckpoint = ssz.phase0.Checkpoint.serialize(cpKey);
-    const filePath = path.join(this.folderPath, toHexString(serializedCheckpoint));
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
     await writeIfNotExist(filePath, stateBytes);
     return serializedCheckpoint;
   }
 
   async remove(serializedCheckpoint: DatastoreKey): Promise<void> {
-    const filePath = path.join(this.folderPath, toHexString(serializedCheckpoint));
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
     await removeFile(filePath);
   }
 
   async read(serializedCheckpoint: DatastoreKey): Promise<Uint8Array | null> {
-    const filePath = path.join(this.folderPath, toHexString(serializedCheckpoint));
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
     return readFile(filePath);
   }
 

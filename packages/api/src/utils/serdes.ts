@@ -1,4 +1,5 @@
-import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
+import {fromHexString, JsonPath} from "@chainsafe/ssz";
+import {toHex} from "@lodestar/utils";
 
 /**
  * Serialize proof path to JSON.
@@ -82,7 +83,7 @@ export function toGraffitiHex(utf8?: string): string | undefined {
     return undefined;
   }
 
-  const hex = toHexString(new TextEncoder().encode(utf8));
+  const hex = toHex(new TextEncoder().encode(utf8));
 
   if (hex.length > GRAFFITI_HEX_LENGTH) {
     // remove characters from the end if hex string is too long

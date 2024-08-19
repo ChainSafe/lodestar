@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
-import {sleep} from "@lodestar/utils";
+import {sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -191,7 +190,7 @@ export class AttestationService {
     duties: AttDutyAndProof[]
   ): Promise<void> {
     const signedAttestations: phase0.Attestation[] = [];
-    const headRootHex = toHexString(attestationNoCommittee.beaconBlockRoot);
+    const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
 
     await Promise.all(
