@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
@@ -56,6 +57,11 @@ export enum StateHashTreeRootSource {
 }
 
 /**
+ * Data in a BeaconBlock is bounded so we can use a single HashComputationGroup for all blocks
+ */
+const hcGroup = new HashComputationGroup();
+
+/**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function stateTransition(
@@ -102,12 +108,19 @@ export function stateTransition(
 
   processBlock(fork, postState, block, options, options);
 
-  const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
-  postState.commit();
-  processBlockCommitTimer?.();
-
-  // Note: time only on success. Include processBlock and commit
+  // Note: time only on success. This does not include hashTreeRoot() time
   processBlockTimer?.();
+
+  // TODO - batch: remove processBlockCommitTime?
+  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+    source: StateHashTreeRootSource.stateTransition,
+  });
+  // commit() is done inside batchHashTreeRoot()
+  // with batchHashTreeRoot(), we're not able to measure commit() time separately
+  // note that at commit() phase, we batch hash validators via ListValidatorTreeViewDU so this metric is a little bit confusing
+  const stateRoot = postState.batchHashTreeRoot(hcGroup);
+  hashTreeRootTimer?.();
+
 
   if (metrics) {
     onPostStateMetrics(postState, metrics);
@@ -115,12 +128,6 @@ export function stateTransition(
 
   // Verify state root
   if (verifyStateRoot) {
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: StateHashTreeRootSource.stateTransition,
-    });
-    const stateRoot = postState.hashTreeRoot();
-    hashTreeRootTimer?.();
-
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
         `Invalid state root at slot ${block.slot}, expected=${toHexString(block.stateRoot)}, actual=${toHexString(

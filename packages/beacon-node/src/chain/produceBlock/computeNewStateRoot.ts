@@ -48,6 +48,7 @@ export function computeNewStateRoot(
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
     source: StateHashTreeRootSource.computeNewStateRoot,
   });
+  // state root is computed inside stateTransition(), so it should take no time here
   const newStateRoot = postState.hashTreeRoot();
   hashTreeRootTimer?.();
 
