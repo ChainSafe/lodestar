@@ -108,6 +108,9 @@ export function stateTransition(
 
   processBlock(fork, postState, block, options, options);
 
+  // Note: time only on success. This does not include hashTreeRoot() time
+  processBlockTimer?.();
+
   // TODO - batch: remove processBlockCommitTime?
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
     source: StateHashTreeRootSource.stateTransition,
@@ -116,8 +119,6 @@ export function stateTransition(
   const stateRoot = postState.batchHashTreeRoot(hcGroup);
   hashTreeRootTimer?.();
 
-  // Note: time only on success. Include processBlock and commit
-  processBlockTimer?.();
 
   if (metrics) {
     onPostStateMetrics(postState, metrics);
