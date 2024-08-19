@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   Root,
   isBlindedBeaconBlock,
@@ -15,9 +15,21 @@ import {
   SignedBlindedBeaconBlock,
   BlindedBeaconBlock,
   ExecutionPayloadHeader,
+  isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
+
+export function blindedOrFullBlockBodyHashTreeRoot(
+  config: ChainForkConfig,
+  blindedOrFull: BeaconBlock | BlindedBeaconBlock
+): Root {
+  return isBlindedBeaconBlock(blindedOrFull)
+    ? // Blinded
+      config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
+    : // Full
+      config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
+}
 
 export function blindedOrFullBlockHashTreeRoot(
   config: ChainForkConfig,
@@ -30,15 +42,15 @@ export function blindedOrFullBlockHashTreeRoot(
       config.getForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull);
 }
 
-export function blindedOrFullBlockBodyHashTreeRoot(
+export function blindedOrFullSignedBlockHashTreeRoot(
   config: ChainForkConfig,
-  blindedOrFull: BeaconBlock | BlindedBeaconBlock
+  blindedOrFull: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): Root {
-  return isBlindedBeaconBlock(blindedOrFull)
+  return isBlindedSignedBeaconBlock(blindedOrFull)
     ? // Blinded
-      config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
+      config.getExecutionForkTypes(blindedOrFull.message.slot).SignedBlindedBeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
-      config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
+      config.getForkTypes(blindedOrFull.message.slot).SignedBeaconBlock.hashTreeRoot(blindedOrFull);
 }
 
 export function blindedOrFullBlockToHeader(
@@ -60,23 +72,59 @@ export function blindedOrFullBlockToHeader(
   };
 }
 
-export function beaconBlockToBlinded(config: ChainForkConfig, block: BeaconBlock<ForkExecution>): BlindedBeaconBlock {
-  const fork = config.getForkName(block.slot);
-  const executionPayloadHeader = executionPayloadToPayloadHeader(ForkSeq[fork], block.body.executionPayload);
-  const blindedBlock: BlindedBeaconBlock = {...block, body: {...block.body, executionPayloadHeader}};
-  return blindedBlock;
+export function fullOrBlindedBlockToBlinded(
+  config: ChainForkConfig,
+  block: BeaconBlock | BlindedBeaconBlock
+): BlindedBeaconBlock {
+  const forkSeq = config.getForkSeq(block.slot);
+  if (isBlindedBeaconBlock(block) || forkSeq < ForkSeq.bellatrix) {
+    return block as BlindedBeaconBlock;
+  }
+  const blinded: BlindedBeaconBlock = {
+    ...block,
+    body: {
+      randaoReveal: block.body.randaoReveal,
+      eth1Data: block.body.eth1Data,
+      graffiti: block.body.graffiti,
+      proposerSlashings: block.body.proposerSlashings,
+      attesterSlashings: block.body.attesterSlashings,
+      attestations: block.body.attestations,
+      deposits: block.body.deposits,
+      voluntaryExits: block.body.voluntaryExits,
+      syncAggregate: (block as BeaconBlock<ForkName.bellatrix>).body.syncAggregate,
+      executionPayloadHeader: executionPayloadToPayloadHeader(
+        forkSeq,
+        (block as BeaconBlock<ForkName.bellatrix>).body.executionPayload
+      ),
+    },
+  };
+
+  if (forkSeq >= ForkSeq.capella) {
+    (blinded as BlindedBeaconBlock<ForkName.capella>).body.blsToExecutionChanges = (
+      block as BeaconBlock<ForkName.capella>
+    ).body.blsToExecutionChanges;
+  }
+
+  if (forkSeq >= ForkSeq.deneb) {
+    (blinded as BlindedBeaconBlock<ForkName.deneb>).body.blobKzgCommitments = (
+      block as BeaconBlock<ForkName.deneb>
+    ).body.blobKzgCommitments;
+  }
+
+  return blinded;
 }
 
-export function signedBeaconBlockToBlinded(
+export function fullOrBlindedSignedBlockToBlinded(
   config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock<ForkExecution>
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): SignedBlindedBeaconBlock {
   return {
-    message: beaconBlockToBlinded(config, signedBlock.message),
+    message: fullOrBlindedBlockToBlinded(config, signedBlock.message),
     signature: signedBlock.signature,
   };
 }
 
+// TODO: (@matthewkeil) not the same as blindedOrFullBlockToFull in beacon-node. consider merging?
 export function signedBlindedBlockToFull(
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null

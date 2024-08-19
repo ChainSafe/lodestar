@@ -1,10 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
-import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
+import {blindedOrFullBlockHashTreeRoot, fullOrBlindedSignedBlockToBlinded} from "@lodestar/state-transition";
 import {
   FullOrBlindedSignedBeaconBlock,
-  blindedOrFullBlockToBlinded,
   serializeFullOrBlindedSignedBeaconBlock,
   deserializeFullOrBlindedSignedBeaconBlock,
 } from "../../util/fullOrBlindedBlock.js";
@@ -44,6 +43,6 @@ export class BlockRepository extends Repository<Uint8Array, FullOrBlindedSignedB
   }
 
   async add(value: FullOrBlindedSignedBeaconBlock): Promise<void> {
-    return super.add(blindedOrFullBlockToBlinded(value));
+    return super.add(fullOrBlindedSignedBlockToBlinded(this.config, value));
   }
 }

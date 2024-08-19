@@ -6,12 +6,14 @@ import {
   SignedBeaconBlock,
   BeaconBlockHeader,
   SignedBeaconBlockHeader,
+  BlindedBeaconBlock,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ZERO_HASH} from "../constants/index.js";
 import {BeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
+import {blindedOrFullBlockBodyHashTreeRoot} from "./fullOrBlindedBlock.js";
 
 /**
  * Return the block root at a recent [[slot]].
@@ -47,15 +49,16 @@ export function getTemporaryBlockHeader(config: ChainForkConfig, block: BeaconBl
 }
 
 /**
- * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
+ * Receives a FullOrBlindedBeaconBlock, and produces the corresponding BeaconBlockHeader.
  */
-export function blockToHeader(config: ChainForkConfig, block: BeaconBlock): BeaconBlockHeader {
+export function blockToHeader(config: ChainForkConfig, block: BeaconBlock | BlindedBeaconBlock): BeaconBlockHeader {
+  const bodyRoot = blindedOrFullBlockBodyHashTreeRoot(config, block);
   return {
     stateRoot: block.stateRoot,
     proposerIndex: block.proposerIndex,
     slot: block.slot,
     parentRoot: block.parentRoot,
-    bodyRoot: config.getForkTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot,
   };
 }
 

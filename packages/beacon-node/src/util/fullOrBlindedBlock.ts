@@ -1,19 +1,22 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BeaconBlock,
   bellatrix,
+  BlindedBeaconBlock,
   capella,
   deneb,
   ExecutionPayload,
   ExecutionPayloadHeader,
+  isBlindedSignedBeaconBlock,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, ForkSeq, ForkName, isForkExecution, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {executionPayloadToPayloadHeader} from "@lodestar/state-transition";
 import {ExecutionPayloadBody} from "../execution/engine/types.js";
 import {ROOT_SIZE, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
+export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 /**
  *  * class SignedBeaconBlock(Container):
  *   message: BeaconBlock [offset - 4 bytes]
@@ -126,16 +129,11 @@ export function isBlindedBytes(forkSeq: ForkSeq, blockBytes: Uint8Array): boolea
   return firstByte - readExtraDataOffsetAt > 92;
 }
 
-// same as isBlindedSignedBeaconBlock but without type narrowing
-export function isBlinded(block: FullOrBlindedSignedBeaconBlock): block is SignedBlindedBeaconBlock {
-  return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
-}
-
 export function serializeFullOrBlindedSignedBeaconBlock(
   config: ChainForkConfig,
   value: FullOrBlindedSignedBeaconBlock
 ): Uint8Array {
-  if (isBlinded(value)) {
+  if (isBlindedSignedBeaconBlock(value)) {
     const type = config.getExecutionForkTypes(value.message.slot).SignedBlindedBeaconBlock;
     return type.serialize(value);
   }
@@ -155,52 +153,6 @@ export function deserializeFullOrBlindedSignedBeaconBlock(
   return isBlindedBytes(config.getForkSeq(slot), bytes)
     ? config.getExecutionForkTypes(slot).SignedBeaconBlock.deserialize(bytes)
     : config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes);
-}
-
-export function blindedOrFullBlockToBlinded(
-  config: ChainForkConfig,
-  block: FullOrBlindedSignedBeaconBlock
-): SignedBlindedBeaconBlock {
-  const forkSeq = config.getForkSeq(block.message.slot);
-  if (isBlinded(block) || forkSeq < ForkSeq.bellatrix) {
-    return block as SignedBlindedBeaconBlock;
-  }
-
-  const blinded = {
-    signature: block.signature,
-    message: {
-      ...block.message,
-      body: {
-        randaoReveal: block.message.body.randaoReveal,
-        eth1Data: block.message.body.eth1Data,
-        graffiti: block.message.body.graffiti,
-        proposerSlashings: block.message.body.proposerSlashings,
-        attesterSlashings: block.message.body.attesterSlashings,
-        attestations: block.message.body.attestations,
-        deposits: block.message.body.deposits,
-        voluntaryExits: block.message.body.voluntaryExits,
-        syncAggregate: (block.message.body as bellatrix.BeaconBlockBody).syncAggregate,
-        executionPayloadHeader: executionPayloadToPayloadHeader(
-          forkSeq,
-          (block.message.body as deneb.BeaconBlockBody).executionPayload
-        ),
-      },
-    },
-  };
-
-  if (forkSeq >= ForkSeq.capella) {
-    (blinded as capella.SignedBlindedBeaconBlock).message.body.blsToExecutionChanges = (
-      block as capella.SignedBeaconBlock
-    ).message.body.blsToExecutionChanges;
-  }
-
-  if (forkSeq >= ForkSeq.deneb) {
-    (blinded as deneb.SignedBlindedBeaconBlock).message.body.blobKzgCommitments = (
-      block as deneb.SignedBeaconBlock
-    ).message.body.blobKzgCommitments;
-  }
-
-  return blinded;
 }
 
 function executionPayloadHeaderToPayload(
@@ -242,13 +194,14 @@ function executionPayloadHeaderToPayload(
   return bellatrixPayloadFields;
 }
 
+// TODO: (@matthewkeil) not the same as blindedOrFullBlockToFull in state-transition. consider merging?
 export function blindedOrFullBlockToFull(
   config: ChainForkConfig,
   block: FullOrBlindedSignedBeaconBlock,
   transactionsAndWithdrawals: Partial<ExecutionPayloadBody>
 ): SignedBeaconBlock {
   if (
-    !isBlinded(block) || // already full
+    !isBlindedSignedBeaconBlock(block) || // already full
     !isForkExecution(config.getForkName(block.message.slot)) || // no execution payload
     (block as unknown as SignedBeaconBlock<ForkName.bellatrix>).message.body.executionPayload.timestamp === 0 // before merge
   ) {
