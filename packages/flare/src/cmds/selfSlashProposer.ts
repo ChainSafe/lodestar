@@ -4,7 +4,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {CliCommand, toHex} from "@lodestar/utils";
+import {CliCommand, toPubkeyHex} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
@@ -86,7 +86,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
         const {index, status, validator} = validators[i];
 
         try {
-          const validatorPkHex = toHex(validator.pubkey);
+          const validatorPkHex = toPubkeyHex(validator.pubkey);
           if (validatorPkHex !== pkHex) {
             throw Error(`getStateValidators did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
           }
