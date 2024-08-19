@@ -1,9 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
-import {ssz} from "@lodestar/types";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, ssz} from "@lodestar/types";
 import {blindedOrFullBlockHashTreeRoot, fullOrBlindedSignedBlockToBlinded} from "@lodestar/state-transition";
 import {
-  FullOrBlindedSignedBeaconBlock,
   serializeFullOrBlindedSignedBeaconBlock,
   deserializeFullOrBlindedSignedBeaconBlock,
 } from "../../util/fullOrBlindedBlock.js";
@@ -14,7 +13,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
  *
  * Used to store unfinalized blocks
  */
-export class BlockRepository extends Repository<Uint8Array, FullOrBlindedSignedBeaconBlock> {
+export class BlockRepository extends Repository<Uint8Array, SignedBeaconBlock | SignedBlindedBeaconBlock> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_block;
     // Pick some type but won't be used, override below so correct container is used
@@ -25,24 +24,25 @@ export class BlockRepository extends Repository<Uint8Array, FullOrBlindedSignedB
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: FullOrBlindedSignedBeaconBlock): Uint8Array {
+  getId(value: SignedBeaconBlock | SignedBlindedBeaconBlock): Uint8Array {
     return blindedOrFullBlockHashTreeRoot(this.config, value.message);
   }
 
-  encodeValue(value: FullOrBlindedSignedBeaconBlock): Uint8Array {
+  encodeValue(value: SignedBeaconBlock | SignedBlindedBeaconBlock): Uint8Array {
     return serializeFullOrBlindedSignedBeaconBlock(this.config, value);
   }
 
-  decodeValue(data: Uint8Array): FullOrBlindedSignedBeaconBlock {
+  decodeValue(data: Uint8Array): SignedBeaconBlock | SignedBlindedBeaconBlock {
     return deserializeFullOrBlindedSignedBeaconBlock(this.config, data);
   }
 
+  // TODO: (@matthewkeil) should this throw or should we allow puts of binary blocks?
   // eslint-disable-next-line @typescript-eslint/naming-convention
   async putBinary(_: Uint8Array, __: Uint8Array): Promise<void> {
     throw new Error("cannot .putBinary into BlockRepository. must use .add so can be saved blinded");
   }
 
-  async add(value: FullOrBlindedSignedBeaconBlock): Promise<void> {
+  async add(value: SignedBeaconBlock | SignedBlindedBeaconBlock): Promise<void> {
     return super.add(fullOrBlindedSignedBlockToBlinded(this.config, value));
   }
 }

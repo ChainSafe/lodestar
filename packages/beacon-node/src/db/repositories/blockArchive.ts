@@ -1,11 +1,10 @@
 import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
-import {Slot, Root, ssz, SignedBeaconBlock} from "@lodestar/types";
+import {Slot, Root, ssz, SignedBeaconBlock, SignedBlindedBeaconBlock} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
+import {blindedOrFullBlockHashTreeRoot, fullOrBlindedSignedBlockToBlinded} from "@lodestar/state-transition";
 import {
-  FullOrBlindedSignedBeaconBlock,
   serializeFullOrBlindedSignedBeaconBlock,
   deserializeFullOrBlindedSignedBeaconBlock,
 } from "../../util/fullOrBlindedBlock.js";
@@ -26,7 +25,7 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
-export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSignedBeaconBlock> {
+export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock | SignedBlindedBeaconBlock> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_blockArchive;
     // Pick some type but won't be used, override below so correct container is used
@@ -36,17 +35,17 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
 
   // Overrides for multi-fork
 
-  encodeValue(value: FullOrBlindedSignedBeaconBlock): Uint8Array {
+  encodeValue(value: SignedBeaconBlock | SignedBlindedBeaconBlock): Uint8Array {
     return serializeFullOrBlindedSignedBeaconBlock(this.config, value);
   }
 
-  decodeValue(data: Uint8Array): FullOrBlindedSignedBeaconBlock {
+  decodeValue(data: Uint8Array): SignedBeaconBlock | SignedBlindedBeaconBlock {
     return deserializeFullOrBlindedSignedBeaconBlock(this.config, data);
   }
 
   // Handle key as slot
 
-  getId(value: FullOrBlindedSignedBeaconBlock): Slot {
+  getId(value: SignedBeaconBlock | SignedBlindedBeaconBlock): Slot {
     return value.message.slot;
   }
 
@@ -56,7 +55,7 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
 
   // Overrides to index
 
-  async put(key: Slot, value: FullOrBlindedSignedBeaconBlock): Promise<void> {
+  async put(key: Slot, value: SignedBeaconBlock | SignedBlindedBeaconBlock): Promise<void> {
     const blockRoot = blindedOrFullBlockHashTreeRoot(this.config, value.message);
     const slot = value.message.slot;
     await Promise.all([
@@ -66,9 +65,11 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
     ]);
   }
 
-  async batchPut(items: KeyValue<Slot, FullOrBlindedSignedBeaconBlock>[]): Promise<void> {
+  async batchPut(items: KeyValue<Slot, SignedBeaconBlock | SignedBlindedBeaconBlock>[]): Promise<void> {
     await Promise.all([
-      super.batchPut(items),
+      super.batchPut(
+        items.map(({key, value}) => ({key, value: fullOrBlindedSignedBlockToBlinded(this.config, value)}))
+      ),
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
         const blockRoot = blindedOrFullBlockHashTreeRoot(this.config, item.value.message);
@@ -82,6 +83,7 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
     ]);
   }
 
+  // TODO: (@matthewkeil) should this throw or should we allow puts of binary blocks?
   async batchPutBinary(items: BlockArchiveBatchPutBinaryItem[]): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
@@ -90,25 +92,25 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
     ]);
   }
 
-  async remove(value: FullOrBlindedSignedBeaconBlock): Promise<void> {
+  async remove(value: SignedBeaconBlock | SignedBlindedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value),
+      deleteRootIndex(this.db, blindedOrFullBlockHashTreeRoot(this.config, value.message)),
       deleteParentRootIndex(this.db, value),
     ]);
   }
 
-  async batchRemove(values: FullOrBlindedSignedBeaconBlock[]): Promise<void> {
+  async batchRemove(values: (SignedBeaconBlock | SignedBlindedBeaconBlock)[]): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) =>
-        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value)
+        deleteRootIndex(this.db, blindedOrFullBlockHashTreeRoot(this.config, value.message))
       ),
       Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);
   }
 
-  async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<FullOrBlindedSignedBeaconBlock> {
+  async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<SignedBeaconBlock | SignedBlindedBeaconBlock> {
     const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
     const step = (opts && opts.step) ?? 1;
@@ -120,13 +122,13 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
     }
   }
 
-  async values(opts?: BlockFilterOptions): Promise<FullOrBlindedSignedBeaconBlock[]> {
+  async values(opts?: BlockFilterOptions): Promise<(SignedBeaconBlock | SignedBlindedBeaconBlock)[]> {
     return all(this.valuesStream(opts));
   }
 
   // INDEX
 
-  async getByRoot(root: Root): Promise<FullOrBlindedSignedBeaconBlock | null> {
+  async getByRoot(root: Root): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
     return slot !== null ? this.get(slot) : null;
   }
@@ -136,7 +138,7 @@ export class BlockArchiveRepository extends Repository<Slot, FullOrBlindedSigned
     return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as KeyValue<Slot, Buffer>) : null;
   }
 
-  async getByParentRoot(root: Root): Promise<FullOrBlindedSignedBeaconBlock | null> {
+  async getByParentRoot(root: Root): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
     return slot !== null ? this.get(slot) : null;
   }

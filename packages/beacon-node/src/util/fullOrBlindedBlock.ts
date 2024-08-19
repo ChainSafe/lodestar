@@ -15,8 +15,6 @@ import {BYTES_PER_LOGS_BLOOM, ForkSeq, ForkName, isForkExecution, SYNC_COMMITTEE
 import {ExecutionPayloadBody} from "../execution/engine/types.js";
 import {ROOT_SIZE, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
-export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
-export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 /**
  *  * class SignedBeaconBlock(Container):
  *   message: BeaconBlock [offset - 4 bytes]
@@ -131,7 +129,7 @@ export function isBlindedBytes(forkSeq: ForkSeq, blockBytes: Uint8Array): boolea
 
 export function serializeFullOrBlindedSignedBeaconBlock(
   config: ChainForkConfig,
-  value: FullOrBlindedSignedBeaconBlock
+  value: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): Uint8Array {
   if (isBlindedSignedBeaconBlock(value)) {
     const type = config.getExecutionForkTypes(value.message.slot).SignedBlindedBeaconBlock;
@@ -144,7 +142,7 @@ export function serializeFullOrBlindedSignedBeaconBlock(
 export function deserializeFullOrBlindedSignedBeaconBlock(
   config: ChainForkConfig,
   bytes: Buffer | Uint8Array
-): FullOrBlindedSignedBeaconBlock {
+): SignedBeaconBlock | SignedBlindedBeaconBlock {
   const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
   if (slot === null) {
     throw Error("getSignedBlockTypeFromBytes: invalid bytes");
@@ -197,7 +195,7 @@ function executionPayloadHeaderToPayload(
 // TODO: (@matthewkeil) not the same as blindedOrFullBlockToFull in state-transition. consider merging?
 export function blindedOrFullBlockToFull(
   config: ChainForkConfig,
-  block: FullOrBlindedSignedBeaconBlock,
+  block: SignedBeaconBlock | SignedBlindedBeaconBlock,
   transactionsAndWithdrawals: Partial<ExecutionPayloadBody>
 ): SignedBeaconBlock {
   if (
