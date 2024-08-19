@@ -1,5 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {phase0, Slot, RootHex, BeaconBlock} from "@lodestar/types";
+import {phase0, Slot, RootHex, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -166,6 +166,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const blocksToReplay = [block];
     let state: CachedBeaconStateAllForks | null = null;
     const {checkpointStateCache} = this.modules;
+
+    const getSeedStateTimer = this.modules.metrics?.regenGetState.getSeedState.startTimer();
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
       state = this.modules.blockStateCache.get(b.stateRoot, opts);
@@ -181,6 +183,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       }
       blocksToReplay.push(b);
     }
+    getSeedStateTimer?.();
 
     if (state === null) {
       throw new RegenError({
@@ -188,18 +191,41 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
+    const blockCount = blocksToReplay.length;
     const MAX_EPOCH_TO_PROCESS = 5;
-    if (blocksToReplay.length > MAX_EPOCH_TO_PROCESS * SLOTS_PER_EPOCH) {
+    if (blockCount > MAX_EPOCH_TO_PROCESS * SLOTS_PER_EPOCH) {
       throw new RegenError({
         code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED,
         stateRoot,
       });
     }
 
-    const replaySlots = blocksToReplay.map((b) => b.slot).join(",");
-    this.modules.logger.debug("Replaying blocks to get state", {stateRoot, replaySlots});
-    for (const b of blocksToReplay.reverse()) {
-      const block = await this.modules.db.block.get(fromHexString(b.blockRoot));
+    this.modules.metrics?.regenGetState.blockCount.observe(blockCount);
+
+    const replaySlots = new Array<Slot>(blockCount);
+    const blockPromises = new Array<Promise<SignedBeaconBlock | null>>(blockCount);
+
+    const protoBlocksAsc = blocksToReplay.reverse();
+    for (const [i, protoBlock] of protoBlocksAsc.entries()) {
+      replaySlots[i] = protoBlock.slot;
+      blockPromises[i] = this.modules.db.block.get(fromHexString(protoBlock.blockRoot));
+    }
+
+    const logCtx = {stateRoot, replaySlots: replaySlots.join(",")};
+    this.modules.logger.debug("Replaying blocks to get state", logCtx);
+
+    const loadBlocksTimer = this.modules.metrics?.regenGetState.loadBlocks.startTimer();
+    const blockOrNulls = await Promise.all(blockPromises);
+    loadBlocksTimer?.();
+
+    const blocksByRoot = new Map<RootHex, SignedBeaconBlock | null>();
+    for (const [i, blockOrNull] of blockOrNulls.entries()) {
+      blocksByRoot.set(protoBlocksAsc[i].blockRoot, blockOrNull);
+    }
+
+    const stateTransitionTimer = this.modules.metrics?.regenGetState.stateTransition.startTimer();
+    for (const b of protoBlocksAsc) {
+      const block = blocksByRoot.get(b.blockRoot);
       if (!block) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_DB,
@@ -238,9 +264,6 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           // also with allowDiskReload flag, we "reload" it to the state cache too
           this.modules.blockStateCache.add(state);
         }
-
-        // this avoids keeping our node busy processing blocks
-        await nextEventLoop();
       } catch (e) {
         throw new RegenError({
           code: RegenErrorCode.STATE_TRANSITION_ERROR,
@@ -248,7 +271,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         });
       }
     }
-    this.modules.logger.debug("Replayed blocks to get state", {stateRoot, replaySlots});
+    stateTransitionTimer?.();
+
+    this.modules.logger.debug("Replayed blocks to get state", {...logCtx, stateSlot: state.slot});
 
     return state;
   }
