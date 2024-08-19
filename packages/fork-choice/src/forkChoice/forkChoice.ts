@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
@@ -643,7 +642,7 @@ export class ForkChoice implements IForkChoice {
 
       ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
         ? {
-            executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
+            executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
             executionPayloadNumber: block.body.executionPayload.blockNumber,
             executionStatus: this.getPostMergeExecStatus(executionStatus),
             dataAvailabilityStatus,
@@ -1484,7 +1483,7 @@ export function assertValidTerminalPowBlock(
     // powBock.blockHash is hex, so we just pick the corresponding root
     if (!ssz.Root.equals(block.body.executionPayload.parentHash, config.TERMINAL_BLOCK_HASH))
       throw new Error(
-        `Invalid terminal block hash, expected: ${toHexString(config.TERMINAL_BLOCK_HASH)}, actual: ${toHexString(
+        `Invalid terminal block hash, expected: ${toRootHex(config.TERMINAL_BLOCK_HASH)}, actual: ${toRootHex(
           block.body.executionPayload.parentHash
         )}`
       );
