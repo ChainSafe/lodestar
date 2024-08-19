@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
-import {LightClientUpdate, Root, ssz} from "@lodestar/types";
+import {LightClientUpdate, Root, isElectraLightClientUpdate, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   FINALIZED_ROOT_INDEX,
@@ -10,6 +10,8 @@ import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
   GENESIS_SLOT,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
 } from "@lodestar/params";
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
 import {isValidMerkleBranch} from "../utils/index.js";
@@ -98,8 +100,8 @@ export function validateLightClientUpdate(
       !isValidMerkleBranch(
         ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
         update.nextSyncCommitteeBranch,
-        NEXT_SYNC_COMMITTEE_DEPTH,
-        NEXT_SYNC_COMMITTEE_INDEX,
+        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
+        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_INDEX_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
         update.attestedHeader.beacon.stateRoot
       )
     ) {
