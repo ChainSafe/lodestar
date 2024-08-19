@@ -116,6 +116,8 @@ export function stateTransition(
     source: StateHashTreeRootSource.stateTransition,
   });
   // commit() is done inside batchHashTreeRoot()
+  // with batchHashTreeRoot(), we're not able to measure commit() time separately
+  // note that at commit() phase, we batch hash validators via ListValidatorTreeViewDU so this metric is a little bit confusing
   const stateRoot = postState.batchHashTreeRoot(hcGroup);
   hashTreeRootTimer?.();
 
