@@ -55,9 +55,6 @@ export function processWithdrawals(
 
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
-    // TODO: remove once this PR is included in a release
-    // https://github.com/ChainSafe/ssz/pull/394
-    stateElectra.pendingPartialWithdrawals.getAllReadonly();
     stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(partialWithdrawalsCount);
   }
 

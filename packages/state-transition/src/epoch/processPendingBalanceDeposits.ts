@@ -55,9 +55,6 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, c
     nextDepositIndex++;
   }
 
-  // TODO: remove once this PR is included in a release
-  // https://github.com/ChainSafe/ssz/pull/394
-  state.pendingBalanceDeposits.getAllReadonly();
   const remainingPendingBalanceDeposits = state.pendingBalanceDeposits.sliceFrom(nextDepositIndex);
   state.pendingBalanceDeposits = remainingPendingBalanceDeposits;
 
