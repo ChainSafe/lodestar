@@ -1,4 +1,5 @@
-import {LodestarError, mapValues, toHexString} from "@lodestar/utils";
+import {LodestarError, mapValues} from "@lodestar/utils";
+import {toHexString} from "@lodestar/utils/browser";
 
 const MAX_DEPTH = 0;
 
