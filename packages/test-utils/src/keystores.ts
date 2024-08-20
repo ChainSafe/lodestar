@@ -1,6 +1,6 @@
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
-import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils/node";
 
 /**
  * Compute encrypted keystore from secret keys serialized in hex, with same password
