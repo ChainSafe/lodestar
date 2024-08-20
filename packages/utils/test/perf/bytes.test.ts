@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {toHex, toRootHex} from "../../src/bytes.js";
+import {toHex, toRootHex} from "../../src/bytes/node.js";
 
 describe("bytes utils", function () {
   const runsFactor = 1000;
