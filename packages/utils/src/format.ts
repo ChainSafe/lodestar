@@ -1,4 +1,4 @@
-import {toHexString} from "./bytes.js";
+import {toHexString} from "./bytes/browser.js";
 import {ETH_TO_WEI} from "./ethConversion.js";
 
 /**

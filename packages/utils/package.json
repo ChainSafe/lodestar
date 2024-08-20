@@ -13,7 +13,27 @@
   },
   "version": "1.21.0",
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js"
+    },
+    "./browser": {
+      "import": "./lib/browser.js"
+    },
+    "./node": {
+      "import": "./lib/node.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
+  "types": "lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
@@ -37,7 +57,6 @@
     "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
     "check-readme": "typescript-docs-verifier"
   },
-  "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^0.5.0",
     "any-signal": "3.0.1",

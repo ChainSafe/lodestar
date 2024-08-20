@@ -1,5 +1,6 @@
 import {describe, it, expect} from "vitest";
-import {intToBytes, bytesToInt, toHex, fromHex, toHexString} from "../../src/index.js";
+import {intToBytes, bytesToInt, toHex, fromHex} from "../../src/bytes/node.js";
+import {toHexString} from "../../src/bytes/browser.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
