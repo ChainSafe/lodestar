@@ -62,7 +62,7 @@ export function defineSimTestConfig(
       secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
       runTill: opts.runTillEpoch,
       // After adding Nethermind its took longer to complete
-      graceExtraTimeFraction: 0.5,
+      graceExtraTimeFraction: 0.8,
     }) * 1000;
 
   const ttd = getEstimatedTTD({
