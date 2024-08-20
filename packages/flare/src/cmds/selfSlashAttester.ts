@@ -4,7 +4,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {CliCommand, toHexString} from "@lodestar/utils";
+import {CliCommand, toHexString} from "@lodestar/utils/browser";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
