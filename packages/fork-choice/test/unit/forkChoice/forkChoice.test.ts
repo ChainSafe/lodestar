@@ -2,7 +2,7 @@ import {describe, it, expect, beforeEach, beforeAll} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {RootHex, Slot} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {

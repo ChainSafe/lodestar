@@ -2,7 +2,7 @@ import {describe, it, expect, beforeEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {Slot} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   ForkChoice,

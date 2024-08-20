@@ -1,4 +1,4 @@
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, Slot, RootHex, ValidatorIndex} from "@lodestar/types";
 import {CheckpointHexWithTotalBalance, CheckpointHexWithBalance} from "./interface.js";

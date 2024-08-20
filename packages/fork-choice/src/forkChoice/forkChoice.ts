@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils/node";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
 import {
