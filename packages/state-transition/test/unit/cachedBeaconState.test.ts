@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {Epoch, ssz, RootHex} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHexString} from "@lodestar/utils/browser";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
 import {createCachedBeaconStateTest} from "../utils/state.js";

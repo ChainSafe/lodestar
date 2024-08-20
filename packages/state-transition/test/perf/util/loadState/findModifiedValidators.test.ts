@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {itBench} from "@dapplion/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {bytesToInt} from "@lodestar/utils";
+import {bytesToInt} from "@lodestar/utils/node";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {VALIDATOR_BYTES_SIZE} from "../../../../src/util/sszBytes.js";
 import {generateValidators} from "../../../utils/validator.js";

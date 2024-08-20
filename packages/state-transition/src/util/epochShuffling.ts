@@ -1,5 +1,6 @@
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv, toRootHex} from "@lodestar/utils";
+import {intDiv} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {
   DOMAIN_BEACON_ATTESTER,
   MAX_COMMITTEES_PER_SLOT,

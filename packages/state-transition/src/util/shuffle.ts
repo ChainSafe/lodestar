@@ -1,7 +1,8 @@
 import {digest} from "@chainsafe/as-sha256";
 import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {Bytes32} from "@lodestar/types";
-import {assert, bytesToBigInt} from "@lodestar/utils";
+import {assert} from "@lodestar/utils";
+import {bytesToBigInt} from "@lodestar/utils/node";
 
 // ArrayLike<number> but with settable indices
 type Shuffleable = {

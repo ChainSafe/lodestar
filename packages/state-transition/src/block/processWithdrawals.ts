@@ -6,7 +6,7 @@ import {
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
 } from "@lodestar/params";
 
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {CachedBeaconStateCapella} from "../types.js";
 import {decreaseBalance, hasEth1WithdrawalCredential, isCapellaPayloadHeader} from "../util/index.js";
 

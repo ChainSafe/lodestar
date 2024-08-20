@@ -1,6 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
 import {Epoch, Bytes32, DomainType, ValidatorIndex} from "@lodestar/types";
-import {assert, bytesToBigInt, intToBytes} from "@lodestar/utils";
+import {assert} from "@lodestar/utils";
+import {bytesToBigInt, intToBytes} from "@lodestar/utils/node";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,

@@ -1,6 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
 import {BLSSignature} from "@lodestar/types";
-import {intDiv, bytesToBigInt} from "@lodestar/utils";
+import {intDiv} from "@lodestar/utils";
+import {bytesToBigInt} from "@lodestar/utils/node";
 import {
   TARGET_AGGREGATORS_PER_COMMITTEE,
   SYNC_COMMITTEE_SIZE,
