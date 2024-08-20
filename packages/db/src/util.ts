@@ -1,4 +1,4 @@
-import {intToBytes} from "@lodestar/utils";
+import {intToBytes} from "@lodestar/utils/node";
 import {BUCKET_LENGTH} from "./const.js";
 
 export const uintLen = 8;
