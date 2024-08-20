@@ -4,7 +4,7 @@ import {TreeViewDU, Type} from "@chainsafe/ssz";
 import {RootHex, ssz} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {ForkName} from "@lodestar/params";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {TestRunnerFn} from "../../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
