@@ -14,6 +14,7 @@ import {
   EpochShuffling,
   computeEndSlotAtEpoch,
   blindedOrFullBlockHashTreeRoot,
+  isBlindedBlock,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -27,7 +28,6 @@ import {
   deneb,
   Wei,
   bellatrix,
-  isBlindedBeaconBlock,
   BeaconBlock,
   SignedBeaconBlock,
   ExecutionPayload,
@@ -844,7 +844,7 @@ export class BeaconChain implements IBeaconChain {
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void {
     const slot = data.slot;
-    if (isBlindedBeaconBlock(data)) {
+    if (isBlindedBlock(data)) {
       const sszType = this.config.getExecutionForkTypes(slot).BlindedBeaconBlock;
       void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
     } else {
@@ -1006,7 +1006,7 @@ export class BeaconChain implements IBeaconChain {
   async fullOrBlindedSignedBeaconBlockToFull(
     block: SignedBeaconBlock | SignedBlindedBeaconBlock
   ): Promise<SignedBeaconBlock> {
-    if (!isBlindedBeaconBlock(block)) {
+    if (!isBlindedBlock(block)) {
       return block;
     }
     const blockHash = toHex(blindedOrFullBlockHashTreeRoot(this.config, block.message));

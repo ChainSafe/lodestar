@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   Root,
-  isBlindedBeaconBlock,
   isExecutionPayloadAndBlobsBundle,
   BeaconBlock,
   BeaconBlockHeader,
@@ -20,11 +20,26 @@ import {
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
 
+export function isSignedBlock(
+  block: BeaconBlock | BlindedBeaconBlock | SignedBeaconBlock | SignedBlindedBeaconBlock
+): block is SignedBeaconBlock | SignedBlindedBeaconBlock {
+  return !!(block as SignedBeaconBlock).signature;
+}
+
+export function isBlindedBlock(
+  block: BeaconBlock | BlindedBeaconBlock | SignedBeaconBlock | SignedBlindedBeaconBlock
+): block is BlindedBeaconBlock | SignedBlindedBeaconBlock {
+  if (isSignedBlock(block)) {
+    return !!(block as SignedBlindedBeaconBlock).message.body.executionPayloadHeader;
+  }
+  return !!(block as BlindedBeaconBlock).body.executionPayloadHeader;
+}
+
 export function blindedOrFullBlockBodyHashTreeRoot(
   config: ChainForkConfig,
   blindedOrFull: BeaconBlock | BlindedBeaconBlock
 ): Root {
-  return isBlindedBeaconBlock(blindedOrFull)
+  return isBlindedBlock(blindedOrFull)
     ? // Blinded
       config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
@@ -35,7 +50,7 @@ export function blindedOrFullBlockHashTreeRoot(
   config: ChainForkConfig,
   blindedOrFull: BeaconBlock | BlindedBeaconBlock
 ): Root {
-  return isBlindedBeaconBlock(blindedOrFull)
+  return isBlindedBlock(blindedOrFull)
     ? // Blinded
       config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
@@ -57,7 +72,7 @@ export function blindedOrFullBlockToHeader(
   config: ChainForkConfig,
   blindedOrFull: BeaconBlock | BlindedBeaconBlock
 ): BeaconBlockHeader {
-  const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
+  const bodyRoot = isBlindedBlock(blindedOrFull)
     ? // Blinded
       config.getExecutionForkTypes(blindedOrFull.slot).BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
@@ -77,7 +92,7 @@ export function fullOrBlindedBlockToBlinded(
   block: BeaconBlock | BlindedBeaconBlock
 ): BlindedBeaconBlock {
   const forkSeq = config.getForkSeq(block.slot);
-  if (isBlindedBeaconBlock(block) || forkSeq < ForkSeq.bellatrix) {
+  if (isBlindedBlock(block) || forkSeq < ForkSeq.bellatrix) {
     return block as BlindedBeaconBlock;
   }
   const blinded: BlindedBeaconBlock = {

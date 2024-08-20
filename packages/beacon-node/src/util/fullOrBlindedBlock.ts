@@ -147,7 +147,7 @@ export function deserializeFullOrBlindedSignedBeaconBlock(
   }
 
   return isBlindedBytes(config.getForkSeq(slot), bytes)
-    ? config.getExecutionForkTypes(slot).SignedBeaconBlock.deserialize(bytes)
+    ? config.getExecutionForkTypes(slot).SignedBlindedBeaconBlock.deserialize(bytes)
     : config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes);
 }
 
