@@ -3,7 +3,7 @@ import {logger} from "@libp2p/logger";
 import {expect} from "vitest";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
-import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils/node";
 import {ResponseIncoming, RespStatus} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
 

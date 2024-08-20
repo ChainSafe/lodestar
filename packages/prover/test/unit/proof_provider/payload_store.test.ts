@@ -4,7 +4,7 @@ import {ApiClient, ApiResponse, HttpStatusCode, routes} from "@lodestar/api";
 import {hash} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 import {ExecutionPayload, SignedBeaconBlock, capella} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHexString} from "@lodestar/utils/browser";
 import {ForkName} from "@lodestar/params";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
