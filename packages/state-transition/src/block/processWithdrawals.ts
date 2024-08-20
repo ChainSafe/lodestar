@@ -105,9 +105,9 @@ export function getExpectedWithdrawals(
       if (
         validator.exitEpoch === FAR_FUTURE_EPOCH &&
         validator.effectiveBalance >= MIN_ACTIVATION_BALANCE &&
-        balances.get(withdrawalIndex) > MIN_ACTIVATION_BALANCE
+        balances.get(withdrawal.index) > MIN_ACTIVATION_BALANCE
       ) {
-        const balanceOverMinActivationBalance = BigInt(balances.get(withdrawalIndex) - MIN_ACTIVATION_BALANCE);
+        const balanceOverMinActivationBalance = BigInt(balances.get(withdrawal.index) - MIN_ACTIVATION_BALANCE);
         const withdrawableBalance =
           balanceOverMinActivationBalance < withdrawal.amount ? balanceOverMinActivationBalance : withdrawal.amount;
         withdrawals.push({
