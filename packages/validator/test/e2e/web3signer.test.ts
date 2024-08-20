@@ -1,5 +1,5 @@
 import {expect, describe, it, vi, beforeAll, afterAll} from "vitest";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
 import {createBeaconConfig} from "@lodestar/config";

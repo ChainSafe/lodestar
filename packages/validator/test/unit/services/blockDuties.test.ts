@@ -4,7 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";

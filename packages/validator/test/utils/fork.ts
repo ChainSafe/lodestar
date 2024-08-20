@@ -1,5 +1,5 @@
 import {phase0} from "@lodestar/types";
-import {intToBytes} from "@lodestar/utils";
+import {intToBytes} from "@lodestar/utils/node";
 
 /**
  * Generates a fake fork data test purposes.

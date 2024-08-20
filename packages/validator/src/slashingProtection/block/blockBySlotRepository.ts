@@ -1,6 +1,6 @@
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {BLSPubkey, Slot, ssz} from "@lodestar/types";
-import {intToBytes, bytesToInt} from "@lodestar/utils";
+import {intToBytes, bytesToInt} from "@lodestar/utils/node";
 import {DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {Bucket, getBucketNameByValue} from "../../buckets.js";
