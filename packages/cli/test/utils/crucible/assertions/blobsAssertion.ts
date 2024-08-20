@@ -1,5 +1,5 @@
 import {randomBytes} from "node:crypto";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 import {Assertion, Match, AssertionResult, NodePair} from "../interfaces.js";
 import {EL_GENESIS_ACCOUNT, EL_GENESIS_SECRET_KEY, SIM_ENV_CHAIN_ID} from "../constants.js";
 import {generateBlobsForTransaction} from "../utils/blobs.js";

@@ -3,7 +3,7 @@ import path from "node:path";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
 import {SignerLocal, SignerType} from "@lodestar/validator";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 import {writeFile600Perm} from "../../../util/file.js";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
 import {LocalKeystoreDefinition} from "./interface.js";

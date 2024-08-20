@@ -1,6 +1,6 @@
 import {Root} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
-import {fromHex, Logger} from "@lodestar/utils";
+import {fromHex, Logger} from "@lodestar/utils/node";
 import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
 import {LevelDbController} from "@lodestar/db";

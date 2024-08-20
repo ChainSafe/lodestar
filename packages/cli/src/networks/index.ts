@@ -7,7 +7,7 @@ import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Slot} from "@lodestar/types";
-import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
+import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils/node";
 import {BeaconStateAllForks, getLatestBlockRoot, computeCheckpointEpochAtStateSlot} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";

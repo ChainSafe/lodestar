@@ -1,4 +1,4 @@
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {bellatrix} from "@lodestar/types";
 import {Match, AssertionResult, Assertion} from "../interfaces.js";
 

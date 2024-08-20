@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {rimraf} from "rimraf";
-import {toHex, fromHex} from "@lodestar/utils";
+import {toHex, fromHex} from "@lodestar/utils/node";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";

@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHexString} from "@lodestar/utils/browser";
 import {Match, AssertionResult, Assertion} from "../interfaces.js";
 
 export function createForkAssertion(fork: ForkName, epoch: Epoch): Assertion<string, string> {

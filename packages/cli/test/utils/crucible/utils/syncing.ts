@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {sleep, toHex} from "@lodestar/utils";
+import {sleep, toHex} from "@lodestar/utils/node";
 import {ForkBlobs} from "@lodestar/params";
 import type {Simulation} from "../simulation.js";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";

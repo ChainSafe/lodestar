@@ -2,7 +2,7 @@ import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {ckzg} from "@lodestar/beacon-node/util";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, VERSIONED_HASH_VERSION_KZG} from "@lodestar/params";
 import {deneb} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 
 export function generateBlobsForTransaction(count: number): {
   blobs: string[];

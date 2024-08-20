@@ -4,7 +4,7 @@ import {allNamespaces} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 // eslint-disable-next-line import/no-relative-packages
 import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 

@@ -4,7 +4,7 @@ import path from "node:path";
 import {describe, it, beforeAll, vi, expect, afterEach, beforeEach} from "vitest";
 import {rimraf} from "rimraf";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils/node";
 import {runCliCommand} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {getLodestarCli} from "../../src/cli.js";
