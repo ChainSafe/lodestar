@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
-import {MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils/node";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Metrics} from "../metrics/metrics.js";
 import {computeAnchorCheckpoint} from "./initState.js";

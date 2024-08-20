@@ -16,7 +16,7 @@ import {
   ForkSeq,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";

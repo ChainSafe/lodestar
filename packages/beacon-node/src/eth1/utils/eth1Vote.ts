@@ -2,7 +2,7 @@ import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, RootHex} from "@lodestar/types";
 import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 
 export type Eth1DataGetter = ({
   timestampRange,

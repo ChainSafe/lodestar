@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";

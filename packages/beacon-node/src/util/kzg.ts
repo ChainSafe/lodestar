@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

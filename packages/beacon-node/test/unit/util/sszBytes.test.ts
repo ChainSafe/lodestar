@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {deneb, Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,

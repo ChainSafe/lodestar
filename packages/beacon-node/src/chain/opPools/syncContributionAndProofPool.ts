@@ -3,7 +3,7 @@ import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {altair, Slot, Root, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils/node";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 

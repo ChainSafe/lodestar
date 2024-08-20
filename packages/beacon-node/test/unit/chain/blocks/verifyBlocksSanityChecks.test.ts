@@ -2,7 +2,7 @@ import {describe, it, expect, beforeEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {ChainForkConfig} from "@lodestar/config";
 import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";

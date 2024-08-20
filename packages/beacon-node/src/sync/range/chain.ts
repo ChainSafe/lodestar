@@ -1,5 +1,5 @@
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
-import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils/node";
 import {ChainForkConfig} from "@lodestar/config";
 import {BlockInput, BlockInputType} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";

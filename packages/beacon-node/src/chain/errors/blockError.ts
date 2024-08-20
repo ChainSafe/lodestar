@@ -1,5 +1,5 @@
 import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
-import {LodestarError, toRootHex} from "@lodestar/utils";
+import {LodestarError, toRootHex} from "@lodestar/utils/node";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {QueueErrorCode} from "../../util/queue/index.js";

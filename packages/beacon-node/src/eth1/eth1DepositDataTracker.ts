@@ -1,7 +1,7 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
-import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils/node";
 
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";

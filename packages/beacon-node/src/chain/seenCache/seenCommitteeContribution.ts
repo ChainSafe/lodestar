@@ -1,6 +1,6 @@
 import {Slot, ValidatorIndex} from "@lodestar/types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@lodestar/types/altair";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils/node";
 import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 import {AggregationInfo, insertDesc} from "./seenAggregateAndProof.js";

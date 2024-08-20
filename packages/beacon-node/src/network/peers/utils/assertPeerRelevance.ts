@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkDigest, Root, Slot, phase0, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 
 // TODO: Why this value? (From Lighthouse)
 const FUTURE_SLOT_TOLERANCE = 1;

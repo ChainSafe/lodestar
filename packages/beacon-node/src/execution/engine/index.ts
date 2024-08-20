@@ -1,4 +1,4 @@
-import {fromHex, toPrintableUrl} from "@lodestar/utils";
+import {fromHex, toPrintableUrl} from "@lodestar/utils/node";
 import {JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IExecutionEngine} from "./interface.js";
 import {ExecutionEngineDisabled} from "./disabled.js";

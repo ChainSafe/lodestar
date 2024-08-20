@@ -8,7 +8,7 @@ import {bellatrix, deneb} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ProtoBlock, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils/node";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";

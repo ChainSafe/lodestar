@@ -7,7 +7,7 @@ import {
   isExecutionEnabled,
   getBlockProposerSignatureSet,
 } from "@lodestar/state-transition";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {sleep, toRootHex} from "@lodestar/utils/node";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";

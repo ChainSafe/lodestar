@@ -1,6 +1,6 @@
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils/node";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {StateCloneOpts} from "../regen/interface.js";

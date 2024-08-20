@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, toHex, toRootHex} from "@lodestar/utils/node";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";

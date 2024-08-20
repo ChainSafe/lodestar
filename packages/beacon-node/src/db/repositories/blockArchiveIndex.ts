@@ -1,6 +1,6 @@
 import {Db, encodeKey} from "@lodestar/db";
 import {Slot, Root, ssz, SignedBeaconBlock, SSZTypesFor} from "@lodestar/types";
-import {intToBytes} from "@lodestar/utils";
+import {intToBytes} from "@lodestar/utils/node";
 import {ForkAll} from "@lodestar/params";
 import {Bucket} from "../buckets.js";
 

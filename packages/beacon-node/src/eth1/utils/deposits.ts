@@ -3,7 +3,7 @@ import {MAX_DEPOSITS} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {FilterOptions} from "@lodestar/db";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 

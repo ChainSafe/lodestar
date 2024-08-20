@@ -9,7 +9,7 @@ import {
   SUBNETS_PER_NODE,
 } from "@lodestar/params";
 import {getCurrentSlot} from "@lodestar/state-transition";
-import {bigIntToBytes} from "@lodestar/utils";
+import {bigIntToBytes} from "@lodestar/utils/node";
 import {Clock, IClock} from "../../../../src/util/clock.js";
 import {Eth2Gossipsub} from "../../../../src/network/gossip/gossipsub.js";
 import {MetadataController} from "../../../../src/network/metadata.js";

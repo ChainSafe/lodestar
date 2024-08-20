@@ -1,5 +1,5 @@
 import {Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {

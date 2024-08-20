@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {Slot} from "@lodestar/types";
-import {bytesToInt} from "@lodestar/utils";
+import {bytesToInt} from "@lodestar/utils/node";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {blobSidecarsWrapperSsz, BlobSidecarsWrapper} from "./blobSidecars.js";
 

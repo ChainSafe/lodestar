@@ -8,7 +8,7 @@ import {noise} from "@chainsafe/libp2p-noise";
 import {ssz} from "@lodestar/types";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {fromHex, sleep, toHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex} from "@lodestar/utils/node";
 import {
   NetworkEventBus,
   PeerRpcScoreStore,

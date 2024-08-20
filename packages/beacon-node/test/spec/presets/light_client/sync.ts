@@ -3,7 +3,7 @@ import {isForkLightClient} from "@lodestar/params";
 import {altair, phase0, RootHex, Slot, ssz, sszTypesFor} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {TestRunnerFn} from "../../utils/types.js";

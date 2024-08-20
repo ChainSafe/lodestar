@@ -16,7 +16,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils/node";
 import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";

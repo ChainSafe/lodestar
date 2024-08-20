@@ -8,7 +8,7 @@ import {
   getBlockRootAtSlot,
   ParticipationFlags,
 } from "@lodestar/state-transition";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils/node";
 import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";

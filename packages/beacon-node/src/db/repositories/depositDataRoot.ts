@@ -1,7 +1,7 @@
 import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {bytesToInt} from "@lodestar/utils";
+import {bytesToInt} from "@lodestar/utils/node";
 import {Db, Repository, KeyValue} from "@lodestar/db";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 

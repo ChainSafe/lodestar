@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {iteratorFromArray} from "../../../utils/interator.js";
 import {
   getEth1DataForBlocks,

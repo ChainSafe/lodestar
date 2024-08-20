@@ -1,5 +1,5 @@
 import {Root, Slot} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 
 /**
  * Sync this up to this target. Uses slot instead of epoch to re-use logic for finalized sync

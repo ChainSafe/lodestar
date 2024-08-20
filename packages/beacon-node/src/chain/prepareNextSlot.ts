@@ -9,7 +9,7 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
+import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils/node";
 import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";

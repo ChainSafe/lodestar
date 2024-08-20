@@ -2,7 +2,7 @@ import {rimraf} from "rimraf";
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {intToBytes} from "@lodestar/utils";
+import {intToBytes} from "@lodestar/utils/node";
 import {LevelDbController, encodeKey} from "@lodestar/db";
 
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";

@@ -10,7 +10,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils/node";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";

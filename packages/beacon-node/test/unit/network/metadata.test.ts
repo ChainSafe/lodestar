@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 import {ssz} from "@lodestar/types";
 import {getENRForkID} from "../../../src/network/metadata.js";
 import {config} from "../../utils/config.js";

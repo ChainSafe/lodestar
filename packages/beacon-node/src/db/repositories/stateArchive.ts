@@ -1,7 +1,7 @@
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {bytesToInt, toHex} from "@lodestar/utils";
+import {bytesToInt, toHex} from "@lodestar/utils/node";
 import {Db, Repository} from "@lodestar/db";
 import {getStateTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";

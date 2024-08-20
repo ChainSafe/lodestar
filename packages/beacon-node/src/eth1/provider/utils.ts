@@ -1,6 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
-import {bytesToBigInt, bigIntToBytes} from "@lodestar/utils";
+import {bytesToBigInt, bigIntToBytes} from "@lodestar/utils/node";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */

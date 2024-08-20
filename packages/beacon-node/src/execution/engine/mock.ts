@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import {bellatrix, deneb, RootHex, ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils/node";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,

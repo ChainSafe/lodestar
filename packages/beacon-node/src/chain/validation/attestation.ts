@@ -12,7 +12,7 @@ import {
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";

@@ -16,7 +16,7 @@ import {
   LVHInvalidResponse,
 } from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
-import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils/node";
 import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 
 import {IExecutionEngine} from "../../execution/engine/interface.js";

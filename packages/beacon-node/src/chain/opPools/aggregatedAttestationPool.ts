@@ -10,7 +10,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils/node";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import {InsertOutcome} from "./types.js";

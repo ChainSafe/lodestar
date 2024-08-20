@@ -31,7 +31,7 @@ import {
   LightClientUpdateSummary,
   upgradeLightClientHeader,
 } from "@lodestar/light-client/spec";
-import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils/node";
 import {routes} from "@lodestar/api";
 import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,

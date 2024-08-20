@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Slot, ssz} from "@lodestar/types";
 import {DatabaseController, Repository} from "@lodestar/db";
-import {bytesToInt} from "@lodestar/utils";
+import {bytesToInt} from "@lodestar/utils/node";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**

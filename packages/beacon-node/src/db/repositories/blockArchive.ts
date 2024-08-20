@@ -2,7 +2,7 @@ import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
 import {Slot, Root, ssz, SignedBeaconBlock} from "@lodestar/types";
-import {bytesToInt} from "@lodestar/utils";
+import {bytesToInt} from "@lodestar/utils/node";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";

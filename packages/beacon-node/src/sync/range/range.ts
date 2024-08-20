@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Epoch, phase0} from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils/node";
 import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {Metrics} from "../../metrics/index.js";

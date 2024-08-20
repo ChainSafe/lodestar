@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils/node";
 
 /**
  * This is a benchmark for different ways of converting a gossipsub message id to a hex string using Mac M1

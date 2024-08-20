@@ -1,4 +1,4 @@
-import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils/node";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";

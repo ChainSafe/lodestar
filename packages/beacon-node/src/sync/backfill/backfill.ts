@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {phase0, Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
-import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils/node";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";

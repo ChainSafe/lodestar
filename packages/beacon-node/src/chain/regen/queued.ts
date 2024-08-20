@@ -1,7 +1,7 @@
 import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils/node";
 import {routes} from "@lodestar/api";
 import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {Metrics} from "../../metrics/index.js";

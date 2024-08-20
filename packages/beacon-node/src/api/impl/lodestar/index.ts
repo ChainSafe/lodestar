@@ -3,7 +3,7 @@ import path from "node:path";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {Repository} from "@lodestar/db";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {toHex, toRootHex} from "@lodestar/utils/node";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";

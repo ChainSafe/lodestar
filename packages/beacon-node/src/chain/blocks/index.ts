@@ -1,4 +1,4 @@
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted, toRootHex} from "@lodestar/utils/node";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";

@@ -1,6 +1,6 @@
 import {deneb, RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {pruneSetToMax, toRootHex} from "@lodestar/utils/node";
 import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName} from "@lodestar/params";
 
 import {

@@ -1,7 +1,7 @@
 import path from "node:path";
 import {unshuffleList} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
-import {bnToNum, fromHex} from "@lodestar/utils";
+import {bnToNum, fromHex} from "@lodestar/utils/node";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";

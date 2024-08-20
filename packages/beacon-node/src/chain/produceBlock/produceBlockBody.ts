@@ -32,7 +32,7 @@ import {
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep, Logger, toRootHex} from "@lodestar/utils";
+import {toHex, sleep, Logger, toRootHex} from "@lodestar/utils/node";
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";

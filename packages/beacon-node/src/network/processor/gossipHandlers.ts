@@ -1,5 +1,5 @@
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils/node";
 import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";

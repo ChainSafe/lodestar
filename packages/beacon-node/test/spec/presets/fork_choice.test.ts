@@ -5,7 +5,7 @@ import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} fr
 import {InputType} from "@lodestar/spec-test-util";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, bellatrix, ssz, RootHex, deneb, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
-import {bnToNum, fromHex} from "@lodestar/utils";
+import {bnToNum, fromHex} from "@lodestar/utils/node";
 import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkSeq, isForkBlobs, ForkName} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";

@@ -1,7 +1,7 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {deneb, Slot} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils/node";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";

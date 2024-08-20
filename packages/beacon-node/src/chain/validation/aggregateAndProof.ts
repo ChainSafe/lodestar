@@ -5,7 +5,7 @@ import {
   isAggregatorFromCommitteeLength,
   createAggregateSignatureSetFromComponents,
 } from "@lodestar/state-transition";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";

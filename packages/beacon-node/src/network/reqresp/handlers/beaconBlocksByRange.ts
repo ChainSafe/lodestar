@@ -1,7 +1,7 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {deneb, phase0} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils/node";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 

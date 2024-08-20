@@ -7,7 +7,7 @@ import {
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
 import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution} from "@lodestar/params";
-import {sleep, fromHex, toRootHex} from "@lodestar/utils";
+import {sleep, fromHex, toRootHex} from "@lodestar/utils/node";
 import {
   deneb,
   isSignedBlockContents,

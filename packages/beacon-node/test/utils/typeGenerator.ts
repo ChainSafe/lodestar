@@ -2,7 +2,7 @@ import {Slot} from "@lodestar/types";
 import {phase0} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils/node";
 import {ZERO_HASH_HEX} from "../../src/constants/index.js";
 
 // Only add functions for types that need some property changed.

@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils/node";
 import {Root, RootHex, deneb} from "@lodestar/types";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";

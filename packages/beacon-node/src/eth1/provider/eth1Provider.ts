@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex, isErrorAborted, createElapsedTimeTracker, toPrintableUrl} from "@lodestar/utils";
+import {fromHex, isErrorAborted, createElapsedTimeTracker, toPrintableUrl} from "@lodestar/utils/node";
 import {Logger} from "@lodestar/logger";
 
 import {FetchError, isFetchError} from "@lodestar/api";

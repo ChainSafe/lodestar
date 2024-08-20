@@ -4,7 +4,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {ChainConfig} from "@lodestar/config";
 import {RootHex, Slot} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {toHexString} from "@lodestar/utils";
+import {toHexString} from "@lodestar/utils/browser";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";

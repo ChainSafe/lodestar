@@ -4,7 +4,7 @@ import {Message} from "@libp2p/interface";
 import {digest} from "@chainsafe/as-sha256";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
-import {intToBytes} from "@lodestar/utils";
+import {intToBytes} from "@lodestar/utils/node";
 import {ForkName} from "@lodestar/params";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {getGossipSSZType, GossipTopicCache} from "./topic.js";

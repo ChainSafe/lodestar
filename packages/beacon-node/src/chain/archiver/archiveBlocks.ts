@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils/node";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";

@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Epoch, RootHex} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/node";
 
 /** The number of validator balance sets that are cached within `CheckpointBalancesCache`. */
 const MAX_BALANCE_CACHE_SIZE = 4;
