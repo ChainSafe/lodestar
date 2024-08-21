@@ -6,6 +6,8 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {IStateRegenerator} from "../regen/interface.js";
 import {getStateSlotFromBytes} from "../../util/multifork.js";
+import {serializeState} from "../serializeState.js";
+import {AllocSource, BufferPool} from "../../util/bufferPool.js";
 
 /**
  * Minimum number of epochs between single temp archived states
@@ -30,7 +32,8 @@ export class StatesArchiver {
     private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
     private readonly logger: Logger,
-    private readonly opts: StatesArchiverOpts
+    private readonly opts: StatesArchiverOpts,
+    private readonly bufferPool?: BufferPool | null
   ) {}
 
   /**
@@ -95,8 +98,13 @@ export class StatesArchiver {
       await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
       this.logger.verbose("Archived finalized state bytes", {epoch: finalized.epoch, slot, root: rootHex});
     } else {
-      // state
-      await this.db.stateArchive.put(finalizedStateOrBytes.slot, finalizedStateOrBytes);
+      // serialize state using
+      await serializeState(
+        finalizedStateOrBytes,
+        AllocSource.ARCHIVE_STATE,
+        (stateBytes) => this.db.stateArchive.putBinary(finalizedStateOrBytes.slot, stateBytes),
+        this.bufferPool
+      );
       // don't delete states before the finalized state, auto-prune will take care of it
       this.logger.verbose("Archived finalized state", {
         epoch: finalized.epoch,

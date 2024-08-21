@@ -18,6 +18,7 @@ import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
+import {AllocSource} from "../../util/bufferPool.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -1150,13 +1151,15 @@ export function createLodestarMetrics(
         name: "lodestar_buffer_pool_length",
         help: "Buffer pool length",
       }),
-      hits: register.counter({
+      hits: register.counter<{source: AllocSource}>({
         name: "lodestar_buffer_pool_hits_total",
         help: "Total number of buffer pool hits",
+        labelNames: ["source"],
       }),
-      misses: register.counter({
+      misses: register.counter<{source: AllocSource}>({
         name: "lodestar_buffer_pool_misses_total",
         help: "Total number of buffer pool misses",
+        labelNames: ["source"],
       }),
       grows: register.counter({
         name: "lodestar_buffer_pool_grows_total",
@@ -1250,10 +1253,6 @@ export function createLodestarMetrics(
       persistedStateRemoveCount: register.gauge({
         name: "lodestar_cp_state_cache_persisted_state_remove_count",
         help: "Total number of persisted states removed",
-      }),
-      persistedStateAllocCount: register.counter({
-        name: "lodestar_cp_state_cache_persisted_state_alloc_count",
-        help: "Total number time to allocate memory for persisted state",
       }),
     },
 

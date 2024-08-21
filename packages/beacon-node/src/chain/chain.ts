@@ -119,6 +119,7 @@ export class BeaconChain implements IBeaconChain {
   readonly config: BeaconConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
+  readonly bufferPool: BufferPool | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -266,6 +267,9 @@ export class BeaconChain implements IBeaconChain {
     const blockStateCache = this.opts.nHistoricalStates
       ? new FIFOBlockStateCache(this.opts, {metrics})
       : new BlockStateCacheImpl({metrics});
+    this.bufferPool = this.opts.nHistoricalStates
+      ? new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics)
+      : null;
     const checkpointStateCache = this.opts.nHistoricalStates
       ? new PersistentCheckpointStateCache(
           {
@@ -274,7 +278,7 @@ export class BeaconChain implements IBeaconChain {
             clock,
             shufflingCache: this.shufflingCache,
             blockStateCache,
-            bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
+            bufferPool: this.bufferPool,
             datastore: fileDataStore
               ? // debug option if we want to investigate any issues with the DB
                 new FileCPStateDatastore()

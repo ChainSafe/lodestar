@@ -8,8 +8,9 @@ import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
-import {BufferPool, BufferWithKey} from "../../util/bufferPool.js";
+import {AllocSource, BufferPool, BufferWithKey} from "../../util/bufferPool.js";
 import {StateCloneOpts} from "../regen/interface.js";
+import {serializeState} from "../serializeState.js";
 import {MapTracker} from "./mapMetrics.js";
 import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
 import {CheckpointHex, CacheItemType, CheckpointStateCache, BlockStateCache} from "./types.js";
@@ -29,7 +30,7 @@ type PersistentCheckpointStateCacheModules = {
   shufflingCache: ShufflingCache;
   datastore: CPStateDatastore;
   blockStateCache: BlockStateCache;
-  bufferPool?: BufferPool;
+  bufferPool?: BufferPool | null;
 };
 
 /** checkpoint serialized as a string */
@@ -106,7 +107,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly datastore: CPStateDatastore;
   private readonly shufflingCache: ShufflingCache;
   private readonly blockStateCache: BlockStateCache;
-  private readonly bufferPool?: BufferPool;
+  private readonly bufferPool?: BufferPool | null;
 
   constructor(
     {
@@ -686,19 +687,20 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             // persist and do not update epochIndex
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
             const cpPersist = {epoch: epoch, root: fromHexString(rootHex)};
-            {
-              const timer = this.metrics?.stateSerializeDuration.startTimer();
-              // automatically free the buffer pool after this scope
-              using stateBytesWithKey = this.serializeState(state);
-              let stateBytes = stateBytesWithKey?.buffer;
-              if (stateBytes == null) {
-                // fallback logic to use regular way to get state ssz bytes
-                this.metrics?.persistedStateAllocCount.inc();
-                stateBytes = state.serialize();
-              }
-              timer?.();
-              persistedKey = await this.datastore.write(cpPersist, stateBytes);
-            }
+            // It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
+            // As monitored on holesky as of Jan 2024:
+            //   - This does not increase heap allocation while gc time is the same
+            //   - It helps stabilize persist time and save ~300ms in average (1.5s vs 1.2s)
+            //   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
+            //   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
+            const timer = this.metrics?.stateSerializeDuration.startTimer();
+            persistedKey = await serializeState(
+              state,
+              AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
+              (stateBytes) => this.datastore.write(cpPersist, stateBytes),
+              this.bufferPool
+            );
+            timer?.();
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
               ...logMeta,
@@ -755,29 +757,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     });
   }
 
-  /*
-   * It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
-   * As monitored on holesky as of Jan 2024:
-   *   - This does not increase heap allocation while gc time is the same
-   *   - It helps stabilize persist time and save ~300ms in average (1.5s vs 1.2s)
-   *   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
-   *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
-   */
-  private serializeState(state: CachedBeaconStateAllForks): BufferWithKey | null {
-    const size = state.type.tree_serializedSize(state.node);
-    if (this.bufferPool) {
-      const bufferWithKey = this.bufferPool.alloc(size);
-      if (bufferWithKey) {
-        const stateBytes = bufferWithKey.buffer;
-        const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-        state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
-        return bufferWithKey;
-      }
-    }
-
-    return null;
-  }
-
   /**
    * Serialize validators to bytes leveraging the buffer pool to save memory allocation.
    *   - As monitored on holesky as of Jan 2024, it helps save ~500ms state reload time (4.3s vs 3.8s)
@@ -788,7 +767,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const type = state.type.fields.validators;
     const size = type.tree_serializedSize(state.validators.node);
     if (this.bufferPool) {
-      const bufferWithKey = this.bufferPool.alloc(size);
+      const bufferWithKey = this.bufferPool.alloc(size, AllocSource.PERSISTENT_CHECKPOINTS_CACHE_VALIDATORS);
       if (bufferWithKey) {
         const validatorsBytes = bufferWithKey.buffer;
         const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
