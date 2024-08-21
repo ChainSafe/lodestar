@@ -6,7 +6,7 @@ import {
   computeEpochShuffling,
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {LodestarError, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
 /**
@@ -67,7 +67,8 @@ export class ShufflingCache implements IShufflingCache {
   constructor(
     readonly metrics: Metrics | null = null,
     readonly logger: Logger | null = null,
-    opts: ShufflingCacheOpts = {}
+    opts: ShufflingCacheOpts = {},
+    precalculatedShufflings?: {shuffling: EpochShuffling | null; decisionRoot: RootHex}[]
   ) {
     if (metrics) {
       metrics.shufflingCache.size.addCollect(() =>
@@ -79,6 +80,12 @@ export class ShufflingCache implements IShufflingCache {
 
     this.maxEpochs = opts.maxShufflingCacheEpochs ?? MAX_EPOCHS;
     this.minTimeDelayToBuild = opts.minTimeDelayToBuildShuffling ?? DEFAULT_MIN_TIME_DELAY_IN_MS;
+
+    precalculatedShufflings?.map(({shuffling, decisionRoot}) => {
+      if (shuffling !== null) {
+        this.set(shuffling, decisionRoot);
+      }
+    });
   }
 
   /**
@@ -198,7 +205,7 @@ export class ShufflingCache implements IShufflingCache {
    * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will
    * resolve the promise with the built shuffling
    */
-  set(shuffling: EpochShuffling, decisionRoot: string): void {
+  private set(shuffling: EpochShuffling, decisionRoot: string): void {
     const shufflingAtEpoch = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
     // if a pending shuffling promise exists, resolve it
     const cacheItem = shufflingAtEpoch.get(decisionRoot);

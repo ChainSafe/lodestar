@@ -254,13 +254,20 @@ export class BeaconChain implements IBeaconChain {
             index2pubkey: [],
           });
 
-    this.shufflingCache = new ShufflingCache(metrics, logger, this.opts);
-    cachedState.epochCtx.shufflingCache = this.shufflingCache;
-    this.shufflingCache.set(cachedState.epochCtx.previousShuffling, cachedState.epochCtx.previousDecisionRoot);
-    this.shufflingCache.set(cachedState.epochCtx.currentShuffling, cachedState.epochCtx.currentDecisionRoot);
-    if (cachedState.epochCtx.nextShuffling !== null) {
-      this.shufflingCache.set(cachedState.epochCtx.nextShuffling, cachedState.epochCtx.nextDecisionRoot);
-    }
+    this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
+      {
+        shuffling: cachedState.epochCtx.previousShuffling,
+        decisionRoot: cachedState.epochCtx.previousDecisionRoot,
+      },
+      {
+        shuffling: cachedState.epochCtx.currentShuffling,
+        decisionRoot: cachedState.epochCtx.currentDecisionRoot,
+      },
+      {
+        shuffling: cachedState.epochCtx.nextShuffling,
+        decisionRoot: cachedState.epochCtx.nextDecisionRoot,
+      },
+    ]);
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;

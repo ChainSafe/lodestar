@@ -53,12 +53,6 @@ export interface IShufflingCache {
     state: BeaconStateAllForks,
     activeIndices: ValidatorIndex[]
   ): Promise<EpochShuffling>;
-
-  /**
-   * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will
-   * resolve the promise with the built shuffling
-   */
-  set(shuffling: EpochShuffling, decisionRoot: RootHex): void;
 }
 
 /**
