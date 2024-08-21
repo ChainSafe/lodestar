@@ -23,7 +23,7 @@ export interface ShufflingBuildProps {
 
 export interface PublicShufflingCacheMetrics {
   shufflingCache: {
-    nextShufflingOnEpochCache: GaugeExtra<NoLabels>;
+    nextShufflingNotOnEpochCache: GaugeExtra<NoLabels>;
   };
 }
 export interface IShufflingCache {

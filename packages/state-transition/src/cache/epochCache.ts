@@ -599,10 +599,10 @@ export class EpochCache {
     // move next to current or calculate upcoming
     this.currentDecisionRoot = this.nextDecisionRoot;
     if (this.nextShuffling) {
-      // was already pulled by the api or another method on EpochCache
+      // was already pulled from the ShufflingCache to the EpochCache (should be in most cases)
       this.currentShuffling = this.nextShuffling;
-      this.shufflingCache?.metrics?.shufflingCache.nextShufflingOnEpochCache.inc();
     } else {
+      this.shufflingCache?.metrics?.shufflingCache.nextShufflingNotOnEpochCache.inc();
       this.currentShuffling =
         this.shufflingCache?.getSync(upcomingEpoch, this.nextDecisionRoot, {
           state,
