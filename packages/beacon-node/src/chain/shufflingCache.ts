@@ -66,6 +66,7 @@ export class ShufflingCache implements IShufflingCache {
 
   constructor(
     readonly metrics: Metrics | null = null,
+    readonly logger: Logger | null = null,
     opts: ShufflingCacheOpts = {}
   ) {
     if (metrics) {
@@ -170,19 +171,27 @@ export class ShufflingCache implements IShufflingCache {
   /**
    * Queue asynchronous build for an EpochShuffling
    */
-  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void {
+  build(
+    epoch: number,
+    decisionRoot: string,
+    state: BeaconStateAllForks,
+    activeIndices: ValidatorIndex[]
+  ): Promise<EpochShuffling> {
     this.insertPromise(epoch, decisionRoot);
     /**
      * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
      * on a NICE thread with a rust implementation
      */
-    setTimeout(() => {
-      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
-      const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-      timer?.();
-      this.set(shuffling, decisionRoot);
-      // wait until after the first slot to help with attestation and block proposal performance
-    }, this.minTimeDelayToBuild);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
+        const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+        timer?.();
+        this.set(shuffling, decisionRoot);
+        resolve(shuffling);
+        // wait until after the first slot to help with attestation and block proposal performance
+      }, this.minTimeDelayToBuild);
+    });
   }
 
   /**

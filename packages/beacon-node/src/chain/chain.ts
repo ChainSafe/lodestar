@@ -239,7 +239,6 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
-    this.shufflingCache = new ShufflingCache(metrics, this.opts);
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -255,6 +254,7 @@ export class BeaconChain implements IBeaconChain {
             index2pubkey: [],
           });
 
+    this.shufflingCache = new ShufflingCache(metrics, logger, this.opts);
     cachedState.epochCtx.shufflingCache = this.shufflingCache;
     this.shufflingCache.set(cachedState.epochCtx.previousShuffling, cachedState.epochCtx.previousDecisionRoot);
     this.shufflingCache.set(cachedState.epochCtx.currentShuffling, cachedState.epochCtx.currentDecisionRoot);

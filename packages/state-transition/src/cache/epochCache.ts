@@ -634,7 +634,19 @@ export class EpochCache {
 
     if (this.shufflingCache) {
       this.nextShuffling = null;
-      this.shufflingCache?.build(epochAfterUpcoming, this.nextDecisionRoot, state, this.nextActiveIndices);
+      const decisionRoot = this.nextDecisionRoot;
+      this.shufflingCache
+        ?.build(epochAfterUpcoming, this.nextDecisionRoot, state, this.nextActiveIndices)
+        .then((shuffling) => {
+          this.nextShuffling = shuffling;
+        })
+        .catch((err) => {
+          this.shufflingCache?.logger?.error(
+            "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
+            {epoch: epochAfterUpcoming, decisionRoot},
+            err
+          );
+        });
     } else {
       // Only for testing. shufflingCache should always be available in prod
       this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
