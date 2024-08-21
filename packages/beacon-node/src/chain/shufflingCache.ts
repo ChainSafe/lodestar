@@ -8,6 +8,7 @@ import {
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
+import {callInNextEventLoop} from "../util/eventLoop.js";
 
 /**
  * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
@@ -22,8 +23,6 @@ const MAX_EPOCHS = 4;
  * with MAX_EPOCHS = 4, only allow 2 promise at a time. Note that regen already bounds number of concurrent requests at 1 already.
  */
 const MAX_PROMISES = 2;
-
-const DEFAULT_MIN_TIME_DELAY_IN_MS = 5;
 
 enum CacheItemType {
   shuffling,
@@ -46,7 +45,6 @@ type CacheItem = ShufflingCacheItem | PromiseCacheItem;
 
 export type ShufflingCacheOpts = {
   maxShufflingCacheEpochs?: number;
-  minTimeDelayToBuildShuffling?: number;
 };
 
 /**
@@ -62,7 +60,6 @@ export class ShufflingCache implements IShufflingCache {
   );
 
   private readonly maxEpochs: number;
-  private readonly minTimeDelayToBuild: number;
 
   constructor(
     readonly metrics: Metrics | null = null,
@@ -79,7 +76,6 @@ export class ShufflingCache implements IShufflingCache {
     }
 
     this.maxEpochs = opts.maxShufflingCacheEpochs ?? MAX_EPOCHS;
-    this.minTimeDelayToBuild = opts.minTimeDelayToBuildShuffling ?? DEFAULT_MIN_TIME_DELAY_IN_MS;
 
     precalculatedShufflings?.map(({shuffling, decisionRoot}) => {
       if (shuffling !== null) {
@@ -190,14 +186,14 @@ export class ShufflingCache implements IShufflingCache {
      * on a NICE thread with a rust implementation
      */
     return new Promise((resolve) => {
-      setTimeout(() => {
+      callInNextEventLoop(() => {
         const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
         const shuffling = computeEpochShuffling(state, activeIndices, epoch);
         timer?.();
         this.set(shuffling, decisionRoot);
         resolve(shuffling);
         // wait until after the first slot to help with attestation and block proposal performance
-      }, this.minTimeDelayToBuild);
+      });
     });
   }
 
