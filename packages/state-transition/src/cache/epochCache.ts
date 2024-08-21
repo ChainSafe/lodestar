@@ -376,43 +376,39 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    let currentShuffling: EpochShuffling;
-    if (cachedCurrentShuffling) {
-      currentShuffling = cachedCurrentShuffling;
-    } else if (shufflingCache) {
-      currentShuffling = shufflingCache.getSync(currentEpoch, currentDecisionRoot, {
-        state,
-        activeIndices: currentActiveIndices,
-      });
-    } else {
-      currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-    }
-
     let previousShuffling: EpochShuffling;
-    if (cachedPreviousShuffling) {
-      previousShuffling = cachedPreviousShuffling;
-    } else if (isGenesis) {
-      // TODO: (@matthewkeil) does this need to be added to the cache at previousEpoch and previousDecisionRoot?
-      previousShuffling = currentShuffling;
-    } else if (shufflingCache) {
-      previousShuffling = shufflingCache.getSync(previousEpoch, previousDecisionRoot, {
-        state,
-        activeIndices: previousActiveIndices,
-      });
-    } else {
-      previousShuffling = computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-    }
-
+    let currentShuffling: EpochShuffling;
     let nextShuffling: EpochShuffling;
-    if (cachedNextShuffling) {
-      nextShuffling = cachedNextShuffling;
-    } else if (shufflingCache) {
-      nextShuffling = shufflingCache.getSync(nextEpoch, nextDecisionRoot, {
-        state,
-        activeIndices: nextActiveIndices,
-      });
-    } else {
+    if (!shufflingCache) {
+      // Only for testing. shufflingCache should always be available in prod
+      previousShuffling = computeEpochShuffling(state, previousActiveIndices, previousEpoch);
+      currentShuffling = isGenesis
+        ? previousShuffling
+        : computeEpochShuffling(state, currentActiveIndices, currentEpoch);
       nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    } else {
+      currentShuffling = cachedCurrentShuffling
+        ? cachedCurrentShuffling
+        : shufflingCache.getSync(currentEpoch, currentDecisionRoot, {
+            state,
+            activeIndices: currentActiveIndices,
+          });
+
+      previousShuffling = cachedPreviousShuffling
+        ? cachedPreviousShuffling
+        : isGenesis
+          ? currentShuffling // TODO: (@matthewkeil) does this need to be added to the cache at previousEpoch and previousDecisionRoot?
+          : shufflingCache.getSync(previousEpoch, previousDecisionRoot, {
+              state,
+              activeIndices: previousActiveIndices,
+            });
+
+      nextShuffling = cachedNextShuffling
+        ? cachedNextShuffling
+        : shufflingCache.getSync(nextEpoch, nextDecisionRoot, {
+            state,
+            activeIndices: nextActiveIndices,
+          });
     }
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
@@ -640,6 +636,7 @@ export class EpochCache {
       this.nextShuffling = null;
       this.shufflingCache?.build(epochAfterUpcoming, this.nextDecisionRoot, state, this.nextActiveIndices);
     } else {
+      // Only for testing. shufflingCache should always be available in prod
       this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
     }
 
