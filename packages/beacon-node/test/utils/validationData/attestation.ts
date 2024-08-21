@@ -76,11 +76,20 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 
-  const shufflingCache = new ShufflingCache();
-  shufflingCache.set(state.epochCtx.previousShuffling, state.epochCtx.previousDecisionRoot);
-  shufflingCache.set(state.epochCtx.currentShuffling, state.epochCtx.currentDecisionRoot);
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  shufflingCache.set(state.epochCtx.nextShuffling!, state.epochCtx.nextDecisionRoot);
+  const shufflingCache = new ShufflingCache(null, null, {}, [
+    {
+      shuffling: state.epochCtx.previousShuffling,
+      decisionRoot: state.epochCtx.previousDecisionRoot,
+    },
+    {
+      shuffling: state.epochCtx.currentShuffling,
+      decisionRoot: state.epochCtx.currentDecisionRoot,
+    },
+    {
+      shuffling: state.epochCtx.nextShuffling,
+      decisionRoot: state.epochCtx.nextDecisionRoot,
+    },
+  ]);
 
   const forkChoice = {
     getBlock: (root) => {
