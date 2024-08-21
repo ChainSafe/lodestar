@@ -19,7 +19,6 @@ import {getConfig} from "../../utils/config.js";
 import {RunnerType} from "../utils/types.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
-// import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
 
