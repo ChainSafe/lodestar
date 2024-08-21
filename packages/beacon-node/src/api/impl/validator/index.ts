@@ -989,7 +989,7 @@ export function getValidatorApi(
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state.validators, indices);
-      const decisionRoot = state.epochCtx.getDecisionRoot(epoch);
+      const decisionRoot = state.epochCtx.getShufflingDecisionRoot(epoch);
       const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
       if (!shuffling) {
         throw new ApiError(

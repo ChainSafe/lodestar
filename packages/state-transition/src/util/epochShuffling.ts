@@ -141,7 +141,7 @@ export function computeEpochShuffling(
   };
 }
 
-function getDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
+function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
   return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }
@@ -151,8 +151,12 @@ function getDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
  *   - Special case close to genesis block, return the genesis block root
  *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
  */
-export function getShufflingDecisionBlock(config: BeaconConfig, state: BeaconStateAllForks, epoch: Epoch): RootHex {
+export function calculateShufflingDecisionRoot(
+  config: BeaconConfig,
+  state: BeaconStateAllForks,
+  epoch: Epoch
+): RootHex {
   return state.slot > GENESIS_SLOT
-    ? getDecisionBlock(state, epoch)
+    ? calculateDecisionRoot(state, epoch)
     : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
 }

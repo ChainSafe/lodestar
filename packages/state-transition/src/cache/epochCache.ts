@@ -28,7 +28,7 @@ import {
 import {
   computeEpochShuffling,
   EpochShuffling,
-  getShufflingDecisionBlock,
+  calculateShufflingDecisionRoot,
   IShufflingCache,
 } from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
@@ -328,11 +328,11 @@ export class EpochCache {
 
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
-    const previousDecisionRoot = getShufflingDecisionBlock(config, state, previousEpoch);
+    const previousDecisionRoot = calculateShufflingDecisionRoot(config, state, previousEpoch);
     const cachedPreviousShuffling = shufflingCache?.getSync(previousEpoch, previousDecisionRoot);
-    const currentDecisionRoot = getShufflingDecisionBlock(config, state, currentEpoch);
+    const currentDecisionRoot = calculateShufflingDecisionRoot(config, state, currentEpoch);
     const cachedCurrentShuffling = shufflingCache?.getSync(currentEpoch, currentDecisionRoot);
-    const nextDecisionRoot = getShufflingDecisionBlock(config, state, nextEpoch);
+    const nextDecisionRoot = calculateShufflingDecisionRoot(config, state, nextEpoch);
     const cachedNextShuffling = shufflingCache?.getSync(nextEpoch, nextDecisionRoot);
 
     for (let i = 0; i < validatorCount; i++) {
@@ -619,7 +619,7 @@ export class EpochCache {
     this.proposers = computeProposers(upcomingProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
 
     // calculate next values
-    this.nextDecisionRoot = getShufflingDecisionBlock(state.config, state, epochAfterUpcoming);
+    this.nextDecisionRoot = calculateShufflingDecisionRoot(state.config, state, epochAfterUpcoming);
     this.nextActiveIndices = new Array<number>(nextActiveIndicesLength);
 
     if (nextActiveIndicesLength > epochTransitionCache.nextEpochShufflingActiveValidatorIndices.length) {
@@ -878,7 +878,7 @@ export class EpochCache {
         throw new EpochCacheError({
           code: EpochCacheErrorCode.NEXT_SHUFFLING_NOT_AVAILABLE,
           epoch: epoch,
-          decisionRoot: this.getDecisionRoot(this.nextEpoch),
+          decisionRoot: this.getShufflingDecisionRoot(this.nextEpoch),
         });
       }
       throw new EpochCacheError({
@@ -891,7 +891,7 @@ export class EpochCache {
     return shuffling;
   }
 
-  getDecisionRoot(epoch: Epoch): RootHex {
+  getShufflingDecisionRoot(epoch: Epoch): RootHex {
     switch (epoch) {
       case this.epoch - 1:
         return this.previousDecisionRoot;
@@ -917,7 +917,7 @@ export class EpochCache {
       case this.nextEpoch:
         if (!this.nextShuffling) {
           this.nextShuffling =
-            this.shufflingCache?.getSync(this.nextEpoch, this.getDecisionRoot(this.nextEpoch)) ?? null;
+            this.shufflingCache?.getSync(this.nextEpoch, this.getShufflingDecisionRoot(this.nextEpoch)) ?? null;
         }
         return this.nextShuffling;
       default:
