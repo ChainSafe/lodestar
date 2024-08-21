@@ -166,7 +166,7 @@ export const ExecutionPayload = new ProfileType(
     withdrawalRequests: WithdrawalRequests, // New in ELECTRA
     consolidationRequests: ConsolidationRequests, // New in ELECTRA
   },
-  initTrueBits(MAX_EXECUTION_PAYLOAD_FIELDS, Object.keys(denebSsz.ExecutionPayload.fields).length + 2),
+  initTrueBits(MAX_EXECUTION_PAYLOAD_FIELDS, Object.keys(denebSsz.ExecutionPayload.fields).length + 3),
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
@@ -177,7 +177,7 @@ export const ExecutionPayloadHeader = new ProfileType(
     withdrawalRequestsRoot: Root, // New in ELECTRA
     consolidationRequestsRoot: Root, // New in ELECTRA
   },
-  initTrueBits(MAX_EXECUTION_PAYLOAD_FIELDS, Object.keys(denebSsz.ExecutionPayloadHeader.fields).length + 2),
+  initTrueBits(MAX_EXECUTION_PAYLOAD_FIELDS, Object.keys(denebSsz.ExecutionPayloadHeader.fields).length + 3),
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
@@ -197,7 +197,7 @@ export const BeaconBlockBody = new ProfileType(
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
   },
-  initTrueBits(MAX_BEACON_BLOCK_BODY_FIELDS, 13),
+  initTrueBits(MAX_BEACON_BLOCK_BODY_FIELDS, 12),
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
@@ -232,7 +232,7 @@ export const BlindedBeaconBlockBody = new ProfileType(
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
   },
-  initTrueBits(MAX_BEACON_BLOCK_BODY_FIELDS, 13),
+  initTrueBits(MAX_BEACON_BLOCK_BODY_FIELDS, 12),
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
