@@ -218,15 +218,23 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const blockOrNulls = await Promise.all(blockPromises);
     loadBlocksTimer?.();
 
-    const blocksByRoot = new Map<RootHex, SignedBeaconBlock | null>();
+    const blocksByRoot = new Map<RootHex, SignedBeaconBlock>();
     for (const [i, blockOrNull] of blockOrNulls.entries()) {
+      // checking early here helps prevent unneccessary state transition below
+      if (blockOrNull === null) {
+        throw new RegenError({
+          code: RegenErrorCode.BLOCK_NOT_IN_DB,
+          blockRoot: protoBlocksAsc[i].blockRoot,
+        });
+      }
       blocksByRoot.set(protoBlocksAsc[i].blockRoot, blockOrNull);
     }
 
     const stateTransitionTimer = this.modules.metrics?.regenGetState.stateTransition.startTimer();
     for (const b of protoBlocksAsc) {
       const block = blocksByRoot.get(b.blockRoot);
-      if (!block) {
+      // just to make compiler happy, we checked in the above for loop already
+      if (block === undefined) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_DB,
           blockRoot: b.blockRoot,
