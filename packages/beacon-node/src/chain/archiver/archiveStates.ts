@@ -98,7 +98,7 @@ export class StatesArchiver {
       await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
       this.logger.verbose("Archived finalized state bytes", {epoch: finalized.epoch, slot, root: rootHex});
     } else {
-      // serialize state using
+      // serialize state using BufferPool if provided
       await serializeState(
         finalizedStateOrBytes,
         AllocSource.ARCHIVE_STATE,
