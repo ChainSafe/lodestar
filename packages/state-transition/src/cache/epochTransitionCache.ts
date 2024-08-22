@@ -1,5 +1,5 @@
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
+import {intDiv, toRootHex} from "@lodestar/utils";
 import {
   EPOCHS_PER_SLASHINGS_VECTOR,
   FAR_FUTURE_EPOCH,
@@ -356,7 +356,7 @@ export function beforeProcessEpoch(
 
   // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
   const epochAfterUpcoming = state.epochCtx.nextEpoch + 1;
-  const nextShufflingDecisionRoot = state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT);
+  const nextShufflingDecisionRoot = toRootHex(state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT));
   const nextShufflingActiveIndices = new Array<number>(nextEpochShufflingActiveIndicesLength);
   if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
     throw new Error(
