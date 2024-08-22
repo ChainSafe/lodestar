@@ -351,7 +351,7 @@ export function beforeProcessEpoch(
 
   // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
   const epochAfterUpcoming = state.epochCtx.nextEpoch + 1;
-  const nextShufflingDecisionRoot = calculateShufflingDecisionRoot(state.config, state, epochAfterUpcoming, true);
+  const nextShufflingDecisionRoot = calculateShufflingDecisionRoot(state.config, state, epochAfterUpcoming);
   const nextShufflingActiveIndices = new Array<number>(nextEpochShufflingActiveIndicesLength);
   if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
     throw new Error(
