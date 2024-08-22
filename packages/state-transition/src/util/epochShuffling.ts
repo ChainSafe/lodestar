@@ -144,10 +144,8 @@ export function computeEpochShuffling(
 }
 
 function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch, beforeSlotIncrement = false): RootHex {
-  let pivotSlot = computeStartSlotAtEpoch(epoch - 1);
-  if (!beforeSlotIncrement) {
-    pivotSlot--;
-  }
+  const pivotEpoch = beforeSlotIncrement ? epoch : epoch - 1;
+  const pivotSlot = computeStartSlotAtEpoch(pivotEpoch) - 1;
   return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }
 
