@@ -878,7 +878,7 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<EpochShuffling> {
     // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
     // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
-    void this.shufflingCache.insertPromise(attEpoch, shufflingDependentRoot);
+    this.shufflingCache.insertPromise(attEpoch, shufflingDependentRoot);
     const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
 
     let state: CachedBeaconStateAllForks;

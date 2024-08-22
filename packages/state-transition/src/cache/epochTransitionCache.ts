@@ -1,4 +1,4 @@
-import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 
@@ -14,6 +14,7 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "../util/attesterStatus.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../index.js";
+import {calculateShufflingDecisionRoot} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
@@ -143,12 +144,12 @@ export interface EpochTransitionCache {
    * | beforeProcessEpoch               | calculate during the validator loop|
    * | afterEpochTransitionCache                | read it                            |
    */
-  nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+  nextShufflingActiveIndices: ValidatorIndex[];
 
   /**
-   * We do not use up to `nextEpochShufflingActiveValidatorIndices.length`, use this to control that
+   * Shuffling decision root that gets set on the EpochCache in afterProcessEpoch
    */
-  nextEpochShufflingActiveIndicesLength: number;
+  nextShufflingDecisionRoot: RootHex;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -348,6 +349,26 @@ export function beforeProcessEpoch(
     }
   }
 
+  // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
+  const epochAfterUpcoming = state.epochCtx.nextEpoch + 1;
+  const nextShufflingDecisionRoot = calculateShufflingDecisionRoot(state.config, state, epochAfterUpcoming);
+  const nextShufflingActiveIndices = new Array<number>(nextEpochShufflingActiveIndicesLength);
+  if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
+    throw new Error(
+      `Invalid activeValidatorCount: ${nextEpochShufflingActiveIndicesLength} > ${nextEpochShufflingActiveValidatorIndices.length}`
+    );
+  }
+  // only the first `activeValidatorCount` elements are copied to `activeIndices`
+  for (let i = 0; i < nextEpochShufflingActiveIndicesLength; i++) {
+    nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
+  }
+  state.epochCtx.shufflingCache?.build(
+    epochAfterUpcoming,
+    nextShufflingDecisionRoot,
+    state,
+    nextShufflingActiveIndices
+  );
+
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
   } else if (totalActiveStakeByIncrement >= Number.MAX_SAFE_INTEGER) {
@@ -471,8 +492,8 @@ export function beforeProcessEpoch(
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,
     indicesToEject,
-    nextEpochShufflingActiveValidatorIndices,
-    nextEpochShufflingActiveIndicesLength,
+    nextShufflingDecisionRoot,
+    nextShufflingActiveIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

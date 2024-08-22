@@ -88,7 +88,7 @@ export class ShufflingCache implements IShufflingCache {
    * Insert a promise to make sure we don't regen state for the same shuffling.
    * Bound by MAX_SHUFFLING_PROMISE to make sure our node does not blow up.
    */
-  insertPromise(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling> {
+  insertPromise(epoch: Epoch, decisionRoot: RootHex): void {
     const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
       .flatMap((innerMap) => Array.from(innerMap.values()))
       .filter((item) => isPromiseCacheItem(item)).length;
@@ -113,7 +113,6 @@ export class ShufflingCache implements IShufflingCache {
     };
     this.itemsByDecisionRootByEpoch.getOrDefault(epoch).set(decisionRoot, cacheItem);
     this.metrics?.shufflingCache.insertPromiseCount.inc();
-    return promise;
   }
 
   /**
@@ -175,13 +174,8 @@ export class ShufflingCache implements IShufflingCache {
   /**
    * Queue asynchronous build for an EpochShuffling
    */
-  build(
-    epoch: number,
-    decisionRoot: string,
-    state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[]
-  ): Promise<EpochShuffling> {
-    const promise = this.insertPromise(epoch, decisionRoot);
+  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void {
+    this.insertPromise(epoch, decisionRoot);
     /**
      * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
      * on a NICE thread with a rust implementation
@@ -193,8 +187,6 @@ export class ShufflingCache implements IShufflingCache {
       this.set(shuffling, decisionRoot);
       // wait until after the first slot to help with attestation and block proposal performance
     });
-
-    return promise;
   }
 
   /**

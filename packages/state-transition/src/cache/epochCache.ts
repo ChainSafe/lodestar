@@ -582,14 +582,13 @@ export class EpochCache {
   afterProcessEpoch(
     state: CachedBeaconStateAllForks,
     epochTransitionCache: {
-      nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
-      nextEpochShufflingActiveIndicesLength: number;
+      nextShufflingDecisionRoot: RootHex;
+      nextShufflingActiveIndices: ValidatorIndex[];
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
     const upcomingEpoch = this.nextEpoch;
     const epochAfterUpcoming = upcomingEpoch + 1;
-    const nextActiveIndicesLength = epochTransitionCache.nextEpochShufflingActiveIndicesLength;
 
     // move current to previous
     this.previousShuffling = this.currentShuffling;
@@ -618,32 +617,29 @@ export class EpochCache {
     // next epoch was moved to current epoch so use current here
     this.proposers = computeProposers(upcomingProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
 
-    // calculate next values
-    this.nextDecisionRoot = calculateShufflingDecisionRoot(state.config, state, epochAfterUpcoming);
-    this.nextActiveIndices = new Array<number>(nextActiveIndicesLength);
-
-    if (nextActiveIndicesLength > epochTransitionCache.nextEpochShufflingActiveValidatorIndices.length) {
-      throw new Error(
-        `Invalid activeValidatorCount: ${nextActiveIndicesLength} > ${epochTransitionCache.nextEpochShufflingActiveValidatorIndices.length}`
-      );
-    }
-    // only the first `activeValidatorCount` elements are copied to `activeIndices`
-    for (let i = 0; i < nextActiveIndicesLength; i++) {
-      this.nextActiveIndices[i] = epochTransitionCache.nextEpochShufflingActiveValidatorIndices[i];
-    }
-
+    // handle next values
+    this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
+    this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
     if (this.shufflingCache) {
       this.nextShuffling = null;
-      const decisionRoot = this.nextDecisionRoot;
+      // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
+      // the build is done on a worker thread it will be calculated immediately after the epoch transition
+      // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
+      // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
+      // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
+      // is not ready yet as the transition must not be asynchronous.
       this.shufflingCache
-        ?.build(epochAfterUpcoming, this.nextDecisionRoot, state, this.nextActiveIndices)
+        .get(epochAfterUpcoming, this.nextDecisionRoot)
         .then((shuffling) => {
+          if (!shuffling) {
+            throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
+          }
           this.nextShuffling = shuffling;
         })
         .catch((err) => {
           this.shufflingCache?.logger?.error(
             "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
-            {epoch: epochAfterUpcoming, decisionRoot},
+            {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
             err
           );
         });

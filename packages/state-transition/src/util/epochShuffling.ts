@@ -45,14 +45,16 @@ export interface IShufflingCache {
   ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
 
   /**
+   * Gets a cached shuffling via the epoch and decision root.  Returns a promise
+   * for the shuffling if it hs not calculated yet.  Returns null if a build has
+   * not been queued nor a shuffling was calculated.
+   */
+  get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null>;
+
+  /**
    * Queue asynchronous build for an EpochShuffling
    */
-  build(
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    state: BeaconStateAllForks,
-    activeIndices: ValidatorIndex[]
-  ): Promise<EpochShuffling>;
+  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void;
 }
 
 /**
