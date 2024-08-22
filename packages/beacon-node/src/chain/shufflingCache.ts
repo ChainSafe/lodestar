@@ -210,7 +210,7 @@ export class ShufflingCache implements IShufflingCache {
         cacheItem.resolveFn(shuffling);
         this.metrics?.shufflingCache.shufflingPromiseResolutionTime.observe(Date.now() - cacheItem.timeInserted);
       } else {
-        this.metrics?.shufflingCache.shufflingRecalculated.inc();
+        this.metrics?.shufflingCache.shufflingBuiltMultipleTimes.inc();
       }
     }
     // set the shuffling
