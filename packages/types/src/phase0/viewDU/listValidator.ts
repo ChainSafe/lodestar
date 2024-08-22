@@ -5,7 +5,7 @@ import {
   ByteViews,
   ContainerNodeStructTreeViewDU,
 } from "@chainsafe/ssz";
-import {HashComputationGroup, HashComputationLevel, Node, digestNLevel, setNodesAtDepth} from "@chainsafe/persistent-merkle-tree";
+import {HashComputationLevel, Node, digestNLevel, setNodesAtDepth} from "@chainsafe/persistent-merkle-tree";
 import {byteArrayIntoHashObject} from "@chainsafe/as-sha256";
 import {ValidatorNodeStructType, ValidatorType, validatorToChunkBytes} from "../validator.js";
 
@@ -42,6 +42,11 @@ for (let i = 0; i < PARALLEL_FACTOR; i++) {
 }
 const validatorRoot = new Uint8Array(32);
 
+/**
+ * Similar to ListCompositeTreeViewDU with some differences:
+ * - if called without params, it's from hashTreeRoot() api call, no need to compute root
+ * - otherwise it's from batchHashTreeRoot() call, compute validator roots in batch
+ */
 export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNodeStructType> {
   constructor(
     readonly type: ListCompositeType<ValidatorNodeStructType>,
@@ -52,6 +57,11 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
   }
 
   commit(hcOffset = 0, hcByLevel: HashComputationLevel[] | null = null): void {
+    if (hcByLevel === null) {
+      // this is not from batchHashTreeRoot() call, go with regular flow
+      return super.commit();
+    }
+
     const isOldRootHashed = this._rootNode.h0 !== null;
     if (this.viewsChanged.size === 0) {
       if (!isOldRootHashed && hcByLevel !== null) {
@@ -66,8 +76,20 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
       number,
       ContainerNodeStructTreeViewDU<typeof ValidatorType>
     >;
-    const indicesChanged = Array.from(this.viewsChanged.keys()).sort((a, b) => a - b);
-    const endBatch = indicesChanged.length - (indicesChanged.length % PARALLEL_FACTOR);
+
+    const indicesChanged: number[] = [];
+    for (const [index, viewChanged] of viewsChanged) {
+      // should not have any params here in order not to compute root
+      viewChanged.commit();
+      // `validators.get(i)` was called but it may not modify any property, do not need to compute root
+      if (viewChanged.node.h0 === null) {
+        indicesChanged.push(index);
+      }
+    }
+
+    // these validators don't have roots, we compute roots in batch
+    const sortedIndicesChanged = indicesChanged.sort((a, b) => a - b);
+    const endBatch = sortedIndicesChanged.length - (sortedIndicesChanged.length % PARALLEL_FACTOR);
     // nodesChanged is sorted by index
     const nodesChanged: {index: number; node: Node}[] = [];
     // commit every 16 validators in batch
@@ -77,7 +99,7 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
         batchLevel4Bytes.fill(0);
       }
       const indexInBatch = i % PARALLEL_FACTOR;
-      const viewIndex = indicesChanged[i];
+      const viewIndex = sortedIndicesChanged[i];
       const viewChanged = viewsChanged.get(viewIndex);
       if (viewChanged) {
         validatorToChunkBytes(level3ByteViewsArr[indexInBatch], level4BytesArr[indexInBatch], viewChanged.value);
@@ -93,12 +115,10 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
         digestNLevel(batchLevel3Bytes, 3);
         // commit all validators in this batch
         for (let j = PARALLEL_FACTOR - 1; j >= 0; j--) {
-          const viewIndex = indicesChanged[i - j];
+          const viewIndex = sortedIndicesChanged[i - j];
           const indexInBatch = (i - j) % PARALLEL_FACTOR;
           const viewChanged = viewsChanged.get(viewIndex);
           if (viewChanged) {
-            // should not have any params here in order not to compute root
-            viewChanged.commit();
             const branchNodeStruct = viewChanged.node;
             byteArrayIntoHashObject(validatorRoots[indexInBatch], 0, branchNodeStruct);
             nodesChanged.push({index: viewIndex, node: viewChanged.node});
@@ -111,12 +131,10 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
 
     // commit the remaining validators, we can do in batch too but don't want to create new Uint8Array views
     // it's not much different to commit one by one
-    for (let i = endBatch; i < indicesChanged.length; i++) {
-      const viewIndex = indicesChanged[i];
+    for (let i = endBatch; i < sortedIndicesChanged.length; i++) {
+      const viewIndex = sortedIndicesChanged[i];
       const viewChanged = viewsChanged.get(viewIndex);
       if (viewChanged) {
-        // commit
-        viewChanged.commit();
         // compute root for each validator
         viewChanged.type.hashTreeRootInto(viewChanged.value, validatorRoot, 0);
         byteArrayIntoHashObject(validatorRoot, 0, viewChanged.node);
