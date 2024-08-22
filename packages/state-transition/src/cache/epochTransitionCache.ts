@@ -1,6 +1,12 @@
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  MAX_EFFECTIVE_BALANCE,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@lodestar/params";
 
 import {
   hasMarkers,
@@ -14,7 +20,6 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "../util/attesterStatus.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../index.js";
-import {calculateShufflingDecisionRoot} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
@@ -351,7 +356,7 @@ export function beforeProcessEpoch(
 
   // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
   const epochAfterUpcoming = state.epochCtx.nextEpoch + 1;
-  const nextShufflingDecisionRoot = calculateShufflingDecisionRoot(state.config, state, epochAfterUpcoming);
+  const nextShufflingDecisionRoot = state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT);
   const nextShufflingActiveIndices = new Array<number>(nextEpochShufflingActiveIndicesLength);
   if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
     throw new Error(

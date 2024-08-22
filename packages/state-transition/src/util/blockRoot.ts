@@ -17,8 +17,8 @@ import {computeStartSlotAtEpoch} from "./epoch.js";
  * Return the block root at a recent [[slot]].
  */
 export function getBlockRootAtSlot(state: BeaconStateAllForks, slot: Slot): Root {
-  if (slot > state.slot) {
-    throw Error(`Can only get current block root, or one in the past currentSlot=${state.slot} slot=${slot}`);
+  if (slot >= state.slot) {
+    throw Error(`Can only get block root in the past currentSlot=${state.slot} slot=${slot}`);
   }
   if (slot < state.slot - SLOTS_PER_HISTORICAL_ROOT) {
     throw Error(`Cannot get block root more than ${SLOTS_PER_HISTORICAL_ROOT} in the past`);
