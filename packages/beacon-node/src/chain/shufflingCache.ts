@@ -88,7 +88,7 @@ export class ShufflingCache implements IShufflingCache {
    * Insert a promise to make sure we don't regen state for the same shuffling.
    * Bound by MAX_SHUFFLING_PROMISE to make sure our node does not blow up.
    */
-  insertPromise(epoch: Epoch, decisionRoot: RootHex): void {
+  insertPromise(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling> {
     const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
       .flatMap((innerMap) => Array.from(innerMap.values()))
       .filter((item) => isPromiseCacheItem(item)).length;
@@ -113,6 +113,7 @@ export class ShufflingCache implements IShufflingCache {
     };
     this.itemsByDecisionRootByEpoch.getOrDefault(epoch).set(decisionRoot, cacheItem);
     this.metrics?.shufflingCache.insertPromiseCount.inc();
+    return promise;
   }
 
   /**
@@ -180,21 +181,20 @@ export class ShufflingCache implements IShufflingCache {
     state: BeaconStateAllForks,
     activeIndices: ValidatorIndex[]
   ): Promise<EpochShuffling> {
-    this.insertPromise(epoch, decisionRoot);
+    const promise = this.insertPromise(epoch, decisionRoot);
     /**
      * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
      * on a NICE thread with a rust implementation
      */
-    return new Promise((resolve) => {
-      callInNextEventLoop(() => {
-        const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
-        const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-        timer?.();
-        this.set(shuffling, decisionRoot);
-        resolve(shuffling);
-        // wait until after the first slot to help with attestation and block proposal performance
-      });
+    callInNextEventLoop(() => {
+      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
+      const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+      timer?.();
+      this.set(shuffling, decisionRoot);
+      // wait until after the first slot to help with attestation and block proposal performance
     });
+
+    return promise;
   }
 
   /**
