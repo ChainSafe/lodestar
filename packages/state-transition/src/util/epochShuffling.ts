@@ -143,8 +143,9 @@ export function computeEpochShuffling(
   };
 }
 
-function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
-  const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
+function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch, beforeSlotIncrement = false): RootHex {
+  const pivotEpoch = beforeSlotIncrement ? epoch : epoch - 1;
+  const pivotSlot = computeStartSlotAtEpoch(pivotEpoch) - 1;
   return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }
 
@@ -156,9 +157,10 @@ function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHe
 export function calculateShufflingDecisionRoot(
   config: BeaconConfig,
   state: BeaconStateAllForks,
-  epoch: Epoch
+  epoch: Epoch,
+  beforeSlotIncrement?: boolean
 ): RootHex {
   return state.slot > GENESIS_SLOT
-    ? calculateDecisionRoot(state, epoch)
+    ? calculateDecisionRoot(state, epoch, beforeSlotIncrement)
     : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
 }
