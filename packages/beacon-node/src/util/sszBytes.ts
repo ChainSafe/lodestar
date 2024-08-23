@@ -202,7 +202,8 @@ export function getAttDataFromSignedAggregateAndProofElectra(data: Uint8Array): 
   if (data.length < endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE) {
     return null;
   }
-  return toBase64(data.subarray(startIndex, endIndex));
+  attDataBuf.set(data.subarray(startIndex, endIndex));
+  return attDataBuf.toString("base64");
 }
 
 /**
@@ -217,7 +218,8 @@ export function getCommitteeBitsFromSignedAggregateAndProofElectra(data: Uint8Ar
     return null;
   }
 
-  return toBase64(data.subarray(startIndex, endIndex));
+  committeeBitsDataBuf.set(data.subarray(startIndex, endIndex));
+  return committeeBitsDataBuf.toString("base64");
 }
 
 /**
