@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
-import {sleep} from "@lodestar/utils";
+import {prettyBytes, sleep} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -242,7 +242,11 @@ export class AttestationService {
       } else {
         (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
       }
-      this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
+      this.logger.info("Published attestations", {
+        ...logCtx,
+        head: prettyBytes(headRootHex),
+        count: signedAttestations.length,
+      });
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
       // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
@@ -286,7 +290,8 @@ export class AttestationService {
           slot: attestation.slot,
         });
     const aggregate = res.value();
-    this.metrics?.numParticipantsInAggregate.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
+    const participants = aggregate.aggregationBits.getTrueBitIndexes().length;
+    this.metrics?.numParticipantsInAggregate.observe(participants);
 
     const signedAggregateAndProofs: SignedAggregateAndProof[] = [];
 
@@ -316,7 +321,11 @@ export class AttestationService {
         } else {
           (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
         }
-        this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
+        this.logger.info("Published aggregateAndProofs", {
+          ...logCtx,
+          participants,
+          count: signedAggregateAndProofs.length,
+        });
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {
         this.logger.error("Error publishing aggregateAndProofs", logCtx, e as Error);
