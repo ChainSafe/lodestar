@@ -630,6 +630,16 @@ export function createLodestarMetrics(
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
+      shufflingCacheHit: register.gauge<{caller: RegenCaller}>({
+        name: "lodestar_gossip_attestation_shuffling_cache_hit_count",
+        help: "Count of gossip attestation verification shuffling cache hit",
+        labelNames: ["caller"],
+      }),
+      shufflingCacheMiss: register.gauge<{caller: RegenCaller}>({
+        name: "lodestar_gossip_attestation_shuffling_cache_miss_count",
+        help: "Count of gossip attestation verification shuffling cache miss",
+        labelNames: ["caller"],
+      }),
       shufflingCacheRegenHit: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_shuffling_cache_regen_hit_count",
         help: "Count of gossip attestation verification shuffling cache regen hit",
@@ -1273,11 +1283,11 @@ export function createLodestarMetrics(
         help: "Total number of times insertPromise is called",
       }),
       hit: register.gauge({
-        name: "lodestar_gossip_attestation_shuffling_cache_hit_count",
+        name: "lodestar_shuffling_cache_hit_count",
         help: "Count of shuffling cache hit",
       }),
       miss: register.gauge({
-        name: "lodestar_gossip_attestation_shuffling_cache_miss_count",
+        name: "lodestar_shuffling_cache_miss_count",
         help: "Count of shuffling cache miss",
       }),
       shufflingBuiltMultipleTimes: register.gauge({
