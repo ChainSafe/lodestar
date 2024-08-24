@@ -332,6 +332,10 @@ export function createLodestarMetrics(
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
     }),
+    numEffectiveBalanceUpdates: register.gauge({
+      name: "lodestar_stfn_effective_balance_updates_count",
+      help: "Total count of effective balance updates",
+    }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",

@@ -123,7 +123,9 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - phase0 processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEffectiveBalanceUpdates(ForkSeq.phase0, state, cache.value),
+    fn: (state) => {
+      processEffectiveBalanceUpdates(ForkSeq.phase0, state, cache.value);
+    },
   });
 
   itBench({

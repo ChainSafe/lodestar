@@ -36,7 +36,9 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
       minRuns: 5, // Worst case is very slow
       before: () => getEffectiveBalanceTestData(vc, changeRatio),
       beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
-      fn: ({state, cache}) => processEffectiveBalanceUpdates(ForkSeq.phase0, state, cache),
+      fn: ({state, cache}) => {
+        processEffectiveBalanceUpdates(ForkSeq.phase0, state, cache);
+      },
     });
   }
 });

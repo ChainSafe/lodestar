@@ -23,12 +23,14 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
  *
  * - On normal mainnet conditions 0 validators change their effective balance
  * - In case of big innactivity event a medium portion of validators may have their effectiveBalance updated
+ *
+ * Return number of validators updated
  */
 export function processEffectiveBalanceUpdates(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   cache: EpochTransitionCache
-): void {
+): number {
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
@@ -43,33 +45,37 @@ export function processEffectiveBalanceUpdates(
   // and updated in processPendingBalanceDeposits() and processPendingConsolidations()
   // so it's recycled here for performance.
   const balances = cache.balances ?? state.balances.getAll();
+  const currentEpochValidators = cache.validators;
+  const newCompoundingValidators = cache.newCompoundingValidators ?? new Set();
 
+  let numUpdate = 0;
   for (let i = 0, len = balances.length; i < len; i++) {
     const balance = balances[i];
 
     // PERF: It's faster to access to get() every single element (4ms) than to convert to regular array then loop (9ms)
     let effectiveBalanceIncrement = effectiveBalanceIncrements[i];
     let effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
-    let effectiveBalanceLimit;
+
+    let effectiveBalanceLimit: number;
+    if (fork < ForkSeq.electra) {
+      effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
+    } else {
+      // from electra, effectiveBalanceLimit is per validator
+      const isCompoundingValidator =
+        hasCompoundingWithdrawalCredential(currentEpochValidators[i].withdrawalCredentials) ||
+        newCompoundingValidators.has(i);
+      effectiveBalanceLimit = isCompoundingValidator ? MAX_EFFECTIVE_BALANCE_ELECTRA : MIN_ACTIVATION_BALANCE;
+    }
 
     if (
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||
       // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
-      effectiveBalance + UPWARD_THRESHOLD < balance
+      (effectiveBalance < effectiveBalanceLimit && effectiveBalance + UPWARD_THRESHOLD < balance)
     ) {
       // Update the state tree
       // Should happen rarely, so it's fine to update the tree
       const validator = validators.get(i);
-
-      if (fork < ForkSeq.electra) {
-        effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
-      } else {
-        // Electra or after
-        effectiveBalanceLimit = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials)
-          ? MAX_EFFECTIVE_BALANCE_ELECTRA
-          : MIN_ACTIVATION_BALANCE;
-      }
 
       effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), effectiveBalanceLimit);
       validator.effectiveBalance = effectiveBalance;
@@ -95,6 +101,7 @@ export function processEffectiveBalanceUpdates(
 
       effectiveBalanceIncrement = newEffectiveBalanceIncrement;
       effectiveBalanceIncrements[i] = effectiveBalanceIncrement;
+      numUpdate++;
     }
 
     // TODO: Do this in afterEpochTransitionCache, looping a Uint8Array should be very cheap
@@ -105,4 +112,5 @@ export function processEffectiveBalanceUpdates(
   }
 
   cache.nextEpochTotalActiveBalanceByIncrement = nextEpochTotalActiveBalanceByIncrement;
+  return numUpdate;
 }

@@ -1,4 +1,4 @@
-import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 
@@ -126,6 +126,18 @@ export interface EpochTransitionCache {
   inclusionDelays: number[];
 
   flags: number[];
+
+  /**
+   * Validators in the current epoch, should use it for read-only value instead of accessing state.validators directly.
+   * Note that during epoch processing, validators could be updated so need to use it with care.
+   */
+  validators: phase0.Validator[];
+
+  /**
+   * This is for electra only
+   * Validators that're switched to compounding during processPendingConsolidations(), not available in beforeProcessEpoch()
+   */
+  newCompoundingValidators?: Set<ValidatorIndex>;
 
   /**
    * balances array will be populated by processRewardsAndPenalties() and consumed by processEffectiveBalanceUpdates().
@@ -481,7 +493,9 @@ export function beforeProcessEpoch(
     proposerIndices,
     inclusionDelays,
     flags,
-
+    validators,
+    // will be assigned in processPendingConsolidations()
+    newCompoundingValidators: undefined,
     // Will be assigned in processRewardsAndPenalties()
     balances: undefined,
   };

@@ -120,7 +120,9 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - capella processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEffectiveBalanceUpdates(ForkSeq.capella, state, cache.value),
+    fn: (state) => {
+      processEffectiveBalanceUpdates(ForkSeq.capella, state, cache.value);
+    },
   });
 
   itBench({

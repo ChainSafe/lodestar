@@ -150,8 +150,9 @@ export function processEpoch(
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processEffectiveBalanceUpdates,
     });
-    processEffectiveBalanceUpdates(fork, state, cache);
+    const numUpdate = processEffectiveBalanceUpdates(fork, state, cache);
     timer?.();
+    metrics?.numEffectiveBalanceUpdates.set(numUpdate);
   }
 
   processSlashingsReset(state, cache);
