@@ -8,6 +8,7 @@ import {
   DataAvailableStatus,
   processSlots,
   stateTransition,
+  StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Logger, toRootHex} from "@lodestar/utils";
@@ -258,7 +259,12 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           this.modules.metrics
         );
 
+        const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
+          source: StateHashTreeRootSource.regenState,
+        });
         const stateRoot = toRootHex(state.hashTreeRoot());
+        hashTreeRootTimer?.();
+
         if (b.stateRoot !== stateRoot) {
           throw new RegenError({
             slot: b.slot,

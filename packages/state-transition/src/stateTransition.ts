@@ -52,6 +52,7 @@ export enum StateHashTreeRootSource {
   blockTransition = "block_transition",
   prepareNextSlot = "prepare_next_slot",
   prepareNextEpoch = "prepare_next_epoch",
+  regenState = "regen_state",
   computeNewStateRoot = "compute_new_state_root",
 }
 
