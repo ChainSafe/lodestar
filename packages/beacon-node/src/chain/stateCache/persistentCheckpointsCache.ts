@@ -229,6 +229,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       newCachedState.commit();
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
       timer?.();
+
+      // load all cache in order for consumers (usually regen.getState()) to process blocks faster
+      newCachedState.validators.getAllReadonlyValues();
+      newCachedState.balances.getAll();
       this.logger.debug("Reload: cached state load successful", {
         ...logMeta,
         stateSlot: newCachedState.slot,

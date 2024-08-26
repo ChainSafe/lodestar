@@ -157,6 +157,13 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       return cachedStateCtx;
     }
 
+    // in block gossip validation (getPreState() call), dontTransferCache is specified as true because we only want to transfer cache in verifyBlocksStateTransitionOnly()
+    // but here we want to process blocks as fast as possible so force to transfer cache in this case
+    if (opts && allowDiskReload) {
+      // if there is no `opts` specified, it already means "false"
+      opts.dontTransferCache = false;
+    }
+
     // Otherwise we have to use the fork choice to traverse backwards, block by block,
     // searching the state caches
     // then replay blocks forward to the desired stateRoot
