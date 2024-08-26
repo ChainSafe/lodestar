@@ -146,7 +146,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    */
   async getState(
     stateRoot: RootHex,
-    _rCaller: RegenCaller,
+    caller: RegenCaller,
     opts?: StateCloneOpts,
     // internal option, don't want to expose to external caller
     allowDiskReload = false
@@ -175,7 +175,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     let state: CachedBeaconStateAllForks | null = null;
     const {checkpointStateCache} = this.modules;
 
-    const getSeedStateTimer = this.modules.metrics?.regenGetState.getSeedState.startTimer();
+    const getSeedStateTimer = this.modules.metrics?.regenGetState.getSeedState.startTimer({caller});
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
       state = this.modules.blockStateCache.get(b.stateRoot, opts);
@@ -208,7 +208,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
-    this.modules.metrics?.regenGetState.blockCount.observe(blockCount);
+    this.modules.metrics?.regenGetState.blockCount.observe({caller}, blockCount);
 
     const replaySlots = new Array<Slot>(blockCount);
     const blockPromises = new Array<Promise<SignedBeaconBlock | null>>(blockCount);
@@ -222,7 +222,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const logCtx = {stateRoot, replaySlots: replaySlots.join(",")};
     this.modules.logger.debug("Replaying blocks to get state", logCtx);
 
-    const loadBlocksTimer = this.modules.metrics?.regenGetState.loadBlocks.startTimer();
+    const loadBlocksTimer = this.modules.metrics?.regenGetState.loadBlocks.startTimer({caller});
     const blockOrNulls = await Promise.all(blockPromises);
     loadBlocksTimer?.();
 
@@ -238,7 +238,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       blocksByRoot.set(protoBlocksAsc[i].blockRoot, blockOrNull);
     }
 
-    const stateTransitionTimer = this.modules.metrics?.regenGetState.stateTransition.startTimer();
+    const stateTransitionTimer = this.modules.metrics?.regenGetState.stateTransition.startTimer({caller});
     for (const b of protoBlocksAsc) {
       const block = blocksByRoot.get(b.blockRoot);
       // just to make compiler happy, we checked in the above for loop already
