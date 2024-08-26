@@ -20,7 +20,7 @@ import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
+import {initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {NodeId} from "../network/subnets/interface.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -164,7 +164,7 @@ export class BeaconNode {
     // If deneb is configured, load the trusted setup
     if (config.DENEB_FORK_EPOCH < Infinity) {
       await initCKZG();
-      loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetupPrecompute, opts.chain.trustedSetup);
+      loadEthereumTrustedSetup(opts.chain.trustedSetupPrecompute, opts.chain.trustedSetup);
     }
 
     // Prune hot db repos
