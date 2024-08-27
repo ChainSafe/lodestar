@@ -18,6 +18,7 @@ import {switchToCompoundingValidator} from "../util/electra.js";
  *
  */
 export function processPendingConsolidations(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
+  const nextEpoch = state.epochCtx.epoch + 1;
   let nextPendingConsolidation = 0;
   const validators = state.validators;
   const cachedBalances = cache.balances;
@@ -32,7 +33,7 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
       continue;
     }
 
-    if (sourceValidator.withdrawableEpoch > state.epochCtx.epoch) {
+    if (sourceValidator.withdrawableEpoch > nextEpoch) {
       break;
     }
     // Churn any target excess active balance of target and raise its max
