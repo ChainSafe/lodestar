@@ -10,6 +10,7 @@ type GlobalSingleArgs = {
   paramsFile?: string;
   preset: string;
   presetFile?: string;
+  supernode?: boolean;
 };
 
 export const defaultNetwork: NetworkName = "mainnet";
@@ -43,6 +44,11 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     hidden: true,
     description: "Preset configuration file to override the active preset with custom values",
     type: "string",
+  },
+
+  supernode: {
+    description: "custody all subnets, alias to params.NODE_CUSTODY_REQUIREMENT for all subnets",
+    type: "boolean",
   },
 };
 

@@ -236,6 +236,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Peerdas
     SAMPLES_PER_SLOT: peerdasForkRelevant,
     CUSTODY_REQUIREMENT: peerdasForkRelevant,
-    NODE_CUSTODY_REQUIREMENT: peerdasForkRelevant,
+    NODE_CUSTODY_REQUIREMENT: false,
   };
 }
