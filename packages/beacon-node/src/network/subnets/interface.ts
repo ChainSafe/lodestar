@@ -54,7 +54,7 @@ export type GossipSubscriber = {
 export type NodeId = Bytes32;
 export function computeNodeId(peerIdOrStr: PeerId | PeerIdStr) {
   let peerId;
-  if (typeof peerId === "string") {
+  if (typeof peerIdOrStr === "string") {
     peerId = peerIdFromString(peerId);
   } else {
     peerId = peerIdOrStr as PeerId;
