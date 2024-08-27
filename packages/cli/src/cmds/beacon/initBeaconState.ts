@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {Logger, formatBytes} from "@lodestar/utils";
 import {
   isWithinWeakSubjectivityPeriod,
   ensureWithinWeakSubjectivityPeriod,
@@ -104,6 +104,7 @@ export async function initBeaconState(
   let lastDbState: BeaconStateAllForks | null = null;
   let lastDbValidatorsBytes: Uint8Array | null = null;
   if (lastDbStateBytes) {
+    logger.verbose("Found the last archived state", {slot: lastDbSlot, size: formatBytes(lastDbStateBytes.length)});
     const {state, validatorsBytes} = loadStateAndValidators(chainForkConfig, lastDbStateBytes);
     lastDbState = state;
     lastDbValidatorsBytes = validatorsBytes;

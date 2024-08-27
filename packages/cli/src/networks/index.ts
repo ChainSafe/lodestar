@@ -7,7 +7,7 @@ import {getStateSlotFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Slot} from "@lodestar/types";
-import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
+import {fromHex, callFnWhenAwait, Logger, formatBytes} from "@lodestar/utils";
 import {
   BeaconStateAllForks,
   getLatestBlockRoot,
@@ -187,7 +187,8 @@ export async function fetchWeakSubjectivityState(
     });
 
     const wsSlot = getStateSlotFromBytes(wsStateBytes);
-    logger.info("Download completed", typeof stateId === "number" ? {stateId} : {stateId, slot: wsSlot});
+    const logData = {stateId, size: formatBytes(wsStateBytes.length)};
+    logger.info("Download completed", typeof stateId === "number" ? logData : {...logData, slot: wsSlot});
     // It should not be required to get fork type from bytes but Checkpointz does not return
     // Eth-Consensus-Version header, see https://github.com/ethpandaops/checkpointz/issues/164
     let wsState: BeaconStateAllForks;

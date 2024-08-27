@@ -1,5 +1,14 @@
 import {describe, it, expect} from "vitest";
-import {intToBytes, bytesToInt, toHex, fromHex, toHexString, toRootHex, toPubkeyHex} from "../../src/index.js";
+import {
+  intToBytes,
+  bytesToInt,
+  toHex,
+  fromHex,
+  toHexString,
+  toRootHex,
+  toPubkeyHex,
+  formatBytes,
+} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -132,6 +141,27 @@ describe("toHexString", () => {
   for (const {input, output} of testCases) {
     it(`should convert Uint8Array to hex string ${output}`, () => {
       expect(toHexString(input)).toBe(output);
+    });
+  }
+});
+
+describe("formatBytes", () => {
+  const testCases: {input: number; output: string}[] = [
+    {input: 0, output: "0 Bytes"},
+    {input: 1, output: "1.00 Bytes"},
+    {input: 1024, output: "1.00 KB"},
+    {input: 1024 + 0.12 * 1024, output: "1.12 KB"},
+    {input: 1024 * 1024, output: "1.00 MB"},
+    {input: 1024 * 1024 + 0.12 * (1024 * 1024), output: "1.12 MB"},
+    {input: 1024 * 1024 * 1024, output: "1.00 GB"},
+    {input: 1024 * 1024 * 1024 + 0.12 * 1024 * 1024 * 1024, output: "1.12 GB"},
+    // too big
+    {input: 1024 * 1024 * 1024 * 1024, output: "1024.00 GB"},
+  ];
+
+  for (const {input, output} of testCases) {
+    it(`should format ${input} bytes as ${output}`, () => {
+      expect(formatBytes(input)).toBe(output);
     });
   }
 });
