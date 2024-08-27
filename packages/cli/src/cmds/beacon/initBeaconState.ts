@@ -5,6 +5,8 @@ import {
   isWithinWeakSubjectivityPeriod,
   ensureWithinWeakSubjectivityPeriod,
   BeaconStateAllForks,
+  loadState,
+  loadStateAndValidators,
 } from "@lodestar/state-transition";
 import {
   IBeaconDb,
@@ -96,8 +98,17 @@ export async function initBeaconState(
   }
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
   //   i)  used directly as the anchor state
-  //   ii) used during verification of a weak subjectivity state,
-  const lastDbState = await db.stateArchive.lastValue();
+  //   ii) used to load and verify a weak subjectivity state,
+  const lastDbSlot = await db.stateArchive.lastKey();
+  const lastDbStateBytes = lastDbSlot !== null ? await db.stateArchive.getBinary(lastDbSlot) : null;
+  let lastDbState: BeaconStateAllForks | null = null;
+  let lastDbValidatorsBytes: Uint8Array | null = null;
+  if (lastDbStateBytes) {
+    const {state, validatorsBytes} = loadStateAndValidators(chainForkConfig, lastDbStateBytes);
+    lastDbState = state;
+    lastDbValidatorsBytes = validatorsBytes;
+  }
+
   if (lastDbState) {
     const config = createBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, lastDbState, getCheckpointFromState(lastDbState));
@@ -107,7 +118,9 @@ export async function initBeaconState(
       // Forcing to sync from checkpoint is only recommended if node is taking too long to sync from last db state.
       // It is important to remind the user to remove this flag again unless it is absolutely necessary.
       if (wssCheck) {
-        logger.warn("Forced syncing from checkpoint even though db state is within weak subjectivity period");
+        logger.warn(
+          `Forced syncing from checkpoint even though db state at slot ${lastDbState.slot} is within weak subjectivity period`
+        );
         logger.warn("Please consider removing --forceCheckpointSync flag unless absolutely necessary");
       }
     } else {
@@ -128,6 +141,7 @@ export async function initBeaconState(
   if (args.checkpointState) {
     return readWSState(
       lastDbState,
+      lastDbValidatorsBytes,
       {
         checkpointState: args.checkpointState,
         wssCheckpoint: args.wssCheckpoint,
@@ -140,6 +154,7 @@ export async function initBeaconState(
   } else if (args.checkpointSyncUrl) {
     return fetchWSStateFromBeaconApi(
       lastDbState,
+      lastDbValidatorsBytes,
       {
         checkpointSyncUrl: args.checkpointSyncUrl,
         wssCheckpoint: args.wssCheckpoint,
@@ -171,6 +186,7 @@ export async function initBeaconState(
 
 async function readWSState(
   lastDbState: BeaconStateAllForks | null,
+  lastDbValidatorsBytes: Uint8Array | null,
   wssOpts: {checkpointState: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
@@ -182,7 +198,13 @@ async function readWSState(
   const {checkpointState, wssCheckpoint, ignoreWeakSubjectivityCheck} = wssOpts;
 
   const stateBytes = await downloadOrLoadFile(checkpointState);
-  const wsState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+  let wsState: BeaconStateAllForks;
+  if (lastDbState && lastDbValidatorsBytes) {
+    // use lastDbState to load wsState if possible to share the same state tree
+    wsState = loadState(chainForkConfig, lastDbState, stateBytes, lastDbValidatorsBytes).state;
+  } else {
+    wsState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+  }
   const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const store = lastDbState ?? wsState;
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
@@ -193,6 +215,7 @@ async function readWSState(
 
 async function fetchWSStateFromBeaconApi(
   lastDbState: BeaconStateAllForks | null,
+  lastDbValidatorsBytes: Uint8Array | null,
   wssOpts: {checkpointSyncUrl: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
@@ -213,7 +236,10 @@ async function fetchWSStateFromBeaconApi(
     throw e;
   }
 
-  const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, logger, wssOpts);
+  const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, logger, wssOpts, {
+    lastDbState,
+    lastDbValidatorsBytes,
+  });
   const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const store = lastDbState ?? wsState;
   return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, wsCheckpoint, {
