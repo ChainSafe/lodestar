@@ -199,7 +199,7 @@ export function blindedOrFullBlockToFull(
   if (
     !isBlindedSignedBeaconBlock(block) || // already full
     !isForkExecution(config.getForkName(block.message.slot)) || // no execution payload
-    (block as unknown as SignedBeaconBlock<ForkName.bellatrix>).message.body.executionPayload.timestamp === 0 // before merge
+    (block as unknown as SignedBeaconBlock<ForkName.bellatrix>).message.body.executionPayload?.timestamp === 0 // before merge
   ) {
     return block;
   }
