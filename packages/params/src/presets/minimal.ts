@@ -120,7 +120,7 @@ export const minimalPreset: BeaconPreset = {
   MAX_BLOBS_PER_BLOCK: 6,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: 9,
 
-  // ELECTRA
+  // PEERDAS
   ///////////
   FIELD_ELEMENTS_PER_CELL: 64,
   FIELD_ELEMENTS_PER_EXT_BLOB: 8192,

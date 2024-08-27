@@ -11,7 +11,7 @@ import {
   phase0,
   SignedBeaconBlock,
   Slot,
-  electra,
+  peerdas,
 } from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
@@ -83,7 +83,7 @@ export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer
 export type GossipTypeMap = {
   [GossipType.beacon_block]: SignedBeaconBlock;
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
-  [GossipType.data_column_sidecar]: electra.DataColumnSidecar;
+  [GossipType.data_column_sidecar]: peerdas.DataColumnSidecar;
   [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
   [GossipType.beacon_attestation]: phase0.Attestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
@@ -99,7 +99,7 @@ export type GossipTypeMap = {
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: SignedBeaconBlock) => Promise<void> | void;
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
-  [GossipType.data_column_sidecar]: (blobSidecar: electra.DataColumnSidecar) => Promise<void> | void;
+  [GossipType.data_column_sidecar]: (blobSidecar: peerdas.DataColumnSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: phase0.SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: phase0.Attestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;

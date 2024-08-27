@@ -1,6 +1,6 @@
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {electra, RootHex, ssz} from "@lodestar/types";
+import {peerdas, RootHex, ssz} from "@lodestar/types";
 import {toHex, fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -11,7 +11,7 @@ import {
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRoot(
-  requestBody: electra.DataColumnSidecarsByRootRequest,
+  requestBody: peerdas.DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {

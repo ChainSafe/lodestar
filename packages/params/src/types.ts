@@ -83,7 +83,7 @@ export type BeaconPreset = {
   MAX_BLOBS_PER_BLOCK: number;
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: number;
 
-  // ELECTRA
+  // PEERDAS
   ///////////
   FIELD_ELEMENTS_PER_CELL: number;
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
@@ -176,7 +176,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_BLOBS_PER_BLOCK: "number",
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: "number",
 
-  // ELECTRA
+  // PEERDAS
   ///////////
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",

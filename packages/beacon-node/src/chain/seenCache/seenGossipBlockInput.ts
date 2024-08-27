@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {deneb, RootHex, SignedBeaconBlock, ssz, electra} from "@lodestar/types";
+import {deneb, RootHex, SignedBeaconBlock, ssz, peerdas} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
 import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
@@ -31,7 +31,7 @@ type GossipedBlockInput =
   | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}
   | {
       type: GossipedInputType.dataColumn;
-      dataColumnSidecar: electra.DataColumnSidecar;
+      dataColumnSidecar: peerdas.DataColumnSidecar;
       dataColumnBytes: Uint8Array | null;
     };
 
@@ -127,8 +127,8 @@ export class SeenGossipBlockInput {
 
       blockHex = toHexString(blockRoot);
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
-      if (blockCache.cachedData?.fork !== ForkName.electra) {
-        throw Error(`blob data at non electra fork=${blockCache.fork}`);
+      if (blockCache.cachedData?.fork !== ForkName.peerdas) {
+        throw Error(`blob data at non peerdas fork=${blockCache.fork}`);
       }
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
@@ -215,7 +215,7 @@ export class SeenGossipBlockInput {
             },
           };
         }
-      } else if (cachedData.fork === ForkName.electra) {
+      } else if (cachedData.fork === ForkName.peerdas) {
         const {dataColumnsCache} = cachedData;
 
         // block is available, check if all blobs have shown up
@@ -330,7 +330,7 @@ export class SeenGossipBlockInput {
           },
           blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
         };
-      } else if (fork === ForkName.electra) {
+      } else if (fork === ForkName.peerdas) {
         const {dataColumnsCache} = cachedData;
 
         return {
@@ -376,7 +376,7 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheTyp
     const blobsCache = new Map();
     const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
-  } else if (fork === ForkName.electra) {
+  } else if (fork === ForkName.peerdas) {
     let resolveAvailability: ((blobs: BlockInputDataDataColumns) => void) | null = null;
     const availabilityPromise = new Promise<BlockInputDataDataColumns>((resolveCB) => {
       resolveAvailability = resolveCB;

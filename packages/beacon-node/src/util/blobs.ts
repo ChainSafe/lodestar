@@ -8,7 +8,7 @@ import {
   ForkAll,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, electra} from "@lodestar/types";
+import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, peerdas} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {ckzg} from "./kzg.js";
@@ -35,7 +35,7 @@ export function computeInclusionProof(
 export function computeKzgCommitmentsInclusionProof(
   fork: ForkName,
   body: BeaconBlockBody
-): electra.KzgCommitmentsInclusionProof {
+): peerdas.KzgCommitmentsInclusionProof {
   const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(body);
   return new Tree(bodyView.node).getSingleProof(BigInt(KZG_COMMITMENTS_GINDEX));
 }
@@ -66,8 +66,8 @@ export function computeBlobSidecars(
 export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: deneb.Contents & {kzgCommitmentsInclusionProof?: electra.KzgCommitmentsInclusionProof}
-): electra.DataColumnSidecars {
+  contents: deneb.Contents & {kzgCommitmentsInclusionProof?: peerdas.KzgCommitmentsInclusionProof}
+): peerdas.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
     throw Error("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
@@ -93,7 +93,7 @@ export function computeDataColumnSidecars(
       kzgProofs,
       signedBlockHeader,
       kzgCommitmentsInclusionProof,
-    } as electra.DataColumnSidecar;
+    } as peerdas.DataColumnSidecar;
 
     return dataColumnSidecar;
   });

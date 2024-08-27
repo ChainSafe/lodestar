@@ -1,6 +1,6 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
-import {electra, Slot, ssz, ColumnIndex} from "@lodestar/types";
+import {peerdas, Slot, ssz, ColumnIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -11,7 +11,7 @@ import {
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRange(
-  request: electra.DataColumnSidecarsByRangeRequest,
+  request: peerdas.DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
@@ -118,8 +118,8 @@ export function* iterateDataColumnBytesFromWrapper(
 }
 
 export function validateDataColumnSidecarsByRangeRequest(
-  request: electra.DataColumnSidecarsByRangeRequest
-): electra.DataColumnSidecarsByRangeRequest {
+  request: peerdas.DataColumnSidecarsByRangeRequest
+): peerdas.DataColumnSidecarsByRangeRequest {
   const {startSlot, columns} = request;
   let {count} = request;
 

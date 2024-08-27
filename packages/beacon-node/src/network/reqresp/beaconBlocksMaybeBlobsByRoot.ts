@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, deneb, electra} from "@lodestar/types";
+import {phase0, deneb, peerdas} from "@lodestar/types";
 import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {
   BlockInput,
@@ -52,7 +52,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
   let pendingDataColumns = null;
 
   const blobIdentifiers: deneb.BlobIdentifier[] = [];
-  const dataColumnIdentifiers: electra.DataColumnIdentifier[] = [];
+  const dataColumnIdentifiers: peerdas.DataColumnIdentifier[] = [];
 
   let prevFork = null;
   for (const block of allBlocks) {
@@ -73,7 +73,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       for (let index = 0; index < blobKzgCommitmentsLen; index++) {
         blobIdentifiers.push({blockRoot, index});
       }
-    } else if (fork === ForkName.electra) {
+    } else if (fork === ForkName.peerdas) {
       dataColumnsDataBlocks.push(block);
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
       const custodyColumnIndexes = blobKzgCommitmentsLen > 0 ? columns : [];
@@ -118,7 +118,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       return acc;
     }, [] as number[]);
 
-    let allDataColumnsSidecars: electra.DataColumnSidecar[];
+    let allDataColumnsSidecars: peerdas.DataColumnSidecar[];
     console.log("allDataColumnsSidecars", partialDownload, dataColumnIdentifiers);
     if (dataColumnIdentifiers.length > 0) {
       allDataColumnsSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
@@ -215,11 +215,11 @@ export async function unavailableBeaconBlobsByRoot(
     resolveAvailability(blockData);
     metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
     availableBlockInput = getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
-  } else if (cachedData.fork === ForkName.electra) {
+  } else if (cachedData.fork === ForkName.peerdas) {
     const {dataColumnsCache, resolveAvailability} = cachedData;
 
     // resolve missing blobs
-    const dataColumnIdentifiers: electra.DataColumnIdentifier[] = [];
+    const dataColumnIdentifiers: peerdas.DataColumnIdentifier[] = [];
     const slot = block.message.slot;
     const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
 
@@ -264,7 +264,7 @@ export async function unavailableBeaconBlobsByRoot(
         dataColumnIdentifiers.push({blockRoot, index: columnIndex});
       }
 
-      let allDataColumnSidecars: electra.DataColumnSidecar[];
+      let allDataColumnSidecars: peerdas.DataColumnSidecar[];
       if (dataColumnIdentifiers.length > 0) {
         allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
       } else {

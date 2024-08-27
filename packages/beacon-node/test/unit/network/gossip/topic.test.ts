@@ -23,7 +23,7 @@ describe("network / gossip / topic", function () {
     ],
     [GossipType.data_column_sidecar]: [
       {
-        topic: {type: GossipType.data_column_sidecar, index: 1, fork: ForkName.electra, encoding},
+        topic: {type: GossipType.data_column_sidecar, index: 1, fork: ForkName.peerdas, encoding},
         topicStr: "/eth2/46acb19a/data_column_sidecar/ssz_snappy",
       },
     ],

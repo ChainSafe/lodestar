@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {toHex} from "@lodestar/utils";
-import {electra, ssz} from "@lodestar/types";
+import {peerdas, ssz} from "@lodestar/types";
 import {BeaconChain} from "../chain.js";
 import {BlockInput, BlockInputType} from "./types.js";
 
@@ -48,11 +48,11 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
         });
       } else {
         const {dataColumnsLen, dataColumnsIndex, dataColumns: dataColumnSidecars} = blockData;
-        const blobsLen = (block.message as electra.BeaconBlock).body.blobKzgCommitments.length;
+        const blobsLen = (block.message as peerdas.BeaconBlock).body.blobKzgCommitments.length;
 
         const dataColumnsSize =
-          ssz.electra.DataColumnSidecar.minSize +
-          blobsLen * (ssz.electra.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+          ssz.peerdas.DataColumnSidecar.minSize +
+          blobsLen * (ssz.peerdas.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
         const slot = block.message.slot;
         const writeData = {
           blockRoot,
@@ -99,8 +99,8 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
           blobsToRemove.push({blockRoot, slot, blobSidecars});
         } else {
           const {dataColumnsLen, dataColumnsIndex, dataColumns: dataColumnSidecars} = blockData;
-          const blobsLen = (block.message as electra.BeaconBlock).body.blobKzgCommitments.length;
-          const dataColumnsSize = ssz.electra.Cell.fixedSize * blobsLen;
+          const blobsLen = (block.message as peerdas.BeaconBlock).body.blobKzgCommitments.length;
+          const dataColumnsSize = ssz.peerdas.Cell.fixedSize * blobsLen;
 
           dataColumnsToRemove.push({
             blockRoot,

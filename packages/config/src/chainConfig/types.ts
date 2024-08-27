@@ -40,9 +40,9 @@ export type ChainConfig = {
   // DENEB
   DENEB_FORK_VERSION: Uint8Array;
   DENEB_FORK_EPOCH: number;
-  // ELECTRA
-  ELECTRA_FORK_VERSION: Uint8Array;
-  ELECTRA_FORK_EPOCH: number;
+  // PEERDAS
+  PEERDAS_FORK_VERSION: Uint8Array;
+  PEERDAS_FORK_EPOCH: number;
   EIP7594_FORK_VERSION: Uint8Array;
   EIP7594_FORK_EPOCH: number;
 
@@ -108,9 +108,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // DENEB
   DENEB_FORK_VERSION: "bytes",
   DENEB_FORK_EPOCH: "number",
-  // ELECTRA
-  ELECTRA_FORK_VERSION: "bytes",
-  ELECTRA_FORK_EPOCH: "number",
+  // PEERDAS
+  PEERDAS_FORK_VERSION: "bytes",
+  PEERDAS_FORK_EPOCH: "number",
   EIP7594_FORK_VERSION: "bytes",
   EIP7594_FORK_EPOCH: "number",
 

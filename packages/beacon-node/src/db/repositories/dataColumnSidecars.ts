@@ -15,7 +15,7 @@ export const dataColumnSidecarsWrapperSsz = new ContainerType(
     // // each byte[i] tells what index (1 based) the column i is stored, 0 means not custodied
     // max value to represent will be 128 which can be represented in a byte
     dataColumnsIndex: new ByteVectorType(NUMBER_OF_COLUMNS),
-    dataColumnSidecars: ssz.electra.DataColumnSidecars,
+    dataColumnSidecars: ssz.peerdas.DataColumnSidecars,
   },
   {typeName: "DataColumnSidecarsWrapper", jsonCase: "eth2"}
 );

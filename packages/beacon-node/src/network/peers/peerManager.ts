@@ -2,7 +2,7 @@ import {Connection, PeerId} from "@libp2p/interface";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
-import {Metadata, electra, phase0} from "@lodestar/types";
+import {Metadata, peerdas, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
@@ -332,9 +332,9 @@ export class PeerManager {
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
-        syncnets: (metadata as Partial<electra.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
+        syncnets: (metadata as Partial<peerdas.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
         csc:
-          (metadata as Partial<electra.Metadata>).csc ??
+          (metadata as Partial<peerdas.Metadata>).csc ??
           this.discovery?.["peerIdToCustodySubnetCount"].get(peer.toString()) ??
           this.config.CUSTODY_REQUIREMENT,
       };

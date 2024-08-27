@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, electra} from "@lodestar/types";
+import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, peerdas} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -256,7 +256,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   }
 
   async function validateBeaconDataColumn(
-    dataColumnSidecar: electra.DataColumnSidecar,
+    dataColumnSidecar: peerdas.DataColumnSidecar,
     dataColumnBytes: Uint8Array,
     gossipIndex: number,
     peerIdStr: string,
@@ -312,7 +312,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
         if (e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(
-            ssz.electra.DataColumnSidecar,
+            ssz.peerdas.DataColumnSidecar,
             dataColumnSidecar,
             `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
           );

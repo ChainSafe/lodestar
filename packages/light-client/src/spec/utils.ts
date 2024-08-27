@@ -114,7 +114,7 @@ export function upgradeLightClientHeader(
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
     // eslint-disable-next-line no-fallthrough
-    case ForkName.electra:
+    case ForkName.peerdas:
       throw Error("Not Implemented");
   }
   return upgradedHeader;

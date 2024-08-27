@@ -1,7 +1,7 @@
 import {rimraf} from "rimraf";
 import {describe, it, expect, beforeEach, afterEach, beforeAll} from "vitest";
 import {ByteVectorType} from "@chainsafe/ssz";
-import {ssz, electra} from "@lodestar/types";
+import {ssz, peerdas} from "@lodestar/types";
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
@@ -22,7 +22,7 @@ const config = createChainForkConfig({
   ALTAIR_FORK_EPOCH: 0,
   BELLATRIX_FORK_EPOCH: 0,
   DENEB_FORK_EPOCH: 0,
-  ELECTRA_FORK_EPOCH: 0,
+  PEERDAS_FORK_EPOCH: 0,
 });
 describe("block archive repository", function () {
   const testDir = "./.tmp";
@@ -44,12 +44,12 @@ describe("block archive repository", function () {
   });
 
   it("should get block by parent root", async function () {
-    const dataColumn = ssz.electra.DataColumnSidecar.defaultValue();
+    const dataColumn = ssz.peerdas.DataColumnSidecar.defaultValue();
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumn.signedBlockHeader.message);
     const slot = dataColumn.signedBlockHeader.message.slot;
     const blob = ssz.deneb.Blob.defaultValue();
     const commitment = ssz.deneb.KZGCommitment.defaultValue();
-    const singedBlock = ssz.electra.SignedBeaconBlock.defaultValue();
+    const singedBlock = ssz.peerdas.SignedBeaconBlock.defaultValue();
 
     singedBlock.message.body.blobKzgCommitments.push(commitment);
     singedBlock.message.body.blobKzgCommitments.push(commitment);
@@ -64,14 +64,14 @@ describe("block archive repository", function () {
 
     const blobKzgCommitmentsLen = 3;
     const columnsSize =
-      ssz.electra.DataColumnSidecar.minSize +
+      ssz.peerdas.DataColumnSidecar.minSize +
       blobKzgCommitmentsLen *
-        (ssz.electra.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+        (ssz.peerdas.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
 
     const numColumns = NUMBER_OF_COLUMNS;
-    const blobsLen = (singedBlock.message as electra.BeaconBlock).body.blobKzgCommitments.length;
+    const blobsLen = (singedBlock.message as peerdas.BeaconBlock).body.blobKzgCommitments.length;
 
-    // const dataColumnsSize = ssz.electra.DataColumnSidecar.minSize + blobsLen * (ssz.electra.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+    // const dataColumnsSize = ssz.peerdas.DataColumnSidecar.minSize + blobsLen * (ssz.peerdas.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
 
     // const dataColumnsLen = blockInput.blockData;
     const writeData = {
@@ -80,7 +80,7 @@ describe("block archive repository", function () {
       blobsLen,
       columnsSize,
       dataColumnsIndex: new ByteVectorType(NUMBER_OF_COLUMNS),
-      dataColumnSidecars: ssz.electra.DataColumnSidecars,
+      dataColumnSidecars: ssz.peerdas.DataColumnSidecars,
     };
 
     await dataColumnRepo.add(writeData);
@@ -102,7 +102,7 @@ describe("block archive repository", function () {
 
     for (let j = 0; j < numColumns; j++) {
       const dataColumnBytes = dataColumnSidecarsBytes.slice(j * columnsSize, (j + 1) * columnsSize);
-      const retrivedDataColumnSidecar = ssz.electra.DataColumnSidecar.deserialize(dataColumnBytes);
+      const retrivedDataColumnSidecar = ssz.peerdas.DataColumnSidecar.deserialize(dataColumnBytes);
       const index = retrivedDataColumnSidecar.index;
       expect(j === index).toBe(true);
     }
