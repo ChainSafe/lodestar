@@ -55,7 +55,7 @@ export type NodeId = Bytes32;
 export function computeNodeId(peerIdOrStr: PeerId | PeerIdStr) {
   let peerId;
   if (typeof peerIdOrStr === "string") {
-    peerId = peerIdFromString(peerId);
+    peerId = peerIdFromString(peerIdOrStr as string);
   } else {
     peerId = peerIdOrStr as PeerId;
   }
