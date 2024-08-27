@@ -61,7 +61,7 @@ export function computeNodeId(peerIdOrStr: PeerId | PeerIdStr) {
   }
 
   if (peerId.publicKey === undefined) {
-    throw Error("Undefined publicKey");
+    throw Error(`Undefined publicKey typeof peerIdOrStr=${typeof peerIdOrStr} peerId=${peerIdFromString.toString()}`);
   }
   return fromHexString(computeENRNodeId(IDScheme.v4, peerId.publicKey.slice(4)));
 }
