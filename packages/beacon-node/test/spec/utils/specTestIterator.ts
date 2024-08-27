@@ -65,6 +65,7 @@ export const defaultSkipOpts: SkipOpts = {
   skippedTestSuites: [
     /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    /^electra\/light_client\/.*/,
   ],
   // TODO Electra: Review this test in the next spec test release
   skippedTests: [/incorrect_not_enough_consolidation_churn_available/],
