@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {GaugeExtra, intDiv, Logger, NoLabels, toRootHex} from "@lodestar/utils";
 import {
@@ -159,5 +158,5 @@ export function calculateShufflingDecisionRoot(
 ): RootHex {
   return state.slot > GENESIS_SLOT
     ? calculateDecisionRoot(state, epoch)
-    : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
+    : toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
 }
