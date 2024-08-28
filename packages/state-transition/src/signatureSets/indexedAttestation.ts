@@ -41,7 +41,11 @@ export function getAttestationsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
+  // TODO: figure how to get attesting indices of an attestation once per block processing
   return signedBlock.message.body.attestations.map((attestation) =>
-    getIndexedAttestationSignatureSet(state, state.epochCtx.getIndexedAttestation(attestation))
+    getIndexedAttestationSignatureSet(
+      state,
+      state.epochCtx.getIndexedAttestation(state.config.getForkSeq(signedBlock.message.slot), attestation)
+    )
   );
 }

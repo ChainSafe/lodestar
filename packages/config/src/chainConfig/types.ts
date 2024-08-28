@@ -40,6 +40,9 @@ export type ChainConfig = {
   // DENEB
   DENEB_FORK_VERSION: Uint8Array;
   DENEB_FORK_EPOCH: number;
+  // ELECTRA
+  ELECTRA_FORK_VERSION: Uint8Array;
+  ELECTRA_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -55,6 +58,8 @@ export type ChainConfig = {
   MIN_PER_EPOCH_CHURN_LIMIT: number;
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
+  MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: number;
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: number;
 
   // Fork choice
   PROPOSER_SCORE_BOOST: number;
@@ -99,6 +104,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // DENEB
   DENEB_FORK_VERSION: "bytes",
   DENEB_FORK_EPOCH: "number",
+  // ELECTRA
+  ELECTRA_FORK_VERSION: "bytes",
+  ELECTRA_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -114,6 +122,8 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MIN_PER_EPOCH_CHURN_LIMIT: "number",
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: "number",
   CHURN_LIMIT_QUOTIENT: "number",
+  MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: "number",
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: "number",
 
   // Fork choice
   PROPOSER_SCORE_BOOST: "number",

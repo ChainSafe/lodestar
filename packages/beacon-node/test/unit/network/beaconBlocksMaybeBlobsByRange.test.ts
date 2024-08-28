@@ -24,6 +24,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
     BELLATRIX_FORK_EPOCH: 0,
     CAPELLA_FORK_EPOCH: 0,
     DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
@@ -101,7 +102,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
       const expectedResponse = blocksWithBlobs.map(([block, blobSidecars]) => {
         const blobs = blobSidecars !== undefined ? blobSidecars : [];
         return getBlockInput.availableData(config, block, BlockSource.byRange, null, {
-          fork: ForkName.deneb,
+          fork: ForkName.electra,
           blobs,
           blobsSource: BlobsSource.byRange,
           blobsBytes: blobs.map(() => null),

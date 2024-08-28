@@ -22,6 +22,18 @@ export const assert = {
   },
 
   /**
+   * Assert not null
+   * ```
+   * actual !== null
+   * ```
+   */
+  notNull<T>(actual: T | null, message?: string): asserts actual is T {
+    if (!(actual !== null)) {
+      throw new AssertionError(`${message || "Expected value to be not null"}`);
+    }
+  },
+
+  /**
    * Assert less than or equal
    * ```js
    * left <= right

@@ -29,6 +29,9 @@
     "./deneb": {
       "import": "./lib/deneb/index.js"
     },
+    "./electra": {
+      "import": "./lib/electra/index.js"
+    },
     "./phase0": {
       "import": "./lib/phase0/index.js"
     }
@@ -70,7 +73,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.17.0",
+    "@chainsafe/ssz": "^0.17.1",
     "@lodestar/params": "^1.21.0",
     "ethereum-cryptography": "^2.0.0"
   },

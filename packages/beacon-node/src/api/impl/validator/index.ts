@@ -21,6 +21,7 @@ import {
   ForkPreBlobs,
   ForkBlobs,
   ForkExecution,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
@@ -814,6 +815,7 @@ export function getValidatorApi(
       const attEpoch = computeEpochAtSlot(slot);
       const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
       const headBlockRoot = fromHex(headBlockRootHex);
+      const fork = config.getForkName(slot);
 
       const beaconBlockRoot =
         slot >= headSlot
@@ -845,7 +847,7 @@ export function getValidatorApi(
       return {
         data: {
           slot,
-          index: committeeIndex,
+          index: isForkPostElectra(fork) ? 0 : committeeIndex,
           beaconBlockRoot,
           source: attEpochState.currentJustifiedCheckpoint,
           target: {epoch: attEpoch, root: targetRoot},
@@ -1076,8 +1078,16 @@ export function getValidatorApi(
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex);
+      const dataRootHex = toHex(attestationDataRoot);
+      const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
+      const fork = chain.config.getForkName(slot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getAggregatedAttestationV2 to retrieve aggregated attestations for post-electra fork=${fork}`
+        );
+      }
 
       if (!aggregate) {
         throw new ApiError(404, `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}`);
@@ -1090,7 +1100,34 @@ export function getValidatorApi(
       };
     },
 
+    async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
+      notWhileSyncing();
+
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      const dataRootHex = toRootHex(attestationDataRoot);
+      const aggregate = chain.attestationPool.getAggregate(slot, committeeIndex, dataRootHex);
+
+      if (!aggregate) {
+        throw new ApiError(
+          404,
+          `No aggregated attestation for slot=${slot}, committeeIndex=${committeeIndex}, dataRoot=${dataRootHex}`
+        );
+      }
+
+      metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
+
+      return {
+        data: aggregate,
+        meta: {version: config.getForkName(slot)},
+      };
+    },
+
     async publishAggregateAndProofs({signedAggregateAndProofs}) {
+      await this.publishAggregateAndProofsV2({signedAggregateAndProofs});
+    },
+
+    async publishAggregateAndProofsV2({signedAggregateAndProofs}) {
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;

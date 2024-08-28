@@ -73,6 +73,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
+  const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -105,6 +106,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Deneb
     DENEB_FORK_VERSION: denebForkRelevant,
     DENEB_FORK_EPOCH: denebForkRelevant,
+    // electra
+    ELECTRA_FORK_VERSION: electraForkRelevant,
+    ELECTRA_FORK_EPOCH: electraForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -217,5 +221,22 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+
+    // ELECTRA
+    MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
+    MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
+    MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: electraForkRelevant,
+    MAX_EFFECTIVE_BALANCE_ELECTRA: electraForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: electraForkRelevant,
+    MIN_ACTIVATION_BALANCE: electraForkRelevant,
+    PENDING_BALANCE_DEPOSITS_LIMIT: electraForkRelevant,
+    PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
+    PENDING_CONSOLIDATIONS_LIMIT: electraForkRelevant,
+    MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
+    MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
+    MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
   };
 }

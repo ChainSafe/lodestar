@@ -332,6 +332,10 @@ export function createLodestarMetrics(
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
     }),
+    numEffectiveBalanceUpdates: register.gauge({
+      name: "lodestar_stfn_effective_balance_updates_count",
+      help: "Total count of effective balance updates",
+    }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",
@@ -373,6 +377,17 @@ export function createLodestarMetrics(
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
+
+    epochCache: {
+      finalizedPubkeyDuplicateInsert: register.gauge({
+        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert",
+        help: "Total count of duplicate insert of finalized pubkeys",
+      }),
+      newUnFinalizedPubkey: register.gauge({
+        name: "lodestar_epoch_cache_new_unfinalized_pubkey",
+        help: "Total count of unfinalized pubkeys added",
+      }),
+    },
 
     // BLS verifier thread pool and queue
 
@@ -1205,6 +1220,11 @@ export function createLodestarMetrics(
         help: "Histogram of time to serialize state to db",
         buckets: [0.1, 0.5, 1, 2, 3, 4],
       }),
+      numStatesUpdated: register.histogram({
+        name: "lodestar_cp_state_cache_state_updated_count",
+        help: "Histogram of number of state cache items updated every time removing and adding pubkeys to pubkey cache",
+        buckets: [1, 2, 5, 10, 50, 250],
+      }),
       statePruneFromMemoryCount: register.gauge({
         name: "lodestar_cp_state_cache_state_prune_from_memory_count",
         help: "Total number of states pruned from memory",
@@ -1372,6 +1392,21 @@ export function createLodestarMetrics(
       name: "lodestar_regen_fn_errors_total",
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
+    }),
+    regenFnAddPubkeyTime: register.histogram({
+      name: "lodestar_regen_fn_add_pubkey_time_seconds",
+      help: "Historgram of time spent on adding pubkeys to all state cache items in seconds",
+      buckets: [0.01, 0.1, 0.5, 1, 2, 5],
+    }),
+    regenFnDeletePubkeyTime: register.histogram({
+      name: "lodestar_regen_fn_delete_pubkey_time_seconds",
+      help: "Histrogram of time spent on deleting pubkeys from all state cache items in seconds",
+      buckets: [0.01, 0.1, 0.5, 1],
+    }),
+    regenFnNumStatesUpdated: register.histogram({
+      name: "lodestar_regen_state_cache_state_updated_count",
+      help: "Histogram of number of state cache items updated every time removing pubkeys from unfinalized cache",
+      buckets: [1, 2, 5, 10, 50, 250],
     }),
     unhandledPromiseRejections: register.gauge({
       name: "lodestar_unhandled_promise_rejections_total",

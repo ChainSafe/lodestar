@@ -13,7 +13,7 @@ export type ApiClient = ApiClientMethods<Endpoints>;
  */
 export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
   const definitions = getDefinitions(config);
-  const eventSerdes = getEventSerdes();
+  const eventSerdes = getEventSerdes(config);
 
   return {
     eventstream: async ({topics, signal, onEvent, onError, onClose}) => {

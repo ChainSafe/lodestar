@@ -152,6 +152,9 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     // processRegistryUpdates: function of registry updates
     // processSlashingsAllForks: function of process.indicesToSlash
     // processSlashingsReset: free
+    // -- electra
+    // processPendingBalanceDeposits: -
+    // processPendingConsolidations: -
     // -- altair
     // processInactivityUpdates: -
     // processParticipationFlagUpdates: -

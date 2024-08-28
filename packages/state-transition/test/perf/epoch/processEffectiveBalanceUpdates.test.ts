@@ -1,6 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
+import {ForkSeq} from "@lodestar/params";
 import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
 import {numValidators} from "../util.js";
@@ -35,7 +36,9 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
       minRuns: 5, // Worst case is very slow
       before: () => getEffectiveBalanceTestData(vc, changeRatio),
       beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
-      fn: ({state, cache}) => processEffectiveBalanceUpdates(state, cache),
+      fn: ({state, cache}) => {
+        processEffectiveBalanceUpdates(ForkSeq.phase0, state, cache);
+      },
     });
   }
 });
