@@ -172,7 +172,7 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   /**
-   * Queue asynchronous build for an EpochShuffling
+   * Queue asynchronous build for an EpochShuffling, triggered from state-transition
    */
   build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void {
     this.insertPromise(epoch, decisionRoot);
