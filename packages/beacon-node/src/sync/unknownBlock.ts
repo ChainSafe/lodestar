@@ -733,14 +733,16 @@ export class UnknownBlockSync {
   private removeAndDownscoreAllDescendants(block: PendingBlock): void {
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = this.removeAllDescendants(block);
+    // just console log and do not penalize on pending/bad blocks for debugging
+    console.log("removeAndDownscoreAllDescendants", {block});
 
     for (const block of badPendingBlocks) {
-      this.knownBadBlocks.add(block.blockRootHex);
-      for (const peerIdStr of block.peerIdStrs) {
-        // TODO: Refactor peerRpcScores to work with peerIdStr only
-        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
-      }
-      this.logger.debug("Banning unknown block", {
+      //   this.knownBadBlocks.add(block.blockRootHex);
+      //   for (const peerIdStr of block.peerIdStrs) {
+      //     // TODO: Refactor peerRpcScores to work with peerIdStr only
+      //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
+      //   }
+      this.logger.debug("ignored Banning unknown block", {
         root: block.blockRootHex,
         peerIdStrs: Array.from(block.peerIdStrs).join(","),
       });

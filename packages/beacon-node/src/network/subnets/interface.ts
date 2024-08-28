@@ -57,7 +57,7 @@ export function computeNodeId(peerIdOrStr: PeerId | PeerIdStr) {
   if (typeof peerIdOrStr === "string") {
     peerId = peerIdFromString(peerIdOrStr as string);
   } else {
-    peerId = peerIdOrStr as PeerId;
+    peerId = peerIdOrStr;
   }
 
   if (peerId.publicKey === undefined) {

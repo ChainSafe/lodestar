@@ -256,7 +256,11 @@ export function matchBlockWithDataColumns(
       }
 
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      console.log("matchBlockWithDataColumns", {blobKzgCommitmentsLen});
+      console.log("matchBlockWithDataColumns", {
+        blobKzgCommitmentsLen,
+        dataColumnSidecars: dataColumnSidecars.length,
+        shouldHaveAllData,
+      });
       if (blobKzgCommitmentsLen === 0) {
         if (dataColumnSidecars.length > 0) {
           throw Error(
@@ -280,6 +284,8 @@ export function matchBlockWithDataColumns(
           (acc, columnIndex) => acc && dataColumnIndexes.includes(columnIndex),
           true
         );
+
+        console.log("matchBlockWithDataColumns", {dataColumnIndexes, requestedColumnsPresent});
 
         if (dataColumnSidecars.length !== requestedColumns.length || !requestedColumnsPresent) {
           console.log(
@@ -357,5 +363,6 @@ export function matchBlockWithDataColumns(
         .join(",")}`
     );
   }
+  console.log("matchedBlockWithDataColumns", blockInputs);
   return blockInputs;
 }

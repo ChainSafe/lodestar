@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, deneb, peerdas} from "@lodestar/types";
+import {phase0, deneb, peerdas, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {
   BlockInput,
@@ -171,7 +171,10 @@ export async function unavailableBeaconBlobsByRoot(
     block = allBlocks[0].data;
     blockBytes = allBlocks[0].bytes;
     cachedData = unavailableBlockInput.cachedData;
-    console.log("downloaded sendBeaconBlocksByRoot", block);
+    console.log(
+      "downloaded sendBeaconBlocksByRoot",
+      ssz.peerdas.SignedBeaconBlock.toJson(block as peerdas.SignedBeaconBlock)
+    );
   } else {
     ({block, cachedData, blockBytes} = unavailableBlockInput);
   }
