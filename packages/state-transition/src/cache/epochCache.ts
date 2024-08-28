@@ -149,7 +149,7 @@ export class EpochCache {
    * Cache nextActiveIndices so that in afterProcessEpoch the next shuffling can be build synchronously
    * in case it is not built or the ShufflingCache is not available
    */
-  nextActiveIndices: ValidatorIndex[];
+  nextActiveIndices: Uint32Array;
   /**
    * Effective balances, for altair processAttestations()
    */
@@ -241,7 +241,7 @@ export class EpochCache {
     previousShuffling: EpochShuffling;
     currentShuffling: EpochShuffling;
     nextShuffling: EpochShuffling | null;
-    nextActiveIndices: ValidatorIndex[];
+    nextActiveIndices: Uint32Array;
     effectiveBalanceIncrements: EffectiveBalanceIncrements;
     totalSlashingsByIncrement: number;
     syncParticipantReward: number;
@@ -322,9 +322,9 @@ export class EpochCache {
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
     const totalSlashingsByIncrement = getTotalSlashingsByIncrement(state);
-    const previousActiveIndices: ValidatorIndex[] = [];
-    const currentActiveIndices: ValidatorIndex[] = [];
-    const nextActiveIndices: ValidatorIndex[] = [];
+    const previousActiveIndicesAsNumberArray: ValidatorIndex[] = [];
+    const currentActiveIndicesAsNumberArray: ValidatorIndex[] = [];
+    const nextActiveIndicesAsNumberArray: ValidatorIndex[] = [];
 
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
@@ -344,17 +344,17 @@ export class EpochCache {
       // we only need to track active indices for previous, current and next epoch if we have to compute shufflings
       // skip doing that if we already have cached shufflings
       if (cachedPreviousShuffling == null && isActiveValidator(validator, previousEpoch)) {
-        previousActiveIndices.push(i);
+        previousActiveIndicesAsNumberArray.push(i);
       }
       if (isActiveValidator(validator, currentEpoch)) {
         if (cachedCurrentShuffling == null) {
-          currentActiveIndices.push(i);
+          currentActiveIndicesAsNumberArray.push(i);
         }
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
       if (cachedNextShuffling == null && isActiveValidator(validator, nextEpoch)) {
-        nextActiveIndices.push(i);
+        nextActiveIndicesAsNumberArray.push(i);
       }
 
       const {exitEpoch} = validator;
@@ -376,6 +376,9 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
+    const previousActiveIndices = new Uint32Array(previousActiveIndicesAsNumberArray);
+    const currentActiveIndices = new Uint32Array(currentActiveIndicesAsNumberArray);
+    const nextActiveIndices = new Uint32Array(nextActiveIndicesAsNumberArray);
     let previousShuffling: EpochShuffling;
     let currentShuffling: EpochShuffling;
     let nextShuffling: EpochShuffling;
@@ -583,7 +586,7 @@ export class EpochCache {
     state: CachedBeaconStateAllForks,
     epochTransitionCache: {
       nextShufflingDecisionRoot: RootHex;
-      nextShufflingActiveIndices: ValidatorIndex[];
+      nextShufflingActiveIndices: Uint32Array;
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {

@@ -18,7 +18,7 @@ import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
 
 export interface ShufflingBuildProps {
   state: BeaconStateAllForks;
-  activeIndices: ValidatorIndex[];
+  activeIndices: Uint32Array;
 }
 
 export interface PublicShufflingCacheMetrics {
@@ -54,7 +54,7 @@ export interface IShufflingCache {
   /**
    * Queue asynchronous build for an EpochShuffling
    */
-  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: ValidatorIndex[]): void;
+  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: Uint32Array): void;
 }
 
 /**
@@ -105,13 +105,12 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
 
 export function computeEpochShuffling(
   state: BeaconStateAllForks,
-  activeIndices: ValidatorIndex[],
+  activeIndices: Uint32Array,
   epoch: Epoch
 ): EpochShuffling {
-  const _activeIndices = new Uint32Array(activeIndices);
   const activeValidatorCount = activeIndices.length;
 
-  const shuffling = _activeIndices.slice();
+  const shuffling = activeIndices.slice();
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   unshuffleList(shuffling, seed);
 
@@ -136,7 +135,7 @@ export function computeEpochShuffling(
 
   return {
     epoch,
-    activeIndices: _activeIndices,
+    activeIndices,
     shuffling,
     committees,
     committeesPerSlot,
