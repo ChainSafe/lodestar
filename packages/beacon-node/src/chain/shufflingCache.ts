@@ -36,7 +36,7 @@ type ShufflingCacheItem = {
 
 type PromiseCacheItem = {
   type: CacheItemType.promise;
-  timeInserted: number;
+  timeInsertedMs: number;
   promise: Promise<EpochShuffling>;
   resolveFn: (shuffling: EpochShuffling) => void;
 };
@@ -107,7 +107,7 @@ export class ShufflingCache implements IShufflingCache {
 
     const cacheItem: PromiseCacheItem = {
       type: CacheItemType.promise,
-      timeInserted: Date.now(),
+      timeInsertedMs: Date.now(),
       promise,
       resolveFn,
     };
@@ -163,7 +163,7 @@ export class ShufflingCache implements IShufflingCache {
 
     let shuffling: EpochShuffling | null = null;
     if (buildProps) {
-      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
+      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "getSync"});
       shuffling = computeEpochShuffling(buildProps.state, buildProps.activeIndices, epoch);
       timer?.();
       this.set(shuffling, decisionRoot);
@@ -181,7 +181,7 @@ export class ShufflingCache implements IShufflingCache {
      * on a NICE thread with a rust implementation
      */
     callInNextEventLoop(() => {
-      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer();
+      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "build"});
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
       timer?.();
       this.set(shuffling, decisionRoot);
@@ -200,7 +200,9 @@ export class ShufflingCache implements IShufflingCache {
     if (cacheItem) {
       if (isPromiseCacheItem(cacheItem)) {
         cacheItem.resolveFn(shuffling);
-        this.metrics?.shufflingCache.shufflingPromiseResolutionTime.observe(Date.now() - cacheItem.timeInserted);
+        this.metrics?.shufflingCache.shufflingPromiseResolutionTime.observe(
+          (Date.now() - cacheItem.timeInsertedMs) / 1000
+        );
       } else {
         this.metrics?.shufflingCache.shufflingBuiltMultipleTimes.inc();
       }
