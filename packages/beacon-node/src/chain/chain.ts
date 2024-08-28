@@ -13,6 +13,7 @@ import {
   PubkeyIndexMap,
   EpochShuffling,
   computeEndSlotAtEpoch,
+  computeAnchorCheckpoint,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -60,7 +61,6 @@ import {
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
-import {computeAnchorCheckpoint} from "./initState.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
   SeenAttesters,
