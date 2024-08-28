@@ -150,7 +150,7 @@ export async function fetchWeakSubjectivityState(
     lastDbState,
     lastDbValidatorsBytes,
   }: {lastDbState: BeaconStateAllForks | null; lastDbValidatorsBytes: Uint8Array | null}
-): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
+): Promise<{wsState: BeaconStateAllForks; wsStateBytes: Uint8Array; wsCheckpoint: Checkpoint}> {
   try {
     let wsCheckpoint: Checkpoint | null;
     let stateId: Slot | "finalized";
@@ -202,6 +202,7 @@ export async function fetchWeakSubjectivityState(
 
     return {
       wsState,
+      wsStateBytes,
       wsCheckpoint: wsCheckpoint ?? getCheckpointFromState(wsState),
     };
   } catch (e) {
