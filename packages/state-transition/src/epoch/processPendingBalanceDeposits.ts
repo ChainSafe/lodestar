@@ -2,7 +2,6 @@ import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
-import {getCurrentEpoch} from "../util/epoch.js";
 
 /**
  * Starting from Electra:
@@ -14,8 +13,8 @@ import {getCurrentEpoch} from "../util/epoch.js";
  * TODO Electra: Update ssz library to support batch push to `pendingBalanceDeposits`
  */
 export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
+  const nextEpoch = state.epochCtx.epoch + 1;
   const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state.epochCtx));
-  const currentEpoch = getCurrentEpoch(state);
   let processedAmount = 0n;
   let nextDepositIndex = 0;
   const depositsToPostpone = [];
@@ -28,7 +27,7 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, c
 
     // Validator is exiting, postpone the deposit until after withdrawable epoch
     if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
-      if (currentEpoch <= validator.withdrawableEpoch) {
+      if (nextEpoch <= validator.withdrawableEpoch) {
         depositsToPostpone.push(deposit);
       } else {
         // Deposited balance will never become active. Increase balance but do not consume churn
