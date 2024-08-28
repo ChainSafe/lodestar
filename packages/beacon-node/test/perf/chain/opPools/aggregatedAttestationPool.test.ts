@@ -12,7 +12,8 @@ import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, DataAvailabil
 import {ssz} from "@lodestar/types";
 
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test/perf/util.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
 
