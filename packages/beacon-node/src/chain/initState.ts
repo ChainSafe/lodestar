@@ -154,7 +154,7 @@ export async function initStateFromDb(
 /**
  * Initialize and persist an anchor state (either weak subjectivity or genesis)
  */
-export async function initStateFromAnchorState(
+export async function checkAndPersistAnchorState(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,

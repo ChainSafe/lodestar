@@ -11,7 +11,7 @@ import {
 import {
   IBeaconDb,
   IBeaconNodeOptions,
-  initStateFromAnchorState,
+  checkAndPersistAnchorState,
   initStateFromEth1,
   getStateTypeFromBytes,
 } from "@lodestar/beacon-node";
@@ -67,7 +67,7 @@ async function initAndVerifyWeakSubjectivityState(
     throw wssCheck.err;
   }
 
-  anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
+  anchorState = await checkAndPersistAnchorState(config, db, logger, anchorState, {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
   });
@@ -129,7 +129,7 @@ export async function initBeaconState(
       //  - if no checkpoint sync args provided, or
       //  - the lastDbState is within weak subjectivity period:
       if ((!args.checkpointState && !args.checkpointSyncUrl) || wssCheck) {
-        const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState, {
+        const anchorState = await checkAndPersistAnchorState(config, db, logger, lastDbState, {
           isWithinWeakSubjectivityPeriod: wssCheck,
           isCheckpointState: false,
         });
@@ -172,7 +172,7 @@ export async function initBeaconState(
       let anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
       const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
       const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
-      anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
+      anchorState = await checkAndPersistAnchorState(config, db, logger, anchorState, {
         isWithinWeakSubjectivityPeriod: wssCheck,
         isCheckpointState: true,
       });
