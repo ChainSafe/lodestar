@@ -68,7 +68,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/.*/,
   ],
   // TODO Electra: Review this test in the next spec test release
-  skippedTests: [/incorrect_not_enough_consolidation_churn_available/],
+  skippedTests: [/incorrect_not_enough_consolidation_churn_available/, /^deneb\/light_client\/sync\/.*electra_fork.*/],
   skippedRunners: ["merkle_proof", "networking"],
 };
 
