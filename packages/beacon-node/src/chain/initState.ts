@@ -191,7 +191,9 @@ export async function checkAndPersistAnchorState(
     logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
   }
 
-  await persistAnchorState(config, db, anchorState);
+  if (isCheckpointState || anchorState.slot === GENESIS_SLOT) {
+    await persistAnchorState(config, db, anchorState);
+  }
 
   return anchorState;
 }
