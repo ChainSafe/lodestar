@@ -400,7 +400,7 @@ export class EpochCache {
       previousShuffling = cachedPreviousShuffling
         ? cachedPreviousShuffling
         : isGenesis
-          ? currentShuffling // TODO: (@matthewkeil) does this need to be added to the cache at previousEpoch and previousDecisionRoot?
+          ? currentShuffling
           : shufflingCache.getSync(previousEpoch, previousDecisionRoot, {
               state,
               activeIndices: previousActiveIndices,
@@ -606,7 +606,7 @@ export class EpochCache {
     } else {
       this.shufflingCache?.metrics?.shufflingCache.nextShufflingNotOnEpochCache.inc();
       this.currentShuffling =
-        this.shufflingCache?.getSync(upcomingEpoch, this.nextDecisionRoot, {
+        this.shufflingCache?.getSync(upcomingEpoch, this.currentDecisionRoot, {
           state,
           // have to use the "nextActiveIndices" that were saved in the last transition here to calculate
           // the upcoming shuffling if it is not already built (similar condition to the below computation)
