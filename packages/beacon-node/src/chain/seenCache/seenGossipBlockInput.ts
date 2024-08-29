@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {deneb, RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {pruneSetToMax} from "@lodestar/utils";
+import {pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName} from "@lodestar/params";
 
 import {
@@ -81,9 +80,7 @@ export class SeenGossipBlockInput {
       const {signedBlock, blockBytes} = gossipedInput;
       fork = config.getForkName(signedBlock.message.slot);
 
-      blockHex = toHexString(
-        config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
-      );
+      blockHex = toRootHex(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message));
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
 
       blockCache.block = signedBlock;
@@ -93,7 +90,7 @@ export class SeenGossipBlockInput {
       const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
       fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
 
-      blockHex = toHexString(blockRoot);
+      blockHex = toRootHex(blockRoot);
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions

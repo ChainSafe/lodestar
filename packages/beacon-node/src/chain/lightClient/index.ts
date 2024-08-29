@@ -1,4 +1,4 @@
-import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
+import {BitArray, CompositeViewDU} from "@chainsafe/ssz";
 import {
   altair,
   BeaconBlock,
@@ -31,7 +31,7 @@ import {
   LightClientUpdateSummary,
   upgradeLightClientHeader,
 } from "@lodestar/light-client/spec";
-import {Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
@@ -292,7 +292,7 @@ export class LightClientServer {
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
-        `syncCommitteeWitness not available ${toHexString(blockRoot)}`
+        `syncCommitteeWitness not available ${toRootHex(blockRoot)}`
       );
     }
 
@@ -352,7 +352,7 @@ export class LightClientServer {
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
-        `syncCommitteeWitness not available ${toHexString(blockRoot)} period ${period}`
+        `syncCommitteeWitness not available ${toRootHex(blockRoot)} period ${period}`
       );
     }
 
@@ -391,7 +391,7 @@ export class LightClientServer {
     const header = blockToLightClientHeader(this.config.getForkName(blockSlot), block);
 
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.beacon);
-    const blockRootHex = toHexString(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
 
     const syncCommitteeWitness = getSyncCommitteesWitness(postState);
 
@@ -410,7 +410,7 @@ export class LightClientServer {
     const period = computeSyncPeriodAtSlot(blockSlot);
     if (parentBlockPeriod < period) {
       // If the parentBlock is in a previous epoch it must be the dependentRoot of this epoch transition
-      const dependentRoot = toHexString(block.parentRoot);
+      const dependentRoot = toRootHex(block.parentRoot);
       const periodDependentRoots = this.knownSyncCommittee.getOrDefault(period);
       if (!periodDependentRoots.has(dependentRoot)) {
         periodDependentRoots.add(dependentRoot);
@@ -486,7 +486,7 @@ export class LightClientServer {
   ): Promise<void> {
     this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
 
-    const signedBlockRootHex = toHexString(signedBlockRoot);
+    const signedBlockRootHex = toRootHex(signedBlockRoot);
     const attestedData = this.prevHeadData.get(signedBlockRootHex);
     if (!attestedData) {
       // Log cacheSize since at start this.prevHeadData will be empty
@@ -574,7 +574,7 @@ export class LightClientServer {
     } catch (e) {
       this.logger.error(
         "Error updating best LightClientUpdate",
-        {syncPeriod, slot: attestedHeader.beacon.slot, blockRoot: toHexString(attestedData.blockRoot)},
+        {syncPeriod, slot: attestedHeader.beacon.slot, blockRoot: toRootHex(attestedData.blockRoot)},
         e as Error
       );
     }
@@ -619,7 +619,7 @@ export class LightClientServer {
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(attestedData.blockRoot);
     if (!syncCommitteeWitness) {
-      throw Error(`syncCommitteeWitness not available at ${toHexString(attestedData.blockRoot)}`);
+      throw Error(`syncCommitteeWitness not available at ${toRootHex(attestedData.blockRoot)}`);
     }
     const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
     if (!nextSyncCommittee) {
@@ -697,7 +697,7 @@ export class LightClientServer {
    * Get finalized header from db. Keeps a small in-memory cache to speed up most of the lookups
    */
   private async getFinalizedHeader(finalizedBlockRoot: Uint8Array): Promise<LightClientHeader | null> {
-    const finalizedBlockRootHex = toHexString(finalizedBlockRoot);
+    const finalizedBlockRootHex = toRootHex(finalizedBlockRoot);
     const cachedFinalizedHeader = this.checkpointHeaders.get(finalizedBlockRootHex);
     if (cachedFinalizedHeader) {
       return cachedFinalizedHeader;

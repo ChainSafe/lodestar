@@ -1,5 +1,5 @@
 import path from "node:path";
-import {CompositeTypeAny, fromHexString, TreeView, Type, toHexString} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -35,7 +35,7 @@ import {
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
+import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -133,7 +133,7 @@ export class BeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
-  readonly aggregatedAttestationPool = new AggregatedAttestationPool();
+  readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
   readonly opPool = new OpPool();
@@ -226,7 +226,13 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
-    this.attestationPool = new AttestationPool(clock, preAggregateCutOffTime, this.opts?.preaggregateSlotDistance);
+    this.attestationPool = new AttestationPool(
+      config,
+      clock,
+      preAggregateCutOffTime,
+      this.opts?.preaggregateSlotDistance
+    );
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,
       preAggregateCutOffTime,
@@ -592,7 +598,7 @@ export class BeaconChain implements IBeaconChain {
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
     const {slot, parentBlockRoot} = blockAttributes;
     const state = await this.regen.getBlockSlotState(
-      toHexString(parentBlockRoot),
+      toRootHex(parentBlockRoot),
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
@@ -641,7 +647,7 @@ export class BeaconChain implements IBeaconChain {
     shouldOverrideBuilder?: boolean;
   }> {
     const state = await this.regen.getBlockSlotState(
-      toHexString(parentBlockRoot),
+      toRootHex(parentBlockRoot),
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
@@ -673,7 +679,7 @@ export class BeaconChain implements IBeaconChain {
         : this.config.getExecutionForkTypes(slot).BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
     this.logger.debug("Computing block post state from the produced body", {
       slot,
-      bodyRoot: toHexString(bodyRoot),
+      bodyRoot: toRootHex(bodyRoot),
       blockType,
     });
 
@@ -691,7 +697,7 @@ export class BeaconChain implements IBeaconChain {
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
         : this.config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
-    const blockRootHex = toHex(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
 
     // track the produced block for consensus broadcast validations
     if (blockType === BlockType.Full) {
@@ -729,7 +735,7 @@ export class BeaconChain implements IBeaconChain {
    *   )
    */
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
-    const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
+    const blockHash = toRootHex(beaconBlock.body.executionPayload.blockHash);
     const contents = this.producedContentsCache.get(blockHash);
     if (!contents) {
       throw Error(`No contents for executionPayload.blockHash ${blockHash}`);
@@ -926,7 +932,7 @@ export class BeaconChain implements IBeaconChain {
           checkpointRoot: checkpoint.rootHex,
           stateId,
           stateSlot: state.slot,
-          stateRoot: toHex(state.hashTreeRoot()),
+          stateRoot: toRootHex(state.hashTreeRoot()),
         });
       }
 
@@ -997,7 +1003,7 @@ export class BeaconChain implements IBeaconChain {
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${typeName}_${toHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${typeName}_${toRootHex(root)}.ssz`);
 
     await ensureDir(dirpath);
 
@@ -1027,6 +1033,9 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const headState = this.getHeadState();
+    metrics.headState.unfinalizedPubkeyCacheSize.set(headState.epochCtx.unfinalizedPubkey2index.size);
   }
 
   private onClockSlot(slot: Slot): void {
@@ -1115,6 +1124,39 @@ export class BeaconChain implements IBeaconChain {
     if (headState) {
       this.opPool.pruneAll(headBlock, headState);
     }
+
+    const cpEpoch = cp.epoch;
+
+    if (headState === null) {
+      this.logger.verbose("Head state is null");
+    } else if (cpEpoch >= this.config.ELECTRA_FORK_EPOCH) {
+      // Get the validator.length from the state at cpEpoch
+      // We are confident the last element in the list is from headEpoch
+      // Thus we query from the end of the list. (cpEpoch - headEpoch - 1) is negative number
+      const pivotValidatorIndex = headState.epochCtx.getValidatorCountAtEpoch(cpEpoch);
+
+      if (pivotValidatorIndex !== undefined) {
+        // Note EIP-6914 will break this logic
+        const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
+          (index, _pubkey) => index < pivotValidatorIndex
+        );
+
+        // Populate finalized pubkey cache and remove unfinalized pubkey cache
+        if (!newFinalizedValidators.isEmpty()) {
+          this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
+        }
+      }
+    }
+
+    // TODO-Electra: Deprecating eth1Data poll requires a check on a finalized checkpoint state.
+    // Will resolve this later
+    // if (cpEpoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity)) {
+    //   // finalizedState can be safely casted to Electra state since cp is already post-Electra
+    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositRequestsStartIndex) {
+    //     // Signal eth1 to stop polling eth1Data
+    //     this.eth1.stopPollingEth1Data();
+    //   }
+    // }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
@@ -1152,10 +1194,10 @@ export class BeaconChain implements IBeaconChain {
     const preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
-      throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
+      throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
 
-    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
+    const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
 
     return computeBlockRewards(block, preState.clone(), postState?.clone());
   }
@@ -1173,7 +1215,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const {executionOptimistic, finalized} = stateResult;
-    const stateRoot = toHexString(stateResult.state.hashTreeRoot());
+    const stateRoot = toRootHex(stateResult.state.hashTreeRoot());
 
     const cachedState = this.regen.getStateSync(stateRoot);
 
@@ -1193,7 +1235,7 @@ export class BeaconChain implements IBeaconChain {
     const preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
-      throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
+      throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
 
     return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);

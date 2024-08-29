@@ -12,7 +12,7 @@ import {testData} from "./testData.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v1.0.0";
+const version = "v1.1.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/keymanager-APIs/releases/download/${version}/keymanager-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/keymanager-oapi.json"),

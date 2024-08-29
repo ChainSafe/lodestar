@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -9,7 +8,7 @@ import {bellatrix, deneb} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ProtoBlock, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
@@ -198,9 +197,9 @@ export async function verifyBlocksInEpoch(
 }
 
 function logOnPowBlock(logger: Logger, config: ChainForkConfig, mergeBlock: bellatrix.BeaconBlock): void {
-  const mergeBlockHash = toHexString(config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
-  const mergeExecutionHash = toHexString(mergeBlock.body.executionPayload.blockHash);
-  const mergePowHash = toHexString(mergeBlock.body.executionPayload.parentHash);
+  const mergeBlockHash = toRootHex(config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
+  const mergeExecutionHash = toRootHex(mergeBlock.body.executionPayload.blockHash);
+  const mergePowHash = toRootHex(mergeBlock.body.executionPayload.parentHash);
   logger.info(POS_PANDA_MERGE_TRANSITION_BANNER);
   logger.info("Execution transitioning from PoW to PoS!!!");
   logger.info("Importing block referencing terminal PoW block", {

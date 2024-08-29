@@ -10,7 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
-import {isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -62,13 +62,14 @@ export async function importBlock(
   const {block, source} = blockInput;
   const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
-  const blockRootHex = toHexString(blockRoot);
+  const blockRootHex = toRootHex(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const fork = this.config.getForkSeq(blockSlot);
 
   // this is just a type assertion since blockinput with dataPromise type will not end up here
   if (blockInput.type === BlockInputType.dataPromise) {
@@ -120,10 +121,11 @@ export async function importBlock(
 
     for (const attestation of attestations) {
       try {
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
+        // TODO Electra: figure out how to reuse the attesting indices computed from state transition
+        const indexedAttestation = postState.epochCtx.getIndexedAttestation(fork, attestation);
         const {target, beaconBlockRoot} = attestation.data;
 
-        const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+        const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         this.seenAggregatedAttestations.add(
           target.epoch,
           attDataRoot,
@@ -371,9 +373,9 @@ export async function importBlock(
       const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
       if (finalizedEpoch > preFinalizedEpoch) {
         this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-          block: toHexString(finalizedCheckpoint.root),
+          block: toRootHex(finalizedCheckpoint.root),
           epoch: finalizedCheckpoint.epoch,
-          state: toHexString(checkpointState.hashTreeRoot()),
+          state: toRootHex(checkpointState.hashTreeRoot()),
           executionOptimistic: false,
         });
         this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));

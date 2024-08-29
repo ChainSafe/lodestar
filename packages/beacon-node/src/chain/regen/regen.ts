@@ -1,4 +1,4 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {phase0, Slot, RootHex, BeaconBlock} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -10,7 +10,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
@@ -89,7 +89,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, opts, regenCaller, allowDiskReload);
+    return this.getBlockSlotState(toRootHex(cp.root), checkpointStartSlot, opts, regenCaller, allowDiskReload);
   }
 
   /**
@@ -224,7 +224,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           this.modules.metrics
         );
 
-        const stateRoot = toHexString(state.hashTreeRoot());
+        const stateRoot = toRootHex(state.hashTreeRoot());
         if (b.stateRoot !== stateRoot) {
           throw new RegenError({
             slot: b.slot,

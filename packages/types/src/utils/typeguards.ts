@@ -1,4 +1,4 @@
-import {ForkBlobs, ForkExecution} from "@lodestar/params";
+import {ForkBlobs, ForkExecution, ForkPostElectra} from "@lodestar/params";
 import {
   BlockContents,
   SignedBeaconBlock,
@@ -13,6 +13,7 @@ import {
   BlindedBeaconBlockBody,
   SignedBlockContents,
   BeaconBlock,
+  Attestation,
 } from "../types.js";
 
 export function isExecutionPayload<F extends ForkExecution>(
@@ -65,4 +66,8 @@ export function isSignedBlockContents<F extends ForkBlobs>(
   data: SignedBeaconBlockOrContents | BeaconBlockOrContents
 ): data is SignedBlockContents<F> {
   return (data as SignedBlockContents<F>).kzgProofs !== undefined;
+}
+
+export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {
+  return (attestation as Attestation<ForkPostElectra>).committeeBits !== undefined;
 }

@@ -198,11 +198,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     parentBlockRoot?: Root
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_newPayloadV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_newPayloadV2"
-          : "engine_newPayloadV1";
+      ForkSeq[fork] >= ForkSeq.electra
+        ? "engine_newPayloadV4"
+        : ForkSeq[fork] >= ForkSeq.deneb
+          ? "engine_newPayloadV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_newPayloadV2"
+            : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -218,7 +220,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
       const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
 
-      const method = "engine_newPayloadV3";
+      const method = ForkSeq[fork] >= ForkSeq.electra ? "engine_newPayloadV4" : "engine_newPayloadV3";
       engineRequest = {
         method,
         params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
@@ -392,11 +394,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     shouldOverrideBuilder?: boolean;
   }> {
     const method =
-      ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_getPayloadV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_getPayloadV2"
-          : "engine_getPayloadV1";
+      ForkSeq[fork] >= ForkSeq.electra
+        ? "engine_getPayloadV4"
+        : ForkSeq[fork] >= ForkSeq.deneb
+          ? "engine_getPayloadV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_getPayloadV2"
+            : "engine_getPayloadV1";
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -414,8 +418,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.payloadIdCache.prune();
   }
 
-  async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByHashV1";
+  async getPayloadBodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
+    const method =
+      ForkSeq[fork] >= ForkSeq.electra ? "engine_getPayloadBodiesByHashV2" : "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
@@ -425,10 +430,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getPayloadBodiesByRange(
+    fork: ForkName,
     startBlockNumber: number,
     blockCount: number
   ): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByRangeV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.electra ? "engine_getPayloadBodiesByRangeV2" : "engine_getPayloadBodiesByRangeV1";
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {it, vi} from "vitest";
+import {expect, it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
@@ -45,12 +45,20 @@ const sszStatic =
     /* eslint-disable @typescript-eslint/strict-boolean-expressions */
     const sszType =
       (sszTypesFor(fork) as Types)[typeName] ||
+      (ssz.electra as Types)[typeName] ||
+      (ssz.deneb as Types)[typeName] ||
       (ssz.capella as Types)[typeName] ||
       (ssz.bellatrix as Types)[typeName] ||
       (ssz.altair as Types)[typeName] ||
       (ssz.phase0 as Types)[typeName];
+
+    it(`${fork} - ${typeName} type exists`, function () {
+      expect(sszType).toEqualWithMessage(expect.any(Type), `SSZ type ${typeName} for fork ${fork} is not defined`);
+    });
+
     if (!sszType) {
-      throw Error(`No type for ${typeName}`);
+      // Return instead of throwing an error to only skip ssz_static tests associated to missing type
+      return;
     }
 
     const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);

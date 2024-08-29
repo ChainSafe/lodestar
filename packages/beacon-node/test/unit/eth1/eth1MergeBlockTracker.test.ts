@@ -32,7 +32,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   });
 
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {
-    config.TERMINAL_BLOCK_HASH = Buffer.alloc(1, 32);
+    config.TERMINAL_BLOCK_HASH = Buffer.alloc(32, 1);
     const block: EthJsonRpcBlockRaw = {
       number: toHex(10),
       hash: toRootHex(11),

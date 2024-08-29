@@ -14,7 +14,7 @@ import {
   SignedBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {ForkName, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
+import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
@@ -101,8 +101,20 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    BeaconBlockBody["attestations"],
+    BeaconBlockBody<ForkPreElectra>["attestations"],
     ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
+   * Get block attestations
+   * Retrieves attestation included in requested block.
+   */
+  getBlockAttestationsV2: Endpoint<
+    "GET",
+    BlockArgs,
+    {params: {block_id: string}},
+    BeaconBlockBody["attestations"],
+    ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
   /**
@@ -249,6 +261,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: ssz.phase0.BeaconBlockBody.fields.attestations,
         meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getBlockAttestationsV2: {
+      url: "/eth/v2/beacon/blocks/{block_id}/attestations",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: WithVersion((fork) => ssz[fork].BeaconBlockBody.fields.attestations),
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
     getBlockHeader: {

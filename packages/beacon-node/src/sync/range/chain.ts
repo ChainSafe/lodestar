@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
-import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {BlockInput, BlockInputType} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
@@ -234,7 +233,7 @@ export class SyncChain {
   /** Full debug state for lodestar API */
   getDebugState(): SyncChainDebugState {
     return {
-      targetRoot: toHexString(this.target.root),
+      targetRoot: toRootHex(this.target.root),
       targetSlot: this.target.slot,
       syncType: this.syncType,
       status: this.status,

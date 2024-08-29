@@ -1,7 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochTransitionCache, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
 import {
@@ -10,6 +10,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -19,6 +20,7 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
+  upgradeStateToElectra,
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
@@ -130,7 +132,7 @@ export function stateTransition(
   if (verifyStateRoot) {
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
-        `Invalid state root at slot ${block.slot}, expected=${toHexString(block.stateRoot)}, actual=${toHexString(
+        `Invalid state root at slot ${block.slot}, expected=${toRootHex(block.stateRoot)}, actual=${toRootHex(
           stateRoot
         )}`
       );
@@ -233,18 +235,21 @@ function processSlotsWithTransientCache(
       epochTransitionTimer?.();
 
       // Upgrade state if exactly at epoch boundary
-      const stateSlot = computeEpochAtSlot(postState.slot);
-      if (stateSlot === config.ALTAIR_FORK_EPOCH) {
+      const stateEpoch = computeEpochAtSlot(postState.slot);
+      if (stateEpoch === config.ALTAIR_FORK_EPOCH) {
         postState = upgradeStateToAltair(postState as CachedBeaconStatePhase0) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.BELLATRIX_FORK_EPOCH) {
+      if (stateEpoch === config.BELLATRIX_FORK_EPOCH) {
         postState = upgradeStateToBellatrix(postState as CachedBeaconStateAltair) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.CAPELLA_FORK_EPOCH) {
+      if (stateEpoch === config.CAPELLA_FORK_EPOCH) {
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.DENEB_FORK_EPOCH) {
+      if (stateEpoch === config.DENEB_FORK_EPOCH) {
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
+      }
+      if (stateEpoch === config.ELECTRA_FORK_EPOCH) {
+        postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;
