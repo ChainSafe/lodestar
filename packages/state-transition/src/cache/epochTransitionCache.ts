@@ -1,4 +1,3 @@
-import {ReusableListIterator} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
@@ -214,7 +213,7 @@ const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 /**
  * This data is reused and never gc.
  */
-const validators = new ReusableListIterator<phase0.Validator>();
+const validators: phase0.Validator[] = [];
 const previousEpochParticipation = new Array<number>();
 const currentEpochParticipation = new Array<number>();
 
@@ -242,9 +241,8 @@ export function beforeProcessEpoch(
   // To optimize memory each validator node in `state.validators` is represented with a special node type
   // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directly
   // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
-  validators.reset();
-  state.validators.getAllReadonlyValuesIter(validators);
-  validators.clean();
+  validators.length = state.validators.length;
+  state.validators.getAllReadonlyValues(validators);
 
   const validatorCount = validators.length;
 
