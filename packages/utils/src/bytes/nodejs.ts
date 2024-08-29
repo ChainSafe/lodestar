@@ -9,7 +9,7 @@ export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): s
 }
 
 // Shared buffer to convert root to hex
-const rootBuf = Buffer.alloc(32);
+let rootBuf: Buffer | undefined;
 
 /**
  * Convert a Uint8Array, length 32, to 0x-prefixed hex string
@@ -17,6 +17,10 @@ const rootBuf = Buffer.alloc(32);
 export function toRootHex(root: Uint8Array): string {
   if (root.length !== 32) {
     throw Error(`Expect root to be 32 bytes, got ${root.length}`);
+  }
+
+  if (rootBuf === undefined) {
+    rootBuf = Buffer.alloc(32);
   }
 
   rootBuf.set(root);

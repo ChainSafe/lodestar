@@ -1,15 +1,14 @@
-let toHex: (bytes: Uint8Array) => string;
-let toRootHex: (root: Uint8Array) => string;
-let fromHex: (hex: string) => Uint8Array;
+import {toHex as browserToHex, toRootHex as browserToRootHex, fromHex as browserFromHex} from "./browser.js";
+import {toHex as nodeToHex, toRootHex as nodeToRootHex, fromHex as nodeFromHex} from "./nodejs.js";
+
+let toHex = browserToHex;
+let toRootHex = browserToRootHex;
+let fromHex = browserFromHex;
 
 if (typeof Buffer !== "undefined") {
-  toHex = (await import("./nodejs.js")).toHex;
-  toRootHex = (await import("./nodejs.js")).toRootHex;
-  fromHex = (await import("./nodejs.js")).fromHex;
-} else {
-  toHex = (await import("./browser.js")).toHex;
-  toRootHex = (await import("./browser.js")).toRootHex;
-  fromHex = (await import("./browser.js")).fromHex;
+  toHex = nodeToHex;
+  toRootHex = nodeToRootHex;
+  fromHex = nodeFromHex;
 }
 
 export {toHex, toRootHex, fromHex};
