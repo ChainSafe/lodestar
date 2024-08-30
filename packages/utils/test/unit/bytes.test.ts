@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {intToBytes, bytesToInt, toHex, fromHex, toHexString} from "../../src/index.js";
+import {intToBytes, bytesToInt, toHex, fromHex, toHexString, toRootHex} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -48,7 +48,7 @@ describe("bytesToInt", () => {
 });
 
 describe("toHex", () => {
-  const testCases: {input: Buffer | Uint8Array | string; output: string}[] = [
+  const testCases: {input: Uint8Array; output: string}[] = [
     {input: Buffer.from("Hello, World!", "utf-8"), output: "0x48656c6c6f2c20576f726c6421"},
     {input: new Uint8Array([72, 101, 108, 108, 111]), output: "0x48656c6c6f"},
     {input: Buffer.from([72, 101, 108, 108, 111]), output: "0x48656c6c6f"},
@@ -57,6 +57,25 @@ describe("toHex", () => {
   for (const {input, output} of testCases) {
     it(`should convert Uint8Array to hex string ${output}`, () => {
       expect(toHex(input)).toBe(output);
+    });
+  }
+});
+
+describe("toRootHex", () => {
+  const testCases: {input: Uint8Array; output: string}[] = [
+    {
+      input: new Uint8Array(Array.from({length: 32}, (_, i) => i)),
+      output: "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    },
+    {
+      input: new Uint8Array(Array.from({length: 32}, () => 0)),
+      output: "0x0000000000000000000000000000000000000000000000000000000000000000",
+    },
+  ];
+
+  for (const {input, output} of testCases) {
+    it(`should convert root to hex string ${output}`, () => {
+      expect(toRootHex(input)).toBe(output);
     });
   }
 });
