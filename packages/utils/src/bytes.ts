@@ -4,7 +4,7 @@ type Endianness = "le" | "be";
 
 const hexByByte: string[] = [];
 /**
- * Deprecated. Use toHex() instead.
+ * @deprecated Use toHex() instead.
  */
 export function toHexString(bytes: Uint8Array): string {
   let hex = "0x";
