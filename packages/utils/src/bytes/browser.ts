@@ -13,9 +13,7 @@ export function toHex(bytes: Uint8Array): string {
 }
 
 const rootCharCodes = new Array<number>(32 * 2 + 2);
-// "0".charCodeAt(0)
 rootCharCodes[0] = CHAR_CODE_0;
-// "x".charCodeAt(0)
 rootCharCodes[1] = CHAR_CODE_X;
 
 /**
@@ -31,9 +29,7 @@ export function toRootHex(root: Uint8Array): string {
 }
 
 const pubkeyCharCodes = new Array<number>(48 * 2 + 2);
-// "0".charCodeAt(0)
 pubkeyCharCodes[0] = CHAR_CODE_0;
-// "x".charCodeAt(0)
 pubkeyCharCodes[1] = CHAR_CODE_X;
 
 /**
