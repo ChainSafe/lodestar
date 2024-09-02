@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {sleep} from "@lodestar/utils";
+import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
@@ -97,7 +96,7 @@ export class AttestationDutiesService {
   removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch) {
       for (const [vIndex, attDutyAndProof] of attDutiesAtEpoch.dutiesByIndex) {
-        if (toHexString(attDutyAndProof.duty.pubkey) === pubkey) {
+        if (toPubkeyHex(attDutyAndProof.duty.pubkey) === pubkey) {
           attDutiesAtEpoch.dutiesByIndex.delete(vIndex);
           if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
             this.dutiesByIndexByEpoch.delete(epoch);
@@ -244,7 +243,7 @@ export class AttestationDutiesService {
     const attesterDuties = res.value();
     const {dependentRoot} = res.meta();
     const relevantDuties = attesterDuties.filter((duty) => {
-      const pubkeyHex = toHexString(duty.pubkey);
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });
 
