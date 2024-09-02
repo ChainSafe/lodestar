@@ -3,7 +3,7 @@ import path from "node:path";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
 import {SignerLocal, SignerType} from "@lodestar/validator";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex, toPubkeyHex} from "@lodestar/utils";
 import {writeFile600Perm} from "../../../util/file.js";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
 import {LocalKeystoreDefinition} from "./interface.js";
@@ -42,9 +42,9 @@ export async function loadKeystoreCache(
     const secretKey = SecretKey.fromBytes(secretKeyBytes);
     const publicKey = secretKey.toPublicKey().toBytes();
 
-    if (toHex(publicKey) !== toHex(fromHex(k.pubkey))) {
+    if (toPubkeyHex(publicKey) !== toPubkeyHex(fromHex(k.pubkey))) {
       throw new Error(
-        `Keystore ${k.uuid} does not match the expected pubkey. expected=${toHex(fromHex(k.pubkey))}, found=${toHex(
+        `Keystore ${k.uuid} does not match the expected pubkey. expected=${toPubkeyHex(fromHex(k.pubkey))}, found=${toHex(
           publicKey
         )}`
       );
