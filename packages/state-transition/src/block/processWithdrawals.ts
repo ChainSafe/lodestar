@@ -89,6 +89,10 @@ export function getExpectedWithdrawals(
   sampledValidators: number;
   partialWithdrawalsCount: number;
 } {
+  if (fork < ForkSeq.capella) {
+    throw new Error(`getExpectedWithdrawals not supported at forkSeq=${fork} < ForkSeq.capella`);
+  }
+
   const epoch = state.epochCtx.epoch;
   let withdrawalIndex = state.nextWithdrawalIndex;
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
