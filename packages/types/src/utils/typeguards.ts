@@ -75,5 +75,8 @@ export function isElectraAttestation(attestation: Attestation): attestation is A
 
 export function isElectraLightClientUpdate(update: LightClientUpdate): update is LightClientUpdate<ForkPostElectra> {
   const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
-  return updatePostElectra.attestedHeader.execution !== undefined && updatePostElectra.attestedHeader.execution.depositRequestsRoot !== undefined;
+  return (
+    updatePostElectra.attestedHeader.execution !== undefined &&
+    updatePostElectra.attestedHeader.execution.depositRequestsRoot !== undefined
+  );
 }

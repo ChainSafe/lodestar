@@ -3,8 +3,6 @@ import {DatabaseController, Repository} from "@lodestar/db";
 import {LightClientHeader, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getLightClientHeaderTypeFromBytes} from "../../util/multifork.js";
-import { ValueOfFields, ContainerType, UintNumberType, ByteVectorType, ByteListType, UintBigintType, VectorCompositeType } from "@chainsafe/ssz";
-import { ExecutionAddressType } from "@lodestar/types/lib/utils/executionAddress.js";
 
 /**
  * Block headers by block root. Until finality includes all headers seen by this node. After finality,
