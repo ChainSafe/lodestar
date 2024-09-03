@@ -3,10 +3,10 @@ import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
 import {Root, RootHex, capella, Wei, ExecutionPayload} from "@lodestar/types";
 
 import {DATA} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
+import {PayloadIdCache, PayloadId, WithdrawalV1, DepositRequestV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 
-export {PayloadIdCache, type PayloadId, type WithdrawalV1};
+export {PayloadIdCache, type PayloadId, type WithdrawalV1, type DepositRequestV1};
 
 export enum ExecutionPayloadStatus {
   /** given payload is valid */
@@ -174,7 +174,7 @@ export interface IExecutionEngine {
     shouldOverrideBuilder?: boolean;
   }>;
 
-  getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
+  getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
-  getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
+  getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 }

@@ -7,12 +7,14 @@ exports[`forkName > should have valid allForks 1`] = `
   "bellatrix",
   "capella",
   "deneb",
+  "electra",
 ]
 `;
 
 exports[`forkName > should have valid blobs forks 1`] = `
 [
   "deneb",
+  "electra",
 ]
 `;
 
@@ -21,6 +23,7 @@ exports[`forkName > should have valid execution forks 1`] = `
   "bellatrix",
   "capella",
   "deneb",
+  "electra",
 ]
 `;
 
@@ -30,6 +33,7 @@ exports[`forkName > should have valid lightclient forks 1`] = `
   "bellatrix",
   "capella",
   "deneb",
+  "electra",
 ]
 `;
 
@@ -37,5 +41,6 @@ exports[`forkName > should have valid withdrawal forks 1`] = `
 [
   "capella",
   "deneb",
+  "electra",
 ]
 `;

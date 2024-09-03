@@ -3,6 +3,9 @@ import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {ssz} from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {ChainConfig, createChainForkConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -49,16 +52,23 @@ describe("AttestationService", function () {
     vi.resetAllMocks();
   });
 
-  const testContexts: [string, AttestationServiceOpts][] = [
-    ["With default configuration", {}],
-    ["With attestation grouping disabled", {disableAttestationGrouping: true}],
-    ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}],
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
+
+  const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
+    ["With default configuration", {}, {}],
+    ["With default configuration post-electra", {}, electraConfig],
+    ["With attestation grouping disabled", {disableAttestationGrouping: true}, {}],
+    ["With attestation grouping disabled post-electra", {disableAttestationGrouping: true}, electraConfig],
+    ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}, {}],
   ];
 
-  for (const [title, opts] of testContexts) {
+  for (const [title, opts, chainConfig] of testContexts) {
     describe(title, () => {
       it("Should produce, sign, and publish an attestation + aggregate", async () => {
         const clock = new ClockMock();
+        const config = createChainForkConfig({...defaultConfig, ...chainConfig});
+        const isPostElectra = chainConfig.ELECTRA_FORK_EPOCH === 0;
         const attestationService = new AttestationService(
           loggerVc,
           api,
@@ -68,11 +78,16 @@ describe("AttestationService", function () {
           chainHeadTracker,
           syncingStatusTracker,
           null,
+          config,
           opts
         );
 
-        const attestation = ssz.phase0.Attestation.defaultValue();
-        const aggregate = ssz.phase0.SignedAggregateAndProof.defaultValue();
+        const attestation = isPostElectra
+          ? ssz.electra.Attestation.defaultValue()
+          : ssz.phase0.Attestation.defaultValue();
+        const aggregate = isPostElectra
+          ? ssz.electra.SignedAggregateAndProof.defaultValue()
+          : ssz.phase0.SignedAggregateAndProof.defaultValue();
         const duties: AttDutyAndProof[] = [
           {
             duty: {
@@ -102,10 +117,17 @@ describe("AttestationService", function () {
 
         // Mock beacon's attestation and aggregates endpoints
         api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: attestation.data}));
-        api.validator.getAggregatedAttestation.mockResolvedValue(mockApiResponse({data: attestation}));
-
-        api.beacon.submitPoolAttestations.mockResolvedValue(mockApiResponse({}));
-        api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));
+        if (isPostElectra) {
+          api.validator.getAggregatedAttestationV2.mockResolvedValue(
+            mockApiResponse({data: attestation, meta: {version: ForkName.electra}})
+          );
+          api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
+          api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
+        } else {
+          api.validator.getAggregatedAttestation.mockResolvedValue(mockApiResponse({data: attestation}));
+          api.beacon.submitPoolAttestations.mockResolvedValue(mockApiResponse({}));
+          api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));
+        }
 
         if (opts.distributedAggregationSelection) {
           // Mock distributed validator middleware client selections endpoint
@@ -146,13 +168,25 @@ describe("AttestationService", function () {
           expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledWith({subscriptions: [subscription]});
         }
 
-        // Must submit the attestation received through produceAttestationData()
-        expect(api.beacon.submitPoolAttestations).toHaveBeenCalledOnce();
-        expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith({signedAttestations: [attestation]});
+        if (isPostElectra) {
+          // Must submit the attestation received through produceAttestationData()
+          expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
+          expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [attestation]});
 
-        // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
-        expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
-        expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
+          // Must submit the aggregate received through getAggregatedAttestationV2() then createAndSignAggregateAndProof()
+          expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledOnce();
+          expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledWith({
+            signedAggregateAndProofs: [aggregate],
+          });
+        } else {
+          // Must submit the attestation received through produceAttestationData()
+          expect(api.beacon.submitPoolAttestations).toHaveBeenCalledOnce();
+          expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith({signedAttestations: [attestation]});
+
+          // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
+          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
+          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
+        }
       });
     });
   }

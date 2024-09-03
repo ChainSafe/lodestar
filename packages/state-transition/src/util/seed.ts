@@ -5,7 +5,9 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
+  ForkSeq,
   MAX_EFFECTIVE_BALANCE,
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_SEED_LOOKAHEAD,
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
@@ -20,6 +22,7 @@ import {computeEpochAtSlot} from "./epoch.js";
  * Compute proposer indices for an epoch
  */
 export function computeProposers(
+  fork: ForkSeq,
   epochSeed: Uint8Array,
   shuffling: {epoch: Epoch; activeIndices: ArrayLike<ValidatorIndex>},
   effectiveBalanceIncrements: EffectiveBalanceIncrements
@@ -29,6 +32,7 @@ export function computeProposers(
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
       computeProposerIndex(
+        fork,
         effectiveBalanceIncrements,
         shuffling.activeIndices,
         digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
@@ -44,6 +48,7 @@ export function computeProposers(
  * SLOW CODE - 🐢
  */
 export function computeProposerIndex(
+  fork: ForkSeq,
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ArrayLike<ValidatorIndex>,
   seed: Uint8Array
@@ -54,7 +59,10 @@ export function computeProposerIndex(
 
   // TODO: Inline outside this function
   const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-  const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+  const MAX_EFFECTIVE_BALANCE_INCREMENT =
+    fork >= ForkSeq.electra
+      ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
+      : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
@@ -73,9 +81,6 @@ export function computeProposerIndex(
       return candidateIndex;
     }
     i += 1;
-    if (i === indices.length) {
-      return -1;
-    }
   }
 }
 
@@ -90,13 +95,17 @@ export function computeProposerIndex(
  * SLOW CODE - 🐢
  */
 export function getNextSyncCommitteeIndices(
+  fork: ForkSeq,
   state: BeaconStateAllForks,
   activeValidatorIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): ValidatorIndex[] {
   // TODO: Bechmark if it's necessary to inline outside of this function
   const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-  const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+  const MAX_EFFECTIVE_BALANCE_INCREMENT =
+    fork >= ForkSeq.electra
+      ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
+      : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
   const epoch = computeEpochAtSlot(state.slot) + 1;
 

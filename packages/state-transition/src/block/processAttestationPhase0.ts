@@ -1,7 +1,7 @@
-import {Slot, phase0, ssz} from "@lodestar/types";
-
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
 import {toRootHex} from "@lodestar/utils";
+import {Slot, Attestation, electra, phase0, ssz} from "@lodestar/types";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
+import {assert} from "@lodestar/utils";
 import {computeEpochAtSlot} from "../util/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
 import {isValidIndexedAttestation} from "./index.js";
@@ -51,27 +51,18 @@ export function processAttestationPhase0(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
+  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }
 
-export function validateAttestation(
-  fork: ForkSeq,
-  state: CachedBeaconStateAllForks,
-  attestation: phase0.Attestation
-): void {
+export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllForks, attestation: Attestation): void {
   const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
   const computedEpoch = computeEpochAtSlot(data.slot);
   const committeeCount = epochCtx.getCommitteeCountPerSlot(computedEpoch);
-  if (!(data.index < committeeCount)) {
-    throw new Error(
-      "Attestation committee index not within current committee count: " +
-        `committeeIndex=${data.index} committeeCount=${committeeCount}`
-    );
-  }
+
   if (!(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.epoch)) {
     throw new Error(
       "Attestation target epoch not in previous or current epoch: " +
@@ -93,12 +84,47 @@ export function validateAttestation(
     );
   }
 
-  const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-  if (attestation.aggregationBits.bitLen !== committee.length) {
-    throw new Error(
-      "Attestation aggregation bits length does not match committee length: " +
-        `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
+  if (fork >= ForkSeq.electra) {
+    assert.equal(data.index, 0, `AttestationData.index must be zero: index=${data.index}`);
+    const attestationElectra = attestation as electra.Attestation;
+    const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
+
+    if (committeeIndices.length === 0) {
+      throw Error("Attestation should have at least one committee bit set");
+    } else {
+      const lastCommitteeIndex = committeeIndices[committeeIndices.length - 1];
+      if (lastCommitteeIndex >= committeeCount) {
+        throw new Error(
+          `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
+        );
+      }
+    }
+
+    // Get total number of attestation participant of every committee specified
+    const participantCount = committeeIndices
+      .map((committeeIndex) => epochCtx.getBeaconCommittee(data.slot, committeeIndex).length)
+      .reduce((acc, committeeSize) => acc + committeeSize, 0);
+
+    assert.equal(
+      attestationElectra.aggregationBits.bitLen,
+      participantCount,
+      `Attestation aggregation bits length does not match total number of committee participant aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${participantCount}`
     );
+  } else {
+    if (!(data.index < committeeCount)) {
+      throw new Error(
+        "Attestation committee index not within current committee count: " +
+          `committeeIndex=${data.index} committeeCount=${committeeCount}`
+      );
+    }
+
+    const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
+    if (attestation.aggregationBits.bitLen !== committee.length) {
+      throw new Error(
+        "Attestation aggregation bits length does not match committee length: " +
+          `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
+      );
+    }
   }
 }
 

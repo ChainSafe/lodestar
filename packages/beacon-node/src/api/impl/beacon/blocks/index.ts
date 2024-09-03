@@ -1,12 +1,12 @@
 import {routes} from "@lodestar/api";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   reconstructFullBlockOrContents,
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution} from "@lodestar/params";
+import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
 import {sleep, fromHex, toRootHex} from "@lodestar/utils";
 import {
   deneb,
@@ -407,9 +407,26 @@ export function getBeaconBlockApi({
 
     async getBlockAttestations({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getBlockAttestationsV2 to retrieve block attestations for post-electra fork=${fork}`
+        );
+      }
+
       return {
-        data: Array.from(block.message.body.attestations),
+        data: block.message.body.attestations,
         meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getBlockAttestationsV2({blockId}) {
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      return {
+        data: block.message.body.attestations,
+        meta: {executionOptimistic, finalized, version: config.getForkName(block.message.slot)},
       };
     },
 

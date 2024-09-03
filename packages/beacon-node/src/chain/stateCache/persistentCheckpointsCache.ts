@@ -581,6 +581,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     });
   }
 
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+    const items = Array.from(this.cache.values())
+      .filter(isInMemoryCacheItem)
+      .map((item) => item.state);
+
+    return items.values();
+  }
+
   /** ONLY FOR DEBUGGING PURPOSES. For spec tests on error */
   dumpCheckpointKeys(): string[] {
     return Array.from(this.cache.keys());

@@ -190,6 +190,10 @@ export class FIFOBlockStateCache implements BlockStateCache {
     }));
   }
 
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+    return this.cache.values();
+  }
+
   /**
    * For unit test only.
    */

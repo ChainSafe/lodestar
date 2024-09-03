@@ -1,6 +1,6 @@
 import {SecretKey, aggregateSignatures} from "@chainsafe/blst";
 import {getClient} from "@lodestar/api";
-import {phase0, ssz} from "@lodestar/types";
+import {AttesterSlashing, phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
@@ -117,7 +117,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       target: {epoch: BigInt(0), root: rootB},
     };
 
-    const attesterSlashing: phase0.AttesterSlashing = {
+    const attesterSlashing: AttesterSlashing = {
       attestation1: {
         attestingIndices,
         data: data1,
@@ -130,7 +130,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       },
     };
 
-    (await client.beacon.submitPoolAttesterSlashings({attesterSlashing})).assertOk();
+    (await client.beacon.submitPoolAttesterSlashingsV2({attesterSlashing})).assertOk();
 
     successCount += attestingIndices.length;
     const indexesStr = attestingIndices.join(",");
