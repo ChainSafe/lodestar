@@ -11,6 +11,7 @@ import {
   GENESIS_SLOT,
   NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
   NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
+  NEXT_SYNC_COMMITTEE_INDEX,
 } from "@lodestar/params";
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
 import {isValidMerkleBranch} from "../utils/index.js";
@@ -100,7 +101,7 @@ export function validateLightClientUpdate(
         ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
         update.nextSyncCommitteeBranch,
         isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
-        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_INDEX_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
+        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_INDEX_ELECTRA : NEXT_SYNC_COMMITTEE_INDEX,
         update.attestedHeader.beacon.stateRoot
       )
     ) {
