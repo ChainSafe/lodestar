@@ -1,6 +1,12 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
-import {SlotInterval, computeEpochAtSlot, endOfInterval, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {
+  SlotInterval,
+  computeEpochAtSlot,
+  endOfInterval,
+  isAggregatorFromCommitteeLength,
+  isStartSlotOfEpoch,
+} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
 import {batchItems, IClock, LoggerVc} from "../util/index.js";

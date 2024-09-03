@@ -1,6 +1,11 @@
 import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-import {SlotInterval, computeEpochAtSlot, endOfInterval, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
+import {
+  SlotInterval,
+  computeEpochAtSlot,
+  endOfInterval,
+  isAggregatorFromCommitteeLength,
+} from "@lodestar/state-transition";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
@@ -90,8 +95,13 @@ export class AttestationService {
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one interval of the slot has transpired (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of slot) -- whichever comes first.
-    await Promise.race([sleep(this.clock.msToSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION), signal), this.emitter.waitForBlockSlot(slot)]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION));
+    await Promise.race([
+      sleep(this.clock.msToSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION), signal),
+      this.emitter.waitForBlockSlot(slot),
+    ]);
+    this.metrics?.attesterStepCallProduceAttestation.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION)
+    );
 
     if (this.opts?.disableAttestationGrouping) {
       // Attestation service grouping optimization must be disabled in a distributed validator cluster as
@@ -135,7 +145,9 @@ export class AttestationService {
     // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the beginning of SlotInterval.AGGREGATION_PROPAGATION
     await sleep(this.clock.msToSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION));
+    this.metrics?.attesterStepCallProduceAggregate.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION)
+    );
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
@@ -156,7 +168,9 @@ export class AttestationService {
     // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the beginning of SlotInterval.AGGREGATION_PROPAGATION
     await sleep(this.clock.msToSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION));
+    this.metrics?.attesterStepCallProduceAggregate.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION)
+    );
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
     const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
@@ -227,7 +241,9 @@ export class AttestationService {
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToAttestationInterval, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION));
+    this.metrics?.attesterStepCallPublishAttestation.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION)
+    );
 
     // Step 2. Publish all `Attestations` in one go
     const logCtx = {
@@ -311,7 +327,9 @@ export class AttestationService {
       })
     );
 
-    this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromSlotInterval(attestation.slot, SlotInterval.AGGREGATION_PROPAGATION));
+    this.metrics?.attesterStepCallPublishAggregate.observe(
+      this.clock.secFromSlotInterval(attestation.slot, SlotInterval.AGGREGATION_PROPAGATION)
+    );
 
     if (signedAggregateAndProofs.length > 0) {
       try {

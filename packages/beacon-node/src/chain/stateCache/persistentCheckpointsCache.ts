@@ -1,9 +1,13 @@
 import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, ONE_INTERVAL_OF_SLOT, computeStartSlotAtEpoch, getBlockRootAtSlot, getCurrentEpoch} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  ONE_INTERVAL_OF_SLOT,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+} from "@lodestar/state-transition";
 import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
-import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";

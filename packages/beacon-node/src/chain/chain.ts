@@ -228,7 +228,8 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
-    const preAggregateCutOffTime = getSlotFractionFromInterval(SlotInterval.AGGREGATION_PROPAGATION) * this.config.SECONDS_PER_SLOT;
+    const preAggregateCutOffTime =
+      getSlotFractionFromInterval(SlotInterval.AGGREGATION_PROPAGATION) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(
       config,
       clock,

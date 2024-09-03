@@ -1,6 +1,6 @@
 import {Epoch, Slot} from "@lodestar/types";
+import {SlotInterval} from "@lodestar/state-transition";
 import {IClock} from "../../src/util/index.js";
-import { SlotInterval } from "@lodestar/state-transition";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 

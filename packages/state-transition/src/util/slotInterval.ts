@@ -1,17 +1,18 @@
-import { INTERVALS_PER_SLOT } from "@lodestar/params";
+import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 /**
  * SlotInterval defines intervals within a slot.
  * For example, attestation propagation happens at the beginning of interval 1 (second interval) of the slot
  * whereas block propagation happens at the beginning of interval 0 (first interval) of the slot.
- * 
+ *
  * This can also be interpret as seconds into the slot.
  * For example, block propagation happens at (0 * SECONDS_PER_SLOT / INTERVALS_PER_SLOT) seconds into the slot
  * and attestation propagation happens (1 * SECONDS_PER_SLOT / INTERVALS_PER_SLOT) seconds into the slot
- * 
+ *
  * Some intervals might have several validator actions eg. aggregate and sync aggregate both happening at the beginning
  * inteval 2.
  */
+/* eslint-disable @typescript-eslint/no-duplicate-enum-values */
 export enum SlotInterval {
   BLOCK_PROPAGATION = 0,
   SYNC_ATTESTATION_PROPAGATION = 0,
