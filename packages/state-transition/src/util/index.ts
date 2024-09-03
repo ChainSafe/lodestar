@@ -20,6 +20,7 @@ export * from "./shufflingDecisionRoot.js";
 export * from "./signatureSets.js";
 export * from "./signingRoot.js";
 export * from "./slot.js";
+export * from "./slotInterval.js";
 export * from "./syncCommittee.js";
 export * from "./validator.js";
 export * from "./weakSubjectivity.js";

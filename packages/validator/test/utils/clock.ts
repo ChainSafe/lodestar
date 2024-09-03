@@ -1,5 +1,6 @@
 import {Epoch, Slot} from "@lodestar/types";
 import {IClock} from "../../src/util/index.js";
+import { SlotInterval } from "@lodestar/state-transition";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
@@ -15,7 +16,9 @@ export class ClockMock implements IClock {
   runEverySlot = (fn: RunEveryFn): number => this.everySlot.push(fn);
   runEveryEpoch = (fn: RunEveryFn): number => this.everyEpoch.push(fn);
   msToSlot = (_slot: number): number => 0;
+  msToSlotInterval = (_slot: number, _interval: SlotInterval): number => 0;
   secFromSlot = (): number => 0;
+  secFromSlotInterval = (): number => 0;
   getCurrentSlot = (): number => 0;
   getCurrentEpoch = (): number => 0;
 

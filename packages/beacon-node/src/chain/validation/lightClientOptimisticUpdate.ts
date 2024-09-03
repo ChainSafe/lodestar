@@ -6,6 +6,7 @@ import {LightClientError, LightClientErrorCode} from "../errors/lightClientError
 import {GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {assertLightClientServer} from "../../node/utils/lightclient.js";
+import { ONE_INTERVAL_OF_SLOT } from "@lodestar/state-transition/src/index.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
@@ -26,7 +27,7 @@ export function validateLightClientOptimisticUpdate(
   }
 
   // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate
-  // through the network -- i.e. validate that one-third of optimistic_update.signature_slot has transpired
+  // through the network -- i.e. validate that one interval of optimistic_update.signature_slot has transpired
   // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   if (updateReceivedTooEarly(config, chain.genesisTime, gossipedOptimisticUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
@@ -53,7 +54,7 @@ export function validateLightClientOptimisticUpdate(
  * xxx|-------  (x is not okay)
  *
  * [IGNORE] The *update is received after the block at signature_slot was given enough time to propagate
- * through the network -- i.e. validate that one-third of *update.signature_slot has transpired
+ * through the network -- i.e. validate that one interval of *update.signature_slot has transpired
  * (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
  */
 export function updateReceivedTooEarly(
@@ -61,7 +62,7 @@ export function updateReceivedTooEarly(
   genesisTime: number,
   update: Pick<LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
-  const signatureSlot13TimestampMs = computeTimeAtSlot(config, update.signatureSlot + 1 / 3, genesisTime) * 1000;
+  const signatureSlot13TimestampMs = computeTimeAtSlot(config, update.signatureSlot + ONE_INTERVAL_OF_SLOT, genesisTime) * 1000;
   const earliestAllowedTimestampMs = signatureSlot13TimestampMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
   return Date.now() < earliestAllowedTimestampMs;
 }
