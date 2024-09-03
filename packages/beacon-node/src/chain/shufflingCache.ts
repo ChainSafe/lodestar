@@ -5,7 +5,7 @@ import {
   ShufflingBuildProps,
   computeEpochShuffling,
 } from "@lodestar/state-transition";
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {Epoch, RootHex} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
