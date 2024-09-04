@@ -8,7 +8,7 @@ import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
-import {createLibp2p} from "libp2p";
+import {createLibp2p, Libp2pInit} from "libp2p";
 import {Registry} from "prom-client";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
@@ -63,6 +63,33 @@ export async function createNodeJsLibp2p(
       peerDiscovery.push(mdns());
     }
   }
+  const transports: Libp2pInit["transports"] = [
+    // TCP is always enabled
+    tcp({
+      // Reject connections when the server's connection count gets high
+      maxConnections: networkOpts.maxPeers,
+      // socket option: the maximum length of the queue of pending connections
+      // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
+      // it's not safe if we increase this number
+      backlog: 5,
+      closeServerOnMaxConnections: {
+        closeAbove: networkOpts.maxPeers ?? Infinity,
+        listenBelow: networkOpts.maxPeers ?? Infinity,
+      },
+    }),
+  ];
+  if (!networkOpts.disableQuic) {
+    transports.unshift(
+      quic({
+        handshakeTimeout: 5_000,
+        maxIdleTimeout: 10_000,
+        keepAliveInterval: 5_000,
+        maxConcurrentStreamLimit: 256,
+        maxStreamData: 10_000_000,
+        maxConnectionData: 15_000_000,
+      })
+    );
+  }
 
   return createLibp2p({
     privateKey,
@@ -71,30 +98,7 @@ export async function createNodeJsLibp2p(
       announce: [],
     },
     connectionEncrypters: [noise()],
-    // Reject connections when the server's connection count gets high
-    transports: [
-      networkOpts.disableQuic
-        ? undefined
-        : quic({
-            handshakeTimeout: 5_000,
-            maxIdleTimeout: 10_000,
-            keepAliveInterval: 5_000,
-            maxConcurrentStreamLimit: 256,
-            maxStreamData: 10_000_000,
-            maxConnectionData: 15_000_000,
-          }),
-      tcp({
-        maxConnections: networkOpts.maxPeers,
-        // socket option: the maximum length of the queue of pending connections
-        // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
-        // it's not safe if we increase this number
-        backlog: 5,
-        closeServerOnMaxConnections: {
-          closeAbove: networkOpts.maxPeers ?? Infinity,
-          listenBelow: networkOpts.maxPeers ?? Infinity,
-        },
-      }),
-    ].filter(Boolean),
+    transports,
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
