@@ -66,18 +66,18 @@ export async function createNodeJsLibp2p(
   }
   const transports: Libp2pInit["transports"] = [
     // TCP is always enabled
-    tcp({
-      // Reject connections when the server's connection count gets high
-      maxConnections: networkOpts.maxPeers,
-      // socket option: the maximum length of the queue of pending connections
-      // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
-      // it's not safe if we increase this number
-      backlog: 5,
-      closeServerOnMaxConnections: {
-        closeAbove: networkOpts.maxPeers ?? Infinity,
-        listenBelow: networkOpts.maxPeers ?? Infinity,
-      },
-    }),
+    // tcp({
+    //   // Reject connections when the server's connection count gets high
+    //   maxConnections: networkOpts.maxPeers,
+    //   // socket option: the maximum length of the queue of pending connections
+    //   // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
+    //   // it's not safe if we increase this number
+    //   backlog: 5,
+    //   closeServerOnMaxConnections: {
+    //     closeAbove: networkOpts.maxPeers ?? Infinity,
+    //     listenBelow: networkOpts.maxPeers ?? Infinity,
+    //   },
+    // }),
   ];
   if (!networkOpts.disableQuic) {
     transports.unshift(
