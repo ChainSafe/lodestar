@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {intToBytes, bytesToInt, toHex, fromHex, toHexString, toRootHex} from "../../src/index.js";
+import {intToBytes, bytesToInt, toHex, fromHex, toHexString, toRootHex, toPubkeyHex} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -76,6 +76,25 @@ describe("toRootHex", () => {
   for (const {input, output} of testCases) {
     it(`should convert root to hex string ${output}`, () => {
       expect(toRootHex(input)).toBe(output);
+    });
+  }
+});
+
+describe("toPubkeyHex", () => {
+  const testCases: {input: Uint8Array; output: string}[] = [
+    {
+      input: new Uint8Array(Array.from({length: 48}, (_, i) => i)),
+      output: "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+    },
+    {
+      input: new Uint8Array(Array.from({length: 48}, () => 0)),
+      output: "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+  ];
+
+  for (const {input, output} of testCases) {
+    it(`should convert root to hex string ${output}`, () => {
+      expect(toPubkeyHex(input)).toBe(output);
     });
   }
 });

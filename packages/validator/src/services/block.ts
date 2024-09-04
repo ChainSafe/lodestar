@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {
   BLSPubkey,
   Slot,
@@ -15,7 +14,7 @@ import {
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
-import {extendError, prettyBytes, prettyWeiToEth} from "@lodestar/utils";
+import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -110,7 +109,7 @@ export class BlockProposingService {
 
   /** Produce a block at the given slot for pubkey */
   private async createAndPublishBlock(pubkey: BLSPubkey, slot: Slot): Promise<void> {
-    const pubkeyHex = toHexString(pubkey);
+    const pubkeyHex = toPubkeyHex(pubkey);
     const logCtx = {slot, validator: prettyBytes(pubkeyHex)};
 
     // Wrap with try catch here to re-use `logCtx`
