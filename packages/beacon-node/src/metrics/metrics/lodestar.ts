@@ -1413,6 +1413,34 @@ export function createLodestarMetrics(
       help: "UnhandledPromiseRejection total count",
     }),
 
+    // regen.getState metrics
+    regenGetState: {
+      blockCount: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_block_count",
+        help: "Block count in regen.getState",
+        labelNames: ["caller"],
+        buckets: [4, 8, 16, 32, 64],
+      }),
+      getSeedState: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_get_seed_state_seconds",
+        help: "Duration of get seed state in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      loadBlocks: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_load_blocks_seconds",
+        help: "Duration of load blocks in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      stateTransition: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_state_transition_seconds",
+        help: "Duration of state transition in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+    },
+
     // Precompute next epoch transition
     precomputeNextEpochTransition: {
       count: register.counter<{result: string}>({
