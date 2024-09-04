@@ -554,7 +554,7 @@
 
 "@chainsafe/libp2p-quic@https://github.com/chainsafe/js-libp2p-quic/raw/pack/package.tgz":
   version "0.0.0"
-  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/pack/package.tgz#36ae3a52fcb69133cc81ea76ccd9c5776cb0fbd9"
+  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/pack/package.tgz#134c8ebef4f9a799772d247be7c349e697285765"
   dependencies:
     "@libp2p/crypto" "^4.1.9"
     "@libp2p/interface" "^1.7.0"
