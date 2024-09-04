@@ -676,6 +676,62 @@
     uint8arrays "^5.0.0"
     wherearewe "^2.0.1"
 
+"@chainsafe/libp2p-quic-darwin-arm64@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-arm64/-/libp2p-quic-darwin-arm64-1.1.1.tgz#a84873b0b40ec16ab2fde96b22d0da4fcf345561"
+  integrity sha512-2INg6niu0u3GtKIsHC3gzEaufg/3ZgFvSeqIjuF+u5eXGIcTo1uare228icWC5/hn/DwQ83l6WafoMkuguSakA==
+
+"@chainsafe/libp2p-quic-darwin-x64@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-x64/-/libp2p-quic-darwin-x64-1.1.1.tgz#757d8a2fbba18d98070158e571b187b9d848b85d"
+  integrity sha512-xHU6GqjI7/4daslX04VIjTrVxyb/O3Yc1hH2dubtEmqnpJEM5+7qf03MBK/ddNhbAqzC0b7QuU/ecEgtqjHsRA==
+
+"@chainsafe/libp2p-quic-linux-arm64-gnu@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-gnu/-/libp2p-quic-linux-arm64-gnu-1.1.1.tgz#a6805dac5bc5057825ee141e7d4093acd52c87ff"
+  integrity sha512-HmjZ/2cb8xvkUBn1hPFkwl5s6m3hwkCiEE9ITlu/3UPajALpk4vrLjeoKDHV6M3c+ohIMauyKVqV50EEl6VM4Q==
+
+"@chainsafe/libp2p-quic-linux-arm64-musl@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-musl/-/libp2p-quic-linux-arm64-musl-1.1.1.tgz#41c1bfef51a61bba0d0869b41cd8d02b59ec0299"
+  integrity sha512-G7R4WhzDriLNpVRWPIlsyRUUDIik+4SJoX+ZKQ6T54r+wyJTght6coA1rJANjkXWa8wKK0b5iIQol1SZEGH3Jg==
+
+"@chainsafe/libp2p-quic-linux-x64-gnu@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-gnu/-/libp2p-quic-linux-x64-gnu-1.1.1.tgz#4583dab95304f5bed09ce18ad619e81e09192de6"
+  integrity sha512-ARZbIj+ueD/LTCwB7CLMtokNZkqu640gi9YIuhHqEqenLZ75FbpJpYnqY/Jx+vdK/+gV0NyRZ395o4pH1W5SXQ==
+
+"@chainsafe/libp2p-quic-linux-x64-musl@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-musl/-/libp2p-quic-linux-x64-musl-1.1.1.tgz#7f123d15d24bfb87afee74cb0e4f42fdc1efb417"
+  integrity sha512-lsBlcYlukwTDupe9SxI7hmhhSlZfBhGWXlb4gRqd+xcBptadX15lPhJDBi6P9T2CMwsAIoZNLDZhMqPf8RL5fw==
+
+"@chainsafe/libp2p-quic-win32-x64-msvc@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-win32-x64-msvc/-/libp2p-quic-win32-x64-msvc-1.1.1.tgz#622638c05d82ba6db8e7d169a685fefa2d38b34d"
+  integrity sha512-5O5ffgtzD8fpb6LeP4/clscOdWk17JXrjfMTlp9zUtTa+0vcAzBT8RtWzv12Vaqf9PPsTp+dUQ5595LWMcZVEA==
+
+"@chainsafe/libp2p-quic@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic/-/libp2p-quic-1.1.1.tgz#9bf77218f8961911eb31cf690bdf3e8ce5edec5d"
+  integrity sha512-fnL6n82ngQ1qzcuI/bdVshHU/GumO4azloP3RG1z6hkmcro8gdVDAYgmP47rXOQUf2GlczwKyI2epIPMRVwDhg==
+  dependencies:
+    "@libp2p/crypto" "^5.0.12"
+    "@libp2p/interface" "^2.6.0"
+    "@libp2p/utils" "^6.5.8"
+    "@multiformats/multiaddr" "^12.4.0"
+    "@multiformats/multiaddr-matcher" "^1.6.0"
+    it-stream-types "^2.0.2"
+    uint8arraylist "^2.4.8"
+  optionalDependencies:
+    "@chainsafe/libp2p-quic-darwin-arm64" "1.1.1"
+    "@chainsafe/libp2p-quic-darwin-x64" "1.1.1"
+    "@chainsafe/libp2p-quic-linux-arm64-gnu" "1.1.1"
+    "@chainsafe/libp2p-quic-linux-arm64-musl" "1.1.1"
+    "@chainsafe/libp2p-quic-linux-x64-gnu" "1.1.1"
+    "@chainsafe/libp2p-quic-linux-x64-musl" "1.1.1"
+    "@chainsafe/libp2p-quic-win32-x64-msvc" "1.1.1"
+
 "@chainsafe/netmask@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/netmask/-/netmask-2.0.0.tgz#0d4a75f47919f65011da4327a3845c9661f1038a"
@@ -1821,7 +1877,7 @@
     "@multiformats/mafmt" "^12.1.6"
     "@multiformats/multiaddr" "^12.3.3"
 
-"@libp2p/crypto@^5.0.0", "@libp2p/crypto@^5.0.1", "@libp2p/crypto@^5.0.15":
+"@libp2p/crypto@^5.0.0", "@libp2p/crypto@^5.0.1", "@libp2p/crypto@^5.0.12", "@libp2p/crypto@^5.0.15":
   version "5.0.15"
   resolved "https://registry.yarnpkg.com/@libp2p/crypto/-/crypto-5.0.15.tgz#ed4b75247ea1661417564d8dd30faf58e4199ecb"
   integrity sha512-28xYMOn3fs8flsNgCVVxp27gEmDTtZHbz+qEVv3v7cWfGRipaVhNXFV9tQJHWXHQ8mN8v/PQvgcfCcWu5jkrTg==
@@ -1864,7 +1920,7 @@
     "@multiformats/multiaddr" "^12.3.3"
     progress-events "^1.0.1"
 
-"@libp2p/interface@^2.0.0", "@libp2p/interface@^2.0.1", "@libp2p/interface@^2.7.0":
+"@libp2p/interface@^2.0.0", "@libp2p/interface@^2.0.1", "@libp2p/interface@^2.6.0", "@libp2p/interface@^2.7.0":
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/@libp2p/interface/-/interface-2.7.0.tgz#05dc0c13901f3a681484ec6f1a41f164b6228f41"
   integrity sha512-lWmfIGzbSaw//yoEWWJh8dXNDGSCwUyXwC7P1Q6jCFWNoEtCaB1pvwOGBtri7Db/aNFZryMzN5covoq5ulldnA==
@@ -2030,7 +2086,7 @@
     race-event "^1.3.0"
     stream-to-it "^1.0.1"
 
-"@libp2p/utils@^6.6.0":
+"@libp2p/utils@^6.5.8", "@libp2p/utils@^6.6.0":
   version "6.6.0"
   resolved "https://registry.yarnpkg.com/@libp2p/utils/-/utils-6.6.0.tgz#ed4859c603dcb8d16b29b6a14e55048df6c35049"
   integrity sha512-QjS1+r+jInOxULjdATBc1N/gorUWUoJqEKxpqTcB2wOwCipzB58RYR3n3QPeoRHj1mVMhZujE1dTbmK/Nafhqg==
@@ -2146,7 +2202,7 @@
     "@multiformats/multiaddr" "^12.0.0"
     multiformats "^13.0.0"
 
-"@multiformats/multiaddr@^12.0.0", "@multiformats/multiaddr@^12.1.10", "@multiformats/multiaddr@^12.1.14", "@multiformats/multiaddr@^12.1.3", "@multiformats/multiaddr@^12.3.3", "@multiformats/multiaddr@^12.3.5":
+"@multiformats/multiaddr@^12.0.0", "@multiformats/multiaddr@^12.1.10", "@multiformats/multiaddr@^12.1.14", "@multiformats/multiaddr@^12.1.3", "@multiformats/multiaddr@^12.3.3", "@multiformats/multiaddr@^12.3.5", "@multiformats/multiaddr@^12.4.0":
   version "12.4.0"
   resolved "https://registry.yarnpkg.com/@multiformats/multiaddr/-/multiaddr-12.4.0.tgz#13fca8d68805fe0d0569bdd7d4dce41497503d31"
   integrity sha512-FL7yBTLijJ5JkO044BGb2msf+uJLrwpD6jD6TkXlbjA9N12+18HT40jvd4o5vL4LOJMc86dPX6tGtk/uI9kYKg==
@@ -12618,7 +12674,14 @@ undici-types@~6.19.2:
   resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-6.19.8.tgz#35111c9d1437ab83a7cdc0abae2f26d88eda0a02"
   integrity sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==
 
-undici@^5.12.0, undici@^5.25.4:
+undici@^5.12.0:
+  version "5.29.0"
+  resolved "https://registry.yarnpkg.com/undici/-/undici-5.29.0.tgz#419595449ae3f2cdcba3580a2e8903399bd1f5a3"
+  integrity sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==
+  dependencies:
+    "@fastify/busboy" "^2.0.0"
+
+undici@^5.25.4:
   version "5.28.5"
   resolved "https://registry.yarnpkg.com/undici/-/undici-5.28.5.tgz#b2b94b6bf8f1d919bc5a6f31f2c01deb02e54d4b"
   integrity sha512-zICwjrDrcrUE0pyyJc1I2QzBkLM8FINsgOrt6WjA+BgajVq9Nxu2PbFFXUrAggLfDXlZGZBVZYw7WNV5KiBiBA==

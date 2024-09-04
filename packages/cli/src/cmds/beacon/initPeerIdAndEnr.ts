@@ -56,7 +56,7 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
 /**
  * Only update the enr if the value has changed
  */
-function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "ip6" | "tcp6" | "udp6">(
+function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "quic" | "ip6" | "tcp6" | "udp6" | "quic6">(
   enr: SignableENR,
   key: T,
   value: SignableENR[T] | undefined
@@ -73,7 +73,7 @@ export function overwriteEnrWithCliArgs(
   opts?: {newEnr?: boolean; bootnode?: boolean}
 ): void {
   const preSeq = enr.seq;
-  const {port, discoveryPort, port6, discoveryPort6} = parseListenArgs(args);
+  const {port, discoveryPort, quicPort, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
@@ -81,6 +81,8 @@ export function overwriteEnrWithCliArgs(
   if (!opts?.bootnode) {
     maybeUpdateEnr(enr, "tcp", args["enr.tcp"] ?? port ?? enr.tcp);
     maybeUpdateEnr(enr, "tcp6", args["enr.tcp6"] ?? port6 ?? enr.tcp6);
+    maybeUpdateEnr(enr, "quic", args["enr.quic"] ?? quicPort);
+    maybeUpdateEnr(enr, "quic6", args["enr.quic6"] ?? quicPort6);
   }
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
