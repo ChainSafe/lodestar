@@ -9,6 +9,7 @@ import {createLibp2p} from "libp2p";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
+import {quic} from "@chainsafe/libp2p-quic";
 import {noise} from "@chainsafe/libp2p-noise";
 import {defaultNetworkOptions, NetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
@@ -73,6 +74,16 @@ export async function createNodeJsLibp2p(
     connectionEncryption: [noise()],
     // Reject connections when the server's connection count gets high
     transports: [
+      networkOpts.disableQuic
+        ? undefined
+        : quic({
+            handshakeTimeout: 5_000,
+            maxIdleTimeout: 10_000,
+            keepAliveInterval: 5_000,
+            maxConcurrentStreamLimit: 256,
+            maxStreamData: 10_000_000,
+            maxConnectionData: 15_000_000,
+          }),
       tcp({
         maxConnections: networkOpts.maxPeers,
         // socket option: the maximum length of the queue of pending connections
@@ -84,7 +95,7 @@ export async function createNodeJsLibp2p(
           listenBelow: networkOpts.maxPeers ?? Infinity,
         },
       }),
-    ],
+    ].filter(Boolean),
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics

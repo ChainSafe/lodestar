@@ -74,6 +74,7 @@ export type SubnetDiscvQueryMs = {
 type CachedENR = {
   peerId: PeerId;
   multiaddrTCP: Multiaddr;
+  multiaddrQUIC?: Multiaddr;
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
 };
@@ -310,9 +311,16 @@ export class PeerDiscovery {
       return;
     }
 
+    // There is at least one multiaddr
+    // We assume its the tcp multiaddr, we also assume that there may be an additional quic multiaddr
+    // In practice this will only be challenged for mdns discovered peers
+    // TODO: make this smarter
+    const multiaddrTCP = multiaddrs[0];
+    const multiaddrQUIC = multiaddrs[1];
+
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
-    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets);
+    const status = this.handleDiscoveredPeer(id, multiaddrTCP, multiaddrQUIC, attnets, syncnets);
     this.logger.debug("Discovered peer via libp2p", {peer: prettyPrintPeerId(id), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
@@ -344,7 +352,10 @@ export class PeerDiscovery {
     const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
 
-    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets);
+    // quic multiaddr is optional
+    const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
+
+    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, multiaddrQUIC, attnets, syncnets);
     this.logger.debug("Discovered peer via discv5", {peer: prettyPrintPeerId(peerId), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
@@ -355,6 +366,7 @@ export class PeerDiscovery {
   private handleDiscoveredPeer(
     peerId: PeerId,
     multiaddrTCP: Multiaddr,
+    multiaddrQUIC: Multiaddr | undefined,
     attnets: boolean[],
     syncnets: boolean[]
   ): DiscoveredPeerStatus {
@@ -382,6 +394,7 @@ export class PeerDiscovery {
       const cachedPeer: CachedENR = {
         peerId,
         multiaddrTCP,
+        multiaddrQUIC,
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
       };
@@ -445,13 +458,15 @@ export class PeerDiscovery {
     // are not successful.
     this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
 
-    const {peerId, multiaddrTCP} = cachedPeer;
+    const {peerId, multiaddrTCP, multiaddrQUIC} = cachedPeer;
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
-    await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
+    await this.libp2p.peerStore.merge(peerId, {
+      multiaddrs: [multiaddrQUIC, multiaddrTCP].filter(Boolean) as Multiaddr[],
+    });
 
-    // Note: PeerDiscovery adds the multiaddrTCP beforehand
+    // Note: PeerDiscovery adds the multiaddrs beforehand
     const peerIdShort = prettyPrintPeerId(peerId);
     this.logger.debug("Dialing discovered peer", {peer: peerIdShort});
 

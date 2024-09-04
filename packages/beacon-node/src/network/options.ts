@@ -23,12 +23,14 @@ export interface NetworkOptions
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
+  disableQuic?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
   maxPeers: 110, // Allow some room above targetPeers for new inbound peers
   targetPeers: 100,
-  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
+  // this default is never used, in practice, it is always overridden by the cli
+  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000", "/ip4/0.0.0.0/udp/9001/quic-v1"],
   bootMultiaddrs: [],
   /** disabled by default */
   discv5: null,
@@ -44,4 +46,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   beaconAttestationBatchValidation: true,
   // This will enable the light client server by default
   disableLightClientServer: false,
+  // enable quic by default
+  disableQuic: false,
 };

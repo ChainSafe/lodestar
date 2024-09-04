@@ -151,10 +151,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
 type ENRArgs = {
   "enr.ip"?: string;
   "enr.tcp"?: number;
-  "enr.ip6"?: string;
   "enr.udp"?: number;
+  "enr.quic"?: number;
+  "enr.ip6"?: string;
   "enr.tcp6"?: number;
   "enr.udp6"?: number;
+  "enr.quic6"?: number;
   nat?: boolean;
 };
 
@@ -174,6 +176,11 @@ const enrOptions: CliCommandOptions<ENRArgs> = {
     type: "number",
     group: "enr",
   },
+  "enr.quic": {
+    description: "Override ENR QUIC entry",
+    type: "number",
+    group: "enr",
+  },
   "enr.ip6": {
     description: "Override ENR IPv6 entry",
     type: "string",
@@ -186,6 +193,11 @@ const enrOptions: CliCommandOptions<ENRArgs> = {
   },
   "enr.udp6": {
     description: "Override ENR (IPv6-specific) UDP entry",
+    type: "number",
+    group: "enr",
+  },
+  "enr.quic6": {
+    description: "Override ENR (IPv6-specific) QUIC entry",
     type: "number",
     group: "enr",
   },
