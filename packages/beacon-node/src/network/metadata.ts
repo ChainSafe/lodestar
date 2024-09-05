@@ -3,6 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {altair, Epoch, phase0, ssz, peerdas} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
+import {intToBytes} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextFork} from "./forks.js";
 
@@ -59,7 +60,10 @@ export class MetadataController {
     }
 
     if (this.config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.peerdas) {
-      this.onSetValue(ENRKey.csc, ssz.Uint8.serialize(this._metadata.csc));
+      this.onSetValue(
+        ENRKey.csc,
+        intToBytes(this._metadata.csc, Math.ceil(Math.log2(this._metadata.csc + 1) / 8), "be")
+      );
     }
   }
 
@@ -91,7 +95,7 @@ export class MetadataController {
   }
 
   set csc(csc: number) {
-    this.onSetValue(ENRKey.csc, ssz.Uint8.serialize(csc));
+    this.onSetValue(ENRKey.csc, intToBytes(this._metadata.csc, Math.ceil(Math.log2(this._metadata.csc + 1) / 8), "be"));
     this._metadata.csc = csc;
   }
 

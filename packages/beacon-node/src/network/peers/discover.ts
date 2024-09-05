@@ -7,6 +7,7 @@ import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ssz} from "@lodestar/types";
+import {bytesToInt} from "@lodestar/utils";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
@@ -375,7 +376,9 @@ export class PeerDiscovery {
     // never throw and treat too long or too short bitfields as zero-ed
     const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
-    const custodySubnetCount = custodySubnetCountBytes ? ssz.Uint8.deserialize(custodySubnetCountBytes) : 4;
+    const custodySubnetCount = custodySubnetCountBytes
+      ? bytesToInt(custodySubnetCountBytes, "be")
+      : this.config.CUSTODY_REQUIREMENT;
     this.peerIdToCustodySubnetCount.set(peerId.toString(), custodySubnetCount);
 
     const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets, custodySubnetCount);

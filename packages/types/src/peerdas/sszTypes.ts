@@ -13,12 +13,12 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altariSsz} from "../altair/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-const {BLSSignature, Root, ColumnIndex, Bytes32, Slot, UintNum64, Uint8} = primitiveSsz;
+const {BLSSignature, Root, ColumnIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
 
 export const Metadata = new ContainerType(
   {
     ...altariSsz.Metadata.fields,
-    csc: Uint8,
+    csc: UintNum64,
   },
   {typeName: "Metadata", jsonCase: "eth2"}
 );
