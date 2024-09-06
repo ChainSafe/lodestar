@@ -1010,7 +1010,9 @@ export class BeaconChain implements IBeaconChain {
       return block;
     }
     const blockHash = toHex(blindedOrFullBlockHashTreeRoot(this.config, block.message));
-    const [payload] = await this.executionEngine.getPayloadBodiesByHash([blockHash]);
+    const [payload] = await this.executionEngine.getPayloadBodiesByHash(this.config.getForkName(block.message.slot), [
+      blockHash,
+    ]);
     if (!payload) {
       throw new Eth1Error(
         {code: Eth1ErrorCode.INVALID_PAYLOAD_BODY, blockHash},
