@@ -50,9 +50,8 @@ export function processSlashings(
     totalBalanceByIncrement
   );
   const increment = EFFECTIVE_BALANCE_INCREMENT;
-  const adjustedTotalSlashingBalance = adjustedTotalSlashingBalanceByIncrement * increment;
 
-  const penaltyPerEffectiveBalanceIncrement = Math.floor(adjustedTotalSlashingBalance / totalBalanceByIncrement);
+  const penaltyPerEffectiveBalanceIncrement = Math.floor(adjustedTotalSlashingBalanceByIncrement / totalBalanceByIncrement) * increment;
   const penalties: number[] = [];
 
   const penaltiesByEffectiveBalanceIncrement = new Map<number, number>();
