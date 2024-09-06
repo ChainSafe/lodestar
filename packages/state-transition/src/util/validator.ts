@@ -75,7 +75,7 @@ export function getConsolidationChurnLimit(epochCtx: EpochCache): number {
   return getBalanceChurnLimit(epochCtx) - getActivationExitChurnLimit(epochCtx);
 }
 
-export function getValidatorMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {
+export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {
   // Compounding withdrawal credential only available since Electra
   if (hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
     return MAX_EFFECTIVE_BALANCE_ELECTRA;
@@ -85,7 +85,7 @@ export function getValidatorMaxEffectiveBalance(withdrawalCredentials: Uint8Arra
 }
 
 export function getActiveBalance(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
-  const validatorMaxEffectiveBalance = getValidatorMaxEffectiveBalance(
+  const validatorMaxEffectiveBalance = getMaxEffectiveBalance(
     state.validators.getReadonly(validatorIndex).withdrawalCredentials
   );
 
