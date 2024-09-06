@@ -427,40 +427,42 @@ export class EpochCache {
     let currentShuffling: EpochShuffling;
     let nextShuffling: EpochShuffling;
 
-    {
-      const previousActiveIndices = new Uint32Array(previousActiveIndicesAsNumberArray);
-      const currentActiveIndices = new Uint32Array(currentActiveIndicesAsNumberArray);
-      if (!shufflingCache) {
-        // Only for testing. shufflingCache should always be available in prod
-        previousShuffling = computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-        currentShuffling = isGenesis
-          ? previousShuffling
-          : computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-        nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
-      } else {
-        currentShuffling = cachedCurrentShuffling
-          ? cachedCurrentShuffling
-          : shufflingCache.getSync(currentEpoch, currentDecisionRoot, {
+    if (!shufflingCache) {
+      // Only for testing. shufflingCache should always be available in prod
+      previousShuffling = computeEpochShuffling(
+        state,
+        new Uint32Array(previousActiveIndicesAsNumberArray),
+        previousEpoch
+      );
+
+      currentShuffling = isGenesis
+        ? previousShuffling
+        : computeEpochShuffling(state, new Uint32Array(currentActiveIndicesAsNumberArray), currentEpoch);
+
+      nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    } else {
+      currentShuffling = cachedCurrentShuffling
+        ? cachedCurrentShuffling
+        : shufflingCache.getSync(currentEpoch, currentDecisionRoot, {
+            state,
+            activeIndices: new Uint32Array(currentActiveIndicesAsNumberArray),
+          });
+
+      previousShuffling = cachedPreviousShuffling
+        ? cachedPreviousShuffling
+        : isGenesis
+          ? currentShuffling
+          : shufflingCache.getSync(previousEpoch, previousDecisionRoot, {
               state,
-              activeIndices: currentActiveIndices,
+              activeIndices: new Uint32Array(previousActiveIndicesAsNumberArray),
             });
 
-        previousShuffling = cachedPreviousShuffling
-          ? cachedPreviousShuffling
-          : isGenesis
-            ? currentShuffling
-            : shufflingCache.getSync(previousEpoch, previousDecisionRoot, {
-                state,
-                activeIndices: previousActiveIndices,
-              });
-
-        nextShuffling = cachedNextShuffling
-          ? cachedNextShuffling
-          : shufflingCache.getSync(nextEpoch, nextDecisionRoot, {
-              state,
-              activeIndices: nextActiveIndices,
-            });
-      }
+      nextShuffling = cachedNextShuffling
+        ? cachedNextShuffling
+        : shufflingCache.getSync(nextEpoch, nextDecisionRoot, {
+            state,
+            activeIndices: nextActiveIndices,
+          });
     }
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
