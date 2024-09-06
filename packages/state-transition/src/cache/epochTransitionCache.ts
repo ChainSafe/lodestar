@@ -372,7 +372,7 @@ export function beforeProcessEpoch(
   // as a decision block.  we are part way through the transition though and this was added in
   // process slot beforeProcessEpoch happens so it available and valid
   const nextShufflingDecisionRoot = toRootHex(state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT));
-  const _nextShufflingActiveIndices = new Array<number>(nextEpochShufflingActiveIndicesLength);
+  const nextShufflingActiveIndices = new Uint32Array(nextEpochShufflingActiveIndicesLength);
   if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
     throw new Error(
       `Invalid activeValidatorCount: ${nextEpochShufflingActiveIndicesLength} > ${nextEpochShufflingActiveValidatorIndices.length}`
@@ -380,9 +380,8 @@ export function beforeProcessEpoch(
   }
   // only the first `activeValidatorCount` elements are copied to `activeIndices`
   for (let i = 0; i < nextEpochShufflingActiveIndicesLength; i++) {
-    _nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
+    nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
   }
-  const nextShufflingActiveIndices = new Uint32Array(_nextShufflingActiveIndices);
   state.epochCtx.shufflingCache?.build(
     epochAfterUpcoming,
     nextShufflingDecisionRoot,
