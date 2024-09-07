@@ -173,8 +173,7 @@ export function getExpectedWithdrawals(
       });
       withdrawalIndex++;
     } else if (
-      effectiveBalance ===
-        (isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE) &&
+      effectiveBalance === (isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE) &&
       balance > effectiveBalance
     ) {
       // capella partial withdrawal
