@@ -289,6 +289,15 @@ export async function unavailableBeaconBlobsByRoot(
           ? {blocks: [unavailableBlockInput], pendingDataColumns: neededColumns}
           : null
       );
+
+      // don't forget to resolve availability as the block may be stuck in availability wait
+      if (availableBlockInput !== undefined && availableBlockInput.type === BlockInputType.availableData) {
+        const {blockData} = availableBlockInput;
+        if (blockData.fork !== ForkName.peerdas) {
+          throw Error(`unexpected blockData fork=${blockData.fork} returned by matchBlockWithDataColumns`);
+        }
+        resolveAvailability(blockData);
+      }
     }
   } else {
     throw Error(`Invalid cachedData fork=${cachedData.fork} for unavailableBeaconBlobsByRoot`);
