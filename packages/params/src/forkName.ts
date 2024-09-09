@@ -97,10 +97,10 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
 }
 
 // TODO add electra type in ForkPreEpbs
-export type ForkPreEpbs = ForkPreBlobs | ForkName.deneb | ForkName.electra;
+export type ForkPreEpbs = ForkPreElectra | ForkName.electra;
 export type ForkExecutionPreEpbs = Exclude<ForkPreEpbs, ForkPreExecution>;
 export const forkExecutionPreEpbs = [ForkName.bellatrix, ForkName.capella, ForkName.deneb, ForkName.electra];
-export type ForkEpbs = Exclude<ForkName, ForkPreBlobs>;
+export type ForkEpbs = Exclude<ForkName, ForkPreEpbs>;
 export const forkEpbs = exclude(forkAll, [
   ForkName.phase0,
   ForkName.altair,
@@ -110,5 +110,5 @@ export const forkEpbs = exclude(forkAll, [
   ForkName.electra,
 ]);
 export function isForkEpbs(fork: ForkName): fork is ForkEpbs {
-  return isForkBlobs(fork) && fork !== ForkName.deneb && fork !== ForkName.electra;
+  return isForkPostElectra(fork) && fork !== ForkName.electra;
 }

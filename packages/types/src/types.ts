@@ -232,12 +232,12 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
-    Attestation: phase0.Attestation;
-    IndexedAttestation: phase0.IndexedAttestation;
-    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
-    AttesterSlashing: phase0.AttesterSlashing;
-    AggregateAndProof: phase0.AggregateAndProof;
-    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
+    Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
   };
 };
 
