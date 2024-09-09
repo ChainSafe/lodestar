@@ -30,7 +30,7 @@ import {
 } from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
-import {computeBlobSidecars, getDataColumnSidecars} from "../../../../util/blobs.js";
+import {computeBlobSidecars, computeDataColumnSidecars} from "../../../../util/blobs.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
@@ -79,7 +79,7 @@ export function getBeaconBlockApi({
       const fork = config.getForkName(signedBlock.message.slot);
       let blockData: BlockInputData;
       if (fork === ForkName.peerdas) {
-        dataColumnSidecars = getDataColumnSidecars(config, signedBlock, signedBlockOrContents);
+        dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, signedBlockOrContents);
         blockData = {
           fork,
           dataColumnsLen: dataColumnSidecars.length,

@@ -71,7 +71,7 @@ export function computeBlobSidecars(
  * Implementation of get_data_column_sidecars
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_data_column_sidecars
  */
-export function getDataColumnSidecars(
+export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
   contents: deneb.Contents & {kzgCommitmentsInclusionProof?: peerdas.KzgCommitmentsInclusionProof}

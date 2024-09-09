@@ -4,7 +4,7 @@ import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {computeBlobSidecars, getDataColumnSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
+import {computeBlobSidecars, computeDataColumnSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
@@ -93,7 +93,7 @@ describe("C-KZG", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(commitment);
     }
 
-    const sidecars = getDataColumnSidecars(config, signedBeaconBlock, {blobs});
+    const sidecars = computeDataColumnSidecars(config, signedBeaconBlock, {blobs});
     const signedBlockHeader = signedBlockToSignedHeader(config, signedBeaconBlock);
 
     sidecars.forEach((sidecar, column) => {
