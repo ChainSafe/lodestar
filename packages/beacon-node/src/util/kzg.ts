@@ -1,12 +1,19 @@
 import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
+import {DasContextJs} from "@crate-crypto/node-eth-kzg";
 import {fromHex, toHex} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 // "c-kzg" has hardcoded the mainnet value, do not use params
 export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
+
+// A constant to switch between the two libraries at compile time
+declare let USE_PEERDAS_KZG: boolean | undefined;
+if (typeof USE_PEERDAS_KZG === "undefined") {
+  USE_PEERDAS_KZG = false; // use c-kzg by default, if the constant is not set
+}
 
 function ckzgNotLoaded(): never {
   throw Error("c-kzg library not loaded");
@@ -19,11 +26,19 @@ export let ckzg: {
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
+  // TODO:This is deprecated
   computeCells(blob: Uint8Array): Uint8Array[];
   computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
+  // TODO:This is deprecated
   cellsToBlob(cells: Uint8Array[]): Uint8Array;
+  // TODO:This is deprecated for recoverCellsAndKzgProofs
   recoverAllCells(cellIds: number[], cells: Uint8Array[]): Uint8Array[];
+  // TODO: The uncommented function `recoverCellsAndKzgProofs` is what the new API should look like.
+  // recoverCellsAndKzgProofs(cellIndices: number[], cells: Uint8Array[]): [Uint8Array[], Uint8Array[]];
+  // TODO: This is deprecated
   verifyCellKzgProof(commitmentBytes: Uint8Array, cellId: number, cell: Uint8Array, proofBytes: Uint8Array): boolean;
+  // TODO: This API no longer takes rowIndices. The commitmentBytes are duplicated.
+  // TODO: To update to the new API, one can do something like `commitmentBytes = rowIndices.map(|index| commitmentBytes[index]).collect()`
   verifyCellKzgProofBatch(
     commitmentsBytes: Uint8Array[],
     rowIndices: number[],
@@ -60,6 +75,9 @@ const G1POINT_COUNT = FIELD_ELEMENTS_PER_BLOB_MAINNET;
 const G2POINT_COUNT = 65;
 const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POINT_BYTES * G2POINT_COUNT;
 
+// TODO: We can think of a better way to initialize this
+let RustEthKzgContext: DasContextJs;
+
 export async function initCKZG(): Promise<void> {
   /* eslint-disable @typescript-eslint/ban-ts-comment */
   // @ts-ignore
@@ -83,6 +101,7 @@ export function loadEthereumTrustedSetup(
   filePath?: string
 ): void {
   try {
+    RustEthKzgContext = new DasContextJs();
     let setupFilePath;
     if (mode === TrustedFileMode.Bin) {
       const binPath = filePath ?? TRUSTED_SETUP_BIN_FILEPATH;
@@ -181,5 +200,46 @@ function strip0xPrefix(hex: string): string {
     return hex.slice(2);
   } else {
     return hex;
+  }
+}
+
+export function computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]] {
+  if (USE_PEERDAS_KZG) {
+    const cellsAndProofs = RustEthKzgContext.computeCellsAndKzgProofs(blob);
+    return [cellsAndProofs.cells, cellsAndProofs.proofs];
+  } else {
+    return ckzg.computeCellsAndKzgProofs(blob);
+  }
+}
+
+export function verifyCellKzgProofBatch(
+  commitmentsBytes: Uint8Array[],
+  cellIndices: number[],
+  cells: Uint8Array[],
+  proofsBytes: Uint8Array[]
+): boolean {
+  if (USE_PEERDAS_KZG) {
+    // Note: The library requires `BigInt`  since the specs define a u64.
+    // Left it as `number` in the API to note break anything.
+    const cellIndicesBigInt: bigint[] = cellIndices.map(BigInt);
+    return RustEthKzgContext.verifyCellKzgProofBatch(commitmentsBytes, cellIndicesBigInt, cells, proofsBytes);
+  } else {
+    // TODO: We need to update the c-kzg dep, it points to `matthewkeil/c-kzg-4844#13aa01464479aa7c1ccafa64d52cbc17699ffa07`
+    // TODO: I'm not sure how to proceed, so will leave this to lodestar folks.
+    throw new Error("unimplemented");
+  }
+}
+
+export function recoverCellsAndKzgProofs(cellIndices: number[], cells: Uint8Array[]): [Uint8Array[], Uint8Array[]] {
+  if (USE_PEERDAS_KZG) {
+    // Note: The library requires `BigInt`  since the specs define a u64.
+    // Left it as `number` in the API to note break anything.
+    const cellIndicesBigInt: bigint[] = cellIndices.map(BigInt);
+    const cellsAndProofs = RustEthKzgContext.recoverCellsAndKzgProofs(cellIndicesBigInt, cells);
+    return [cellsAndProofs.cells, cellsAndProofs.proofs];
+  } else {
+    // TODO: We need to update the c-kzg dep, it points to `matthewkeil/c-kzg-4844#13aa01464479aa7c1ccafa64d52cbc17699ffa07`
+    // TODO: I'm not sure how to proceed, so will leave this to lodestar folks.
+    throw new Error("unimplemented");
   }
 }
