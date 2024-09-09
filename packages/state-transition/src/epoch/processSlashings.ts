@@ -59,7 +59,12 @@ export function processSlashings(
     const effectiveBalanceIncrement = effectiveBalanceIncrements[index];
     let penalty = penaltiesByEffectiveBalanceIncrement.get(effectiveBalanceIncrement);
     if (penalty === undefined) {
-      penalty = penaltyPerEffectiveBalanceIncrement * effectiveBalanceIncrement;
+      if (fork < ForkSeq.electra) {
+        const penaltyNumeratorByIncrement = effectiveBalanceIncrement * adjustedTotalSlashingBalanceByIncrement;
+        penalty = Math.floor(penaltyNumeratorByIncrement / totalBalanceByIncrement) * increment;
+      } else {
+        penalty = penaltyPerEffectiveBalanceIncrement * effectiveBalanceIncrement;
+      }
       penaltiesByEffectiveBalanceIncrement.set(effectiveBalanceIncrement, penalty);
     }
 
