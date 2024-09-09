@@ -14,7 +14,7 @@ import {toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {
   decreaseBalance,
-  getValidatorMaxEffectiveBalance,
+  getMaxEffectiveBalance,
   hasEth1WithdrawalCredential,
   hasExecutionWithdrawalCredential,
   isCapellaPayloadHeader,
@@ -173,8 +173,7 @@ export function getExpectedWithdrawals(
       });
       withdrawalIndex++;
     } else if (
-      effectiveBalance ===
-        (isPostElectra ? getValidatorMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE) &&
+      effectiveBalance === (isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE) &&
       balance > effectiveBalance
     ) {
       // capella partial withdrawal
