@@ -49,6 +49,7 @@ export async function validateGossipDataColumnSidecar(
 export function validateDataColumnsSidecars(
   blockSlot: Slot,
   blockRoot: Root,
+  blockKzgCommitments: deneb.BlobKzgCommitments,
   dataColumnSidecars: electra.DataColumnSidecars,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): void {
@@ -58,12 +59,16 @@ export function validateDataColumnsSidecars(
   const proofBytes: Uint8Array[] = [];
   for (let sidecarsIndex = 0; sidecarsIndex < dataColumnSidecars.length; sidecarsIndex++) {
     const columnSidecar = dataColumnSidecars[sidecarsIndex];
-    const columnIndex = columnSidecar.index;
+    const {index: columnIndex, column, kzgCommitments, kzgProofs} = columnSidecar;
     const columnBlockHeader = columnSidecar.signedBlockHeader.message;
     const columnBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnBlockHeader);
-    if (columnBlockHeader.slot !== blockSlot || !byteArrayEquals(columnBlockRoot, blockRoot)) {
+    if (
+      columnBlockHeader.slot !== blockSlot ||
+      !byteArrayEquals(columnBlockRoot, blockRoot) ||
+      !byteArrayEquals(blockKzgCommitments, kzgCommitments)
+    ) {
       throw new Error(
-        `Invalid columnSidecar with slot=${columnBlockHeader.slot} columnBlockRoot=${toHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
+        `Invalid data column sidecar with slot=${columnBlockHeader.slot} columnBlockRoot=${toHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
       );
     }
 
@@ -73,7 +78,6 @@ export function validateDataColumnsSidecars(
       );
     }
 
-    const {column, kzgCommitments, kzgProofs} = columnSidecar;
     if (column.length !== kzgCommitments.length || column.length !== kzgProofs.length) {
       throw new Error(
         `Invalid data column lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`
