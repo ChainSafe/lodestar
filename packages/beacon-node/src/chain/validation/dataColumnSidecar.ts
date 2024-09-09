@@ -4,12 +4,14 @@ import {
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {ssz, deneb, electra, Slot, Root} from "@lodestar/types";
-import {verifyMerkleBranch} from "@lodestar/utils";
+import {ssz, electra, Slot, Root} from "@lodestar/types";
+import {toHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {DataColumnSidecarGossipError, DataColumnSidecarErrorCode} from "../errors/dataColumnSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
+import {ckzg} from "../../util/kzg.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
@@ -45,14 +47,60 @@ export async function validateGossipDataColumnSidecar(
 }
 
 export function validateDataColumnsSidecars(
-  _blockSlot: Slot,
-  _blockRoot: Root,
-  _expectedKzgCommitments: deneb.BlobKzgCommitments,
-  _dataColumnSidecars: electra.DataColumnSidecars,
-  _opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
+  blockSlot: Slot,
+  blockRoot: Root,
+  dataColumnSidecars: electra.DataColumnSidecars,
+  opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): void {
-  // stubbed
-  return;
+  const commitmentBytes: Uint8Array[] = [];
+  const cellIndices: number[] = [];
+  const cells: Uint8Array[] = [];
+  const proofBytes: Uint8Array[] = [];
+  for (let sidecarsIndex = 0; sidecarsIndex < dataColumnSidecars.length; sidecarsIndex++) {
+    const columnSidecar = dataColumnSidecars[sidecarsIndex];
+    const columnIndex = columnSidecar.index;
+    const columnBlockHeader = columnSidecar.signedBlockHeader.message;
+    const columnBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnBlockHeader);
+    if (columnBlockHeader.slot !== blockSlot || !byteArrayEquals(columnBlockRoot, blockRoot)) {
+      throw new Error(
+        `Invalid columnSidecar with slot=${columnBlockHeader.slot} columnBlockRoot=${toHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
+      );
+    }
+
+    if (columnIndex < NUMBER_OF_COLUMNS) {
+      throw new Error(
+        `Invalid data column columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
+      );
+    }
+
+    const {column, kzgCommitments, kzgProofs} = columnSidecar;
+    if (column.length !== kzgCommitments.length || column.length !== kzgProofs.length) {
+      throw new Error(
+        `Invalid data column lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`
+      );
+    }
+
+    commitmentBytes.push(...kzgCommitments);
+    cellIndices.push(...Array.from({length: column.length}, () => columnIndex));
+    cells.push(...column);
+    proofBytes.push(...kzgProofs);
+  }
+
+  if (opts.skipProofsCheck) {
+    return;
+  }
+
+  let valid: boolean;
+  try {
+    valid = ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
+  } catch (err) {
+    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toHex(blockRoot)}`;
+    throw err;
+  }
+
+  if (!valid) {
+    throw new Error(`Invalid data column sidecars in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`);
+  }
 }
 
 function validateInclusionProof(dataColumnSidecar: electra.DataColumnSidecar): boolean {

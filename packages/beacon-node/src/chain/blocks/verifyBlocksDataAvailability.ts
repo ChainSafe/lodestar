@@ -119,7 +119,7 @@ async function maybeValidateBlobs(
         const {dataColumns} = blockData;
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
         // might require numColumns, custodyColumns from blockData as input to below
-        validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, {skipProofsCheck});
+        validateDataColumnsSidecars(blockSlot, beaconBlockRoot, dataColumns, {skipProofsCheck});
       }
 
       const availableBlockInput = getBlockInput.availableData(
