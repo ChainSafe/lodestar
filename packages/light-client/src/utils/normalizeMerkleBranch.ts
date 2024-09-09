@@ -9,8 +9,7 @@ export const SYNC_COMMITTEES_INDEX = 11;
  * unmodified ``branch``
  */
 export function normalizeMerkleBranch(branch: Uint8Array[], depth: number): Uint8Array[] {
-  const numBytes = Math.floor(branch.length / 8);
-  const numExtraBytesRequired = depth - numBytes;
+  const numExtraDepth = depth - branch.length;
 
-  return [...Array.from({length: numExtraBytesRequired}, () => ZERO_HASH), ...branch];
+  return [...Array.from({length: numExtraDepth}, () => ZERO_HASH), ...branch];
 }
