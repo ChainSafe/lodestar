@@ -73,7 +73,7 @@ export function computeBlobSidecars(
  */
 export function getDataColumnSidecars(
   config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock<ForkBlobs>,
+  signedBlock: SignedBeaconBlock,
   contents: deneb.Contents & {kzgCommitmentsInclusionProof?: peerdas.KzgCommitmentsInclusionProof}
 ): peerdas.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
