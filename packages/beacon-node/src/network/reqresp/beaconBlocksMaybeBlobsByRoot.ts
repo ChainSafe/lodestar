@@ -1,4 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
+import {toHex} from "multiformats/dist/types/src/bytes.js";
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb, peerdas, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
@@ -219,7 +220,7 @@ export async function unavailableBeaconBlobsByRoot(
     metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
     availableBlockInput = getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
   } else if (cachedData.fork === ForkName.peerdas) {
-    const {dataColumnsCache, resolveAvailability} = cachedData;
+    const {dataColumnsCache, resolveAvailability, cacheId} = cachedData;
 
     // resolve missing blobs
     const dataColumnIdentifiers: peerdas.DataColumnIdentifier[] = [];
@@ -279,6 +280,8 @@ export async function unavailableBeaconBlobsByRoot(
         peerColumns: peerColumns.length,
         intersectingColumns: columns.length,
         allDataColumnSidecars: allDataColumnSidecars.length,
+        cacheId,
+        blockRoot: toHex(blockRoot),
       });
 
       [availableBlockInput] = matchBlockWithDataColumns(

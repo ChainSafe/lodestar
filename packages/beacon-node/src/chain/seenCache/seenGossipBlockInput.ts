@@ -147,6 +147,8 @@ export class SeenGossipBlockInput {
     }
 
     const {block: signedBlock, blockBytes, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
+    const {cacheId} = cachedData || {};
+    console.log("seenGossipBlockInput", {cacheId});
 
     if (signedBlock !== undefined) {
       if (!isForkBlobs(fork)) {
@@ -356,6 +358,7 @@ export class SeenGossipBlockInput {
   }
 }
 
+let globalCacheId = 0;
 export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
   // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
@@ -381,7 +384,13 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheTyp
     }
 
     const blobsCache = new Map();
-    const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
+    const cachedData: CachedData = {
+      fork,
+      blobsCache,
+      availabilityPromise,
+      resolveAvailability,
+      cacheId: ++globalCacheId,
+    };
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
   } else if (fork === ForkName.peerdas) {
     let resolveAvailability: ((blobs: BlockInputDataDataColumns) => void) | null = null;
@@ -399,6 +408,7 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheTyp
       dataColumnsCache,
       availabilityPromise,
       resolveAvailability,
+      cacheId: ++globalCacheId,
     };
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
   } else {

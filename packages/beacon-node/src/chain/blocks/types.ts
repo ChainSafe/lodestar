@@ -67,7 +67,10 @@ export type BlockInputData = BlockInputDataBlobs | BlockInputDataDataColumns;
 type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (data: T) => void};
 type CachedBlobs = {blobsCache: BlobsCacheMap} & Availability<BlockInputDataBlobs>;
 type CachedDataColumns = {dataColumnsCache: DataColumnsCacheMap} & Availability<BlockInputDataDataColumns>;
-export type CachedData = (ForkBlobsInfo & CachedBlobs) | (ForkDataColumnsInfo & CachedDataColumns);
+export type CachedData = {cacheId: number} & (
+  | (ForkBlobsInfo & CachedBlobs)
+  | (ForkDataColumnsInfo & CachedDataColumns)
+);
 
 export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preData | BlockInputType.outOfRangeData}
