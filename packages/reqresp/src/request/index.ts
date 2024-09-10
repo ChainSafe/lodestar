@@ -166,16 +166,17 @@ export async function* sendRequest(
     try {
       // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
       yield* pipe(
-        abortableSource(stream.source as AsyncIterable<Uint8ArrayList>, [
-          {
-            signal: ttfbTimeoutController.signal,
-            getError: () => new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
-          },
-          {
-            signal: respTimeoutController.signal,
-            getError: () => new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
-          },
-        ]),
+        stream.source,
+        // abortableSource(stream.source as AsyncIterable<Uint8ArrayList>, [
+        //   {
+        //     signal: ttfbTimeoutController.signal,
+        //     getError: () => new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
+        //   },
+        //   {
+        //     signal: respTimeoutController.signal,
+        //     getError: () => new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
+        //   },
+        // ]),
 
         // Transforms `Buffer` chunks to yield `ResponseBody` chunks
         responseDecode(protocol, {

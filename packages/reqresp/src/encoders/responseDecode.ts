@@ -57,6 +57,7 @@ export function responseDecode(
 
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
       // code (i.e. The chunk stream is terminated once an error occurs
+      console.log("bufferedSourceFull", Buffer.from(bufferedSource["buffer"].subarray()).toString("hex"));
       if (status !== RespStatus.SUCCESS) {
         const errorMessage = await readErrorMessage(bufferedSource);
         throw new ResponseError(status, errorMessage);
@@ -147,6 +148,16 @@ export async function readContextBytes(
 
     case ContextBytesType.ForkDigest: {
       const forkDigest = await readContextBytesForkDigest(bufferedSource);
+      console.log("forkDigest", Buffer.from(forkDigest).toString("hex"));
+      const ctx = contextBytes.forkDigestContext;
+      console.log("knownForkDigests", {
+        phase0: ctx.forkName2ForkDigestHex(ForkName.phase0),
+        altair: ctx.forkName2ForkDigestHex(ForkName.altair),
+        bellatrix: ctx.forkName2ForkDigestHex(ForkName.bellatrix),
+        capella: ctx.forkName2ForkDigestHex(ForkName.capella),
+        deneb: ctx.forkName2ForkDigestHex(ForkName.deneb),
+        electra: ctx.forkName2ForkDigestHex(ForkName.electra),
+      });
       return contextBytes.forkDigestContext.forkDigest2ForkName(forkDigest);
     }
   }
