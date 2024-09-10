@@ -13,7 +13,7 @@ import {OpPool} from "../../../../src/chain/opPools/opPool.js";
 import {generateBlsToExecutionChanges} from "../../../fixtures/capella.js";
 import {
   generateIndexedAttestations,
-  generateSignedBeaconBlockHeader,
+  generateSignedBeaconBlockHeaders,
   generateVoluntaryExits,
 } from "../../../fixtures/phase0.js";
 import {BlockType} from "../../../../src/chain/interface.js";
@@ -74,7 +74,7 @@ function fillAttesterSlashing(pool: OpPool, state: CachedBeaconStateAltair, coun
 }
 
 function fillProposerSlashing(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
-  for (const blockHeader of generateSignedBeaconBlockHeader(state, count)) {
+  for (const blockHeader of generateSignedBeaconBlockHeaders(state, count)) {
     pool.insertProposerSlashing({
       signedHeader1: ssz.phase0.SignedBeaconBlockHeaderBigint.fromJson(
         ssz.phase0.SignedBeaconBlockHeader.toJson(blockHeader)
