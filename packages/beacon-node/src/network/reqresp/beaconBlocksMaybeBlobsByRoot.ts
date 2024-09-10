@@ -259,7 +259,7 @@ export async function unavailableBeaconBlobsByRoot(
       }, [] as number[]);
 
       // this peer can't help fetching columns for this block
-      if (unavailableBlockInput.block !== null && columns.length === 0) {
+      if (unavailableBlockInput.block !== null && columns.length === 0 && neededColumns.length > 0) {
         return unavailableBlockInput;
       }
 
@@ -273,6 +273,13 @@ export async function unavailableBeaconBlobsByRoot(
       } else {
         allDataColumnSidecars = [];
       }
+
+      console.log("unavailableBlockInput fetched", {
+        neededColumns: neededColumns.length,
+        peerColumns: peerColumns.length,
+        intersectingColumns: columns.length,
+        allDataColumnSidecars: allDataColumnSidecars.length,
+      });
 
       [availableBlockInput] = matchBlockWithDataColumns(
         network,
