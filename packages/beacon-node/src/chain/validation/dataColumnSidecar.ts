@@ -4,7 +4,7 @@ import {
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {ssz, electra, Slot, Root} from "@lodestar/types";
+import {ssz, electra, Slot, Root, deneb} from "@lodestar/types";
 import {toHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {DataColumnSidecarGossipError, DataColumnSidecarErrorCode} from "../errors/dataColumnSidecarError.js";
@@ -57,6 +57,7 @@ export function validateDataColumnsSidecars(
   const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
   const proofBytes: Uint8Array[] = [];
+
   for (let sidecarsIndex = 0; sidecarsIndex < dataColumnSidecars.length; sidecarsIndex++) {
     const columnSidecar = dataColumnSidecars[sidecarsIndex];
     const {index: columnIndex, column, kzgCommitments, kzgProofs} = columnSidecar;
@@ -65,7 +66,10 @@ export function validateDataColumnsSidecars(
     if (
       columnBlockHeader.slot !== blockSlot ||
       !byteArrayEquals(columnBlockRoot, blockRoot) ||
-      !byteArrayEquals(blockKzgCommitments, kzgCommitments)
+      blockKzgCommitments.length !== kzgCommitments.length ||
+      blockKzgCommitments
+        .map((commitment, i) => byteArrayEquals(commitment, kzgCommitments[i]))
+        .filter((result) => result === false).length
     ) {
       throw new Error(
         `Invalid data column sidecar with slot=${columnBlockHeader.slot} columnBlockRoot=${toHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
