@@ -1,11 +1,11 @@
 import {describe, it, expect, afterEach, beforeAll} from "vitest";
-import {bellatrix, deneb, ssz} from "@lodestar/types";
-import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";
+import {deneb, ssz} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
-import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
+import {computeBlobSidecars} from "../../../src/util/blobs.js";
+import {loadEthereumTrustedSetup, initCKZG, ckzg} from "../../../src/util/kzg.js";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
+import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
 describe("C-KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -74,25 +74,3 @@ describe("C-KZG", () => {
     });
   });
 });
-
-function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
-  // Just use versionedHash as the transaction encoding to mock newPayloadV3 verification
-  // prefixed with BLOB_TX_TYPE
-  const transaction = new Uint8Array(33);
-  const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
-  transaction[0] = BLOB_TX_TYPE;
-  transaction.set(versionedHash, 1);
-  return transaction;
-}
-
-/**
- * Generate random blob of sequential integers such that each element is < BLS_MODULUS
- */
-function generateRandomBlob(): deneb.Blob {
-  const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB_MAINNET * BYTES_PER_FIELD_ELEMENT);
-  const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
-  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB_MAINNET; i++) {
-    dv.setUint32(i * BYTES_PER_FIELD_ELEMENT, i);
-  }
-  return blob;
-}

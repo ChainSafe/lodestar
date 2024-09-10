@@ -72,7 +72,7 @@ export function validateDataColumnsSidecars(
       );
     }
 
-    if (columnIndex < NUMBER_OF_COLUMNS) {
+    if (columnIndex >= NUMBER_OF_COLUMNS) {
       throw new Error(
         `Invalid data column columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
       );
