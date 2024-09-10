@@ -161,7 +161,7 @@ export class SeenGossipBlockInput {
       }
 
       if (cachedData.fork === ForkName.deneb) {
-        const {blobsCache} = cachedData;
+        const {blobsCache, resolveAvailability} = cachedData;
 
         // block is available, check if all blobs have shown up
         const {slot, body} = signedBlock.message;
@@ -176,13 +176,15 @@ export class SeenGossipBlockInput {
 
         if (blobKzgCommitments.length === blobsCache.size) {
           const allBlobs = getBlockInputBlobs(blobsCache);
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
           const {blobs} = allBlobs;
           const blockData = {
             fork: cachedData.fork,
             ...allBlobs,
             blobsSource: BlobsSource.gossip,
           };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+
           const blockInput = getBlockInput.availableData(
             config,
             signedBlock,
@@ -216,7 +218,7 @@ export class SeenGossipBlockInput {
           };
         }
       } else if (cachedData.fork === ForkName.peerdas) {
-        const {dataColumnsCache} = cachedData;
+        const {dataColumnsCache, resolveAvailability} = cachedData;
 
         // block is available, check if all blobs have shown up
         const {slot} = signedBlock.message;
@@ -239,6 +241,8 @@ export class SeenGossipBlockInput {
             dataColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS),
             dataColumnsSource: DataColumnsSource.gossip,
           };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
 
           const blockInput = getBlockInput.availableData(
             config,
@@ -273,6 +277,9 @@ export class SeenGossipBlockInput {
             dataColumnsIndex: this.custodyConfig.custodyColumnsIndex,
             dataColumnsSource: DataColumnsSource.gossip,
           };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+
           const blockInput = getBlockInput.availableData(
             config,
             signedBlock,
