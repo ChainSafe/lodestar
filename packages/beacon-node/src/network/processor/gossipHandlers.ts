@@ -55,6 +55,7 @@ import {
   BlobSidecarValidation,
   BlockInputType,
   NullBlockInput,
+  BlockInputData,
 } from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
@@ -329,10 +330,6 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
-    // if blobs are not yet fully available start an aggressive blob pull
-    if (blockInput.type === BlockInputType.dataPromise) {
-      events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-    }
 
     chain
       .processBlock(blockInput, {
@@ -400,6 +397,26 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
         chain.seenGossipBlockInput.prune();
       });
+
+    if (blockInput.type === BlockInputType.dataPromise) {
+      const blockSlot = blockInput.block.message.slot;
+      // if blobs are not yet fully available start an aggressive blob pull
+      chain.logger.debug("Block under processing is not available, racing with cutoff to add to unknownBlockInput", {
+        blockSlot,
+      });
+      raceWithCutoff(
+        chain,
+        blockSlot,
+        blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+        BLOCK_AVAILABILITY_CUTOFF_MS
+      ).catch((_e) => {
+        chain.logger.debug("Block under processing not yet available, racing with cutoff to add to unknownBlockInput", {
+          blockSlot,
+        });
+        events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+        return null;
+      });
+    }
   }
 
   return {
