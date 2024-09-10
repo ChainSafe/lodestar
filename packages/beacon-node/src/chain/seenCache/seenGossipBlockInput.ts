@@ -61,6 +61,7 @@ const MAX_GOSSIPINPUT_CACHE = 5;
 export class SeenGossipBlockInput {
   private blockInputCache = new Map<RootHex, BlockInputCacheType>();
   constructor(private custodyConfig: CustodyConfig) {}
+  globalCacheId = 0;
 
   prune(): void {
     pruneSetToMax(this.blockInputCache, MAX_GOSSIPINPUT_CACHE);
@@ -99,7 +100,7 @@ export class SeenGossipBlockInput {
       blockHex = toHexString(
         config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
 
       blockCache.block = signedBlock;
       blockCache.blockBytes = blockBytes;
@@ -109,7 +110,7 @@ export class SeenGossipBlockInput {
       fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
 
       blockHex = toHexString(blockRoot);
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
       if (blockCache.cachedData?.fork !== ForkName.deneb) {
         throw Error(`blob data at non deneb fork=${blockCache.fork}`);
       }
@@ -126,7 +127,7 @@ export class SeenGossipBlockInput {
       fork = config.getForkName(dataColumnSidecar.signedBlockHeader.message.slot);
 
       blockHex = toHexString(blockRoot);
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
       if (blockCache.cachedData?.fork !== ForkName.peerdas) {
         throw Error(`blob data at non peerdas fork=${blockCache.fork}`);
       }
@@ -358,8 +359,7 @@ export class SeenGossipBlockInput {
   }
 }
 
-let globalCacheId = 0;
-export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
+export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: number): BlockInputCacheType {
   // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
   let resolveBlockInput: ((block: BlockInput) => void) | null = null;

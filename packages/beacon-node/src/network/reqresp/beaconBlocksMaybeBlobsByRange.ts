@@ -312,7 +312,7 @@ export function matchBlockWithDataColumns(
           }
           cachedData = prevBlockInput.cachedData;
         } else {
-          cachedData = getEmptyBlockInputCacheEntry(config.getForkName(block.data.message.slot)).cachedData;
+          cachedData = getEmptyBlockInputCacheEntry(config.getForkName(block.data.message.slot), -1).cachedData;
           if (cachedData === undefined) {
             throw Error("Invalid cachedData=undefined from getEmptyBlockInputCacheEntry");
           }
