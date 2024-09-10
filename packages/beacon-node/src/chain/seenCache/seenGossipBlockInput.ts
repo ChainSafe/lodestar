@@ -148,8 +148,6 @@ export class SeenGossipBlockInput {
     }
 
     const {block: signedBlock, blockBytes, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
-    const {cacheId} = cachedData || {};
-    console.log("seenGossipBlockInput", {cacheId});
 
     if (signedBlock !== undefined) {
       if (!isForkBlobs(fork)) {
@@ -221,7 +219,8 @@ export class SeenGossipBlockInput {
           };
         }
       } else if (cachedData.fork === ForkName.peerdas) {
-        const {dataColumnsCache, resolveAvailability} = cachedData;
+        const {dataColumnsCache, resolveAvailability, cacheId} = cachedData;
+        console.log("seenGossipBlockInput", {cacheId, dataColumnsCache: dataColumnsCache.size});
 
         // block is available, check if all blobs have shown up
         const {slot} = signedBlock.message;

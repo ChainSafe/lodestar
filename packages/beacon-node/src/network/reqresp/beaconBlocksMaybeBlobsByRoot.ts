@@ -278,8 +278,10 @@ export async function unavailableBeaconBlobsByRoot(
         neededColumns: neededColumns.length,
         peerColumns: peerColumns.length,
         intersectingColumns: columns.length,
+        dataColumnIdentifiers: dataColumnIdentifiers.length,
         allDataColumnSidecars: allDataColumnSidecars.length,
         cacheId,
+        dataColumnsCache: dataColumnsCache.size,
         blockRoot: toHexString(blockRoot),
       });
 
