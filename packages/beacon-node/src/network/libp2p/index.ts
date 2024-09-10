@@ -123,6 +123,10 @@ export async function createNodeJsLibp2p(
       // make it the same to backlog option above
       maxIncomingPendingConnections: 5,
     },
+    // rely on lodestar's peer manager to trigger pings
+    connectionMonitor: {
+      enabled: false,
+    },
     datastore,
     services: {
       identify: identify({
