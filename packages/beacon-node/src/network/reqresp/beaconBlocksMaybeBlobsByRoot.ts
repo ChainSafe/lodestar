@@ -1,5 +1,4 @@
-import {fromHexString} from "@chainsafe/ssz";
-import {toHex} from "multiformats/dist/types/src/bytes.js";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb, peerdas, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
@@ -281,7 +280,7 @@ export async function unavailableBeaconBlobsByRoot(
         intersectingColumns: columns.length,
         allDataColumnSidecars: allDataColumnSidecars.length,
         cacheId,
-        blockRoot: toHex(blockRoot),
+        blockRoot: toHexString(blockRoot),
       });
 
       [availableBlockInput] = matchBlockWithDataColumns(
