@@ -267,6 +267,16 @@ export async function unavailableBeaconBlobsByRoot(
         dataColumnIdentifiers.push({blockRoot, index: columnIndex});
       }
 
+      console.log("unavailableBlockInput fetching", {
+        neededColumns: neededColumns.length,
+        peerColumns: peerColumns.length,
+        intersectingColumns: columns.length,
+        dataColumnIdentifiers: dataColumnIdentifiers.length,
+        cacheId,
+        dataColumnsCache: dataColumnsCache.size,
+        blockRoot: toHexString(blockRoot),
+      });
+
       let allDataColumnSidecars: peerdas.DataColumnSidecar[];
       if (dataColumnIdentifiers.length > 0) {
         allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
