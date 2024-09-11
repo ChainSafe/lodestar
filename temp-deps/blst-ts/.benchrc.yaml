@@ -1,0 +1,10 @@
+# Mocha opts
+extension: ["ts"]
+colors: true
+node-option:
+  - "loader=ts-node/register"
+
+# benchmark opts
+threshold: 3
+maxMs: 60_000
+minRuns: 10

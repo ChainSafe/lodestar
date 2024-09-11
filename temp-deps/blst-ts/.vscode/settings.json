@@ -1,0 +1,7 @@
+{
+    "rust-analyzer.procMacro.ignored": {
+        "napi-derive": [
+            "napi"
+        ]
+    }
+}

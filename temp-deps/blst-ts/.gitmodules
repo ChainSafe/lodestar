@@ -1,0 +1,3 @@
+[submodule "blst"]
+	path = blst
+	url = https://github.com/wemeetagain/blst.git

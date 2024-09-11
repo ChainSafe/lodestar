@@ -1,0 +1,34 @@
+{
+  "name": "@chainsafe/blst-linux-arm64-musl",
+  "version": "2.0.3",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "blst.linux-arm64-musl.node",
+  "files": [
+    "blst.linux-arm64-musl.node"
+  ],
+  "description": "Typescript wrapper for supranational/blst native bindings, a highly performant BLS12-381 signature library",
+  "keywords": [
+    "bls",
+    "bls12-381",
+    "blst",
+    "crypto",
+    "ethereum",
+    "napi"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">= 16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChainSafe/blst-ts"
+  },
+  "libc": [
+    "musl"
+  ]
+}

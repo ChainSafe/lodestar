@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Multi-Thread Tests",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/ts-node",
+            "args": [
+                "${workspaceFolder}/node_modules/.bin/benchmark",
+                "--config",
+                ".benchrc.yaml",
+                "test/perf/multithreading.test.ts"
+            ],
+            "env": {
+                "UV_THREADPOOL_SIZE": "9",
+            },
+            "console": "integratedTerminal",
+            "protocol": "inspector",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Native Addon",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "npm: build:debug",
+            "program": "node",
+            "args": [
+                "node_modules/.bin/mocha",
+                "test/unit/**/*.test.ts"
+            ]
+        }
+    ]
+}

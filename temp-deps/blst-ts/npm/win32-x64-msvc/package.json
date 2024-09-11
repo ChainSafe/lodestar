@@ -1,0 +1,31 @@
+{
+  "name": "@chainsafe/blst-win32-x64-msvc",
+  "version": "2.0.3",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "blst.win32-x64-msvc.node",
+  "files": [
+    "blst.win32-x64-msvc.node"
+  ],
+  "description": "Typescript wrapper for supranational/blst native bindings, a highly performant BLS12-381 signature library",
+  "keywords": [
+    "bls",
+    "bls12-381",
+    "blst",
+    "crypto",
+    "ethereum",
+    "napi"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">= 16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChainSafe/blst-ts"
+  }
+}
