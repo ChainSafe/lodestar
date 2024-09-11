@@ -58,24 +58,21 @@ export async function* onDataColumnSidecarsByRoot(
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
       );
-      console.log({columnsSize, storedColumnsNum: dataColumnSidecarsBytes.length / columnsSize});
+      console.log("onDataColumnSidecarsByRoot", {
+        slot: block.slot,
+        columnsSize,
+        storedColumnsNum: dataColumnSidecarsBytes.length / columnsSize,
+      });
 
       lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex};
     }
 
-    const dataIndex = lastFetchedSideCars.dataColumnsIndex[index] - 1;
+    const dataIndex = (lastFetchedSideCars.dataColumnsIndex[index] ?? 0) - 1;
     if (dataIndex < 0) {
       throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
     }
     const {columnsSize} = lastFetchedSideCars;
 
-    if (dataIndex === undefined || dataIndex === 0) {
-      throw Error(
-        `Missing dataColumnSidecar blockRoot=${blockRootHex} index=${index} calculated dataIndex=${dataIndex}`
-      );
-    }
-
-    // dataIndex is 1 based index
     const dataColumnSidecarBytes = lastFetchedSideCars.bytes.slice(
       dataIndex * columnsSize,
       (dataIndex + 1) * columnsSize

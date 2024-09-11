@@ -96,10 +96,15 @@ export function* iterateDataColumnBytesFromWrapper(
   }
 
   const fork = chain.config.getForkName(blockSlot);
+  console.log("onDataColumnSidecarsByRange", {
+    slot: blockSlot,
+    columnsSize,
+    storedColumnsNum: allDataColumnSidecarsBytes.length / columnsSize,
+  });
 
   for (const column of columns) {
     // get the index at which the column is
-    const index = dataColumnsIndex[column] - 1;
+    const index = (dataColumnsIndex[column] ?? 0) - 1;
     if (index < 0) {
       throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${column} not custodied`);
     }
