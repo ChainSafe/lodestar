@@ -1,7 +1,7 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
-import {toHex} from "@lodestar/utils";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {
@@ -24,7 +24,7 @@ export function processExecutionPayload(
     const {latestExecutionPayloadHeader} = state;
     if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
       throw Error(
-        `Invalid execution payload parentHash ${toHex(payload.parentHash)} latest blockHash ${toHex(
+        `Invalid execution payload parentHash ${toRootHex(payload.parentHash)} latest blockHash ${toRootHex(
           latestExecutionPayloadHeader.blockHash
         )}`
       );

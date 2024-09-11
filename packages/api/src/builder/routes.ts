@@ -13,7 +13,7 @@ import {
 } from "@lodestar/types";
 import {ForkName, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {toHex, toPubkeyHex} from "@lodestar/utils";
+import {toPubkeyHex, toRootHex} from "@lodestar/utils";
 
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
@@ -106,7 +106,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: {
         writeReq: ({slot, parentHash, proposerPubkey: proposerPubKey}) => ({
-          params: {slot, parent_hash: toHex(parentHash), pubkey: toPubkeyHex(proposerPubKey)},
+          params: {slot, parent_hash: toRootHex(parentHash), pubkey: toPubkeyHex(proposerPubKey)},
         }),
         parseReq: ({params}) => ({
           slot: params.slot,

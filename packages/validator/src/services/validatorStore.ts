@@ -42,7 +42,7 @@ import {
   SignedAggregateAndProof,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {toHex, toPubkeyHex} from "@lodestar/utils";
+import {toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
@@ -459,8 +459,8 @@ export class ValidatorStore {
 
     logger?.debug("Signing the block proposal", {
       slot: signingSlot,
-      blockRoot: toHex(blockRoot),
-      signingRoot: toHex(signingRoot),
+      blockRoot: toRootHex(blockRoot),
+      signingRoot: toRootHex(signingRoot),
     });
 
     try {
@@ -824,7 +824,7 @@ export class ValidatorStore {
 function getSignerPubkeyHex(signer: Signer): PubkeyHex {
   switch (signer.type) {
     case SignerType.Local:
-      return toHex(signer.secretKey.toPublicKey().toBytes());
+      return toPubkeyHex(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

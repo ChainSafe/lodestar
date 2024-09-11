@@ -13,7 +13,7 @@ import {
   SyncPeriod,
 } from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {isErrorAborted, sleep, toHex} from "@lodestar/utils";
+import {isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
@@ -162,7 +162,7 @@ export class Lightclient {
     const {transport, checkpointRoot} = args;
 
     // Fetch bootstrap state with proof at the trusted block root
-    const {data: bootstrap} = await transport.getBootstrap(toHex(checkpointRoot));
+    const {data: bootstrap} = await transport.getBootstrap(toRootHex(checkpointRoot));
 
     validateLightClientBootstrap(args.config, checkpointRoot, bootstrap);
 

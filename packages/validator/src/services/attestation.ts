@@ -1,7 +1,7 @@
 import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
-import {prettyBytes, sleep, toHex} from "@lodestar/utils";
+import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -194,7 +194,7 @@ export class AttestationService {
     duties: AttDutyAndProof[]
   ): Promise<void> {
     const signedAttestations: Attestation[] = [];
-    const headRootHex = toHex(attestationNoCommittee.beaconBlockRoot);
+    const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
     const isPostElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
 

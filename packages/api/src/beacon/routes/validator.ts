@@ -20,7 +20,7 @@ import {
   Attestation,
   sszTypesFor,
 } from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
 import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
@@ -806,7 +806,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: {
         writeReq: ({slot, subcommitteeIndex, beaconBlockRoot}) => ({
-          query: {slot, subcommittee_index: subcommitteeIndex, beacon_block_root: toHex(beaconBlockRoot)},
+          query: {slot, subcommittee_index: subcommitteeIndex, beacon_block_root: toRootHex(beaconBlockRoot)},
         }),
         parseReq: ({query}) => ({
           slot: query.slot,
@@ -831,7 +831,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: {
         writeReq: ({attestationDataRoot, slot}) => ({
-          query: {attestation_data_root: toHex(attestationDataRoot), slot},
+          query: {attestation_data_root: toRootHex(attestationDataRoot), slot},
         }),
         parseReq: ({query}) => ({
           attestationDataRoot: fromHexString(query.attestation_data_root),
