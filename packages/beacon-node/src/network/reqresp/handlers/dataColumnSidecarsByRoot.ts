@@ -58,6 +58,7 @@ export async function* onDataColumnSidecarsByRoot(
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
       );
+      console.log({columnsSize, storedColumnsNum: dataColumnSidecarsBytes.length / columnsSize});
 
       lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex};
     }
