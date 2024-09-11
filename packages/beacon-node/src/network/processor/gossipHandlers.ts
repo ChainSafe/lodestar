@@ -461,10 +461,23 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         seenTimestampSec
       );
       if (blockInput.block !== null) {
-        // we can just queue up the blockInput in the processor, but block gossip handler would have already
-        // queued it up.
-        //
-        // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+        if (blockInput.type === BlockInputType.dataPromise) {
+          chain.logger.debug("Block corresponding to blob is available but waiting for data availability", {
+            blobSlot,
+            index,
+          });
+          await raceWithCutoff(
+            chain,
+            blobSlot,
+            blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+            BLOCK_AVAILABILITY_CUTOFF_MS
+          ).catch((_e) => {
+            chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
+              blobSlot,
+            });
+            events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          });
+        }
       } else {
         // wait for the block to arrive till some cutoff else emit unknownBlockInput event
         chain.logger.debug("Block not yet available, racing with cutoff", {blobSlot, index});
@@ -536,10 +549,23 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         seenTimestampSec
       );
       if (blockInput.block !== null) {
-        // we can just queue up the blockInput in the processor, but block gossip handler would have already
-        // queued it up.
-        //
-        // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+        if (blockInput.type === BlockInputType.dataPromise) {
+          chain.logger.debug("Block corresponding to blob is available but waiting for data availability", {
+            blobSlot,
+            index,
+          });
+          await raceWithCutoff(
+            chain,
+            blobSlot,
+            blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+            BLOCK_AVAILABILITY_CUTOFF_MS
+          ).catch((_e) => {
+            chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
+              blobSlot,
+            });
+            events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          });
+        }
       } else {
         // wait for the block to arrive till some cutoff else emit unknownBlockInput event
         chain.logger.debug("Block not yet available, racing with cutoff", {blobSlot, index});
