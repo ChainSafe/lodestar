@@ -1,5 +1,5 @@
 import {Multiaddr} from "@multiformats/multiaddr";
-import type {PeerId, PeerInfo} from "@libp2p/interface";
+import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
@@ -27,6 +27,7 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
+  privateKey: PrivateKey;
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
@@ -158,7 +159,7 @@ export class PeerDiscovery {
   static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {
     const discv5 = await Discv5Worker.init({
       discv5: opts.discv5,
-      peerId: modules.libp2p.peerId,
+      privateKey: modules.privateKey,
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
       config: modules.config,
@@ -324,8 +325,7 @@ export class PeerDiscovery {
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
       this.randomNodeQuery.count++;
     }
-    // async due to some crypto that's no longer necessary
-    const peerId = await enr.peerId();
+    const peerId = enr.peerId;
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {

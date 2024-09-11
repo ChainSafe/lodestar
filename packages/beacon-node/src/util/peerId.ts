@@ -12,5 +12,5 @@ export type PeerIdStr = string;
 export {peerIdFromString};
 
 export function peerIdToString(peerId: PeerId): string {
-  return base58btc.encode(peerId.multihash.bytes).slice(1);
+  return base58btc.encode(peerId.toMultihash().bytes).slice(1);
 }

@@ -1,4 +1,4 @@
-import {Connection, PeerId} from "@libp2p/interface";
+import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
@@ -94,6 +94,7 @@ export interface IReqRespBeaconNodePeerManager {
 }
 
 export type PeerManagerModules = {
+  privateKey: PrivateKey;
   libp2p: Libp2p;
   logger: LoggerNode;
   metrics: NetworkCoreMetrics | null;

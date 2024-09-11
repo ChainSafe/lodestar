@@ -1,8 +1,7 @@
-import {PeerId} from "@libp2p/interface";
+import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
-// TODO: We should use this fork until https://github.com/libp2p/js-libp2p/pull/2387
-import {identify} from "@chainsafe/libp2p-identify";
+import {identify} from "@libp2p/identify";
 import {bootstrap} from "@libp2p/bootstrap";
 import {mdns} from "@libp2p/mdns";
 import {createLibp2p} from "libp2p";
@@ -34,7 +33,7 @@ export async function getDiscv5Multiaddrs(bootEnrs: string[]): Promise<string[]>
 }
 
 export async function createNodeJsLibp2p(
-  peerId: PeerId,
+  privateKey: PrivateKey,
   networkOpts: Partial<NetworkOptions> = {},
   nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
 ): Promise<Libp2p> {
@@ -65,12 +64,12 @@ export async function createNodeJsLibp2p(
   }
 
   return createLibp2p({
-    peerId,
+    privateKey,
     addresses: {
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncryption: [noise()],
+    connectionEncrypters: [noise()],
     // Reject connections when the server's connection count gets high
     transports: [
       tcp({
@@ -99,14 +98,13 @@ export async function createNodeJsLibp2p(
       maxParallelDials: 100,
       maxPeerAddrsToDial: 4,
       dialTimeout: 30_000,
-
-      // Rely entirely on lodestar's peer manager to prune connections
-      //maxConnections: options.maxConnections,
-      // DOCS: There is no way to turn off autodial other than setting minConnections to 0
-      minConnections: 0,
       // the maximum number of pending connections libp2p will accept before it starts rejecting incoming connections.
       // make it the same to backlog option above
       maxIncomingPendingConnections: 5,
+    },
+    // rely on lodestar's peer manager to ping peers
+    connectionMonitor: {
+      enabled: false,
     },
     datastore,
     services: {
@@ -118,6 +116,7 @@ export async function createNodeJsLibp2p(
       // and passing it here directly causes problems downstream, not to mention is slowwww
       components: (components: LodestarComponents) => ({
         peerId: components.peerId,
+        privateKey: components.privateKey,
         nodeInfo: components.nodeInfo,
         logger: components.logger,
         events: components.events,
