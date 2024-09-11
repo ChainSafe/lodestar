@@ -26,7 +26,7 @@ export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phas
 /**
  * This data is reused and never gc.
  */
-const eth1DataVotes = new ReusableListIterator<CompositeViewDU<typeof ssz.phase0.Eth1Data>>();
+const eth1DataVotes: CompositeViewDU<typeof ssz.phase0.Eth1Data>[] = [];
 /**
  * Returns true if adding the given `eth1Data` to `state.eth1DataVotes` would
  * result in a change to `state.eth1Data`.
@@ -52,9 +52,8 @@ export function becomesNewEth1Data(
   // Then isEqualEth1DataView compares cached roots (HashObject as of Jan 2022) which is much cheaper
   // than doing structural equality, which requires tree -> value conversions
   let sameVotesCount = 0;
-  eth1DataVotes.reset();
-  state.eth1DataVotes.getAllReadonlyIter(eth1DataVotes);
-  eth1DataVotes.clean();
+  eth1DataVotes.length = state.eth1DataVotes.length;
+  state.eth1DataVotes.getAllReadonly(eth1DataVotes);
   for (const eth1DataVote of eth1DataVotes) {
     if (isEqualEth1DataView(eth1DataVote, newEth1Data)) {
       sameVotesCount++;

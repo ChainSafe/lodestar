@@ -44,10 +44,7 @@ export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorInde
   state.balances.set(index, Math.max(0, newBalance));
 }
 
-/**
- * This data is reused and never gc.
- */
-const validators = new ReusableListIterator<phase0.Validator>();
+const validatorSlashes: boolean[] = [];
 
 /**
  * This method is used to get justified balances from a justified state.
@@ -69,16 +66,14 @@ export function getEffectiveBalanceIncrementsZeroInactive(
     validatorCount
   );
 
-  validators.reset();
-  justifiedState.validators.getAllReadonlyValuesIter(validators);
-  validators.clean();
-  let i = 0;
+  validatorSlashes.length = justifiedState.validators.length;
+  justifiedState.validators.forEachValue((v, i) => validatorSlashes[i] = v.slashed);
   let j = 0;
-  for (const validator of validators) {
+  for (const [i, slashed] of validatorSlashes.entries()) {
     if (i === activeIndices[j]) {
       // active validator
       j++;
-      if (validator.slashed) {
+      if (slashed) {
         // slashed validator
         effectiveBalanceIncrementsZeroInactive[i] = 0;
       }
@@ -86,7 +81,6 @@ export function getEffectiveBalanceIncrementsZeroInactive(
       // inactive validator
       effectiveBalanceIncrementsZeroInactive[i] = 0;
     }
-    i++;
   }
 
   return effectiveBalanceIncrementsZeroInactive;
