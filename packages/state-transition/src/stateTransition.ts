@@ -124,7 +124,6 @@ export function stateTransition(
   const stateRoot = postState.batchHashTreeRoot(hcGroup);
   hashTreeRootTimer?.();
 
-
   if (metrics) {
     onPostStateMetrics(postState, metrics);
   }

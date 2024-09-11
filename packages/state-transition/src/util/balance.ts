@@ -1,6 +1,5 @@
-import {ReusableListIterator} from "@chainsafe/ssz";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
-import {Gwei, ValidatorIndex, phase0} from "@lodestar/types";
+import {Gwei, ValidatorIndex} from "@lodestar/types";
 import {bigIntMax} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "..";
@@ -67,7 +66,7 @@ export function getEffectiveBalanceIncrementsZeroInactive(
   );
 
   validatorSlashes.length = justifiedState.validators.length;
-  justifiedState.validators.forEachValue((v, i) => validatorSlashes[i] = v.slashed);
+  justifiedState.validators.forEachValue((v, i) => (validatorSlashes[i] = v.slashed));
   let j = 0;
   for (const [i, slashed] of validatorSlashes.entries()) {
     if (i === activeIndices[j]) {

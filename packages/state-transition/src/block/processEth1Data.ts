@@ -1,5 +1,5 @@
 import {Node} from "@chainsafe/persistent-merkle-tree";
-import {CompositeViewDU, ReusableListIterator} from "@chainsafe/ssz";
+import {CompositeViewDU} from "@chainsafe/ssz";
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";

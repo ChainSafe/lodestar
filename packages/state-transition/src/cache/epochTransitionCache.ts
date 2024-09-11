@@ -1,4 +1,4 @@
-import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 
@@ -13,7 +13,12 @@ import {
   FLAG_CURR_TARGET_ATTESTER,
   FLAG_CURR_HEAD_ATTESTER,
 } from "../util/attesterStatus.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../index.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
+  hasCompoundingWithdrawalCredential,
+} from "../index.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
@@ -131,7 +136,13 @@ export interface EpochTransitionCache {
    * Validators in the current epoch, should use it for read-only value instead of accessing state.validators directly.
    * Note that during epoch processing, validators could be updated so need to use it with care.
    */
-  validators: phase0.Validator[];
+  isCompoundingValidatorArr: boolean[];
+  effectiveBalanceArr: number[];
+  slashedArr: boolean[];
+  activationEligibilityEpochArr: Epoch[];
+  activationEpochArr: Epoch[];
+  exitEpochArr: Epoch[];
+  withdrawableEpochArr: Epoch[];
 
   /**
    * This is for electra only
@@ -211,11 +222,37 @@ const flags = new Array<number>();
 /** WARNING: reused, never gc'd */
 const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 /**
- * This data is reused and never gc.
+ * This decomposed validator data is reused and never gc.
  */
-const validators: phase0.Validator[] = [];
+const isCompoundingValidatorArr: boolean[] = [];
+const effectiveBalanceArr: number[] = [];
+const slashedArr: boolean[] = [];
+const activationEligibilityEpochArr: Epoch[] = [];
+const activationEpochArr: Epoch[] = [];
+const exitEpochArr: Epoch[] = [];
+const withdrawableEpochArr: Epoch[] = [];
+
 const previousEpochParticipation = new Array<number>();
 const currentEpochParticipation = new Array<number>();
+
+function populateValidatorArrays(state: CachedBeaconStateAllForks, validatorCount: number): void {
+  isCompoundingValidatorArr.length = validatorCount;
+  effectiveBalanceArr.length = validatorCount;
+  slashedArr.length = validatorCount;
+  activationEligibilityEpochArr.length = validatorCount;
+  activationEpochArr.length = validatorCount;
+  exitEpochArr.length = validatorCount;
+  withdrawableEpochArr.length = validatorCount;
+  state.validators.forEachValue((v, i) => {
+    isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(v.withdrawalCredentials);
+    effectiveBalanceArr[i] = v.effectiveBalance;
+    slashedArr[i] = v.slashed;
+    activationEligibilityEpochArr[i] = v.activationEligibilityEpoch;
+    activationEpochArr[i] = v.activationEpoch;
+    exitEpochArr[i] = v.exitEpoch;
+    withdrawableEpochArr[i] = v.withdrawableEpoch;
+  });
+}
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
@@ -237,14 +274,8 @@ export function beforeProcessEpoch(
   const indicesToEject: ValidatorIndex[] = [];
 
   let totalActiveStakeByIncrement = 0;
-
-  // To optimize memory each validator node in `state.validators` is represented with a special node type
-  // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directly
-  // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
-  validators.length = state.validators.length;
-  state.validators.getAllReadonlyValues(validators);
-
-  const validatorCount = validators.length;
+  const validatorCount = state.validators.length;
+  populateValidatorArrays(state, validatorCount);
 
   nextEpochShufflingActiveValidatorIndices.length = validatorCount;
   let nextEpochShufflingActiveIndicesLength = 0;
@@ -275,20 +306,23 @@ export function beforeProcessEpoch(
 
   const effectiveBalancesByIncrements = epochCtx.effectiveBalanceIncrements;
 
-  // for (let i = 0; i < validatorCount; i++) {
-  let i = 0;
-  for (const validator of validators) {
+  for (let i = 0; i < validatorCount; i++) {
     let flag = 0;
+    const effectiveBalance = effectiveBalanceArr[i];
+    const slashed = slashedArr[i];
+    const activationEligibilityEpoch = activationEligibilityEpochArr[i];
+    const activationEpoch = activationEpochArr[i];
+    const exitEpoch = exitEpochArr[i];
+    const withdrawableEpoch = withdrawableEpochArr[i];
 
-    if (validator.slashed) {
-      if (slashingsEpoch === validator.withdrawableEpoch) {
+    if (slashed) {
+      if (slashingsEpoch === withdrawableEpoch) {
         indicesToSlash.push(i);
       }
     } else {
       flag |= FLAG_UNSLASHED;
     }
 
-    const {activationEpoch, exitEpoch} = validator;
     const isActivePrev = activationEpoch <= prevEpoch && prevEpoch < exitEpoch;
     const isActiveCurr = activationEpoch <= currentEpoch && currentEpoch < exitEpoch;
     const isActiveNext = activationEpoch <= nextEpoch && nextEpoch < exitEpoch;
@@ -301,7 +335,7 @@ export function beforeProcessEpoch(
     // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
-    if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
+    if (isActivePrev || (slashed && prevEpoch + 1 < withdrawableEpoch)) {
       flag |= FLAG_ELIGIBLE_ATTESTER;
     }
 
@@ -321,10 +355,7 @@ export function beforeProcessEpoch(
     //     and validator.effective_balance >= MAX_EFFECTIVE_BALANCE # [Modified in Electra]
     //   )
     // ```
-    if (
-      validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
-      validator.effectiveBalance >= MIN_ACTIVATION_BALANCE
-    ) {
+    if (activationEligibilityEpoch === FAR_FUTURE_EPOCH && effectiveBalance >= MIN_ACTIVATION_BALANCE) {
       indicesEligibleForActivationQueue.push(i);
     }
 
@@ -341,10 +372,10 @@ export function beforeProcessEpoch(
     // Then in processRegistryUpdates() we will check `activationEligibilityEpoch <= finalityEpoch`. This is to keep the array small.
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
-    else if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
+    else if (activationEpoch === FAR_FUTURE_EPOCH && activationEligibilityEpoch <= currentEpoch) {
       indicesEligibleForActivation.push({
         validatorIndex: i,
-        activationEligibilityEpoch: validator.activationEligibilityEpoch,
+        activationEligibilityEpoch,
       });
     }
 
@@ -355,11 +386,7 @@ export function beforeProcessEpoch(
     // Adding extra condition `exitEpoch === FAR_FUTURE_EPOCH` to keep the array as small as possible. initiateValidatorExit() will ignore them anyway
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
-    else if (
-      isActiveCurr &&
-      validator.exitEpoch === FAR_FUTURE_EPOCH &&
-      validator.effectiveBalance <= config.EJECTION_BALANCE
-    ) {
+    else if (isActiveCurr && exitEpoch === FAR_FUTURE_EPOCH && effectiveBalance <= config.EJECTION_BALANCE) {
       indicesToEject.push(i);
     }
 
@@ -370,7 +397,6 @@ export function beforeProcessEpoch(
     if (isActiveNext2) {
       nextEpochShufflingActiveValidatorIndices[nextEpochShufflingActiveIndicesLength++] = i;
     }
-    i++;
   }
 
   if (totalActiveStakeByIncrement < 1) {
@@ -508,7 +534,13 @@ export function beforeProcessEpoch(
     proposerIndices,
     inclusionDelays,
     flags,
-    validators,
+    isCompoundingValidatorArr,
+    effectiveBalanceArr,
+    slashedArr,
+    activationEligibilityEpochArr,
+    activationEpochArr,
+    exitEpochArr,
+    withdrawableEpochArr,
     // will be assigned in processPendingConsolidations()
     newCompoundingValidators: undefined,
     // Will be assigned in processRewardsAndPenalties()
