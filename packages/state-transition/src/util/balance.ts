@@ -43,9 +43,6 @@ export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorInde
   state.balances.set(index, Math.max(0, newBalance));
 }
 
-/** WARNING: reused, never gc'd */
-const validatorSlashes: boolean[] = [];
-
 /**
  * This method is used to get justified balances from a justified state.
  * This is consumed by forkchoice which based on delta so we return "by increment" (in ether) value,
@@ -66,10 +63,9 @@ export function getEffectiveBalanceIncrementsZeroInactive(
     validatorCount
   );
 
-  validatorSlashes.length = justifiedState.validators.length;
-  justifiedState.validators.forEachValue((v, i) => (validatorSlashes[i] = v.slashed));
   let j = 0;
-  for (const [i, slashed] of validatorSlashes.entries()) {
+  justifiedState.validators.forEachValue((validator, i) => {
+    const {slashed} = validator;
     if (i === activeIndices[j]) {
       // active validator
       j++;
@@ -81,7 +77,7 @@ export function getEffectiveBalanceIncrementsZeroInactive(
       // inactive validator
       effectiveBalanceIncrementsZeroInactive[i] = 0;
     }
-  }
+  });
 
   return effectiveBalanceIncrementsZeroInactive;
 }
