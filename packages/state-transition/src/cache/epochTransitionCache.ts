@@ -211,10 +211,8 @@ const inclusionDelays = new Array<number>();
 const flags = new Array<number>();
 /** WARNING: reused, never gc'd */
 const nextEpochShufflingActiveValidatorIndices = new Array<number>();
-/**
- * This decomposed validator data is reused and never gc.
- */
-const isCompoundingValidatorArr: boolean[] = [];
+/** WARNING: reused, never gc'd */
+const isCompoundingValidatorArr = new Array<boolean>();
 
 const previousEpochParticipation = new Array<number>();
 const currentEpochParticipation = new Array<number>();
@@ -240,7 +238,9 @@ export function beforeProcessEpoch(
 
   let totalActiveStakeByIncrement = 0;
   const validatorCount = state.validators.length;
-  isCompoundingValidatorArr.length = validatorCount;
+  if (forkSeq >= ForkSeq.electra) {
+    isCompoundingValidatorArr.length = validatorCount;
+  }
   nextEpochShufflingActiveValidatorIndices.length = validatorCount;
   let nextEpochShufflingActiveIndicesLength = 0;
   // pre-fill with true (most validators are active)
@@ -281,7 +281,10 @@ export function beforeProcessEpoch(
       withdrawableEpoch,
       withdrawalCredentials,
     } = validator;
-    isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
+
+    if (forkSeq >= ForkSeq.electra) {
+      isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
+    }
 
     if (slashed) {
       if (slashingsEpoch === withdrawableEpoch) {

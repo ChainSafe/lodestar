@@ -43,6 +43,7 @@ export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorInde
   state.balances.set(index, Math.max(0, newBalance));
 }
 
+/** WARNING: reused, never gc'd */
 const validatorSlashes: boolean[] = [];
 
 /**
