@@ -1,4 +1,4 @@
-import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
+import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {
   computeEpochAtSlot,
@@ -42,7 +42,7 @@ import {
   SignedAggregateAndProof,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {toPubkeyHex} from "@lodestar/utils";
+import {toHex, toPubkeyHex} from "@lodestar/utils";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
@@ -459,8 +459,8 @@ export class ValidatorStore {
 
     logger?.debug("Signing the block proposal", {
       slot: signingSlot,
-      blockRoot: toHexString(blockRoot),
-      signingRoot: toHexString(signingRoot),
+      blockRoot: toHex(blockRoot),
+      signingRoot: toHex(signingRoot),
     });
 
     try {
@@ -748,7 +748,7 @@ export class ValidatorStore {
     signingSlot: Slot,
     signableMessage: SignableMessage
   ): Promise<BLSSignature> {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
+    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
 
     const signer = this.validators.get(pubkeyHex)?.signer;
@@ -787,7 +787,7 @@ export class ValidatorStore {
   }
 
   private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
+    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
     const signer = this.validators.get(pubkeyHex)?.signer;
     if (!signer) {
@@ -824,7 +824,7 @@ export class ValidatorStore {
 function getSignerPubkeyHex(signer: Signer): PubkeyHex {
   switch (signer.type) {
     case SignerType.Local:
-      return toHexString(signer.secretKey.toPublicKey().toBytes());
+      return toHex(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

@@ -1,4 +1,4 @@
-import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {fetch} from "@lodestar/api";
 import {phase0, altair, capella, BeaconBlock, BlindedBeaconBlock} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
@@ -6,6 +6,7 @@ import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -131,17 +132,17 @@ export async function externalSignerPostSignature(
   const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
 
   requestObj.type = signableMessage.type;
-  requestObj.signingRoot = toHexString(signingRoot);
+  requestObj.signingRoot = toHex(signingRoot);
 
   if (requiresForkInfo[signableMessage.type]) {
     const forkInfo = config.getForkInfo(signingSlot);
     requestObj.fork_info = {
       fork: {
-        previous_version: toHexString(forkInfo.prevVersion),
-        current_version: toHexString(forkInfo.version),
+        previous_version: toHex(forkInfo.prevVersion),
+        current_version: toHex(forkInfo.version),
         epoch: String(computeEpochAtSlot(signingSlot)),
       },
-      genesis_validators_root: toHexString(config.genesisValidatorsRoot),
+      genesis_validators_root: toHex(config.genesisValidatorsRoot),
     };
   }
 

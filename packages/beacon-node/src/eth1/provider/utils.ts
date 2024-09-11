@@ -1,6 +1,6 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
-import {bytesToBigInt, bigIntToBytes} from "@lodestar/utils";
+import {bytesToBigInt, bigIntToBytes, toHex} from "@lodestar/utils";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
@@ -32,7 +32,7 @@ export function bytesToHex(bytes: Uint8Array): string {
     return "0x" + bytes[0].toString(16);
   }
 
-  return toHexString(bytes);
+  return toHex(bytes);
 }
 
 /**
@@ -100,7 +100,7 @@ export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
  * - WRONG: 004200 (must be prefixed 0x)
  */
 export function bytesToData(bytes: Uint8Array): DATA {
-  return toHexString(bytes);
+  return toHex(bytes);
 }
 
 /**

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {toPubkeyHex} from "@lodestar/utils";
+import {fromHexString} from "@chainsafe/ssz";
+import {toHex, toPubkeyHex} from "@lodestar/utils";
 import {InterchangeLodestar} from "../types.js";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
 
@@ -86,7 +86,7 @@ export function serializeInterchangeV5({data, genesisValidatorsRoot}: Interchang
   return {
     metadata: {
       interchange_format_version: "5",
-      genesis_validators_root: toHexString(genesisValidatorsRoot),
+      genesis_validators_root: toHex(genesisValidatorsRoot),
     },
     data: data.map((validator) => ({
       pubkey: toPubkeyHex(validator.pubkey),

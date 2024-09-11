@@ -1,8 +1,8 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {GENESIS_EPOCH} from "@lodestar/params";
 
+import {toHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} from "./errors.js";
@@ -10,7 +10,7 @@ import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} fr
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
 
-const ZERO_HASH_HEX = toHexString(Buffer.alloc(32, 0));
+const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));
 
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
