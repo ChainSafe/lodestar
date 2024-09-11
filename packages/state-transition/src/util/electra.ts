@@ -1,16 +1,7 @@
-import {
-  COMPOUNDING_WITHDRAWAL_PREFIX,
-  FAR_FUTURE_EPOCH,
-  ForkSeq,
-  MAX_EFFECTIVE_BALANCE,
-  MIN_ACTIVATION_BALANCE,
-} from "@lodestar/params";
-import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {COMPOUNDING_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {ValidatorIndex, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra} from "../types.js";
-import {getValidatorMaxEffectiveBalance} from "./validator.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
-
-type ValidatorInfo = Pick<phase0.Validator, "effectiveBalance" | "withdrawableEpoch" | "withdrawalCredentials">;
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === COMPOUNDING_WITHDRAWAL_PREFIX;
@@ -20,48 +11,6 @@ export function hasExecutionWithdrawalCredential(withdrawalCredentials: Uint8Arr
   return (
     hasCompoundingWithdrawalCredential(withdrawalCredentials) || hasEth1WithdrawalCredential(withdrawalCredentials)
   );
-}
-
-export function isFullyWithdrawableValidator(
-  fork: ForkSeq,
-  validatorCredential: ValidatorInfo,
-  balance: number,
-  epoch: number
-): boolean {
-  const {withdrawableEpoch, withdrawalCredentials} = validatorCredential;
-
-  if (fork < ForkSeq.capella) {
-    throw new Error(`isFullyWithdrawableValidator not supported at forkSeq=${fork} < ForkSeq.capella`);
-  }
-  const hasWithdrawableCredentials =
-    fork >= ForkSeq.electra
-      ? hasExecutionWithdrawalCredential(withdrawalCredentials)
-      : hasEth1WithdrawalCredential(withdrawalCredentials);
-
-  return hasWithdrawableCredentials && withdrawableEpoch <= epoch && balance > 0;
-}
-
-export function isPartiallyWithdrawableValidator(
-  fork: ForkSeq,
-  validatorCredential: ValidatorInfo,
-  balance: number
-): boolean {
-  const {effectiveBalance, withdrawalCredentials} = validatorCredential;
-
-  if (fork < ForkSeq.capella) {
-    throw new Error(`isPartiallyWithdrawableValidator not supported at forkSeq=${fork} < ForkSeq.capella`);
-  }
-  const hasWithdrawableCredentials =
-    fork >= ForkSeq.electra
-      ? hasExecutionWithdrawalCredential(withdrawalCredentials)
-      : hasEth1WithdrawalCredential(withdrawalCredentials);
-
-  const validatorMaxEffectiveBalance =
-    fork >= ForkSeq.electra ? getValidatorMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE;
-  const hasMaxEffectiveBalance = effectiveBalance === validatorMaxEffectiveBalance;
-  const hasExcessBalance = balance > validatorMaxEffectiveBalance;
-
-  return hasWithdrawableCredentials && hasMaxEffectiveBalance && hasExcessBalance;
 }
 
 export function switchToCompoundingValidator(state: CachedBeaconStateElectra, index: ValidatorIndex): void {

@@ -37,17 +37,18 @@ export async function persistGenesisResult(
 export async function persistAnchorState(
   config: ChainForkConfig,
   db: IBeaconDb,
-  anchorState: BeaconStateAllForks
+  anchorState: BeaconStateAllForks,
+  anchorStateBytes: Uint8Array
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),
-      db.stateArchive.add(anchorState),
+      db.stateArchive.putBinary(anchorState.slot, anchorStateBytes),
     ]);
   } else {
-    await db.stateArchive.add(anchorState);
+    await db.stateArchive.putBinary(anchorState.slot, anchorStateBytes);
   }
 }
 
@@ -154,16 +155,17 @@ export async function initStateFromDb(
 /**
  * Initialize and persist an anchor state (either weak subjectivity or genesis)
  */
-export async function initStateFromAnchorState(
+export async function checkAndPersistAnchorState(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
   anchorState: BeaconStateAllForks,
+  anchorStateBytes: Uint8Array,
   {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
   }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
-): Promise<BeaconStateAllForks> {
+): Promise<void> {
   const expectedFork = config.getForkInfo(computeStartSlotAtEpoch(anchorState.fork.epoch));
   const expectedForkVersion = toHex(expectedFork.version);
   const stateFork = toHex(anchorState.fork.currentVersion);
@@ -191,9 +193,9 @@ export async function initStateFromAnchorState(
     logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
   }
 
-  await persistAnchorState(config, db, anchorState);
-
-  return anchorState;
+  if (isCheckpointState || anchorState.slot === GENESIS_SLOT) {
+    await persistAnchorState(config, db, anchorState, anchorStateBytes);
+  }
 }
 
 export function initBeaconMetrics(metrics: Metrics, state: BeaconStateAllForks): void {

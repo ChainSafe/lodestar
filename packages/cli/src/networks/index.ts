@@ -3,12 +3,17 @@ import got from "got";
 import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
-import {getStateTypeFromBytes} from "@lodestar/beacon-node";
+import {getStateSlotFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Slot} from "@lodestar/types";
-import {fromHex, callFnWhenAwait, Logger, toHex} from "@lodestar/utils";
-import {BeaconStateAllForks, getLatestBlockRoot, computeCheckpointEpochAtStateSlot} from "@lodestar/state-transition";
+import {fromHex, callFnWhenAwait, Logger, formatBytes} from "@lodestar/utils";
+import {
+  BeaconStateAllForks,
+  getLatestBlockRoot,
+  computeCheckpointEpochAtStateSlot,
+  loadState,
+} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
@@ -140,8 +145,12 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
 export async function fetchWeakSubjectivityState(
   config: ChainForkConfig,
   logger: Logger,
-  {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string}
-): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
+  {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string},
+  {
+    lastDbState,
+    lastDbValidatorsBytes,
+  }: {lastDbState: BeaconStateAllForks | null; lastDbValidatorsBytes: Uint8Array | null}
+): Promise<{wsState: BeaconStateAllForks; wsStateBytes: Uint8Array; wsCheckpoint: Checkpoint}> {
   try {
     let wsCheckpoint: Checkpoint | null;
     let stateId: Slot | "finalized";
@@ -169,7 +178,7 @@ export async function fetchWeakSubjectivityState(
       }
     );
 
-    const stateBytes = await callFnWhenAwait(
+    const wsStateBytes = await callFnWhenAwait(
       getStatePromise,
       () => logger.info("Download in progress, please wait..."),
       GET_STATE_LOG_INTERVAL
@@ -177,15 +186,23 @@ export async function fetchWeakSubjectivityState(
       return res.ssz();
     });
 
+    const wsSlot = getStateSlotFromBytes(wsStateBytes);
+    const logData = {stateId, size: formatBytes(wsStateBytes.length)};
+    logger.info("Download completed", typeof stateId === "number" ? logData : {...logData, slot: wsSlot});
     // It should not be required to get fork type from bytes but Checkpointz does not return
     // Eth-Consensus-Version header, see https://github.com/ethpandaops/checkpointz/issues/164
-    const wsState = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-    // not possible to hash the full tree in batch, use the old way to create and drop validator tree one by one
-    // so use wsState.node.root instead of hashTreeRoot()
-    logger.info("Download completed", {stateId, root: toHex(wsState.node.root)});
+    let wsState: BeaconStateAllForks;
+    if (lastDbState && lastDbValidatorsBytes) {
+      // use lastDbState to load wsState if possible to share the same state tree
+      wsState = loadState(config, lastDbState, wsStateBytes, lastDbValidatorsBytes).state;
+    } else {
+      const stateType = config.getForkTypes(wsSlot).BeaconState;
+      wsState = stateType.deserializeToViewDU(wsStateBytes);
+    }
 
     return {
       wsState,
+      wsStateBytes,
       wsCheckpoint: wsCheckpoint ?? getCheckpointFromState(wsState),
     };
   } catch (e) {

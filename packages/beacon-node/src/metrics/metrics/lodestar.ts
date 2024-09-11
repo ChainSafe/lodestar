@@ -18,6 +18,7 @@ import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
+import {AllocSource} from "../../util/bufferPool.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -1165,13 +1166,15 @@ export function createLodestarMetrics(
         name: "lodestar_buffer_pool_length",
         help: "Buffer pool length",
       }),
-      hits: register.counter({
+      hits: register.counter<{source: AllocSource}>({
         name: "lodestar_buffer_pool_hits_total",
         help: "Total number of buffer pool hits",
+        labelNames: ["source"],
       }),
-      misses: register.counter({
+      misses: register.counter<{source: AllocSource}>({
         name: "lodestar_buffer_pool_misses_total",
         help: "Total number of buffer pool misses",
+        labelNames: ["source"],
       }),
       grows: register.counter({
         name: "lodestar_buffer_pool_grows_total",
@@ -1270,10 +1273,6 @@ export function createLodestarMetrics(
       persistedStateRemoveCount: register.gauge({
         name: "lodestar_cp_state_cache_persisted_state_remove_count",
         help: "Total number of persisted states removed",
-      }),
-      persistedStateAllocCount: register.counter({
-        name: "lodestar_cp_state_cache_persisted_state_alloc_count",
-        help: "Total number time to allocate memory for persisted state",
       }),
     },
 
@@ -1412,6 +1411,34 @@ export function createLodestarMetrics(
       name: "lodestar_unhandled_promise_rejections_total",
       help: "UnhandledPromiseRejection total count",
     }),
+
+    // regen.getState metrics
+    regenGetState: {
+      blockCount: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_block_count",
+        help: "Block count in regen.getState",
+        labelNames: ["caller"],
+        buckets: [4, 8, 16, 32, 64],
+      }),
+      getSeedState: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_get_seed_state_seconds",
+        help: "Duration of get seed state in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      loadBlocks: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_load_blocks_seconds",
+        help: "Duration of load blocks in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      stateTransition: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_state_transition_seconds",
+        help: "Duration of state transition in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+    },
 
     // Precompute next epoch transition
     precomputeNextEpochTransition: {

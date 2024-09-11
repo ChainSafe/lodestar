@@ -3,6 +3,9 @@ import {toBufferLE, toBigIntLE, toBufferBE, toBigIntBE} from "bigint-buffer";
 type Endianness = "le" | "be";
 
 const hexByByte: string[] = [];
+/**
+ * @deprecated Use toHex() instead.
+ */
 export function toHexString(bytes: Uint8Array): string {
   let hex = "0x";
   for (const byte of bytes) {
@@ -46,32 +49,22 @@ export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"):
   throw new Error("endianness must be either 'le' or 'be'");
 }
 
-export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): string {
-  if (Buffer.isBuffer(buffer)) {
-    return "0x" + buffer.toString("hex");
-  } else if (buffer instanceof Uint8Array) {
-    return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset, buffer.length).toString("hex");
-  } else {
-    return "0x" + Buffer.from(buffer).toString("hex");
-  }
-}
-
-// Shared buffer to convert root to hex
-const rootBuf = Buffer.alloc(32);
-
-/**
- * Convert a Uint8Array, length 32, to 0x-prefixed hex string
- */
-export function toRootHex(root: Uint8Array): string {
-  if (root.length !== 32) {
-    throw Error(`Expect root to be 32 bytes, got ${root.length}`);
+export function formatBytes(bytes: number): string {
+  if (bytes < 0) {
+    throw new Error("bytes must be a positive number, got " + bytes);
   }
 
-  rootBuf.set(root);
-  return `0x${rootBuf.toString("hex")}`;
-}
+  if (bytes === 0) {
+    return "0 Bytes";
+  }
 
-export function fromHex(hex: string): Uint8Array {
-  const b = Buffer.from(hex.replace("0x", ""), "hex");
-  return new Uint8Array(b.buffer, b.byteOffset, b.length);
+  // size of a kb
+  const k = 1024;
+
+  // only support up to GB
+  const units = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+  const formattedSize = (bytes / Math.pow(k, i)).toFixed(2);
+
+  return `${formattedSize} ${units[i]}`;
 }

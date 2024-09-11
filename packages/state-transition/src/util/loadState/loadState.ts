@@ -67,6 +67,25 @@ export function loadState(
 }
 
 /**
+ * Load state and validators Uint8Array from state bytes.
+ */
+export function loadStateAndValidators(
+  chainForkConfig: ChainForkConfig,
+  stateBytes: Uint8Array
+): {state: BeaconStateAllForks; validatorsBytes: Uint8Array} {
+  // stateType could be any types, casting just to make typescript happy
+  const stateType = getStateTypeFromBytes(chainForkConfig, stateBytes) as typeof ssz.phase0.BeaconState;
+  const state = stateType.deserializeToViewDU(stateBytes);
+  const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+  const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
+  const allFields = Object.keys(stateType.fields);
+  const validatorFieldIndex = allFields.indexOf("validators");
+  const validatorRange = fieldRanges[validatorFieldIndex];
+  const validatorsBytes = stateBytes.subarray(validatorRange.start, validatorRange.end);
+  return {state, validatorsBytes};
+}
+
+/**
  * This value is rarely changed as monitored 3 month state diffs on mainnet as of Sep 2023.
  * Reusing this data helps save hashTreeRoot time of state ~500ms
  *
