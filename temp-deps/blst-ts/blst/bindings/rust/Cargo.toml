@@ -26,7 +26,8 @@ links = "blst"
 [features]
 # By default, compile with ADX extension if the host supports it.
 # Binary can be executed on systems similar to the host.
-default = []
+default = ["std"]
+std = []
 # Compile in portable mode, without ISA extensions.
 # Binary can be executed on all systems.
 portable = []
