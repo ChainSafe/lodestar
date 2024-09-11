@@ -132,17 +132,7 @@ export interface EpochTransitionCache {
 
   flags: number[];
 
-  /**
-   * Validators in the current epoch, should use it for read-only value instead of accessing state.validators directly.
-   * Note that during epoch processing, validators could be updated so need to use it with care.
-   */
   isCompoundingValidatorArr: boolean[];
-  effectiveBalanceArr: number[];
-  slashedArr: boolean[];
-  activationEligibilityEpochArr: Epoch[];
-  activationEpochArr: Epoch[];
-  exitEpochArr: Epoch[];
-  withdrawableEpochArr: Epoch[];
 
   /**
    * This is for electra only
@@ -225,34 +215,9 @@ const nextEpochShufflingActiveValidatorIndices = new Array<number>();
  * This decomposed validator data is reused and never gc.
  */
 const isCompoundingValidatorArr: boolean[] = [];
-const effectiveBalanceArr: number[] = [];
-const slashedArr: boolean[] = [];
-const activationEligibilityEpochArr: Epoch[] = [];
-const activationEpochArr: Epoch[] = [];
-const exitEpochArr: Epoch[] = [];
-const withdrawableEpochArr: Epoch[] = [];
 
 const previousEpochParticipation = new Array<number>();
 const currentEpochParticipation = new Array<number>();
-
-function populateValidatorArrays(state: CachedBeaconStateAllForks, validatorCount: number): void {
-  isCompoundingValidatorArr.length = validatorCount;
-  effectiveBalanceArr.length = validatorCount;
-  slashedArr.length = validatorCount;
-  activationEligibilityEpochArr.length = validatorCount;
-  activationEpochArr.length = validatorCount;
-  exitEpochArr.length = validatorCount;
-  withdrawableEpochArr.length = validatorCount;
-  state.validators.forEachValue((v, i) => {
-    isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(v.withdrawalCredentials);
-    effectiveBalanceArr[i] = v.effectiveBalance;
-    slashedArr[i] = v.slashed;
-    activationEligibilityEpochArr[i] = v.activationEligibilityEpoch;
-    activationEpochArr[i] = v.activationEpoch;
-    exitEpochArr[i] = v.exitEpoch;
-    withdrawableEpochArr[i] = v.withdrawableEpoch;
-  });
-}
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
@@ -275,8 +240,7 @@ export function beforeProcessEpoch(
 
   let totalActiveStakeByIncrement = 0;
   const validatorCount = state.validators.length;
-  populateValidatorArrays(state, validatorCount);
-
+  isCompoundingValidatorArr.length = validatorCount;
   nextEpochShufflingActiveValidatorIndices.length = validatorCount;
   let nextEpochShufflingActiveIndicesLength = 0;
   // pre-fill with true (most validators are active)
@@ -306,14 +270,18 @@ export function beforeProcessEpoch(
 
   const effectiveBalancesByIncrements = epochCtx.effectiveBalanceIncrements;
 
-  for (let i = 0; i < validatorCount; i++) {
+  state.validators.forEachValue((validator, i) => {
     let flag = 0;
-    const effectiveBalance = effectiveBalanceArr[i];
-    const slashed = slashedArr[i];
-    const activationEligibilityEpoch = activationEligibilityEpochArr[i];
-    const activationEpoch = activationEpochArr[i];
-    const exitEpoch = exitEpochArr[i];
-    const withdrawableEpoch = withdrawableEpochArr[i];
+    const {
+      effectiveBalance,
+      slashed,
+      activationEligibilityEpoch,
+      activationEpoch,
+      exitEpoch,
+      withdrawableEpoch,
+      withdrawalCredentials,
+    } = validator;
+    isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
 
     if (slashed) {
       if (slashingsEpoch === withdrawableEpoch) {
@@ -397,7 +365,7 @@ export function beforeProcessEpoch(
     if (isActiveNext2) {
       nextEpochShufflingActiveValidatorIndices[nextEpochShufflingActiveIndicesLength++] = i;
     }
-  }
+  });
 
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
@@ -535,12 +503,6 @@ export function beforeProcessEpoch(
     inclusionDelays,
     flags,
     isCompoundingValidatorArr,
-    effectiveBalanceArr,
-    slashedArr,
-    activationEligibilityEpochArr,
-    activationEpochArr,
-    exitEpochArr,
-    withdrawableEpochArr,
     // will be assigned in processPendingConsolidations()
     newCompoundingValidators: undefined,
     // Will be assigned in processRewardsAndPenalties()
