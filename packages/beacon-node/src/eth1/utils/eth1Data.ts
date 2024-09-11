@@ -93,7 +93,6 @@ export function getDepositRootByDepositCount(depositCounts: number[], depositRoo
 
   const depositRootByDepositCount = new Map<number, Root>();
   for (const depositCount of depositCounts) {
-    depositRootTree.commit();
     depositRootTree = depositRootTree.sliceTo(depositCount - 1);
     depositRootByDepositCount.set(depositCount, depositRootTree.hashTreeRoot());
   }

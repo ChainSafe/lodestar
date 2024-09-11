@@ -53,8 +53,6 @@ export function getRewardsAndPenaltiesAltair(
   // TODO: Is there a cheaper way to measure length that going to `state.validators`?
   const validatorCount = state.validators.length;
   const activeIncrements = cache.totalActiveStakeByIncrement;
-  // const rewards = newZeroedArray(validatorCount);
-  // const penalties = newZeroedArray(validatorCount);
   rewards.length = validatorCount;
   rewards.fill(0);
   penalties.length = validatorCount;
