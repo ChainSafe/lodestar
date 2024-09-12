@@ -65,7 +65,9 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
         fnPromises.push(this.db.dataColumnSidecars.add(writeData));
 
         this.logger.debug("Persisted dataColumnSidecars to hot DB", {
-          dataColumnsLen: dataColumnSidecars.length,
+          dataColumnsSize,
+          dataColumnsLen,
+          dataColumnSidecars: dataColumnSidecars.length,
           slot: block.message.slot,
           root: blockRootHex,
         });

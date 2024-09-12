@@ -62,6 +62,7 @@ export async function* onDataColumnSidecarsByRoot(
         slot: block.slot,
         columnsSize,
         storedColumnsNum: dataColumnSidecarsBytes.length / columnsSize,
+        dataColumnSidecarsBytesWrapped: dataColumnSidecarsBytesWrapped.length,
       });
 
       lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex};

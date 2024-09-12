@@ -102,17 +102,23 @@ export function* iterateDataColumnBytesFromWrapper(
     storedColumnsNum: allDataColumnSidecarsBytes.length / columnsSize,
   });
 
-  for (const column of columns) {
+  for (const index of columns) {
     // get the index at which the column is
-    const index = (dataColumnsIndex[column] ?? 0) - 1;
-    if (index < 0) {
-      throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${column} not custodied`);
+    const dataIndex = (dataColumnsIndex[index] ?? 0) - 1;
+    if (dataIndex < 0) {
+      throw new ResponseError(
+        RespStatus.SERVER_ERROR,
+        `dataColumnSidecar index=${index} dataIndex=${dataIndex} not custodied`
+      );
     }
-    const dataColumnSidecarBytes = allDataColumnSidecarsBytes.slice(index * columnsSize, (index + 1) * columnsSize);
+    const dataColumnSidecarBytes = allDataColumnSidecarsBytes.slice(
+      dataIndex * columnsSize,
+      (dataIndex + 1) * columnsSize
+    );
     if (dataColumnSidecarBytes.length !== columnsSize) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,
-        `Invalid dataColumnSidecar index=${index} bytes length=${dataColumnSidecarBytes.length} expected=${columnsSize} for slot ${blockSlot} blobsLen=${columnsLen}`
+        `Invalid dataColumnSidecar index=${index} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnsSize} for slot ${blockSlot} blobsLen=${columnsLen}`
       );
     }
     yield {
