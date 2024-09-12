@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
 import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -433,8 +432,8 @@ export async function importBlock(
             blockRoot: blockRootHex,
             slot: blockSlot,
             index,
-            kzgCommitment: toHexString(kzgCommitment),
-            versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+            kzgCommitment: toHex(kzgCommitment),
+            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
           });
         }
       }
