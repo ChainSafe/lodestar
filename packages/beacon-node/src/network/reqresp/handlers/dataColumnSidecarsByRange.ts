@@ -8,6 +8,7 @@ import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   COLUMN_SIZE_IN_WRAPPER_INDEX,
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
+  NUM_COLUMNS_IN_WRAPPER_INDEX,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRange(
@@ -78,15 +79,20 @@ export function* iterateDataColumnBytesFromWrapper(
   blockSlot: Slot,
   columns: ColumnIndex[]
 ): Iterable<ResponseOutgoing> {
+  const retrivedColumnsLen = ssz.Uint8.deserialize(
+    dataColumnSidecarsBytesWrapped.slice(NUM_COLUMNS_IN_WRAPPER_INDEX, COLUMN_SIZE_IN_WRAPPER_INDEX)
+  );
   const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
     COLUMN_SIZE_IN_WRAPPER_INDEX,
     CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX
   );
   const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
-  const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
   const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
     CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
     CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
+  );
+  const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
+    DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
   );
 
   const columnsLen = allDataColumnSidecarsBytes.length / columnsSize;

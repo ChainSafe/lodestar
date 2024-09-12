@@ -8,6 +8,7 @@ import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
   COLUMN_SIZE_IN_WRAPPER_INDEX,
+  NUM_COLUMNS_IN_WRAPPER_INDEX,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRoot(
@@ -47,12 +48,17 @@ export async function* onDataColumnSidecarsByRoot(
         throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
       }
 
+      const retrivedColumnsLen = ssz.Uint8.deserialize(
+        dataColumnSidecarsBytesWrapped.slice(NUM_COLUMNS_IN_WRAPPER_INDEX, COLUMN_SIZE_IN_WRAPPER_INDEX)
+      );
       const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
         COLUMN_SIZE_IN_WRAPPER_INDEX,
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX
       );
       const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
-      const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
+      const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
+        DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
+      );
 
       const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
