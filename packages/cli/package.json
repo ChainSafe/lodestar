@@ -80,7 +80,6 @@
     "got": "^11.8.6",
     "inquirer": "^9.1.5",
     "js-yaml": "^4.1.0",
-    "multiformats": "^13.2.2",
     "prom-client": "^15.1.0",
     "proper-lockfile": "^4.1.2",
     "rimraf": "^4.4.1",

@@ -4,6 +4,7 @@ import {describe, it, expect} from "vitest";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR, SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
@@ -58,7 +59,7 @@ describe("cmds / beacon / args handler", () => {
     const {privateKey: pk1} = await runBeaconHandlerInit({});
     const {privateKey: pk2} = await runBeaconHandlerInit({});
 
-    expect(pk1.toString()).not.toBe(pk2.toString());
+    expect(pk1.equals(pk2)).toBe(false);
   });
 
   it("Re-use existing peer", async () => {
@@ -74,7 +75,7 @@ describe("cmds / beacon / args handler", () => {
       persistNetworkIdentity: true,
     });
 
-    expect(privateKey.toString()).toBe(prevPk.toString());
+    expect(privateKey.equals(prevPk)).toBe(true);
   });
 
   it("Set known deposit contract", async () => {
@@ -128,7 +129,7 @@ describe("initPeerIdAndEnr", () => {
       testLogger()
     );
 
-    expect(pk1.toString()).not.toBe(pk2.toString());
+    expect(pk1.equals(pk2)).toBe(false);
   });
 
   it("should reuse peer id, persistNetworkIdentity=true", async () => {
@@ -143,7 +144,7 @@ describe("initPeerIdAndEnr", () => {
       testLogger()
     );
 
-    expect(pk1.toString()).toBe(pk2.toString());
+    expect(pk1.equals(pk2)).toBe(true);
   });
 
   it("should overwrite invalid peer id", async () => {
@@ -157,8 +158,8 @@ describe("initPeerIdAndEnr", () => {
     );
     const filePk = createFromJSON(JSON.parse(fs.readFileSync(peerIdFile, "utf-8")));
 
-    expect(pk1Str).not.toBe(pk2.toString());
-    expect(filePk.toString()).toBe(pk2.toString());
+    expect(pk1Str).not.toBe(peerIdFromPrivateKey(pk2).toString());
+    expect(filePk.equals(pk2)).toBe(true);
   });
 
   it("should overwrite invalid enr", async () => {

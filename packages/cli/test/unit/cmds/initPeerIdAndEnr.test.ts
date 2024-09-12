@@ -46,7 +46,7 @@ describe("initPeerIdAndEnr", () => {
       true
     );
 
-    expect(run1.privateKey.toString()).toBe(run2.privateKey.toString());
+    expect(run1.privateKey.equals(run2.privateKey)).toBe(true);
     expect(run1.enr.encodeTxt()).toBe(run2.enr.encodeTxt());
   });
 });

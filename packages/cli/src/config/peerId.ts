@@ -1,5 +1,5 @@
 import type {PrivateKey} from "@libp2p/interface";
-import {peerIdFromCID, peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {peerIdFromPrivateKey, peerIdFromString} from "@libp2p/peer-id";
 import {
   privateKeyFromProtobuf,
   privateKeyToProtobuf,
@@ -8,7 +8,6 @@ import {
 } from "@libp2p/crypto/keys";
 import {fromString as uint8ArrayFromString} from "uint8arrays/from-string";
 import {toString as uint8ArrayToString} from "uint8arrays/to-string";
-import {CID} from "multiformats";
 import {writeFile600Perm, readFile} from "../util/index.js";
 
 // Peer id to / from JSON taken from peer-id-factory
@@ -32,7 +31,7 @@ export function exportToJSON(privateKey: PrivateKey): PeerIdJSON {
 export function createFromJSON(obj: PeerIdJSON): PrivateKey {
   const privateKey = privateKeyFromProtobuf(uint8ArrayFromString(obj.privKey, "base64pad"));
   const publicKey = publicKeyFromProtobuf(uint8ArrayFromString(obj.pubKey, "base64pad"));
-  const peerId = peerIdFromCID(CID.parse(obj.id));
+  const peerId = peerIdFromString(obj.id);
   if (!publicKey.equals(privateKey.publicKey)) {
     throw new Error("Public key does not match private key");
   }
