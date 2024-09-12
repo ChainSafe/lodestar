@@ -1,6 +1,5 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Root, ssz} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 
 export const blsPubkeyLen = 48;
 export const ZERO_ROOT = ssz.Root.defaultValue();
@@ -14,7 +13,7 @@ export function isEqualNonZeroRoot(root1: Root, root2: Root): boolean {
 }
 
 export function fromOptionalHexString(hex: string | undefined): Root {
-  return hex ? fromHexString(hex) : ZERO_ROOT;
+  return hex ? fromHex(hex) : ZERO_ROOT;
 }
 
 export function toOptionalHexString(root: Root): string | undefined {

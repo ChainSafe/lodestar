@@ -1,7 +1,6 @@
 import path from "node:path";
-import {fromHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 
@@ -48,6 +47,6 @@ export class FileCPStateDatastore implements CPStateDatastore {
     const fileNames = await readFileNames(this.folderPath);
     return fileNames
       .filter((fileName) => fileName.startsWith("0x") && fileName.length === CHECKPOINT_FILE_NAME_LENGTH)
-      .map((fileName) => fromHexString(fileName));
+      .map((fileName) => fromHex(fileName));
   }
 }

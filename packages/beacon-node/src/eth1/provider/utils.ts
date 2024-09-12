@@ -1,6 +1,5 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
-import {bytesToBigInt, bigIntToBytes, toHex} from "@lodestar/utils";
+import {bytesToBigInt, bigIntToBytes, toHex, fromHex} from "@lodestar/utils";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
@@ -108,7 +107,7 @@ export function bytesToData(bytes: Uint8Array): DATA {
  */
 export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
   try {
-    const bytes = fromHexString(hex);
+    const bytes = fromHex(hex);
     if (fixedLength != null && bytes.length !== fixedLength) {
       throw Error(`Wrong data length ${bytes.length} expected ${fixedLength}`);
     }

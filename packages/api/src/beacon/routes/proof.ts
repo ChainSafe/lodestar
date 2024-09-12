@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
-import {ByteListType, ContainerType, fromHexString} from "@chainsafe/ssz";
-import {toHex} from "@lodestar/utils";
+import {ByteListType, ContainerType} from "@chainsafe/ssz";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
@@ -47,7 +47,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: {
         writeReq: ({stateId, descriptor}) => ({params: {state_id: stateId}, query: {format: toHex(descriptor)}}),
-        parseReq: ({params, query}) => ({stateId: params.state_id, descriptor: fromHexString(query.format)}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, descriptor: fromHex(query.format)}),
         schema: {params: {state_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
       },
       resp: {
@@ -65,7 +65,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: {
         writeReq: ({blockId, descriptor}) => ({params: {block_id: blockId}, query: {format: toHex(descriptor)}}),
-        parseReq: ({params, query}) => ({blockId: params.block_id, descriptor: fromHexString(query.format)}),
+        parseReq: ({params, query}) => ({blockId: params.block_id, descriptor: fromHex(query.format)}),
         schema: {params: {block_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
       },
       resp: {
