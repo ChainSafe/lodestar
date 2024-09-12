@@ -361,7 +361,11 @@ export class NetworkCore implements INetworkCore {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    return getConnectionsMap(this.libp2p);
+    const m = new Map<string, Connection[]>();
+    for (const [k, v] of getConnectionsMap(this.libp2p).entries()) {
+      m.set(k, v.value);
+    }
+    return m;
   }
 
   async getConnectedPeers(): Promise<PeerIdStr[]> {

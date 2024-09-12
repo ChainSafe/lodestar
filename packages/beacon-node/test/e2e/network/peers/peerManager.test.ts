@@ -161,7 +161,7 @@ describe("network / peers / PeerManager", function () {
     const {statusCache, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
@@ -180,7 +180,7 @@ describe("network / peers / PeerManager", function () {
     const {statusCache, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
@@ -193,7 +193,7 @@ describe("network / peers / PeerManager", function () {
     reqResp.sendMetadata.mockResolvedValue(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
     libp2p.services.components.events.dispatchEvent(
       new CustomEvent("connection:open", {detail: libp2pConnectionOutboud})
     );

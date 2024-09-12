@@ -686,7 +686,7 @@ export class PeerManager {
     }
 
     for (const connections of getConnectionsMap(this.libp2p).values()) {
-      const openCnx = connections.find((cnx) => cnx.status === "open");
+      const openCnx = connections.value.find((cnx) => cnx.status === "open");
       if (openCnx) {
         const direction = openCnx.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));

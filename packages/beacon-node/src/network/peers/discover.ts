@@ -474,7 +474,7 @@ export class PeerDiscovery {
   /** Check if there is 1+ open connection with this peer */
   private isPeerConnected(peerIdStr: PeerIdStr): boolean {
     const connections = getConnectionsMap(this.libp2p).get(peerIdStr);
-    return Boolean(connections && connections.some((connection) => connection.status === "open"));
+    return Boolean(connections && connections.value.some((connection) => connection.status === "open"));
   }
 }
 
