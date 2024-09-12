@@ -1,6 +1,5 @@
-import {ReusableListIterator} from "@chainsafe/ssz";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
-import {Gwei, ValidatorIndex, phase0} from "@lodestar/types";
+import {Gwei, ValidatorIndex} from "@lodestar/types";
 import {bigIntMax} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "..";
@@ -45,11 +44,6 @@ export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorInde
 }
 
 /**
- * This data is reused and never gc.
- */
-const validators = new ReusableListIterator<phase0.Validator>();
-
-/**
  * This method is used to get justified balances from a justified state.
  * This is consumed by forkchoice which based on delta so we return "by increment" (in ether) value,
  * ie [30, 31, 32] instead of [30e9, 31e9, 32e9]
@@ -69,16 +63,13 @@ export function getEffectiveBalanceIncrementsZeroInactive(
     validatorCount
   );
 
-  validators.reset();
-  justifiedState.validators.getAllReadonlyValuesIter(validators);
-  validators.clean();
-  let i = 0;
   let j = 0;
-  for (const validator of validators) {
+  justifiedState.validators.forEachValue((validator, i) => {
+    const {slashed} = validator;
     if (i === activeIndices[j]) {
       // active validator
       j++;
-      if (validator.slashed) {
+      if (slashed) {
         // slashed validator
         effectiveBalanceIncrementsZeroInactive[i] = 0;
       }
@@ -86,8 +77,7 @@ export function getEffectiveBalanceIncrementsZeroInactive(
       // inactive validator
       effectiveBalanceIncrementsZeroInactive[i] = 0;
     }
-    i++;
-  }
+  });
 
   return effectiveBalanceIncrementsZeroInactive;
 }
