@@ -272,28 +272,20 @@ export function beforeProcessEpoch(
 
   state.validators.forEachValue((validator, i) => {
     let flag = 0;
-    const {
-      effectiveBalance,
-      slashed,
-      activationEligibilityEpoch,
-      activationEpoch,
-      exitEpoch,
-      withdrawableEpoch,
-      withdrawalCredentials,
-    } = validator;
 
     if (forkSeq >= ForkSeq.electra) {
-      isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
+      isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials);
     }
 
-    if (slashed) {
-      if (slashingsEpoch === withdrawableEpoch) {
+    if (validator.slashed) {
+      if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
       }
     } else {
       flag |= FLAG_UNSLASHED;
     }
 
+    const {activationEpoch, exitEpoch} = validator;
     const isActivePrev = activationEpoch <= prevEpoch && prevEpoch < exitEpoch;
     const isActiveCurr = activationEpoch <= currentEpoch && currentEpoch < exitEpoch;
     const isActiveNext = activationEpoch <= nextEpoch && nextEpoch < exitEpoch;
@@ -306,7 +298,7 @@ export function beforeProcessEpoch(
     // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
     // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
-    if (isActivePrev || (slashed && prevEpoch + 1 < withdrawableEpoch)) {
+    if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       flag |= FLAG_ELIGIBLE_ATTESTER;
     }
 
@@ -326,7 +318,10 @@ export function beforeProcessEpoch(
     //     and validator.effective_balance >= MAX_EFFECTIVE_BALANCE # [Modified in Electra]
     //   )
     // ```
-    if (activationEligibilityEpoch === FAR_FUTURE_EPOCH && effectiveBalance >= MIN_ACTIVATION_BALANCE) {
+    if (
+      validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance >= MIN_ACTIVATION_BALANCE
+    ) {
       indicesEligibleForActivationQueue.push(i);
     }
 
@@ -343,10 +338,10 @@ export function beforeProcessEpoch(
     // Then in processRegistryUpdates() we will check `activationEligibilityEpoch <= finalityEpoch`. This is to keep the array small.
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
-    else if (activationEpoch === FAR_FUTURE_EPOCH && activationEligibilityEpoch <= currentEpoch) {
+    else if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
       indicesEligibleForActivation.push({
         validatorIndex: i,
-        activationEligibilityEpoch,
+        activationEligibilityEpoch: validator.activationEligibilityEpoch,
       });
     }
 
@@ -357,7 +352,11 @@ export function beforeProcessEpoch(
     // Adding extra condition `exitEpoch === FAR_FUTURE_EPOCH` to keep the array as small as possible. initiateValidatorExit() will ignore them anyway
     //
     // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
-    else if (isActiveCurr && exitEpoch === FAR_FUTURE_EPOCH && effectiveBalance <= config.EJECTION_BALANCE) {
+    else if (
+      isActiveCurr &&
+      validator.exitEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance <= config.EJECTION_BALANCE
+    ) {
       indicesToEject.push(i);
     }
 
