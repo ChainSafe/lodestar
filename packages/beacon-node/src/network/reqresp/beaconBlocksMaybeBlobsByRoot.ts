@@ -171,6 +171,7 @@ export async function unavailableBeaconBlobsByRoot(
     block = allBlocks[0].data;
     blockBytes = allBlocks[0].bytes;
     cachedData = unavailableBlockInput.cachedData;
+    unavailableBlockInput = getBlockInput.dataPromise(config, block, BlockSource.byRoot, blockBytes, cachedData);
     console.log(
       "downloaded sendBeaconBlocksByRoot",
       ssz.peerdas.SignedBeaconBlock.toJson(block as peerdas.SignedBeaconBlock)
@@ -248,6 +249,7 @@ export async function unavailableBeaconBlobsByRoot(
         }
         return acc;
       }, [] as number[]);
+
       const peerColumns = network.getConnectedPeerCustody(peerId);
 
       // get match
