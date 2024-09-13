@@ -531,6 +531,7 @@ export class EpochCache {
       index2pubkey: this.index2pubkey,
       // No need to clone this reference. On each mutation the `unfinalizedPubkey2index` reference is replaced, @see `addPubkey`
       unfinalizedPubkey2index: this.unfinalizedPubkey2index,
+      balancesTreeCache: this.balancesTreeCache,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,

@@ -21,7 +21,7 @@ export class BalancesTreeCache implements IBalancesTreeCache {
     }
 
     this.unusedBalancesTrees.push(state.balances);
-    if (this.unusedBalancesTrees.length > MAX_ITEMS) {
+    while (this.unusedBalancesTrees.length > MAX_ITEMS) {
       this.unusedBalancesTrees.shift();
     }
   }
