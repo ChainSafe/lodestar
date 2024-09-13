@@ -260,6 +260,8 @@ export function matchBlockWithDataColumns(
         blobKzgCommitmentsLen,
         dataColumnSidecars: dataColumnSidecars.length,
         shouldHaveAllData,
+        neededColumns,
+        requestedColumns,
       });
       if (blobKzgCommitmentsLen === 0) {
         if (dataColumnSidecars.length > 0) {
