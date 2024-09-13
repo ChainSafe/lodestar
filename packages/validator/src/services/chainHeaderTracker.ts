@@ -1,6 +1,5 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {ApiClient, routes} from "@lodestar/api";
-import {Logger} from "@lodestar/utils";
+import {Logger, fromHex} from "@lodestar/utils";
 import {Slot, Root, RootHex} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
@@ -64,7 +63,7 @@ export class ChainHeaderTracker {
       const {message} = event;
       const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
       this.headBlockSlot = slot;
-      this.headBlockRoot = fromHexString(block);
+      this.headBlockRoot = fromHex(block);
 
       const headEventData = {
         slot: this.headBlockSlot,

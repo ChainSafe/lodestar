@@ -1,4 +1,4 @@
-import {BitArray, fromHexString} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {
   computeEpochAtSlot,
@@ -42,7 +42,7 @@ import {
   SignedAggregateAndProof,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
@@ -693,8 +693,8 @@ export class ValidatorStore {
     regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
     _slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
-    const pubkey = typeof pubkeyMaybeHex === "string" ? fromHexString(pubkeyMaybeHex) : pubkeyMaybeHex;
-    const feeRecipient = fromHexString(regAttributes.feeRecipient);
+    const pubkey = typeof pubkeyMaybeHex === "string" ? fromHex(pubkeyMaybeHex) : pubkeyMaybeHex;
+    const feeRecipient = fromHex(regAttributes.feeRecipient);
     const {gasLimit} = regAttributes;
 
     const validatorRegistration: bellatrix.ValidatorRegistrationV1 = {
@@ -775,7 +775,7 @@ export class ValidatorStore {
             signingSlot,
             signableMessage
           );
-          return fromHexString(signatureHex);
+          return fromHex(signatureHex);
         } catch (e) {
           this.metrics?.remoteSignErrors.inc();
           throw e;

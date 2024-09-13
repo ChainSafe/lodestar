@@ -1,5 +1,4 @@
-import {fromHexString} from "@chainsafe/ssz";
-import {toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ChainConfig, chainConfigTypes, SpecValue, SpecValueTypeName} from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
@@ -96,7 +95,7 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
       return BigInt(valueStr);
 
     case "bytes":
-      return fromHexString(valueStr);
+      return fromHex(valueStr);
 
     case "string":
       return valueStr;

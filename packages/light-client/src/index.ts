@@ -1,5 +1,4 @@
 import mitt from "mitt";
-import {fromHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {
   LightClientBootstrap,
@@ -13,7 +12,7 @@ import {
   SyncPeriod,
 } from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
+import {fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
@@ -120,7 +119,7 @@ export class Lightclient {
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
-        ? fromHexString(genesisData.genesisValidatorsRoot)
+        ? fromHex(genesisData.genesisValidatorsRoot)
         : genesisData.genesisValidatorsRoot;
 
     this.config = createBeaconConfig(config, this.genesisValidatorsRoot);

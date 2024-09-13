@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ContainerType, fromHexString, Type, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkBlobs, isForkPostElectra} from "@lodestar/params";
 import {
@@ -20,7 +20,7 @@ import {
   Attestation,
   sszTypesFor,
 } from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
 import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
@@ -633,7 +633,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         }),
         parseReq: ({params, query}) => ({
           slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
+          randaoReveal: fromHex(query.randao_reveal),
           graffiti: fromGraffitiHex(query.graffiti),
           feeRecipient: query.fee_recipient,
           builderSelection: query.builder_selection as BuilderSelection,
@@ -687,7 +687,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         }),
         parseReq: ({params, query}) => ({
           slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
+          randaoReveal: fromHex(query.randao_reveal),
           graffiti: fromGraffitiHex(query.graffiti),
           skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
           feeRecipient: query.fee_recipient,
@@ -770,7 +770,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         }),
         parseReq: ({params, query}) => ({
           slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
+          randaoReveal: fromHex(query.randao_reveal),
           graffiti: fromGraffitiHex(query.graffiti),
         }),
         schema: {
@@ -811,7 +811,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReq: ({query}) => ({
           slot: query.slot,
           subcommitteeIndex: query.subcommittee_index,
-          beaconBlockRoot: fromHexString(query.beacon_block_root),
+          beaconBlockRoot: fromHex(query.beacon_block_root),
         }),
         schema: {
           query: {
@@ -834,7 +834,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           query: {attestation_data_root: toRootHex(attestationDataRoot), slot},
         }),
         parseReq: ({query}) => ({
-          attestationDataRoot: fromHexString(query.attestation_data_root),
+          attestationDataRoot: fromHex(query.attestation_data_root),
           slot: query.slot,
         }),
         schema: {
@@ -857,7 +857,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           query: {attestation_data_root: toHex(attestationDataRoot), slot, committee_index: committeeIndex},
         }),
         parseReq: ({query}) => ({
-          attestationDataRoot: fromHexString(query.attestation_data_root),
+          attestationDataRoot: fromHex(query.attestation_data_root),
           slot: query.slot,
           committeeIndex: query.committee_index,
         }),

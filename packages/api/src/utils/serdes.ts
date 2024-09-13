@@ -1,5 +1,5 @@
-import {fromHexString, JsonPath} from "@chainsafe/ssz";
-import {toHex} from "@lodestar/utils";
+import {JsonPath} from "@chainsafe/ssz";
+import {fromHex, toHex} from "@lodestar/utils";
 
 /**
  * Serialize proof path to JSON.
@@ -103,7 +103,7 @@ export function fromGraffitiHex(hex?: string): string | undefined {
     return undefined;
   }
   try {
-    return new TextDecoder("utf8").decode(fromHexString(hex));
+    return new TextDecoder("utf8").decode(fromHex(hex));
   } catch {
     // allow malformed graffiti hex string
     return hex;

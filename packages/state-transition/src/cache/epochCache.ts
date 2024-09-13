@@ -1,6 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
 import * as immutable from "immutable";
-import {fromHexString} from "@chainsafe/ssz";
 import {
   BLSSignature,
   CommitteeIndex,
@@ -25,7 +24,7 @@ import {
   SLOTS_PER_EPOCH,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, fromHex} from "@lodestar/utils";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
@@ -964,7 +963,7 @@ export class EpochCache {
     }
 
     this.pubkey2index.set(pubkey, index);
-    const pubkeyBytes = pubkey instanceof Uint8Array ? pubkey : fromHexString(pubkey);
+    const pubkeyBytes = pubkey instanceof Uint8Array ? pubkey : fromHex(pubkey);
     this.index2pubkey[index] = PublicKey.fromBytes(pubkeyBytes); // Optimize for aggregation
   }
 
