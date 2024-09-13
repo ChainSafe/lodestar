@@ -39,7 +39,7 @@ export function processRewardsAndPenalties(
 
   // important: do not change state one balance at a time. Set them all at once, constructing the tree in one go
   // cache the balances array, too
-  state.balances = ssz.phase0.Balances.toViewDU(balances);
+  state.balances = ssz.phase0.Balances.toViewDU(balances, state.epochCtx.balancesTreeCache?.getUnusedBalances());
 
   // For processEffectiveBalanceUpdates() to prevent having to re-compute the balances array.
   // For validator metrics
