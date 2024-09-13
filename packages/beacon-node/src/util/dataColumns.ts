@@ -3,6 +3,7 @@ import {NUMBER_OF_COLUMNS, DATA_COLUMN_SIDECAR_SUBNET_COUNT} from "@lodestar/par
 import {ColumnIndex} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
+import {bytesToBigInt} from "@lodestar/utils";
 import {NodeId} from "../network/subnets/index.js";
 
 export type CustodyConfig = {custodyColumnsIndex: Uint8Array; custodyColumnsLen: number; custodyColumns: ColumnIndex[]};
@@ -54,7 +55,8 @@ export function getCustodyColumnSubnets(nodeId: NodeId, custodySubnetCount: numb
     custodySubnetCount = DATA_COLUMN_SIDECAR_SUBNET_COUNT;
   }
 
-  let currentId = ssz.UintBn256.deserialize(nodeId);
+  // nodeId is in bigendian and all computes are in little endian
+  let currentId = bytesToBigInt(nodeId, "be");
   while (subnetIds.length < custodySubnetCount) {
     // could be optimized
     const currentIdBytes = ssz.UintBn256.serialize(currentId);

@@ -1,12 +1,12 @@
 import {describe, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
+import {bigIntToBytes} from "@lodestar/utils";
 
 import {getCustodyColumns} from "../../../src/util/dataColumns.js";
 
 describe("custody columns", () => {
   const testCases = [
-    ["cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f", 4, [0, 2, 4, 107]],
+    ["cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f", 4, [2, 80, 89, 118]],
     [
       "51781405571328938149219259614021022118347017557305093857689627172914154745642",
       47,
@@ -19,7 +19,8 @@ describe("custody columns", () => {
   ];
   for (const [nodeIdHex, numSubnets, custodyColumns] of testCases) {
     it(`${nodeIdHex} / ${numSubnets}`, async () => {
-      const nodeId = nodeIdHex.length === 64 ? fromHexString(nodeIdHex) : ssz.UintBn256.serialize(BigInt(nodeIdHex));
+      const nodeId = nodeIdHex.length === 64 ? fromHexString(nodeIdHex) : bigIntToBytes(BigInt(nodeIdHex), 32, "be");
+
       const columnIndexs = getCustodyColumns(nodeId, numSubnets);
       expect(columnIndexs).toEqual(custodyColumns);
     });
