@@ -116,6 +116,8 @@ export const DepositRequest = new ContainerType(
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
+    // this is actually gwei uintbn64 type, but super unlikely to get a high amount here
+    // to warrant a bn type
     amount: UintNum64,
     signature: BLSSignature,
     index: DepositIndex,
@@ -129,7 +131,7 @@ export const WithdrawalRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
     validatorPubkey: BLSPubkey,
-    amount: UintNum64,
+    amount: Gwei,
   },
   {typeName: "WithdrawalRequest", jsonCase: "eth2"}
 );
