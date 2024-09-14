@@ -5,6 +5,7 @@ import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
+import {ts as epbs} from "./epbs/index.js";
 import {Slot} from "./primitive/types.js";
 
 export * from "./primitive/types.js";
@@ -14,6 +15,7 @@ export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
 export {ts as electra} from "./electra/index.js";
+export {ts as epbs} from "./epbs/index.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
@@ -188,6 +190,43 @@ type TypesByFork = {
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
     BlockContents: electra.BlockContents;
     SignedBlockContents: electra.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: deneb.BlobsBundle;
+    Contents: deneb.Contents;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+    Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
+  };
+  [ForkName.epbs]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: epbs.BeaconBlock;
+    BeaconBlockBody: epbs.BeaconBlockBody;
+    BeaconState: epbs.BeaconState;
+    SignedBeaconBlock: epbs.SignedBeaconBlock;
+    Metadata: altair.Metadata;
+    LightClientHeader: epbs.LightClientHeader;
+    LightClientBootstrap: epbs.LightClientBootstrap;
+    LightClientUpdate: epbs.LightClientUpdate;
+    LightClientFinalityUpdate: epbs.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: epbs.LightClientOptimisticUpdate;
+    LightClientStore: epbs.LightClientStore;
+    BlindedBeaconBlock: epbs.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: epbs.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: epbs.SignedBlindedBeaconBlock;
+    ExecutionPayload: epbs.ExecutionPayload;
+    ExecutionPayloadHeader: epbs.ExecutionPayloadHeader;
+    BuilderBid: epbs.BuilderBid;
+    SignedBuilderBid: epbs.SignedBuilderBid;
+    SSEPayloadAttributes: epbs.SSEPayloadAttributes;
+    BlockContents: epbs.BlockContents;
+    SignedBlockContents: epbs.SignedBlockContents;
+
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: deneb.BlobsBundle;
     Contents: deneb.Contents;

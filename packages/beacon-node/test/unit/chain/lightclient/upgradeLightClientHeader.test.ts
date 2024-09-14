@@ -16,6 +16,7 @@ describe("UpgradeLightClientHeader", function () {
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
     ELECTRA_FORK_EPOCH: 5,
+    EPBS_FORK_EPOCH: Infinity,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -29,6 +30,7 @@ describe("UpgradeLightClientHeader", function () {
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.electra.LightClientHeader.defaultValue(),
+      epbs: ssz.epbs.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -38,11 +40,18 @@ describe("UpgradeLightClientHeader", function () {
       capella: 25,
       deneb: 33,
       electra: 41,
+      epbs: 0,
     };
   });
 
-  for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
-    for (let j = i + 1; j < Object.values(ForkName).length; j++) {
+  // Since epbs is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once epbs is implemnted run for loop till Object.values(ForkName).length
+
+  // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
+  //   for (let j = i + 1; j < Object.values(ForkName).length; j++) {
+
+  for (let i = ForkSeq.altair; i < Object.values(ForkName).length - 1; i++) {
+    for (let j = i + 1; j < Object.values(ForkName).length - 1; j++) {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];
 
@@ -56,7 +65,27 @@ describe("UpgradeLightClientHeader", function () {
     }
   }
 
+  // for epbs not implemented
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
+    const fromFork = ForkName[ForkSeq[i] as ForkName];
+    const toFork = ForkName["epbs"];
+
+    it(`Throw error ${fromFork}=>${toFork}`, function () {
+      lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
+      lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
+
+      expect(() => {
+        upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
+      }).toThrow("Not Implemented");
+    });
+  }
+
+  // Since epbs is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once epbs is implemnted run for loop till Object.values(ForkName).length
+
+  // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
+
+  for (let i = ForkSeq.altair; i < Object.values(ForkName).length - 1; i++) {
     for (let j = i; j > 0; j--) {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];

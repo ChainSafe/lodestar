@@ -124,6 +124,10 @@ export function upgradeLightClientHeader(
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
+
+    // eslint-disable-next-line no-fallthrough
+    case ForkName.epbs:
+      throw Error("Not Implemented");
   }
   return upgradedHeader;
 }

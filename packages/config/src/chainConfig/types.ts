@@ -43,6 +43,9 @@ export type ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: Uint8Array;
   ELECTRA_FORK_EPOCH: number;
+  // EPBS
+  EPBS_FORK_VERSION: Uint8Array;
+  EPBS_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -107,6 +110,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // ELECTRA
   ELECTRA_FORK_VERSION: "bytes",
   ELECTRA_FORK_EPOCH: "number",
+  // epbs
+  EPBS_FORK_VERSION: "bytes",
+  EPBS_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
