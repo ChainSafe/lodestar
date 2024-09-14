@@ -16,7 +16,7 @@ describe("UpgradeLightClientHeader", function () {
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
     ELECTRA_FORK_EPOCH: 5,
-    EBPS_FORK_EPOCH: Infinity,
+    EPBS_FORK_EPOCH: Infinity,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -30,7 +30,7 @@ describe("UpgradeLightClientHeader", function () {
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.electra.LightClientHeader.defaultValue(),
-      ebps: ssz.ebps.LightClientHeader.defaultValue(),
+      epbs: ssz.epbs.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -40,12 +40,12 @@ describe("UpgradeLightClientHeader", function () {
       capella: 25,
       deneb: 33,
       electra: 41,
-      ebps: 0,
+      epbs: 0,
     };
   });
 
-  // Since ebps is not implemented for loop is till deneb (Object.values(ForkName).length-1)
-  // Once ebps is implemnted run for loop till Object.values(ForkName).length
+  // Since epbs is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once epbs is implemnted run for loop till Object.values(ForkName).length
 
   // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
   //   for (let j = i + 1; j < Object.values(ForkName).length; j++) {
@@ -65,10 +65,10 @@ describe("UpgradeLightClientHeader", function () {
     }
   }
 
-  // for ebps not implemented
+  // for epbs not implemented
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
     const fromFork = ForkName[ForkSeq[i] as ForkName];
-    const toFork = ForkName["ebps"];
+    const toFork = ForkName["epbs"];
 
     it(`Throw error ${fromFork}=>${toFork}`, function () {
       lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
@@ -80,8 +80,8 @@ describe("UpgradeLightClientHeader", function () {
     });
   }
 
-  // Since ebps is not implemented for loop is till deneb (Object.values(ForkName).length-1)
-  // Once ebps is implemnted run for loop till Object.values(ForkName).length
+  // Since epbs is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once epbs is implemnted run for loop till Object.values(ForkName).length
 
   // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
 

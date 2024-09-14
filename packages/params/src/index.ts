@@ -274,7 +274,7 @@ export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
 export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
 export const FINALIZED_ROOT_INDEX_ELECTRA = 169;
 
-// ebps
+// epbs
 export const PAYLOAD_ABSENT = 0;
 export const PAYLOAD_PRESENT = 1;
 export const PAYLOAD_WITHHELD = 2;

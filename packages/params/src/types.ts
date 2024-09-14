@@ -98,7 +98,7 @@ export type BeaconPreset = {
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: number;
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: number;
 
-  // EBPS
+  // EPBS
   PTC_SIZE: number;
   MAX_PAYLOAD_ATTESTATIONS: number;
 };
@@ -202,7 +202,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: "number",
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: "number",
 
-  // EBPS
+  // EPBS
   PTC_SIZE: "number",
   MAX_PAYLOAD_ATTESTATIONS: "number",
 };

@@ -137,7 +137,7 @@ export const minimalPreset: BeaconPreset = {
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: 1,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: 4096,
 
-  // ebps - EIP-7732
+  // epbs - EIP-7732
   // uint64(2**9) = 512
   PTC_SIZE: 512,
   // 2**2 = 4

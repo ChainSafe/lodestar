@@ -5,6 +5,7 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
+import {ssz as electraSsz} from "../electra/index.js";
 
 const {BLSSignature, Root, Slot, Uint8, ValidatorIndex, Gwei, Boolean, UintNum64} = primitiveSsz;
 
@@ -48,7 +49,7 @@ export const IndexedPayloadAttestation = new ContainerType(
 
 export const ExecutionPayload = new ContainerType(
   {
-    ...denebSsz.ExecutionPayload.fields,
+    ...electraSsz.ExecutionPayload.fields,
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
