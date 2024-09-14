@@ -421,7 +421,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Prune all checkpoint states before the provided finalized epoch.
    */
-  pruneFinalized(finalizedEpoch: Epoch): void {
+  pruneFinalized(finalizedEpoch: Epoch): Map<Epoch, CachedBeaconStateAllForks[]> | null {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch).catch((e) =>
@@ -429,6 +429,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         );
       }
     }
+
+    // not likely to return anything in-memory state because we may persist states even before they are finalized
+    return null;
   }
 
   /**
@@ -481,12 +484,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *
    * As of Mar 2024, it takes <=350ms to persist a holesky state on fast server
    */
-  async processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number> {
-    let persistCount = 0;
+  async processState(
+    blockRootHex: RootHex,
+    state: CachedBeaconStateAllForks
+  ): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
     // it's important to sort the epochs in ascending order, in case of big reorg we always want to keep the most recent checkpoint states
     const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
     if (sortedEpochs.length <= this.maxEpochsInMemory) {
-      return 0;
+      return null;
     }
 
     const blockSlot = state.slot;
@@ -502,24 +507,19 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       // normally the block persist happens at 2/3 of slot 0 of epoch, if it's already late then just skip to allow other tasks to run
       // there are plenty of chances in the same epoch to persist checkpoint states, also if block is late it could be reorged
       this.logger.verbose("Skip persist checkpoint states", {blockSlot, root: blockRootHex});
-      return 0;
+      return null;
     }
 
     const persistEpochs = sortedEpochs.slice(0, sortedEpochs.length - this.maxEpochsInMemory);
+
+    const result = new Map<Epoch, CachedBeaconStateAllForks[]>();
     for (const lowestEpoch of persistEpochs) {
       // usually there is only 0 or 1 epoch to persist in this loop
-      persistCount += await this.processPastEpoch(blockRootHex, state, lowestEpoch);
+      const prunedStates = await this.processPastEpoch(blockRootHex, state, lowestEpoch);
+      result.set(lowestEpoch, prunedStates);
     }
 
-    if (persistCount > 0) {
-      this.logger.verbose("Persisted checkpoint states", {
-        slot: blockSlot,
-        root: blockRootHex,
-        persistCount,
-        persistEpochs: persistEpochs.length,
-      });
-    }
-    return persistCount;
+    return result;
   }
 
   /**
@@ -648,13 +648,16 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * Performance note:
    *   - In normal condition, we persist 1 checkpoint state per epoch.
    *   - In reorged condition, we may persist multiple (most likely 2) checkpoint states per epoch.
+   *
+   * Return the pruned states from memory
    */
   private async processPastEpoch(
     blockRootHex: RootHex,
     state: CachedBeaconStateAllForks,
     epoch: Epoch
-  ): Promise<number> {
+  ): Promise<CachedBeaconStateAllForks[]> {
     let persistCount = 0;
+    const prunedStates: CachedBeaconStateAllForks[] = [];
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
       epochBoundarySlot === state.slot ? fromHexString(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
@@ -735,10 +738,20 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           this.metrics?.statePruneFromMemoryCount.inc();
           this.logger.verbose("Pruned checkpoint state from memory", logMeta);
         }
+
+        prunedStates.push(state);
       }
     }
 
-    return persistCount;
+    if (persistCount > 0) {
+      this.logger.verbose("Persisted checkpoint states", {
+        stateSlot: state.slot,
+        blockRoot: blockRootHex,
+        persistCount,
+      });
+    }
+
+    return prunedStates;
   }
 
   /**

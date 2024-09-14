@@ -60,6 +60,7 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
+import {IBalancesTreeCache} from "./balancesTreeCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -68,6 +69,7 @@ export type EpochCacheImmutableData = {
   config: BeaconConfig;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
+  balancesTreeCache?: IBalancesTreeCache;
 };
 
 export type EpochCacheOpts = {
@@ -128,6 +130,8 @@ export class EpochCache {
    * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
    */
   unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
+
+  balancesTreeCache?: IBalancesTreeCache;
 
   /**
    * Indexes of the block proposers for the current epoch.
@@ -245,6 +249,7 @@ export class EpochCache {
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
+    balancesTreeCache?: IBalancesTreeCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -273,6 +278,7 @@ export class EpochCache {
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
     this.unfinalizedPubkey2index = data.unfinalizedPubkey2index;
+    this.balancesTreeCache = data.balancesTreeCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -306,7 +312,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    {config, pubkey2index, index2pubkey, balancesTreeCache}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     const currentEpoch = computeEpochAtSlot(state.slot);
@@ -483,6 +489,7 @@ export class EpochCache {
       index2pubkey,
       // `createFromFinalizedState()` creates cache with empty unfinalizedPubkey2index. Be cautious to only pass in finalized state
       unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap(),
+      balancesTreeCache,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -524,6 +531,7 @@ export class EpochCache {
       index2pubkey: this.index2pubkey,
       // No need to clone this reference. On each mutation the `unfinalizedPubkey2index` reference is replaced, @see `addPubkey`
       unfinalizedPubkey2index: this.unfinalizedPubkey2index,
+      balancesTreeCache: this.balancesTreeCache,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,

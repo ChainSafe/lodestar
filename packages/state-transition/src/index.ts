@@ -42,6 +42,7 @@ export {
   EpochCacheErrorCode,
 } from "./cache/epochCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+export type {IBalancesTreeCache} from "./cache/balancesTreeCache.js";
 
 // Aux data-structures
 export {
