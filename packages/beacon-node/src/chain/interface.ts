@@ -173,7 +173,10 @@ export interface IBeaconChain {
    * this methods returns blocks in current chain head according to
    * forkchoice. Works for finalized slots as well
    */
-  getCanonicalBlockAtSlot(slot: Slot): Promise<{
+  getCanonicalBlockAtSlot(
+    slot: Slot,
+    getFull?: boolean
+  ): Promise<{
     block: SignedBeaconBlock | SignedBlindedBeaconBlock;
     executionOptimistic: boolean;
     finalized: boolean;
@@ -181,7 +184,10 @@ export interface IBeaconChain {
   /**
    * Get local block by root, does not fetch from the network
    */
-  getBlockByRoot(root: RootHex): Promise<{
+  getBlockByRoot(
+    root: RootHex,
+    getFull?: boolean
+  ): Promise<{
     block: SignedBeaconBlock | SignedBlindedBeaconBlock;
     executionOptimistic: boolean;
     finalized: boolean;

@@ -564,7 +564,10 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getCanonicalBlockAtSlot(slot: Slot): Promise<{
+  async getCanonicalBlockAtSlot(
+    slot: Slot,
+    getFull = true
+  ): Promise<{
     block: SignedBeaconBlock | SignedBlindedBeaconBlock;
     executionOptimistic: boolean;
     finalized: boolean;
@@ -576,7 +579,11 @@ export class BeaconChain implements IBeaconChain {
       if (block) {
         const data = await this.db.block.get(fromHex(block.blockRoot));
         if (data) {
-          return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
+          return {
+            block: getFull ? await this.fullOrBlindedSignedBeaconBlockToFull(data) : data,
+            executionOptimistic: isOptimisticBlock(block),
+            finalized: false,
+          };
         }
       }
       // A non-finalized slot expected to be found in the hot db, could be archived during
@@ -585,10 +592,19 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const data = await this.db.blockArchive.get(slot);
-    return data && {block: data, executionOptimistic: false, finalized: true};
+    return (
+      data && {
+        block: getFull ? await this.fullOrBlindedSignedBeaconBlockToFull(data) : data,
+        executionOptimistic: false,
+        finalized: true,
+      }
+    );
   }
 
-  async getBlockByRoot(root: string): Promise<{
+  async getBlockByRoot(
+    root: string,
+    getFull = true
+  ): Promise<{
     block: SignedBeaconBlock | SignedBlindedBeaconBlock;
     executionOptimistic: boolean;
     finalized: boolean;
@@ -597,14 +613,24 @@ export class BeaconChain implements IBeaconChain {
     if (block) {
       const data = await this.db.block.get(fromHex(root));
       if (data) {
-        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return {
+          block: getFull ? await this.fullOrBlindedSignedBeaconBlockToFull(data) : data,
+          executionOptimistic: isOptimisticBlock(block),
+          finalized: false,
+        };
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
     const data = await this.db.blockArchive.getByRoot(fromHex(root));
-    return data && {block: data, executionOptimistic: false, finalized: true};
+    return (
+      data && {
+        block: getFull ? await this.fullOrBlindedSignedBeaconBlockToFull(data) : data,
+        executionOptimistic: false,
+        finalized: true,
+      }
+    );
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
