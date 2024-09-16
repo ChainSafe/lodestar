@@ -7,7 +7,7 @@ export enum ForkName {
   bellatrix = "bellatrix",
   capella = "capella",
   deneb = "deneb",
-  electra = "electra",
+  peerdas = "peerdas",
 }
 
 /**
@@ -19,7 +19,7 @@ export enum ForkSeq {
   bellatrix = 2,
   capella = 3,
   deneb = 4,
-  electra = 5,
+  peerdas = 5,
 }
 
 function exclude<T extends ForkName, U extends T>(coll: T[], val: U[]): Exclude<T, U>[] {

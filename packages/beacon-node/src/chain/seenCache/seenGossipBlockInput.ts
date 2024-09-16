@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {deneb, RootHex, SignedBeaconBlock, ssz, electra} from "@lodestar/types";
+import {deneb, RootHex, SignedBeaconBlock, ssz, peerdas} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
 import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
@@ -31,7 +31,7 @@ type GossipedBlockInput =
   | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}
   | {
       type: GossipedInputType.dataColumn;
-      dataColumnSidecar: electra.DataColumnSidecar;
+      dataColumnSidecar: peerdas.DataColumnSidecar;
       dataColumnBytes: Uint8Array | null;
     };
 
@@ -61,6 +61,7 @@ const MAX_GOSSIPINPUT_CACHE = 5;
 export class SeenGossipBlockInput {
   private blockInputCache = new Map<RootHex, BlockInputCacheType>();
   constructor(private custodyConfig: CustodyConfig) {}
+  globalCacheId = 0;
 
   prune(): void {
     pruneSetToMax(this.blockInputCache, MAX_GOSSIPINPUT_CACHE);
@@ -99,7 +100,7 @@ export class SeenGossipBlockInput {
       blockHex = toHexString(
         config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
 
       blockCache.block = signedBlock;
       blockCache.blockBytes = blockBytes;
@@ -109,7 +110,7 @@ export class SeenGossipBlockInput {
       fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
 
       blockHex = toHexString(blockRoot);
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
       if (blockCache.cachedData?.fork !== ForkName.deneb) {
         throw Error(`blob data at non deneb fork=${blockCache.fork}`);
       }
@@ -126,9 +127,9 @@ export class SeenGossipBlockInput {
       fork = config.getForkName(dataColumnSidecar.signedBlockHeader.message.slot);
 
       blockHex = toHexString(blockRoot);
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
-      if (blockCache.cachedData?.fork !== ForkName.electra) {
-        throw Error(`blob data at non electra fork=${blockCache.fork}`);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
+      if (blockCache.cachedData?.fork !== ForkName.peerdas) {
+        throw Error(`blob data at non peerdas fork=${blockCache.fork}`);
       }
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
@@ -161,7 +162,7 @@ export class SeenGossipBlockInput {
       }
 
       if (cachedData.fork === ForkName.deneb) {
-        const {blobsCache} = cachedData;
+        const {blobsCache, resolveAvailability} = cachedData;
 
         // block is available, check if all blobs have shown up
         const {slot, body} = signedBlock.message;
@@ -176,13 +177,15 @@ export class SeenGossipBlockInput {
 
         if (blobKzgCommitments.length === blobsCache.size) {
           const allBlobs = getBlockInputBlobs(blobsCache);
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
           const {blobs} = allBlobs;
           const blockData = {
             fork: cachedData.fork,
             ...allBlobs,
             blobsSource: BlobsSource.gossip,
           };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+
           const blockInput = getBlockInput.availableData(
             config,
             signedBlock,
@@ -215,8 +218,9 @@ export class SeenGossipBlockInput {
             },
           };
         }
-      } else if (cachedData.fork === ForkName.electra) {
-        const {dataColumnsCache} = cachedData;
+      } else if (cachedData.fork === ForkName.peerdas) {
+        const {dataColumnsCache, resolveAvailability, cacheId} = cachedData;
+        console.log("seenGossipBlockInput", {cacheId, dataColumnsCache: dataColumnsCache.size});
 
         // block is available, check if all blobs have shown up
         const {slot} = signedBlock.message;
@@ -239,6 +243,8 @@ export class SeenGossipBlockInput {
             dataColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS),
             dataColumnsSource: DataColumnsSource.gossip,
           };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
 
           const blockInput = getBlockInput.availableData(
             config,
@@ -273,6 +279,9 @@ export class SeenGossipBlockInput {
             dataColumnsIndex: this.custodyConfig.custodyColumnsIndex,
             dataColumnsSource: DataColumnsSource.gossip,
           };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+
           const blockInput = getBlockInput.availableData(
             config,
             signedBlock,
@@ -330,7 +339,7 @@ export class SeenGossipBlockInput {
           },
           blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
         };
-      } else if (fork === ForkName.electra) {
+      } else if (fork === ForkName.peerdas) {
         const {dataColumnsCache} = cachedData;
 
         return {
@@ -349,7 +358,7 @@ export class SeenGossipBlockInput {
   }
 }
 
-export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
+export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: number): BlockInputCacheType {
   // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
   let resolveBlockInput: ((block: BlockInput) => void) | null = null;
@@ -374,9 +383,15 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheTyp
     }
 
     const blobsCache = new Map();
-    const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
+    const cachedData: CachedData = {
+      fork,
+      blobsCache,
+      availabilityPromise,
+      resolveAvailability,
+      cacheId: ++globalCacheId,
+    };
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
-  } else if (fork === ForkName.electra) {
+  } else if (fork === ForkName.peerdas) {
     let resolveAvailability: ((blobs: BlockInputDataDataColumns) => void) | null = null;
     const availabilityPromise = new Promise<BlockInputDataDataColumns>((resolveCB) => {
       resolveAvailability = resolveCB;
@@ -392,6 +407,7 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheTyp
       dataColumnsCache,
       availabilityPromise,
       resolveAvailability,
+      cacheId: ++globalCacheId,
     };
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
   } else {

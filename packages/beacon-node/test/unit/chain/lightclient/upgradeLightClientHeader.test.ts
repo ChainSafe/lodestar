@@ -15,7 +15,7 @@ describe("UpgradeLightClientHeader", function () {
     BELLATRIX_FORK_EPOCH: 2,
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
-    ELECTRA_FORK_EPOCH: Infinity,
+    PEERDAS_FORK_EPOCH: Infinity,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -28,7 +28,7 @@ describe("UpgradeLightClientHeader", function () {
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
-      electra: ssz.electra.LightClientHeader.defaultValue(),
+      peerdas: ssz.peerdas.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -37,12 +37,12 @@ describe("UpgradeLightClientHeader", function () {
       bellatrix: 17,
       capella: 25,
       deneb: 33,
-      electra: 0,
+      peerdas: 0,
     };
   });
 
-  // Since electra is not implemented for loop is till deneb (Object.values(ForkName).length-1)
-  // Once electra is implemnted run for loop till Object.values(ForkName).length
+  // Since peerdas is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once peerdas is implemnted run for loop till Object.values(ForkName).length
 
   // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
   //   for (let j = i + 1; j < Object.values(ForkName).length; j++) {
@@ -62,10 +62,10 @@ describe("UpgradeLightClientHeader", function () {
     }
   }
 
-  // for electra not implemented
+  // for peerdas not implemented
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
     const fromFork = ForkName[ForkSeq[i] as ForkName];
-    const toFork = ForkName["electra"];
+    const toFork = ForkName["peerdas"];
 
     it(`Throw error ${fromFork}=>${toFork}`, function () {
       lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
@@ -77,8 +77,8 @@ describe("UpgradeLightClientHeader", function () {
     });
   }
 
-  // Since electra is not implemented for loop is till deneb (Object.values(ForkName).length-1)
-  // Once electra is implemnted run for loop till Object.values(ForkName).length
+  // Since peerdas is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once peerdas is implemnted run for loop till Object.values(ForkName).length
 
   // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
 

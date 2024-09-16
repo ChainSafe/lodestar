@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, electra} from "@lodestar/types";
+import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, peerdas} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -55,6 +55,7 @@ import {
   BlobSidecarValidation,
   BlockInputType,
   NullBlockInput,
+  BlockInputData,
 } from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
@@ -256,7 +257,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   }
 
   async function validateBeaconDataColumn(
-    dataColumnSidecar: electra.DataColumnSidecar,
+    dataColumnSidecar: peerdas.DataColumnSidecar,
     dataColumnBytes: Uint8Array,
     gossipIndex: number,
     peerIdStr: string,
@@ -312,7 +313,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
         if (e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(
-            ssz.electra.DataColumnSidecar,
+            ssz.peerdas.DataColumnSidecar,
             dataColumnSidecar,
             `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
           );
@@ -329,10 +330,6 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
-    // if blobs are not yet fully available start an aggressive blob pull
-    if (blockInput.type === BlockInputType.dataPromise) {
-      events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-    }
 
     chain
       .processBlock(blockInput, {
@@ -400,6 +397,26 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
         chain.seenGossipBlockInput.prune();
       });
+
+    if (blockInput.type === BlockInputType.dataPromise) {
+      const blockSlot = blockInput.block.message.slot;
+      // if blobs are not yet fully available start an aggressive blob pull
+      chain.logger.debug("Block under processing is not available, racing with cutoff to add to unknownBlockInput", {
+        blockSlot,
+      });
+      raceWithCutoff(
+        chain,
+        blockSlot,
+        blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+        BLOCK_AVAILABILITY_CUTOFF_MS
+      ).catch((_e) => {
+        chain.logger.debug("Block under processing not yet available, racing with cutoff to add to unknownBlockInput", {
+          blockSlot,
+        });
+        events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+        return null;
+      });
+    }
   }
 
   return {
@@ -444,10 +461,23 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         seenTimestampSec
       );
       if (blockInput.block !== null) {
-        // we can just queue up the blockInput in the processor, but block gossip handler would have already
-        // queued it up.
-        //
-        // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+        if (blockInput.type === BlockInputType.dataPromise) {
+          chain.logger.debug("Block corresponding to blob is available but waiting for data availability", {
+            blobSlot,
+            index,
+          });
+          await raceWithCutoff(
+            chain,
+            blobSlot,
+            blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+            BLOCK_AVAILABILITY_CUTOFF_MS
+          ).catch((_e) => {
+            chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
+              blobSlot,
+            });
+            events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          });
+        }
       } else {
         // wait for the block to arrive till some cutoff else emit unknownBlockInput event
         chain.logger.debug("Block not yet available, racing with cutoff", {blobSlot, index});
@@ -461,7 +491,6 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         });
 
         if (normalBlockInput !== null) {
-          chain.logger.debug("Block corresponding to blob is now available for processing", {blobSlot, index});
           // we can directly send it for processing but block gossip handler will queue it up anyway
           // if we see any issues later, we can send it to handleValidBeaconBlock
           //
@@ -470,10 +499,29 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
           // however we can emit the event which will atleast add the peer to the list of peers to pull
           // data from
           if (normalBlockInput.type === BlockInputType.dataPromise) {
-            events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+            chain.logger.debug("Block corresponding to blob is now available but waiting for data availability", {
+              blobSlot,
+              index,
+            });
+            await raceWithCutoff(
+              chain,
+              blobSlot,
+              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+              BLOCK_AVAILABILITY_CUTOFF_MS
+            ).catch((_e) => {
+              chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
+                blobSlot,
+              });
+              events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+            });
+          } else {
+            chain.logger.debug("Block corresponding to blob is now available for processing", {blobSlot, index});
           }
         } else {
-          chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {blobSlot, index});
+          chain.logger.debug(
+            "Block corresponding to blob not available till BLOCK_AVAILABILITY_CUTOFF_MS adding to unknownBlockInput",
+            {blobSlot, index}
+          );
           events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
         }
       }
@@ -501,10 +549,23 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         seenTimestampSec
       );
       if (blockInput.block !== null) {
-        // we can just queue up the blockInput in the processor, but block gossip handler would have already
-        // queued it up.
-        //
-        // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+        if (blockInput.type === BlockInputType.dataPromise) {
+          chain.logger.debug("Block corresponding to blob is available but waiting for data availability", {
+            blobSlot,
+            index,
+          });
+          await raceWithCutoff(
+            chain,
+            blobSlot,
+            blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+            BLOCK_AVAILABILITY_CUTOFF_MS
+          ).catch((_e) => {
+            chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
+              blobSlot,
+            });
+            events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          });
+        }
       } else {
         // wait for the block to arrive till some cutoff else emit unknownBlockInput event
         chain.logger.debug("Block not yet available, racing with cutoff", {blobSlot, index});
@@ -518,16 +579,24 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         });
 
         if (normalBlockInput !== null) {
-          chain.logger.debug("Block corresponding to blob is now available for processing", {blobSlot, index});
-          // we can directly send it for processing but block gossip handler will queue it up anyway
-          // if we see any issues later, we can send it to handleValidBeaconBlock
-          //
-          // handleValidBeaconBlock(normalBlockInput, peerIdStr, seenTimestampSec);
-          //
-          // however we can emit the event which will atleast add the peer to the list of peers to pull
-          // data from
           if (normalBlockInput.type === BlockInputType.dataPromise) {
-            events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+            chain.logger.debug("Block corresponding to blob is now available but waiting for data availability", {
+              blobSlot,
+              index,
+            });
+            await raceWithCutoff(
+              chain,
+              blobSlot,
+              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+              BLOCK_AVAILABILITY_CUTOFF_MS
+            ).catch((_e) => {
+              chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
+                blobSlot,
+              });
+              events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+            });
+          } else {
+            chain.logger.debug("Block corresponding to blob is now available for processing", {blobSlot, index});
           }
         } else {
           chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {blobSlot, index});

@@ -35,7 +35,7 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
         case ForkName.deneb:
           return slotFns.upgradeStateToDeneb(preState as CachedBeaconStateCapella);
-        case ForkName.electra:
+        case ForkName.peerdas:
           throw Error("not Implemented");
       }
     },

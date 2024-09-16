@@ -256,6 +256,6 @@ export const NUMBER_OF_COLUMNS = (FIELD_ELEMENTS_PER_BLOB * 2) / FIELD_ELEMENTS_
 export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
 export const CELLS_PER_BLOB = FIELD_ELEMENTS_PER_EXT_BLOB / FIELD_ELEMENTS_PER_CELL;
 
-// ssz.electra.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
+// ssz.peerdas.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
 export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;

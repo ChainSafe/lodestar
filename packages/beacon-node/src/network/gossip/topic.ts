@@ -90,7 +90,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.data_column_sidecar:
-      return ssz.electra.DataColumnSidecar;
+      return ssz.peerdas.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return ssz.phase0.SignedAggregateAndProof;
     case GossipType.beacon_attestation:
@@ -224,8 +224,8 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
-  // After Electra also track data_column_sidecar_{index}
-  if (ForkSeq[fork] >= ForkSeq.electra) {
+  // After Peerdas also track data_column_sidecar_{index}
+  if (ForkSeq[fork] >= ForkSeq.peerdas) {
     for (let index = 0; index < DATA_COLUMN_SIDECAR_SUBNET_COUNT; index++) {
       topics.push({type: GossipType.data_column_sidecar, index});
     }

@@ -1,6 +1,6 @@
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {electra, RootHex, ssz} from "@lodestar/types";
+import {peerdas, RootHex, ssz} from "@lodestar/types";
 import {toHex, fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -8,10 +8,11 @@ import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
   COLUMN_SIZE_IN_WRAPPER_INDEX,
+  NUM_COLUMNS_IN_WRAPPER_INDEX,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRoot(
-  requestBody: electra.DataColumnSidecarsByRootRequest,
+  requestBody: peerdas.DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
@@ -47,34 +48,38 @@ export async function* onDataColumnSidecarsByRoot(
         throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
       }
 
+      const retrivedColumnsLen = ssz.Uint8.deserialize(
+        dataColumnSidecarsBytesWrapped.slice(NUM_COLUMNS_IN_WRAPPER_INDEX, COLUMN_SIZE_IN_WRAPPER_INDEX)
+      );
       const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
         COLUMN_SIZE_IN_WRAPPER_INDEX,
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX
       );
       const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
-      const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
+      const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
+        DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
+      );
 
       const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
         CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
       );
+      console.log("onDataColumnSidecarsByRoot", {
+        slot: block.slot,
+        columnsSize,
+        storedColumnsNum: dataColumnSidecarsBytes.length / columnsSize,
+        dataColumnSidecarsBytesWrapped: dataColumnSidecarsBytesWrapped.length,
+      });
 
       lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex};
     }
 
-    const dataIndex = lastFetchedSideCars.dataColumnsIndex[index] - 1;
+    const dataIndex = (lastFetchedSideCars.dataColumnsIndex[index] ?? 0) - 1;
     if (dataIndex < 0) {
       throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
     }
     const {columnsSize} = lastFetchedSideCars;
 
-    if (dataIndex === undefined || dataIndex === 0) {
-      throw Error(
-        `Missing dataColumnSidecar blockRoot=${blockRootHex} index=${index} calculated dataIndex=${dataIndex}`
-      );
-    }
-
-    // dataIndex is 1 based index
     const dataColumnSidecarBytes = lastFetchedSideCars.bytes.slice(
       dataIndex * columnsSize,
       (dataIndex + 1) * columnsSize

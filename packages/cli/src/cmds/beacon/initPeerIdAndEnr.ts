@@ -7,7 +7,7 @@ import {Multiaddr} from "@multiformats/multiaddr";
 import {createPrivateKeyFromPeerId, SignableENR} from "@chainsafe/enr";
 import {Logger, fromHex} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
 
 import {exportToJSON, readPeerId} from "../../config/index.js";
 import {writeFile600Perm} from "../../util/file.js";
@@ -89,7 +89,8 @@ export function overwriteEnrWithCliArgs(
   }
 
   // csc is big ending but since 1 bytes suffices for now so its the same
-  enr.set("csc", ssz.Uint8.serialize(Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)));
+  const csc = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
+  enr.set("csc", intToBytes(csc, Math.ceil(Math.log2(csc + 1) / 8), "be"));
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
     const isLocal = isLocalMultiAddr(mu);

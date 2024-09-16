@@ -6,10 +6,11 @@ function ckzgNotLoaded(): never {
 }
 
 export let ckzg: {
-  freeTrustedSetup(): void;
   loadTrustedSetup(precompute: number, filePath?: string): void;
   blobToKzgCommitment(blob: Uint8Array): Uint8Array;
+  computeKzgProof(blob: Uint8Array, zBytes: Uint8Array): [Uint8Array, Uint8Array];
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
+  verifyKzgProof(commitmentBytes: Uint8Array, zBytes: Uint8Array, yBytes: Uint8Array, proofBytes: Uint8Array): boolean;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
   computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
@@ -21,10 +22,11 @@ export let ckzg: {
     proofsBytes: Uint8Array[]
   ): boolean;
 } = {
-  freeTrustedSetup: ckzgNotLoaded,
   loadTrustedSetup: ckzgNotLoaded,
   blobToKzgCommitment: ckzgNotLoaded,
+  computeKzgProof: ckzgNotLoaded,
   computeBlobKzgProof: ckzgNotLoaded,
+  verifyKzgProof: ckzgNotLoaded,
   verifyBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProofBatch: ckzgNotLoaded,
   computeCellsAndKzgProofs: ckzgNotLoaded,

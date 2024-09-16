@@ -9,7 +9,7 @@ import {
 import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, ForkName} from "@lodestar/params";
 import {sleep, fromHex, toHex} from "@lodestar/utils";
 import {
-  electra,
+  peerdas,
   deneb,
   isSignedBlockContents,
   ProducedBlockSource,
@@ -72,13 +72,13 @@ export function getBeaconBlockApi({
     let blockForImport: BlockInput,
       signedBlock: SignedBeaconBlock,
       blobSidecars: deneb.BlobSidecars,
-      dataColumnSidecars: electra.DataColumnSidecars;
+      dataColumnSidecars: peerdas.DataColumnSidecars;
 
     if (isSignedBlockContents(signedBlockOrContents)) {
       ({signedBlock} = signedBlockOrContents);
       const fork = config.getForkName(signedBlock.message.slot);
       let blockData: BlockInputData;
-      if (fork === ForkName.electra) {
+      if (fork === ForkName.peerdas) {
         dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, signedBlockOrContents);
         blockData = {
           fork,
