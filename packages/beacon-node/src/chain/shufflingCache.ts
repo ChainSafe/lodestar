@@ -185,7 +185,6 @@ export class ShufflingCache implements IShufflingCache {
       const shuffling = computeEpochShuffling(state, activeIndices, epoch);
       timer?.();
       this.set(shuffling, decisionRoot);
-      // wait until after the first slot to help with attestation and block proposal performance
     });
   }
 
