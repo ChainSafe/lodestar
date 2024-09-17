@@ -12,6 +12,8 @@ import {
   NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
   NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
   NEXT_SYNC_COMMITTEE_INDEX,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  FINALIZED_ROOT_INDEX_ELECTRA,
 } from "@lodestar/params";
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
 import {isValidMerkleBranch} from "../utils/index.js";
@@ -80,8 +82,8 @@ export function validateLightClientUpdate(
       !isValidMerkleBranch(
         finalizedRoot,
         update.finalityBranch,
-        FINALIZED_ROOT_DEPTH,
-        FINALIZED_ROOT_INDEX,
+        isElectraLightClientUpdate(update) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH,
+        isElectraLightClientUpdate(update) ? FINALIZED_ROOT_INDEX_ELECTRA : FINALIZED_ROOT_INDEX,
         update.attestedHeader.beacon.stateRoot
       )
     ) {
