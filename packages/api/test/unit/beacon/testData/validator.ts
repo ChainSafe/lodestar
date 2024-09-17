@@ -102,7 +102,15 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {attestationDataRoot: ZERO_HASH, slot: 32000},
     res: {data: ssz.phase0.Attestation.defaultValue()},
   },
+  getAggregatedAttestationV2: {
+    args: {attestationDataRoot: ZERO_HASH, slot: 32000, committeeIndex: 2},
+    res: {data: ssz.electra.Attestation.defaultValue(), meta: {version: ForkName.electra}},
+  },
   publishAggregateAndProofs: {
+    args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
+    res: undefined,
+  },
+  publishAggregateAndProofsV2: {
     args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
     res: undefined,
   },

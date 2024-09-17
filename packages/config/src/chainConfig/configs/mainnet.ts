@@ -49,6 +49,10 @@ export const chainConfig: ChainConfig = {
   DENEB_FORK_VERSION: b("0x04000000"),
   DENEB_FORK_EPOCH: 269568, // March 13, 2024, 01:55:35pm UTC
 
+  // ELECTRA
+  ELECTRA_FORK_VERSION: b("0x05000000"),
+  ELECTRA_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds
@@ -98,4 +102,10 @@ export const chainConfig: ChainConfig = {
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+
+  // Electra
+  // 2**8 * 10**9 (= 256,000,000,000)
+  MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,
+  // 2*7 * 10**9 (= 128,000,000,000)
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
 };

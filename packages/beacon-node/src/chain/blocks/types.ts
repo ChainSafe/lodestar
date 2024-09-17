@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {deneb, Slot, RootHex, SignedBeaconBlock} from "@lodestar/types";
-import {ForkSeq, ForkName} from "@lodestar/params";
+import {ForkSeq, ForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 export enum BlockInputType {
@@ -36,7 +36,7 @@ export enum GossipedInputType {
 
 type BlobsCacheMap = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
 
-type ForkBlobsInfo = {fork: ForkName.deneb};
+type ForkBlobsInfo = {fork: ForkBlobs};
 type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
 export type BlockInputData = BlockInputDataBlobs;

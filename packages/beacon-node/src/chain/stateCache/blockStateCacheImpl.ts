@@ -1,7 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
+import {toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
@@ -34,7 +34,7 @@ export class BlockStateCacheImpl implements BlockStateCache {
     this.maxStates = maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
-      this.metrics = metrics.stateCache;
+      this.metrics = {...metrics.stateCache, ...metrics.epochCache};
       metrics.stateCache.size.addCollect(() => metrics.stateCache.size.set(this.cache.size));
     }
   }
@@ -53,7 +53,7 @@ export class BlockStateCacheImpl implements BlockStateCache {
   }
 
   add(item: CachedBeaconStateAllForks): void {
-    const key = toHexString(item.hashTreeRoot());
+    const key = toRootHex(item.hashTreeRoot());
     if (this.cache.get(key)) {
       return;
     }
@@ -70,7 +70,7 @@ export class BlockStateCacheImpl implements BlockStateCache {
 
   setHeadState(item: CachedBeaconStateAllForks | null): void {
     if (item) {
-      const key = toHexString(item.hashTreeRoot());
+      const key = toRootHex(item.hashTreeRoot());
       this.head = {state: item, stateRoot: key};
     } else {
       this.head = null;
@@ -130,11 +130,15 @@ export class BlockStateCacheImpl implements BlockStateCache {
   dumpSummary(): routes.lodestar.StateCacheItem[] {
     return Array.from(this.cache.entries()).map(([key, state]) => ({
       slot: state.slot,
-      root: toHexString(state.hashTreeRoot()),
+      root: toRootHex(state.hashTreeRoot()),
       reads: this.cache.readCount.get(key) ?? 0,
       lastRead: this.cache.lastRead.get(key) ?? 0,
       checkpointState: false,
     }));
+  }
+
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+    return this.cache.values();
   }
 
   private deleteAllEpochItems(epoch: Epoch): void {

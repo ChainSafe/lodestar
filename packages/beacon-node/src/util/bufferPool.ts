@@ -5,6 +5,12 @@ import {Metrics} from "../metrics/metrics.js";
  */
 const GROW_RATIO = 1.1;
 
+export enum AllocSource {
+  PERSISTENT_CHECKPOINTS_CACHE_VALIDATORS = "persistent_checkpoints_cache_validators",
+  PERSISTENT_CHECKPOINTS_CACHE_STATE = "persistent_checkpoints_cache_state",
+  ARCHIVE_STATE = "archive_state",
+}
+
 /**
  * A simple implementation to manage a single buffer.
  * This is initially used for state serialization at every epoch and for state reload.
@@ -36,24 +42,24 @@ export class BufferPool {
    * If the buffer is already in use, return null.
    * Grow the buffer if the requested size is larger than the current buffer.
    */
-  alloc(size: number): BufferWithKey | null {
-    return this.doAlloc(size, false);
+  alloc(size: number, source: AllocSource): BufferWithKey | null {
+    return this.doAlloc(size, source, false);
   }
 
   /**
    * Same to alloc() but the buffer is not zeroed.
    */
-  allocUnsafe(size: number): BufferWithKey | null {
-    return this.doAlloc(size, true);
+  allocUnsafe(size: number, source: AllocSource): BufferWithKey | null {
+    return this.doAlloc(size, source, true);
   }
 
-  private doAlloc(size: number, isUnsafe = false): BufferWithKey | null {
+  private doAlloc(size: number, source: AllocSource, isUnsafe = false): BufferWithKey | null {
     if (this.inUse) {
-      this.metrics?.misses.inc();
+      this.metrics?.misses.inc({source});
       return null;
     }
     this.inUse = true;
-    this.metrics?.hits.inc();
+    this.metrics?.hits.inc({source});
     this.currentKey += 1;
     if (size > this.buffer.length) {
       this.metrics?.grows.inc();

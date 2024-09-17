@@ -1,4 +1,5 @@
 import {describe, it, expect} from "vitest";
+import {ForkSeq} from "@lodestar/params";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {numValidators} from "../../perf/util.js";
 import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capella.js";
@@ -36,8 +37,9 @@ describe("getExpectedWithdrawals", () => {
     // Clone true to drop cache
     const state = beforeValue(() => getExpectedWithdrawalsTestData(vc, opts).clone(true));
 
+    // TODO Electra: Add test for electra
     it(`getExpectedWithdrawals ${vc} ${caseID}`, () => {
-      const {sampledValidators, withdrawals} = getExpectedWithdrawals(state.value);
+      const {sampledValidators, withdrawals} = getExpectedWithdrawals(ForkSeq.capella, state.value);
       expect(sampledValidators).toBe(opts.sampled);
       expect(withdrawals.length).toBe(opts.withdrawals);
     });

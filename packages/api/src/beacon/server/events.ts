@@ -3,7 +3,7 @@ import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "
 import {Endpoints, getDefinitions, eventTypes, getEventSerdes} from "../routes/events.js";
 
 export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
-  const eventSerdes = getEventSerdes();
+  const eventSerdes = getEventSerdes(config);
   const serverRoutes = createFastifyRoutes(getDefinitions(config), methods);
 
   return {

@@ -24,7 +24,7 @@ import fs from "node:fs";
 const knownAuthors = {
   "caymannava@gmail.com": "wemeetagain",
   "develop@g11tech.io": "g11tech",
-  "tuyen@chainsafe.io": "tuyennhv",
+  "tuyen@chainsafe.io": "twoeths",
   "35266934+dapplion@users.noreply.github.com": "dapplion",
   "41898282+github-actions[bot]@users.noreply.github.com": "github-actions[bot]",
   "49699333+dependabot[bot]@users.noreply.github.com": "dependabot[bot]",
@@ -42,6 +42,7 @@ const knownAuthors = {
   "nflaig@protonmail.com": "nflaig",
   "nazarhussain@gmail.com": "nazarhussain",
   "me@matthewkeil.com": "matthewkeil",
+  "17676176+ensi321@users.noreply.github.com": "ensi321",
 };
 
 const fromTag = process.argv[2];

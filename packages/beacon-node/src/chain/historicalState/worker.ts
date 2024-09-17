@@ -82,6 +82,10 @@ if (metricsRegister) {
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
     }),
+    numEffectiveBalanceUpdates: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
+      help: "Count of effective balance updates in epoch transition",
+    }),
     preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
       name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",

@@ -21,6 +21,7 @@ import {
   ForkPreBlobs,
   ForkBlobs,
   ForkExecution,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
@@ -41,7 +42,7 @@ import {
   BlindedBeaconBlock,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
+import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth, toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -324,7 +325,7 @@ export function getValidatorApi(
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {
-      throw new ApiError(400, `Block not in forkChoice, beaconBlockRoot=${toHex(beaconBlockRoot)}`);
+      throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
 
     if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
@@ -336,7 +337,7 @@ export function getValidatorApi(
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {
-      throw new ApiError(400, `Block not in forkChoice, beaconBlockRoot=${toHex(beaconBlockRoot)}`);
+      throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
 
     if (protoBeaconBlock.dataAvailabilityStatus === DataAvailabilityStatus.OutOfRange)
@@ -416,7 +417,7 @@ export function getValidatorApi(
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toHex(config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
+        root: toRootHex(config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
       });
 
       if (chain.opts.persistProducedBlocks) {
@@ -494,13 +495,13 @@ export function getValidatorApi(
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+        root: toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
       if (chain.opts.persistProducedBlocks) {
         void chain.persistBlock(block, "produced_engine_block");
       }
       if (isForkBlobs(version)) {
-        const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
+        const blockHash = toRootHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
         const contents = chain.producedContentsCache.get(blockHash);
         if (contents === undefined) {
           throw Error("contents missing in cache");
@@ -814,6 +815,7 @@ export function getValidatorApi(
       const attEpoch = computeEpochAtSlot(slot);
       const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
       const headBlockRoot = fromHex(headBlockRootHex);
+      const fork = config.getForkName(slot);
 
       const beaconBlockRoot =
         slot >= headSlot
@@ -845,7 +847,7 @@ export function getValidatorApi(
       return {
         data: {
           slot,
-          index: committeeIndex,
+          index: isForkPostElectra(fork) ? 0 : committeeIndex,
           beaconBlockRoot,
           source: attEpochState.currentJustifiedCheckpoint,
           target: {epoch: attEpoch, root: targetRoot},
@@ -869,7 +871,7 @@ export function getValidatorApi(
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
       if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
-        const rootHex = toHex(beaconBlockRoot);
+        const rootHex = toRootHex(beaconBlockRoot);
         network.searchUnknownSlotRoot({slot, root: rootHex});
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
         await chain.waitForBlock(slot, rootHex);
@@ -880,7 +882,12 @@ export function getValidatorApi(
       notOnOutOfRangeData(beaconBlockRoot);
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
-      if (!contribution) throw new ApiError(500, "No contribution available");
+      if (!contribution) {
+        throw new ApiError(
+          404,
+          `No sync committee contribution for slot=${slot}, subnet=${subcommitteeIndex}, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`
+        );
+      }
 
       metrics?.production.producedSyncContributionParticipants.observe(
         contribution.aggregationBits.getTrueBitIndexes().length
@@ -954,7 +961,7 @@ export function getValidatorApi(
       return {
         data: duties,
         meta: {
-          dependentRoot: toHex(dependentRoot),
+          dependentRoot: toRootHex(dependentRoot),
           executionOptimistic: isOptimisticBlock(head),
         },
       };
@@ -1006,7 +1013,7 @@ export function getValidatorApi(
       return {
         data: duties,
         meta: {
-          dependentRoot: toHex(dependentRoot),
+          dependentRoot: toRootHex(dependentRoot),
           executionOptimistic: isOptimisticBlock(head),
         },
       };
@@ -1072,7 +1079,15 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex);
+      const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
+      const fork = chain.config.getForkName(slot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getAggregatedAttestationV2 to retrieve aggregated attestations for post-electra fork=${fork}`
+        );
+      }
 
       if (!aggregate) {
         throw new ApiError(404, `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}`);
@@ -1085,7 +1100,34 @@ export function getValidatorApi(
       };
     },
 
+    async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
+      notWhileSyncing();
+
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      const dataRootHex = toRootHex(attestationDataRoot);
+      const aggregate = chain.attestationPool.getAggregate(slot, committeeIndex, dataRootHex);
+
+      if (!aggregate) {
+        throw new ApiError(
+          404,
+          `No aggregated attestation for slot=${slot}, committeeIndex=${committeeIndex}, dataRoot=${dataRootHex}`
+        );
+      }
+
+      metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
+
+      return {
+        data: aggregate,
+        meta: {version: config.getForkName(slot)},
+      };
+    },
+
     async publishAggregateAndProofs({signedAggregateAndProofs}) {
+      await this.publishAggregateAndProofsV2({signedAggregateAndProofs});
+    },
+
+    async publishAggregateAndProofsV2({signedAggregateAndProofs}) {
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;

@@ -191,7 +191,7 @@ Merge `stable` into `unstable`, resolving conflicts:
 
 - `git checkout unstable && git merge stable`
 - Resolve conflicts
-- Sanity check locally before pushing by using: `git diff unstable origin/unstable`
+- Sanity check locally before pushing by using: `git diff origin/unstable unstable`
 - Disable `unstable` branch protection
 - `git push`
 - Enable `unstable` branch protection

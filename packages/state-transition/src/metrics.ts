@@ -11,6 +11,7 @@ export type BeaconStateTransitionMetrics = {
   processBlockTime: Histogram;
   processBlockCommitTime: Histogram;
   stateHashTreeRootTime: Histogram<{source: StateHashTreeRootSource}>;
+  numEffectiveBalanceUpdates: Gauge;
   preStateBalancesNodesPopulatedMiss: Gauge<{source: StateCloneSource}>;
   preStateBalancesNodesPopulatedHit: Gauge<{source: StateCloneSource}>;
   preStateValidatorsNodesPopulatedMiss: Gauge<{source: StateCloneSource}>;
@@ -28,6 +29,11 @@ export type BeaconStateTransitionMetrics = {
     isActivePrevEpoch: boolean[],
     balances?: number[]
   ) => void;
+};
+
+export type EpochCacheMetrics = {
+  finalizedPubkeyDuplicateInsert: Gauge;
+  newUnFinalizedPubkey: Gauge;
 };
 
 export function onStateCloneMetrics(

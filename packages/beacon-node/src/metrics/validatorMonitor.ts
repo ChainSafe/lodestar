@@ -8,12 +8,12 @@ import {
   getBlockRootAtSlot,
   ParticipationFlags,
 } from "@lodestar/state-transition";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toHex} from "@lodestar/utils";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
 import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
-import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
+import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {LodestarMetrics} from "./metrics/lodestar.js";
 
@@ -392,7 +392,7 @@ export function createValidatorMonitor(
 
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
         summary.blockProposals.push({
-          blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+          blockRoot: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
           blockSlot: block.slot,
           poolSubmitDelaySec: delaySec,
           successfullyImported: false,
@@ -416,7 +416,7 @@ export function createValidatorMonitor(
           proposal.successfullyImported = true;
         } else {
           summary.blockProposals.push({
-            blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+            blockRoot: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
             blockSlot: block.slot,
             poolSubmitDelaySec: null,
             successfullyImported: true,
@@ -445,7 +445,7 @@ export function createValidatorMonitor(
 
           const attestationSummary = validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root));
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root));
           if (
             attestationSummary.poolSubmitDelayMinSec === null ||
             attestationSummary.poolSubmitDelayMinSec > delaySec
@@ -494,7 +494,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .aggregateInclusionDelaysSec.push(delaySec);
         }
       }
@@ -533,7 +533,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .aggregateInclusionDelaysSec.push(delaySec);
         }
       }
@@ -577,7 +577,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .blockInclusions.push({
               blockRoot: inclusionBlockRoot,
               blockSlot: inclusionBlockSlot,
@@ -644,13 +644,20 @@ export function createValidatorMonitor(
       }
 
       // Compute summaries of previous epoch attestation performance
-      const prevEpoch = Math.max(0, computeEpochAtSlot(headState.slot) - 1);
+      const prevEpoch = computeEpochAtSlot(headState.slot) - 1;
+
+      // During the end of first epoch, the prev epoch with be -1
+      // Skip this as there is no attestation and block proposal summary in epoch -1
+      if (prevEpoch === -1) {
+        return;
+      }
+
       const rootCache = new RootHexCache(headState);
 
       if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
         const {previousEpochParticipation} = headState as CachedBeaconStateAltair;
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
-        const prevEpochTargetRoot = toHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
+        const prevEpochTargetRoot = toRootHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
@@ -1041,7 +1048,7 @@ export class RootHexCache {
   getBlockRootAtSlot(slot: Slot): RootHex {
     let root = this.blockRootSlotCache.get(slot);
     if (!root) {
-      root = toHex(getBlockRootAtSlot(this.state, slot));
+      root = toRootHex(getBlockRootAtSlot(this.state, slot));
       this.blockRootSlotCache.set(slot, root);
     }
     return root;
