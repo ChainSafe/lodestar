@@ -1,6 +1,5 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, pruneSetToMax} from "@lodestar/utils";
+import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Root, RootHex, deneb} from "@lodestar/types";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
@@ -139,8 +138,8 @@ export class UnknownBlockSync {
   private addUnknownParent(blockInput: BlockInput, peerIdStr: string): void {
     const block = blockInput.block.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-    const blockRootHex = toHexString(blockRoot);
-    const parentBlockRootHex = toHexString(block.parentRoot);
+    const blockRootHex = toRootHex(blockRoot);
+    const parentBlockRootHex = toRootHex(block.parentRoot);
 
     // add 1 pending block with status downloaded
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
@@ -180,9 +179,7 @@ export class UnknownBlockSync {
     } else {
       if (blockInputOrRootHex.block !== null) {
         const {block} = blockInputOrRootHex;
-        blockRootHex = toHexString(
-          this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
-        );
+        blockRootHex = toRootHex(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
         unknownBlockType = PendingBlockType.UNKNOWN_BLOBS;
       } else {
         unknownBlockType = PendingBlockType.UNKNOWN_BLOCKINPUT;
@@ -290,7 +287,7 @@ export class UnknownBlockSync {
 
     let res;
     if (block.blockInput === null) {
-      res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
+      res = await wrapError(this.fetchUnknownBlockRoot(fromHex(block.blockRootHex), connectedPeers));
     } else {
       res = await wrapError(this.fetchUnavailableBlockInput(block.blockInput, connectedPeers));
     }
@@ -304,7 +301,7 @@ export class UnknownBlockSync {
         ...block,
         status: PendingBlockStatus.downloaded,
         blockInput,
-        parentBlockRootHex: toHexString(blockInput.block.message.parentRoot),
+        parentBlockRootHex: toRootHex(blockInput.block.message.parentRoot),
       };
       this.pendingBlocks.set(block.blockRootHex, block);
       const blockSlot = blockInput.block.message.slot;
@@ -336,7 +333,7 @@ export class UnknownBlockSync {
         this.logger.debug("Downloaded block is before finalized slot", {
           finalizedSlot,
           blockSlot,
-          parentRoot: toHexString(blockRoot),
+          parentRoot: toRootHex(blockRoot),
           unknownBlockType,
         });
         this.removeAndDownscoreAllDescendants(block);
@@ -384,7 +381,7 @@ export class UnknownBlockSync {
         .BeaconBlock.hashTreeRoot(pendingBlock.blockInput.block.message);
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
         blockSlot,
-        blockRoot: toHexString(blockRoot),
+        blockRoot: toRootHex(blockRoot),
         proposerIndex,
       });
       await sleep(this.proposerBoostSecWindow * 1000);
@@ -466,7 +463,7 @@ export class UnknownBlockSync {
     connectedPeers: PeerIdStr[]
   ): Promise<{blockInput: BlockInput; peerIdStr: string}> {
     const shuffledPeers = shuffle(connectedPeers);
-    const blockRootHex = toHexString(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
 
     let lastError: Error | null = null;
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
@@ -483,7 +480,7 @@ export class UnknownBlockSync {
         const block = blockInput.block.message;
         const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
         if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
-          throw Error(`Wrong block received by peer, got ${toHexString(receivedBlockRoot)} expected ${blockRootHex}`);
+          throw Error(`Wrong block received by peer, got ${toRootHex(receivedBlockRoot)} expected ${blockRootHex}`);
         }
 
         return {blockInput, peerIdStr: peer};
@@ -521,13 +518,13 @@ export class UnknownBlockSync {
 
     if (unavailableBlockInput.block === null) {
       blockRootHex = unavailableBlockInput.blockRootHex;
-      blockRoot = fromHexString(blockRootHex);
+      blockRoot = fromHex(blockRootHex);
     } else {
       const unavailableBlock = unavailableBlockInput.block;
       blockRoot = this.config
         .getForkTypes(unavailableBlock.message.slot)
         .BeaconBlock.hashTreeRoot(unavailableBlock.message);
-      blockRootHex = toHexString(blockRoot);
+      blockRootHex = toRootHex(blockRoot);
       blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
       pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.cachedData.blobsCache.size;
     }
@@ -554,7 +551,7 @@ export class UnknownBlockSync {
         const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
 
         if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
-          throw Error(`Wrong block received by peer, got ${toHexString(receivedBlockRoot)} expected ${blockRootHex}`);
+          throw Error(`Wrong block received by peer, got ${toRootHex(receivedBlockRoot)} expected ${blockRootHex}`);
         }
         if (unavailableBlockInput.block === null) {
           this.logger.debug("Fetched  NullBlockInput", {attempts: i, blockRootHex});

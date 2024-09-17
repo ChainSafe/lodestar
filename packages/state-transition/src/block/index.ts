@@ -1,5 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella} from "@lodestar/types";
+import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
@@ -31,7 +31,7 @@ export * from "./externalData.js";
 export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  block: allForks.FullOrBlindedBeaconBlock,
+  block: BeaconBlock | BlindedBeaconBlock,
   externalData: BlockExternalData & ProcessBlockOpts,
   opts?: ProcessBlockOpts
 ): void {
@@ -47,10 +47,12 @@ export function processBlock(
     // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
     if (fork >= ForkSeq.capella) {
       processWithdrawals(
+        fork,
         state as CachedBeaconStateCapella,
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
       );
     }
+
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
   }
 

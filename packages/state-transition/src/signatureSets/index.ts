@@ -1,5 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella} from "@lodestar/types";
+import {SignedBeaconBlock, altair, capella} from "@lodestar/types";
 import {ISignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
@@ -25,12 +25,15 @@ export * from "./blsToExecutionChange.js";
  */
 export function getBlockSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock,
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
   }
 ): ISignatureSet[] {
+  // fork based validations
+  const fork = state.config.getForkSeq(signedBlock.message.slot);
+
   const signatureSets = [
     getRandaoRevealSignatureSet(state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(state, signedBlock),
@@ -42,9 +45,6 @@ export function getBlockSignatureSets(
   if (!opts?.skipProposerSignature) {
     signatureSets.push(getBlockProposerSignatureSet(state, signedBlock));
   }
-
-  // fork based validations
-  const fork = state.config.getForkSeq(signedBlock.message.slot);
 
   // Only after altair fork, validate tSyncCommitteeSignature
   if (fork >= ForkSeq.altair) {

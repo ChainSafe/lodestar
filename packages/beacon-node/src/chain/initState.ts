@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {
   blockToHeader,
   computeEpochAtSlot,
@@ -7,9 +6,9 @@ import {
   computeCheckpointEpochAtStateSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {phase0, allForks, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, toHex} from "@lodestar/utils";
+import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
@@ -21,7 +20,7 @@ import {GenesisResult} from "./genesis/interface.js";
 export async function persistGenesisResult(
   db: IBeaconDb,
   genesisResult: GenesisResult,
-  genesisBlock: allForks.SignedBeaconBlock
+  genesisBlock: SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
     db.stateArchive.add(genesisResult.state),
@@ -38,24 +37,22 @@ export async function persistGenesisResult(
 export async function persistAnchorState(
   config: ChainForkConfig,
   db: IBeaconDb,
-  anchorState: BeaconStateAllForks
+  anchorState: BeaconStateAllForks,
+  anchorStateBytes: Uint8Array
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),
-      db.stateArchive.add(anchorState),
+      db.stateArchive.putBinary(anchorState.slot, anchorStateBytes),
     ]);
   } else {
-    await db.stateArchive.add(anchorState);
+    await db.stateArchive.putBinary(anchorState.slot, anchorStateBytes);
   }
 }
 
-export function createGenesisBlock(
-  config: ChainForkConfig,
-  genesisState: BeaconStateAllForks
-): allForks.SignedBeaconBlock {
+export function createGenesisBlock(config: ChainForkConfig, genesisState: BeaconStateAllForks): SignedBeaconBlock {
   const types = config.getForkTypes(GENESIS_SLOT);
   const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = genesisState.hashTreeRoot();
@@ -106,8 +103,8 @@ export async function initStateFromEth1({
     const blockRoot = types.BeaconBlock.hashTreeRoot(genesisBlock.message);
 
     logger.info("Initializing genesis state", {
-      stateRoot: toHexString(stateRoot),
-      blockRoot: toHexString(blockRoot),
+      stateRoot: toRootHex(stateRoot),
+      blockRoot: toRootHex(blockRoot),
       validatorCount: genesisResult.state.validators.length,
     });
 
@@ -149,7 +146,7 @@ export async function initStateFromDb(
   logger.info("Initializing beacon state from db", {
     slot: state.slot,
     epoch: computeEpochAtSlot(state.slot),
-    stateRoot: toHexString(state.hashTreeRoot()),
+    stateRoot: toRootHex(state.hashTreeRoot()),
   });
 
   return state;
@@ -158,16 +155,17 @@ export async function initStateFromDb(
 /**
  * Initialize and persist an anchor state (either weak subjectivity or genesis)
  */
-export async function initStateFromAnchorState(
+export async function checkAndPersistAnchorState(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
   anchorState: BeaconStateAllForks,
+  anchorStateBytes: Uint8Array,
   {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
   }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
-): Promise<BeaconStateAllForks> {
+): Promise<void> {
   const expectedFork = config.getForkInfo(computeStartSlotAtEpoch(anchorState.fork.epoch));
   const expectedForkVersion = toHex(expectedFork.version);
   const stateFork = toHex(anchorState.fork.currentVersion);
@@ -182,22 +180,22 @@ export async function initStateFromAnchorState(
     logger.info(`Initializing beacon from a valid ${stateInfo} state`, {
       slot: anchorState.slot,
       epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      stateRoot: toRootHex(anchorState.hashTreeRoot()),
       isWithinWeakSubjectivityPeriod,
     });
   } else {
     logger.warn(`Initializing from a stale ${stateInfo} state vulnerable to long range attacks`, {
       slot: anchorState.slot,
       epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      stateRoot: toRootHex(anchorState.hashTreeRoot()),
       isWithinWeakSubjectivityPeriod,
     });
     logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
   }
 
-  await persistAnchorState(config, db, anchorState);
-
-  return anchorState;
+  if (isCheckpointState || anchorState.slot === GENESIS_SLOT) {
+    await persistAnchorState(config, db, anchorState, anchorStateBytes);
+  }
 }
 
 export function initBeaconMetrics(metrics: Metrics, state: BeaconStateAllForks): void {

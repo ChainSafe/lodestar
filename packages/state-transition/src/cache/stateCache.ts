@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
@@ -11,6 +10,7 @@ import {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
+  BeaconStateElectra,
 } from "./types.js";
 import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 
@@ -131,11 +131,13 @@ export type CachedBeaconStateAltair = CachedBeaconState<BeaconStateAltair>;
 export type CachedBeaconStateBellatrix = CachedBeaconState<BeaconStateBellatrix>;
 export type CachedBeaconStateCapella = CachedBeaconState<BeaconStateCapella>;
 export type CachedBeaconStateDeneb = CachedBeaconState<BeaconStateDeneb>;
+export type CachedBeaconStateElectra = CachedBeaconState<BeaconStateElectra>;
 
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
+ * TODO ELECTRA: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only
  */
 export function createCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
@@ -159,7 +161,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Create a CachedBeaconState given a cached seed state and state bytes
  * This guarantees that the returned state shares the same tree with the seed state
  * Check loadState() api for more details
- * // TODO: rename to loadUnfinalizedCachedBeaconState() due to EIP-6110
+ * // TODO: rename to loadUnfinalizedCachedBeaconState() due to ELECTRA
  */
 export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
@@ -180,7 +182,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     const validator = validators.getReadonly(validatorIndex);
     const pubkey = validator.pubkey;
     pubkey2index.set(pubkey, validatorIndex);
-    index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+    index2pubkey[validatorIndex] = PublicKey.fromBytes(pubkey);
   }
 
   return createCachedBeaconState(

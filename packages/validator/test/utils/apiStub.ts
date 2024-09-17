@@ -1,7 +1,18 @@
 import {vi, Mocked} from "vitest";
-import {ApiClientMethods, ApiResponse, Endpoint, Endpoints, HttpStatusCode} from "@lodestar/api";
+import {ApiClientMethods, ApiResponse, Endpoint, Endpoints, HttpStatusCode, IHttpClient} from "@lodestar/api";
 
-export function getApiClientStub(): {[K in keyof Endpoints]: Mocked<ApiClientMethods<Endpoints[K]>>} {
+type ApiClientStub = {[K in keyof Endpoints]: Mocked<ApiClientMethods<Endpoints[K]>>} & {
+  httpClient: Mocked<IHttpClient>;
+};
+
+const httpClientStub: IHttpClient = {
+  baseUrl: "",
+  request: vi.fn(),
+  urlsInits: [],
+  urlsScore: [],
+};
+
+export function getApiClientStub(): ApiClientStub {
   return {
     beacon: {
       getStateValidators: vi.fn(),
@@ -10,6 +21,10 @@ export function getApiClientStub(): {[K in keyof Endpoints]: Mocked<ApiClientMet
       publishBlockV2: vi.fn(),
       submitPoolSyncCommitteeSignatures: vi.fn(),
       submitPoolAttestations: vi.fn(),
+      submitPoolAttestationsV2: vi.fn(),
+    },
+    node: {
+      getSyncingStatus: vi.fn(),
     },
     validator: {
       getProposerDuties: vi.fn(),
@@ -23,10 +38,13 @@ export function getApiClientStub(): {[K in keyof Endpoints]: Mocked<ApiClientMet
       submitSyncCommitteeSelections: vi.fn(),
       produceAttestationData: vi.fn(),
       getAggregatedAttestation: vi.fn(),
+      getAggregatedAttestationV2: vi.fn(),
       publishAggregateAndProofs: vi.fn(),
+      publishAggregateAndProofsV2: vi.fn(),
       submitBeaconCommitteeSelections: vi.fn(),
     },
-  } as unknown as {[K in keyof Endpoints]: Mocked<ApiClientMethods<Endpoints[K]>>};
+    httpClient: httpClientStub,
+  } as unknown as ApiClientStub;
 }
 
 export function mockApiResponse<T, M, E extends Endpoint<any, any, any, T, M>>({

@@ -4,7 +4,6 @@ import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
 import {prettyMsToTime, retry, sleep, Logger} from "@lodestar/utils";
-import {TestContext} from "./interfaces.js";
 
 export type ChildProcessLogOptions = {
   /**
@@ -191,10 +190,6 @@ export type SpawnChildProcessOptions = Partial<HealthCheckOptions> &
      */
     resolveOn?: ChildProcessResolve;
     /**
-     * Test context to pass to child process. Useful for testing to close the process after test case
-     */
-    testContext?: TestContext;
-    /**
      * Abort signal to stop child process
      */
     signal?: AbortSignal;
@@ -258,7 +253,7 @@ export async function spawnChildProcess(
 ): Promise<childProcess.ChildProcessWithoutNullStreams> {
   const options = {...defaultStartOpts, ...opts} as SpawnChildProcessOptions;
   const {env, signal, health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs} = options;
-  const {logPrefix, testContext} = options;
+  const {logPrefix} = options;
 
   return new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve, reject) => {
     void (async () => {
@@ -267,14 +262,6 @@ export async function spawnChildProcess(
       });
 
       handleLoggingForChildProcess(proc, options);
-
-      if (testContext) {
-        testContext.afterEach(async () => {
-          proc.kill("SIGINT");
-          await sleep(1000, signal);
-          await stopChildProcess(proc);
-        });
-      }
 
       if (signal) {
         signal.addEventListener(

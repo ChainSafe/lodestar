@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {PointFormat} from "@chainsafe/bls/types";
+import {SecretKey} from "@chainsafe/blst";
 import {SignerLocal, SignerType} from "@lodestar/validator";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, toHex, toPubkeyHex} from "@lodestar/utils";
 import {writeFile600Perm} from "../../../util/file.js";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
 import {LocalKeystoreDefinition} from "./interface.js";
@@ -40,12 +39,12 @@ export async function loadKeystoreCache(
   const result: SignerLocal[] = [];
   for (const [index, k] of keystores.entries()) {
     const secretKeyBytes = Uint8Array.prototype.slice.call(secretKeyConcatenatedBytes, index * 32, (index + 1) * 32);
-    const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
-    const publicKey = secretKey.toPublicKey().toBytes(PointFormat.compressed);
+    const secretKey = SecretKey.fromBytes(secretKeyBytes);
+    const publicKey = secretKey.toPublicKey().toBytes();
 
-    if (toHex(publicKey) !== toHex(fromHex(k.pubkey))) {
+    if (toPubkeyHex(publicKey) !== toPubkeyHex(fromHex(k.pubkey))) {
       throw new Error(
-        `Keystore ${k.uuid} does not match the expected pubkey. expected=${toHex(fromHex(k.pubkey))}, found=${toHex(
+        `Keystore ${k.uuid} does not match the expected pubkey. expected=${toPubkeyHex(fromHex(k.pubkey))}, found=${toHex(
           publicKey
         )}`
       );

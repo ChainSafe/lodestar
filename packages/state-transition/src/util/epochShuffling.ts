@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
+import {intDiv, toRootHex} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
   MAX_COMMITTEES_PER_SLOT,
@@ -62,16 +61,22 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
 export function computeEpochShuffling(
   state: BeaconStateAllForks,
   activeIndices: ArrayLike<ValidatorIndex>,
+  activeValidatorCount: number,
   epoch: Epoch
 ): EpochShuffling {
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
 
-  // copy
-  const _activeIndices = new Uint32Array(activeIndices);
+  if (activeValidatorCount > activeIndices.length) {
+    throw new Error(`Invalid activeValidatorCount: ${activeValidatorCount} > ${activeIndices.length}`);
+  }
+  // only the first `activeValidatorCount` elements are copied to `activeIndices`
+  const _activeIndices = new Uint32Array(activeValidatorCount);
+  for (let i = 0; i < activeValidatorCount; i++) {
+    _activeIndices[i] = activeIndices[i];
+  }
   const shuffling = _activeIndices.slice();
   unshuffleList(shuffling, seed);
 
-  const activeValidatorCount = activeIndices.length;
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
 
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
@@ -102,5 +107,5 @@ export function computeEpochShuffling(
 
 export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
-  return toHexString(getBlockRootAtSlot(state, pivotSlot));
+  return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }

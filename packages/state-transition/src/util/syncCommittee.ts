@@ -1,7 +1,8 @@
-import bls from "@chainsafe/bls";
+import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkSeq,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
   SYNC_REWARD_WEIGHT,
@@ -19,11 +20,12 @@ import {getNextSyncCommitteeIndices} from "./seed.js";
  * SLOW CODE - 🐢
  */
 export function getNextSyncCommittee(
+  fork: ForkSeq,
   state: BeaconStateAllForks,
   activeValidatorIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): {indices: ValidatorIndex[]; syncCommittee: altair.SyncCommittee} {
-  const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalanceIncrements);
+  const indices = getNextSyncCommitteeIndices(fork, state, activeValidatorIndices, effectiveBalanceIncrements);
 
   // Using the index2pubkey cache is slower because it needs the serialized pubkey.
   const pubkeys = indices.map((index) => state.validators.getReadonly(index).pubkey);
@@ -32,7 +34,7 @@ export function getNextSyncCommittee(
     indices,
     syncCommittee: {
       pubkeys,
-      aggregatePubkey: bls.aggregatePublicKeys(pubkeys),
+      aggregatePubkey: aggregateSerializedPublicKeys(pubkeys).toBytes(),
     },
   };
 }

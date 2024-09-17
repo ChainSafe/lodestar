@@ -5,6 +5,7 @@ import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodes
 import {config as chainConfig} from "@lodestar/config/default";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
+import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 
@@ -22,6 +23,21 @@ describe("upgradeState", () => {
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);
+    expect(() => newState.toValue()).not.toThrow();
+  });
+  it("upgradeStateToElectra", () => {
+    const denebState = ssz.deneb.BeaconState.defaultViewDU();
+    const config = getConfig(ForkName.deneb);
+    const stateView = createCachedBeaconState(
+      denebState,
+      {
+        config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
+      },
+      {skipSyncCommitteeCache: true}
+    );
+    const newState = upgradeStateToElectra(stateView);
     expect(() => newState.toValue()).not.toThrow();
   });
 });
@@ -54,6 +70,14 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
+      });
+    case ForkName.electra:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: forkEpoch,
       });
   }
 }

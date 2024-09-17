@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, allForks, deneb, UintNum64} from "@lodestar/types";
+import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
+import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -38,8 +37,8 @@ import {
   AggregateAndProofValidationResult,
   validateGossipAttestationsSameAttData,
   validateGossipAttestation,
-  AttestationOrBytes,
   AttestationValidationResult,
+  GossipAttestation,
 } from "../../chain/validation/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {PeerAction} from "../peers/index.js";
@@ -113,7 +112,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
 
   async function validateBeaconBlock(
-    signedBlock: allForks.SignedBeaconBlock,
+    signedBlock: SignedBeaconBlock,
     blockBytes: Uint8Array,
     fork: ForkName,
     peerIdStr: string,
@@ -298,7 +297,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             case BlockErrorCode.DATA_UNAVAILABLE: {
               const slot = signedBlock.message.slot;
               const forkTypes = config.getForkTypes(slot);
-              const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+              const rootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
               events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
 
@@ -422,7 +421,11 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         validationResult = await validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
+          chain.persistInvalidSszValue(
+            sszTypesFor(fork).SignedAggregateAndProof,
+            signedAggregateAndProof,
+            "gossip_reject"
+          );
         }
         throw e;
       }
@@ -481,14 +484,14 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       }
 
       // Handler
-      const {indexedAttestation, attDataRootHex, attestation} = validationResult;
+      const {indexedAttestation, attDataRootHex, attestation, committeeIndex} = validationResult;
       metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
       try {
         // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
         // but don't add to attestation pool, to save CPU and RAM
         if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-          const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+          const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
         }
       } catch (e) {
@@ -673,7 +676,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         serializedData: param.gossipData.serializedData,
         attSlot: param.gossipData.msgSlot,
         attDataBase64: param.gossipData.indexed,
-      })) as AttestationOrBytes[];
+      })) as GossipAttestation[];
       const {results: validationResults, batchableBls} = await validateGossipAttestationsSameAttData(
         fork,
         chain,
@@ -689,14 +692,14 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         results.push(null);
 
         // Handler
-        const {indexedAttestation, attDataRootHex, attestation} = validationResult.result;
+        const {indexedAttestation, attDataRootHex, attestation, committeeIndex} = validationResult.result;
         metrics?.registerGossipUnaggregatedAttestation(gossipHandlerParams[i].seenTimestampSec, indexedAttestation);
 
         try {
           // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
           // but don't add to attestation pool, to save CPU and RAM
           if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-            const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+            const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
             metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
           }
         } catch (e) {
@@ -747,12 +750,12 @@ export async function validateGossipFnRetryUnknownRoot<T>(
       ) {
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
-          const rootHex = toHexString(blockRoot);
+          const rootHex = toRootHex(blockRoot);
           network.searchUnknownSlotRoot({slot, root: rootHex});
         }
 
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
-          const foundBlock = await chain.waitForBlock(slot, toHexString(blockRoot));
+          const foundBlock = await chain.waitForBlock(slot, toRootHex(blockRoot));
           // Returns true if the block was found on time. In that case, try to get it from the fork-choice again.
           // Otherwise, throw the error below.
           if (foundBlock) {

@@ -21,9 +21,9 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.5.0";
+const version = "v2.6.0-alpha.1";
 const openApiFile: OpenApiFile = {
-  url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
+  url: `https://raw.githubusercontent.com/nflaig/beacon-api-spec/main/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
@@ -56,7 +56,6 @@ const testDatas = {
 const ignoredOperations = [
   /* missing route */
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
-  "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
   /* Must support ssz response body */
@@ -109,7 +108,7 @@ describe("eventstream event data", () => {
     }
   });
 
-  const eventSerdes = routes.events.getEventSerdes();
+  const eventSerdes = routes.events.getEventSerdes(config);
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
   for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(

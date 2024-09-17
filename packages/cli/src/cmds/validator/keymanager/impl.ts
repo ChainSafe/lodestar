@@ -1,6 +1,5 @@
-import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@chainsafe/blst";
 import {
   DeleteRemoteKeyStatus,
   DeletionStatus,
@@ -21,7 +20,7 @@ import {KeymanagerApiMethods as Api} from "@lodestar/api/keymanager/server";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api/server";
 import {Epoch} from "@lodestar/types";
-import {isValidHttpUrl} from "@lodestar/utils";
+import {fromHex, isValidHttpUrl} from "@lodestar/utils";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
@@ -60,7 +59,11 @@ export class KeymanagerApi implements Api {
   }
 
   async getGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGraffiti"]> {
-    return {data: {pubkey, graffiti: this.validator.validatorStore.getGraffiti(pubkey)}};
+    const graffiti = this.validator.validatorStore.getGraffiti(pubkey);
+    if (graffiti === undefined) {
+      throw new ApiError(404, `No graffiti for pubkey ${pubkey}`);
+    }
+    return {data: {pubkey, graffiti}};
   }
 
   async setGraffiti({pubkey, graffiti}: GraffitiData): ReturnType<Api["setGraffiti"]> {
@@ -149,7 +152,7 @@ export class KeymanagerApi implements Api {
         decryptKeystores.queue(
           {keystoreStr, password},
           async (secretKeyBytes: Uint8Array) => {
-            const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
+            const secretKey = SecretKey.fromBytes(secretKeyBytes);
 
             // Persist the key to disk for restarts, before adding to in-memory store
             // If the keystore exist and has a lock it will throw
@@ -220,7 +223,7 @@ export class KeymanagerApi implements Api {
       }
     }
 
-    const pubkeysBytes = pubkeys.map((pubkeyHex) => fromHexString(pubkeyHex));
+    const pubkeysBytes = pubkeys.map((pubkeyHex) => fromHex(pubkeyHex));
 
     const interchangeV5 = await this.validator.exportInterchange(pubkeysBytes, {
       version: "5",

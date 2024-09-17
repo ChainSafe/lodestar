@@ -1,6 +1,5 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
-import {fromHexString} from "@chainsafe/ssz";
+import {PublicKey} from "@chainsafe/blst";
+import {fromHex} from "@lodestar/utils";
 
 /**
  * 0x prefix a string if not prefixed already
@@ -51,8 +50,8 @@ export function parseRange(range: string): number[] {
 
 export function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
-    const pubkeyBytes = fromHexString(pubkeyHex);
-    bls.PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+    const pubkeyBytes = fromHex(pubkeyHex);
+    PublicKey.fromBytes(pubkeyBytes, true);
   }
 }
 

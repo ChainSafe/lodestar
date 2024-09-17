@@ -1,6 +1,5 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {LeafNode, toGindex, Tree, zeroNode} from "@chainsafe/persistent-merkle-tree";
-import {MutableVector} from "@chainsafe/persistent-ts";
 
 // Understand the cost of each array-ish data structure to:
 // - Get one element
@@ -97,48 +96,6 @@ describe("Tree (persistent-merkle-tree)", () => {
     }
     return tree;
   }
-});
-
-describe("MutableVector", () => {
-  // Don't track regressions in CI
-  setBenchOpts({noThreshold: true});
-
-  let items: number[];
-  let mutableVector: MutableVector<number>;
-
-  before(function () {
-    items = createArray(n);
-    mutableVector = MutableVector.from(items);
-  });
-
-  itBench(`MutableVector ${n} create`, () => {
-    MutableVector.from(items);
-  });
-
-  itBench({id: `MutableVector ${n} get(${ih})`, runsFactor}, () => {
-    for (let i = 0; i < runsFactor; i++) mutableVector.get(ih - i);
-  });
-
-  itBench({id: `MutableVector ${n} set(${ih})`, runsFactor}, () => {
-    for (let i = 0; i < runsFactor; i++) mutableVector.set(ih - i, 10000000);
-  });
-
-  itBench(`MutableVector ${n} toArray()`, () => {
-    mutableVector.toArray();
-  });
-
-  itBench(`MutableVector ${n} iterate all - toArray() + loop`, () => {
-    const mvArr = mutableVector.toArray();
-    for (let i = 0; i < n; i++) {
-      mvArr[i];
-    }
-  });
-
-  itBench(`MutableVector ${n} iterate all - get(i)`, () => {
-    for (let i = 0; i < n; i++) {
-      mutableVector.get(i);
-    }
-  });
 });
 
 describe("Array", () => {

@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ValidatorIndex} from "@lodestar/types";
-import {Logger, MapDef} from "@lodestar/utils";
+import {Logger, MapDef, toPubkeyHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
@@ -137,7 +136,7 @@ export class IndicesService {
       const status = statusToSimpleStatusMapping(validator.status);
       allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
 
-      const pubkeyHex = toHexString(validator.validator.pubkey);
+      const pubkeyHex = toPubkeyHex(validator.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.info("Validator seen on beacon chain", {
           validatorIndex: validator.index,

@@ -249,13 +249,21 @@ export class PeerDiscovery {
     }
 
     // Run a discv5 subnet query to try to discover new peers
-    if (subnetsToDiscoverPeers.length > 0 || cachedENRsToDial.size < peersToConnect) {
+    const shouldRunFindRandomNodeQuery = subnetsToDiscoverPeers.length > 0 || cachedENRsToDial.size < peersToConnect;
+    if (shouldRunFindRandomNodeQuery) {
       void this.runFindRandomNodeQuery();
     }
+
+    this.logger.debug("Discover peers outcome", {
+      peersToConnect,
+      peersAvailableToDial: cachedENRsToDial.size,
+      subnetsToDiscover: subnetsToDiscoverPeers.length,
+      shouldRunFindRandomNodeQuery,
+    });
   }
 
   /**
-   * Request to find peers. First, looked at cached peers in peerStore
+   * Request discv5 to find peers if there is no query in progress
    */
   private async runFindRandomNodeQuery(): Promise<void> {
     // Delay the 1st query after starting discv5
@@ -305,6 +313,7 @@ export class PeerDiscovery {
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
     const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets);
+    this.logger.debug("Discovered peer via libp2p", {peer: prettyPrintPeerId(id), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
@@ -336,6 +345,7 @@ export class PeerDiscovery {
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
 
     const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets);
+    this.logger.debug("Discovered peer via discv5", {peer: prettyPrintPeerId(peerId), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 

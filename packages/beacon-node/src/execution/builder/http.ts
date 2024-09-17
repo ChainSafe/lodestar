@@ -1,10 +1,20 @@
-import {allForks, bellatrix, Slot, Root, BLSPubkey, deneb, Wei} from "@lodestar/types";
+import {
+  bellatrix,
+  Slot,
+  Root,
+  BLSPubkey,
+  deneb,
+  Wei,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  ExecutionPayloadHeader,
+} from "@lodestar/types";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {getClient, ApiClient as BuilderApi} from "@lodestar/api/builder";
 import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
-import {toSafePrintableUrl} from "@lodestar/utils";
+import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
@@ -54,7 +64,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       },
       {config, metrics: metrics?.builderHttpClient}
     );
-    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
+    logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
     this.config = config;
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
@@ -101,7 +111,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     parentHash: Root,
     proposerPubkey: BLSPubkey
   ): Promise<{
-    header: allForks.ExecutionPayloadHeader;
+    header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }> {
@@ -116,9 +126,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     return {header, executionPayloadValue, blobKzgCommitments};
   }
 
-  async submitBlindedBlock(
-    signedBlindedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<allForks.SignedBeaconBlockOrContents> {
+  async submitBlindedBlock(signedBlindedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents> {
     const data = (await this.api.submitBlindedBlock({signedBlindedBlock}, {retries: 2})).value();
 
     const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);

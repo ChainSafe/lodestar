@@ -13,7 +13,7 @@ export type ApiClient = ApiClientMethods<Endpoints>;
  */
 export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
   const definitions = getDefinitions(config);
-  const eventSerdes = getEventSerdes();
+  const eventSerdes = getEventSerdes(config);
 
   return {
     eventstream: async ({topics, signal, onEvent, onError, onClose}) => {
@@ -44,8 +44,9 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
         const errEs = err as unknown as EventSourceError;
 
         // Ignore noisy errors due to beacon node being offline
-        if (!errEs.message?.includes("ECONNREFUSED")) {
-          onError?.(new Error(errEs.message));
+        if (!/ECONNREFUSED|EAI_AGAIN/.test(errEs.message ?? "")) {
+          // If there is no message it likely indicates that the server closed the connection
+          onError?.(new Error(errEs.message ?? "Server closed connection"));
         }
 
         // Consider 400 and 500 status errors unrecoverable, close the eventsource

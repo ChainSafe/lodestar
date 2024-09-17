@@ -1,5 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {
@@ -127,6 +127,14 @@ export enum AttestationErrorCode {
   INVALID_SERIALIZED_BYTES = "ATTESTATION_ERROR_INVALID_SERIALIZED_BYTES",
   /** Too many skipped slots. */
   TOO_MANY_SKIPPED_SLOTS = "ATTESTATION_ERROR_TOO_MANY_SKIPPED_SLOTS",
+  /**
+   * Electra: The aggregated attestation does not have exactly one committee bit set.
+   */
+  NOT_EXACTLY_ONE_COMMITTEE_BIT_SET = "ATTESTATION_ERROR_NOT_EXACTLY_ONE_COMMITTEE_BIT_SET",
+  /**
+   * Electra: Invalid attestationData index: is non-zero
+   */
+  NON_ZERO_ATTESTATION_DATA_INDEX = "ATTESTATION_ERROR_NON_ZERO_ATTESTATION_DATA_INDEX",
 }
 
 export type AttestationErrorType =
@@ -160,14 +168,16 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION}
   | {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES}
-  | {code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS; headBlockSlot: Slot; attestationSlot: Slot};
+  | {code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS; headBlockSlot: Slot; attestationSlot: Slot}
+  | {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET}
+  | {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {
     const type = this.type;
     switch (type.code) {
       case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-        return {code: type.code, root: toHexString(type.root)};
+        return {code: type.code, root: toRootHex(type.root)};
       case AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION:
         // TODO: The stack trace gets lost here
         return {code: type.code, error: type.error.message};

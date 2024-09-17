@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
-import {Logger, pruneSetToMax} from "@lodestar/utils";
+import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {enumToIndexMap} from "../util/enum.js";
@@ -239,7 +238,7 @@ export class Eth1MergeBlockTracker {
   private async internalGetTerminalPowBlockFromEth1(): Promise<PowMergeBlock | null> {
     // Search merge block by hash
     // Terminal block hash override takes precedence over terminal total difficulty
-    const terminalBlockHash = toHexString(this.config.TERMINAL_BLOCK_HASH);
+    const terminalBlockHash = toRootHex(this.config.TERMINAL_BLOCK_HASH);
     if (terminalBlockHash !== ZERO_HASH_HEX) {
       const block = await this.getPowBlock(terminalBlockHash);
       if (block) {

@@ -2,7 +2,18 @@ import {Libp2p} from "libp2p";
 import {Message, TopicValidatorResult} from "@libp2p/interface";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";
+import {
+  altair,
+  capella,
+  deneb,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  phase0,
+  SignedBeaconBlock,
+  Slot,
+  Attestation,
+  SignedAggregateAndProof,
+} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -69,25 +80,25 @@ export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer
   : never;
 
 export type GossipTypeMap = {
-  [GossipType.beacon_block]: allForks.SignedBeaconBlock;
+  [GossipType.beacon_block]: SignedBeaconBlock;
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
-  [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
-  [GossipType.beacon_attestation]: phase0.Attestation;
+  [GossipType.beacon_aggregate_and_proof]: SignedAggregateAndProof;
+  [GossipType.beacon_attestation]: Attestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
   [GossipType.attester_slashing]: phase0.AttesterSlashing;
   [GossipType.sync_committee_contribution_and_proof]: altair.SignedContributionAndProof;
   [GossipType.sync_committee]: altair.SyncCommitteeMessage;
-  [GossipType.light_client_finality_update]: allForks.LightClientFinalityUpdate;
-  [GossipType.light_client_optimistic_update]: allForks.LightClientOptimisticUpdate;
+  [GossipType.light_client_finality_update]: LightClientFinalityUpdate;
+  [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
 };
 
 export type GossipFnByType = {
-  [GossipType.beacon_block]: (signedBlock: allForks.SignedBeaconBlock) => Promise<void> | void;
+  [GossipType.beacon_block]: (signedBlock: SignedBeaconBlock) => Promise<void> | void;
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
-  [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: phase0.SignedAggregateAndProof) => Promise<void> | void;
-  [GossipType.beacon_attestation]: (attestation: phase0.Attestation) => Promise<void> | void;
+  [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: SignedAggregateAndProof) => Promise<void> | void;
+  [GossipType.beacon_attestation]: (attestation: Attestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
   [GossipType.attester_slashing]: (attesterSlashing: phase0.AttesterSlashing) => Promise<void> | void;
@@ -96,10 +107,10 @@ export type GossipFnByType = {
   ) => Promise<void> | void;
   [GossipType.sync_committee]: (syncCommittee: altair.SyncCommitteeMessage) => Promise<void> | void;
   [GossipType.light_client_finality_update]: (
-    lightClientFinalityUpdate: allForks.LightClientFinalityUpdate
+    lightClientFinalityUpdate: LightClientFinalityUpdate
   ) => Promise<void> | void;
   [GossipType.light_client_optimistic_update]: (
-    lightClientOptimisticUpdate: allForks.LightClientOptimisticUpdate
+    lightClientOptimisticUpdate: LightClientOptimisticUpdate
   ) => Promise<void> | void;
   [GossipType.bls_to_execution_change]: (
     blsToExecutionChange: capella.SignedBLSToExecutionChange

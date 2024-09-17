@@ -9,21 +9,17 @@ import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
-describe(
-  "network / main thread",
-  function () {
-    runTests({useWorker: false});
-  },
-  {timeout: 3000}
-);
+describe("network / main thread", function () {
+  vi.setConfig({testTimeout: 3000});
 
-describe(
-  "network / worker",
-  function () {
-    runTests({useWorker: true});
-  },
-  {timeout: 10_000}
-);
+  runTests({useWorker: false});
+});
+
+describe("network / worker", function () {
+  vi.setConfig({testTimeout: 10_000});
+
+  runTests({useWorker: true});
+});
 
 function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -111,11 +107,11 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
     // NetworkEvent.reqRespRequest does not work on worker thread
     // so we only test the peerDisconnected event
-    const onGoodbyeNetB = useWorker ? null : vi.fn<[phase0.Goodbye, PeerId]>();
+    const onGoodbyeNetB = useWorker ? null : vi.fn<(message: phase0.Goodbye, peerId: PeerId) => void>();
     netB.events.on(NetworkEvent.reqRespRequest, ({request, peer}) => {
       if (request.method === ReqRespMethod.Goodbye && onGoodbyeNetB) onGoodbyeNetB(request.body, peer);
     });
-    const onDisconnectNetB = vi.fn<[string]>();
+    const onDisconnectNetB = vi.fn<(_: string) => void>();
     netB.events.on(NetworkEvent.peerDisconnected, ({peer}) => {
       onDisconnectNetB(peer);
     });

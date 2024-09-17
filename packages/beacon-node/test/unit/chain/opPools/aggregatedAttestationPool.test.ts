@@ -1,15 +1,23 @@
-import type {SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
+import {SecretKey, Signature, fastAggregateVerify, aggregateSignatures} from "@chainsafe/blst";
 import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
-import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  MAX_COMMITTEES_PER_SLOT,
+  MAX_EFFECTIVE_BALANCE,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {
+  aggregateConsolidation,
   AggregatedAttestationPool,
   aggregateInto,
+  AttestationsConsolidation,
   getNotSeenValidatorsFn,
   MatchingDataAttestationGroup,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
@@ -29,6 +37,9 @@ const validSignature = fromHexString(
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;
   const fork = ForkName.altair;
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+  });
   const altairForkEpoch = 2020;
   const currentEpoch = altairForkEpoch + 10;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
@@ -72,7 +83,7 @@ describe("AggregatedAttestationPool", function () {
   let forkchoiceStub: MockedForkChoice;
 
   beforeEach(() => {
-    pool = new AggregatedAttestationPool();
+    pool = new AggregatedAttestationPool(config);
     altairState = originalState.clone();
     forkchoiceStub = getMockedForkChoice();
   });
@@ -81,11 +92,11 @@ describe("AggregatedAttestationPool", function () {
     vi.clearAllMocks();
   });
 
-  it("getParticipationFn", () => {
+  it("getNotSeenValidatorsFn", () => {
     // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
     // 0 and 1 are fully participated
     const notSeenValidatorFn = getNotSeenValidatorsFn(altairState);
-    const participation = notSeenValidatorFn(currentEpoch, committee);
+    const participation = notSeenValidatorFn(currentEpoch, currentSlot, committeeIndex);
     // seen attesting indices are 0, 1 => not seen are 2, 3
     expect(participation).toEqual(
       // {
@@ -280,6 +291,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
         }
       }
       const attestationsForBlock = attestationGroup.getAttestationsForBlock(
+        ForkName.phase0,
         // notSeenValidatorIndices,
         notSeenAttestingIndices
       );
@@ -303,8 +315,8 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   let sk2: SecretKey;
 
   beforeAll(async () => {
-    sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-    sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
+    sk1 = SecretKey.fromBytes(Buffer.alloc(32, 1));
+    sk2 = SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
     attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
   });
@@ -315,7 +327,81 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
     aggregateInto(attWithIndex1, attWithIndex2);
 
     expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).toEqual(renderBitArray(mergedBitArray));
-    const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature, undefined, true);
-    expect(aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)).toBe(true);
+    const aggregatedSignature = Signature.fromBytes(attWithIndex1.attestation.signature, true, true);
+    expect(fastAggregateVerify(attestationDataRoot, [sk1.toPublicKey(), sk2.toPublicKey()], aggregatedSignature)).toBe(
+      true
+    );
   });
+});
+
+describe("aggregateConsolidation", function () {
+  const sk0 = SecretKey.fromBytes(Buffer.alloc(32, 1));
+  const sk1 = SecretKey.fromBytes(Buffer.alloc(32, 2));
+  const sk2 = SecretKey.fromBytes(Buffer.alloc(32, 3));
+  const skArr = [sk0, sk1, sk2];
+  const testCases: {
+    name: string;
+    committeeIndices: number[];
+    aggregationBitsArr: Array<number>[];
+    expectedAggregationBits: Array<number>;
+    expectedCommitteeBits: Array<boolean>;
+  }[] = [
+    // note that bit index starts from the right
+    {
+      name: "test case 0",
+      committeeIndices: [0, 1, 2],
+      aggregationBitsArr: [[0b111], [0b011], [0b111]],
+      expectedAggregationBits: [0b11011111, 0b1],
+      expectedCommitteeBits: [true, true, true, false],
+    },
+    {
+      name: "test case 1",
+      committeeIndices: [2, 3, 1],
+      aggregationBitsArr: [[0b100], [0b010], [0b001]],
+      expectedAggregationBits: [0b10100001, 0b0],
+      expectedCommitteeBits: [false, true, true, true],
+    },
+  ];
+  for (const {
+    name,
+    committeeIndices,
+    aggregationBitsArr,
+    expectedAggregationBits,
+    expectedCommitteeBits,
+  } of testCases) {
+    it(name, () => {
+      const attData = ssz.phase0.AttestationData.defaultValue();
+      const consolidation: AttestationsConsolidation = {
+        byCommittee: new Map(),
+        attData: attData,
+        totalNotSeenCount: 0,
+        score: 0,
+      };
+      // to simplify, instead of signing the signingRoot, just sign the attData root
+      const sigArr = skArr.map((sk) => sk.sign(ssz.phase0.AttestationData.hashTreeRoot(attData)));
+      const attestationSeed = ssz.electra.Attestation.defaultValue();
+      for (let i = 0; i < committeeIndices.length; i++) {
+        const committeeIndex = committeeIndices[i];
+        const commiteeBits = BitArray.fromBoolArray(
+          Array.from({length: MAX_COMMITTEES_PER_SLOT}, (_, i) => i === committeeIndex)
+        );
+        const aggAttestation = {
+          ...attestationSeed,
+          aggregationBits: new BitArray(new Uint8Array(aggregationBitsArr[i]), 3),
+          committeeBits: commiteeBits,
+          signature: sigArr[i].toBytes(),
+        };
+        consolidation.byCommittee.set(committeeIndex, {
+          attestation: aggAttestation,
+          notSeenAttesterCount: aggregationBitsArr[i].filter((item) => item).length,
+        });
+      }
+
+      const finalAttestation = aggregateConsolidation(consolidation);
+      expect(finalAttestation.aggregationBits.uint8Array).toEqual(new Uint8Array(expectedAggregationBits));
+      expect(finalAttestation.committeeBits.toBoolArray()).toEqual(expectedCommitteeBits);
+      expect(finalAttestation.data).toEqual(attData);
+      expect(finalAttestation.signature).toEqual(aggregateSignatures(sigArr).toBytes());
+    });
+  }
 });

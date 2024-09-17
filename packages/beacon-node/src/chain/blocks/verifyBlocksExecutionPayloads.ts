@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   isExecutionStateType,
@@ -6,7 +5,7 @@ import {
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
+import {bellatrix, Slot, deneb, SignedBeaconBlock} from "@lodestar/types";
 import {
   IForkChoice,
   assertValidTerminalPowBlock,
@@ -17,7 +16,7 @@ import {
   LVHInvalidResponse,
 } from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
-import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 
 import {IExecutionEngine} from "../../execution/engine/interface.js";
@@ -68,7 +67,7 @@ type VerifyBlockExecutionResponse =
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -205,10 +204,8 @@ export async function verifyBlocksExecutionPayload(
     //     in import block
     if (isMergeTransitionBlock) {
       const mergeBlock = block.message as bellatrix.BeaconBlock;
-      const mergeBlockHash = toHexString(
-        chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock)
-      );
-      const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
+      const mergeBlockHash = toRootHex(chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
+      const powBlockRootHex = toRootHex(mergeBlock.body.executionPayload.parentHash);
       const powBlock = await chain.eth1.getPowBlock(powBlockRootHex).catch((error) => {
         // Lets just warn the user here, errors if any will be reported on
         // `assertValidTerminalPowBlock` checks
@@ -274,7 +271,7 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  block: allForks.SignedBeaconBlock,
+  block: SignedBeaconBlock,
   preState0: CachedBeaconStateAllForks,
   opts: BlockProcessOpts,
   isOptimisticallySafe: boolean,
@@ -330,7 +327,7 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromParentBlockRoot: toHexString(block.message.parentRoot),
+        invalidateFromParentBlockRoot: toRootHex(block.message.parentRoot),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -393,7 +390,7 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[]
+  blocks: SignedBeaconBlock[]
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
   let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
@@ -407,7 +404,7 @@ function getSegmentErrorResponse(
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
       const block = blocks[mayBeLVHIndex];
       if (
-        toHexString((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
+        toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
         lvhResponse.latestValidExecHash
       ) {
         lvhFound = true;

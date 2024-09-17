@@ -244,7 +244,7 @@ export function lintGrafanaDashboard(json) {
         condition: "",
         key: "instance",
         operator: "=",
-        value: "unstable-lg1k-hzax41",
+        value: "unstable-lg1k-hzax41-dkr",
       },
     ],
     hide: 0,

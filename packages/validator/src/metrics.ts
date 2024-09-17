@@ -8,9 +8,7 @@ export enum MessageSource {
 export enum BeaconHealth {
   READY = 0,
   SYNCING = 1,
-  NOT_INITIALIZED_OR_ISSUES = 2,
-  UNKNOWN = 3,
-  ERROR = 4,
+  ERROR = 2,
 }
 
 export type Metrics = ReturnType<typeof getMetrics>;
@@ -279,7 +277,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
 
     beaconHealth: register.gauge({
       name: "vc_beacon_health",
-      help: `Current health status of the beacon(s) the validator is connected too. ${renderEnumNumeric(BeaconHealth)}`,
+      help: `Current health status of the beacon(s) the validator is connected to. ${renderEnumNumeric(BeaconHealth)}`,
     }),
 
     restApiClient: {

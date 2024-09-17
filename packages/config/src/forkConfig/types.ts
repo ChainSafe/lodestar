@@ -1,5 +1,5 @@
-import {ForkName, ForkSeq} from "@lodestar/params";
-import {allForks, Epoch, Slot, Version} from "@lodestar/types";
+import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName, ForkSeq} from "@lodestar/params";
+import {Epoch, SSZTypesFor, Slot, Version} from "@lodestar/types";
 
 export type ForkInfo = {
   name: ForkName;
@@ -21,21 +21,22 @@ export type ForkConfig = {
 
   /** Get the hard-fork info for the active fork at `slot` */
   getForkInfo(slot: Slot): ForkInfo;
-
+  /** Get the hard-fork info for the active fork at `epoch` */
+  getForkInfoAtEpoch(epoch: Epoch): ForkInfo;
   /** Get the hard-fork name at a given slot */
   getForkName(slot: Slot): ForkName;
   /** Get the hard-fork sequence number at a given slot */
   getForkSeq(slot: Slot): ForkSeq;
+  /** Get the hard-fork sequence number at a given epoch */
+  getForkSeqAtEpoch(epoch: Epoch): ForkSeq;
   /** Get the hard-fork version at a given slot */
   getForkVersion(slot: Slot): Version;
   /** Get SSZ types by hard-fork */
-  getForkTypes(slot: Slot): allForks.AllForksSSZTypes;
+  getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F>;
   /** Get lightclient SSZ types by hard-fork*/
-  getLightClientForkTypes(slot: Slot): allForks.AllForksLightClientSSZTypes;
+  getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient>;
   /** Get execution SSZ types by hard-fork*/
-  getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes;
-  /** Get blinded SSZ types by hard-fork */
-  getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes;
+  getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution>;
   /** Get blobs SSZ types by hard-fork*/
-  getBlobsForkTypes(slot: Slot): allForks.AllForksBlobsSSZTypes;
+  getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs>;
 };

@@ -1,5 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Root, Slot} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 
 /**
  * Sync this up to this target. Uses slot instead of epoch to re-use logic for finalized sync
@@ -21,7 +21,7 @@ export function computeMostCommonTarget(targets: ChainTarget[]): ChainTarget {
   let mostCommonCount = 0;
 
   for (const target of targets) {
-    const targetId = `${target.slot}-${toHexString(target.root)}`;
+    const targetId = `${target.slot}-${toRootHex(target.root)}`;
     const count = 1 + (countById.get(targetId) ?? 0);
     countById.set(targetId, count);
     if (count > mostCommonCount) {

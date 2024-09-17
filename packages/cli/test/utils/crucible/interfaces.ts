@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ChildProcess} from "node:child_process";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {Web3} from "web3";
+import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {Slot, allForks, Epoch} from "@lodestar/types";
+import {Slot, Epoch, SignedBeaconBlock} from "@lodestar/types";
 import {LogLevel, Logger} from "@lodestar/logger";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
@@ -317,7 +317,7 @@ export interface AssertionInput {
 }
 
 export interface CaptureInput<D extends Record<string, unknown>> extends AssertionInput {
-  block: allForks.SignedBeaconBlock;
+  block: SignedBeaconBlock;
   dependantStores: D;
 }
 

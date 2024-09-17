@@ -5,7 +5,7 @@ import {
   ExecutionPayloadStatus,
   stateTransition,
 } from "@lodestar/state-transition";
-import {allForks, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {createChainForkConfig, ChainConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
@@ -53,7 +53,7 @@ const transition =
 
         let state = createCachedBeaconStateTest(testcase.pre, testConfig);
         for (let i = 0; i < meta.blocks_count; i++) {
-          const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
+          const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
           state = stateTransition(state, signedBlock, {
             // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -102,13 +102,21 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: forkEpoch};
     case ForkName.deneb:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, DENEB_FORK_EPOCH: forkEpoch};
+    case ForkName.electra:
+      return {
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: forkEpoch,
+      };
   }
 }
 
 type BlocksSZZTypeMapping = Record<string, (typeof ssz)[ForkName]["SignedBeaconBlock"]>;
 
 type TransitionTestCase = {
-  [k: string]: allForks.SignedBeaconBlock | unknown | null | undefined;
+  [k: string]: SignedBeaconBlock | unknown | null | undefined;
   meta: {
     post_fork: ForkName;
     fork_epoch: bigint;

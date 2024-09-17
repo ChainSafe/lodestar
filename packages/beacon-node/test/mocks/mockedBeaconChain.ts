@@ -20,7 +20,7 @@ import {getMockedClock} from "./clock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
-  getHeadState: Mock<[]>;
+  getHeadState: Mock;
   forkChoice: MockedForkChoice;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
@@ -31,10 +31,10 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
   bls: {
-    verifySignatureSets: Mock<[boolean]>;
-    verifySignatureSetsSameMessage: Mock<[boolean]>;
+    verifySignatureSets: Mock<() => boolean>;
+    verifySignatureSetsSameMessage: Mock<() => boolean>;
     close: Mock;
-    canAcceptWork: Mock<[boolean]>;
+    canAcceptWork: Mock<() => boolean>;
   };
   lightClientServer: Mocked<LightClientServer>;
 };
@@ -117,13 +117,14 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
+        getClientVersion: vi.fn(),
       },
       executionBuilder: {},
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
-      aggregatedAttestationPool: new AggregatedAttestationPool(),
+      aggregatedAttestationPool: new AggregatedAttestationPool(config),
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),

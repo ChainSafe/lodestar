@@ -1,5 +1,6 @@
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {BeaconBlock, BlindedBeaconBlock, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
 import {blindedOrFullBlockToHeader} from "../util/index.js";
@@ -9,7 +10,7 @@ import {blindedOrFullBlockToHeader} from "../util/index.js";
  * PERF: Fixed work independent of block contents.
  * NOTE: `block` body root MUST be pre-cached.
  */
-export function processBlockHeader(state: CachedBeaconStateAllForks, block: allForks.FullOrBlindedBeaconBlock): void {
+export function processBlockHeader(state: CachedBeaconStateAllForks, block: BeaconBlock | BlindedBeaconBlock): void {
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {
@@ -32,7 +33,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
   // verify that the parent matches
   if (!byteArrayEquals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
     throw new Error(
-      `Block parent root ${toHexString(block.parentRoot)} does not match state latest block, block slot=${slot}`
+      `Block parent root ${toRootHex(block.parentRoot)} does not match state latest block, block slot=${slot}`
     );
   }
 

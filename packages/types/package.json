@@ -11,14 +11,11 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.19.0",
+  "version": "1.21.0",
   "type": "module",
   "exports": {
     ".": {
       "import": "./lib/index.js"
-    },
-    "./allForks": {
-      "import": "./lib/allForks/index.js"
     },
     "./altair": {
       "import": "./lib/altair/index.js"
@@ -31,6 +28,9 @@
     },
     "./deneb": {
       "import": "./lib/deneb/index.js"
+    },
+    "./electra": {
+      "import": "./lib/electra/index.js"
     },
     "./phase0": {
       "import": "./lib/phase0/index.js"
@@ -73,8 +73,8 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.15.1",
-    "@lodestar/params": "^1.19.0",
+    "@chainsafe/ssz": "^0.17.1",
+    "@lodestar/params": "^1.21.0",
     "ethereum-cryptography": "^2.0.0"
   },
   "keywords": [

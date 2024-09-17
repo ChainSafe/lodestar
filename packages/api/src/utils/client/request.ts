@@ -28,7 +28,12 @@ export type OptionalRequestInit = {
 };
 
 export type UrlInit = ApiRequestInit & {baseUrl?: string};
-export type UrlInitRequired = ApiRequestInit & {urlIndex: number; baseUrl: string};
+export type UrlInitRequired = ApiRequestInit & {
+  urlIndex: number;
+  baseUrl: string;
+  /** Used in logs and metrics to prevent leaking user credentials */
+  printableUrl: string;
+};
 export type ApiRequestInit = ExtraRequestInit & OptionalRequestInit & RequestInit;
 export type ApiRequestInitRequired = Required<ExtraRequestInit> & UrlInitRequired;
 

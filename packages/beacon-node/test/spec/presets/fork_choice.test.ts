@@ -4,7 +4,17 @@ import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
+import {
+  bellatrix,
+  ssz,
+  RootHex,
+  deneb,
+  BeaconBlock,
+  SignedBeaconBlock,
+  sszTypesFor,
+  Attestation,
+  AttesterSlashing,
+} from "@lodestar/types";
 import {bnToNum, fromHex} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkSeq, isForkBlobs, ForkName} from "@lodestar/params";
@@ -136,8 +146,11 @@ const forkChoiceTest =
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
               const headState = chain.getHeadState();
-              const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
-              chain.forkChoice.onAttestation(headState.epochCtx.getIndexedAttestation(attestation), attDataRootHex);
+              const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
+              chain.forkChoice.onAttestation(
+                headState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
+                attDataRootHex
+              );
             }
 
             // attester slashing step
@@ -340,16 +353,16 @@ const forkChoiceTest =
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
           [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
-          [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
-          [ATTESTER_SLASHING_FILE_NAME]: ssz.phase0.AttesterSlashing,
+          [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
+          [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
-          const blocks = new Map<string, allForks.SignedBeaconBlock>();
+          const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const powBlocks = new Map<string, bellatrix.PowBlock>();
-          const attestations = new Map<string, phase0.Attestation>();
-          const attesterSlashings = new Map<string, phase0.AttesterSlashing>();
+          const attestations = new Map<string, Attestation>();
+          const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
             const blockMatch = key.match(BLOCK_FILE_NAME);
             if (blockMatch) {
@@ -487,13 +500,13 @@ type ForkChoiceTestCase = {
     bls_setting: bigint;
   };
   anchorState: BeaconStateAllForks;
-  anchorBlock: allForks.BeaconBlock;
+  anchorBlock: BeaconBlock;
   steps: Step[];
-  blocks: Map<string, allForks.SignedBeaconBlock>;
+  blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   powBlocks: Map<string, bellatrix.PowBlock>;
-  attestations: Map<string, phase0.Attestation>;
-  attesterSlashings: Map<string, phase0.AttesterSlashing>;
+  attestations: Map<string, Attestation>;
+  attesterSlashings: Map<string, AttesterSlashing>;
 };
 
 function isTick(step: Step): step is OnTick {

@@ -1,8 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
-import {phase0, Slot, allForks, RootHex, Epoch} from "@lodestar/types";
+import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
+import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap, computeEpochAtSlot} from "@lodestar/state-transition";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -86,10 +85,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * which is usually the gossip block.
    */
   getPreStateSync(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
-    const parentRoot = toHexString(block.parentRoot);
+    const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = this.forkChoice.getBlockHex(parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -165,28 +164,40 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache.add(cp, item);
   }
 
-  updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void {
-    // the resulting state will be added to block state cache so we transfer the cache in this flow
-    const cloneOpts = {dontTransferCache: true};
+  updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void {
+    const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
+    const maybeHeadStateRoot = toRootHex(maybeHeadState.hashTreeRoot());
+    const logCtx = {
+      newHeadSlot,
+      newHeadBlockRoot,
+      newHeadStateRoot,
+      maybeHeadSlot: maybeHeadState.slot,
+      maybeHeadStateRoot,
+    };
     const headState =
-      newHeadStateRoot === toHexString(maybeHeadState.hashTreeRoot())
+      newHeadStateRoot === maybeHeadStateRoot
         ? maybeHeadState
-        : this.blockStateCache.get(newHeadStateRoot, cloneOpts);
+        : // maybeHeadState was already in block state cache so we don't transfer the cache
+          this.blockStateCache.get(newHeadStateRoot, {dontTransferCache: true});
 
     if (headState) {
       this.blockStateCache.setHeadState(headState);
     } else {
       // Trigger regen on head change if necessary
-      this.logger.warn("Head state not available, triggering regen", {stateRoot: newHeadStateRoot});
-      // it's important to reload state to regen head state here
-      const allowDiskReload = true;
-      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
-      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
-      // for legacy StateContextCache only
+      this.logger.warn("Head state not available, triggering regen", logCtx);
+      // for the old BlockStateCacheImpl only
+      //     - head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
+      //       up memory for regen step below. During regen, node won't be functional but eventually head will be available
+      // for the new FIFOBlockStateCache, this has no affect
       this.blockStateCache.setHeadState(null);
+
+      // for the new FIFOBlockStateCache, it's important to reload state to regen head state here if needed
+      const allowDiskReload = true;
+      // transfer cache here because we want to regen state asap
+      const cloneOpts = {dontTransferCache: false};
       this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, cloneOpts, allowDiskReload).then(
         (headStateRegen) => this.blockStateCache.setHeadState(headStateRegen),
-        (e) => this.logger.error("Error on head state regen", {}, e)
+        (e) => this.logger.error("Error on head state regen", logCtx, e)
       );
     }
   }
@@ -196,11 +207,59 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   /**
+   * Remove `validators` from all unfinalized cache's epochCtx.UnfinalizedPubkey2Index,
+   * and add them to epochCtx.pubkey2index and epochCtx.index2pubkey
+   */
+  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
+    let numStatesUpdated = 0;
+    const states = this.blockStateCache.getStates();
+    const cpStates = this.checkpointStateCache.getStates();
+
+    // Add finalized pubkeys to all states.
+    const addTimer = this.metrics?.regenFnAddPubkeyTime.startTimer();
+
+    // We only need to add pubkeys to any one of the states since the finalized caches is shared globally across all states
+    const firstState = (states.next().value ?? cpStates.next().value) as CachedBeaconStateAllForks | undefined;
+
+    if (firstState !== undefined) {
+      firstState.epochCtx.addFinalizedPubkeys(validators, this.metrics?.epochCache ?? undefined);
+    } else {
+      this.logger.warn("Attempt to delete finalized pubkey from unfinalized pubkey cache. But no state is available");
+    }
+
+    addTimer?.();
+
+    // Delete finalized pubkeys from unfinalized pubkey cache for all states
+    const deleteTimer = this.metrics?.regenFnDeletePubkeyTime.startTimer();
+    const pubkeysToDelete = Array.from(validators.keys());
+
+    for (const s of states) {
+      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    for (const s of cpStates) {
+      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    // Since first state is consumed from the iterator. Will need to perform delete explicitly
+    if (firstState !== undefined) {
+      firstState?.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    deleteTimer?.();
+
+    this.metrics?.regenFnNumStatesUpdated.observe(numStatesUpdated);
+  }
+
+  /**
    * Get the state to run with `block`.
    * - State after `block.parentRoot` dialed forward to block.slot
    */
   async getPreState(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     opts: StateCloneOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {

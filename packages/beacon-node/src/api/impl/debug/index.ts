@@ -1,22 +1,16 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {phase0} from "@lodestar/types";
-import {resolveStateId} from "../beacon/state/utils.js";
+import {BeaconState} from "@lodestar/types";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
 
 export function getDebugApi({
   chain,
   config,
 }: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.debug.Endpoints> {
   return {
-    async getDebugChainHeads() {
-      const heads = chain.forkChoice.getHeads();
-      return {
-        data: heads.map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot})),
-      };
-    },
-
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
       return {
@@ -41,20 +35,20 @@ export function getDebugApi({
       return {data: nodes};
     },
 
-    async getState({stateId}, context) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
-      return {
-        data: context?.returnBytes ? state.serialize() : (state.toValue() as phase0.BeaconState),
-        meta: {executionOptimistic, finalized},
-      };
-    },
-
     async getStateV2({stateId}, context) {
-      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      let slot: number, data: Uint8Array | BeaconState;
+      if (state instanceof Uint8Array) {
+        slot = getStateSlotFromBytes(state);
+        data = state;
+      } else {
+        slot = state.slot;
+        data = context?.returnBytes ? state.serialize() : state.toValue();
+      }
       return {
-        data: context?.returnBytes ? state.serialize() : state.toValue(),
+        data,
         meta: {
-          version: config.getForkName(state.slot),
+          version: config.getForkName(slot),
           executionOptimistic,
           finalized,
         },

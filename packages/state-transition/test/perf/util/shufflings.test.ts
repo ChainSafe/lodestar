@@ -28,21 +28,25 @@ describe("epoch shufflings", () => {
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
       const epochSeed = getSeed(state, state.epochCtx.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-      computeProposers(epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
+      const fork = state.config.getForkSeq(state.slot);
+      computeProposers(fork, epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
     },
   });
 
   itBench({
     id: `computeEpochShuffling - vc ${numValidators}`,
     fn: () => {
-      computeEpochShuffling(state, state.epochCtx.nextShuffling.activeIndices, nextEpoch);
+      const {activeIndices} = state.epochCtx.nextShuffling;
+      computeEpochShuffling(state, activeIndices, activeIndices.length, nextEpoch);
     },
   });
 
   itBench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
+      const fork = state.config.getForkSeq(state.slot);
       getNextSyncCommittee(
+        fork,
         state,
         state.epochCtx.nextShuffling.activeIndices,
         state.epochCtx.effectiveBalanceIncrements

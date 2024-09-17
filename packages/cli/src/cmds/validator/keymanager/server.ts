@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import {toHexString} from "@chainsafe/ssz";
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {KeymanagerApiMethods, registerRoutes} from "@lodestar/api/keymanager/server";
 import {ChainForkConfig} from "@lodestar/config";
+import {toHex} from "@lodestar/utils";
 import {writeFile600Perm} from "../../../util/index.js";
 
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {
@@ -50,7 +50,7 @@ export class KeymanagerRestApiServer extends RestApiServer {
 
     if (opts.isAuthEnabled) {
       // Generate a new token if token file does not exist or file do exist, but is empty
-      bearerToken = readFileIfExists(apiTokenPath) ?? `api-token-${toHexString(crypto.randomBytes(32))}`;
+      bearerToken = readFileIfExists(apiTokenPath) ?? `api-token-${toHex(crypto.randomBytes(32))}`;
       writeFile600Perm(apiTokenPath, bearerToken, {encoding: "utf8"});
     }
 

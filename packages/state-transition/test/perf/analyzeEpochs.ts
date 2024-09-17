@@ -114,8 +114,8 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const attesterFlagsCount = {...attesterFlagsCountZero};
     const keys = Object.keys(attesterFlagsCountZero) as (keyof typeof attesterFlagsCountZero)[];
-    for (const status of cache.statuses) {
-      const flags = parseAttesterFlags(status.flags);
+    for (const flag of cache.flags) {
+      const flags = parseAttesterFlags(flag);
       for (const key of keys) {
         if (flags[key]) attesterFlagsCount[key]++;
       }
@@ -143,7 +143,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
       currentEpochAttestationsBits: countAttBits(currentEpochAttestations as phase0.PendingAttestation[]),
     });
 
-    // -- allForks
+    // -- all forks
     // processEffectiveBalanceUpdates: function of effectiveBalance changes
     // processEth1DataReset: free
     // processHistoricalRootsUpdate: free
@@ -152,6 +152,9 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     // processRegistryUpdates: function of registry updates
     // processSlashingsAllForks: function of process.indicesToSlash
     // processSlashingsReset: free
+    // -- electra
+    // processPendingBalanceDeposits: -
+    // processPendingConsolidations: -
     // -- altair
     // processInactivityUpdates: -
     // processParticipationFlagUpdates: -

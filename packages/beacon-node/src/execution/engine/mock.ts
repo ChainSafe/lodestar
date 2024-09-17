@@ -24,7 +24,7 @@ import {
   BlobsBundleRpc,
   ExecutionPayloadBodyRpc,
 } from "./types.js";
-import {ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
+import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
@@ -35,6 +35,7 @@ export type ExecutionEngineMockOpts = {
   onlyPredefinedResponses?: boolean;
   capellaForkTimestamp?: number;
   denebForkTimestamp?: number;
+  electraForkTimestamp?: number;
 };
 
 type ExecutionBlock = {
@@ -88,14 +89,19 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV1: this.notifyNewPayload.bind(this),
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
+      engine_newPayloadV4: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
       engine_getPayloadV1: this.getPayload.bind(this),
       engine_getPayloadV2: this.getPayload.bind(this),
       engine_getPayloadV3: this.getPayload.bind(this),
+      engine_getPayloadV4: this.getPayload.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
+      engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
+      engine_getClientVersionV1: this.getClientVersionV1.bind(this),
+      engine_getPayloadBodiesByRangeV2: this.getPayloadBodiesByRange.bind(this),
     };
   }
 
@@ -386,7 +392,14 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     return payload.executionPayload;
   }
 
+  private getClientVersionV1(
+    _clientVersion: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getClientVersionV1"] {
+    return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
+  }
+
   private timestampToFork(timestamp: number): ForkExecution {
+    if (timestamp > (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
     if (timestamp > (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
     if (timestamp > (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;
     return ForkName.bellatrix;

@@ -1,10 +1,10 @@
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, deneb} from "@lodestar/types";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {
-  isExecutionPayload,
   isMergeTransitionComplete,
   getFullOrBlindedPayloadFromBody,
   executionPayloadToPayloadHeader,
@@ -14,7 +14,7 @@ import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 export function processExecutionPayload(
   fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
-  body: allForks.FullOrBlindedBeaconBlockBody,
+  body: BeaconBlockBody | BlindedBeaconBlockBody,
   externalData: Omit<BlockExternalData, "dataAvailableStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
@@ -24,7 +24,7 @@ export function processExecutionPayload(
     const {latestExecutionPayloadHeader} = state;
     if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
       throw Error(
-        `Invalid execution payload parentHash ${toHexString(payload.parentHash)} latest blockHash ${toHexString(
+        `Invalid execution payload parentHash ${toRootHex(payload.parentHash)} latest blockHash ${toRootHex(
           latestExecutionPayloadHeader.blockHash
         )}`
       );
@@ -34,9 +34,7 @@ export function processExecutionPayload(
   // Verify random
   const expectedRandom = getRandaoMix(state, state.epochCtx.epoch);
   if (!byteArrayEquals(payload.prevRandao, expectedRandom)) {
-    throw Error(
-      `Invalid execution payload random ${toHexString(payload.prevRandao)} expected=${toHexString(expectedRandom)}`
-    );
+    throw Error(`Invalid execution payload random ${toHex(payload.prevRandao)} expected=${toHex(expectedRandom)}`);
   }
 
   // Verify timestamp
@@ -76,8 +74,8 @@ export function processExecutionPayload(
 
   const payloadHeader = isExecutionPayload(payload) ? executionPayloadToPayloadHeader(fork, payload) : payload;
 
-  // TODO Deneb: Types are not happy by default. Since it's a generic allForks type going through ViewDU
-  // transformation then into allForks, probably some weird intersection incompatibility happens
+  // TODO Deneb: Types are not happy by default. Since it's a generic type going through ViewDU
+  // transformation then into all forks compatible probably some weird intersection incompatibility happens
   state.latestExecutionPayloadHeader = state.config
     .getExecutionForkTypes(state.slot)
     .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;

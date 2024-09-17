@@ -1,6 +1,7 @@
 import {describe, beforeAll, afterAll, it, expect, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {routes} from "@lodestar/api";
 import {ApiClient, getClient} from "@lodestar/api/beacon";
 import {sleep} from "@lodestar/utils";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
@@ -46,9 +47,9 @@ describe("beacon node api", function () {
     it("should return valid syncing status", async () => {
       const res = await client.node.getSyncingStatus();
 
-      expect(res.value()).toEqual({
-        headSlot: "0",
-        syncDistance: "0",
+      expect(res.value()).toEqual<routes.node.SyncingStatus>({
+        headSlot: 0,
+        syncDistance: 0,
         isSyncing: false,
         isOptimistic: false,
         elOffline: false,

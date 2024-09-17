@@ -23,7 +23,7 @@ type ClientModules = HttpClientModules & {
   httpClient?: IHttpClient;
 };
 
-export type ApiClient = {[K in keyof Endpoints]: ApiClientMethods<Endpoints[K]>};
+export type ApiClient = {[K in keyof Endpoints]: ApiClientMethods<Endpoints[K]>} & {httpClient: IHttpClient};
 
 /**
  * REST HTTP client for all routes
@@ -42,5 +42,6 @@ export function getClient(opts: HttpClientOptions, modules: ClientModules): ApiC
     node: node.getClient(config, httpClient),
     proof: proof.getClient(config, httpClient),
     validator: validator.getClient(config, httpClient),
+    httpClient,
   };
 }

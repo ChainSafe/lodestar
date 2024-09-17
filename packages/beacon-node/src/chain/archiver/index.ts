@@ -48,7 +48,7 @@ export class Archiver {
     opts: ArchiverOpts
   ) {
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
-    this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts);
+    this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts, chain.bufferPool);
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,

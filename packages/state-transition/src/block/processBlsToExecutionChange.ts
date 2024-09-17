@@ -1,7 +1,8 @@
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {digest} from "@chainsafe/as-sha256";
 import {capella} from "@lodestar/types";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
+import {toHex} from "@lodestar/utils";
 import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
 
 import {CachedBeaconStateCapella} from "../types.js";
@@ -60,9 +61,7 @@ export function isValidBlsToExecutionChange(
     return {
       valid: false,
       error: Error(
-        `Invalid withdrawalCredentials expected=${toHexString(withdrawalCredentials)} actual=${toHexString(
-          digestCredentials
-        )}`
+        `Invalid withdrawalCredentials expected=${toHex(withdrawalCredentials)} actual=${toHex(digestCredentials)}`
       ),
     };
   }

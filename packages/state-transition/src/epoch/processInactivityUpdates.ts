@@ -4,7 +4,7 @@ import * as attesterStatusUtil from "../util/attesterStatus.js";
 import {isInInactivityLeak} from "../util/index.js";
 
 /**
- * Mutates `inactivityScores` from pre-calculated validator statuses.
+ * Mutates `inactivityScores` from pre-calculated validator flags.
  *
  * PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
  * have been inactive in the past, i.e. that require an update to their inactivityScore. Worst case = all validators
@@ -24,30 +24,31 @@ export function processInactivityUpdates(state: CachedBeaconStateAltair, cache: 
 
   const {config, inactivityScores} = state;
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
-  const {statuses, eligibleValidatorIndices} = cache;
+  const {flags} = cache;
   const inActivityLeak = isInInactivityLeak(state);
 
   // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
-  const {FLAG_PREV_TARGET_ATTESTER_UNSLASHED, hasMarkers} = attesterStatusUtil;
+  const {FLAG_PREV_TARGET_ATTESTER_UNSLASHED, FLAG_ELIGIBLE_ATTESTER, hasMarkers} = attesterStatusUtil;
 
   const inactivityScoresArr = inactivityScores.getAll();
 
-  for (let j = 0; j < eligibleValidatorIndices.length; j++) {
-    const i = eligibleValidatorIndices[j];
-    const status = statuses[i];
-    let inactivityScore = inactivityScoresArr[i];
+  for (let i = 0; i < flags.length; i++) {
+    const flag = flags[i];
+    if (hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
+      let inactivityScore = inactivityScoresArr[i];
 
-    const prevInactivityScore = inactivityScore;
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-      inactivityScore -= Math.min(1, inactivityScore);
-    } else {
-      inactivityScore += INACTIVITY_SCORE_BIAS;
-    }
-    if (!inActivityLeak) {
-      inactivityScore -= Math.min(INACTIVITY_SCORE_RECOVERY_RATE, inactivityScore);
-    }
-    if (inactivityScore !== prevInactivityScore) {
-      inactivityScores.set(i, inactivityScore);
+      const prevInactivityScore = inactivityScore;
+      if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+        inactivityScore -= Math.min(1, inactivityScore);
+      } else {
+        inactivityScore += INACTIVITY_SCORE_BIAS;
+      }
+      if (!inActivityLeak) {
+        inactivityScore -= Math.min(INACTIVITY_SCORE_RECOVERY_RATE, inactivityScore);
+      }
+      if (inactivityScore !== prevInactivityScore) {
+        inactivityScores.set(i, inactivityScore);
+      }
     }
   }
 }

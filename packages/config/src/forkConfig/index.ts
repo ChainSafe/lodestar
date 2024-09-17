@@ -6,8 +6,12 @@ import {
   isForkLightClient,
   isForkExecution,
   isForkBlobs,
+  ForkExecution,
+  ForkAll,
+  ForkLightClient,
+  ForkBlobs,
 } from "@lodestar/params";
-import {Slot, allForks, Version, ssz} from "@lodestar/types";
+import {Slot, Version, SSZTypesFor, sszTypesFor, Epoch} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
@@ -55,10 +59,18 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.CAPELLA_FORK_VERSION,
     prevForkName: ForkName.capella,
   };
+  const electra: ForkInfo = {
+    name: ForkName.electra,
+    seq: ForkSeq.electra,
+    epoch: config.ELECTRA_FORK_EPOCH,
+    version: config.ELECTRA_FORK_VERSION,
+    prevVersion: config.DENEB_FORK_VERSION,
+    prevForkName: ForkName.deneb,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -72,6 +84,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     // Fork convenience methods
     getForkInfo(slot: Slot): ForkInfo {
       const epoch = Math.floor(Math.max(slot, 0) / SLOTS_PER_EPOCH);
+      return this.getForkInfoAtEpoch(epoch);
+    },
+    getForkInfoAtEpoch(epoch: Epoch): ForkInfo {
       // NOTE: forks must be sorted by descending epoch, latest fork first
       for (const fork of forksDescendingEpochOrder) {
         if (epoch >= fork.epoch) return fork;
@@ -84,39 +99,35 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getForkSeq(slot: Slot): ForkSeq {
       return this.getForkInfo(slot).seq;
     },
+    getForkSeqAtEpoch(epoch: Epoch): ForkSeq {
+      return this.getForkInfoAtEpoch(epoch).seq;
+    },
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;
     },
-    getForkTypes(slot: Slot): allForks.AllForksSSZTypes {
-      return ssz.allForks[this.getForkName(slot)] as allForks.AllForksSSZTypes;
+    getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F> {
+      return sszTypesFor(this.getForkName(slot)) as SSZTypesFor<F>;
     },
-    getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes {
+    getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution> {
       const forkName = this.getForkName(slot);
       if (!isForkExecution(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
       }
-      return ssz.allForksExecution[forkName] as allForks.AllForksExecutionSSZTypes;
+      return sszTypesFor(forkName);
     },
-    getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes {
-      const forkName = this.getForkName(slot);
-      if (!isForkExecution(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
-      }
-      return ssz.allForksBlinded[forkName] as allForks.AllForksBlindedSSZTypes;
-    },
-    getLightClientForkTypes(slot: Slot): allForks.AllForksLightClientSSZTypes {
+    getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
       const forkName = this.getForkName(slot);
       if (!isForkLightClient(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
       }
-      return ssz.allForksLightClient[forkName] as allForks.AllForksLightClientSSZTypes;
+      return sszTypesFor(forkName);
     },
-    getBlobsForkTypes(slot: Slot): allForks.AllForksBlobsSSZTypes {
+    getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
       const forkName = this.getForkName(slot);
       if (!isForkBlobs(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
       }
-      return ssz.allForksBlobs[forkName] as allForks.AllForksBlobsSSZTypes;
+      return sszTypesFor(forkName);
     },
   };
 }
