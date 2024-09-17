@@ -135,7 +135,7 @@ export async function importBlock(
             versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
           });
         }
-      } else if (blockData.fork === ForkName.electra) {
+      } else if (blockData.fork === ForkName.peerdas) {
         // TODO peerDAS build and emit the event for the datacolumns
       }
     }

@@ -294,7 +294,7 @@ export class UnknownBlockSync {
       res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
     } else {
       const {cachedData} = block.blockInput;
-      if (cachedData.fork === ForkName.electra) {
+      if (cachedData.fork === ForkName.peerdas) {
         const {dataColumnsCache} = cachedData;
         const {custodyConfig} = this.network;
         const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
@@ -540,7 +540,7 @@ export class UnknownBlockSync {
           throw Error(`prevBlockInput=${prevBlockInput?.type} in partialDownload`);
         }
         const {cachedData} = prevBlockInput;
-        if (cachedData.fork === ForkName.electra) {
+        if (cachedData.fork === ForkName.peerdas) {
           const {dataColumnsCache} = cachedData;
           const {custodyConfig} = this.network;
           const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
@@ -642,7 +642,7 @@ export class UnknownBlockSync {
       if (cachedData.fork === ForkName.deneb) {
         const pendingBlobs = blobKzgCommitmentsLen - cachedData.blobsCache.size;
         Object.assign(dataMeta, {pendingBlobs});
-      } else if (cachedData.fork === ForkName.electra) {
+      } else if (cachedData.fork === ForkName.peerdas) {
         const pendingColumns = this.network.custodyConfig.custodyColumnsLen - cachedData.dataColumnsCache.size;
         Object.assign(dataMeta, {pendingColumns});
       }
@@ -653,7 +653,7 @@ export class UnknownBlockSync {
       const peer = shuffledPeers[i % shuffledPeers.length];
       if (unavailableBlockInput.block !== null) {
         const {cachedData} = unavailableBlockInput;
-        if (cachedData.fork === ForkName.electra) {
+        if (cachedData.fork === ForkName.peerdas) {
           const {dataColumnsCache} = cachedData;
           const {custodyConfig} = this.network;
           const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
@@ -733,14 +733,16 @@ export class UnknownBlockSync {
   private removeAndDownscoreAllDescendants(block: PendingBlock): void {
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = this.removeAllDescendants(block);
+    // just console log and do not penalize on pending/bad blocks for debugging
+    console.log("removeAndDownscoreAllDescendants", {block});
 
     for (const block of badPendingBlocks) {
-      this.knownBadBlocks.add(block.blockRootHex);
-      for (const peerIdStr of block.peerIdStrs) {
-        // TODO: Refactor peerRpcScores to work with peerIdStr only
-        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
-      }
-      this.logger.debug("Banning unknown block", {
+      //   this.knownBadBlocks.add(block.blockRootHex);
+      //   for (const peerIdStr of block.peerIdStrs) {
+      //     // TODO: Refactor peerRpcScores to work with peerIdStr only
+      //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
+      //   }
+      this.logger.debug("ignored Banning unknown block", {
         root: block.blockRootHex,
         peerIdStrs: Array.from(block.peerIdStrs).join(","),
       });

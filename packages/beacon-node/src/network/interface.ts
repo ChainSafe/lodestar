@@ -26,7 +26,7 @@ import {
   capella,
   deneb,
   phase0,
-  electra,
+  peerdas,
 } from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {CustodyConfig} from "../util/dataColumns.js";
@@ -77,17 +77,17 @@ export interface INetwork extends INetworkCorePublic {
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
-    request: electra.DataColumnSidecarsByRangeRequest
-  ): Promise<electra.DataColumnSidecar[]>;
+    request: peerdas.DataColumnSidecarsByRangeRequest
+  ): Promise<peerdas.DataColumnSidecar[]>;
   sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
-    request: electra.DataColumnSidecarsByRootRequest
-  ): Promise<electra.DataColumnSidecar[]>;
+    request: peerdas.DataColumnSidecarsByRootRequest
+  ): Promise<peerdas.DataColumnSidecar[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
-  publishDataColumnSidecar(dataColumnSideCar: electra.DataColumnSidecar): Promise<number>;
+  publishDataColumnSidecar(dataColumnSideCar: peerdas.DataColumnSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;

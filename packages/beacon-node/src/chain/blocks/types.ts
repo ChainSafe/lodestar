@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {deneb, Slot, RootHex, SignedBeaconBlock, electra, ColumnIndex} from "@lodestar/types";
+import {deneb, Slot, RootHex, SignedBeaconBlock, peerdas, ColumnIndex} from "@lodestar/types";
 import {ForkSeq, ForkName} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
@@ -45,19 +45,19 @@ export enum GossipedInputType {
 export type BlobsCacheMap = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
 export type DataColumnsCacheMap = Map<
   number,
-  {dataColumnSidecar: electra.DataColumnSidecar; dataColumnBytes: Uint8Array | null}
+  {dataColumnSidecar: peerdas.DataColumnSidecar; dataColumnBytes: Uint8Array | null}
 >;
 
 type ForkBlobsInfo = {fork: ForkName.deneb};
 type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
 
-type ForkDataColumnsInfo = {fork: ForkName.electra};
+type ForkDataColumnsInfo = {fork: ForkName.peerdas};
 type DataColumnsData = {
   // marker of that columns are to be custodied
   dataColumnsLen: number;
   dataColumnsIndex: Uint8Array;
-  dataColumns: electra.DataColumnSidecars;
+  dataColumns: peerdas.DataColumnSidecars;
   dataColumnsBytes: (Uint8Array | null)[];
   dataColumnsSource: DataColumnsSource;
 };
@@ -67,7 +67,10 @@ export type BlockInputData = BlockInputDataBlobs | BlockInputDataDataColumns;
 type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (data: T) => void};
 type CachedBlobs = {blobsCache: BlobsCacheMap} & Availability<BlockInputDataBlobs>;
 type CachedDataColumns = {dataColumnsCache: DataColumnsCacheMap} & Availability<BlockInputDataDataColumns>;
-export type CachedData = (ForkBlobsInfo & CachedBlobs) | (ForkDataColumnsInfo & CachedDataColumns);
+export type CachedData = {cacheId: number} & (
+  | (ForkBlobsInfo & CachedBlobs)
+  | (ForkDataColumnsInfo & CachedDataColumns)
+);
 
 export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preData | BlockInputType.outOfRangeData}

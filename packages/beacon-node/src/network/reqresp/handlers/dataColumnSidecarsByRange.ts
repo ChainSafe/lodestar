@@ -1,6 +1,6 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
-import {electra, Slot, ssz, ColumnIndex} from "@lodestar/types";
+import {peerdas, Slot, ssz, ColumnIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -8,10 +8,11 @@ import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   COLUMN_SIZE_IN_WRAPPER_INDEX,
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
+  NUM_COLUMNS_IN_WRAPPER_INDEX,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRange(
-  request: electra.DataColumnSidecarsByRangeRequest,
+  request: peerdas.DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
@@ -78,15 +79,20 @@ export function* iterateDataColumnBytesFromWrapper(
   blockSlot: Slot,
   columns: ColumnIndex[]
 ): Iterable<ResponseOutgoing> {
+  const retrivedColumnsLen = ssz.Uint8.deserialize(
+    dataColumnSidecarsBytesWrapped.slice(NUM_COLUMNS_IN_WRAPPER_INDEX, COLUMN_SIZE_IN_WRAPPER_INDEX)
+  );
   const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
     COLUMN_SIZE_IN_WRAPPER_INDEX,
     CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX
   );
   const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
-  const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX);
   const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
     CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
     CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
+  );
+  const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
+    DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
   );
 
   const columnsLen = allDataColumnSidecarsBytes.length / columnsSize;
@@ -96,18 +102,29 @@ export function* iterateDataColumnBytesFromWrapper(
   }
 
   const fork = chain.config.getForkName(blockSlot);
+  console.log("onDataColumnSidecarsByRange", {
+    slot: blockSlot,
+    columnsSize,
+    storedColumnsNum: allDataColumnSidecarsBytes.length / columnsSize,
+  });
 
-  for (const column of columns) {
+  for (const index of columns) {
     // get the index at which the column is
-    const index = dataColumnsIndex[column] - 1;
-    if (index < 0) {
-      throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${column} not custodied`);
+    const dataIndex = (dataColumnsIndex[index] ?? 0) - 1;
+    if (dataIndex < 0) {
+      throw new ResponseError(
+        RespStatus.SERVER_ERROR,
+        `dataColumnSidecar index=${index} dataIndex=${dataIndex} not custodied`
+      );
     }
-    const dataColumnSidecarBytes = allDataColumnSidecarsBytes.slice(index * columnsSize, (index + 1) * columnsSize);
+    const dataColumnSidecarBytes = allDataColumnSidecarsBytes.slice(
+      dataIndex * columnsSize,
+      (dataIndex + 1) * columnsSize
+    );
     if (dataColumnSidecarBytes.length !== columnsSize) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,
-        `Invalid dataColumnSidecar index=${index} bytes length=${dataColumnSidecarBytes.length} expected=${columnsSize} for slot ${blockSlot} blobsLen=${columnsLen}`
+        `Invalid dataColumnSidecar index=${index} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnsSize} for slot ${blockSlot} blobsLen=${columnsLen}`
       );
     }
     yield {
@@ -118,8 +135,8 @@ export function* iterateDataColumnBytesFromWrapper(
 }
 
 export function validateDataColumnSidecarsByRangeRequest(
-  request: electra.DataColumnSidecarsByRangeRequest
-): electra.DataColumnSidecarsByRangeRequest {
+  request: peerdas.DataColumnSidecarsByRangeRequest
+): peerdas.DataColumnSidecarsByRangeRequest {
   const {startSlot, columns} = request;
   let {count} = request;
 

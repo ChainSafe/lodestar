@@ -4,7 +4,7 @@ import {
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {ssz, electra, Slot, Root, deneb} from "@lodestar/types";
+import {ssz, deneb, peerdas, electra, Slot, Root} from "@lodestar/types";
 import {toHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {DataColumnSidecarGossipError, DataColumnSidecarErrorCode} from "../errors/dataColumnSidecarError.js";
@@ -15,7 +15,7 @@ import {byteArrayEquals} from "../../util/bytes.js";
 
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
-  dataColumnSideCar: electra.DataColumnSidecar,
+  dataColumnSideCar: peerdas.DataColumnSidecar,
   gossipIndex: number
 ): Promise<void> {
   const dataColumnSlot = dataColumnSideCar.signedBlockHeader.message.slot;
@@ -111,7 +111,7 @@ export function validateDataColumnsSidecars(
   }
 }
 
-function validateInclusionProof(dataColumnSidecar: electra.DataColumnSidecar): boolean {
+function validateInclusionProof(dataColumnSidecar: peerdas.DataColumnSidecar): boolean {
   return verifyMerkleBranch(
     ssz.deneb.BlobKzgCommitments.hashTreeRoot(dataColumnSidecar.kzgCommitments),
     dataColumnSidecar.kzgCommitmentsInclusionProof,

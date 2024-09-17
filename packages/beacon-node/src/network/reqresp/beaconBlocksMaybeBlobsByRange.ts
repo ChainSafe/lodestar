@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, electra, ssz} from "@lodestar/types";
+import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, peerdas, ssz} from "@lodestar/types";
 import {ForkSeq, NUMBER_OF_COLUMNS, ForkName} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
@@ -59,7 +59,7 @@ export async function beaconBlocksMaybeBlobsByRange(
 
   // Only request blobs if they are recent enough
   else if (computeEpochAtSlot(startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
-    if (forkSeq < ForkSeq.electra) {
+    if (forkSeq < ForkSeq.peerdas) {
       const [allBlocks, allBlobSidecars] = await Promise.all([
         network.sendBeaconBlocksByRange(peerId, request),
         network.sendBlobSidecarsByRange(peerId, request),
@@ -110,7 +110,7 @@ export async function beaconBlocksMaybeBlobsByRange(
       ]);
       console.log({
         beaconBlocksRequest: ssz.phase0.BeaconBlocksByRangeRequest.toJson(request),
-        dataColumnRequest: ssz.electra.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest),
+        dataColumnRequest: ssz.peerdas.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest),
       });
 
       const blocks = matchBlockWithDataColumns(
@@ -218,7 +218,7 @@ export function matchBlockWithDataColumns(
   custodyConfig: CustodyConfig,
   requestedColumns: number[],
   allBlocks: WithOptionalBytes<SignedBeaconBlock>[],
-  allDataColumnSidecars: electra.DataColumnSidecar[],
+  allDataColumnSidecars: peerdas.DataColumnSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,
   dataColumnsSource: DataColumnsSource,
@@ -241,11 +241,11 @@ export function matchBlockWithDataColumns(
     const block = allBlocks[i];
 
     const forkSeq = config.getForkSeq(block.data.message.slot);
-    if (forkSeq < ForkSeq.electra) {
-      throw Error(`Invalid block forkSeq=${forkSeq} < ForSeq.electra for matchBlockWithDataColumns`);
+    if (forkSeq < ForkSeq.peerdas) {
+      throw Error(`Invalid block forkSeq=${forkSeq} < ForSeq.peerdas for matchBlockWithDataColumns`);
     } else {
-      const dataColumnSidecars: electra.DataColumnSidecar[] = [];
-      let dataColumnSidecar: electra.DataColumnSidecar;
+      const dataColumnSidecars: peerdas.DataColumnSidecar[] = [];
+      let dataColumnSidecar: peerdas.DataColumnSidecar;
       while (
         (dataColumnSidecar = allDataColumnSidecars[dataColumnSideCarIndex])?.signedBlockHeader.message.slot ===
         block.data.message.slot
@@ -256,7 +256,13 @@ export function matchBlockWithDataColumns(
       }
 
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      console.log("matchBlockWithDataColumns", {blobKzgCommitmentsLen});
+      console.log("matchBlockWithDataColumns", {
+        blobKzgCommitmentsLen,
+        dataColumnSidecars: dataColumnSidecars.length,
+        shouldHaveAllData,
+        neededColumns,
+        requestedColumns,
+      });
       if (blobKzgCommitmentsLen === 0) {
         if (dataColumnSidecars.length > 0) {
           throw Error(
@@ -280,6 +286,8 @@ export function matchBlockWithDataColumns(
           (acc, columnIndex) => acc && dataColumnIndexes.includes(columnIndex),
           true
         );
+
+        console.log("matchBlockWithDataColumns", {dataColumnIndexes, requestedColumnsPresent});
 
         if (dataColumnSidecars.length !== requestedColumns.length || !requestedColumnsPresent) {
           console.log(
@@ -306,13 +314,13 @@ export function matchBlockWithDataColumns(
           }
           cachedData = prevBlockInput.cachedData;
         } else {
-          cachedData = getEmptyBlockInputCacheEntry(config.getForkName(block.data.message.slot)).cachedData;
+          cachedData = getEmptyBlockInputCacheEntry(config.getForkName(block.data.message.slot), -1).cachedData;
           if (cachedData === undefined) {
             throw Error("Invalid cachedData=undefined from getEmptyBlockInputCacheEntry");
           }
         }
 
-        if (cachedData.fork !== ForkName.electra) {
+        if (cachedData.fork !== ForkName.peerdas) {
           throw Error("Invalid fork for cachedData on dataColumns");
         }
 
@@ -357,5 +365,6 @@ export function matchBlockWithDataColumns(
         .join(",")}`
     );
   }
+  console.log("matchedBlockWithDataColumns", blockInputs);
   return blockInputs;
 }

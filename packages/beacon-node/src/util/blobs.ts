@@ -7,8 +7,9 @@ import {
   ForkName,
   ForkAll,
   NUMBER_OF_COLUMNS,
+  ForkBlobs,
 } from "@lodestar/params";
-import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, electra} from "@lodestar/types";
+import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor, peerdas} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {ckzg} from "./kzg.js";
@@ -35,7 +36,7 @@ export function computeInclusionProof(
 export function computeKzgCommitmentsInclusionProof(
   fork: ForkName,
   body: BeaconBlockBody
-): electra.KzgCommitmentsInclusionProof {
+): peerdas.KzgCommitmentsInclusionProof {
   const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(body);
   return new Tree(bodyView.node).getSingleProof(BigInt(KZG_COMMITMENTS_GINDEX));
 }
@@ -63,11 +64,18 @@ export function computeBlobSidecars(
   });
 }
 
+/**
+ * Turns a SignedBeaconBlock and an array of Blobs from a given slot into an array of
+ * DataColumnSidecars that are ready to be served by gossip and req/resp.
+ *
+ * Implementation of get_data_column_sidecars
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_data_column_sidecars
+ */
 export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: deneb.Contents & {kzgCommitmentsInclusionProof?: electra.KzgCommitmentsInclusionProof}
-): electra.DataColumnSidecars {
+  contents: deneb.Contents & {kzgCommitmentsInclusionProof?: peerdas.KzgCommitmentsInclusionProof}
+): peerdas.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
     throw Error("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
@@ -75,28 +83,24 @@ export function computeDataColumnSidecars(
   if (blobKzgCommitments.length === 0) {
     return [];
   }
-
+  const {blobs} = contents;
+  const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const fork = config.getForkName(signedBlockHeader.message.slot);
   const kzgCommitmentsInclusionProof =
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const cellsAndProofs = contents.blobs.map((blob) => ckzg.computeCellsAndKzgProofs(blob));
-  const dataColumnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, j) => {
-    // j'th column
-    const column = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][0][j]);
-    const kzgProofs = Array.from({length: contents.blobs.length}, (_, i) => cellsAndProofs[i][1][j]);
+  const cellsAndProofs = blobs.map((blob) => ckzg.computeCellsAndKzgProofs(blob));
 
-    const dataColumnSidecar = {
-      index: j,
+  return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
+    // columnIndex'th column
+    const column = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber][0][columnIndex]);
+    const kzgProofs = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber][1][columnIndex]);
+    return {
+      index: columnIndex,
       column,
       kzgCommitments: blobKzgCommitments,
       kzgProofs,
       signedBlockHeader,
       kzgCommitmentsInclusionProof,
-    } as electra.DataColumnSidecar;
-
-    return dataColumnSidecar;
+    };
   });
-
-  return dataColumnSidecars;
 }

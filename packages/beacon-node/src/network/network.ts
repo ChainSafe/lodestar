@@ -17,7 +17,7 @@ import {
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  electra,
+  peerdas,
   ColumnIndex,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -335,7 +335,7 @@ export class Network implements INetwork {
     });
   }
 
-  async publishDataColumnSidecar(dataColumnSidecar: electra.DataColumnSidecar): Promise<number> {
+  async publishDataColumnSidecar(dataColumnSidecar: peerdas.DataColumnSidecar): Promise<number> {
     const slot = dataColumnSidecar.signedBlockHeader.message.slot;
     const fork = this.config.getForkName(slot);
     const index = dataColumnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
@@ -551,8 +551,8 @@ export class Network implements INetwork {
 
   async sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
-    request: electra.DataColumnSidecarsByRangeRequest
-  ): Promise<electra.DataColumnSidecar[]> {
+    request: peerdas.DataColumnSidecarsByRangeRequest
+  ): Promise<peerdas.DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
@@ -563,8 +563,8 @@ export class Network implements INetwork {
 
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
-    request: electra.DataColumnSidecarsByRootRequest
-  ): Promise<electra.DataColumnSidecar[]> {
+    request: peerdas.DataColumnSidecarsByRootRequest
+  ): Promise<peerdas.DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.length,

@@ -54,14 +54,14 @@ export type GossipSubscriber = {
 export type NodeId = Bytes32;
 export function computeNodeId(peerIdOrStr: PeerId | PeerIdStr) {
   let peerId;
-  if (typeof peerId === "string") {
-    peerId = peerIdFromString(peerId);
+  if (typeof peerIdOrStr === "string") {
+    peerId = peerIdFromString(peerIdOrStr as string);
   } else {
-    peerId = peerIdOrStr as PeerId;
+    peerId = peerIdOrStr;
   }
 
   if (peerId.publicKey === undefined) {
-    throw Error("Undefined publicKey");
+    throw Error(`Undefined publicKey typeof peerIdOrStr=${typeof peerIdOrStr} peerIdOrStr=${peerIdOrStr.toString()}`);
   }
   return fromHexString(computeENRNodeId(IDScheme.v4, peerId.publicKey.slice(4)));
 }
