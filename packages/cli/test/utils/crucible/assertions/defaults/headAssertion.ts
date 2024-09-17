@@ -46,7 +46,16 @@ export const headAssertion: Assertion<"head", HeadSummary> = {
      */
     const result = [`Slot,${nodes.map((n) => n.beacon.id).join(", ")}`];
     for (let s = 1; s <= slot; s++) {
-      result.push(`${s}, ${nodes.map((n) => store[n.beacon.id][s].blockRoot ?? "-").join(",")}`);
+      result.push(
+        `${s}, ${nodes
+          .map((n) => {
+            const nodeStore = store[n.beacon.id];
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+            const desiredSlot = nodeStore ? nodeStore[s] : undefined;
+            return desiredSlot ? desiredSlot.blockRoot : "not found";
+          })
+          .join(",")}`
+      );
     }
     return {"headAssertion.csv": result.join("\n")};
   },

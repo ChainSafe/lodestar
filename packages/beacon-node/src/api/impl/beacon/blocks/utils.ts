@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
-import {blockToHeader} from "@lodestar/state-transition";
+import {blockToHeader, blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
@@ -10,11 +10,12 @@ import {rootHexRegex} from "../../../../eth1/provider/utils.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,
-  block: SignedBeaconBlock,
+  block: SignedBeaconBlock | SignedBlindedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {
+  const root = blindedOrFullBlockHashTreeRoot(config, block.message);
   return {
-    root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+    root,
     canonical,
     header: {
       message: blockToHeader(config, block.message),
@@ -59,7 +60,7 @@ export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.B
 export async function getBlockResponse(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
-): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
+): Promise<{block: SignedBeaconBlock | SignedBlindedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
   const rootOrSlot = resolveBlockId(chain.forkChoice, blockId);
 
   const res =

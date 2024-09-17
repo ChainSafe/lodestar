@@ -15,6 +15,7 @@ import {
   ExecutionPayload,
   SignedBeaconBlock,
   BlindedBeaconBlock,
+  SignedBlindedBeaconBlock,
 } from "@lodestar/types";
 import {
   BeaconStateAllForks,
@@ -173,14 +174,24 @@ export interface IBeaconChain {
    * forkchoice. Works for finalized slots as well
    */
   getCanonicalBlockAtSlot(
-    slot: Slot
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+    slot: Slot,
+    getFull?: boolean
+  ): Promise<{
+    block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+    executionOptimistic: boolean;
+    finalized: boolean;
+  } | null>;
   /**
    * Get local block by root, does not fetch from the network
    */
   getBlockByRoot(
-    root: RootHex
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+    root: RootHex,
+    getFull?: boolean
+  ): Promise<{
+    block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+    executionOptimistic: boolean;
+    finalized: boolean;
+  } | null>;
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
@@ -196,6 +207,8 @@ export interface IBeaconChain {
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
   }>;
+
+  fullOrBlindedSignedBeaconBlockToFull(block: SignedBeaconBlock | SignedBlindedBeaconBlock): Promise<SignedBeaconBlock>;
 
   /** Process a block until complete */
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;

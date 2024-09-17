@@ -4,6 +4,7 @@ import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {deserializeFullOrBlindedSignedBeaconBlock} from "../../../util/fullOrBlindedBlock.js";
 
 // TODO: Unit test
 
@@ -23,8 +24,11 @@ export async function* onBeaconBlocksByRange(
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+      const fullBlock = await chain.fullOrBlindedSignedBeaconBlockToFull(
+        deserializeFullOrBlindedSignedBeaconBlock(chain.config, value)
+      );
       yield {
-        data: value,
+        data: chain.config.getForkTypes(fullBlock.message.slot).SignedBeaconBlock.serialize(fullBlock),
         fork: chain.config.getForkName(finalized.decodeKey(key)),
       };
     }
@@ -54,9 +58,12 @@ export async function* onBeaconBlocksByRange(
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
         }
 
+        const fullBlock = await chain.fullOrBlindedSignedBeaconBlockToFull(
+          deserializeFullOrBlindedSignedBeaconBlock(chain.config, blockBytes)
+        );
         yield {
-          data: blockBytes,
-          fork: chain.config.getForkName(block.slot),
+          data: chain.config.getForkTypes(fullBlock.message.slot).SignedBeaconBlock.serialize(fullBlock),
+          fork: chain.config.getForkName(fullBlock.message.slot),
         };
       }
 

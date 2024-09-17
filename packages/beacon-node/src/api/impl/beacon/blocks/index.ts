@@ -4,9 +4,10 @@ import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   reconstructFullBlockOrContents,
-  signedBeaconBlockToBlinded,
+  blindedOrFullBlockHashTreeRoot,
+  fullOrBlindedSignedBlockToBlinded,
 } from "@lodestar/state-transition";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
+import {SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
 import {sleep, fromHex, toRootHex} from "@lodestar/utils";
 import {
   deneb,
@@ -331,15 +332,12 @@ export function getBeaconBlockApi({
         if (slot > headSlot) {
           return {data: [], meta: {executionOptimistic: false, finalized: false}};
         }
-
         const canonicalBlock = await chain.getCanonicalBlockAtSlot(slot);
         // skip slot
         if (!canonicalBlock) {
           return {data: [], meta: {executionOptimistic: false, finalized: false}};
         }
-        const canonicalRoot = config
-          .getForkTypes(canonicalBlock.block.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
+        const canonicalRoot = blindedOrFullBlockHashTreeRoot(config, canonicalBlock.block.message);
         result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
         if (!canonicalBlock.finalized) {
           finalized = false;
@@ -381,7 +379,7 @@ export function getBeaconBlockApi({
     async getBlockV2({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
-        data: block,
+        data: await chain.fullOrBlindedSignedBeaconBlockToFull(block),
         meta: {
           executionOptimistic,
           finalized,
@@ -394,9 +392,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       return {
-        data: isForkExecution(fork)
-          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkExecution>)
-          : block,
+        data: isForkExecution(fork) ? fullOrBlindedSignedBlockToBlinded(config, block) : block,
         meta: {
           executionOptimistic,
           finalized,
@@ -464,7 +460,7 @@ export function getBeaconBlockApi({
       // Slow path
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
-        data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
+        data: {root: blindedOrFullBlockHashTreeRoot(config, block.message)},
         meta: {executionOptimistic, finalized},
       };
     },
@@ -482,7 +478,7 @@ export function getBeaconBlockApi({
 
     async getBlobSidecars({blockId, indices}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const blockRoot = blindedOrFullBlockHashTreeRoot(config, block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
       if (!blobSidecars) {
