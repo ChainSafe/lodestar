@@ -1,10 +1,19 @@
-import {describe, it, expect} from "vitest";
+/* eslint-disable @typescript-eslint/naming-convention */
+import {describe, it, expect, beforeAll, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {bigIntToBytes} from "@lodestar/utils";
 
 import {getCustodyColumns} from "../../../src/util/dataColumns.js";
+import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
+import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
+import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 
-describe("custody columns", () => {
+describe("getCustodyColumns", () => {
   const testCases = [
     ["cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f", 4, [2, 80, 89, 118]],
     [
@@ -25,4 +34,53 @@ describe("custody columns", () => {
       expect(columnIndexs).toEqual(custodyColumns);
     });
   }
+});
+describe("data column sidecars", () => {
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
+
+  beforeAll(async function () {
+    await initCKZG();
+    loadEthereumTrustedSetup();
+  });
+
+  it("validateDataColumnsSidecars", () => {
+    const chainConfig = createChainForkConfig({
+      ...defaultChainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    });
+    const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+    const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+    const chain = getMockedBeaconChain({config});
+    afterEachCallbacks.push(() => chain.close());
+
+    const slot = 0;
+    const blobs = [generateRandomBlob(), generateRandomBlob()];
+    const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+
+    const signedBeaconBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+
+    for (const kzgCommitment of kzgCommitments) {
+      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
+      signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
+    }
+    const blockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
+    const columnSidecars = computeDataColumnSidecars(config, signedBeaconBlock, {
+      blobs,
+    });
+
+    expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
+    expect(columnSidecars[0].column.length).toEqual(blobs.length);
+
+    expect(validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars)).toBeUndefined();
+  });
 });
