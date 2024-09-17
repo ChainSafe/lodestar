@@ -4,7 +4,7 @@ import {
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {ssz, deneb, peerdas, electra, Slot, Root} from "@lodestar/types";
+import {ssz, deneb, peerdas, Slot, Root} from "@lodestar/types";
 import {toHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {DataColumnSidecarGossipError, DataColumnSidecarErrorCode} from "../errors/dataColumnSidecarError.js";
@@ -50,7 +50,7 @@ export function validateDataColumnsSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockKzgCommitments: deneb.BlobKzgCommitments,
-  dataColumnSidecars: electra.DataColumnSidecars,
+  dataColumnSidecars: peerdas.DataColumnSidecars,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): void {
   const commitmentBytes: Uint8Array[] = [];
