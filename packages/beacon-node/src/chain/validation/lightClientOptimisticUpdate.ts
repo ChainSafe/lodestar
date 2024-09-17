@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeTimeAtSlot, ONE_INTERVAL_OF_SLOT} from "@lodestar/state-transition";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
-import {ONE_INTERVAL_OF_SLOT} from "@lodestar/state-transition/src/index.js";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {GossipAction} from "../errors/index.js";
