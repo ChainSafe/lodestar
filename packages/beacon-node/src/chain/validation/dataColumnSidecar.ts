@@ -43,7 +43,13 @@ export async function validateGossipDataColumnSidecar(
     });
   }
 
-  validateInclusionProof(dataColumnSideCar);
+  if (!validateInclusionProof(dataColumnSideCar)) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
+      slot: dataColumnSideCar.signedBlockHeader.message.slot,
+      columnIdx: dataColumnSideCar.index,
+    });
+  }
 }
 
 export function validateDataColumnsSidecars(
