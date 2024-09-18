@@ -83,7 +83,7 @@ describe("CachedBeaconState", () => {
 
     expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
     expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(undefined);
+    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(null);
     expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
   });
 
