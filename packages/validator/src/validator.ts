@@ -372,7 +372,9 @@ export class Validator {
    * Create a signed voluntary exit message for the given validator by its key.
    */
   async signVoluntaryExit(publicKey: string, exitEpoch?: number): Promise<phase0.SignedVoluntaryExit> {
-    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validators = (
+      await this.api.beacon.postStateValidators({stateId: "head", validatorIds: [publicKey]})
+    ).value();
 
     const validator = validators[0];
     if (validator === undefined) {
