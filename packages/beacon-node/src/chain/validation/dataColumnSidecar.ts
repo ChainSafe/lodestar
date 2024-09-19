@@ -43,7 +43,11 @@ export async function validateGossipDataColumnSidecar(
     });
   }
 
-  if (!validateInclusionProof(dataColumnSideCar)) {
+  const timer = chain.metrics?.peerDas.inclusionProofVerificationTimeInSec.startTimer();
+  const isValid = validateInclusionProof(dataColumnSideCar);
+  timer?.();
+
+  if (!isValid) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
       slot: dataColumnSideCar.signedBlockHeader.message.slot,

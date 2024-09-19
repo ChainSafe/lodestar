@@ -282,12 +282,14 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     );
 
     try {
+      metrics?.gossipColumn.processRequestCount.inc();
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipIndex);
+      metrics?.gossipColumn.processSuccessCount.inc();
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
-      metrics?.gossipBlob.validationTime.observe(validationTime);
+      metrics?.gossipColumn.verificationTimeInSec.observe(validationTime);
 
       logger.debug("Received gossip dataColumn", {
         slot: slot,
@@ -650,6 +652,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
       chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
+
     [GossipType.beacon_attestation]: async ({
       gossipData,
       topic,
