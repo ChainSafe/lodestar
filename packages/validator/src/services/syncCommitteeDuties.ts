@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -10,6 +9,7 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
+import {toPubkeyHex} from "@lodestar/utils";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -287,7 +287,7 @@ export class SyncCommitteeDutiesService {
       // Using `alreadyWarnedReorg` avoids excessive logs.
 
       // TODO: Use memory-efficient toHexString()
-      const pubkeyHex = toHexString(duty.pubkey);
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       dutiesByIndex.set(validatorIndex, {duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
     }
 

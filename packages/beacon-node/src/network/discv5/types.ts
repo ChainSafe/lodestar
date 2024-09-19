@@ -31,7 +31,7 @@ export type LodestarDiscv5Opts = {
 /** discv5 worker constructor data */
 export interface Discv5WorkerData {
   enr: string;
-  peerIdProto: Uint8Array;
+  privateKeyProto: Uint8Array;
   bindAddrs: BindAddrs;
   config: Discv5Config;
   bootEnrs: string[];

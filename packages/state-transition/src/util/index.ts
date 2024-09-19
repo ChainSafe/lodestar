@@ -25,3 +25,4 @@ export * from "./validator.js";
 export * from "./weakSubjectivity.js";
 export * from "./deposit.js";
 export * from "./electra.js";
+export * from "./loadState/index.js";

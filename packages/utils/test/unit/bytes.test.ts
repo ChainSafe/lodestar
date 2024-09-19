@@ -1,5 +1,14 @@
 import {describe, it, expect} from "vitest";
-import {intToBytes, bytesToInt, toHex, fromHex, toHexString, toRootHex} from "../../src/index.js";
+import {
+  intToBytes,
+  bytesToInt,
+  toHex,
+  fromHex,
+  toHexString,
+  toRootHex,
+  toPubkeyHex,
+  formatBytes,
+} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -80,6 +89,25 @@ describe("toRootHex", () => {
   }
 });
 
+describe("toPubkeyHex", () => {
+  const testCases: {input: Uint8Array; output: string}[] = [
+    {
+      input: new Uint8Array(Array.from({length: 48}, (_, i) => i)),
+      output: "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+    },
+    {
+      input: new Uint8Array(Array.from({length: 48}, () => 0)),
+      output: "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+  ];
+
+  for (const {input, output} of testCases) {
+    it(`should convert root to hex string ${output}`, () => {
+      expect(toPubkeyHex(input)).toBe(output);
+    });
+  }
+});
+
 describe("fromHex", () => {
   const testCases: {input: string; output: Buffer | Uint8Array}[] = [
     {
@@ -113,6 +141,27 @@ describe("toHexString", () => {
   for (const {input, output} of testCases) {
     it(`should convert Uint8Array to hex string ${output}`, () => {
       expect(toHexString(input)).toBe(output);
+    });
+  }
+});
+
+describe("formatBytes", () => {
+  const testCases: {input: number; output: string}[] = [
+    {input: 0, output: "0 Bytes"},
+    {input: 1, output: "1.00 Bytes"},
+    {input: 1024, output: "1.00 KB"},
+    {input: 1024 + 0.12 * 1024, output: "1.12 KB"},
+    {input: 1024 * 1024, output: "1.00 MB"},
+    {input: 1024 * 1024 + 0.12 * (1024 * 1024), output: "1.12 MB"},
+    {input: 1024 * 1024 * 1024, output: "1.00 GB"},
+    {input: 1024 * 1024 * 1024 + 0.12 * 1024 * 1024 * 1024, output: "1.12 GB"},
+    // too big
+    {input: 1024 * 1024 * 1024 * 1024, output: "1024.00 GB"},
+  ];
+
+  for (const {input, output} of testCases) {
+    it(`should format ${input} bytes as ${output}`, () => {
+      expect(formatBytes(input)).toBe(output);
     });
   }
 });
