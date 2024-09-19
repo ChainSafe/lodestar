@@ -206,7 +206,7 @@ export function getBeaconStateApi({
       const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
       if (!shuffling) {
         throw new ApiError(
-          400,
+          500,
           `No shuffling found to calculate committees for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
         );
       }
