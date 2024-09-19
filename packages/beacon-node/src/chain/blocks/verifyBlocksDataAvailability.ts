@@ -76,7 +76,7 @@ export async function verifyBlocksDataAvailability(
 }
 
 async function maybeValidateBlobs(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger; metrics: Metrics | null},
   blockInput: BlockInput,
   opts: ImportBlockOpts
 ): Promise<{dataAvailabilityStatus: DataAvailabilityStatus; availableBlockInput: BlockInput}> {
@@ -119,7 +119,9 @@ async function maybeValidateBlobs(
         const {dataColumns} = blockData;
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
         // might require numColumns, custodyColumns from blockData as input to below
+        const timer = chain.metrics?.peerDas.batchColumnVerificationTimeInSec.startTimer();
         validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, {skipProofsCheck});
+        timer?.();
       }
 
       const availableBlockInput = getBlockInput.availableData(

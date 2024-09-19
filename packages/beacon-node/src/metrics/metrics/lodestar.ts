@@ -765,6 +765,7 @@ export function createLodestarMetrics(
         labelNames: ["error"],
       }),
     },
+
     gossipBlob: {
       recvToValidation: register.histogram({
         name: "lodestar_gossip_blob_received_to_gossip_validate",
@@ -777,6 +778,67 @@ export function createLodestarMetrics(
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
+
+    gossipColumn: {
+      /**
+       * All of these column metrics that are prefixed with `beacon_` are part of the
+       * ethpandops official metrics set
+       * https://github.com/KatyaRyazantseva/beacon-metrics/blob/master/metrics.md#peerdas-metrics
+       */
+      verificationTimeInSec: register.histogram({
+        name: "beacon_data_column_sidecar_gossip_verification_seconds",
+        help: "Full runtime of data column sidecars gossip verification",
+        // TODO: (@g11tech) need to verify that these buckets are correct. they are copy/pasta from above
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      processRequestCount: register.gauge({
+        name: "beacon_data_column_sidecar_processing_requests_total",
+        help: "Number of data column sidecars submitted for processing",
+      }),
+      processSuccessCount: register.gauge({
+        name: "beacon_data_column_sidecar_processing_successes_total",
+        help: "Number of data column sidecars verified for gossip",
+      }),
+    },
+
+    peerDas: {
+      /**
+       * All of these column metrics that are prefixed with `beacon_` are part of the
+       * ethpandops official metrics set
+       * https://github.com/KatyaRyazantseva/beacon-metrics/blob/master/metrics.md#peerdas-metrics
+       */
+      matrixReconstructionTimeInSec: register.histogram({
+        name: "beacon_data_availability_reconstruction_time_seconds",
+        help: "Time taken to reconstruct columns",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      sidecarComputationTimeInSec: register.histogram({
+        name: "beacon_data_column_sidecar_computation_seconds",
+        help: "Time taken to compute data column sidecar, including cells, proofs and inclusion proof",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      inclusionProofVerificationTimeInSec: register.histogram({
+        name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",
+        help: "Time taken to verify data column sidecar inclusion proof",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      // commenting this out for now. there is no where we do single verification currently
+      // singleColumnVerificationTimeInSec: register.histogram({
+      //   name: "beacon_kzg_verification_data_column_single_seconds",
+      //   help: "Runtime of single data column kzg verification",
+      //   buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      // }),
+      batchColumnVerificationTimeInSec: register.histogram({
+        name: "beacon_kzg_verification_data_column_batch_seconds",
+        help: "Runtime of batched data column kzg verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      totalCustodyColumnCount: register.gauge({
+        name: "beacon_custody_columns_count_total",
+        help: "Total count of columns in custody within the data availability boundary",
+      }),
+    },
+
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({
         name: "lodestar_import_block_persist_block_no_serialized_data_count",

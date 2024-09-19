@@ -79,7 +79,9 @@ export function getBeaconBlockApi({
       const fork = config.getForkName(signedBlock.message.slot);
       let blockData: BlockInputData;
       if (fork === ForkName.peerdas) {
+        const timer = chain.metrics?.peerDas.sidecarComputationTimeInSec.startTimer();
         dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, signedBlockOrContents);
+        timer?.();
         blockData = {
           fork,
           dataColumnsLen: dataColumnSidecars.length,
