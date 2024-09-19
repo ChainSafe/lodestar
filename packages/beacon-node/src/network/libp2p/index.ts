@@ -97,7 +97,7 @@ export async function createNodeJsLibp2p(
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncryption: [noise()],
+    connectionEncrypters: [noise()],
     transports,
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
