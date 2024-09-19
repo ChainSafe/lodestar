@@ -1,4 +1,4 @@
-import {ForkBlobs, ForkExecution, ForkPostElectra} from "@lodestar/params";
+import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkBlobs, ForkExecution, ForkPostElectra} from "@lodestar/params";
 import {
   BlockContents,
   SignedBeaconBlock,
@@ -76,7 +76,7 @@ export function isElectraAttestation(attestation: Attestation): attestation is A
 export function isElectraLightClientUpdate(update: LightClientUpdate): update is LightClientUpdate<ForkPostElectra> {
   const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
   return (
-    updatePostElectra.attestedHeader.execution !== undefined &&
-    updatePostElectra.attestedHeader.execution.depositRequestsRoot !== undefined
+    updatePostElectra.finalityBranch !== undefined &&
+    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
   );
 }

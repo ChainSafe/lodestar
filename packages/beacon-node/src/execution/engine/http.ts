@@ -1,5 +1,5 @@
-import {ExecutionPayload, Root, RootHex, Wei} from "@lodestar/types";
-import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {SLOTS_PER_EPOCH, ForkName, ForkSeq, isForkPostElectra} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
   ErrorJsonRpcResponse,
@@ -37,6 +37,7 @@ import {
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
+  serializeExecutionRequests,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -195,7 +196,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fork: ForkName,
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
-    parentBlockRoot?: Root
+    parentBlockRoot?: Root,
+    executionRequests?: ExecutionRequests,
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.electra
@@ -220,12 +222,23 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
       const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
 
-      const method = ForkSeq[fork] >= ForkSeq.electra ? "engine_newPayloadV4" : "engine_newPayloadV3";
-      engineRequest = {
-        method,
-        params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
-        methodOpts: notifyNewPayloadOpts,
-      };
+      if (ForkSeq[fork] >= ForkSeq.electra) {
+        if (executionRequests === undefined) {
+          throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
+        }
+        const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
+        engineRequest = {
+          method: "engine_newPayloadV4",
+          params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot, serializedExecutionRequests],
+          methodOpts: notifyNewPayloadOpts,
+        };
+      } else {
+        engineRequest = {
+          method: "engine_newPayloadV3",
+          params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
+          methodOpts: notifyNewPayloadOpts,
+        };
+      }
     } else {
       const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
       engineRequest = {

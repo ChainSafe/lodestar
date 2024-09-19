@@ -128,12 +128,7 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.electra:
-      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.depositRequestsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.depositRequestsRoot.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.withdrawalRequestsRoot.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.consolidationRequestsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.consolidationRequestsRoot.defaultValue();
+      // No changes to LightClientHeader in Electra
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
@@ -165,16 +160,6 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
         (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
       ((header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas &&
         (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0))
-    ) {
-      return false;
-    }
-  }
-
-  if (epoch < config.ELECTRA_FORK_EPOCH) {
-    if (
-      (header as LightClientHeader<ForkName.electra>).execution.depositRequestsRoot !== undefined ||
-      (header as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot !== undefined ||
-      (header as LightClientHeader<ForkName.electra>).execution.consolidationRequestsRoot !== undefined
     ) {
       return false;
     }
