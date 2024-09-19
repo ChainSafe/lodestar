@@ -8,6 +8,7 @@ function getForkConfig({
   altair,
   bellatrix,
   capella,
+  verkle,
   deneb,
   electra,
 }: {
@@ -15,6 +16,7 @@ function getForkConfig({
   altair: number;
   bellatrix: number;
   capella: number;
+  verkle: number;
   deneb: number;
   electra: number;
 }): BeaconConfig {
@@ -51,20 +53,28 @@ function getForkConfig({
       prevVersion: Buffer.from([0, 0, 0, 2]),
       prevForkName: ForkName.bellatrix,
     },
+    verkle: {
+      name: ForkName.verkle,
+      seq: ForkSeq.verkle,
+      epoch: verkle,
+      version: Buffer.from([0, 0, 0, 4]),
+      prevVersion: Buffer.from([0, 0, 0, 3]),
+      prevForkName: ForkName.capella,
+    },
     deneb: {
       name: ForkName.deneb,
       seq: ForkSeq.deneb,
       epoch: deneb,
-      version: Buffer.from([0, 0, 0, 4]),
-      prevVersion: Buffer.from([0, 0, 0, 3]),
-      prevForkName: ForkName.capella,
+      version: Buffer.from([0, 0, 0, 5]),
+      prevVersion: Buffer.from([0, 0, 0, 4]),
+      prevForkName: ForkName.verkle,
     },
     electra: {
       name: ForkName.electra,
       seq: ForkSeq.electra,
       epoch: electra,
-      version: Buffer.from([0, 0, 0, 5]),
-      prevVersion: Buffer.from([0, 0, 0, 4]),
+      version: Buffer.from([0, 0, 0, 6]),
+      prevVersion: Buffer.from([0, 0, 0, 5]),
       prevForkName: ForkName.deneb,
     },
   };
@@ -142,11 +152,12 @@ const testScenarios = [
 
 for (const testScenario of testScenarios) {
   const {phase0, altair, bellatrix, capella, testCases} = testScenario;
+  const verkle = Infinity;
   const deneb = Infinity;
   const electra = Infinity;
 
   describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, electra});
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, verkle, deneb, electra});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;

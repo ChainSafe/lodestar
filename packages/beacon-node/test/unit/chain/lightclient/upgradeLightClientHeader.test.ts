@@ -14,8 +14,9 @@ describe("UpgradeLightClientHeader", function () {
     ALTAIR_FORK_EPOCH: 1,
     BELLATRIX_FORK_EPOCH: 2,
     CAPELLA_FORK_EPOCH: 3,
-    DENEB_FORK_EPOCH: 4,
-    ELECTRA_FORK_EPOCH: 5,
+    VERKLE_FORK_EPOCH: 4,
+    DENEB_FORK_EPOCH: 5,
+    ELECTRA_FORK_EPOCH: 6,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -27,6 +28,7 @@ describe("UpgradeLightClientHeader", function () {
       altair: ssz.altair.LightClientHeader.defaultValue(),
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
+      verkle: ssz.verkle.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.electra.LightClientHeader.defaultValue(),
     };
@@ -36,8 +38,9 @@ describe("UpgradeLightClientHeader", function () {
       altair: 10,
       bellatrix: 17,
       capella: 25,
-      deneb: 33,
-      electra: 41,
+      verkle: 33,
+      deneb: 41,
+      electra: 49,
     };
   });
 

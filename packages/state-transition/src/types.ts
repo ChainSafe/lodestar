@@ -8,6 +8,7 @@ export type {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateVerkle,
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
 } from "./cache/stateCache.js";
@@ -19,6 +20,7 @@ export type {
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
+  BeaconStateVerkle,
   BeaconStateDeneb,
   BeaconStateElectra,
 } from "./cache/types.js";

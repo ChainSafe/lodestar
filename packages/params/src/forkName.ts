@@ -6,6 +6,7 @@ export enum ForkName {
   altair = "altair",
   bellatrix = "bellatrix",
   capella = "capella",
+  verkle = "verkle",
   deneb = "deneb",
   electra = "electra",
 }
@@ -18,8 +19,10 @@ export enum ForkSeq {
   altair = 1,
   bellatrix = 2,
   capella = 3,
-  deneb = 4,
-  electra = 5,
+  // Verkle is scheduled after capella for now
+  verkle = 4,
+  deneb = 5,
+  electra = 6,
 }
 
 function exclude<T extends ForkName, U extends T>(coll: T[], val: U[]): Exclude<T, U>[] {
@@ -74,11 +77,24 @@ export function isForkWithdrawals(fork: ForkName): fork is ForkWithdrawals {
   return isForkExecution(fork) && fork !== ForkName.bellatrix;
 }
 
-export type ForkPreBlobs = ForkPreWithdrawals | ForkName.capella;
-export type ForkBlobs = Exclude<ForkName, ForkPreBlobs>;
-export const forkBlobs = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix, ForkName.capella]);
-export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
+export type ForkPreVerge = ForkPreWithdrawals | ForkName.capella;
+export type ForkVerge = Exclude<ForkName, ForkPreVerge>;
+export const forkVerge = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix, ForkName.capella]);
+export function isForkVerge(fork: ForkName): fork is ForkVerge {
   return isForkWithdrawals(fork) && fork !== ForkName.capella;
+}
+
+export type ForkPreBlobs = ForkPreVerge | ForkName.verkle;
+export type ForkBlobs = Exclude<ForkName, ForkPreBlobs>;
+export const forkBlobs = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.verkle,
+]);
+export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
+  return isForkVerge(fork) && fork !== ForkName.verkle;
 }
 
 export type ForkPreElectra = ForkPreBlobs | ForkName.deneb;
@@ -88,6 +104,7 @@ export const forkPostElectra = exclude(forkAll, [
   ForkName.altair,
   ForkName.bellatrix,
   ForkName.capella,
+  ForkName.verkle,
   ForkName.deneb,
 ]);
 export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {

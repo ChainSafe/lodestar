@@ -37,6 +37,9 @@ export type ChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: Uint8Array;
   CAPELLA_FORK_EPOCH: number;
+  // VERKLE
+  VERKLE_FORK_VERSION: Uint8Array;
+  VERKLE_FORK_EPOCH: number;
   // DENEB
   DENEB_FORK_VERSION: Uint8Array;
   DENEB_FORK_EPOCH: number;
@@ -101,6 +104,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // Capella
   CAPELLA_FORK_VERSION: "bytes",
   CAPELLA_FORK_EPOCH: "number",
+  // VERKLE
+  VERKLE_FORK_VERSION: "bytes",
+  VERKLE_FORK_EPOCH: "number",
   // DENEB
   DENEB_FORK_VERSION: "bytes",
   DENEB_FORK_EPOCH: "number",

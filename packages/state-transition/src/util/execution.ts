@@ -1,6 +1,7 @@
 import {
   bellatrix,
   capella,
+  verkle,
   deneb,
   electra,
   isBlindedBeaconBlockBody,
@@ -159,6 +160,12 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
     (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
       (payload as capella.ExecutionPayload).withdrawals
     );
+  }
+
+  if (fork >= ForkSeq.verkle) {
+    // https://github.com/ethereum/consensus-specs/blob/db74090c1e8dc1fb2c052bae268e22dc63061e32/specs/verge/beacon-chain.md#process_execution_payload
+    (bellatrixPayloadFields as verkle.ExecutionPayloadHeader).executionWitnessRoot =
+      ssz.verkle.ExecutionWitness.hashTreeRoot((payload as verkle.ExecutionPayload).executionWitness);
   }
 
   if (fork >= ForkSeq.deneb) {

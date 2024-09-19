@@ -6,6 +6,7 @@ import {ZERO_HASH} from "../constants/index.js";
 export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
 export {upgradeStateToCapella} from "./upgradeStateToCapella.js";
+export {upgradeStateToVerkle} from "./upgradeStateToVerkle.js";
 export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
 export {upgradeStateToElectra} from "./upgradeStateToElectra.js";
 

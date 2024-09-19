@@ -24,11 +24,19 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: forkEpoch,
       });
+    case ForkName.verkle:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        VERKLE_FORK_EPOCH: forkEpoch,
+      });
     case ForkName.deneb:
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
+        VERKLE_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
       });
     case ForkName.electra:
@@ -36,6 +44,7 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
+        VERKLE_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
       });

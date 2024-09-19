@@ -230,6 +230,7 @@ export function initializeBeaconStateFromEth1(
   executionPayloadHeader?: CompositeViewDU<
     | typeof ssz.bellatrix.ExecutionPayloadHeader
     | typeof ssz.capella.ExecutionPayloadHeader
+    | typeof ssz.verkle.ExecutionPayloadHeader
     | typeof ssz.deneb.ExecutionPayloadHeader
     | typeof ssz.electra.ExecutionPayloadHeader
   >
@@ -294,6 +295,15 @@ export function initializeBeaconStateFromEth1(
     stateCapella.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.capella.ExecutionPayloadHeader>) ??
       ssz.capella.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (GENESIS_SLOT >= config.VERKLE_FORK_EPOCH) {
+    const stateVerkle = state as CompositeViewDU<typeof ssz.verkle.BeaconState>;
+    stateVerkle.fork.previousVersion = config.VERKLE_FORK_VERSION;
+    stateVerkle.fork.currentVersion = config.VERKLE_FORK_VERSION;
+    stateVerkle.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.verkle.ExecutionPayloadHeader>) ??
+      ssz.verkle.ExecutionPayloadHeader.defaultViewDU();
   }
 
   if (fork >= ForkSeq.deneb) {
