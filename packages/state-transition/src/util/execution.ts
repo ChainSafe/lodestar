@@ -2,7 +2,6 @@ import {
   bellatrix,
   capella,
   deneb,
-  electra,
   isBlindedBeaconBlockBody,
   ssz,
   BeaconBlock,

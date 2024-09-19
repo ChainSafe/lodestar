@@ -176,10 +176,10 @@ export type WithdrawalRpc = {
 };
 
 export type ExecutionRequestsRpc = {
-  deposits: DepositRequestRpc[],
-  withdrawals: WithdrawalRequestRpc[],
-  consolidations: ConsolidationRequestRpc[],
-}
+  deposits: DepositRequestRpc[];
+  withdrawals: WithdrawalRequestRpc[];
+  consolidations: ConsolidationRequestRpc[];
+};
 
 export type DepositRequestRpc = {
   pubkey: DATA;
@@ -361,7 +361,6 @@ export function parseExecutionPayload(
     //   );
     // }
     // (executionPayload as electra.ExecutionPayload).depositRequests = depositRequests.map(deserializeDepositRequest);
-
     // if (withdrawalRequests == null) {
     //   throw Error(
     //     `withdrawalRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
@@ -369,7 +368,6 @@ export function parseExecutionPayload(
     // }
     // (executionPayload as electra.ExecutionPayload).withdrawalRequests =
     //   withdrawalRequests.map(deserializeWithdrawalRequest);
-
     // if (consolidationRequests == null) {
     //   throw Error(
     //     `consolidationRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
@@ -482,9 +480,7 @@ function deserializeWithdrawalRequest(withdrawalRequest: WithdrawalRequestRpc): 
   };
 }
 
-function serializeConsolidationRequest(
-  consolidationRequest: electra.ConsolidationRequest
-): ConsolidationRequestRpc {
+function serializeConsolidationRequest(consolidationRequest: electra.ConsolidationRequest): ConsolidationRequestRpc {
   return {
     sourceAddress: bytesToData(consolidationRequest.sourceAddress),
     sourcePubkey: bytesToData(consolidationRequest.sourcePubkey),
@@ -492,9 +488,7 @@ function serializeConsolidationRequest(
   };
 }
 
-function deserializeConsolidationRequest(
-  consolidationRequest: ConsolidationRequestRpc
-): electra.ConsolidationRequest {
+function deserializeConsolidationRequest(consolidationRequest: ConsolidationRequestRpc): electra.ConsolidationRequest {
   return {
     sourceAddress: dataToBytes(consolidationRequest.sourceAddress, 20),
     sourcePubkey: dataToBytes(consolidationRequest.sourcePubkey, 48),
@@ -507,7 +501,7 @@ export function serializeExecutionRequests(executionRequests: ExecutionRequests)
   return {
     deposits: deposits.map(serializeDepositRequest),
     withdrawals: withdrawals.map(serializeWithdrawalRequest),
-    consolidations: consolidations.map(serializeConsolidationRequest), 
+    consolidations: consolidations.map(serializeConsolidationRequest),
   };
 }
 

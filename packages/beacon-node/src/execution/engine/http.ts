@@ -197,7 +197,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
-    executionRequests?: ExecutionRequests,
+    executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.electra
@@ -229,7 +229,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
         engineRequest = {
           method: "engine_newPayloadV4",
-          params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot, serializedExecutionRequests],
+          params: [
+            serializedExecutionPayload,
+            serializedVersionedHashes,
+            parentBeaconBlockRoot,
+            serializedExecutionRequests,
+          ],
           methodOpts: notifyNewPayloadOpts,
         };
       } else {

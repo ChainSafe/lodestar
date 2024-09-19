@@ -1,4 +1,12 @@
-import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName, ForkPostElectra, ForkPreBlobs} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkBlobs,
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkPostElectra,
+  ForkPreBlobs,
+} from "@lodestar/params";
 import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
