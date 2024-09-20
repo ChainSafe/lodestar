@@ -652,6 +652,11 @@ export class EpochCache {
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
+    // Because the slot was incremented before entering this function the "next epoch" is actually the "current epoch"
+    // in this context but that is not actually true because the state transition happens in the last 4 seconds of the
+    // epoch. For the context of this function "upcoming epoch" is used to denote the epoch that will begin after this
+    // function returns.  The epoch that is "next" once the state transition is complete is referred to as the
+    // epochAfterUpcoming for the same reason to help minimize confusion.
     const upcomingEpoch = this.nextEpoch;
     const epochAfterUpcoming = upcomingEpoch + 1;
 
