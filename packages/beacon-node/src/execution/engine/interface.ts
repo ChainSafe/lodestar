@@ -134,7 +134,8 @@ export interface IExecutionEngine {
     fork: ForkName,
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
-    parentBeaconBlockRoot?: Root
+    parentBeaconBlockRoot?: Root,
+    executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse>;
 
   /**
