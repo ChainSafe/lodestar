@@ -272,8 +272,6 @@ export function matchBlockWithDataColumns(
 
         const blockData = {
           fork: config.getForkName(block.data.message.slot),
-          dataColumnsLen: 0,
-          dataColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS),
           dataColumns: [],
           dataColumnsBytes: [],
           dataColumnsSource,

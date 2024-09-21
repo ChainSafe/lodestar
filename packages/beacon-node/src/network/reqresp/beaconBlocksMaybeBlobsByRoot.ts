@@ -233,8 +233,6 @@ export async function unavailableBeaconBlobsByRoot(
         fork: cachedData.fork,
         dataColumns: [],
         dataColumnsBytes: [],
-        dataColumnsLen: 0,
-        dataColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS),
         dataColumnsSource: DataColumnsSource.gossip,
       } as BlockInputDataDataColumns;
 

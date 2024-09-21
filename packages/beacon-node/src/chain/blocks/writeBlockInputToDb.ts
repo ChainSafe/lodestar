@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {toHex} from "@lodestar/utils";
 import {peerdas, ssz} from "@lodestar/types";
 import {BeaconChain} from "../chain.js";
@@ -48,11 +48,17 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
         });
       } else {
         const {custodyConfig} = this.seenGossipBlockInput;
-        const {
-          custodyColumnsLen: dataColumnsLen,
-          custodyColumnsIndex: dataColumnsIndex,
-          custodyColumns,
-        } = custodyConfig;
+        const {custodyColumnsLen, custodyColumnsIndex, custodyColumns} = custodyConfig;
+        const blobsLen = (block.message as peerdas.BeaconBlock).body.blobKzgCommitments.length;
+        let dataColumnsLen, dataColumnsIndex;
+        if (blobsLen === 0) {
+          dataColumnsLen = 0;
+          dataColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
+        } else {
+          dataColumnsLen = custodyColumnsLen;
+          dataColumnsIndex = custodyColumnsIndex;
+        }
+
         const dataColumnSidecars = blockData.dataColumns.filter((dataColumnSidecar) =>
           custodyColumns.includes(dataColumnSidecar.index)
         );
@@ -65,8 +71,6 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
             `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
           );
         }
-
-        const blobsLen = (block.message as peerdas.BeaconBlock).body.blobKzgCommitments.length;
 
         const dataColumnsSize =
           ssz.peerdas.DataColumnSidecar.minSize +
