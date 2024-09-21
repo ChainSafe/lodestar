@@ -208,6 +208,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await sleep(1000);
     const payloadAndBlockValue = await executionEngine.getPayload(ForkName.electra, payloadId2);
     const payload = payloadAndBlockValue.executionPayload as electra.ExecutionPayload;
+    const depositRequests = payloadAndBlockValue.executionRequests?.deposits;
 
     if (payload.transactions.length !== 1) {
       throw Error(`Number of transactions mismatched. Expected: 1, actual: ${payload.transactions.length}`);
@@ -219,11 +220,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       }
     }
 
-    if (payload.depositRequests.length !== 1) {
-      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${payload.depositRequests.length}`);
+    if (depositRequests === undefined || depositRequests.length !== 1) {
+      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${depositRequests?.length}`);
     }
 
-    const actualDepositRequest = payload.depositRequests[0];
+    const actualDepositRequest = depositRequests[0];
     assert.deepStrictEqual(
       actualDepositRequest,
       depositRequestB,

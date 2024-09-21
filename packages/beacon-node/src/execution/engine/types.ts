@@ -251,8 +251,6 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
   }
 
   // No changes in Electra
-  if (ForkSeq[fork] >= ForkSeq.electra) {
-  }
 
   return payload;
 }
@@ -344,8 +342,6 @@ export function parseExecutionPayload(
   }
 
   // No changes in Electra
-  if (ForkSeq[fork] >= ForkSeq.electra) {
-  }
 
   return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }

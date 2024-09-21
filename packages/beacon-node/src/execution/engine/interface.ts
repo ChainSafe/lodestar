@@ -172,7 +172,7 @@ export interface IExecutionEngine {
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
-    executionRequests?: ExecutionRequests,
+    executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }>;
 

@@ -1,5 +1,5 @@
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
-import {SLOTS_PER_EPOCH, ForkName, ForkSeq, isForkPostElectra} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
   ErrorJsonRpcResponse,
@@ -409,7 +409,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
-    executionRequests?: ExecutionRequests,
+    executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
     const method =
