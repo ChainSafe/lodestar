@@ -16,6 +16,7 @@ describe("SeenGossipBlockInput", () => {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const seenGossipBlockInput = new SeenGossipBlockInput({
+    sampledColumns: [],
     custodyColumns: [],
     custodyColumnsIndex: [],
     custodyColumnsLen: 0,

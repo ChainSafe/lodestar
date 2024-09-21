@@ -55,8 +55,6 @@ export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
 type ForkDataColumnsInfo = {fork: ForkName.peerdas};
 type DataColumnsData = {
   // marker of that columns are to be custodied
-  dataColumnsLen: number;
-  dataColumnsIndex: Uint8Array;
   dataColumns: peerdas.DataColumnSidecars;
   dataColumnsBytes: (Uint8Array | null)[];
   dataColumnsSource: DataColumnsSource;

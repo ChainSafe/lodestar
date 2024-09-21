@@ -6,15 +6,21 @@ import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {NodeId} from "../network/subnets/index.js";
 
-export type CustodyConfig = {custodyColumnsIndex: Uint8Array; custodyColumnsLen: number; custodyColumns: ColumnIndex[]};
+export type CustodyConfig = {
+  custodyColumnsIndex: Uint8Array;
+  custodyColumnsLen: number;
+  custodyColumns: ColumnIndex[];
+  sampledColumns: ColumnIndex[];
+};
 
 export function getCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
-  const custodyColumns = getCustodyColumns(
+  const custodyColumns = getDataColumns(nodeId, Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT));
+  const sampledColumns = getDataColumns(
     nodeId,
-    Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)
+    Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
   );
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
-  return {...custodyMeta, custodyColumns};
+  return {...custodyMeta, custodyColumns, sampledColumns};
 }
 
 export function getCustodyColumnsMeta(custodyColumns: ColumnIndex[]): {
@@ -33,8 +39,8 @@ export function getCustodyColumnsMeta(custodyColumns: ColumnIndex[]): {
 }
 
 // optimize by having a size limited index/map
-export function getCustodyColumns(nodeId: NodeId, custodySubnetCount: number): ColumnIndex[] {
-  const subnetIds = getCustodyColumnSubnets(nodeId, custodySubnetCount);
+export function getDataColumns(nodeId: NodeId, custodySubnetCount: number): ColumnIndex[] {
+  const subnetIds = getDataColumnSubnets(nodeId, custodySubnetCount);
   const columnsPerSubnet = Number(NUMBER_OF_COLUMNS / DATA_COLUMN_SIDECAR_SUBNET_COUNT);
 
   const columnIndexes = [];
@@ -49,7 +55,7 @@ export function getCustodyColumns(nodeId: NodeId, custodySubnetCount: number): C
   return columnIndexes;
 }
 
-export function getCustodyColumnSubnets(nodeId: NodeId, custodySubnetCount: number): number[] {
+export function getDataColumnSubnets(nodeId: NodeId, custodySubnetCount: number): number[] {
   const subnetIds: number[] = [];
   if (custodySubnetCount > DATA_COLUMN_SIDECAR_SUBNET_COUNT) {
     custodySubnetCount = DATA_COLUMN_SIDECAR_SUBNET_COUNT;

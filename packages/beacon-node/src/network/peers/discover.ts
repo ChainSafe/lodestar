@@ -15,7 +15,7 @@ import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {NodeId, computeNodeId} from "../subnets/interface.js";
-import {getCustodyColumnSubnets} from "../../util/dataColumns.js";
+import {getDataColumnSubnets} from "../../util/dataColumns.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 
@@ -96,7 +96,7 @@ export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
   private nodeId: NodeId;
-  private custodySubnets: number[];
+  private sampleSubnets: number[];
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: NetworkCoreMetrics | null;
   private logger: LoggerNode;
@@ -129,9 +129,9 @@ export class PeerDiscovery {
     this.discv5 = discv5;
     this.nodeId = nodeId;
     // we will only connect to peers that can provide us custody
-    this.custodySubnets = getCustodyColumnSubnets(
+    this.sampleSubnets = getDataColumnSubnets(
       nodeId,
-      Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT)
+      Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
     );
 
     this.maxPeers = opts.maxPeers;
@@ -447,14 +447,14 @@ export class PeerDiscovery {
   private shouldDialPeer(peer: CachedENR): boolean {
     const nodeId = computeNodeId(peer.peerId);
     const peerCustodySubnetCount = peer.custodySubnetCount;
-    const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
+    const peerCustodySubnets = getDataColumnSubnets(nodeId, peerCustodySubnetCount);
 
-    const matchingSubnetsNum = this.custodySubnets.reduce(
+    const matchingSubnetsNum = this.sampleSubnets.reduce(
       (acc, elem) => acc + (peerCustodySubnets.includes(elem) ? 1 : 0),
       0
     );
-    const hasAllColumns = matchingSubnetsNum === this.custodySubnets.length;
-    const hasMinCustodyMatchingColumns = matchingSubnetsNum >= this.config.CUSTODY_REQUIREMENT;
+    const hasAllColumns = matchingSubnetsNum === this.sampleSubnets.length;
+    const hasMinCustodyMatchingColumns = matchingSubnetsNum >= Math.max(this.config.CUSTODY_REQUIREMENT);
 
     this.logger.warn("peerCustodySubnets", {
       peerId: peer.peerId.toString(),
@@ -462,7 +462,7 @@ export class PeerDiscovery {
       hasAllColumns,
       peerCustodySubnetCount,
       peerCustodySubnets: peerCustodySubnets.join(","),
-      custodySubnets: this.custodySubnets.join(","),
+      sampleSubnets: this.sampleSubnets.join(","),
       nodeId: `${toHexString(this.nodeId)}`,
     });
     if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {

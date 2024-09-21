@@ -17,7 +17,7 @@ import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
-import {getCustodyColumnSubnets, getCustodyColumns} from "../../util/dataColumns.js";
+import {getDataColumnSubnets, getDataColumns} from "../../util/dataColumns.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeersData, PeerData} from "./peersData.js";
 import {getKnownClientFromAgentVersion, ClientKind} from "./client.js";
@@ -132,7 +132,7 @@ enum RelevantPeerStatus {
  */
 export class PeerManager {
   private nodeId: NodeId;
-  private custodySubnets: number[];
+  private sampleSubnets: number[];
   private readonly libp2p: Libp2p;
   private readonly logger: LoggerNode;
   private readonly metrics: NetworkCoreMetrics | null;
@@ -172,9 +172,9 @@ export class PeerManager {
     this.discovery = discovery;
     this.nodeId = modules.nodeId;
     // we will only connect to peers that can provide us custody
-    this.custodySubnets = getCustodyColumnSubnets(
+    this.sampleSubnets = getDataColumnSubnets(
       this.nodeId,
-      Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT)
+      Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
     );
 
     const {metrics} = modules;
@@ -411,13 +411,13 @@ export class PeerManager {
       const custodySubnetCount = peerData?.metadata?.csc;
 
       const peerCustodySubnetCount = custodySubnetCount ?? 4;
-      const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
+      const peerCustodySubnets = getDataColumnSubnets(nodeId, peerCustodySubnetCount);
 
-      const matchingSubnetsNum = this.custodySubnets.reduce(
+      const matchingSubnetsNum = this.sampleSubnets.reduce(
         (acc, elem) => acc + (peerCustodySubnets.includes(elem) ? 1 : 0),
         0
       );
-      const hasAllColumns = matchingSubnetsNum === this.custodySubnets.length;
+      const hasAllColumns = matchingSubnetsNum === this.sampleSubnets.length;
       const hasMinCustodyMatchingColumns = matchingSubnetsNum >= this.config.CUSTODY_REQUIREMENT;
 
       this.logger.warn(`onStatus ${custodySubnetCount == undefined ? "undefined custody count assuming 4" : ""}`, {
@@ -427,7 +427,7 @@ export class PeerManager {
         custodySubnetCount,
         hasAllColumns,
         peerCustodySubnets: peerCustodySubnets.join(","),
-        myCustodySubnets: this.custodySubnets.join(","),
+        mySampleSubnets: this.sampleSubnets.join(","),
       });
 
       if (this.opts.onlyConnectToBiggerDataNodes && !hasAllColumns) {
@@ -447,7 +447,7 @@ export class PeerManager {
       }
 
       // coule be optimized by directly using the previously calculated subnet
-      const dataColumns = getCustodyColumns(nodeId, peerCustodySubnetCount);
+      const dataColumns = getDataColumns(nodeId, peerCustodySubnetCount);
       this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status, dataColumns});
     }
   }

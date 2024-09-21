@@ -39,7 +39,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
   const dataColumnsDataBlocks = [];
 
   const {custodyConfig} = network;
-  const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.custodyColumns;
+  const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.sampledColumns;
   const peerColumns = network.getConnectedPeerCustody(peerId);
 
   // get match
@@ -243,7 +243,7 @@ export async function unavailableBeaconBlobsByRoot(
       availableBlockInput = getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
     } else {
       const {custodyConfig} = network;
-      const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
+      const neededColumns = custodyConfig.sampledColumns.reduce((acc, elem) => {
         if (dataColumnsCache.get(elem) === undefined) {
           acc.push(elem);
         }

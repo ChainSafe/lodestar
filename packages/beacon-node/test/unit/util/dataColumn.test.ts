@@ -6,14 +6,14 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {bigIntToBytes} from "@lodestar/utils";
 
-import {getCustodyColumns} from "../../../src/util/dataColumns.js";
+import {getDataColumns} from "../../../src/util/dataColumns.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 
-describe("getCustodyColumns", () => {
+describe("getDataColumns", () => {
   const testCases = [
     ["cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f", 4, [2, 80, 89, 118]],
     [
@@ -30,7 +30,7 @@ describe("getCustodyColumns", () => {
     it(`${nodeIdHex} / ${numSubnets}`, async () => {
       const nodeId = nodeIdHex.length === 64 ? fromHexString(nodeIdHex) : bigIntToBytes(BigInt(nodeIdHex), 32, "be");
 
-      const columnIndexs = getCustodyColumns(nodeId, numSubnets);
+      const columnIndexs = getDataColumns(nodeId, numSubnets);
       expect(columnIndexs).toEqual(custodyColumns);
     });
   }

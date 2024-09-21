@@ -47,7 +47,21 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           root: blockRootHex,
         });
       } else {
-        const {dataColumnsLen, dataColumnsIndex, dataColumns: dataColumnSidecars} = blockData;
+        const {custodyConfig} = this.seenGossipBlockInput;
+        const {
+          custodyColumnsLen: dataColumnsLen,
+          custodyColumnsIndex: dataColumnsIndex,
+          custodyColumns,
+        } = custodyConfig;
+        const dataColumnSidecars = blockData.dataColumns.filter((dataColumnSidecar) =>
+          custodyColumns.includes(dataColumnSidecar.index)
+        );
+        if (dataColumnSidecars.length !== dataColumnsLen) {
+          throw Error(
+            `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
+          );
+        }
+
         const blobsLen = (block.message as peerdas.BeaconBlock).body.blobKzgCommitments.length;
 
         const dataColumnsSize =
@@ -104,7 +118,21 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
           const blobSidecars = blockData.blobs;
           blobsToRemove.push({blockRoot, slot, blobSidecars});
         } else {
-          const {dataColumnsLen, dataColumnsIndex, dataColumns: dataColumnSidecars} = blockData;
+          const {custodyConfig} = this.seenGossipBlockInput;
+          const {
+            custodyColumnsLen: dataColumnsLen,
+            custodyColumnsIndex: dataColumnsIndex,
+            custodyColumns,
+          } = custodyConfig;
+          const dataColumnSidecars = blockData.dataColumns.filter((dataColumnSidecar) =>
+            custodyColumns.includes(dataColumnSidecar.index)
+          );
+          if (dataColumnSidecars.length !== dataColumnsLen) {
+            throw Error(
+              `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
+            );
+          }
+
           const blobsLen = (block.message as peerdas.BeaconBlock).body.blobKzgCommitments.length;
           const dataColumnsSize = ssz.peerdas.Cell.fixedSize * blobsLen;
 

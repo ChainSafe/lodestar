@@ -77,7 +77,7 @@ export async function beaconBlocksMaybeBlobsByRange(
     } else {
       const {custodyConfig} = network;
       // get columns
-      const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.custodyColumns;
+      const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.sampledColumns;
       const peerColumns = network.getConnectedPeerCustody(peerId);
 
       // get match
@@ -227,8 +227,8 @@ export function matchBlockWithDataColumns(
   const blockInputs: BlockInput[] = [];
   let dataColumnSideCarIndex = 0;
   let lastMatchedSlot = -1;
-  const {custodyColumns, custodyColumnsLen, custodyColumnsIndex} = custodyConfig;
-  const neededColumns = prevPartialDownload?.pendingDataColumns ?? custodyColumns;
+  const {sampledColumns} = custodyConfig;
+  const neededColumns = prevPartialDownload?.pendingDataColumns ?? sampledColumns;
   const shouldHaveAllData = neededColumns.reduce((acc, elem) => acc && requestedColumns.includes(elem), true);
 
   // Match dataColumnSideCar with the block as some blocks would have no dataColumns and hence
@@ -292,7 +292,7 @@ export function matchBlockWithDataColumns(
         if (dataColumnSidecars.length !== requestedColumns.length || !requestedColumnsPresent) {
           console.log(
             "matchBlockWithDataColumns",
-            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${custodyColumnsLen} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`,
+            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`,
             {
               allBlocks: allBlocks.length,
               allDataColumnSidecars: allDataColumnSidecars.length,
@@ -302,7 +302,7 @@ export function matchBlockWithDataColumns(
             }
           );
           throw Error(
-            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} blobKzgCommitmentsLen=${blobKzgCommitmentsLen} with numColumns=${custodyColumnsLen} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`
+            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} blobKzgCommitmentsLen=${blobKzgCommitmentsLen} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`
           );
         }
 
@@ -329,15 +329,13 @@ export function matchBlockWithDataColumns(
         }
 
         if (shouldHaveAllData) {
-          const {dataColumns, dataColumnsBytes} = getBlockInputDataColumns(cachedData.dataColumnsCache, custodyColumns);
+          const {dataColumns, dataColumnsBytes} = getBlockInputDataColumns(cachedData.dataColumnsCache, sampledColumns);
 
           const blockData = {
             fork: config.getForkName(block.data.message.slot),
-            dataColumnsLen: custodyColumnsLen,
-            dataColumnsIndex: custodyColumnsIndex,
             dataColumns,
-            dataColumnsSource,
             dataColumnsBytes,
+            dataColumnsSource,
           } as BlockInputDataDataColumns;
 
           // TODO DENEB: instead of null, pass payload in bytes

@@ -60,7 +60,7 @@ const MAX_GOSSIPINPUT_CACHE = 5;
  */
 export class SeenGossipBlockInput {
   private blockInputCache = new Map<RootHex, BlockInputCacheType>();
-  constructor(private custodyConfig: CustodyConfig) {}
+  constructor(public custodyConfig: CustodyConfig) {}
   globalCacheId = 0;
 
   prune(): void {
@@ -261,22 +261,20 @@ export class SeenGossipBlockInput {
           };
         }
 
-        const custodyIndexesPresent =
-          dataColumnsCache.size >= this.custodyConfig.custodyColumnsLen &&
-          this.custodyConfig.custodyColumns.reduce(
+        const sampledIndexesPresent =
+          dataColumnsCache.size >= this.custodyConfig.sampledColumns.length &&
+          this.custodyConfig.sampledColumns.reduce(
             (acc, columnIndex) => acc && dataColumnsCache.has(columnIndex),
             true
           );
 
-        if (custodyIndexesPresent) {
-          const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.custodyColumns);
+        if (sampledIndexesPresent) {
+          const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
           const {dataColumns} = allDataColumns;
           const blockData = {
             fork: cachedData.fork,
             ...allDataColumns,
-            dataColumnsLen: this.custodyConfig.custodyColumnsLen,
-            dataColumnsIndex: this.custodyConfig.custodyColumnsIndex,
             dataColumnsSource: DataColumnsSource.gossip,
           };
           resolveAvailability(blockData);
@@ -296,7 +294,7 @@ export class SeenGossipBlockInput {
             blockInputMeta: {
               pending: null,
               haveColumns: dataColumns.length,
-              expectedColumns: this.custodyConfig.custodyColumnsLen,
+              expectedColumns: this.custodyConfig.sampledColumns.length,
             },
           };
         } else {
@@ -314,7 +312,7 @@ export class SeenGossipBlockInput {
             blockInputMeta: {
               pending: GossipedInputType.dataColumn,
               haveColumns: dataColumnsCache.size,
-              expectedColumns: this.custodyConfig.custodyColumnsLen,
+              expectedColumns: this.custodyConfig.sampledColumns.length,
             },
           };
         }

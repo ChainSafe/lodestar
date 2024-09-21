@@ -2,7 +2,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex, deneb} from "@lodestar/types";
-import {INTERVALS_PER_SLOT, ForkName} from "@lodestar/params";
+import {INTERVALS_PER_SLOT, ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {PeerIdStr} from "../util/peerId.js";
@@ -297,7 +297,7 @@ export class UnknownBlockSync {
       if (cachedData.fork === ForkName.peerdas) {
         const {dataColumnsCache} = cachedData;
         const {custodyConfig} = this.network;
-        const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
+        const neededColumns = custodyConfig.sampledColumns.reduce((acc, elem) => {
           if (dataColumnsCache.get(elem) === undefined) {
             acc.push(elem);
           }
@@ -349,7 +349,7 @@ export class UnknownBlockSync {
         this.pendingBlocks.set(block.blockRootHex, block);
         block.status = PendingBlockStatus.pending;
         // parentSlot > finalizedSlot, continue downloading parent of parent
-        block.downloadAttempts += this.network.custodyConfig.custodyColumnsLen / 4;
+        block.downloadAttempts += this.config.CUSTODY_REQUIREMENT / NUMBER_OF_COLUMNS;
         const errorData = {root: block.blockRootHex, attempts: block.downloadAttempts, unknownBlockType};
         if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
           // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
@@ -543,7 +543,7 @@ export class UnknownBlockSync {
         if (cachedData.fork === ForkName.peerdas) {
           const {dataColumnsCache} = cachedData;
           const {custodyConfig} = this.network;
-          const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
+          const neededColumns = custodyConfig.sampledColumns.reduce((acc, elem) => {
             if (dataColumnsCache.get(elem) === undefined) {
               acc.push(elem);
             }
@@ -643,7 +643,7 @@ export class UnknownBlockSync {
         const pendingBlobs = blobKzgCommitmentsLen - cachedData.blobsCache.size;
         Object.assign(dataMeta, {pendingBlobs});
       } else if (cachedData.fork === ForkName.peerdas) {
-        const pendingColumns = this.network.custodyConfig.custodyColumnsLen - cachedData.dataColumnsCache.size;
+        const pendingColumns = this.network.custodyConfig.sampledColumns.length - cachedData.dataColumnsCache.size;
         Object.assign(dataMeta, {pendingColumns});
       }
     }
@@ -656,7 +656,7 @@ export class UnknownBlockSync {
         if (cachedData.fork === ForkName.peerdas) {
           const {dataColumnsCache} = cachedData;
           const {custodyConfig} = this.network;
-          const neededColumns = custodyConfig.custodyColumns.reduce((acc, elem) => {
+          const neededColumns = custodyConfig.sampledColumns.reduce((acc, elem) => {
             if (dataColumnsCache.get(elem) === undefined) {
               acc.push(elem);
             }
