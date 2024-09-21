@@ -58,7 +58,6 @@ export type EngineApiRpcParamTypes = {
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
   engine_getPayloadBodiesByHashV1: DATA[][];
-  engine_getPayloadBodiesByHashV2: DATA[][];
 
   /**
    *  1. start: QUANTITY, 64 bits - Starting block number
@@ -70,7 +69,6 @@ export type EngineApiRpcParamTypes = {
    * Object - Instance of ClientVersion
    */
   engine_getClientVersionV1: [ClientVersionRpc];
-  engine_getPayloadBodiesByRangeV2: [start: QUANTITY, count: QUANTITY];
 };
 
 export type PayloadStatus = {
@@ -109,12 +107,10 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV4: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
-  engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
-  engine_getPayloadBodiesByRangeV2: (ExecutionPayloadBodyRpc | null)[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -122,6 +118,7 @@ type ExecutionPayloadRpcWithValue = {
   // even though CL tracks this as executionPayloadValue, EL returns this as blockValue
   blockValue: QUANTITY;
   blobsBundle?: BlobsBundleRpc;
+  requests?: ExecutionRequestsRpc;
   shouldOverrideBuilder?: boolean;
 };
 type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithValue;
@@ -129,19 +126,11 @@ type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithVal
 export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
   withdrawals: WithdrawalV1[] | null | undefined;
-  // currently there is a discepancy between EL and CL field name references for deposit requests
-  // its likely CL receipt will be renamed to requests
-  depositRequests: DepositRequestRpc[] | null | undefined;
-  withdrawalRequests: WithdrawalRequestRpc[] | null | undefined;
-  consolidationRequests: ConsolidationRequestRpc[] | null | undefined;
 };
 
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
-  depositRequests: electra.DepositRequests | null;
-  withdrawalRequests: electra.WithdrawalRequests | null;
-  consolidationRequests: electra.ConsolidationRequests | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -163,9 +152,9 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
-  depositRequests?: DepositRequestRpc[]; // ELECTRA
-  withdrawalRequests?: WithdrawalRequestRpc[]; // ELECTRA
-  consolidationRequests?: ConsolidationRequestRpc[]; // ELECTRA
+  // depositRequests?: DepositRequestRpc[]; // ELECTRA
+  // withdrawalRequests?: WithdrawalRequestRpc[]; // ELECTRA
+  // consolidationRequests?: ConsolidationRequestRpc[]; // ELECTRA
 };
 
 export type WithdrawalRpc = {
@@ -500,11 +489,6 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
     ? {
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
-        depositRequests: data.depositRequests ? data.depositRequests.map(deserializeDepositRequest) : null,
-        withdrawalRequests: data.withdrawalRequests ? data.withdrawalRequests.map(deserializeWithdrawalRequest) : null,
-        consolidationRequests: data.consolidationRequests
-          ? data.consolidationRequests.map(deserializeConsolidationRequest)
-          : null,
       }
     : null;
 }
@@ -514,11 +498,6 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
-        depositRequests: data.depositRequests ? data.depositRequests.map(serializeDepositRequest) : null,
-        withdrawalRequests: data.withdrawalRequests ? data.withdrawalRequests.map(serializeWithdrawalRequest) : null,
-        consolidationRequests: data.consolidationRequests
-          ? data.consolidationRequests.map(serializeConsolidationRequest)
-          : null,
       }
     : null;
 }
