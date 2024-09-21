@@ -57,6 +57,10 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           custodyColumns.includes(dataColumnSidecar.index)
         );
         if (dataColumnSidecars.length !== dataColumnsLen) {
+          console.log({
+            custodyColumns,
+            blockDataColumns: blockData.dataColumns.map((dataColumnSidecar) => dataColumnSidecar.index),
+          });
           throw Error(
             `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
           );

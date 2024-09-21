@@ -107,6 +107,6 @@ export const chainConfig: ChainConfig = {
 
   // Peerdas
   SAMPLES_PER_SLOT: 8,
-  CUSTODY_REQUIREMENT: 1,
+  CUSTODY_REQUIREMENT: 4,
   NODE_CUSTODY_REQUIREMENT: 1,
 };

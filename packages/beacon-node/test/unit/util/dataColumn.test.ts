@@ -6,12 +6,32 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {bigIntToBytes} from "@lodestar/utils";
 
-import {getDataColumns} from "../../../src/util/dataColumns.js";
+import {getDataColumns, getCustodyConfig} from "../../../src/util/dataColumns.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+
+describe("getCustodyConfig", () => {
+  it("validateDataColumnsSidecars", () => {
+    const config = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      PEERDAS_FORK_EPOCH: 0,
+    });
+    const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
+    const custodyConfig = getCustodyConfig(nodeId, config);
+    const {custodyColumnsLen, custodyColumns, custodyColumnsIndex, sampledColumns} = custodyConfig;
+
+    expect(custodyColumnsLen).toEqual(4);
+    expect(custodyColumns).toEqual([2, 80, 89, 118]);
+    expect(sampledColumns.length).toEqual(8);
+    const custodyPresentInSample = custodyColumns.reduce((acc, elem) => acc && sampledColumns.includes(elem), true);
+    expect(custodyPresentInSample).toEqual(true);
+  });
+});
 
 describe("getDataColumns", () => {
   const testCases = [
