@@ -283,23 +283,27 @@ export function parseExecutionPayload(
   executionPayload: ExecutionPayload;
   executionPayloadValue: Wei;
   blobsBundle?: BlobsBundle;
+  executionRequests?: ExecutionRequests;
   shouldOverrideBuilder?: boolean;
 } {
   let data: ExecutionPayloadRpc;
   let executionPayloadValue: Wei;
   let blobsBundle: BlobsBundle | undefined;
+  let executionRequests: ExecutionRequests | undefined;
   let shouldOverrideBuilder: boolean;
 
   if (hasPayloadValue(response)) {
     executionPayloadValue = quantityToBigint(response.blockValue);
     data = response.executionPayload;
     blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
+    executionRequests = response.requests ? deserializeExecutionRequests(response.requests) : undefined;
     shouldOverrideBuilder = response.shouldOverrideBuilder ?? false;
   } else {
     data = response;
     // Just set it to zero as default
     executionPayloadValue = BigInt(0);
     blobsBundle = undefined;
+    executionRequests = undefined;
     shouldOverrideBuilder = false;
   }
 
@@ -352,33 +356,9 @@ export function parseExecutionPayload(
 
   // No changes in Electra
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    // // electra adds depositRequests/depositRequests
-    // const {depositRequests, withdrawalRequests, consolidationRequests} = data;
-    // // Geth can also reply with null
-    // if (depositRequests == null) {
-    //   throw Error(
-    //     `depositRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
-    //   );
-    // }
-    // (executionPayload as electra.ExecutionPayload).depositRequests = depositRequests.map(deserializeDepositRequest);
-    // if (withdrawalRequests == null) {
-    //   throw Error(
-    //     `withdrawalRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
-    //   );
-    // }
-    // (executionPayload as electra.ExecutionPayload).withdrawalRequests =
-    //   withdrawalRequests.map(deserializeWithdrawalRequest);
-    // if (consolidationRequests == null) {
-    //   throw Error(
-    //     `consolidationRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
-    //   );
-    // }
-    // (executionPayload as electra.ExecutionPayload).consolidationRequests = consolidationRequests.map(
-    //   deserializeConsolidationRequest
-    // );
   }
 
-  return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
+  return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }
 
 export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttributesRpc {

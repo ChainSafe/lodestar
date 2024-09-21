@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {Root, RootHex, capella, Wei, ExecutionPayload} from "@lodestar/types";
+import {Root, RootHex, capella, Wei, ExecutionPayload, ExecutionRequests} from "@lodestar/types";
 
 import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
@@ -171,6 +171,7 @@ export interface IExecutionEngine {
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
+    executionRequests?: ExecutionRequests,
     shouldOverrideBuilder?: boolean;
   }>;
 

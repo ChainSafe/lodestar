@@ -409,6 +409,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
+    executionRequests?: ExecutionRequests,
     shouldOverrideBuilder?: boolean;
   }> {
     const method =
