@@ -216,20 +216,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.stateReloadDuration.startTimer();
-      const newCachedState = loadCachedBeaconState(
-        seedState,
-        stateBytes,
-        {
-          shufflingGetter: (shufflingEpoch, decisionRootHex) => {
-            const shuffling = this.shufflingCache.getSync(shufflingEpoch, decisionRootHex);
-            if (shuffling == null) {
-              this.metrics?.stateReloadShufflingCacheMiss.inc();
-            }
-            return shuffling;
-          },
-        },
-        validatorsBytes
-      );
+      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {}, validatorsBytes);
       newCachedState.commit();
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
       timer?.();

@@ -1,6 +1,12 @@
-import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
-import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {phase0, Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {intDiv, toRootHex} from "@lodestar/utils";
+import {
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  SLOTS_PER_HISTORICAL_ROOT,
+  MIN_ACTIVATION_BALANCE,
+} from "@lodestar/params";
 
 import {
   hasMarkers,
@@ -155,12 +161,12 @@ export interface EpochTransitionCache {
    * | beforeProcessEpoch               | calculate during the validator loop|
    * | afterEpochTransitionCache                | read it                            |
    */
-  nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+  nextShufflingActiveIndices: Uint32Array;
 
   /**
-   * We do not use up to `nextEpochShufflingActiveValidatorIndices.length`, use this to control that
+   * Shuffling decision root that gets set on the EpochCache in afterProcessEpoch
    */
-  nextEpochShufflingActiveIndicesLength: number;
+  nextShufflingDecisionRoot: RootHex;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -360,6 +366,24 @@ export function beforeProcessEpoch(
     }
   }
 
+  // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
+  const epochAfterNext = state.epochCtx.nextEpoch + 1;
+  // cannot call calculateShufflingDecisionRoot here because spec prevent getting current slot
+  // as a decision block.  we are part way through the transition though and this was added in
+  // process slot beforeProcessEpoch happens so it available and valid
+  const nextShufflingDecisionRoot = toRootHex(state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT));
+  const nextShufflingActiveIndices = new Uint32Array(nextEpochShufflingActiveIndicesLength);
+  if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
+    throw new Error(
+      `Invalid activeValidatorCount: ${nextEpochShufflingActiveIndicesLength} > ${nextEpochShufflingActiveValidatorIndices.length}`
+    );
+  }
+  // only the first `activeValidatorCount` elements are copied to `activeIndices`
+  for (let i = 0; i < nextEpochShufflingActiveIndicesLength; i++) {
+    nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
+  }
+  state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
+
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
   } else if (totalActiveStakeByIncrement >= Number.MAX_SAFE_INTEGER) {
@@ -483,8 +507,8 @@ export function beforeProcessEpoch(
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,
     indicesToEject,
-    nextEpochShufflingActiveValidatorIndices,
-    nextEpochShufflingActiveIndicesLength,
+    nextShufflingDecisionRoot,
+    nextShufflingActiveIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

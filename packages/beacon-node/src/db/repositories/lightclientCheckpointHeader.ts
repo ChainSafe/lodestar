@@ -25,4 +25,8 @@ export class CheckpointHeaderRepository extends Repository<Uint8Array, LightClie
   decodeValue(data: Uint8Array): LightClientHeader {
     return getLightClientHeaderTypeFromBytes(this.config, data).deserialize(data);
   }
+
+  getId(value: LightClientHeader): Uint8Array {
+    return this.config.getLightClientForkTypes(value.beacon.slot).LightClientHeader.hashTreeRoot(value);
+  }
 }

@@ -15,6 +15,7 @@ import {
   computeEndSlotAtEpoch,
   getSlotFractionFromInterval,
   SlotInterval,
+  computeAnchorCheckpoint,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -62,7 +63,6 @@ import {
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
-import {computeAnchorCheckpoint} from "./initState.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
   SeenAttesters,
@@ -249,7 +249,6 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
-    this.shufflingCache = new ShufflingCache(metrics, this.opts);
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -264,9 +263,21 @@ export class BeaconChain implements IBeaconChain {
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousShuffling.epoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.currentShuffling.epoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextShuffling.epoch);
+
+    this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
+      {
+        shuffling: cachedState.epochCtx.previousShuffling,
+        decisionRoot: cachedState.epochCtx.previousDecisionRoot,
+      },
+      {
+        shuffling: cachedState.epochCtx.currentShuffling,
+        decisionRoot: cachedState.epochCtx.currentDecisionRoot,
+      },
+      {
+        shuffling: cachedState.epochCtx.nextShuffling,
+        decisionRoot: cachedState.epochCtx.nextDecisionRoot,
+      },
+    ]);
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
@@ -905,8 +916,8 @@ export class BeaconChain implements IBeaconChain {
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
 
-    // resolve the promise to unblock other calls of the same epoch and dependent root
-    return this.shufflingCache.processState(state, attEpoch);
+    // should always be the current epoch of the active context so no need to await a result from the ShufflingCache
+    return state.epochCtx.getShufflingAtEpoch(attEpoch);
   }
 
   /**
