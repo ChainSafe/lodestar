@@ -11,6 +11,7 @@ import {
   ResponseIncoming,
 } from "../types.js";
 import {RespStatus} from "../interface.js";
+import {Metrics} from "../metrics.js";
 
 /**
  * Internal helper type to signal stream ended early
@@ -29,6 +30,8 @@ enum StreamStatus {
  */
 export function responseDecode(
   protocol: MixedProtocol,
+  protocolID: string,
+  metrics: Metrics | null,
   cbs: {
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;
@@ -65,6 +68,8 @@ export function responseDecode(
       const forkName = await readContextBytes(protocol.contextBytes, bufferedSource);
       const typeSizes = protocol.responseSizes(forkName);
       const chunkData = await readEncodedPayload(bufferedSource, protocol.encoding, typeSizes);
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      metrics?.responsesReceivedBytesTotalCount.inc({protocol_id: protocolID}, chunkData.length);
 
       yield {
         data: chunkData,

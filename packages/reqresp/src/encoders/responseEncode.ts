@@ -16,14 +16,14 @@ const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
  */
 export function responseEncodeSuccess(
   protocol: Protocol,
-  cbs: {onChunk: (chunkIndex: number) => void}
+  cbs: {onChunk: (chunkIndex: number, chunkBytes: number) => void}
 ): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     let chunkIndex = 0;
 
     for await (const chunk of source) {
       // Postfix increment, return 0 as first chunk
-      cbs.onChunk(chunkIndex++);
+      cbs.onChunk(chunkIndex++, chunk.data.length);
 
       // <result>
       yield SUCCESS_BUFFER;

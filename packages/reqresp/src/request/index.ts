@@ -140,6 +140,11 @@ export async function* sendRequest(
       }
     );
 
+    // only count successful request transmissions and ignore count and body sent size on errors
+    /* eslint-disable @typescript-eslint/naming-convention */
+    metrics?.requestsSentTotalCount.inc({protocol_id: protocolId});
+    metrics?.requestsSentBytesTotalCount.inc({protocol_id: protocolId}, requestBody.length);
+    /* eslint-enable @typescript-eslint/naming-convention */
     logger.debug("Req  request sent", logCtx);
 
     // For goodbye method peers may disconnect before completing the response and trigger multiple errors.
@@ -178,7 +183,7 @@ export async function* sendRequest(
         ]),
 
         // Transforms `Buffer` chunks to yield `ResponseBody` chunks
-        responseDecode(protocol, {
+        responseDecode(protocol, protocolId, metrics, {
           onFirstHeader() {
             // On first byte, cancel the single use TTFB_TIMEOUT, and start RESP_TIMEOUT
             clearTimeout(timeoutTTFB);
@@ -196,6 +201,8 @@ export async function* sendRequest(
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
       logger.verbose("Req  done", {...logCtx});
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      metrics?.responsesReceivedTotalCount.inc({protocol_id: protocolId});
     } finally {
       clearTimeout(timeoutTTFB);
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);

@@ -91,6 +91,11 @@ export async function handleRequest({
           throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED});
         }
 
+        /* eslint-disable @typescript-eslint/naming-convention */
+        metrics?.requestsReceivedBytesTotalCount.inc({protocol_id: protocolID}, requestBody.length);
+        metrics?.requestsReceivedTotalCount.inc({protocol_id: protocolID});
+        /* eslint-enable @typescript-eslint/naming-convention */
+
         const requestChunk: ReqRespRequest = {
           data: requestBody,
           version: protocol.version,
@@ -103,8 +108,10 @@ export async function handleRequest({
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
           responseEncodeSuccess(protocol, {
-            onChunk(chunkIndex) {
+            onChunk(chunkIndex, chunkBytes) {
               if (chunkIndex === 0) timerTTFB?.();
+              // eslint-disable-next-line @typescript-eslint/naming-convention
+              metrics?.responsesSentBytesTotalCount.inc({protocol_id: protocolID}, chunkBytes);
             },
           })
         );
@@ -133,9 +140,12 @@ export async function handleRequest({
 
   if (responseError !== null) {
     logger.verbose("Resp error", logCtx, responseError);
+    // TODO: (@matthewkeil) should be have a metrics?.responseSentTotalErrorCount.inc()?
     throw responseError;
   } else {
     // NOTE: Only log once per request to verbose, intermediate steps to debug
     logger.verbose("Resp done", logCtx);
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    metrics?.responsesSentTotalCount.inc({protocol_id: protocolID});
   }
 }

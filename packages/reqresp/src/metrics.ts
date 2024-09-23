@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {MetricsRegister} from "@lodestar/utils";
 
 export type Metrics = ReturnType<typeof getMetrics>;
@@ -10,6 +11,55 @@ export function getMetrics(register: MetricsRegister) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
   return {
+    requestsSentTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_requests_sent_total",
+      help: "Number of requests sent",
+      labelNames: ["protocol_id"],
+    }),
+    requestsSentBytesTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_requests_bytes_sent_total",
+      help: "Number of requests bytes sent",
+      labelNames: ["protocol_id"],
+    }),
+    requestsReceivedTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_requests_received_total",
+      help: "Number of requests received",
+      labelNames: ["protocol_id"],
+    }),
+    requestsReceivedBytesTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_requests_bytes_received_total",
+      help: "Number of requests bytes received",
+      labelNames: ["protocol_id"],
+    }),
+    responsesSentTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_responses_sent_total",
+      help: "Number of responses sent",
+      labelNames: ["protocol_id"],
+    }),
+    responsesSentBytesTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_responses_bytes_sent_total",
+      help: "Number of responses bytes sent",
+      labelNames: ["protocol_id"],
+    }),
+    responsesReceivedTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_responses_received_total",
+      help: "Number of responses received",
+      labelNames: ["protocol_id"],
+    }),
+    responsesReceivedBytesTotalCount: register.counter<{protocol_id: string}>({
+      // ethereum/beacon-metrics defined
+      name: "libp2p_rpc_responses_bytes_received_total",
+      help: "Number of responses bytes received",
+      labelNames: ["protocol_id"],
+    }),
+
     outgoingRequests: register.gauge<{method: string}>({
       name: "beacon_reqresp_outgoing_requests_total",
       help: "Counts total requests done per method",
