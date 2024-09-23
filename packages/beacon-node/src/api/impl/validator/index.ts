@@ -3,6 +3,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
+  calculateCommitteeAssignments,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
@@ -995,7 +996,15 @@ export function getValidatorApi(
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state.validators, indices);
-      const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, indices);
+      const decisionRoot = state.epochCtx.getShufflingDecisionRoot(epoch);
+      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      if (!shuffling) {
+        throw new ApiError(
+          500,
+          `No shuffling found to calculate committee assignments for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
+        );
+      }
+      const committeeAssignments = calculateCommitteeAssignments(shuffling, indices);
       const duties: routes.validator.AttesterDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
