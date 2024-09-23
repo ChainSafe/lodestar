@@ -476,7 +476,6 @@ export function deserializeExecutionRequests(executionRequests: ExecutionRequest
   };
 }
 
-// TODO ELectra: remove requests field
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
   return data
     ? {
