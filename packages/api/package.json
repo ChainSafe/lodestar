@@ -83,7 +83,7 @@
     "@types/eventsource": "^1.1.11",
     "@types/qs": "^6.9.7",
     "ajv": "^8.12.0",
-    "fastify": "^4.27.0"
+    "fastify": "^5.0.0"
   },
   "keywords": [
     "ethereum",
