@@ -249,14 +249,6 @@ export const SignedBuilderBid = new ContainerType(
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
 
-// export const ExecutionPayloadAndBlobsBundle = new ContainerType(
-//   {
-//     executionPayload: denebSsz.ExecutionPayload,
-//     blobsBundle: denebSsz.BlobsBundle,
-//   },
-//   {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
-// );
-
 export const PendingBalanceDeposit = new ContainerType(
   {
     index: ValidatorIndex,

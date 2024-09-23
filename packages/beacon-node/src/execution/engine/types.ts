@@ -152,9 +152,6 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
-  // depositRequests?: DepositRequestRpc[]; // ELECTRA
-  // withdrawalRequests?: WithdrawalRequestRpc[]; // ELECTRA
-  // consolidationRequests?: ConsolidationRequestRpc[]; // ELECTRA
 };
 
 export type WithdrawalRpc = {

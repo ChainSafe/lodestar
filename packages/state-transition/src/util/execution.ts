@@ -170,15 +170,7 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
     ).excessBlobGas;
   }
 
-  if (fork >= ForkSeq.electra) {
-    // No change in Electra
-    // (bellatrixPayloadFields as electra.ExecutionPayloadHeader).depositRequestsRoot =
-    //   ssz.electra.DepositRequests.hashTreeRoot((payload as electra.ExecutionPayload).depositRequests);
-    // (bellatrixPayloadFields as electra.ExecutionPayloadHeader).withdrawalRequestsRoot =
-    //   ssz.electra.WithdrawalRequests.hashTreeRoot((payload as electra.ExecutionPayload).withdrawalRequests);
-    // (bellatrixPayloadFields as electra.ExecutionPayloadHeader).consolidationRequestsRoot =
-    //   ssz.electra.ConsolidationRequests.hashTreeRoot((payload as electra.ExecutionPayload).consolidationRequests);
-  }
+  // No change in Electra
 
   return bellatrixPayloadFields;
 }

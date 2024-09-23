@@ -131,7 +131,6 @@ export function upgradeStateToElectraOriginal(stateDeneb: CachedBeaconStateDeneb
     epoch: stateDeneb.epochCtx.epoch,
   });
 
-  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
   // default value of depositRequestsStartIndex is UNSET_DEPOSIT_REQUESTS_START_INDEX
   stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
 
