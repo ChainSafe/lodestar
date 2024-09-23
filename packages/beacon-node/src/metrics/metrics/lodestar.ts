@@ -381,11 +381,11 @@ export function createLodestarMetrics(
 
     epochCache: {
       finalizedPubkeyDuplicateInsert: register.gauge({
-        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert",
+        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert_total",
         help: "Total count of duplicate insert of finalized pubkeys",
       }),
       newUnFinalizedPubkey: register.gauge({
-        name: "lodestar_epoch_cache_new_unfinalized_pubkey",
+        name: "lodestar_epoch_cache_new_unfinalized_pubkey_total",
         help: "Total count of unfinalized pubkeys added",
       }),
     },

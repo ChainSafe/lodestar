@@ -6,7 +6,7 @@ import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {
   getAttDataFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofPhase0,
-  getAggregationBitsFromAttestationSerialized as getAggregationBitsFromAttestationSerialized,
+  getAggregationBitsFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,

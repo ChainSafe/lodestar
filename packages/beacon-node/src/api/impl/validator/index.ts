@@ -1087,7 +1087,7 @@ export function getValidatorApi(
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      const dataRootHex = toHex(attestationDataRoot);
+      const dataRootHex = toRootHex(attestationDataRoot);
       const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
       const fork = chain.config.getForkName(slot);
 
