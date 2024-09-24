@@ -57,37 +57,5 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
         labelNames: ["subnet", "fork"],
       }),
     },
-    gossipMessage: {
-      messagesSentCount: register.counter<{topic: string}>({
-        name: "gossipsub_topic_msg_sent_counts_total",
-        help: "Number of gossip messages sent to each topic",
-        labelNames: ["topic"],
-      }),
-      messagesSentBytesCount: register.counter<{topic: string}>({
-        name: "gossipsub_topic_msg_sent_bytes_total",
-        help: "Number of bytes sent to each topic",
-        labelNames: ["topic"],
-      }),
-      messagesReceivedCount: register.counter<{topic: string}>({
-        name: "gossipsub_topic_msg_recv_counts_unfiltered_total",
-        help: "Number of gossip messages received from each topic (including duplicates)",
-        labelNames: ["topic"],
-      }),
-      messagesReceivedBytesCount: register.counter<{topic: string}>({
-        name: "gossipsub_topic_msg_recv_bytes_unfiltered_total",
-        help: "Number of bytes received from each topic (including duplicates)",
-        labelNames: ["topic"],
-      }),
-      messagesReceivedUnfilteredCount: register.counter<{topic: string}>({
-        name: "gossipsub_topic_msg_recv_counts_total",
-        help: "Number of gossip messages received from each topic (deduplicated)",
-        labelNames: ["topic"],
-      }),
-      messagesReceivedBytesUnfilteredCount: register.counter<{topic: string}>({
-        name: "gossipsub_topic_msg_recv_bytes_total",
-        help: "Number of bytes received from each topic (deduplicated)",
-        labelNames: ["topic"],
-      }),
-    },
   };
 }

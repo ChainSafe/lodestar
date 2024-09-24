@@ -74,7 +74,6 @@ export type Eth2GossipsubOpts = {
  */
 export class Eth2Gossipsub extends GossipSub {
   readonly scoreParams: Partial<PeerScoreParams>;
-  readonly metrics: Eth2GossipsubMetrics | null = null;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
   private readonly peersData: PeersData;
@@ -146,8 +145,8 @@ export class Eth2Gossipsub extends GossipSub {
     this.gossipTopicCache = gossipTopicCache;
 
     if (metricsRegister) {
-      this.metrics = createEth2GossipsubMetrics(metricsRegister);
-      this.metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
+      const metrics = createEth2GossipsubMetrics(metricsRegister);
+      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
