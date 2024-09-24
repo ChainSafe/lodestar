@@ -130,6 +130,35 @@ export function getBeaconStateApi({
       return this.getStateValidators(args, context);
     },
 
+    async postStateValidatorIdentities({stateId, validatorIds = []}) {
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {pubkey2index} = chain.getHeadState().epochCtx;
+
+      const validatorIdentities: routes.beacon.ValidatorIdentities = [];
+
+      if (validatorIds.length) {
+        for (const id of validatorIds) {
+          const resp = getStateValidatorIndex(id, state, pubkey2index);
+          if (resp.valid) {
+            const index = resp.validatorIndex;
+            const {pubkey, activationEpoch} = state.validators.getReadonly(index);
+            validatorIdentities.push({index, pubkey, activationEpoch});
+          }
+        }
+      } else {
+        const validatorsArr = state.validators.getAllReadonlyValues();
+        for (let i = 0; i < validatorsArr.length; i++) {
+          const {pubkey, activationEpoch} = validatorsArr[i];
+          validatorIdentities.push({index: i, pubkey, activationEpoch});
+        }
+      }
+
+      return {
+        data: validatorIdentities,
+        meta: {executionOptimistic, finalized},
+      };
+    },
+
     async getStateValidator({stateId, validatorId}) {
       const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
