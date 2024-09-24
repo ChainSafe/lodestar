@@ -336,8 +336,6 @@ export class NetworkCore implements INetworkCore {
   }
   async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {
     const {recipients} = await this.gossip.publish(topic, data, opts);
-    this.gossip.metrics?.gossipMessage.messagesSentCount.inc({topic});
-    this.gossip.metrics?.gossipMessage.messagesSentBytesCount.inc({topic}, data.length);
     return recipients.length;
   }
 
