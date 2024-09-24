@@ -1,7 +1,6 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
-import {Logger, MapDef, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
@@ -193,7 +192,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       return stateOrStateBytesData?.clone(opts?.dontTransferCache) ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
-    const logMeta = {persistedKey: toHexString(persistedKey)};
+    const logMeta = {persistedKey: toHex(persistedKey)};
     this.logger.debug("Reload: read state successful", logMeta);
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
     const seedState = this.findSeedStateToReload(cp);
@@ -213,20 +212,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.stateReloadDuration.startTimer();
-      const newCachedState = loadCachedBeaconState(
-        seedState,
-        stateBytes,
-        {
-          shufflingGetter: (shufflingEpoch, decisionRootHex) => {
-            const shuffling = this.shufflingCache.getSync(shufflingEpoch, decisionRootHex);
-            if (shuffling == null) {
-              this.metrics?.stateReloadShufflingCacheMiss.inc();
-            }
-            return shuffling;
-          },
-        },
-        validatorsBytes
-      );
+      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {}, validatorsBytes);
       newCachedState.commit();
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
       timer?.();
@@ -341,7 +327,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.logger.verbose("Added checkpoint state to memory but a persisted key existed", {
         epoch: cp.epoch,
         rootHex: cpHex.rootHex,
-        persistedKey: toHexString(persistedKey),
+        persistedKey: toHex(persistedKey),
       });
     } else {
       this.cache.set(key, {type: CacheItemType.inMemory, state});
@@ -657,7 +643,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     let persistCount = 0;
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
-      epochBoundarySlot === state.slot ? fromHexString(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
+      epochBoundarySlot === state.slot ? fromHex(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
     const epochBoundaryHex = toRootHex(epochBoundaryRoot);
     const prevEpochRoot = toRootHex(getBlockRootAtSlot(state, epochBoundarySlot - 1));
 
@@ -688,7 +674,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           stateSlot: state.slot,
           rootHex,
           epochBoundaryHex,
-          persistedKey: persistedKey ? toHexString(persistedKey) : "",
+          persistedKey: persistedKey ? toHex(persistedKey) : "",
         };
 
         if (persistedRootHexes.has(rootHex)) {
@@ -698,7 +684,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           } else {
             // persist and do not update epochIndex
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-            const cpPersist = {epoch: epoch, root: fromHexString(rootHex)};
+            const cpPersist = {epoch: epoch, root: fromHex(rootHex)};
             // It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
             // As monitored on holesky as of Jan 2024:
             //   - This does not increase heap allocation while gc time is the same
@@ -716,7 +702,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
               ...logMeta,
-              persistedKey: toHexString(persistedKey),
+              persistedKey: toHex(persistedKey),
             });
           }
           // overwrite cpKey, this means the state is deleted from memory

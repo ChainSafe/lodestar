@@ -1,9 +1,9 @@
 import path from "node:path";
-import {fromHexString} from "@chainsafe/ssz";
 import {getClient} from "@lodestar/api";
 import {Lightclient} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {fromHex} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {parseLoggerArgs} from "../../util/logger.js";
@@ -28,7 +28,7 @@ export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): P
       genesisTime,
       genesisValidatorsRoot,
     },
-    checkpointRoot: fromHexString(args.checkpointRoot),
+    checkpointRoot: fromHex(args.checkpointRoot),
     transport: new LightClientRestTransport(api),
   });
 

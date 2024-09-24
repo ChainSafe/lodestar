@@ -1,6 +1,5 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Root, RootHex, deneb} from "@lodestar/types";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
@@ -288,7 +287,7 @@ export class UnknownBlockSync {
 
     let res;
     if (block.blockInput === null) {
-      res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
+      res = await wrapError(this.fetchUnknownBlockRoot(fromHex(block.blockRootHex), connectedPeers));
     } else {
       res = await wrapError(this.fetchUnavailableBlockInput(block.blockInput, connectedPeers));
     }
@@ -519,7 +518,7 @@ export class UnknownBlockSync {
 
     if (unavailableBlockInput.block === null) {
       blockRootHex = unavailableBlockInput.blockRootHex;
-      blockRoot = fromHexString(blockRootHex);
+      blockRoot = fromHex(blockRootHex);
     } else {
       const unavailableBlock = unavailableBlockInput.block;
       blockRoot = this.config

@@ -1,16 +1,60 @@
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv, toRootHex} from "@lodestar/utils";
+import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
+import {GaugeExtra, intDiv, Logger, NoLabels, toRootHex} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
+  GENESIS_SLOT,
   MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
+import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
+
+export interface ShufflingBuildProps {
+  state: BeaconStateAllForks;
+  activeIndices: Uint32Array;
+}
+
+export interface PublicShufflingCacheMetrics {
+  shufflingCache: {
+    nextShufflingNotOnEpochCache: GaugeExtra<NoLabels>;
+  };
+}
+export interface IShufflingCache {
+  metrics: PublicShufflingCacheMetrics | null;
+  logger: Logger | null;
+  /**
+   * Gets a cached shuffling via the epoch and decision root. If the state and
+   * activeIndices are passed and a shuffling is not available it will be built
+   * synchronously. If the state is not passed and the shuffling is not available
+   * nothing will be returned.
+   *
+   * NOTE: If a shuffling is already queued and not calculated it will build and resolve
+   * the promise but the already queued build will happen at some later time
+   */
+  getSync<T extends ShufflingBuildProps | undefined>(
+    epoch: Epoch,
+    decisionRoot: RootHex,
+    buildProps?: T
+  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
+
+  /**
+   * Gets a cached shuffling via the epoch and decision root.  Returns a promise
+   * for the shuffling if it hs not calculated yet.  Returns null if a build has
+   * not been queued nor a shuffling was calculated.
+   */
+  get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null>;
+
+  /**
+   * Queue asynchronous build for an EpochShuffling
+   */
+  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: Uint32Array): void;
+}
 
 /**
  * Readonly interface for EpochShuffling.
@@ -60,21 +104,13 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
 
 export function computeEpochShuffling(
   state: BeaconStateAllForks,
-  activeIndices: ArrayLike<ValidatorIndex>,
-  activeValidatorCount: number,
+  activeIndices: Uint32Array,
   epoch: Epoch
 ): EpochShuffling {
-  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
+  const activeValidatorCount = activeIndices.length;
 
-  if (activeValidatorCount > activeIndices.length) {
-    throw new Error(`Invalid activeValidatorCount: ${activeValidatorCount} > ${activeIndices.length}`);
-  }
-  // only the first `activeValidatorCount` elements are copied to `activeIndices`
-  const _activeIndices = new Uint32Array(activeValidatorCount);
-  for (let i = 0; i < activeValidatorCount; i++) {
-    _activeIndices[i] = activeIndices[i];
-  }
-  const shuffling = _activeIndices.slice();
+  const shuffling = activeIndices.slice();
+  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   unshuffleList(shuffling, seed);
 
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
@@ -98,14 +134,29 @@ export function computeEpochShuffling(
 
   return {
     epoch,
-    activeIndices: _activeIndices,
+    activeIndices,
     shuffling,
     committees,
     committeesPerSlot,
   };
 }
 
-export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
+function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
   return toRootHex(getBlockRootAtSlot(state, pivotSlot));
+}
+
+/**
+ * Get the shuffling decision block root for the given epoch of given state
+ *   - Special case close to genesis block, return the genesis block root
+ *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
+ */
+export function calculateShufflingDecisionRoot(
+  config: BeaconConfig,
+  state: BeaconStateAllForks,
+  epoch: Epoch
+): RootHex {
+  return state.slot > GENESIS_SLOT
+    ? calculateDecisionRoot(state, epoch)
+    : toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
 }

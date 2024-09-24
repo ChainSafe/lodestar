@@ -2,13 +2,12 @@ import {Connection, PrivateKey} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {fromHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
+import {fromHex, withTimeout} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Libp2p} from "../interface.js";
@@ -195,7 +194,7 @@ export class NetworkCore implements INetworkCore {
     await gossip.start();
 
     const enr = opts.discv5?.enr;
-    const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
+    const nodeId = enr ? fromHex(ENR.decodeTxt(enr).nodeId) : null;
     const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 

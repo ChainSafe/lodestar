@@ -461,7 +461,7 @@ export function deserializeWithdrawalRequest(withdrawalRequest: WithdrawalReques
   return {
     sourceAddress: dataToBytes(withdrawalRequest.sourceAddress, 20),
     validatorPubkey: dataToBytes(withdrawalRequest.validatorPubkey, 48),
-    amount: quantityToNum(withdrawalRequest.amount),
+    amount: quantityToBigint(withdrawalRequest.amount),
   };
 }
 

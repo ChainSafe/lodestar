@@ -116,6 +116,8 @@ export const DepositRequest = new ContainerType(
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
+    // this is actually gwei uintbn64 type, but super unlikely to get a high amount here
+    // to warrant a bn type
     amount: UintNum64,
     signature: BLSSignature,
     index: DepositIndex,
@@ -129,7 +131,7 @@ export const WithdrawalRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
     validatorPubkey: BLSPubkey,
-    amount: UintNum64,
+    amount: Gwei,
   },
   {typeName: "WithdrawalRequest", jsonCase: "eth2"}
 );
@@ -356,20 +358,20 @@ export const LightClientHeader = new ContainerType(
 
 export const LightClientBootstrap = new ContainerType(
   {
-    header: LightClientHeader,
+    header: LightClientHeader, // Modified in ELECTRA
     currentSyncCommittee: altairSsz.SyncCommittee,
-    currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA),
+    currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA), // Modified in ELECTRA
   },
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
 
 export const LightClientUpdate = new ContainerType(
   {
-    attestedHeader: LightClientHeader,
+    attestedHeader: LightClientHeader, // Modified in ELECTRA
     nextSyncCommittee: altairSsz.SyncCommittee,
-    nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA),
-    finalizedHeader: LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA),
+    nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA), // Modified in ELECTRA
+    finalizedHeader: LightClientHeader, // Modified in ELECTRA
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA), // Modified in ELECTRA
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
@@ -380,7 +382,7 @@ export const LightClientFinalityUpdate = new ContainerType(
   {
     attestedHeader: LightClientHeader,
     finalizedHeader: LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA),
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA), // Modified in ELECTRA
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
@@ -389,7 +391,7 @@ export const LightClientFinalityUpdate = new ContainerType(
 
 export const LightClientOptimisticUpdate = new ContainerType(
   {
-    attestedHeader: LightClientHeader,
+    attestedHeader: LightClientHeader, // Modified in ELECTRA
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
@@ -398,8 +400,8 @@ export const LightClientOptimisticUpdate = new ContainerType(
 
 export const LightClientStore = new ContainerType(
   {
-    snapshot: LightClientBootstrap,
-    validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
+    snapshot: LightClientBootstrap, // Modified in ELECTRA
+    validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH), // Modified in ELECTRA
   },
   {typeName: "LightClientStore", jsonCase: "eth2"}
 );

@@ -1,5 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHex} from "@lodestar/utils";
 
 /**
  * 0x prefix a string if not prefixed already
@@ -50,7 +50,7 @@ export function parseRange(range: string): number[] {
 
 export function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
-    const pubkeyBytes = fromHexString(pubkeyHex);
+    const pubkeyBytes = fromHex(pubkeyHex);
     PublicKey.fromBytes(pubkeyBytes, true);
   }
 }

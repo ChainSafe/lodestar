@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
-import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
+import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {phase0, Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
@@ -15,7 +15,6 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
 import {Metrics} from "../../metrics/metrics";
 import {byteArrayEquals} from "../../util/bytes.js";
-import {computeAnchorCheckpoint} from "../../chain/initState.js";
 import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 /**
