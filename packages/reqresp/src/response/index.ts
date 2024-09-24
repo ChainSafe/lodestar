@@ -108,10 +108,10 @@ export async function handleRequest({
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
           responseEncodeSuccess(protocol, {
-            onChunk(chunkIndex, chunkBytes) {
+            onChunk(chunkIndex, chunkLength) {
               if (chunkIndex === 0) timerTTFB?.();
               // eslint-disable-next-line @typescript-eslint/naming-convention
-              metrics?.responsesSentBytesTotalCount.inc({protocol_id: protocolID}, chunkBytes);
+              metrics?.responsesSentBytesTotalCount.inc({protocol_id: protocolID}, chunkLength);
             },
           })
         );

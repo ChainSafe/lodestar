@@ -288,8 +288,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
-      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
-      metrics?.gossipColumn.verificationTimeInSec.observe(validationTime);
+      metrics?.gossipColumn.recvToValidation.observe(recvToValidation);
+      metrics?.gossipColumn.validationTimeInSec.observe(validationTime);
 
       logger.debug("Received gossip dataColumn", {
         slot: slot,

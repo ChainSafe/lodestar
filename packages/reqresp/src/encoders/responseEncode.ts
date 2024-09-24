@@ -16,7 +16,7 @@ const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
  */
 export function responseEncodeSuccess(
   protocol: Protocol,
-  cbs: {onChunk: (chunkIndex: number, chunkBytes: number) => void}
+  cbs: {onChunk: (chunkIndex: number, chunkLength: number) => void}
 ): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     let chunkIndex = 0;

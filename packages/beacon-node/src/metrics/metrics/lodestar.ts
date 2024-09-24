@@ -780,12 +780,17 @@ export function createLodestarMetrics(
     },
 
     gossipColumn: {
+      recvToValidation: register.histogram({
+        name: "beacon_data_column_sidecar_gossip_received_until_validation_seconds",
+        help: "Time elapsed between blob received and blob validation",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
       /**
        * All of these column metrics that are prefixed with `beacon_` are part of the
        * ethpandops official metrics set
        * https://github.com/KatyaRyazantseva/beacon-metrics/blob/master/metrics.md#peerdas-metrics
        */
-      verificationTimeInSec: register.histogram({
+      validationTimeInSec: register.histogram({
         name: "beacon_data_column_sidecar_gossip_verification_seconds",
         help: "Full runtime of data column sidecars gossip verification",
         // TODO: (@g11tech) need to verify that these buckets are correct. they are copy/pasta from above
