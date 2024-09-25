@@ -1,12 +1,12 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {Root, RootHex, capella, Wei, ExecutionPayload} from "@lodestar/types";
+import {Root, RootHex, capella, Wei, ExecutionPayload, ExecutionRequests} from "@lodestar/types";
 
 import {DATA} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, WithdrawalV1, DepositRequestV1} from "./payloadIdCache.js";
+import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 
-export {PayloadIdCache, type PayloadId, type WithdrawalV1, type DepositRequestV1};
+export {PayloadIdCache, type PayloadId, type WithdrawalV1};
 
 export enum ExecutionPayloadStatus {
   /** given payload is valid */
@@ -134,7 +134,8 @@ export interface IExecutionEngine {
     fork: ForkName,
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
-    parentBeaconBlockRoot?: Root
+    parentBeaconBlockRoot?: Root,
+    executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse>;
 
   /**
@@ -171,6 +172,7 @@ export interface IExecutionEngine {
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
+    executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }>;
 

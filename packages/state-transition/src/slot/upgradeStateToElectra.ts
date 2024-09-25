@@ -48,17 +48,11 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.inactivityScores = stateElectraCloned.inactivityScores;
   stateElectraView.currentSyncCommittee = stateElectraCloned.currentSyncCommittee;
   stateElectraView.nextSyncCommittee = stateElectraCloned.nextSyncCommittee;
-  stateElectraView.latestExecutionPayloadHeader = ssz.electra.BeaconState.fields.latestExecutionPayloadHeader.toViewDU({
-    ...stateElectraCloned.latestExecutionPayloadHeader.toValue(),
-    depositRequestsRoot: ssz.Root.defaultValue(),
-    withdrawalRequestsRoot: ssz.Root.defaultValue(),
-    consolidationRequestsRoot: ssz.Root.defaultValue(),
-  });
+  stateElectraView.latestExecutionPayloadHeader = stateElectraCloned.latestExecutionPayloadHeader;
   stateElectraView.nextWithdrawalIndex = stateDeneb.nextWithdrawalIndex;
   stateElectraView.nextWithdrawalValidatorIndex = stateDeneb.nextWithdrawalValidatorIndex;
   stateElectraView.historicalSummaries = stateElectraCloned.historicalSummaries;
 
-  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
   // default value of depositRequestsStartIndex is UNSET_DEPOSIT_REQUESTS_START_INDEX
   stateElectraView.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
   stateElectraView.depositBalanceToConsume = BigInt(0);
@@ -137,7 +131,6 @@ export function upgradeStateToElectraOriginal(stateDeneb: CachedBeaconStateDeneb
     epoch: stateDeneb.epochCtx.epoch,
   });
 
-  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
   // default value of depositRequestsStartIndex is UNSET_DEPOSIT_REQUESTS_START_INDEX
   stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
 
