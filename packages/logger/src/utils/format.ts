@@ -21,8 +21,8 @@ export function getFormat(opts: LoggerOptions): Format {
   switch (opts.format) {
     case "json":
       return jsonLogFormat(opts);
-
     case "human":
+      return humanReadableLogFormat(opts);
     default:
       return humanReadableLogFormat(opts);
   }
@@ -49,6 +49,7 @@ function formatTimestamp(opts: LoggerOptions): Format {
       };
 
     case TimestampFormatCode.DateRegular:
+      return format.timestamp({format: "MMM-DD HH:mm:ss.SSS"});
     default:
       return format.timestamp({format: "MMM-DD HH:mm:ss.SSS"});
   }

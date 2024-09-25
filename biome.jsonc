@@ -34,8 +34,6 @@
         "noThisInStatic": "off",
         "noUselessConstructor": "off",
         "noUselessEmptyExport": "off",
-        "noUselessSwitchCase": "off",
-        "noUselessTernary": "off",
         "noUselessTypeConstraint": "off",
         "useArrowFunction": "off",
         "useFlatMap": "off",

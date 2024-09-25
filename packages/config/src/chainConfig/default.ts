@@ -8,11 +8,10 @@ let defaultChainConfig: ChainConfig;
 switch (ACTIVE_PRESET) {
   case PresetName.minimal:
     defaultChainConfig = minimal;
-    break;
   case PresetName.mainnet:
+    defaultChainConfig = mainnet;
   default:
     defaultChainConfig = mainnet;
-    break;
 }
 
 export {defaultChainConfig};

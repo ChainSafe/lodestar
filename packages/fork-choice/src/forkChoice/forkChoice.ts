@@ -198,6 +198,7 @@ export class ForkChoice implements IForkChoice {
         return {head, isHeadTimely, notReorgedReason};
       }
       case UpdateHeadOpt.GetCanonicialHead:
+        return {head: canonicialHeadBlock};
       default:
         return {head: canonicialHeadBlock};
     }
