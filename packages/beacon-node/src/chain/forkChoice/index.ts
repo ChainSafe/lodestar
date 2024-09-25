@@ -14,10 +14,10 @@ import {
   getEffectiveBalanceIncrementsZeroInactive,
   isExecutionStateType,
   isMergeTransitionComplete,
+  computeAnchorCheckpoint,
 } from "@lodestar/state-transition";
 
 import {Logger, toRootHex} from "@lodestar/utils";
-import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";

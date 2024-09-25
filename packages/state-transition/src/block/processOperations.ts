@@ -67,15 +67,15 @@ export function processOperations(
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
 
-    for (const depositRequest of bodyElectra.executionPayload.depositRequests) {
+    for (const depositRequest of bodyElectra.executionRequests.deposits) {
       processDepositRequest(fork, stateElectra, depositRequest);
     }
 
-    for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
+    for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {
       processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest);
     }
 
-    for (const elConsolidationRequest of bodyElectra.executionPayload.consolidationRequests) {
+    for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {
       processConsolidationRequest(stateElectra, elConsolidationRequest);
     }
   }
