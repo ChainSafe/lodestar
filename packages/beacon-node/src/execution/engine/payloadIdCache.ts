@@ -18,26 +18,6 @@ export type WithdrawalV1 = {
   amount: QUANTITY;
 };
 
-export type DepositRequestV1 = {
-  pubkey: DATA;
-  withdrawalCredentials: DATA;
-  amount: QUANTITY;
-  signature: DATA;
-  index: QUANTITY;
-};
-
-export type WithdrawalRequestV1 = {
-  sourceAddress: DATA;
-  validatorPubkey: DATA;
-  amount: QUANTITY;
-};
-
-export type ConsolidationRequestV1 = {
-  sourceAddress: DATA;
-  sourcePubkey: DATA;
-  targetPubkey: DATA;
-};
-
 type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
 
 export class PayloadIdCache {

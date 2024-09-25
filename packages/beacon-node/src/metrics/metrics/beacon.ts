@@ -122,7 +122,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     headState: {
       unfinalizedPubkeyCacheSize: register.gauge({
-        name: "head_state_unfinalized_pubkey_cache_size",
+        name: "beacon_head_state_unfinalized_pubkey_cache_size",
         help: "Current size of the unfinalizedPubkey2Index cache in the head state",
       }),
     },

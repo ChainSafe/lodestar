@@ -94,6 +94,6 @@
     "@types/inquirer": "^9.0.3",
     "@types/proper-lockfile": "^4.1.4",
     "@types/yargs": "^17.0.24",
-    "fastify": "^4.27.0"
+    "fastify": "^5.0.0"
   }
 }
