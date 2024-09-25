@@ -32,7 +32,6 @@
         "noForEach": "off",
         "noStaticOnlyClass": "off",
         "noThisInStatic": "off",
-        "noUselessConstructor": "off",
         "noUselessEmptyExport": "off",
         "noUselessTypeConstraint": "off",
         "useArrowFunction": "off",
