@@ -156,7 +156,6 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
 }
 
 /** Separate function to simplify unit testing of options merging */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
   const {version, commit} = getVersionData();

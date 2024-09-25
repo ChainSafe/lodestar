@@ -29,7 +29,7 @@
     "check-types": "tsc",
     "docs:build": "node --loader ts-node/esm ./docsgen/index.ts",
     "lint": "biome lint src/ test/",
-    "lint:fix": "yarn run lint --apply",
+    "lint:fix": "yarn run lint --write",
     "test:unit": "vitest --run --dir test/unit/",
     "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e/",
     "test:sim:multifork": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/multiFork.test.ts",

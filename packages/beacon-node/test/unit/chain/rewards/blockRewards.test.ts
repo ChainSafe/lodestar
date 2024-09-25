@@ -10,9 +10,7 @@ import {
 import {
   generatePerfTestCachedStateAltair,
   cachedStateAltairPopulateCaches,
-  // eslint-disable-next-line import/no-relative-packages
 } from "../../../../../state-transition/test/perf/util.js";
-// eslint-disable-next-line import/no-relative-packages
 import {BlockAltairOpts, getBlockAltair} from "../../../../../state-transition/test/perf/block/util.js";
 import {computeBlockRewards} from "../../../../src/chain/rewards/blockRewards.js";
 

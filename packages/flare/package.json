@@ -42,7 +42,7 @@
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" flare --help",
     "check-types": "tsc",
     "lint": "biome lint src/",
-    "lint:fix": "yarn run lint --apply",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"

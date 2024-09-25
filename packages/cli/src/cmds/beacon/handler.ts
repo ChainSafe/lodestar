@@ -158,7 +158,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 }
 
 /** Separate function to simplify unit testing of options merging */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 

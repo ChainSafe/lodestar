@@ -21,6 +21,7 @@ export type SyncChainDebugState = {
   status: string;
   startEpoch: number;
   peers: number;
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   batches: any[];
 };
 

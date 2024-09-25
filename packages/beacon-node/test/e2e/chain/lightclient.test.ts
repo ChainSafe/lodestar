@@ -34,7 +34,6 @@ describe("chain / lightclient", function () {
   const restPort = 9000;
 
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
-    /* eslint-disable @typescript-eslint/naming-convention */
     SECONDS_PER_SLOT: 1,
     ALTAIR_FORK_EPOCH: 0,
   };

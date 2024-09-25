@@ -68,6 +68,7 @@ export interface SpecTestOptions<TestCase extends {meta?: any}, Result> {
    * Optionally pass function to transform loaded values
    * (values from input files)
    */
+
   inputProcessing?: {[K: string]: (value: any) => any};
 
   shouldError?: (testCase: TestCase) => boolean;
@@ -86,7 +87,7 @@ const defaultOptions: SpecTestOptions<any, any> = {
   getExpected: (testCase) => testCase,
   shouldError: () => false,
   shouldSkip: () => false,
-  expectFunc: (testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
+  expectFunc: (_testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
   timeout: 10 * 60 * 1000,
 };
 
@@ -131,7 +132,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
         if (options.shouldError?.(testCase)) {
           try {
             await testFunction(testCase, name);
-          } catch (e) {
+          } catch {
             return;
           }
         } else {

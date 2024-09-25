@@ -35,8 +35,10 @@ const defaultAttestationsReward = {head: 0, target: 0, source: 0, inclusionDelay
 const defaultAttestationsPenalty = {target: 0, source: 0};
 
 export async function computeAttestationsRewards(
+  // biome-ignore lint/correctness/noUnusedVariables:
   epoch: Epoch,
   state: CachedBeaconStateAllForks,
+  // biome-ignore lint/correctness/noUnusedVariables:
   config: BeaconConfig,
   validatorIds?: (ValidatorIndex | string)[]
 ): Promise<AttestationsRewards> {

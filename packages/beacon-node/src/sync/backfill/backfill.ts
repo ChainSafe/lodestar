@@ -680,6 +680,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
       backCount !== this.opts.backfillBatchSize &&
+      // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock

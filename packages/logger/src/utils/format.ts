@@ -70,7 +70,8 @@ function jsonLogFormat(opts: LoggerOptions): Format {
 /**
  * Winston template function print a human readable string given a log object
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 function humanReadableTemplateFn(_info: {[key: string]: any; level: string; message: string}): string {
   const info = _info as WinstonInfoArg;
 

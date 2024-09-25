@@ -34,7 +34,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   const validatorCount = 1;
   const genesisSlotsDelay = 5;
   const beaconParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 

@@ -6,7 +6,6 @@ import {
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_getCode: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
   rpc,
   payload,

@@ -165,7 +165,7 @@ export function getStateValidatorIndex(
     if (id.startsWith("0x")) {
       try {
         id = fromHex(id);
-      } catch (e) {
+      } catch {
         return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
       }
     } else {

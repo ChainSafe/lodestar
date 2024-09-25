@@ -6,7 +6,7 @@ try {
   } else {
     maxPoolSize = (await import("node:os")).availableParallelism();
   }
-} catch (e) {
+} catch {
   maxPoolSize = 8;
 }
 

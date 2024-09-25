@@ -127,7 +127,6 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
     return decodeErrorMessage(bytes);
   } catch {
     // Error message is optional and may not be included in the response stream
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     return Buffer.prototype.toString.call(bytes, "hex");
   }
 }

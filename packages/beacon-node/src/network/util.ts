@@ -15,7 +15,6 @@ export function prettyPrintPeerIdStr(id: PeerIdStr): string {
  */
 // Compat function for efficiency reasons
 export function getConnectionsMap(libp2p: Libp2p): Map<string, Connection[]> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return libp2p.services.components.connectionManager.getConnectionsMap()["map"];
 }
 

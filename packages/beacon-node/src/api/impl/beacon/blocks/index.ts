@@ -260,7 +260,7 @@ export function getBeaconBlockApi({
       chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const contents = executionPayload
-        ? chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null
+        ? (chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null)
         : null;
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 

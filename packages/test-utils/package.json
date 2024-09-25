@@ -43,7 +43,7 @@
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "lint": "biome lint src/",
-    "lint:fix": "yarn run lint --apply",
+    "lint:fix": "yarn run lint --write",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

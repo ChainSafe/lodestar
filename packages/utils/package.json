@@ -29,7 +29,7 @@
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc && vitest --run --typecheck --dir test/types/",
     "lint": "biome lint src/ test/",
-    "lint:fix": "yarn run lint --apply",
+    "lint:fix": "yarn run lint --write",
     "test:unit": "vitest --run --dir test/unit",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
     "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",

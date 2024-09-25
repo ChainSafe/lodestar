@@ -2,7 +2,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {describe, expect, it} from "vitest";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-// eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
@@ -30,7 +29,6 @@ describe("validateAttestation", () => {
 
   const getState = memoOnce(() => generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot}));
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function getValidData(opts?: Partial<AttestationValidDataOpts>) {
     return getAttestationValidData({
       currentSlot: stateSlot,

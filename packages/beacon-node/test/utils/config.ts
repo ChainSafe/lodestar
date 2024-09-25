@@ -6,7 +6,6 @@ import {ZERO_HASH} from "../../src/constants/index.js";
 /** default config with ZERO_HASH as genesisValidatorsRoot */
 export const config = createBeaconConfig(chainConfig, ZERO_HASH);
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
   switch (fork) {
     case ForkName.phase0:

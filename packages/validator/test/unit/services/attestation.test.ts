@@ -52,7 +52,6 @@ describe("AttestationService", function () {
     vi.resetAllMocks();
   });
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
 
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [

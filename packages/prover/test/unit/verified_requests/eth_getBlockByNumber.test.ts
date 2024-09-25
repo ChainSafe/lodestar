@@ -92,7 +92,6 @@ describe("verified_requests / eth_getBlockByNumber", () => {
         // Temper the execution payload
         const testCase = cloneTestFixture(t, {
           beacon: {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
             executionPayload: {parent_hash: "0xbdbd90ab601a073c3d128111eafb12fa7ece4af239abdc8be60184a08c6d7ef4"},
           },
         });

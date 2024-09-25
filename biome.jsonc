@@ -1,6 +1,10 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.7.3/schema.json",
-  "vcs": {"clientKind": "git", "enabled": true, "useIgnoreFile": true},
+  "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  },
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -9,9 +13,17 @@
     "lineEnding": "lf",
     "lineWidth": 120,
     "attributePosition": "auto",
-    "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
+    "ignore": [
+      "**/lib",
+      "**/.nyc_output",
+      "./packages/*/spec-tests",
+      "**/node_modules",
+      "./packages/*/node_modules/**"
+    ]
   },
-  "organizeImports": {"enabled": false},
+  "organizeImports": {
+    "enabled": false
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -39,7 +51,10 @@
         "noVoidTypeReturn": "off",
         "useYield": "off"
       },
-      "performance": {"noAccumulatingSpread": "off", "noDelete": "off"},
+      "performance": {
+        "noAccumulatingSpread": "off",
+        "noDelete": "off"
+      },
       "style": {
         "noCommaOperator": "off",
         "noInferrableTypes": "off",
@@ -47,7 +62,11 @@
         "noParameterAssign": "off",
         "noRestrictedGlobals": {
           "level": "error",
-          "options": {"deniedGlobals": ["fetch"]}
+          "options": {
+            "deniedGlobals": [
+              "fetch"
+            ]
+          }
         },
         "noUnusedTemplateLiteral": "off",
         "noUselessElse": "off",
@@ -60,7 +79,9 @@
         "useLiteralEnumMembers": "off",
         "useNamingConvention": {
           "level": "error",
-          "options": {"strictCase": false}
+          "options": {
+            "strictCase": false
+          }
         },
         "useNumberNamespace": "off",
         "useSingleVarDeclarator": "off",
@@ -91,7 +112,7 @@
     "formatter": {
       "jsxQuoteStyle": "double",
       "quoteProperties": "asNeeded",
-      "trailingComma": "es5",
+      "trailingCommas": "es5",
       "semicolons": "always",
       "arrowParentheses": "always",
       "bracketSpacing": false,
@@ -99,12 +120,24 @@
       "quoteStyle": "double",
       "attributePosition": "auto"
     },
-    "globals": ["BigInt"]
+    "globals": [
+      "BigInt"
+    ]
   },
   "overrides": [
     {
-      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
-      "linter": {"rules": {"suspicious": {"noConsoleLog": "off"}}}
+      "include": [
+        "packages/cli/src/",
+        "packages/test-utils/src",
+        "packages/flare/src"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
     },
     {
       "include": [
@@ -113,36 +146,84 @@
         "**/*.config.cjs",
         "**/*.config.ts",
         "scripts/vitest/**/*.ts",
-        "scripts/vite/**/*.ts"
+        "scripts/vite/**/*.ts",
+        "**/types/**/*.ts",
+        "packages/api/src/beacon/routes/*.ts",
+        "packages/api/src/**/routes.ts",
+        "packages/api/src/utils/server/handler.ts",
+        "packages/api/test/unit/client/urlFormat.test.ts",
+        "packages/beacon-node/src/api/impl/config/constants.ts",
+        "packages/beacon-node/src/eth1/provider/eth1Provider.ts",
+        ""
       ],
       "linter": {
         "rules": {
           "style": {
             "useNamingConvention": {
               "level": "off",
-              "options": {"strictCase": false}
+              "options": {
+                "strictCase": false
+              }
             }
           }
         }
       }
     },
     {
-      "include": ["**/test/**/*.ts", "packages/*/test/**/*.js"],
-      "linter": {"rules": {"suspicious": {"noExplicitAny": "off", "noConsoleLog": "off"}}}
-    },
-    {"include": ["**/perf/**/*.ts"], "linter": {"rules": {}}},
-    {"include": ["**/test/**/*.test.ts"], "linter": {"rules": {}}},
-    {
-      "include": ["**/types/**/*.ts"],
+      "include": [
+        "**/test/**/*.ts",
+        "packages/*/test/**/*.js",
+        "packages/api/src/utils/**/*.ts",
+        "packages/beacon-node/src/db/repositories/checkpointState.ts",
+        "packages/spec-test-util/src/single.ts"
+      ],
       "linter": {
         "rules": {
-          "style": {
-            "useNamingConvention": {
-              "level": "off",
-              "options": {"strictCase": false}
-            }
+          "suspicious": {
+            "noExplicitAny": "off"
           }
         }
+      }
+    },
+    {
+      "include": [
+        "packages/beacon-node/test/e2e/eth1/jsonRpcHttpClient.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": [
+        "**/test/**/*.ts",
+        "packages/*/test/**/*.js"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": [
+        "**/perf/**/*.ts"
+      ],
+      "linter": {
+        "rules": {}
+      }
+    },
+    {
+      "include": [
+        "**/test/**/*.test.ts"
+      ],
+      "linter": {
+        "rules": {}
       }
     }
   ]

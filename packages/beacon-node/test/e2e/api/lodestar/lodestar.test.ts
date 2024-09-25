@@ -20,7 +20,6 @@ describe("api / impl / validator", function () {
     const validatorCount = 8;
     const restPort = 9596;
     const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
-      /* eslint-disable @typescript-eslint/naming-convention */
       SECONDS_PER_SLOT: SECONDS_PER_SLOT,
       ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
     };

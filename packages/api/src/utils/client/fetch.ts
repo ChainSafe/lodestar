@@ -6,6 +6,7 @@
 async function wrappedFetch(url: string | URL, init?: RequestInit): Promise<Response> {
   try {
     // This function wraps global `fetch` which should only be directly called here
+    // biome-ignore lint/style/noRestrictedGlobals: <explanation>
     return await fetch(url, init);
   } catch (e) {
     throw new FetchError(url, e);

@@ -45,7 +45,7 @@
     "check-build": "node -e \"(async function() { await import('./lib/downloadTests.js') })()\"",
     "check-types": "tsc",
     "lint": "biome lint src/ test/",
-    "lint:fix": "yarn run lint --apply",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "vitest --run --passWithNoTests --dir test/unit/",
     "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e/",

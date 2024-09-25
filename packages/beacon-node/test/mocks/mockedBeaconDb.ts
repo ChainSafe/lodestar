@@ -62,7 +62,6 @@ vi.mock("../../src/db/index.js", async (importActual) => {
 
   return {
     ...mod,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     BeaconDb: mockedBeaconDb,
   };
 });

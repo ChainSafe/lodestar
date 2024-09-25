@@ -6,7 +6,7 @@ export interface CliExample {
   description?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export interface CliOptionDefinition<T = any> extends Options {
   example?: Omit<CliExample, "title">;
   // Ensure `type` property matches type of `T`
@@ -28,7 +28,7 @@ export type CliCommandOptions<OwnArgs> = Required<{
       CliOptionDefinition<OwnArgs[K]> & (Required<Pick<Options, "default">> | {demandOption: true});
 }>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<never, never>, R = any> {
   command: string;
   describe: string;
@@ -41,7 +41,7 @@ export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<
   options?: CliCommandOptions<OwnArgs>;
   // 1st arg: any = free own sub command options
   // 2nd arg: subcommand parent options is = to this command options + parent options
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   subcommands?: CliCommand<any, OwnArgs & ParentArgs>[];
   handler?: (args: OwnArgs & ParentArgs) => Promise<R>;
 }
@@ -51,7 +51,8 @@ export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<
  * @param yargs
  * @param cliCommand
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export function registerCommandToYargs(yargs: Argv, cliCommand: CliCommand<any, any>): void {
   yargs.command({
     command: cliCommand.command,

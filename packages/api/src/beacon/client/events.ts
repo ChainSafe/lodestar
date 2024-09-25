@@ -19,7 +19,6 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
     eventstream: async ({topics, signal, onEvent, onError, onClose}) => {
       const query = stringifyQuery({topics});
       const url = `${urlJoin(baseUrl, definitions.eventstream.url)}?${query}`;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       const EventSource = await getEventSource();
       const eventSource = new EventSource(url);
 

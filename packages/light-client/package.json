@@ -63,7 +63,7 @@
     "build:release": "yarn clean && yarn run build && yarn run build:bundle",
     "check-types": "tsc",
     "lint": "biome lint src/ test/",
-    "lint:fix": "yarn run lint --apply",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",

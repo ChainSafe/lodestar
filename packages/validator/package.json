@@ -26,7 +26,7 @@
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "lint": "biome lint src/ test/",
-    "lint:fix": "yarn run lint --apply",
+    "lint:fix": "yarn run lint --write",
     "test:unit": "vitest --run --dir test/unit/",
     "test": "yarn test:unit && yarn test:e2e",
     "test:spec": "vitest --run --config vitest.spec.config.ts --dir test/spec/",

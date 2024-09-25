@@ -200,7 +200,7 @@ export type BatchGossipHandlers = {
   [K in GossipType]?: BatchGossipHandler<K>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
   ? T
   : never;

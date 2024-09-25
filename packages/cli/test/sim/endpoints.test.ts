@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";

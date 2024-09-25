@@ -304,7 +304,7 @@ export async function spawnChildProcess(
           });
           proc.removeAllListeners("exit");
           resolve(proc);
-        } catch (error) {
+        } catch {
           reject(
             new Error(
               `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(healthTimeoutMs ?? 0)}`

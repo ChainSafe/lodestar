@@ -112,7 +112,7 @@ function avg(arr: number[]): number {
 /**
  * Print a table grid of (Y) epoch / (X) slot_per_epoch
  */
-function printEpochSlotGrid<T>(map: Map<Slot, T>, config: BeaconConfig, title: string): void {
+function printEpochSlotGrid<T>(map: Map<Slot, T>, _config: BeaconConfig, title: string): void {
   const lastSlot = Array.from(map.keys())[map.size - 1];
   const lastEpoch = computeEpochAtSlot(lastSlot);
   const rowsByEpochBySlot = linspace(0, lastEpoch).map((epoch) => {
@@ -132,7 +132,7 @@ function printEpochGrid(maps: Record<string, Map<Epoch, number>>, title: string)
     return epoch > max ? epoch : max;
   }, 0);
   const epochGrid = linspace(0, lastEpoch).map((epoch) =>
-    mapValues(maps, (val, key) => formatValue(maps[key].get(epoch)))
+    mapValues(maps, (_val, key) => formatValue(maps[key].get(epoch)))
   );
   console.log(renderTitle(title));
   console.table(epochGrid);

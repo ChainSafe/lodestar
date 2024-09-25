@@ -46,7 +46,6 @@ export class AsyncIterableBridgeCaller<Args, Item> {
   }
 
   getAsyncIterable(callArgs: Args): AsyncIterable<Item> {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
     return {
@@ -67,7 +66,6 @@ export class AsyncIterableBridgeCaller<Args, Item> {
 
         return {
           async next() {
-            // eslint-disable-next-line no-constant-condition
             while (true) {
               const item = req.items.shift();
               if (item !== null) {

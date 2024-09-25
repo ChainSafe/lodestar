@@ -413,7 +413,8 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    return (this.head = headNode);
+    this.head = headNode;
+    return this.head;
   }
 
   /**
