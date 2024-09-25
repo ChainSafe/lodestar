@@ -13,13 +13,13 @@ export const eth_getBlockByNumber: ELVerifiedRequestHandler<
 > = async ({rpc, payload, logger, proofProvider}) => {
   const result = await verifyBlock({payload, proofProvider, logger, rpc});
 
-    if (result.valid) {
-      return getResponseForRequest(payload, result.data);
-    }
+  if (result.valid) {
+    return getResponseForRequest(payload, result.data);
+  }
 
-    logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
-    return getErrorResponseForRequestWithFailedVerification(
-      payload,
-      getVerificationFailedMessage("eth_getBlockByNumber")
-    );
-  };
+  logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
+  return getErrorResponseForRequestWithFailedVerification(
+    payload,
+    getVerificationFailedMessage("eth_getBlockByNumber")
+  );
+};
