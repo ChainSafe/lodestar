@@ -14,14 +14,13 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
     params: [address, block],
   } = payload;
   const result = await verifyAccount({proofProvider, logger, rpc, address, block});
+    if (result.valid) {
+      return getResponseForRequest(payload, result.data.nonce);
+    }
 
-  if (result.valid) {
-    return getResponseForRequest(payload, result.data.nonce);
-  }
-
-  logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
-  return getErrorResponseForRequestWithFailedVerification(
-    payload,
-    getVerificationFailedMessage("eth_getTransactionCount")
-  );
-};
+    logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
+    return getErrorResponseForRequestWithFailedVerification(
+      payload,
+      getVerificationFailedMessage("eth_getTransactionCount")
+    );
+  };
