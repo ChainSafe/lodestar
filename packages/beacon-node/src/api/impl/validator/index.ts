@@ -638,6 +638,9 @@ export function getValidatorApi(
             controller.abort();
           }
           return engineBlock;
+        }).catch((e) => {
+          console.log("enginePromise", e);
+          throw e;
         })
       : Promise.reject(new Error("Engine disabled"));
 
