@@ -207,7 +207,7 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
 async function resolveValidatorIndexes(client: ApiClient, signersToExit: SignerPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 
-  const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pubkeys})).value();
+  const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: pubkeys})).value();
 
   const dataByPubkey = new Map(validators.map((item) => [toPubkeyHex(item.validator.pubkey), item]));
 

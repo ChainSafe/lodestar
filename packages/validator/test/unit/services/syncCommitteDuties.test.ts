@@ -60,7 +60,7 @@ describe("SyncCommitteeDutiesService", function () {
       index: indices[i],
       validator: {...defaultValidator.validator, pubkey: pubkeys[i]},
     }));
-    api.beacon.getStateValidators.mockResolvedValue(
+    api.beacon.postStateValidators.mockResolvedValue(
       mockApiResponse({data: validatorResponses, meta: {executionOptimistic: false, finalized: false}})
     );
   });
