@@ -187,6 +187,8 @@ export async function initPeerIdAndEnr(
     return {peerId, enr, newEnr: false};
   };
 
+  console.log({persistNetworkIdentity});
+
   if (persistNetworkIdentity) {
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
