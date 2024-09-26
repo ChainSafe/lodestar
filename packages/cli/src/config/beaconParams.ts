@@ -39,7 +39,7 @@ export function getBeaconConfigFromArgs(args: GlobalArgs): {config: ChainForkCon
  * @see getBeaconParams
  */
 export function getBeaconParamsFromArgs(args: GlobalArgs): ChainConfig {
-  return getBeaconParams({
+  const beaconParams = getBeaconParams({
     network: args.network,
     paramsFile: args.paramsFile,
     additionalParamsCli: {
@@ -47,6 +47,15 @@ export function getBeaconParamsFromArgs(args: GlobalArgs): ChainConfig {
       ...parseTerminalPowArgs(args as ITerminalPowArgs),
     },
   });
+
+  beaconParams["VERKLE_FORK_EPOCH"] = beaconParams["ELECTRA_FORK_EPOCH"]
+  beaconParams["VERKLE_FORK_VERSION"] = beaconParams["ELECTRA_FORK_VERSION"]
+
+  beaconParams["DENEB_FORK_EPOCH"] = Infinity
+  beaconParams["ELECTRA_FORK_EPOCH"] = Infinity
+
+
+  return beaconParams;
 }
 
 /**
