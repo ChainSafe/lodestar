@@ -108,15 +108,15 @@ await env.tracker.assert(
 await env.tracker.assert("should return HTTP error responses in a spec compliant format", async () => {
   // ApiError with status 400 is thrown by handler
   const res1 = await node.api.beacon.getStateValidator({stateId: "current", validatorId: 1});
-  assert.equal(res1.json(), {code: 400, message: "Invalid block id 'current'"});
+  assert.equal(JSON.parse(await res1.text()), {code: 400, message: "Invalid block id 'current'"});
 
-  // JSON schema validation failed"
+  // JSON schema validation failed
   const res2 = await node.api.beacon.getPoolAttestationsV2({slot: "current" as unknown as number, committeeIndex: 123});
-  assert.equal(res2.json(), {code: 400, message: "slot must be integer"});
+  assert.equal(JSON.parse(await res2.text()), {code: 400, message: "slot must be integer"});
 
   // Route does not exist
   const res3 = await fetch(`${node.restPublicUrl}/not/implemented/route`);
-  assert.equal(res3.json(), {code: 404, message: "Route GET:/not/implemented/route not found"});
+  assert.equal(JSON.parse(await res3.text()), {code: 404, message: "Route GET:/not/implemented/route not found"});
 });
 
 await env.tracker.assert("BN Not Synced", async () => {
