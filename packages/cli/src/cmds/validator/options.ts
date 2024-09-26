@@ -146,7 +146,6 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     hidden: true,
     type: "boolean",
     description: "Return stacktraces in HTTP error responses",
-    group: "api",
   },
 };
 
