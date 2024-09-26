@@ -54,15 +54,17 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const verkle: ForkInfo = {
     name: ForkName.verkle,
     seq: ForkSeq.verkle,
-    epoch: config.VERKLE_FORK_EPOCH,
-    version: config.VERKLE_FORK_VERSION,
+    // testnet uses electra to specify
+    epoch: config.ELECTRA_FORK_EPOCH,
+    version: config.ELECTRA_FORK_VERSION,
     prevVersion: config.CAPELLA_FORK_VERSION,
     prevForkName: ForkName.capella,
   };
   const deneb: ForkInfo = {
     name: ForkName.deneb,
     seq: ForkSeq.deneb,
-    epoch: config.DENEB_FORK_EPOCH,
+    // no scheduling deneb and electra
+    epoch: Infinity,
     version: config.DENEB_FORK_VERSION,
     prevVersion: config.CAPELLA_FORK_VERSION,
     prevForkName: ForkName.capella,
@@ -70,7 +72,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const electra: ForkInfo = {
     name: ForkName.electra,
     seq: ForkSeq.electra,
-    epoch: config.ELECTRA_FORK_EPOCH,
+    // testnet uses electra config to specify peerdas
+    epoch: Infinity,
     version: config.ELECTRA_FORK_VERSION,
     prevVersion: config.DENEB_FORK_VERSION,
     prevForkName: ForkName.deneb,
