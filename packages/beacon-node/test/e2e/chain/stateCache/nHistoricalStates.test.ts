@@ -414,9 +414,8 @@ describe("regen/reload states with n-historical states configuration", function 
 
       const stateSszMetricValues = await (followupBn.metrics?.stateSerializeDuration as Histogram).get();
       expect(
-        stateSszMetricValues?.values.find(
-          (value) => value.metricName === "lodestar_state_serialize_seconds_count"
-        )?.value
+        stateSszMetricValues?.values.find((value) => value.metricName === "lodestar_state_serialize_seconds_count")
+          ?.value
       ).toEqual(persistCount);
 
       // assert number of persisted/in-memory states
