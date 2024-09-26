@@ -21,8 +21,8 @@ const typesByFork = {
   [ForkName.bellatrix]: {...phase0, ...altair, ...bellatrix},
   [ForkName.capella]: {...phase0, ...altair, ...bellatrix, ...capella},
   [ForkName.verkle]: {...phase0, ...altair, ...bellatrix, ...capella, ...verkle},
-  [ForkName.deneb]: {...phase0, ...altair, ...bellatrix, ...capella, ...verkle, ...deneb},
-  [ForkName.electra]: {...phase0, ...altair, ...bellatrix, ...capella, ...verkle, ...deneb, ...electra},
+  [ForkName.deneb]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb},
+  [ForkName.electra]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
 };
 
 /**

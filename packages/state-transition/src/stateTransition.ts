@@ -9,7 +9,6 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
-  CachedBeaconStateVerkle,
   CachedBeaconStateDeneb,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -245,7 +244,7 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToVerkle(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.DENEB_FORK_EPOCH) {
-        postState = upgradeStateToDeneb(postState as CachedBeaconStateVerkle) as CachedBeaconStateAllForks;
+        postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.ELECTRA_FORK_EPOCH) {
         postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;

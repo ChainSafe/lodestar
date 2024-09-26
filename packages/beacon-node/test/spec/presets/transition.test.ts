@@ -112,7 +112,6 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
-        VERKLE_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
       };
 
@@ -121,7 +120,6 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
-        VERKLE_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
       };

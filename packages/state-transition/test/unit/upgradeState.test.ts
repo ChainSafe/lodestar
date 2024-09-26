@@ -11,12 +11,12 @@ import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
-    const verkleState = ssz.verkle.BeaconState.defaultViewDU();
-    const config = getConfig(ForkName.verkle);
+    const capellaState = ssz.capella.BeaconState.defaultViewDU();
+    const config = getConfig(ForkName.capella);
     const stateView = createCachedBeaconState(
-      verkleState,
+      capellaState,
       {
-        config: createBeaconConfig(config, verkleState.genesisValidatorsRoot),
+        config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       },
@@ -64,19 +64,11 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: forkEpoch,
       });
-    case ForkName.verkle:
-      return createChainForkConfig({
-        ALTAIR_FORK_EPOCH: 0,
-        BELLATRIX_FORK_EPOCH: 0,
-        CAPELLA_FORK_EPOCH: 0,
-        VERKLE_FORK_EPOCH: forkEpoch,
-      });
     case ForkName.deneb:
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
-        VERKLE_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
       });
     case ForkName.electra:
@@ -84,7 +76,6 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
-        VERKLE_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
       });
