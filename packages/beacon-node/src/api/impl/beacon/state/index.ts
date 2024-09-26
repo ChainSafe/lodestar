@@ -134,9 +134,10 @@ export function getBeaconStateApi({
       const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
-      const validatorIdentities: routes.beacon.ValidatorIdentities = [];
+      let validatorIdentities: routes.beacon.ValidatorIdentities;
 
       if (validatorIds.length) {
+        validatorIdentities = [];
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
           if (resp.valid) {
@@ -147,9 +148,10 @@ export function getBeaconStateApi({
         }
       } else {
         const validatorsArr = state.validators.getAllReadonlyValues();
+        validatorIdentities = new Array(validatorsArr.length) as routes.beacon.ValidatorIdentities;
         for (let i = 0; i < validatorsArr.length; i++) {
           const {pubkey, activationEpoch} = validatorsArr[i];
-          validatorIdentities.push({index: i, pubkey, activationEpoch});
+          validatorIdentities[i] = {index: i, pubkey, activationEpoch};
         }
       }
 
