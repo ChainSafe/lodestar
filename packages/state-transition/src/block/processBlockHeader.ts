@@ -32,6 +32,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: Beac
 
   // verify that the parent matches
   if (!byteArrayEquals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
+    console.log("state.latestBlockHeader", ssz.phase0.BeaconBlockHeader.toJson(state.latestBlockHeader));
     throw new Error(
       `Block parent root ${toRootHex(block.parentRoot)} does not match state latest block, block slot=${slot}`
     );
@@ -39,6 +40,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: Beac
 
   const blockHeader = blindedOrFullBlockToHeader(state.config, block);
   // cache current block as the new latest block
+  console.log("pre set state.latestBlockHeader", ssz.phase0.BeaconBlockHeader.toJson(state.latestBlockHeader));
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
     slot,
     proposerIndex,
@@ -46,6 +48,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: Beac
     stateRoot: ZERO_HASH,
     bodyRoot: blockHeader.bodyRoot,
   });
+  console.log("post set state.latestBlockHeader", ssz.phase0.BeaconBlockHeader.toJson(state.latestBlockHeader));
 
   // verify proposer is not slashed. Only once per block, may use the slower read from tree
   if (state.validators.getReadonly(proposerIndex).slashed) {
