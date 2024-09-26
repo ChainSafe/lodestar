@@ -2,7 +2,7 @@
 import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
+import {routes, fetch} from "@lodestar/api";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
@@ -104,6 +104,20 @@ await env.tracker.assert(
     assert.equal(toHexString(res.value().validator.pubkey), hexPubKey);
   }
 );
+
+await env.tracker.assert("should return HTTP error responses in a spec compliant format", async () => {
+  // ApiError with status 400 is thrown by handler
+  const res1 = await node.api.beacon.getStateValidator({stateId: "current", validatorId: 1});
+  assert.equal(res1.json(), {code: 400, message: "Invalid block id 'current'"});
+
+  // JSON schema validation failed"
+  const res2 = await node.api.beacon.getPoolAttestationsV2({slot: "current" as unknown as number, committeeIndex: 123});
+  assert.equal(res2.json(), {code: 400, message: "slot must be integer"});
+
+  // Route does not exist
+  const res3 = await fetch(`${node.restPublicUrl}/not/implemented/route`);
+  assert.equal(res3.json(), {code: 404, message: "Route GET:/not/implemented/route not found"});
+});
 
 await env.tracker.assert("BN Not Synced", async () => {
   const expectedSyncStatus: routes.node.SyncingStatus = {
