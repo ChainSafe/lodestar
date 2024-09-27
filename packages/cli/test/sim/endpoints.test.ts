@@ -3,6 +3,7 @@ import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
 import {routes, fetch} from "@lodestar/api";
+import {ssz} from "@lodestar/types";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
@@ -117,6 +118,14 @@ await env.tracker.assert("should return HTTP error responses in a spec compliant
   // Route does not exist
   const res3 = await fetch(`${node.restPublicUrl}/not/implemented/route`);
   assert.deepEqual(JSON.parse(await res3.text()), {code: 404, message: "Route GET:/not/implemented/route not found"});
+
+  // Error processing multiple items
+  const signedAttestations = Array.from({length: 3}, () => ssz.phase0.Attestation.defaultValue());
+  const res4 = await node.api.beacon.submitPoolAttestationsV2({signedAttestations});
+  const errBody = JSON.parse(await res4.errorBody()) as {code: number; message: string; failures: unknown[]};
+  assert.deepEqual(errBody, {code: 400, message: "Error processing attestations"});
+  assert.equal(errBody.failures.length, signedAttestations.length);
+  assert.deepEqual(errBody.failures[0], {index: 0, message: "ATTESTATION_ERROR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET"});
 });
 
 await env.tracker.assert("BN Not Synced", async () => {
