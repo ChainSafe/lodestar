@@ -531,7 +531,7 @@ export class ValidatorStore {
       data: attestationData,
     };
 
-    if (this.config.getForkSeq(duty.slot) >= ForkSeq.electra) {
+    if (this.config.getForkSeq(signingSlot) >= ForkSeq.electra) {
       return {
         aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
         data: attestationData,
@@ -562,7 +562,7 @@ export class ValidatorStore {
 
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
-    const isPostElectra = this.config.getForkSeq(duty.slot) >= ForkSeq.electra;
+    const isPostElectra = this.config.getForkSeq(signingSlot) >= ForkSeq.electra;
     const signingRoot = isPostElectra
       ? computeSigningRoot(ssz.electra.AggregateAndProof, aggregateAndProof, domain)
       : computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
@@ -802,7 +802,7 @@ export class ValidatorStore {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
 
-    const isPostElectra = this.config.getForkSeq(duty.slot) >= ForkSeq.electra;
+    const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
     if (!isPostElectra && duty.committeeIndex != data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
