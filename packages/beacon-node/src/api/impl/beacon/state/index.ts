@@ -22,7 +22,8 @@ import {
 export function getBeaconStateApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
+  logger,
+}: Pick<ApiModules, "chain" | "config" | "logger">): ApplicationMethods<routes.beacon.state.Endpoints> {
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
@@ -98,6 +99,8 @@ export function getBeaconStateApi({
               currentEpoch
             );
             validatorResponses.push(validatorResponse);
+          } else {
+            logger.warn(resp.reason, {id});
           }
         }
         return {
@@ -128,6 +131,39 @@ export function getBeaconStateApi({
 
     async postStateValidators(args, context) {
       return this.getStateValidators(args, context);
+    },
+
+    async postStateValidatorIdentities({stateId, validatorIds = []}) {
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {pubkey2index} = chain.getHeadState().epochCtx;
+
+      let validatorIdentities: routes.beacon.ValidatorIdentities;
+
+      if (validatorIds.length) {
+        validatorIdentities = [];
+        for (const id of validatorIds) {
+          const resp = getStateValidatorIndex(id, state, pubkey2index);
+          if (resp.valid) {
+            const index = resp.validatorIndex;
+            const {pubkey, activationEpoch} = state.validators.getReadonly(index);
+            validatorIdentities.push({index, pubkey, activationEpoch});
+          } else {
+            logger.warn(resp.reason, {id});
+          }
+        }
+      } else {
+        const validatorsArr = state.validators.getAllReadonlyValues();
+        validatorIdentities = new Array(validatorsArr.length) as routes.beacon.ValidatorIdentities;
+        for (let i = 0; i < validatorsArr.length; i++) {
+          const {pubkey, activationEpoch} = validatorsArr[i];
+          validatorIdentities[i] = {index: i, pubkey, activationEpoch};
+        }
+      }
+
+      return {
+        data: validatorIdentities,
+        meta: {executionOptimistic, finalized},
+      };
     },
 
     async getStateValidator({stateId, validatorId}) {

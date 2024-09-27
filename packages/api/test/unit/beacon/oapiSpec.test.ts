@@ -21,9 +21,9 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.6.0-alpha.1";
+const version = "v3.0.0-alpha.6";
 const openApiFile: OpenApiFile = {
-  url: `https://raw.githubusercontent.com/nflaig/beacon-api-spec/main/${version}/beacon-node-oapi.json`,
+  url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
