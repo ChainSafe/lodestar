@@ -171,10 +171,10 @@ export function applyDeposits(
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
     stateElectra.commit();
-    for (const {index: validatorIndex, amount} of stateElectra.pendingBalanceDeposits.getAllReadonly()) {
+    for (const {index: validatorIndex, amount} of stateElectra.pendingDeposits.getAllReadonly()) {
       increaseBalance(state, validatorIndex, Number(amount));
     }
-    stateElectra.pendingBalanceDeposits = ssz.electra.PendingBalanceDeposits.defaultViewDU();
+    stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   }
 
   // Process activations

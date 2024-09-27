@@ -75,11 +75,11 @@ export function applyDeposit(
       increaseBalance(state, cachedIndex, amount);
     } else if (fork >= ForkSeq.electra) {
       const stateElectra = state as CachedBeaconStateElectra;
-      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+      const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
         index: cachedIndex,
         amount: BigInt(amount),
       });
-      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+      stateElectra.pendingDeposits.push(pendingDeposit);
 
       if (
         hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
@@ -143,11 +143,11 @@ function addValidatorToRegistry(
   } else if (fork >= ForkSeq.electra) {
     state.balances.push(0);
     const stateElectra = state as CachedBeaconStateElectra;
-    const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+    const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
       index: validatorIndex,
       amount: BigInt(amount),
     });
-    stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+    stateElectra.pendingDeposits.push(pendingDeposit);
   }
 }
 

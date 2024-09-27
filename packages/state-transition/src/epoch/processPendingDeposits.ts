@@ -7,12 +7,12 @@ import {getActivationExitChurnLimit} from "../util/validator.js";
  * Starting from Electra:
  * Process pending balance deposits from state subject to churn limit and depsoitBalanceToConsume.
  * For each eligible `deposit`, call `increaseBalance()`.
- * Remove the processed deposits from `state.pendingBalanceDeposits`.
+ * Remove the processed deposits from `state.pendingDeposits`.
  * Update `state.depositBalanceToConsume` for the next epoch
  *
- * TODO Electra: Update ssz library to support batch push to `pendingBalanceDeposits`
+ * TODO Electra: Update ssz library to support batch push to `pendingDeposits`
  */
-export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
+export function processPendingDeposits(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
   const nextEpoch = state.epochCtx.epoch + 1;
   const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state.epochCtx));
   let processedAmount = 0n;
@@ -21,7 +21,7 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, c
   const validators = state.validators;
   const cachedBalances = cache.balances;
 
-  for (const deposit of state.pendingBalanceDeposits.getAllReadonly()) {
+  for (const deposit of state.pendingDeposits.getAllReadonly()) {
     const {amount, index: depositIndex} = deposit;
     const validator = validators.getReadonly(depositIndex);
 
@@ -54,10 +54,10 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, c
     nextDepositIndex++;
   }
 
-  const remainingPendingBalanceDeposits = state.pendingBalanceDeposits.sliceFrom(nextDepositIndex);
-  state.pendingBalanceDeposits = remainingPendingBalanceDeposits;
+  const remainingPendingDeposits = state.pendingDeposits.sliceFrom(nextDepositIndex);
+  state.pendingDeposits = remainingPendingDeposits;
 
-  if (remainingPendingBalanceDeposits.length === 0) {
+  if (remainingPendingDeposits.length === 0) {
     state.depositBalanceToConsume = 0n;
   } else {
     state.depositBalanceToConsume = availableForProcessing - processedAmount;
@@ -65,6 +65,6 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, c
 
   // TODO Electra: add a function in ListCompositeTreeView to support batch push operation
   for (const deposit of depositsToPostpone) {
-    state.pendingBalanceDeposits.push(deposit);
+    state.pendingDeposits.push(deposit);
   }
 }
