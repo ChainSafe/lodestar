@@ -1,5 +1,6 @@
 import path from "node:path";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -10,7 +11,6 @@ import {
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
   Index2PubkeyCache,
-  PubkeyIndexMap,
   EpochShuffling,
   computeEndSlotAtEpoch,
   computeAnchorCheckpoint,

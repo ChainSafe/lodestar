@@ -1,5 +1,6 @@
 import {PublicKey} from "@chainsafe/blst";
 import * as immutable from "immutable";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {
   BLSSignature,
   CommitteeIndex,
@@ -53,7 +54,6 @@ import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   Index2PubkeyCache,
-  PubkeyIndexMap,
   UnfinalizedPubkeyIndexMap,
   syncPubkeys,
   toMemoryEfficientHexStr,
@@ -1023,9 +1023,9 @@ export class EpochCache {
     return this.index2pubkey[index];
   }
 
-  getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
+  getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
     if (this.isPostElectra()) {
-      return this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
+      return this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey)) ?? null;
     } else {
       return this.pubkey2index.get(pubkey);
     }
@@ -1059,17 +1059,20 @@ export class EpochCache {
    * Add finalized validator index and pubkey into finalized cache.
    * Since addFinalizedPubkey() primarily takes pubkeys from unfinalized cache, it can take pubkey hex string directly
    */
-  addFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex | Uint8Array, metrics?: EpochCacheMetrics): void {
+  addFinalizedPubkey(index: ValidatorIndex, pubkeyOrHex: PubkeyHex | Uint8Array, metrics?: EpochCacheMetrics): void {
+    const pubkey = typeof pubkeyOrHex === "string" ? fromHex(pubkeyOrHex) : pubkeyOrHex;
     const existingIndex = this.pubkey2index.get(pubkey);
 
-    if (existingIndex !== undefined) {
+    if (existingIndex !== null) {
       if (existingIndex === index) {
         // Repeated insert.
         metrics?.finalizedPubkeyDuplicateInsert.inc();
         return;
       } else {
         // attempt to insert the same pubkey with different index, should never happen.
-        throw Error("inserted existing pubkey into finalizedPubkey2index cache with a different index");
+        throw Error(
+          `inserted existing pubkey into finalizedPubkey2index cache with a different index, index=${index} priorIndex=${existingIndex}`
+        );
       }
     }
 

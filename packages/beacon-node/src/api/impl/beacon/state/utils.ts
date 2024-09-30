@@ -1,6 +1,7 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
@@ -187,7 +188,7 @@ export function getStateValidatorIndex(
 
   // typeof id === Uint8Array
   const validatorIndex = pubkey2index.get(id);
-  if (validatorIndex === undefined) {
+  if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }
   if (validatorIndex >= state.validators.length) {

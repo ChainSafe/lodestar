@@ -1,11 +1,11 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {describe, it, expect} from "vitest";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {createCachedBeaconStateTest} from "../utils/state.js";
-import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
@@ -83,7 +83,7 @@ describe("CachedBeaconState", () => {
 
     expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
     expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(undefined);
+    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(null);
     expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
   });
 

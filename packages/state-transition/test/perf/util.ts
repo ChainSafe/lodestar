@@ -1,5 +1,6 @@
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {phase0, ssz, Slot, BeaconState} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -17,7 +18,6 @@ import {
   interopSecretKey,
   computeEpochAtSlot,
   getActiveValidatorIndices,
-  PubkeyIndexMap,
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,

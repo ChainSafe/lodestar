@@ -1,8 +1,9 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {PublicKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
-import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
+import {Index2PubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {generatePerfTestCachedStateAltair} from "../../util.js";
 
 /**

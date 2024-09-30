@@ -65,7 +65,7 @@ export function applyDeposit(
   const {pubkey, withdrawalCredentials, amount} = deposit;
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
-  if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
+  if (cachedIndex === null || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
     if (isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)) {
       addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
     }

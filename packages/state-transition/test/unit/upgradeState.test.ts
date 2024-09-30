@@ -1,4 +1,5 @@
 import {expect, describe, it} from "vitest";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
@@ -7,7 +8,6 @@ import {config as chainConfig} from "@lodestar/config/default";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
-import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {

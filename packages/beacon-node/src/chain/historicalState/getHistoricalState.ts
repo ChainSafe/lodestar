@@ -1,9 +1,9 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   DataAvailableStatus,
   ExecutionPayloadStatus,
-  PubkeyIndexMap,
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";

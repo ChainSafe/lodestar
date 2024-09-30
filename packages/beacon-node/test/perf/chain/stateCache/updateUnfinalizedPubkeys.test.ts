@@ -1,10 +1,11 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {Map} from "immutable";
+import {Map as ImmutableMap} from "immutable";
 import {toBufferBE} from "bigint-buffer";
 import {digest} from "@chainsafe/as-sha256";
 import {SecretKey} from "@chainsafe/blst";
-import {ssz} from "@lodestar/types";
-import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import {ValidatorIndex, ssz} from "@lodestar/types";
+import {type CachedBeaconStateAllForks, toMemoryEfficientHexStr} from "@lodestar/state-transition";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
 import {InMemoryCheckpointStateCache, BlockStateCacheImpl} from "../../../../src/chain/stateCache/index.js";
 import {BlockStateCache} from "../../../../src/chain/stateCache/types.js";
@@ -31,7 +32,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
     itBench({
       id: `updateUnfinalizedPubkeys - updating ${numPubkeysToBeFinalized} pubkeys`,
       beforeEach: async () => {
-        baseState.epochCtx.unfinalizedPubkey2index = Map(unfinalizedPubkey2Index.map);
+        baseState.epochCtx.unfinalizedPubkey2index = ImmutableMap(unfinalizedPubkey2Index);
         baseState.epochCtx.pubkey2index = new PubkeyIndexMap();
         baseState.epochCtx.index2pubkey = [];
 
@@ -80,12 +81,14 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
     });
   }
 
-  function generatePubkey2Index(startIndex: number, endIndex: number): PubkeyIndexMap {
-    const pubkey2Index = new PubkeyIndexMap();
+  type PubkeyHex = string;
+
+  function generatePubkey2Index(startIndex: number, endIndex: number): Map<PubkeyHex, ValidatorIndex> {
+    const pubkey2Index = new Map<string, number>();
     const pubkeys = generatePubkeys(endIndex - startIndex);
 
     for (let i = startIndex; i < endIndex; i++) {
-      pubkey2Index.set(pubkeys[i], i);
+      pubkey2Index.set(toMemoryEfficientHexStr(pubkeys[i]), i);
     }
 
     return pubkey2Index;

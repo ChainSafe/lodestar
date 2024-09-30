@@ -1,8 +1,9 @@
 import {describe, it} from "vitest";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {createCachedBeaconState, PubkeyIndexMap} from "../../../src/index.js";
+import {createCachedBeaconState} from "../../../src/index.js";
 
 describe("CachedBeaconState", () => {
   it("Create empty CachedBeaconState", () => {
