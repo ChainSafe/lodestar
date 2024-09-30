@@ -1,10 +1,10 @@
 import {SecretKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
-  PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
   CachedBeaconStateElectra,
