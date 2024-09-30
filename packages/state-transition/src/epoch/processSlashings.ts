@@ -50,6 +50,10 @@ export function processSlashings(
     totalBalanceByIncrement
   );
   const increment = EFFECTIVE_BALANCE_INCREMENT;
+
+  const penaltyPerEffectiveBalanceIncrement = Math.floor(
+    (adjustedTotalSlashingBalanceByIncrement * increment) / totalBalanceByIncrement
+  );
   const penalties: number[] = [];
 
   const penaltiesByEffectiveBalanceIncrement = new Map<number, number>();
@@ -57,8 +61,12 @@ export function processSlashings(
     const effectiveBalanceIncrement = effectiveBalanceIncrements[index];
     let penalty = penaltiesByEffectiveBalanceIncrement.get(effectiveBalanceIncrement);
     if (penalty === undefined) {
-      const penaltyNumeratorByIncrement = effectiveBalanceIncrement * adjustedTotalSlashingBalanceByIncrement;
-      penalty = Math.floor(penaltyNumeratorByIncrement / totalBalanceByIncrement) * increment;
+      if (fork < ForkSeq.electra) {
+        const penaltyNumeratorByIncrement = effectiveBalanceIncrement * adjustedTotalSlashingBalanceByIncrement;
+        penalty = Math.floor(penaltyNumeratorByIncrement / totalBalanceByIncrement) * increment;
+      } else {
+        penalty = penaltyPerEffectiveBalanceIncrement * effectiveBalanceIncrement;
+      }
       penaltiesByEffectiveBalanceIncrement.set(effectiveBalanceIncrement, penalty);
     }
 

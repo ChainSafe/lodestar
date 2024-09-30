@@ -66,8 +66,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    // TODO Electra: slashings tests to be enabled in PR#7071
-    /^electra\/epoch_processing\/slashings.*/,
   ],
   skippedTests: [],
   skippedRunners: ["merkle_proof", "networking"],
