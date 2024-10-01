@@ -147,7 +147,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const logCtx = {
       slot: slot,
       root: blockHex,
-      curentSlot: chain.clock.currentSlot,
+      currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
       ...blockInputMeta,
