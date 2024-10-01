@@ -23,9 +23,13 @@ export async function* onDataColumnSidecarsByRange(
   const finalized = db.dataColumnSidecarsArchive;
   const unfinalized = db.dataColumnSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  console.log(
+    `incoming onDataColumnSidecarsByRange startSlot=${startSlot}, count=${count}, columns=${columns.join(",")} finalizedSlot=${finalizedSlot} endSlot=${endSlot}`
+  );
 
   // Finalized range of blobs
   if (startSlot <= finalizedSlot) {
+    console.log(`serving onDataColumnSidecarsByRange finalized startSlot=${startSlot} finalizedSlot=${finalizedSlot}`);
     // Chain of blobs won't change
     for await (const {key, value: dataColumnSideCarsBytesWrapped} of finalized.binaryEntriesStream({
       gte: startSlot,
@@ -42,6 +46,8 @@ export async function* onDataColumnSidecarsByRange(
 
   // Non-finalized range of blobs
   if (endSlot > finalizedSlot) {
+    console.log(`serving onDataColumnSidecarsByRange unfinalized endSlot=${endSlot} finalizedSlot=${finalizedSlot}`);
+
     const headRoot = chain.forkChoice.getHeadRoot();
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
@@ -59,6 +65,7 @@ export async function* onDataColumnSidecarsByRange(
 
         const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
         if (!blobSideCarsBytesWrapped) {
+          console.log(`error onDataColumnSidecarsByRange No item for root ${block.blockRoot} slot ${block.slot}`);
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
         }
@@ -67,6 +74,7 @@ export async function* onDataColumnSidecarsByRange(
 
       // If block is after endSlot, stop iterating
       else if (block.slot >= endSlot) {
+        console.log(`breaking away onDataColumnSidecarsByRange block.slot=${block.slot} endSlot=${endSlot}`);
         break;
       }
     }
