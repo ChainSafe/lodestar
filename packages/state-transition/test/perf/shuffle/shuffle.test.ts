@@ -1,5 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
-import {unshuffleList} from "../../../src/index.js";
+import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
+import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 
 //          Lightouse  Lodestar
 // 512      254.04 us  1.6034 ms (x6)
@@ -7,7 +8,8 @@ import {unshuffleList} from "../../../src/index.js";
 // 4000000  1.5617 s   4.9690 s  (x3)
 
 describe("shuffle list", () => {
-  const seed = new Uint8Array([42, 32]);
+  const seed = new Uint8Array(32);
+  seed.set([42, 32], 0);
 
   for (const listSize of [
     16384, 250000,
@@ -22,7 +24,9 @@ describe("shuffle list", () => {
         return new Uint32Array(input);
       },
       beforeEach: (input) => input,
-      fn: (input) => unshuffleList(input, seed),
+      fn: (input) => {
+        unshuffleList(input, seed, SHUFFLE_ROUND_COUNT);
+      },
     });
   }
 });

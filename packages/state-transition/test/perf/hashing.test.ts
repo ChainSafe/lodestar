@@ -1,13 +1,14 @@
 import {itBench} from "@dapplion/benchmark";
+import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
 import {ssz} from "@lodestar/types";
-import {unshuffleList} from "../../src/index.js";
+import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {generatePerfTestCachedStatePhase0, numValidators} from "./util.js";
 
 // Test cost of hashing state after some modifications
 
 describe("BeaconState hashTreeRoot", () => {
   const vc = numValidators;
-  const indicesShuffled: number[] = [];
+  let indicesShuffled: Uint32Array;
   let stateOg: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
   before(function () {
@@ -15,8 +16,13 @@ describe("BeaconState hashTreeRoot", () => {
     stateOg = generatePerfTestCachedStatePhase0();
     stateOg.hashTreeRoot();
 
-    for (let i = 0; i < vc; i++) indicesShuffled[i] = i;
-    unshuffleList(indicesShuffled, new Uint8Array([42, 32]));
+    const seed = new Uint8Array(32);
+    seed.set([42, 32], 0);
+    const preShuffle = new Uint32Array(numValidators);
+    for (let i = 0; i < vc; i++) {
+      preShuffle[i] = i;
+    }
+    indicesShuffled = unshuffleList(preShuffle, seed, SHUFFLE_ROUND_COUNT);
   });
 
   const validator = ssz.phase0.Validator.defaultViewDU();
