@@ -58,8 +58,6 @@ const ignoredOperations = [
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
-  /* Must support ssz response body */
-  "getLightClientUpdatesByRange", // https://github.com/ChainSafe/lodestar/issues/6841
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
