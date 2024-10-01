@@ -13,7 +13,7 @@ import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../networ
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
-import {Metrics} from "../../metrics/metrics";
+import {Metrics} from "../../metrics/metrics.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
