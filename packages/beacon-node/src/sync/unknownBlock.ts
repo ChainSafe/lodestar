@@ -564,10 +564,19 @@ export class UnknownBlockSync {
       }
 
       try {
+        const peerClient = this.network.getConnectedPeerClientAgent(peer);
         const {
           blocks: [blockInput],
           pendingDataColumns,
-        } = await beaconBlocksMaybeBlobsByRoot(this.config, this.network, peer, [blockRoot], partialDownload);
+        } = await beaconBlocksMaybeBlobsByRoot(
+          this.config,
+          this.network,
+          peer,
+          [blockRoot],
+          partialDownload,
+          peerClient,
+          this.logger
+        );
 
         // Peer does not have the block, try with next peer
         if (blockInput === undefined) {
@@ -677,12 +686,15 @@ export class UnknownBlockSync {
       }
 
       try {
+        const peerClient = this.network.getConnectedPeerClientAgent(peer);
         const blockInput = await unavailableBeaconBlobsByRoot(
           this.config,
           this.network,
           peer,
           unavailableBlockInput,
-          this.metrics
+          this.metrics,
+          peerClient,
+          this.logger
         );
 
         // Peer does not have the block, try with next peer

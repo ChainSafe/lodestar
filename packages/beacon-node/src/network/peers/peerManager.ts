@@ -325,8 +325,11 @@ export class PeerManager {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
-    this.logger.warn("onMetadata", {peer: peer.toString(), peerData: peerData !== undefined});
-    console.log("onMetadata", metadata);
+    this.logger.warn("onMetadata", {
+      peer: peer.toString(),
+      peerData: peerData !== undefined,
+      csc: (metadata as Partial<peerdas.Metadata>).csc,
+    });
     if (peerData) {
       const oldMetadata = peerData.metadata;
       peerData.metadata = {
@@ -407,10 +410,9 @@ export class PeerManager {
     }
     if (getConnection(this.libp2p, peer.toString())) {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      console.log("onStatus", peerData?.metadata);
       const custodySubnetCount = peerData?.metadata?.csc;
 
-      const peerCustodySubnetCount = custodySubnetCount ?? 4;
+      const peerCustodySubnetCount = custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT;
       const peerCustodySubnets = getDataColumnSubnets(nodeId, peerCustodySubnetCount);
 
       const matchingSubnetsNum = this.sampleSubnets.reduce(
@@ -419,6 +421,7 @@ export class PeerManager {
       );
       const hasAllColumns = matchingSubnetsNum === this.sampleSubnets.length;
       const hasMinCustodyMatchingColumns = matchingSubnetsNum >= this.config.CUSTODY_REQUIREMENT;
+      const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
 
       this.logger.warn(`onStatus ${custodySubnetCount == undefined ? "undefined custody count assuming 4" : ""}`, {
         nodeId: toHexString(nodeId),
@@ -428,6 +431,7 @@ export class PeerManager {
         hasAllColumns,
         peerCustodySubnets: peerCustodySubnets.join(","),
         mySampleSubnets: this.sampleSubnets.join(","),
+        clientAgent,
       });
 
       if (this.opts.onlyConnectToBiggerDataNodes && !hasAllColumns) {
@@ -448,7 +452,12 @@ export class PeerManager {
 
       // coule be optimized by directly using the previously calculated subnet
       const dataColumns = getDataColumns(nodeId, peerCustodySubnetCount);
-      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status, dataColumns});
+      this.networkEventBus.emit(NetworkEvent.peerConnected, {
+        peer: peer.toString(),
+        status,
+        dataColumns,
+        clientAgent: `${clientAgent}-csc:${peerCustodySubnets.length}`,
+      });
     }
   }
 

@@ -58,6 +58,7 @@ export interface INetwork extends INetworkCorePublic {
 
   getConnectedPeers(): PeerIdStr[];
   getConnectedPeerCustody(peerId: PeerIdStr): number[];
+  getConnectedPeerClientAgent(peerId: PeerIdStr): string;
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;

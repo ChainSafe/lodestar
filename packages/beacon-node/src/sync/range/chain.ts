@@ -40,7 +40,8 @@ export type SyncChainFns = {
   downloadBeaconBlocksByRange: (
     peer: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest,
-    partialDownload: PartialDownload
+    partialDownload: PartialDownload,
+    peerClient: string
   ) => Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
@@ -113,7 +114,7 @@ export class SyncChain {
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
-  private readonly peersetCustody = new Map<PeerIdStr, {custodyColumns: number[]}>();
+  private readonly peersetCustody = new Map<PeerIdStr, {custodyColumns: number[]; clientAgent: string}>();
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
@@ -195,9 +196,9 @@ export class SyncChain {
   /**
    * Add peer to the chain and request batches if active
    */
-  addPeer(peer: PeerIdStr, target: ChainTarget, custodyColumns: number[]): void {
+  addPeer(peer: PeerIdStr, target: ChainTarget, custodyColumns: number[], clientAgent: string): void {
     this.peerset.set(peer, target);
-    this.peersetCustody.set(peer, {custodyColumns});
+    this.peersetCustody.set(peer, {custodyColumns, clientAgent});
     this.computeTarget();
     this.triggerBatchDownloader();
   }
@@ -403,9 +404,10 @@ export class SyncChain {
   private async sendBatch(batch: Batch, peer: PeerIdStr): Promise<void> {
     try {
       const partialDownload = batch.startDownloading(peer);
+      const peerClient = this.peersetCustody.get(peer)?.clientAgent ?? "unknown";
 
       // wrapError ensures to never call both batch success() and batch error()
-      const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload));
+      const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload, peerClient));
 
       if (!res.err) {
         const blocks = batch.downloadingSuccess(res.result);

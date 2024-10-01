@@ -27,7 +27,12 @@ export enum NetworkEvent {
 }
 
 export type NetworkEventData = {
-  [NetworkEvent.peerConnected]: {peer: PeerIdStr; status: phase0.Status; dataColumns: ColumnIndex[]};
+  [NetworkEvent.peerConnected]: {
+    peer: PeerIdStr;
+    status: phase0.Status;
+    dataColumns: ColumnIndex[];
+    clientAgent: string;
+  };
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};

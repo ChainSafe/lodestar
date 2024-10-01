@@ -107,6 +107,7 @@ export class Network implements INetwork {
 
   private subscribedToCoreTopics = false;
   private connectedPeers = new Map<PeerIdStr, ColumnIndex[]>();
+  private connectedPeerClients = new Map<PeerIdStr, string>();
   private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(modules: NetworkModules) {
@@ -277,6 +278,14 @@ export class Network implements INetwork {
     }
 
     return columns;
+  }
+  getConnectedPeerClientAgent(peerId: PeerIdStr): string {
+    const clientAgent = this.connectedPeerClients.get(peerId);
+    if (clientAgent === undefined) {
+      throw Error("clientAgent not in connectedPeerClients");
+    }
+
+    return clientAgent;
   }
   getConnectedPeerCount(): number {
     return this.connectedPeers.size;
@@ -686,6 +695,7 @@ export class Network implements INetwork {
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     this.logger.warn("onPeerConnected", {peer: data.peer, dataColumns: data.dataColumns.join(",")});
     this.connectedPeers.set(data.peer, data.dataColumns);
+    this.connectedPeerClients.set(data.peer, data.clientAgent);
   };
 
   private onPeerDisconnected = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {

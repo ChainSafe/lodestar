@@ -2,6 +2,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb, peerdas, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {Logger} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputType,
@@ -25,14 +26,16 @@ export async function beaconBlocksMaybeBlobsByRoot(
   network: INetwork,
   peerId: PeerIdStr,
   request: phase0.BeaconBlocksByRootRequest,
-  partialDownload: null | PartialDownload
+  partialDownload: null | PartialDownload,
+  peerClient: string,
+  logger?: Logger
 ): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
   console.log("beaconBlocksMaybeBlobsByRoot", request);
   const allBlocks = partialDownload
     ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block, bytes: blockInput.blockBytes!}))
     : await network.sendBeaconBlocksByRoot(peerId, request);
 
-  console.log("beaconBlocksMaybeBlobsByRoot response", {allBlocks: allBlocks.length});
+  logger?.debug("beaconBlocksMaybeBlobsByRoot response", {allBlocks: allBlocks.length, peerClient});
 
   const preDataBlocks = [];
   const blobsDataBlocks = [];
@@ -69,7 +72,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
     } else if (fork === ForkName.deneb) {
       blobsDataBlocks.push(block);
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      console.log("beaconBlocksMaybeBlobsByRoot", {blobKzgCommitmentsLen});
+      logger?.debug("beaconBlocksMaybeBlobsByRoot", {blobKzgCommitmentsLen, peerClient});
       for (let index = 0; index < blobKzgCommitmentsLen; index++) {
         blobIdentifiers.push({blockRoot, index});
       }
@@ -119,7 +122,13 @@ export async function beaconBlocksMaybeBlobsByRoot(
     }, [] as number[]);
 
     let allDataColumnsSidecars: peerdas.DataColumnSidecar[];
-    console.log("allDataColumnsSidecars", partialDownload, dataColumnIdentifiers);
+    logger?.debug("allDataColumnsSidecars partialDownload", {
+      ...(partialDownload
+        ? {blocks: partialDownload.blocks.length, pendingDataColumns: partialDownload.pendingDataColumns.join(",")}
+        : {blocks: null, pendingDataColumns: null}),
+      dataColumnIdentifiers: dataColumnIdentifiers.map((did) => did.index).join(","),
+      peerClient,
+    });
     if (dataColumnIdentifiers.length > 0) {
       allDataColumnsSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
     } else {
@@ -142,7 +151,9 @@ export async function beaconBlocksMaybeBlobsByRoot(
       Infinity,
       BlockSource.byRoot,
       DataColumnsSource.byRoot,
-      partialDownload
+      partialDownload,
+      peerClient,
+      logger
     );
     blockInputs = [...blockInputs, ...blockInputWithBlobs];
   }
@@ -158,7 +169,9 @@ export async function unavailableBeaconBlobsByRoot(
   network: INetwork,
   peerId: PeerIdStr,
   unavailableBlockInput: BlockInput | NullBlockInput,
-  metrics: Metrics | null
+  metrics: Metrics | null,
+  peerClient: string,
+  logger?: Logger
 ): Promise<BlockInput> {
   if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
     return unavailableBlockInput;
@@ -308,7 +321,9 @@ export async function unavailableBeaconBlobsByRoot(
         DataColumnsSource.byRoot,
         unavailableBlockInput.block !== null
           ? {blocks: [unavailableBlockInput], pendingDataColumns: neededColumns}
-          : null
+          : null,
+        peerClient,
+        logger
       );
 
       // don't forget to resolve availability as the block may be stuck in availability wait

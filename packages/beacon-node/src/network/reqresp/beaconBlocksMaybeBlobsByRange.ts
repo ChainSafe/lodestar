@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, peerdas, ssz} from "@lodestar/types";
 import {ForkSeq, NUMBER_OF_COLUMNS, ForkName} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
 
 import {
   BlobsSource,
@@ -28,7 +29,9 @@ export async function beaconBlocksMaybeBlobsByRange(
   peerId: PeerIdStr,
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch,
-  partialDownload: PartialDownload
+  partialDownload: PartialDownload,
+  peerClient: string,
+  logger?: Logger
 ): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
   // Code below assumes the request is in the same epoch
   // Range sync satisfies this condition, but double check here for sanity
@@ -108,9 +111,12 @@ export async function beaconBlocksMaybeBlobsByRange(
           : network.sendBeaconBlocksByRange(peerId, request),
         columns.length === 0 ? [] : network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
       ]);
-      console.log({
-        beaconBlocksRequest: ssz.phase0.BeaconBlocksByRangeRequest.toJson(request),
-        dataColumnRequest: ssz.peerdas.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest),
+      logger?.debug("ByRange requests", {
+        beaconBlocksRequest: JSON.stringify(ssz.phase0.BeaconBlocksByRangeRequest.toJson(request)),
+        dataColumnRequest: JSON.stringify(ssz.peerdas.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest)),
+        peerColumns: peerColumns.join(","),
+        peerId,
+        peerClient,
       });
 
       const blocks = matchBlockWithDataColumns(
@@ -124,7 +130,9 @@ export async function beaconBlocksMaybeBlobsByRange(
         endSlot,
         BlockSource.byRange,
         DataColumnsSource.byRange,
-        partialDownload
+        partialDownload,
+        peerClient,
+        logger
       );
 
       return {blocks, pendingDataColumns: pendingDataColumns.length > 0 ? pendingDataColumns : null};
@@ -222,7 +230,9 @@ export function matchBlockWithDataColumns(
   endSlot: Slot,
   blockSource: BlockSource,
   dataColumnsSource: DataColumnsSource,
-  prevPartialDownload: null | PartialDownload
+  prevPartialDownload: null | PartialDownload,
+  peerClient: string,
+  logger?: Logger
 ): BlockInput[] {
   const blockInputs: BlockInput[] = [];
   let dataColumnSideCarIndex = 0;
@@ -256,12 +266,15 @@ export function matchBlockWithDataColumns(
       }
 
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      console.log("matchBlockWithDataColumns", {
+      logger?.debug("processing matchBlockWithDataColumns", {
         blobKzgCommitmentsLen,
         dataColumnSidecars: dataColumnSidecars.length,
         shouldHaveAllData,
-        neededColumns,
-        requestedColumns,
+        neededColumns: neededColumns.join(","),
+        requestedColumns: requestedColumns.join(","),
+        slot: block.data.message.slot,
+        dataColumnsSlots: dataColumnSidecars.map((dcm) => dcm.signedBlockHeader.message.slot).join(","),
+        peerClient,
       });
       if (blobKzgCommitmentsLen === 0) {
         if (dataColumnSidecars.length > 0) {
@@ -285,11 +298,15 @@ export function matchBlockWithDataColumns(
           true
         );
 
-        console.log("matchBlockWithDataColumns", {dataColumnIndexes, requestedColumnsPresent});
+        logger?.debug("matchBlockWithDataColumns2", {
+          dataColumnIndexes: dataColumnIndexes.join(","),
+          requestedColumnsPresent,
+          slot: block.data.message.slot,
+          peerClient,
+        });
 
         if (dataColumnSidecars.length !== requestedColumns.length || !requestedColumnsPresent) {
-          console.log(
-            "matchBlockWithDataColumns",
+          logger?.debug(
             `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`,
             {
               allBlocks: allBlocks.length,
@@ -297,6 +314,7 @@ export function matchBlockWithDataColumns(
               peerId,
               nodeId: toHexString(computeNodeId(peerId)),
               blobKzgCommitmentsLen,
+              peerClient,
             }
           );
           throw Error(
@@ -361,6 +379,9 @@ export function matchBlockWithDataColumns(
         .join(",")}`
     );
   }
-  console.log("matchedBlockWithDataColumns", blockInputs);
+  logger?.debug("matched BlockWithDataColumns", {
+    peerClient,
+    blockInputs: blockInputs.map((bInpt) => `${bInpt.block.message.slot}=${bInpt.type}`).join(" "),
+  });
   return blockInputs;
 }
