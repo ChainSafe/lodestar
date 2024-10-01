@@ -1,4 +1,4 @@
-import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
+import {asyncUnshuffleList, unshuffleList} from "@chainsafe/swap-or-not-shuffle";
 import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {GaugeExtra, intDiv, Logger, NoLabels, toRootHex} from "@lodestar/utils";
 import {
@@ -112,6 +112,44 @@ export function computeEpochShuffling(
 
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
+
+  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
+
+  const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
+
+  const committees: Uint32Array[][] = [];
+  for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
+    const slotCommittees: Uint32Array[] = [];
+    for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
+      const index = slot * committeesPerSlot + committeeIndex;
+      const startOffset = Math.floor((activeValidatorCount * index) / committeeCount);
+      const endOffset = Math.floor((activeValidatorCount * (index + 1)) / committeeCount);
+      if (!(startOffset <= endOffset)) {
+        throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
+      }
+      slotCommittees.push(shuffling.subarray(startOffset, endOffset));
+    }
+    committees.push(slotCommittees);
+  }
+
+  return {
+    epoch,
+    activeIndices,
+    shuffling,
+    committees,
+    committeesPerSlot,
+  };
+}
+
+export async function computeEpochShufflingAsync(
+  state: BeaconStateAllForks,
+  activeIndices: Uint32Array,
+  epoch: Epoch
+): Promise<EpochShuffling> {
+  const activeValidatorCount = activeIndices.length;
+
+  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
+  const shuffling = await asyncUnshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
 
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
 
