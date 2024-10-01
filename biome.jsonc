@@ -33,12 +33,14 @@
         "noStaticOnlyClass": "off",
         "noThisInStatic": "off",
         "noUselessEmptyExport": "off",
-        "noUselessTypeConstraint": "off",
+        "noUselessTypeConstraint": "error",
         "useArrowFunction": "off",
         "useFlatMap": "off",
         "useLiteralKeys": "off",
         "useOptionalChain": "off",
-        "useRegexLiterals": "off"
+        "useRegexLiterals": "off",
+        "noBannedTypes": "error",
+        "noUselessThisAlias": "error"
       },
       "correctness": {
         "noInvalidConstructorSuper": "off",
@@ -57,7 +59,10 @@
               }
             }
           }
-        }
+        },
+        "useArrayLiterals": "error",
+        "noUndeclaredDependencies": "off", // TODO: Need to see why this rule is not detecting monorepo packages
+        "noUndeclaredVariables": "error"
       },
       "performance": {
         "noAccumulatingSpread": "off",
@@ -248,7 +253,9 @@
         },
         "useNumberNamespace": "off",
         "useSingleVarDeclarator": "off",
-        "useTemplate": "off"
+        "useTemplate": "off",
+        "noNamespace": "error",
+        "useAsConstAssertion": "error"
       },
       "suspicious": {
         "noAssignInExpressions": "error",
@@ -267,7 +274,11 @@
         "noRedundantUseStrict": "off",
         "noShadowRestrictedNames": "off",
         "useDefaultSwitchClauseLast": "off",
-        "useGetterReturn": "off"
+        "useGetterReturn": "off",
+        "noExtraNonNullAssertion": "error",
+        "noMisleadingInstantiator": "error",
+        "noUnsafeDeclarationMerging": "error",
+        "noEmptyBlockStatements": "off" // There is a lot of empty code blocks, should be enabled and clean up separately.
       },
       "nursery": {
         "useConsistentMemberAccessibility": {
@@ -294,7 +305,9 @@
               "worker_threads": "Please use node:worker_threads instead."
             }
           }
-        }
+        },
+        "noDuplicateElseIf": "error",
+        "noUselessEscapeInRegex": "error"
       }
     }
   },
@@ -308,13 +321,32 @@
       "bracketSpacing": false,
       "bracketSameLine": false,
       "quoteStyle": "double",
-      "attributePosition": "auto"
+      "attributePosition": "auto",
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
     },
     "globals": [
       "BigInt"
     ]
   },
   "overrides": [
+    {
+      "include": [
+        "packages/**/test/perf/**/*.test.ts",
+        "packages/state-transition/test/utils/beforeValueMocha.ts"
+      ],
+      "javascript": {
+        // These are used by mocha
+        "globals": [
+          "describe",
+          "it",
+          "before",
+          "after"
+        ]
+      }
+    },
     {
       "include": [
         "packages/cli/src/",
