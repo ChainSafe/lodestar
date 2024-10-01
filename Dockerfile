@@ -4,7 +4,11 @@
 FROM --platform=${BUILDPLATFORM:-amd64} node:22.4-slim as build_src
 ARG COMMIT
 WORKDIR /usr/app
-RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl build-essential g++ make python3 python3-setuptools \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 COPY . .
 
@@ -23,7 +27,11 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 # Note: This step is redundant for the host arch
 FROM node:22.4-slim as build_deps
 WORKDIR /usr/app
-RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl build-essential g++ make python3 python3-setuptools \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 COPY --from=build_src /usr/app .
 

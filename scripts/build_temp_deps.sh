@@ -8,5 +8,6 @@ chmod +x ./build.sh
 ./build.sh -ggdb
 
 cd $BLST_TS_DIR
+yarn global add @napi-rs/cli
 yarn
 yarn build:debug
