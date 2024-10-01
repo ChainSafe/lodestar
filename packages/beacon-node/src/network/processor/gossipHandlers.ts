@@ -144,6 +144,18 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const blockInputMeta =
       config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb ? blockInputRes.blockInputMeta : {};
 
+    const logCtx = {
+      slot: slot,
+      root: blockHex,
+      currentSlot: chain.clock.currentSlot,
+      peerId: peerIdStr,
+      delaySec,
+      ...blockInputMeta,
+      recvToValLatency,
+    };
+
+    logger.debug("Received gossip block", {...logCtx});
+
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
 
@@ -153,17 +165,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
 
-      logger.debug("Received gossip block", {
-        slot: slot,
-        root: blockHex,
-        curentSlot: chain.clock.currentSlot,
-        peerId: peerIdStr,
-        delaySec,
-        ...blockInputMeta,
-        recvToValLatency,
-        recvToValidation,
-        validationTime,
-      });
+      logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
 
       return blockInput;
     } catch (e) {

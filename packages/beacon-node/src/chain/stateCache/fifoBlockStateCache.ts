@@ -13,9 +13,14 @@ export type FIFOBlockStateCacheOpts = {
 };
 
 /**
- * Regen state if there's a reorg distance > 32 slots.
+ * Given `maxSkipSlots` = 32 and `DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE` = 32, lodestar doesn't need to
+ * reload states in order to process a gossip block.
+ *
+ * |-----------------------------------------------|-----------------------------------------------|
+ *                 maxSkipSlots                      DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE    ^
+ *                                                                                             clock slot
  */
-export const DEFAULT_MAX_BLOCK_STATES = 32;
+export const DEFAULT_MAX_BLOCK_STATES = 64;
 
 /**
  * New implementation of BlockStateCache that keeps the most recent n states consistently
