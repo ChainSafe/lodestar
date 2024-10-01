@@ -1,3 +1,4 @@
+import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
 import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {GaugeExtra, intDiv, Logger, NoLabels, toRootHex} from "@lodestar/utils";
 import {
@@ -6,11 +7,11 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
+  SHUFFLE_ROUND_COUNT,
 } from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
-import {unshuffleList} from "./shuffle.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
@@ -109,9 +110,8 @@ export function computeEpochShuffling(
 ): EpochShuffling {
   const activeValidatorCount = activeIndices.length;
 
-  const shuffling = activeIndices.slice();
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
-  unshuffleList(shuffling, seed);
+  const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
 
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
 
