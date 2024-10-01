@@ -638,8 +638,59 @@
     "@chainsafe/as-sha256" "0.5.0"
     "@chainsafe/persistent-merkle-tree" "0.8.0"
 
-"@chainsafe/swap-or-not-shuffle@file:temp-deps/swap-or-not-shuffle":
-  version "0.0.0"
+"@chainsafe/swap-or-not-shuffle-darwin-arm64@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-darwin-arm64/-/swap-or-not-shuffle-darwin-arm64-0.0.1.tgz#03dcce9dfb0e14f82b3ba7852c61de99a5e9ad1e"
+  integrity sha512-cEga0bB/u44/pEEICLcUk1DINedU+8CBP+/vqbhTLYvO/UWKz/gPMhbfzIhAaYSZYWGyXc0BaZlDWQlg8oCy+A==
+
+"@chainsafe/swap-or-not-shuffle-darwin-x64@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-darwin-x64/-/swap-or-not-shuffle-darwin-x64-0.0.1.tgz#f1b805e0b77cc7444e284f6e23e138e9505829e8"
+  integrity sha512-+lCdPVI4Oj5UnLHtyFNhqI8GylR7asphunosQzM4SAWqQU9xIKNmUblwGR54uhorhv56EbLsA+gk7KC+6VC6eA==
+
+"@chainsafe/swap-or-not-shuffle-linux-arm64-gnu@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-arm64-gnu/-/swap-or-not-shuffle-linux-arm64-gnu-0.0.1.tgz#2b8351316a95f11e333419c573da21e18a5b60a5"
+  integrity sha512-0weniFiFtucSr1r9hMQTu5EKBrIodr2oUAGAxL6sReGz8j4u8HoW0osJ8+S7mUmoh10shasLIqcvq55Ixn+Fnw==
+
+"@chainsafe/swap-or-not-shuffle-linux-arm64-musl@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-arm64-musl/-/swap-or-not-shuffle-linux-arm64-musl-0.0.1.tgz#e4840a5cb913ff8f30f922b56457247a5fff1ab9"
+  integrity sha512-XUOzD0KqkeIZhGVuncsGERP33nlfH2zUzE0CnChaV6XMlO+CdS3BI7cQrfCBBd1JfUDd1o4w/IIMNYcDtan0/A==
+
+"@chainsafe/swap-or-not-shuffle-linux-x64-gnu@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-x64-gnu/-/swap-or-not-shuffle-linux-x64-gnu-0.0.1.tgz#d3b40e37b45da09a9d8ca30a1478ad96ace24159"
+  integrity sha512-AdfghpkUTSPiULv4qMtdiL1sK3vW+9wzf2mgG6trY6ngsQmyYEdrsKWPVtFriE8d/NUW3xqtEVlsSm+RhOmJ9w==
+
+"@chainsafe/swap-or-not-shuffle-linux-x64-musl@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-x64-musl/-/swap-or-not-shuffle-linux-x64-musl-0.0.1.tgz#d1adf6684f08127f034ee90dfbcda71ff3f86228"
+  integrity sha512-3QTQCvfGZ8OfwVlUzwE1S7xLdQ5vhdT2Vg6OzrApUzaHMiuH4VH2Dm7gF3C88nsvpBizHLC7ZfAwsS4jC6a3xA==
+
+"@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-win32-arm64-msvc/-/swap-or-not-shuffle-win32-arm64-msvc-0.0.1.tgz#2e70281678083c94c140554591ea384a5980e8ba"
+  integrity sha512-srQVeIb3prKGWwcYWkcRBUM6KqT8odJ4SWJyX5Z3qOgYSnDl5X1vUOi5wVfUDxlbhZ5YVIp5RojWgf4K73MySw==
+
+"@chainsafe/swap-or-not-shuffle-win32-x64-msvc@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-win32-x64-msvc/-/swap-or-not-shuffle-win32-x64-msvc-0.0.1.tgz#6bc0e299b81f78e28d8b31661d61fe6509c088c7"
+  integrity sha512-55IQgh1vcq9h/dw4c3UkWPV/z/1024i03i3HErVsmSVy5GEX6/PmvQRi1ufapR5tWpHmnrpFjEjun2ONpKxuUw==
+
+"@chainsafe/swap-or-not-shuffle@^0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle/-/swap-or-not-shuffle-0.0.1.tgz#d1988fc565ffb4533f9f853840a2e7c75671df13"
+  integrity sha512-JY/V7eJBzfzeyZj2OeMtIcG3X2PVTizencqKMhbf2vb8H6j+S16uIVfMZC9x4cjXVxjp0KkpUTkJlxYX2LwneA==
+  optionalDependencies:
+    "@chainsafe/swap-or-not-shuffle-darwin-arm64" "0.0.1"
+    "@chainsafe/swap-or-not-shuffle-darwin-x64" "0.0.1"
+    "@chainsafe/swap-or-not-shuffle-linux-arm64-gnu" "0.0.1"
+    "@chainsafe/swap-or-not-shuffle-linux-arm64-musl" "0.0.1"
+    "@chainsafe/swap-or-not-shuffle-linux-x64-gnu" "0.0.1"
+    "@chainsafe/swap-or-not-shuffle-linux-x64-musl" "0.0.1"
+    "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "0.0.1"
+    "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "0.0.1"
 
 "@chainsafe/threads@^1.11.1":
   version "1.11.1"
