@@ -28,7 +28,7 @@
     "build:release": "yarn clean && yarn run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "lint": "biome lint src/ test/",
+    "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",

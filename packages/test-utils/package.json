@@ -42,7 +42,7 @@
     "build:watch": "yarn run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "lint": "biome lint src/",
+    "lint": "biome check src/",
     "lint:fix": "yarn run lint --write",
     "check-readme": "typescript-docs-verifier"
   },
