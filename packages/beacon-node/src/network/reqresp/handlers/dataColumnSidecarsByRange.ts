@@ -96,17 +96,18 @@ export function* iterateDataColumnBytesFromWrapper(
   );
 
   const columnsLen = allDataColumnSidecarsBytes.length / columnsSize;
+  const storedColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_v, i) => i).filter((i) => dataColumnsIndex[i] > 0);
+
+  console.log(
+    `onDataColumnSidecarsByRange: slot=${blockSlot} columnsSize=${columnsSize} columnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} toredColumnsNum=${allDataColumnSidecarsBytes.length / columnsSize}, storedColumns=${storedColumns.join(",")}`
+  );
+
   // no columns possibly no blob
   if (columnsLen === 0) {
     return;
   }
 
   const fork = chain.config.getForkName(blockSlot);
-  console.log("onDataColumnSidecarsByRange", {
-    slot: blockSlot,
-    columnsSize,
-    storedColumnsNum: allDataColumnSidecarsBytes.length / columnsSize,
-  });
 
   for (const index of columns) {
     // get the index at which the column is
