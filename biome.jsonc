@@ -113,6 +113,14 @@
         "noShadowRestrictedNames": "off",
         "useDefaultSwitchClauseLast": "off",
         "useGetterReturn": "off"
+      },
+      "nursery": {
+        "useConsistentMemberAccessibility": {
+          "level": "error",
+          "options": {
+            "accessibility": "noPublic"
+          }
+        }
       }
     }
   },
