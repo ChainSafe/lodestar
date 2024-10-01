@@ -53,10 +53,11 @@ type CacheItem = InMemoryCacheItem | PersistedCacheItem;
 type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array};
 
 /**
- * Before n-historical states, lodestar keeps mostly 3 states in memory with 1 finalized state
- * Since Jan 2024, lodestar stores the finalized state in disk and keeps up to 2 epochs in memory
+ * Before n-historical states, lodestar keeps all checkpoint states since finalized
+ * Since Sep 2024, lodestar stores 3 most recent checkpoint states in memory and the rest on disk. The finalized state
+ * may not be available in memory, and stay on disk instead.
  */
-export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 2;
+export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
