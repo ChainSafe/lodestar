@@ -27,6 +27,12 @@ export type ForkChoiceOpts = RawForkChoiceOpts & {
   forkchoiceConstructor?: typeof ForkChoice;
 };
 
+export enum ForkchoiceCaller {
+  prepareNextSlot = "prepare_next_slot",
+  onClockSlot = "on_clock_slot",
+  importBlock = "import_block",
+}
+
 /**
  * Fork Choice extended with a ChainEventEmitter
  */
