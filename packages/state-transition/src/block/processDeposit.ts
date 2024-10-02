@@ -15,14 +15,7 @@ import {DepositData} from "@lodestar/types/lib/phase0/types.js";
 import {DepositRequest} from "@lodestar/types/lib/electra/types.js";
 import {BeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../constants/index.js";
-import {
-  computeDomain,
-  computeSigningRoot,
-  hasCompoundingWithdrawalCredential,
-  hasEth1WithdrawalCredential,
-  increaseBalance,
-  switchToCompoundingValidator,
-} from "../util/index.js";
+import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
 
 /**
@@ -80,14 +73,6 @@ export function applyDeposit(
         amount: BigInt(amount),
       });
       stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
-
-      // if (
-      //   hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
-      //   hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials) &&
-      //   isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
-      // ) {
-      //   switchToCompoundingValidator(stateElectra, cachedIndex);
-      // }
     }
   }
 }
