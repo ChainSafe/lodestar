@@ -307,7 +307,9 @@
           }
         },
         "noDuplicateElseIf": "error",
-        "noUselessEscapeInRegex": "error"
+        "noUselessEscapeInRegex": "error",
+        "noIrregularWhitespace": "error",
+        "noOctalEscape": "error"
       }
     }
   },
