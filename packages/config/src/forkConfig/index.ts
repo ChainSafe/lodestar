@@ -62,8 +62,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const peerdas: ForkInfo = {
     name: ForkName.peerdas,
     seq: ForkSeq.peerdas,
-    epoch: config.EIP7594_FORK_EPOCH,
-    version: config.EIP7594_FORK_VERSION,
+    epoch: config.PEERDAS_FORK_EPOCH,
+    version: config.PEERDAS_FORK_VERSION,
     prevVersion: config.DENEB_FORK_VERSION,
     prevForkName: ForkName.deneb,
   };
