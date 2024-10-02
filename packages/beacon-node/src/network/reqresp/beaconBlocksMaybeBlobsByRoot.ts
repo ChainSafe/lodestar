@@ -124,9 +124,9 @@ export async function beaconBlocksMaybeBlobsByRoot(
     let allDataColumnsSidecars: peerdas.DataColumnSidecar[];
     logger?.debug("allDataColumnsSidecars partialDownload", {
       ...(partialDownload
-        ? {blocks: partialDownload.blocks.length, pendingDataColumns: partialDownload.pendingDataColumns.join(",")}
+        ? {blocks: partialDownload.blocks.length, pendingDataColumns: partialDownload.pendingDataColumns.join(" ")}
         : {blocks: null, pendingDataColumns: null}),
-      dataColumnIdentifiers: dataColumnIdentifiers.map((did) => did.index).join(","),
+      dataColumnIdentifiers: dataColumnIdentifiers.map((did) => did.index).join(" "),
       peerClient,
     });
     if (dataColumnIdentifiers.length > 0) {

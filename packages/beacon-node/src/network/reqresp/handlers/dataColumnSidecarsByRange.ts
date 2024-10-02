@@ -24,7 +24,7 @@ export async function* onDataColumnSidecarsByRange(
   const unfinalized = db.dataColumnSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
   console.log(
-    `incoming onDataColumnSidecarsByRange startSlot=${startSlot}, count=${count}, columns=${columns.join(",")} finalizedSlot=${finalizedSlot} endSlot=${endSlot}`
+    `incoming onDataColumnSidecarsByRange startSlot=${startSlot}, count=${count}, columns=${columns.join(" ")} finalizedSlot=${finalizedSlot} endSlot=${endSlot}`
   );
 
   // Finalized range of blobs
@@ -107,7 +107,7 @@ export function* iterateDataColumnBytesFromWrapper(
   const storedColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_v, i) => i).filter((i) => dataColumnsIndex[i] > 0);
 
   console.log(
-    `onDataColumnSidecarsByRange: slot=${blockSlot} columnsSize=${columnsSize} columnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} toredColumnsNum=${allDataColumnSidecarsBytes.length / columnsSize}, storedColumns=${storedColumns.join(",")}`
+    `onDataColumnSidecarsByRange: slot=${blockSlot} columnsSize=${columnsSize} columnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} toredColumnsNum=${allDataColumnSidecarsBytes.length / columnsSize}, storedColumns=${storedColumns.join(" ")}`
   );
 
   // no columns possibly no blob
@@ -136,6 +136,7 @@ export function* iterateDataColumnBytesFromWrapper(
         `Invalid dataColumnSidecar index=${index} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnsSize} for slot ${blockSlot} blobsLen=${columnsLen}`
       );
     }
+    console.log(`iterate onDataColumnSidecarsByRange blockSlot=${blockSlot} index=${index} dataIndex=${dataIndex}`);
     yield {
       data: dataColumnSidecarBytes,
       fork,

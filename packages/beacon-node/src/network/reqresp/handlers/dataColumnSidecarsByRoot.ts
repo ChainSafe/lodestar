@@ -71,7 +71,7 @@ export async function* onDataColumnSidecarsByRoot(
       const columnsLen = dataColumnSidecarsBytes.length / columnsSize;
 
       console.log(
-        `onDataColumnSidecarsByRoot: slot=${block.slot} columnsSize=${columnsSize} storedColumnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} dataColumnSidecarsBytesWrapped=${dataColumnSidecarsBytesWrapped.length} storedColumns=${storedColumns.join(",")}`
+        `onDataColumnSidecarsByRoot: slot=${block.slot} columnsSize=${columnsSize} storedColumnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} dataColumnSidecarsBytesWrapped=${dataColumnSidecarsBytesWrapped.length} storedColumns=${storedColumns.join(" ")}`
       );
 
       lastFetchedSideCars = {blockRoot: blockRootHex, bytes: dataColumnSidecarsBytes, columnsSize, dataColumnsIndex};

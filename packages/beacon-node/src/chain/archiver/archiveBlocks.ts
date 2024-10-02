@@ -61,13 +61,13 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
-      await migrateBlobSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
-      logger.verbose("Migrated blobSidecars from hot DB to cold DB");
+      const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
+      logger.verbose("Migrated blobSidecars from hot DB to cold DB", {migratedEntries});
     }
 
     if (finalizedPostPeerDAS) {
-      await migrateDataColumnSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
-      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB");
+      const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
+      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {migratedEntries});
     }
   }
 
@@ -178,18 +178,22 @@ async function migrateBlobSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   blocks: BlockRootSlot[]
-): Promise<void> {
+): Promise<number> {
+  let migratedWrappedBlobSidecars = 0;
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
     const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
 
     // processCanonicalBlocks
-    if (canonicalBlocks.length === 0) return;
+    if (canonicalBlocks.length === 0) break;
 
     // load Buffer instead of ssz deserialized to improve performance
     const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
       canonicalBlocks
-        .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.deneb)
+        .filter((block) => {
+          const blkSeq = config.getForkSeq(block.slot);
+          return blkSeq >= ForkSeq.deneb && blkSeq < ForkSeq.peerdas;
+        })
         .map(async (block) => {
           const bytes = await db.blobSidecars.getBinary(block.root);
           if (!bytes) {
@@ -204,20 +208,24 @@ async function migrateBlobSidecarsFromHotToColdDb(
       db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
       db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
     ]);
+    migratedWrappedBlobSidecars += canonicalBlobSidecarsEntries.length;
   }
+
+  return migratedWrappedBlobSidecars;
 }
 
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   blocks: BlockRootSlot[]
-): Promise<void> {
+): Promise<number> {
+  let migratedWrappedDataColumns = 0;
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
     const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
 
     // processCanonicalBlocks
-    if (canonicalBlocks.length === 0) return;
+    if (canonicalBlocks.length === 0) break;
 
     // load Buffer instead of ssz deserialized to improve performance
     const canonicalDataColumnSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
@@ -237,7 +245,10 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       db.dataColumnSidecarsArchive.batchPutBinary(canonicalDataColumnSidecarsEntries),
       db.dataColumnSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
     ]);
+    migratedWrappedDataColumns += canonicalDataColumnSidecarsEntries.length;
   }
+
+  return migratedWrappedDataColumns;
 }
 
 /**

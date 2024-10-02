@@ -114,7 +114,11 @@ export async function beaconBlocksMaybeBlobsByRange(
       logger?.debug("ByRange requests", {
         beaconBlocksRequest: JSON.stringify(ssz.phase0.BeaconBlocksByRangeRequest.toJson(request)),
         dataColumnRequest: JSON.stringify(ssz.peerdas.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest)),
-        peerColumns: peerColumns.join(","),
+        [`allBlocks(${allBlocks.length})`]: allBlocks.map((blk) => blk.data.message.slot).join(" "),
+        [`allDataColumnSidecars(${allDataColumnSidecars.length})`]: allDataColumnSidecars
+          .map((dCol) => `${dCol.signedBlockHeader.message.slot}:${dCol.index}`)
+          .join(" "),
+        peerColumns: peerColumns.join(" "),
         peerId,
         peerClient,
       });
@@ -213,7 +217,7 @@ export function matchBlockWithBlobs(
       } lastMatchedSlot=${lastMatchedSlot}, pending blobSidecars slots=${allBlobSidecars
         .slice(blobSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)
-        .join(",")}`
+        .join(" ")}`
     );
   }
   return blockInputs;
@@ -270,10 +274,10 @@ export function matchBlockWithDataColumns(
         blobKzgCommitmentsLen,
         dataColumnSidecars: dataColumnSidecars.length,
         shouldHaveAllData,
-        neededColumns: neededColumns.join(","),
-        requestedColumns: requestedColumns.join(","),
+        neededColumns: neededColumns.join(" "),
+        requestedColumns: requestedColumns.join(" "),
         slot: block.data.message.slot,
-        dataColumnsSlots: dataColumnSidecars.map((dcm) => dcm.signedBlockHeader.message.slot).join(","),
+        dataColumnsSlots: dataColumnSidecars.map((dcm) => dcm.signedBlockHeader.message.slot).join(" "),
         peerClient,
       });
       if (blobKzgCommitmentsLen === 0) {
@@ -299,7 +303,7 @@ export function matchBlockWithDataColumns(
         );
 
         logger?.debug("matchBlockWithDataColumns2", {
-          dataColumnIndexes: dataColumnIndexes.join(","),
+          dataColumnIndexes: dataColumnIndexes.join(" "),
           requestedColumnsPresent,
           slot: block.data.message.slot,
           peerClient,
@@ -307,7 +311,7 @@ export function matchBlockWithDataColumns(
 
         if (dataColumnSidecars.length !== requestedColumns.length || !requestedColumnsPresent) {
           logger?.debug(
-            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`,
+            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(" ")} requested=${requestedColumns.join(" ")}`,
             {
               allBlocks: allBlocks.length,
               allDataColumnSidecars: allDataColumnSidecars.length,
@@ -318,7 +322,7 @@ export function matchBlockWithDataColumns(
             }
           );
           throw Error(
-            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} blobKzgCommitmentsLen=${blobKzgCommitmentsLen} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(",")} requested=${requestedColumns.join(",")}`
+            `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} blobKzgCommitmentsLen=${blobKzgCommitmentsLen} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(" ")} requested=${requestedColumns.join(" ")}`
           );
         }
 
@@ -376,7 +380,7 @@ export function matchBlockWithDataColumns(
       } lastMatchedSlot=${lastMatchedSlot}, pending blobSidecars slots=${allDataColumnSidecars
         .slice(dataColumnSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)
-        .join(",")}`
+        .join(" ")}`
     );
   }
   logger?.debug("matched BlockWithDataColumns", {

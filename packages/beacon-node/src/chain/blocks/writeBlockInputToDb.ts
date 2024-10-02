@@ -100,7 +100,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
   await Promise.all(fnPromises);
   this.logger.debug("Persisted blocksInput to db", {
     blocksInput: blocksInput.length,
-    slots: blocksInput.map((blockInput) => blockInput.block.message.slot).join(","),
+    slots: blocksInput.map((blockInput) => blockInput.block.message.slot).join(" "),
   });
 }
 

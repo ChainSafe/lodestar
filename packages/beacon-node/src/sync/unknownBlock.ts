@@ -323,7 +323,7 @@ export class UnknownBlockSync {
           this.logger.debug("Skipping download as no filtered peers having relevant data", {
             allPeers: allPeers.length,
             connectedPeers: connectedPeers.length,
-            neededColumns: neededColumns.join(","),
+            neededColumns: neededColumns.join(" "),
           });
           return;
         }

@@ -429,8 +429,8 @@ export class PeerManager {
         peerId: peer.toString(),
         custodySubnetCount,
         hasAllColumns,
-        peerCustodySubnets: peerCustodySubnets.join(","),
-        mySampleSubnets: this.sampleSubnets.join(","),
+        peerCustodySubnets: peerCustodySubnets.join(" "),
+        mySampleSubnets: this.sampleSubnets.join(" "),
         clientAgent,
       });
 

@@ -461,8 +461,8 @@ export class PeerDiscovery {
       peerNodeId: toHexString(nodeId),
       hasAllColumns,
       peerCustodySubnetCount,
-      peerCustodySubnets: peerCustodySubnets.join(","),
-      sampleSubnets: this.sampleSubnets.join(","),
+      peerCustodySubnets: peerCustodySubnets.join(" "),
+      sampleSubnets: this.sampleSubnets.join(" "),
       nodeId: `${toHexString(this.nodeId)}`,
     });
     if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {
