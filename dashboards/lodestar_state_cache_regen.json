@@ -425,7 +425,32 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "epochs_in-memory"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1325,30 +1350,6 @@
                 "value": "none"
               }
             ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "sec_from_slot"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
           }
         ]
       },
@@ -1378,7 +1379,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_cp_state_cache_state_serialize_seconds_sum[$rate_interval])\n/\nrate(lodestar_cp_state_cache_state_serialize_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_state_serialize_seconds_sum{source=\"persistent_checkpoints_cache_state\"}[$rate_interval])\n/\nrate(lodestar_state_serialize_seconds_count{source=\"persistent_checkpoints_cache_state\"}[$rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "serialize_duration",
@@ -1473,6 +1474,30 @@
               },
               {
                 "id": "unit"
+              }
+            ]
+          },
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "reload_duration"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
               }
             ]
           }
@@ -1618,7 +1643,7 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "from_persistent"
+                  "from_memory"
                 ],
                 "prefix": "All except:",
                 "readOnly": true

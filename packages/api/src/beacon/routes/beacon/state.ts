@@ -53,6 +53,14 @@ export const ValidatorResponseType = new ContainerType({
   status: new StringType<ValidatorStatus>(),
   validator: ssz.phase0.Validator,
 });
+export const ValidatorIdentityType = new ContainerType(
+  {
+    index: ssz.ValidatorIndex,
+    pubkey: ssz.BLSPubkey,
+    activationEpoch: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
 export const EpochCommitteeResponseType = new ContainerType({
   index: ssz.CommitteeIndex,
   slot: ssz.Slot,
@@ -73,6 +81,7 @@ export const EpochSyncCommitteeResponseType = new ContainerType(
   {jsonCase: "eth2"}
 );
 export const ValidatorResponseListType = ArrayOf(ValidatorResponseType);
+export const ValidatorIdentitiesType = ArrayOf(ValidatorIdentityType);
 export const EpochCommitteeResponseListType = ArrayOf(EpochCommitteeResponseType);
 export const ValidatorBalanceListType = ArrayOf(ValidatorBalanceType);
 
@@ -84,6 +93,7 @@ export type ValidatorBalance = ValueOf<typeof ValidatorBalanceType>;
 export type EpochSyncCommitteeResponse = ValueOf<typeof EpochSyncCommitteeResponseType>;
 
 export type ValidatorResponseList = ValueOf<typeof ValidatorResponseListType>;
+export type ValidatorIdentities = ValueOf<typeof ValidatorIdentitiesType>;
 export type EpochCommitteeResponseList = ValueOf<typeof EpochCommitteeResponseListType>;
 export type ValidatorBalanceList = ValueOf<typeof ValidatorBalanceListType>;
 
@@ -188,6 +198,26 @@ export type Endpoints = {
     },
     {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatus[]}},
     ValidatorResponseList,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
+   * Get validator identities from state
+   *
+   * Returns filterable list of validators identities.
+   *
+   * Identities will be returned for all indices or public keys that match known validators. If an index or public key does not
+   * match any known validator, no identity will be returned but this will not cause an error. There are no guarantees for the
+   * returned data in terms of ordering.
+   */
+  postStateValidatorIdentities: Endpoint<
+    "POST",
+    StateArgs & {
+      /** An array of values, with each value either a hex encoded public key (any bytes48 with 0x prefix) or a validator index */
+      validatorIds?: ValidatorId[];
+    },
+    {params: {state_id: string}; body: string[]},
+    ValidatorIdentities,
     ExecutionOptimisticAndFinalizedMeta
   >;
 
@@ -401,6 +431,28 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: {
         onlySupport: WireFormat.json,
         data: ValidatorResponseListType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    postStateValidatorIdentities: {
+      url: "/eth/v1/beacon/states/{state_id}/validator_identities",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({stateId, validatorIds}) => ({
+          params: {state_id: stateId.toString()},
+          body: toValidatorIdsStr(validatorIds) || [],
+        }),
+        parseReqJson: ({params, body = []}) => ({
+          stateId: params.state_id,
+          validatorIds: fromValidatorIdsStr(body),
+        }),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          body: Schema.UintOrStringArray,
+        },
+      }),
+      resp: {
+        data: ValidatorIdentitiesType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },

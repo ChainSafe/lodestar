@@ -41,7 +41,7 @@ await env.start({runTimeoutMs: estimatedTimeoutMs});
 const node = env.nodes[0].beacon;
 await waitForSlot("Wait for 2 slots before checking endpoints", {env, slot: 2});
 
-const validators = (await node.api.beacon.getStateValidators({stateId: "head"})).value();
+const validators = (await node.api.beacon.postStateValidators({stateId: "head"})).value();
 
 await env.tracker.assert("should have correct validators count called without filters", async () => {
   assert.equal(validators.length, validatorCount);
@@ -56,12 +56,12 @@ await env.tracker.assert("should have correct validator index for second validat
 });
 
 await env.tracker.assert(
-  "should return correct number of filtered validators when getStateValidators called with filters",
+  "should return correct number of filtered validators when postStateValidators called with filters",
   async () => {
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const res = await node.api.beacon.getStateValidators({stateId: "head", validatorIds: [filterPubKey]});
+    const res = await node.api.beacon.postStateValidators({stateId: "head", validatorIds: [filterPubKey]});
 
     assert.equal(res.value().length, 1);
 
@@ -72,12 +72,12 @@ await env.tracker.assert(
 );
 
 await env.tracker.assert(
-  "should return correct filtered validators when getStateValidators called with filters",
+  "should return correct filtered validators when postStateValidators called with filters",
   async () => {
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const res = await node.api.beacon.getStateValidators({stateId: "head", validatorIds: [filterPubKey]});
+    const res = await node.api.beacon.postStateValidators({stateId: "head", validatorIds: [filterPubKey]});
 
     assert.equal(toHexString(res.value()[0].validator.pubkey), filterPubKey);
   }

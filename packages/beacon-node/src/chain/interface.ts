@@ -1,4 +1,5 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {
   UintNum64,
   Root,
@@ -21,7 +22,6 @@ import {
   CachedBeaconStateAllForks,
   EpochShuffling,
   Index2PubkeyCache,
-  PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";

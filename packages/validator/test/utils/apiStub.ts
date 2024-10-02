@@ -16,6 +16,7 @@ export function getApiClientStub(): ApiClientStub {
   return {
     beacon: {
       getStateValidators: vi.fn(),
+      postStateValidators: vi.fn(),
       publishBlindedBlockV2: vi.fn(),
       publishBlockV2: vi.fn(),
       submitPoolSyncCommitteeSignatures: vi.fn(),
