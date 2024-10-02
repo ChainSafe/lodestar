@@ -3,6 +3,9 @@ import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {VoteTracker} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 
+// reuse arrays to avoid memory reallocation and gc
+const deltas = new Array<number>();
+
 /**
  * Returns a list of `deltas`, where there is one delta for each of the indices in `indices`
  *
@@ -19,10 +22,8 @@ export function computeDeltas(
   newBalances: EffectiveBalanceIncrements,
   equivocatingIndices: Set<ValidatorIndex>
 ): number[] {
-  const deltas = new Array<number>(numProtoNodes);
-  for (let i = 0; i < numProtoNodes; i++) {
-    deltas[i] = 0;
-  }
+  deltas.length = numProtoNodes;
+  deltas.fill(0);
 
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance, newBalance: number;
