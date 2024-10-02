@@ -5,7 +5,7 @@ import bearerAuthPlugin from "@fastify/bearer-auth";
 import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
-import {ApiError, NodeIsSyncing} from "../impl/errors.js";
+import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
 
 export type RestApiServerOpts = {
@@ -39,6 +39,10 @@ type ErrorResponse = {
   code: number;
   message: string;
   stacktraces?: string[];
+};
+
+type IndexedErrorResponse = ErrorResponse & {
+  failures?: FailureList;
 };
 
 /**
@@ -97,6 +101,14 @@ export class RestApiServer {
           stacktraces,
         };
         void res.status(400).send(payload);
+      } else if (err instanceof IndexedError) {
+        const payload: IndexedErrorResponse = {
+          code: err.statusCode,
+          message: err.message,
+          failures: err.failures,
+          stacktraces,
+        };
+        void res.status(err.statusCode).send(payload);
       } else {
         // Convert our custom ApiError into status code
         const statusCode = err instanceof ApiError ? err.statusCode : 500;
