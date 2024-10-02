@@ -141,7 +141,8 @@ export interface EpochTransitionCache {
 
   /**
    * This is for electra only
-   * Validators that're switched to compounding during processPendingConsolidations(), not available in beforeProcessEpoch()
+   * Previously this was used to improve performance in processEffectiveBalanceUpdates() to keep track of validators
+   * switched to compounding during epoch processing. Switching is now moved to block processing.
    */
   newCompoundingValidators?: Set<ValidatorIndex>;
 

@@ -81,13 +81,13 @@ export function applyDeposit(
       });
       stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
 
-      if (
-        hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
-        hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials) &&
-        isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
-      ) {
-        switchToCompoundingValidator(stateElectra, cachedIndex);
-      }
+      // if (
+      //   hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
+      //   hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials) &&
+      //   isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
+      // ) {
+      //   switchToCompoundingValidator(stateElectra, cachedIndex);
+      // }
     }
   }
 }
