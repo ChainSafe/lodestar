@@ -48,7 +48,7 @@ export function computeDeltas(
     // It is possible that there was a vote for an unknown validator if we change our justified
     // state to a new state with a higher epoch that is on a different fork because that fork may have
     // on-boarded fewer validators than the prior fork.
-    newBalance = newBalances[vIndex] ?? 0;
+    newBalance = newBalances === oldBalances ? oldBalance : newBalances[vIndex] ?? 0;
 
     if (equivocatingIndices.size > 0 && equivocatingIndices.has(vIndex)) {
       // this function could be called multiple times but we only want to process slashing validator for 1 time
