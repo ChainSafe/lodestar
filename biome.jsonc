@@ -5,6 +5,9 @@
     "enabled": true,
     "useIgnoreFile": true
   },
+  "files": {
+    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts"]
+  },
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -13,13 +16,7 @@
     "lineEnding": "lf",
     "lineWidth": 120,
     "attributePosition": "auto",
-    "ignore": [
-      "**/lib",
-      "**/.nyc_output",
-      "./packages/*/spec-tests",
-      "**/node_modules",
-      "./packages/*/node_modules/**"
-    ]
+    "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
   },
   "organizeImports": {
     "enabled": false
@@ -76,9 +73,7 @@
         "noRestrictedGlobals": {
           "level": "error",
           "options": {
-            "deniedGlobals": [
-              "fetch"
-            ]
+            "deniedGlobals": ["fetch"]
           }
         },
         "noUnusedTemplateLiteral": "off",
@@ -99,154 +94,103 @@
                 "selector": {
                   "kind": "any"
                 },
-                "formats": [
-                  "camelCase"
-                ]
+                "formats": ["camelCase"]
               },
               {
                 "selector": {
                   "kind": "classProperty"
                 },
-                "formats": [
-                  "camelCase"
-                ]
+                "formats": ["camelCase"]
               },
               {
                 "selector": {
                   "kind": "objectLiteralProperty"
                 },
-                "formats": [
-                  "camelCase"
-                ]
+                "formats": ["camelCase"]
               },
               {
                 "selector": {
                   "kind": "classMethod"
                 },
-                "formats": [
-                  "camelCase"
-                ]
+                "formats": ["camelCase"]
               },
               {
                 "selector": {
                   "kind": "functionParameter"
                 },
-                "formats": [
-                  "camelCase"
-                ]
+                "formats": ["camelCase"]
               },
               {
                 "selector": {
                   "kind": "variable"
                 },
-                "formats": [
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "typeLike"
                 },
-                "formats": [
-                  "PascalCase"
-                ]
+                "formats": ["PascalCase"]
               },
               {
                 "selector": {
                   "kind": "enum"
                 },
-                "formats": [
-                  "PascalCase"
-                ]
+                "formats": ["PascalCase"]
               },
               {
                 "selector": {
                   "kind": "enumMember"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "classProperty"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "typeProperty"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "classMember"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "objectLiteralMethod"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "typeMethod"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "variable"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase",
-                  "CONSTANT_CASE"
-                ]
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "importAlias"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase"
-                ]
+                "formats": ["PascalCase", "camelCase"]
               },
               {
                 "selector": {
                   "kind": "importNamespace"
                 },
-                "formats": [
-                  "PascalCase",
-                  "camelCase"
-                ]
+                "formats": ["PascalCase", "camelCase"]
               }
             ]
           }
@@ -329,32 +273,18 @@
     "linter": {
       "enabled": true
     },
-    "globals": [
-      "BigInt"
-    ]
+    "globals": ["BigInt"]
   },
   "overrides": [
     {
-      "include": [
-        "packages/**/test/perf/**/*.test.ts",
-        "packages/state-transition/test/utils/beforeValueMocha.ts"
-      ],
+      "include": ["packages/**/test/perf/**/*.test.ts", "packages/state-transition/test/utils/beforeValueMocha.ts"],
       "javascript": {
         // These are used by mocha
-        "globals": [
-          "describe",
-          "it",
-          "before",
-          "after"
-        ]
+        "globals": ["describe", "it", "before", "after"]
       }
     },
     {
-      "include": [
-        "packages/cli/src/",
-        "packages/test-utils/src",
-        "packages/flare/src"
-      ],
+      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -410,9 +340,7 @@
       }
     },
     {
-      "include": [
-        "packages/beacon-node/test/e2e/eth1/jsonRpcHttpClient.test.ts"
-      ],
+      "include": ["packages/beacon-node/test/e2e/eth1/jsonRpcHttpClient.test.ts"],
       "linter": {
         "rules": {
           "correctness": {
@@ -422,10 +350,7 @@
       }
     },
     {
-      "include": [
-        "**/test/**/*.ts",
-        "packages/*/test/**/*.js"
-      ],
+      "include": ["**/test/**/*.ts", "packages/*/test/**/*.js"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -435,17 +360,13 @@
       }
     },
     {
-      "include": [
-        "**/perf/**/*.ts"
-      ],
+      "include": ["**/perf/**/*.ts"],
       "linter": {
         "rules": {}
       }
     },
     {
-      "include": [
-        "**/test/**/*.test.ts"
-      ],
+      "include": ["**/test/**/*.test.ts"],
       "linter": {
         "rules": {}
       }

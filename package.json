@@ -15,7 +15,7 @@
     "build:bundle": "lerna run build:bundle",
     "build:watch": "lerna exec --parallel -- 'yarn run build:watch'",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
-    "lint": "biome check packages/*/src packages/*/test",
+    "lint": "biome check",
     "lint:fix": "yarn lint --write",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
     "check-build": "lerna run check-build",
