@@ -45,6 +45,7 @@ export async function archiveBlocks(
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
+  const finalizedPostPeerDAS = finalizedCheckpoint.epoch >= config.PEERDAS_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -63,6 +64,11 @@ export async function archiveBlocks(
       await migrateBlobSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
       logger.verbose("Migrated blobSidecars from hot DB to cold DB");
     }
+
+    if (finalizedPostPeerDAS) {
+      await migrateDataColumnSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
+      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB");
+    }
   }
 
   // deleteNonCanonicalBlocks
@@ -77,7 +83,12 @@ export async function archiveBlocks(
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical blobsSider from hot DB");
+      logger.verbose("Deleted non canonical blobSidecars from hot DB");
+    }
+
+    if (finalizedPostPeerDAS) {
+      await db.dataColumnSidecars.batchDelete(nonCanonicalBlockRoots);
+      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB");
     }
   }
 
@@ -102,6 +113,11 @@ export async function archiveBlocks(
     } else {
       logger.verbose("blobSidecars pruning skipped: archiveBlobEpochs set to Infinity");
     }
+  }
+
+  if (finalizedPostPeerDAS) {
+    // TODO
+    // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs)]
   }
 
   // Prunning potential checkpoint data
@@ -187,6 +203,39 @@ async function migrateBlobSidecarsFromHotToColdDb(
     await Promise.all([
       db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
       db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
+    ]);
+  }
+}
+
+async function migrateDataColumnSidecarsFromHotToColdDb(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  blocks: BlockRootSlot[]
+): Promise<void> {
+  for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
+    const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
+    const canonicalBlocks = blocks.slice(i, toIdx);
+
+    // processCanonicalBlocks
+    if (canonicalBlocks.length === 0) return;
+
+    // load Buffer instead of ssz deserialized to improve performance
+    const canonicalDataColumnSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
+      canonicalBlocks
+        .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.peerdas)
+        .map(async (block) => {
+          const bytes = await db.dataColumnSidecars.getBinary(block.root);
+          if (!bytes) {
+            throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
+          }
+          return {key: block.slot, value: bytes};
+        })
+    );
+
+    // put to blockArchive db and delete block db
+    await Promise.all([
+      db.dataColumnSidecarsArchive.batchPutBinary(canonicalDataColumnSidecarsEntries),
+      db.dataColumnSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
     ]);
   }
 }
