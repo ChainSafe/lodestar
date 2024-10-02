@@ -91,6 +91,7 @@ export type KeymanagerArgs = {
   "keymanager.cors"?: string;
   "keymanager.headerLimit"?: number;
   "keymanager.bodyLimit"?: number;
+  "keymanager.stacktraces"?: boolean;
 };
 
 export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
@@ -140,6 +141,11 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     hidden: true,
     type: "number",
     description: "Defines the maximum payload, in bytes, the server is allowed to accept",
+  },
+  "keymanager.stacktraces": {
+    hidden: true,
+    type: "boolean",
+    description: "Return stacktraces in HTTP error responses",
   },
 };
 

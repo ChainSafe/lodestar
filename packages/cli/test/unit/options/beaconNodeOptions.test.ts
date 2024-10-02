@@ -17,6 +17,7 @@ describe("options / beaconNodeOptions", () => {
       "rest.port": 7654,
       "rest.headerLimit": 16384,
       "rest.bodyLimit": 30e6,
+      "rest.stacktraces": true,
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
@@ -122,6 +123,7 @@ describe("options / beaconNodeOptions", () => {
           port: 7654,
           headerLimit: 16384,
           bodyLimit: 30e6,
+          stacktraces: true,
         },
       },
       chain: {
