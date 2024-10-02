@@ -1,4 +1,4 @@
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
 import {
@@ -34,7 +34,6 @@ import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestati
 import {
   IForkChoice,
   LatestMessage,
-  QueuedAttestation,
   PowBlockHex,
   EpochDifference,
   AncestorResult,
@@ -91,7 +90,9 @@ export class ForkChoice implements IForkChoice {
    * Attestations that arrived at the current slot and must be queued for later processing.
    * NOT currently tracked in the protoArray
    */
-  private readonly queuedAttestations = new Set<QueuedAttestation>();
+  private readonly queuedAttestations: MapDef<Slot, MapDef<RootHex, Set<ValidatorIndex>>> = new MapDef(
+    () => new MapDef(() => new Set())
+  );
 
   // Note: as of Jun 2022 Lodestar metrics show that 100% of the times updateHead() is called, synced = false.
   // Because we are processing attestations from gossip, recomputing scores is always necessary
@@ -128,9 +129,13 @@ export class ForkChoice implements IForkChoice {
   }
 
   getMetrics(): ForkChoiceMetrics {
+    let numAttestations = 0;
+    for (const indicesByRoot of this.queuedAttestations.values()) {
+      numAttestations += Array.from(indicesByRoot.values()).reduce((acc, indices) => acc + indices.size, 0);
+    }
     return {
       votes: this.votes.length,
-      queuedAttestations: this.queuedAttestations.size,
+      queuedAttestations: numAttestations,
       validatedAttestationDatas: this.validatedAttestationDatas.size,
       balancesLength: this.balances.length,
       nodes: this.protoArray.nodes.length,
@@ -714,12 +719,13 @@ export class ForkChoice implements IForkChoice {
       // Attestations can only affect the fork choice of subsequent slots.
       // Delay consideration in the fork choice until their slot is in the past.
       // ```
-      this.queuedAttestations.add({
-        slot: slot,
-        attestingIndices: attestation.attestingIndices,
-        blockRoot: blockRootHex,
-        targetEpoch,
-      });
+      const byRoot = this.queuedAttestations.getOrDefault(slot);
+      const validatorIndices = byRoot.getOrDefault(blockRootHex);
+      for (const validatorIndex of attestation.attestingIndices) {
+        if (!this.fcStore.equivocatingIndices.has(validatorIndex)) {
+          validatorIndices.add(validatorIndex);
+        }
+      }
     }
   }
 
@@ -1350,15 +1356,18 @@ export class ForkChoice implements IForkChoice {
    */
   private processAttestationQueue(): void {
     const currentSlot = this.fcStore.currentSlot;
-    for (const attestation of this.queuedAttestations.values()) {
-      // Delay consideration in the fork choice until their slot is in the past.
-      if (attestation.slot < currentSlot) {
-        this.queuedAttestations.delete(attestation);
-        const {blockRoot, targetEpoch} = attestation;
-        const blockRootHex = blockRoot;
-        for (const validatorIndex of attestation.attestingIndices) {
-          this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+    for (const [slot, byRoot] of this.queuedAttestations.entries()) {
+      const targetEpoch = computeEpochAtSlot(slot);
+      if (slot < currentSlot) {
+        this.queuedAttestations.delete(slot);
+        for (const [blockRoot, validatorIndices] of byRoot.entries()) {
+          const blockRootHex = blockRoot;
+          for (const validatorIndex of validatorIndices) {
+            this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+          }
         }
+      } else {
+        break;
       }
     }
   }
