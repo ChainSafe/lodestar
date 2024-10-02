@@ -755,6 +755,11 @@ export class ForkChoice implements IForkChoice {
 
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
+   * This should only be called once per slot because:
+   *   - calling this multiple times in the same slot does not update `votes`
+   *     - new attestations in the current slot must stay in the queue
+   *     - new attestations in the old slots are applied to the `votes` already
+   *   - also side effect of this function is `validatedAttestationDatas` reseted
    */
   updateTime(currentSlot: Slot): void {
     if (this.fcStore.currentSlot >= currentSlot) return;
@@ -1363,6 +1368,7 @@ export class ForkChoice implements IForkChoice {
         for (const [blockRoot, validatorIndices] of byRoot.entries()) {
           const blockRootHex = blockRoot;
           for (const validatorIndex of validatorIndices) {
+            // equivocatingIndices was checked in onAttestation
             this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
           }
         }
