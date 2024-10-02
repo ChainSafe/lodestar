@@ -209,6 +209,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         isAuthEnabled: args["keymanager.auth"],
         headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
+        stacktraces: args["keymanager.stacktraces"],
         tokenFile: args["keymanager.tokenFile"],
         tokenDir: dbPath,
       },
