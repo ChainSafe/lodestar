@@ -1060,13 +1060,8 @@ export class BeaconChain implements IBeaconChain {
     if (this.forkChoice.irrecoverableError) {
       this.processShutdownCallback(this.forkChoice.irrecoverableError);
     }
-    this.forkChoice.updateTime(slot);
-    // at slot boundary, the node is free
-    // it's most likely all attestations in old slots are seen, we want to process them so that at importBlock()
-    // time, the computeDeltas() function is faster because we don't have to process them again
-    // attestations in the current slot stay in the queue and they have no affect
-    this.recomputeForkChoiceHead(ForkchoiceCaller.onClockSlot);
 
+    this.forkChoice.updateTime(slot);
     this.metrics?.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);
