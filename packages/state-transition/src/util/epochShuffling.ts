@@ -103,23 +103,17 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
   return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
 }
 
-export function computeEpochShuffling(
-  state: BeaconStateAllForks,
-  activeIndices: Uint32Array,
-  epoch: Epoch
-): EpochShuffling {
-  const activeValidatorCount = activeIndices.length;
-
-  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
-  const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-
+function buildCommitteesFromShuffling(
+  activeValidatorCount: number,
+  shuffling: Uint32Array
+): Pick<EpochShuffling, "committees" | "committeesPerSlot"> {
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
-
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
-  const committees: Uint32Array[][] = [];
+  const committees = new Array<Uint32Array[]>(SLOTS_PER_EPOCH);
   for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
-    const slotCommittees: Uint32Array[] = [];
+    const slotCommittees = new Array<Uint32Array>(committeesPerSlot);
+
     for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
       const index = slot * committeesPerSlot + committeeIndex;
       const startOffset = Math.floor((activeValidatorCount * index) / committeeCount);
@@ -127,17 +121,32 @@ export function computeEpochShuffling(
       if (!(startOffset <= endOffset)) {
         throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
       }
-      slotCommittees.push(shuffling.subarray(startOffset, endOffset));
+      slotCommittees[committeeIndex] = shuffling.subarray(startOffset, endOffset);
     }
-    committees.push(slotCommittees);
+
+    committees[slot] = slotCommittees;
   }
+
+  return {
+    committees,
+    committeesPerSlot,
+  };
+}
+
+export function computeEpochShuffling(
+  state: BeaconStateAllForks,
+  activeIndices: Uint32Array,
+  epoch: Epoch
+): EpochShuffling {
+  const activeValidatorCount = activeIndices.length;
+  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
+  const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
 
   return {
     epoch,
     activeIndices,
     shuffling,
-    committees,
-    committeesPerSlot,
+    ...buildCommitteesFromShuffling(activeValidatorCount, shuffling),
   };
 }
 
@@ -147,35 +156,14 @@ export async function computeEpochShufflingAsync(
   epoch: Epoch
 ): Promise<EpochShuffling> {
   const activeValidatorCount = activeIndices.length;
-
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = await asyncUnshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-
-  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
-
-  const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
-
-  const committees: Uint32Array[][] = [];
-  for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
-    const slotCommittees: Uint32Array[] = [];
-    for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
-      const index = slot * committeesPerSlot + committeeIndex;
-      const startOffset = Math.floor((activeValidatorCount * index) / committeeCount);
-      const endOffset = Math.floor((activeValidatorCount * (index + 1)) / committeeCount);
-      if (!(startOffset <= endOffset)) {
-        throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
-      }
-      slotCommittees.push(shuffling.subarray(startOffset, endOffset));
-    }
-    committees.push(slotCommittees);
-  }
 
   return {
     epoch,
     activeIndices,
     shuffling,
-    committees,
-    committeesPerSlot,
+    ...buildCommitteesFromShuffling(activeValidatorCount, shuffling),
   };
 }
 
