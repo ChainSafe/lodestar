@@ -186,7 +186,7 @@ export class ShufflingCache implements IShufflingCache {
         this.set(shuffling, decisionRoot);
       })
       .catch((err) =>
-        this.logger?.error(`error building shuffling for epoch ${epoch} at decisionRoot ${decisionRoot}`, err)
+        this.logger?.error(`error building shuffling for epoch ${epoch} at decisionRoot ${decisionRoot}`, {}, err)
       )
       .finally(() => {
         timer?.();
