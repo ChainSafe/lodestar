@@ -14,7 +14,9 @@ export type AttestationDataCacheEntry = {
   // part of shuffling data, so this does not take memory
   committeeValidatorIndices: Uint32Array;
   // undefined for phase0 Attestation
+  // TODO: remove this as it's not in SingleAttestation
   committeeBits?: BitArray;
+  // TODO: remove this? this is available in SingleAttestation
   committeeIndex: CommitteeIndex;
   // IndexedAttestationData signing root, 32 bytes
   signingRoot: Uint8Array;
@@ -53,8 +55,14 @@ const DEFAULT_CACHE_SLOT_DISTANCE = 2;
  * Having this cache help saves a lot of cpu time since most of the gossip attestations are on the same slot.
  */
 export class SeenAttestationDatas {
-  private cacheEntryByAttDataBase64BySlot = new MapDef<Slot, Map<SeenAttDataKey, AttestationDataCacheEntry>>(
-    () => new Map<SeenAttDataKey, AttestationDataCacheEntry>()
+  private cacheEntryByAttDataByIndexBySlot = new MapDef<
+    Slot,
+    MapDef<CommitteeIndex, Map<AttDataBase64, AttestationDataCacheEntry>>
+  >(
+    () =>
+      new MapDef<CommitteeIndex, Map<AttDataBase64, AttestationDataCacheEntry>>(
+        () => new Map<AttDataBase64, AttestationDataCacheEntry>()
+      )
   );
   private lowestPermissibleSlot = 0;
 
@@ -68,30 +76,82 @@ export class SeenAttestationDatas {
   }
 
   // TODO: Move InsertOutcome type definition to a common place
+  /**
+   * @deprecated this will be removed soon, rename addItem() to add()
+   */
   add(slot: Slot, attDataKey: SeenAttDataKey, cacheEntry: AttestationDataCacheEntry): InsertOutcome {
     if (slot < this.lowestPermissibleSlot) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.too_old});
       return InsertOutcome.Old;
     }
 
-    const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataBase64BySlot.getOrDefault(slot);
-    if (cacheEntryByAttDataBase64.has(attDataKey)) {
+    const cacheEntryByAttDataByIndex = this.cacheEntryByAttDataByIndexBySlot.getOrDefault(slot);
+    // just for compilation, we will remove this whole function anyway
+    const committeeIndex = cacheEntry.committeeIndex;
+    const cacheEntryByAttData = cacheEntryByAttDataByIndex.getOrDefault(committeeIndex);
+    if (cacheEntryByAttData.has(attDataKey)) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.already_known});
       return InsertOutcome.AlreadyKnown;
     }
 
-    if (cacheEntryByAttDataBase64.size >= this.maxCacheSizePerSlot) {
+    if (cacheEntryByAttData.size >= this.maxCacheSizePerSlot) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.reached_limit});
       return InsertOutcome.ReachLimit;
     }
 
-    cacheEntryByAttDataBase64.set(attDataKey, cacheEntry);
+    cacheEntryByAttData.set(attDataKey, cacheEntry);
     return InsertOutcome.NewData;
   }
 
+  // TODO: rename to add()
+  addItem(
+    slot: Slot,
+    committeeIndex: CommitteeIndex,
+    attDataBase64: AttDataBase64,
+    cacheEntry: AttestationDataCacheEntry
+  ): InsertOutcome {
+    if (slot < this.lowestPermissibleSlot) {
+      this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.too_old});
+      return InsertOutcome.Old;
+    }
+
+    const cacheEntryByAttDataByIndex = this.cacheEntryByAttDataByIndexBySlot.getOrDefault(slot);
+    const cacheEntryByAttData = cacheEntryByAttDataByIndex.getOrDefault(committeeIndex);
+    if (cacheEntryByAttData.has(attDataBase64)) {
+      this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.already_known});
+      return InsertOutcome.AlreadyKnown;
+    }
+
+    if (cacheEntryByAttData.size >= this.maxCacheSizePerSlot) {
+      this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.reached_limit});
+      return InsertOutcome.ReachLimit;
+    }
+
+    cacheEntryByAttData.set(attDataBase64, cacheEntry);
+    return InsertOutcome.NewData;
+  }
+
+  /**
+   * @deprecated this will be removed soon, rename getItem() to get()
+   */
   get(slot: Slot, attDataBase64: SeenAttDataKey): AttestationDataCacheEntry | null {
-    const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataBase64BySlot.get(slot);
+    const committeeIndex = 0;
+    // hard code just for compilation, we will remove this whole function anyway
+    const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataByIndexBySlot.get(slot)?.get(committeeIndex);
     const cacheEntry = cacheEntryByAttDataBase64?.get(attDataBase64);
+    if (cacheEntry) {
+      this.metrics?.seenCache.attestationData.hit.inc();
+    } else {
+      this.metrics?.seenCache.attestationData.miss.inc();
+    }
+    return cacheEntry ?? null;
+  }
+
+  // TODO: rename to get()
+  getItem(slot: Slot, committeeIndex: CommitteeIndex, attDataBase64: SeenAttDataKey): AttestationDataCacheEntry | null {
+    const cacheEntryByAttDataByIndex = this.cacheEntryByAttDataByIndexBySlot.get(slot);
+    const cacheEntryByAttData = cacheEntryByAttDataByIndex?.get(committeeIndex);
+    const cacheEntry = cacheEntryByAttData?.get(attDataBase64);
     if (cacheEntry) {
       this.metrics?.seenCache.attestationData.hit.inc();
     } else {
@@ -102,20 +162,23 @@ export class SeenAttestationDatas {
 
   onSlot(clockSlot: Slot): void {
     this.lowestPermissibleSlot = Math.max(clockSlot - this.cacheSlotDistance, 0);
-    for (const slot of this.cacheEntryByAttDataBase64BySlot.keys()) {
+    for (const slot of this.cacheEntryByAttDataByIndexBySlot.keys()) {
       if (slot < this.lowestPermissibleSlot) {
-        this.cacheEntryByAttDataBase64BySlot.delete(slot);
+        this.cacheEntryByAttDataByIndexBySlot.delete(slot);
       }
     }
   }
 
   private onScrapeLodestarMetrics(metrics: Metrics): void {
-    metrics?.seenCache.attestationData.totalSlot.set(this.cacheEntryByAttDataBase64BySlot.size);
+    metrics?.seenCache.attestationData.totalSlot.set(this.cacheEntryByAttDataByIndexBySlot.size);
     // tracking number of attestation data at current slot may not be correct if scrape time is not at the end of slot
     // so we track it at the previous slot
     const previousSlot = this.lowestPermissibleSlot + this.cacheSlotDistance - 1;
-    metrics?.seenCache.attestationData.countPerSlot.set(
-      this.cacheEntryByAttDataBase64BySlot.get(previousSlot)?.size ?? 0
-    );
+    const cacheEntryByAttDataByIndex = this.cacheEntryByAttDataByIndexBySlot.get(previousSlot);
+    let count = 0;
+    for (const cacheEntryByAttDataBase64 of cacheEntryByAttDataByIndex?.values() ?? []) {
+      count += cacheEntryByAttDataBase64.size;
+    }
+    metrics?.seenCache.attestationData.countPerSlot.set(count);
   }
 }
