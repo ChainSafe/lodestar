@@ -96,7 +96,7 @@ export class RestApiServer {
       if (err.validation) {
         const {instancePath, message} = err.validation[0];
         const payload: ErrorResponse = {
-          code: err.statusCode ?? 400,
+          code: 400,
           message: `${instancePath.substring(instancePath.lastIndexOf("/") + 1)} ${message}`,
           stacktraces,
         };
