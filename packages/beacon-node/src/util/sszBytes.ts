@@ -26,6 +26,12 @@ export type CommitteeBitsBase64 = string;
 //   data: AttestationData - target data - 128
 //   signature: BLSSignature - 96
 //   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT]
+// electra
+// class SingleAttestation(Container):
+//   committeeIndex: CommitteeIndex - data 8
+//   attesterIndex: ValidatorIndex - data 8
+//   data: AttestationData - data 128
+//   signature: BLSSignature - data 96
 //
 // for all forks
 // class AttestationData(Container): 128 bytes fixed size
@@ -43,6 +49,12 @@ const ATTESTATION_DATA_SIZE = 128;
 // MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
 const COMMITTEE_BITS_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
+const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
+const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
+const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
+const SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8 + 8;
+const SINGLE_ATTESTATION_SIGNATURE_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE;
+const SINGLE_ATTESTATION_SIZE = SINGLE_ATTESTATION_SIGNATURE_OFFSET + SIGNATURE_SIZE;
 
 // shared Buffers to convert bytes to hex/base64
 const blockRootBuf = Buffer.alloc(ROOT_SIZE);
@@ -92,6 +104,7 @@ export function getAttDataFromAttestationSerialized(data: Uint8Array): AttDataBa
 
 /**
  * Alias of `getAttDataFromAttestationSerialized` specifically for batch handling indexing in gossip queue
+ * // TODO: call getAttDataFromSingleAttestationSerialized
  */
 export function getGossipAttestationIndex(data: Uint8Array): AttDataBase64 | null {
   return getAttDataFromAttestationSerialized(data);
@@ -142,6 +155,73 @@ export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): Com
 
   committeeBitsDataBuf.set(data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_SIZE));
   return committeeBitsDataBuf.toString("base64");
+}
+
+/**
+ * Extract slot from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract slot.
+ */
+export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot | null {
+  if (data.length == SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SINGLE_ATTESTATION_SLOT_OFFSET);
+}
+
+/**
+ * Extract committee index from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract slot.
+ */
+export function getCommitteeIndexFromSingleAttestationSerialized(data: Uint8Array): Slot | null {
+  if (data.length == SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET);
+}
+
+/**
+ * Extract block root from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract block root.
+ */
+export function getBlockRootFromSingleAttestationSerialized(data: Uint8Array): BlockRootHex | null {
+  if (data.length == SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  blockRootBuf.set(
+    data.subarray(SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE)
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+/**
+ * Extract attestation data base64 from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract attestation data.
+ */
+export function getAttDataFromSingleAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
+  if (data.length == SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  // base64 is a bit efficient than hex
+  attDataBuf.set(
+    data.subarray(SINGLE_ATTESTATION_ATTDATA_OFFSET, SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE)
+  );
+  return attDataBuf.toString("base64");
+}
+
+/**
+ * Extract signature from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract signature.
+ */
+export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): BLSSignature | null {
+  if (data.length == SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  return data.subarray(SINGLE_ATTESTATION_SIGNATURE_OFFSET, SINGLE_ATTESTATION_SIGNATURE_OFFSET + SIGNATURE_SIZE);
 }
 
 //
