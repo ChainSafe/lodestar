@@ -67,6 +67,17 @@ export const Attestation = new ContainerType(
   {typeName: "Attestation", jsonCase: "eth2"}
 );
 
+// New type in ELECTRA
+export const SingleAttestation = new ContainerType(
+  {
+    committeeIndex: UintNum64,
+    attesterIndex: ValidatorIndex,
+    data: phase0Ssz.AttestationData,
+    signature: BLSSignature,
+  },
+  {typeName: "SingleAttestation", jsonCase: "eth2"}
+);
+
 export const IndexedAttestation = new ContainerType(
   {
     attestingIndices: AttestingIndices, // Modified in ELECTRA

@@ -98,6 +98,7 @@ type TypesByFork = {
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -129,6 +130,7 @@ type TypesByFork = {
     SSEPayloadAttributes: capella.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -165,6 +167,7 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -201,6 +204,7 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.Attestation;
     Attestation: electra.Attestation;
     IndexedAttestation: electra.IndexedAttestation;
     IndexedAttestationBigint: electra.IndexedAttestationBigint;

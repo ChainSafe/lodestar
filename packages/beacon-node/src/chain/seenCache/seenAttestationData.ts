@@ -104,6 +104,8 @@ export class SeenAttestationDatas {
   }
 
   // TODO: rename to add()
+  // preElectra: add(slot, 0, attDataBase64, cacheEntry) since committeeIndex stay in AttestationData
+  // electra: add(slot, committeeIndex, attDataBase64, cacheEntry)
   addItem(
     slot: Slot,
     committeeIndex: CommitteeIndex,
@@ -148,6 +150,8 @@ export class SeenAttestationDatas {
   }
 
   // TODO: rename to get()
+  // preElectra: getItem(slot, 0, attDataBase64) since committeeIndex stay in AttestationData
+  // electra: getItem(slot, committeeIndex, attDataBase64)
   getItem(slot: Slot, committeeIndex: CommitteeIndex, attDataBase64: SeenAttDataKey): AttestationDataCacheEntry | null {
     const cacheEntryByAttDataByIndex = this.cacheEntryByAttDataByIndexBySlot.get(slot);
     const cacheEntryByAttData = cacheEntryByAttDataByIndex?.get(committeeIndex);
