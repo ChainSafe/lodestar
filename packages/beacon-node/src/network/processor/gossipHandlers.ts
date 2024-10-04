@@ -701,6 +701,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
           // but don't add to attestation pool, to save CPU and RAM
           if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
+            // TODO: modify after we change attestationPool due to SingleAttestation
             const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
             metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
           }

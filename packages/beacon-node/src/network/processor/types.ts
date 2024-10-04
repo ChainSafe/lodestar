@@ -1,5 +1,6 @@
 import {Message} from "@libp2p/interface";
 import {Slot, SlotOptionalRoot} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {GossipTopic, GossipType} from "../gossip/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 
@@ -22,5 +23,5 @@ export type PendingGossipsubMessage = {
 };
 
 export type ExtractSlotRootFns = {
-  [K in GossipType]?: (data: Uint8Array) => SlotOptionalRoot | null;
+  [K in GossipType]?: (data: Uint8Array, forkName: ForkName) => SlotOptionalRoot | null;
 };
