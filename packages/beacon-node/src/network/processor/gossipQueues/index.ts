@@ -3,16 +3,8 @@ import {GossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";
 import {getGossipAttestationIndex} from "../../../util/sszBytes.js";
 import {LinearGossipQueue} from "./linear.js";
-import {
-  DropType,
-  GossipQueue,
-  GossipQueueOpts,
-  QueueType,
-  isIndexedGossipQueueAvgTimeOpts,
-  isIndexedGossipQueueMinSizeOpts,
-} from "./types.js";
+import {DropType, GossipQueue, GossipQueueOpts, QueueType, isIndexedGossipQueueMinSizeOpts} from "./types.js";
 import {IndexedGossipQueueMinSize} from "./indexed.js";
-import {IndexedGossipQueueAvgTime} from "./indexedAvgTime.js";
 
 /**
  * In normal condition, the higher this value the more efficient the signature verification.
@@ -120,8 +112,6 @@ export function createGossipQueues(beaconAttestationBatchValidation = false): {
   return mapValues(gossipQueueOpts, (opts) => {
     if (isIndexedGossipQueueMinSizeOpts(opts)) {
       return new IndexedGossipQueueMinSize(opts);
-    } else if (isIndexedGossipQueueAvgTimeOpts(opts)) {
-      return new IndexedGossipQueueAvgTime(opts);
     } else {
       return new LinearGossipQueue<PendingGossipsubMessage>(opts);
     }
