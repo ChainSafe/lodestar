@@ -1,5 +1,5 @@
-import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {BLSSignature, phase0, Slot, ssz, SignedAggregateAndProof, SingleAttestation} from "@lodestar/types";
+import {ForkPreElectra, ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
@@ -193,7 +193,7 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: Attestation[] = [];
+    const signedAttestations: SingleAttestation[] = [];
     const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
     const isPostElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
@@ -239,7 +239,11 @@ export class AttestationService {
       if (isPostElectra) {
         (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
       } else {
-        (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
+        (
+          await this.api.beacon.submitPoolAttestations({
+            signedAttestations: signedAttestations as SingleAttestation<ForkPreElectra>[],
+          })
+        ).assertOk();
       }
       this.logger.info("Published attestations", {
         ...logCtx,
