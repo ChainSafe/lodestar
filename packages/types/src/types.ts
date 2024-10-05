@@ -275,6 +275,7 @@ export type SignedBuilderBid<F extends ForkExecution = ForkExecution> = TypesByF
 export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
 
 export type Attestation<F extends ForkName = ForkAll> = TypesByFork[F]["Attestation"];
+export type SingleAttestation<F extends ForkName = ForkAll> = TypesByFork[F]["SingleAttestation"];
 export type IndexedAttestation<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestation"];
 export type IndexedAttestationBigint<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestationBigint"];
 export type AttesterSlashing<F extends ForkName = ForkAll> = TypesByFork[F]["AttesterSlashing"];
