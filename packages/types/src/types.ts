@@ -44,6 +44,7 @@ type TypesByFork = {
     BeaconState: phase0.BeaconState;
     SignedBeaconBlock: phase0.SignedBeaconBlock;
     Metadata: phase0.Metadata;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -67,6 +68,7 @@ type TypesByFork = {
     LightClientStore: altair.LightClientStore;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
