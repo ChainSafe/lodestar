@@ -88,7 +88,7 @@ describe("AttestationService", function () {
         const aggregatedAttestation = isPostElectra
           ? ssz.electra.Attestation.defaultValue()
           : ssz.phase0.Attestation.defaultValue();
-        const aggregate = isPostElectra
+        const aggregateAndProof = isPostElectra
           ? ssz.electra.SignedAggregateAndProof.defaultValue()
           : ssz.phase0.SignedAggregateAndProof.defaultValue();
         const duties: AttDutyAndProof[] = [
@@ -144,7 +144,7 @@ describe("AttestationService", function () {
 
         // Mock signing service
         validatorStore.signAttestation.mockResolvedValue(singleAttestation);
-        validatorStore.signAggregateAndProof.mockResolvedValue(aggregate);
+        validatorStore.signAggregateAndProof.mockResolvedValue(aggregateAndProof);
 
         // Trigger clock onSlot for slot 0
         await clock.tickSlotFns(0, controller.signal);
@@ -179,7 +179,7 @@ describe("AttestationService", function () {
           // Must submit the aggregate received through getAggregatedAttestationV2() then createAndSignAggregateAndProof()
           expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledOnce();
           expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledWith({
-            signedAggregateAndProofs: [aggregate],
+            signedAggregateAndProofs: [aggregateAndProof],
           });
         } else {
           // Must submit the attestation received through produceAttestationData()
@@ -188,7 +188,9 @@ describe("AttestationService", function () {
 
           // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
           expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
-          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
+          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({
+            signedAggregateAndProofs: [aggregateAndProof],
+          });
         }
       });
     });
