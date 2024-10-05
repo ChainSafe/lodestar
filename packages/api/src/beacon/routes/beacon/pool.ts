@@ -1,8 +1,17 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostElectra} from "@lodestar/params";
-import {phase0, capella, CommitteeIndex, Slot, ssz, electra, AttesterSlashing} from "@lodestar/types";
+import {ForkPostElectra, ForkPreElectra, isForkPostElectra} from "@lodestar/params";
+import {
+  phase0,
+  capella,
+  CommitteeIndex,
+  Slot,
+  ssz,
+  electra,
+  AttesterSlashing,
+  SingleAttestation,
+} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {
   ArrayOf,
@@ -21,6 +30,8 @@ import {fromHeaders} from "../../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
+const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
+const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
 const AttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const AttestationListTypeElectra = ArrayOf(ssz.electra.Attestation);
 const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
@@ -143,7 +154,7 @@ export type Endpoints = {
    */
   submitPoolAttestations: Endpoint<
     "POST",
-    {signedAttestations: AttestationListPhase0},
+    {signedAttestations: SingleAttestation<ForkPreElectra>[]},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -159,7 +170,7 @@ export type Endpoints = {
    */
   submitPoolAttestationsV2: Endpoint<
     "POST",
-    {signedAttestations: AttestationList},
+    {signedAttestations: SingleAttestation[]},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
@@ -317,10 +328,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/attestations",
       method: "POST",
       req: {
-        writeReqJson: ({signedAttestations}) => ({body: AttestationListTypePhase0.toJson(signedAttestations)}),
-        parseReqJson: ({body}) => ({signedAttestations: AttestationListTypePhase0.fromJson(body)}),
-        writeReqSsz: ({signedAttestations}) => ({body: AttestationListTypePhase0.serialize(signedAttestations)}),
-        parseReqSsz: ({body}) => ({signedAttestations: AttestationListTypePhase0.deserialize(body)}),
+        writeReqJson: ({signedAttestations}) => ({body: SingleAttestationListTypePhase0.toJson(signedAttestations)}),
+        parseReqJson: ({body}) => ({signedAttestations: SingleAttestationListTypePhase0.fromJson(body)}),
+        writeReqSsz: ({signedAttestations}) => ({body: SingleAttestationListTypePhase0.serialize(signedAttestations)}),
+        parseReqSsz: ({body}) => ({signedAttestations: SingleAttestationListTypePhase0.deserialize(body)}),
         schema: {
           body: Schema.ObjectArray,
         },
@@ -335,8 +346,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
             body: isForkPostElectra(fork)
-              ? AttestationListTypeElectra.toJson(signedAttestations as AttestationListElectra)
-              : AttestationListTypePhase0.toJson(signedAttestations as AttestationListPhase0),
+              ? SingleAttestationListTypeElectra.toJson(signedAttestations as SingleAttestation<ForkPostElectra>[])
+              : SingleAttestationListTypePhase0.toJson(signedAttestations as SingleAttestation<ForkPreElectra>[]),
             headers: {[MetaHeader.Version]: fork},
           };
         },
@@ -344,16 +355,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             signedAttestations: isForkPostElectra(fork)
-              ? AttestationListTypeElectra.fromJson(body)
-              : AttestationListTypePhase0.fromJson(body),
+              ? SingleAttestationListTypeElectra.fromJson(body)
+              : SingleAttestationListTypePhase0.fromJson(body),
           };
         },
         writeReqSsz: ({signedAttestations}) => {
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
             body: isForkPostElectra(fork)
-              ? AttestationListTypeElectra.serialize(signedAttestations as AttestationListElectra)
-              : AttestationListTypePhase0.serialize(signedAttestations as AttestationListPhase0),
+              ? SingleAttestationListTypeElectra.serialize(signedAttestations as SingleAttestation<ForkPostElectra>[])
+              : SingleAttestationListTypePhase0.serialize(signedAttestations as SingleAttestation<ForkPreElectra>[]),
             headers: {[MetaHeader.Version]: fork},
           };
         },
@@ -361,8 +372,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             signedAttestations: isForkPostElectra(fork)
-              ? AttestationListTypeElectra.deserialize(body)
-              : AttestationListTypePhase0.deserialize(body),
+              ? SingleAttestationListTypeElectra.deserialize(body)
+              : SingleAttestationListTypePhase0.deserialize(body),
           };
         },
         schema: {

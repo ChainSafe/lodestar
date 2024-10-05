@@ -1,7 +1,13 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {Attestation, Epoch, isElectraAttestation, ssz} from "@lodestar/types";
-import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
+import {Attestation, Epoch, isElectraAttestation, phase0, SingleAttestation, ssz} from "@lodestar/types";
+import {
+  ForkName,
+  ForkPostElectra,
+  ForkPreElectra,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -113,7 +119,14 @@ export function getBeaconPoolApi({
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
-            chain.emitter.emit(routes.events.EventType.attestation, attestation);
+            if (isForkPostElectra(fork)) {
+              chain.emitter.emit(
+                routes.events.EventType.singleAttestation,
+                attestation as SingleAttestation<ForkPostElectra>
+              );
+            } else {
+              chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
+            }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
