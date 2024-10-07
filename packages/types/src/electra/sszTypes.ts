@@ -44,6 +44,7 @@ const {
   UintBn64,
   ExecutionAddress,
   ValidatorIndex,
+  CommitteeIndex,
 } = primitiveSsz;
 
 export const AggregationBits = new BitListType(MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);
@@ -70,7 +71,7 @@ export const Attestation = new ContainerType(
 // New type in ELECTRA
 export const SingleAttestation = new ContainerType(
   {
-    committeeIndex: UintNum64,
+    committeeIndex: CommitteeIndex,
     attesterIndex: ValidatorIndex,
     data: phase0Ssz.AttestationData,
     signature: BLSSignature,

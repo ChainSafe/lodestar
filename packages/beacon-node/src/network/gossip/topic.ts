@@ -1,4 +1,4 @@
-import {ssz, Attestation, sszTypesFor} from "@lodestar/types";
+import {ssz, Attestation, sszTypesFor, SingleAttestation} from "@lodestar/types";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -7,6 +7,7 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkLightClient,
   MAX_BLOBS_PER_BLOCK,
+  isForkPostElectra,
 } from "@lodestar/params";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -131,6 +132,20 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   try {
     return sszTypesFor(fork).Attestation.deserialize(serializedData);
+  } catch (e) {
+    throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
+  }
+}
+
+/**
+ * Deserialize a gossip seralized data into an SingleAttestation object.
+ */
+export function sszDeserializeSingleAttestation(fork: ForkName, serializedData: Uint8Array): SingleAttestation {
+  try {
+    if (isForkPostElectra(fork)) {
+      return sszTypesFor(fork).SingleAttestation.deserialize(serializedData);
+    } 
+    return sszTypesFor(fork).Attestation.deserialize(serializedData) as SingleAttestation;
   } catch (e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }

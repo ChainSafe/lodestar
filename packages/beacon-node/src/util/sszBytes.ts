@@ -1,5 +1,5 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
-import {BLSSignature, RootHex, Slot} from "@lodestar/types";
+import {BLSSignature, CommitteeIndex, RootHex, Slot} from "@lodestar/types";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
@@ -196,8 +196,9 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
 /**
  * Extract committee index from SingleAttestation serialized bytes.
  * Return null if data is not long enough to extract slot.
+ * TODO Electra: Rename getSlotFromOffset to reflect generic usage
  */
-export function getCommitteeIndexFromSingleAttestationSerialized(data: Uint8Array): Slot | null {
+export function getCommitteeIndexFromSingleAttestationSerialized(data: Uint8Array): CommitteeIndex | null {
   if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }

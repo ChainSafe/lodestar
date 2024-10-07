@@ -13,6 +13,7 @@ import {
   Slot,
   Attestation,
   SignedAggregateAndProof,
+  SingleAttestation,
 } from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
@@ -83,7 +84,7 @@ export type GossipTypeMap = {
   [GossipType.beacon_block]: SignedBeaconBlock;
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
   [GossipType.beacon_aggregate_and_proof]: SignedAggregateAndProof;
-  [GossipType.beacon_attestation]: Attestation;
+  [GossipType.beacon_attestation]: SingleAttestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
   [GossipType.attester_slashing]: phase0.AttesterSlashing;
@@ -98,7 +99,7 @@ export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: SignedBeaconBlock) => Promise<void> | void;
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: SignedAggregateAndProof) => Promise<void> | void;
-  [GossipType.beacon_attestation]: (attestation: Attestation) => Promise<void> | void;
+  [GossipType.beacon_attestation]: (attestation: SingleAttestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
   [GossipType.attester_slashing]: (attesterSlashing: phase0.AttesterSlashing) => Promise<void> | void;
