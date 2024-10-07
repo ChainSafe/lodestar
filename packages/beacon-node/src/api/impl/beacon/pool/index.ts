@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {Attestation, Epoch, isElectraAttestation, phase0, SingleAttestation, ssz} from "@lodestar/types";
+import {Attestation, Epoch, isElectraAttestation, SingleAttestation, ssz} from "@lodestar/types";
 import {
   ForkName,
   ForkPostElectra,

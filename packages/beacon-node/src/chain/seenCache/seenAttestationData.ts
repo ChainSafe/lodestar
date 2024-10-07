@@ -79,38 +79,12 @@ export class SeenAttestationDatas {
     metrics?.seenCache.attestationData.totalSlot.addCollect(() => this.onScrapeLodestarMetrics(metrics));
   }
 
-  // TODO: Move InsertOutcome type definition to a common place
   /**
-   * @deprecated this will be removed soon, rename addItem() to add()
+   * Add an AttestationDataCacheEntry to the cache.
+   * - preElectra: add(slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, attDataBase64, cacheEntry)
+   * - electra: add(slot, committeeIndex, attDataBase64, cacheEntry)
    */
-  add(slot: Slot, attDataKey: SeenAttDataKey, cacheEntry: AttestationDataCacheEntry): InsertOutcome {
-    if (slot < this.lowestPermissibleSlot) {
-      this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.too_old});
-      return InsertOutcome.Old;
-    }
-
-    const cacheEntryByAttDataByIndex = this.cacheEntryByAttDataByIndexBySlot.getOrDefault(slot);
-    // just for compilation, we will remove this whole function anyway
-    const committeeIndex = cacheEntry.committeeIndex;
-    const cacheEntryByAttData = cacheEntryByAttDataByIndex.getOrDefault(committeeIndex);
-    if (cacheEntryByAttData.has(attDataKey)) {
-      this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.already_known});
-      return InsertOutcome.AlreadyKnown;
-    }
-
-    if (cacheEntryByAttData.size >= this.maxCacheSizePerSlot) {
-      this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.reached_limit});
-      return InsertOutcome.ReachLimit;
-    }
-
-    cacheEntryByAttData.set(attDataKey, cacheEntry);
-    return InsertOutcome.NewData;
-  }
-
-  // TODO: rename to add()
-  // preElectra: add(slot, 0, attDataBase64, cacheEntry) since committeeIndex stay in AttestationData
-  // electra: add(slot, committeeIndex, attDataBase64, cacheEntry)
-  addItem(
+  add(
     slot: Slot,
     committeeIndex: CommitteeIndex,
     attDataBase64: AttDataBase64,
@@ -138,25 +112,11 @@ export class SeenAttestationDatas {
   }
 
   /**
-   * @deprecated this will be removed soon, rename getItem() to get()
+   * Get an AttestationDataCacheEntry from the cache.
+   * - preElectra: get(slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, attDataBase64)
+   * - electra: get(slot, committeeIndex, attDataBase64)
    */
-  get(slot: Slot, attDataBase64: SeenAttDataKey): AttestationDataCacheEntry | null {
-    const committeeIndex = 0;
-    // hard code just for compilation, we will remove this whole function anyway
-    const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataByIndexBySlot.get(slot)?.get(committeeIndex);
-    const cacheEntry = cacheEntryByAttDataBase64?.get(attDataBase64);
-    if (cacheEntry) {
-      this.metrics?.seenCache.attestationData.hit.inc();
-    } else {
-      this.metrics?.seenCache.attestationData.miss.inc();
-    }
-    return cacheEntry ?? null;
-  }
-
-  // TODO: rename to get()
-  // preElectra: getItem(slot, 0, attDataBase64) since committeeIndex stay in AttestationData
-  // electra: getItem(slot, committeeIndex, attDataBase64)
-  getItem(slot: Slot, committeeIndex: CommitteeIndex, attDataBase64: SeenAttDataKey): AttestationDataCacheEntry | null {
+  get(slot: Slot, committeeIndex: CommitteeIndex, attDataBase64: SeenAttDataKey): AttestationDataCacheEntry | null {
     const cacheEntryByAttDataByIndex = this.cacheEntryByAttDataByIndexBySlot.get(slot);
     const cacheEntryByAttData = cacheEntryByAttDataByIndex?.get(committeeIndex);
     const cacheEntry = cacheEntryByAttData?.get(attDataBase64);

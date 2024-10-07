@@ -15,13 +15,13 @@ describe("SeenAttestationDatas", () => {
   beforeEach(() => {
     cache = new SeenAttestationDatas(null, 1, 2);
     cache.onSlot(100);
-    cache.addItem(99, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, "99a", {
+    cache.add(99, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, "99a", {
       attDataRootHex: "99a",
     } as AttestationDataCacheEntry);
-    cache.addItem(99, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, "99b", {
+    cache.add(99, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, "99b", {
       attDataRootHex: "99b",
     } as AttestationDataCacheEntry);
-    cache.addItem(100, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, "100a", {
+    cache.add(100, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, "100a", {
       attDataRootHex: "100a",
     } as AttestationDataCacheEntry);
   });
@@ -36,7 +36,7 @@ describe("SeenAttestationDatas", () => {
   for (const testCase of addTestCases) {
     it(`add slot ${testCase.slot} data ${testCase.attDataBase64} should return ${testCase.expected}`, () => {
       expect(
-        cache.addItem(testCase.slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, testCase.attDataBase64, {
+        cache.add(testCase.slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, testCase.attDataBase64, {
           attDataRootHex: testCase.attDataBase64,
         } as AttestationDataCacheEntry)
       ).toBe(testCase.expected);
@@ -55,11 +55,11 @@ describe("SeenAttestationDatas", () => {
     }`, () => {
       if (testCase.expectedNull) {
         expect(
-          cache.getItem(testCase.slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, testCase.attDataBase64)
+          cache.get(testCase.slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, testCase.attDataBase64)
         ).toBeNull();
       } else {
         expect(
-          cache.getItem(testCase.slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, testCase.attDataBase64)
+          cache.get(testCase.slot, PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX, testCase.attDataBase64)
         ).not.toBeNull();
       }
     });
