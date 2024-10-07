@@ -38,7 +38,6 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   getAggregationBitsFromAttestationSerialized,
-  getAttDataFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofElectra,
   getCommitteeBitsFromAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
@@ -75,9 +74,8 @@ export type GossipAttestation = {
   serializedData: Uint8Array;
   // available in NetworkProcessor since we check for unknown block root attestations
   attSlot: Slot;
-  // for old LIFO linear gossip queue we don't have attDataBase64
   // for indexed gossip queue we have attDataBase64
-  attDataBase64?: SeenAttDataKey | null;
+  attDataBase64: SeenAttDataKey;
 };
 
 export type Step0Result = AttestationValidationResult & {
@@ -801,9 +799,6 @@ export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, co
  * Return fork-dependent seen attestation key
  *   - for pre-electra, it's the AttestationData base64
  *   - for electra and later, it's the AttestationData base64 + committeeBits base64
- *
- * we always have attDataBase64 from the IndexedGossipQueue, getAttDataFromAttestationSerialized() just for backward compatible when beaconAttestationBatchValidation is false
- * TODO: remove beaconAttestationBatchValidation flag since the batch attestation is stable
  */
 export function getSeenAttDataKeyFromGossipAttestation(
   fork: ForkName,
@@ -811,13 +806,12 @@ export function getSeenAttDataKeyFromGossipAttestation(
 ): SeenAttDataKey | null {
   const {attDataBase64, serializedData} = attestation;
   if (isForkPostElectra(fork)) {
-    const attData = attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
     const committeeBits = getCommitteeBitsFromAttestationSerialized(serializedData);
-    return attData && committeeBits ? attDataBase64 + committeeBits : null;
+    return attDataBase64 && committeeBits ? attDataBase64 + committeeBits : null;
   }
 
   // pre-electra
-  return attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
+  return attDataBase64;
 }
 
 /**

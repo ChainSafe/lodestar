@@ -103,12 +103,11 @@ const indexedGossipQueueOpts: {
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function createGossipQueues(beaconAttestationBatchValidation = false): {
+export function createGossipQueues(): {
   [K in GossipType]: GossipQueue<PendingGossipsubMessage>;
 } {
-  const gossipQueueOpts = beaconAttestationBatchValidation
-    ? {...defaultGossipQueueOpts, ...indexedGossipQueueOpts}
-    : defaultGossipQueueOpts;
+  const gossipQueueOpts = {...defaultGossipQueueOpts, ...indexedGossipQueueOpts};
+
   return mapValues(gossipQueueOpts, (opts) => {
     if (isIndexedGossipQueueMinSizeOpts(opts)) {
       return new IndexedGossipQueueMinSize(opts);
