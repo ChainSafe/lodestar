@@ -37,6 +37,10 @@ export enum RejectReason {
   already_known = "already_known",
 }
 
+// For pre-electra, there is no committeeIndex in SingleAttestation, so we hard code it to 0
+// AttDataBase64 has committeeIndex instead
+export const PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX = 0;
+
 /**
  * There are maximum 64 committees per slot, assuming 1 committee may have up to 3 different data due to some nodes
  * are not up to date, we can have up to 192 different attestation data per slot.
