@@ -92,9 +92,7 @@ const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const defaultHandlers = getSequentialHandlers(modules, options);
-  const batchHandlers = getBatchHandlers(modules, options);
-  return {...defaultHandlers, ...batchHandlers};
+  return {...getSequentialHandlers(modules, options), ...getBatchHandlers(modules, options)};
 }
 
 /**
