@@ -20,7 +20,7 @@ import {
 } from "../../chain/errors/index.js";
 import {
   BatchGossipHandlers,
-  DefaultGossipHandlers,
+  SequentialGossipHandlers,
   GossipHandlerParamGeneric,
   GossipHandlers,
   GossipType,
@@ -36,8 +36,6 @@ import {
   validateGossipBlsToExecutionChange,
   AggregateAndProofValidationResult,
   validateGossipAttestationsSameAttData,
-  validateGossipAttestation,
-  AttestationValidationResult,
   GossipAttestation,
 } from "../../chain/validation/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
@@ -94,7 +92,7 @@ const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const defaultHandlers = getDefaultHandlers(modules, options);
+  const defaultHandlers = getSequentialHandlers(modules, options);
   const batchHandlers = getBatchHandlers(modules, options);
   return {...defaultHandlers, ...batchHandlers};
 }
@@ -103,8 +101,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * Default handlers validate gossip messages one by one.
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
-function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): DefaultGossipHandlers {
-  const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
+function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
+  const {chain, config, metrics, events, logger, core} = modules;
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
@@ -453,10 +451,6 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
       chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
-    [GossipType.beacon_attestation]: async (): Promise<void> => {
-      // should not happen, we use batch handler for this topic
-      throw new Error("Not implemented");
-    },
 
     [GossipType.attester_slashing]: async ({
       gossipData,
@@ -607,7 +601,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 /**
  * For now, only beacon_attestation topic is batched.
  */
-function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): Partial<BatchGossipHandlers> {
+function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): BatchGossipHandlers {
   const {chain, metrics, logger, aggregatorTracker} = modules;
   return {
     [GossipType.beacon_attestation]: async (

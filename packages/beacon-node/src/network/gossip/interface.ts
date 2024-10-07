@@ -181,24 +181,24 @@ export type GossipHandlerParamGeneric<T extends GossipType> = {
 };
 
 export type GossipHandlers = {
-  [K in GossipType]: DefaultGossipHandler<K> | BatchGossipHandler<K>;
+  [K in GossipType]: SequentialGossipHandler<K> | BatchGossipHandler<K>;
 };
 
-export type DefaultGossipHandler<K extends GossipType> = (
+export type SequentialGossipHandler<K extends GossipType> = (
   gossipHandlerParam: GossipHandlerParamGeneric<K>
 ) => Promise<void>;
 
-export type DefaultGossipHandlers = {
-  [K in GossipType]: DefaultGossipHandler<K>;
+export type SequentialGossipHandlers = {
+  [K in Exclude<GossipType, GossipType.beacon_attestation>]: SequentialGossipHandler<K>;
+};
+
+export type BatchGossipHandlers = {
+  [GossipType.beacon_attestation]: BatchGossipHandler<GossipType.beacon_attestation>;
 };
 
 export type BatchGossipHandler<K extends GossipType> = (
   gossipHandlerParams: GossipHandlerParamGeneric<K>[]
 ) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
-
-export type BatchGossipHandlers = {
-  [K in GossipType]?: BatchGossipHandler<K>;
-};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
