@@ -168,6 +168,7 @@ export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSign
 /**
  * Extract committee bits from Electra attestation serialized bytes.
  * Return null if data is not long enough to extract committee bits.
+ * TODO: remove
  */
 export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): CommitteeBitsBase64 | null {
   const committeeBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
@@ -185,7 +186,7 @@ export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): Com
  * Return null if data is not long enough to extract slot.
  */
 export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot | null {
-  if (data.length == SINGLE_ATTESTATION_SIZE) {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }
 
@@ -197,7 +198,7 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
  * Return null if data is not long enough to extract slot.
  */
 export function getCommitteeIndexFromSingleAttestationSerialized(data: Uint8Array): Slot | null {
-  if (data.length == SINGLE_ATTESTATION_SIZE) {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }
 
@@ -209,7 +210,7 @@ export function getCommitteeIndexFromSingleAttestationSerialized(data: Uint8Arra
  * Return null if data is not long enough to extract block root.
  */
 export function getBlockRootFromSingleAttestationSerialized(data: Uint8Array): BlockRootHex | null {
-  if (data.length == SINGLE_ATTESTATION_SIZE) {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }
 
@@ -224,7 +225,7 @@ export function getBlockRootFromSingleAttestationSerialized(data: Uint8Array): B
  * Return null if data is not long enough to extract attestation data.
  */
 export function getAttDataFromSingleAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
-  if (data.length == SINGLE_ATTESTATION_SIZE) {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }
 
@@ -240,7 +241,7 @@ export function getAttDataFromSingleAttestationSerialized(data: Uint8Array): Att
  * Return null if data is not long enough to extract signature.
  */
 export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): BLSSignature | null {
-  if (data.length == SINGLE_ATTESTATION_SIZE) {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }
 
