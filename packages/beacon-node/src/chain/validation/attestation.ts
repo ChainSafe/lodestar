@@ -84,20 +84,6 @@ export type Step0Result = AttestationValidationResult & {
 };
 
 /**
- * Validate a single gossip attestation, do not prioritize bls signature set
- */
-export async function validateGossipAttestation(
-  fork: ForkName,
-  chain: IBeaconChain,
-  attestationOrBytes: GossipAttestation,
-  /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number
-): Promise<AttestationValidationResult> {
-  const prioritizeBls = false;
-  return validateAttestation(fork, chain, attestationOrBytes, subnet, prioritizeBls);
-}
-
-/**
  * Verify gossip attestations of the same attestation data. The main advantage is we can batch verify bls signatures
  * through verifySignatureSetsSameMessage bls api to improve performance.
  *   - If there are less than 2 signatures (minSameMessageSignatureSetsToBatch), verify each signature individually with batchable = true
@@ -109,7 +95,7 @@ export async function validateGossipAttestationsSameAttData(
   attestationOrBytesArr: GossipAttestation[],
   subnet: number,
   // for unit test, consumers do not need to pass this
-  step0ValidationFn = validateGossipAttestationNoSignatureCheck
+  step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
   if (attestationOrBytesArr.length === 0) {
     return {results: [], batchableBls: false};
@@ -211,22 +197,10 @@ export async function validateApiAttestation(
   attestationOrBytes: ApiAttestation
 ): Promise<AttestationValidationResult> {
   const prioritizeBls = true;
-  return validateAttestation(fork, chain, attestationOrBytes, null, prioritizeBls);
-}
+  const subnet = null;
 
-/**
- * Validate a single unaggregated attestation
- * subnet is null for api attestations
- */
-export async function validateAttestation(
-  fork: ForkName,
-  chain: IBeaconChain,
-  attestationOrBytes: AttestationOrBytes,
-  subnet: number | null,
-  prioritizeBls = false
-): Promise<AttestationValidationResult> {
   try {
-    const step0Result = await validateGossipAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
+    const step0Result = await validateAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
     const {attestation, signatureSet, validatorIndex} = step0Result;
     const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
 
@@ -254,7 +228,7 @@ export async function validateAttestation(
  * Only deserialize the attestation if needed, use the cached AttestationData instead
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
-async function validateGossipAttestationNoSignatureCheck(
+async function validateAttestationNoSignatureCheck(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytes: AttestationOrBytes,
