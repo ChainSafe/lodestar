@@ -84,7 +84,7 @@ describe("get proposers api impl", function () {
 
   it("should raise error for more than one epoch in the future", async () => {
     await expect(api.getProposerDuties({epoch: 2})).rejects.toThrow(
-      "Requested epoch 2 must equal current 0 or next epoch 1"
+      "Requested epoch 2 must not be more than one epoch in the future"
     );
   });
 
