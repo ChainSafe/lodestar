@@ -1,6 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {BeaconState} from "@lodestar/types";
+import {ZERO_HASH_HEX} from "@lodestar/params";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -19,6 +21,35 @@ export function getDebugApi({
           root: block.blockRoot,
           executionOptimistic: isOptimisticBlock(block),
         })),
+      };
+    },
+
+    async getDebugForkChoice() {
+      return {
+        data: {
+          justifiedCheckpoint: chain.forkChoice.getJustifiedCheckpoint(),
+          finalizedCheckpoint: chain.forkChoice.getFinalizedCheckpoint(),
+          forkChoiceNodes: chain.forkChoice.getAllNodes().map((node) => ({
+            slot: node.slot,
+            blockRoot: node.blockRoot,
+            parentRoot: node.parentRoot,
+            justifiedEpoch: node.justifiedEpoch,
+            finalizedEpoch: node.finalizedEpoch,
+            weight: node.weight,
+            validity: (() => {
+              switch (node.executionStatus) {
+                case ExecutionStatus.Valid:
+                  return "valid";
+                case ExecutionStatus.Invalid:
+                  return "invalid";
+                case ExecutionStatus.Syncing:
+                case ExecutionStatus.PreMerge:
+                  return "optimistic";
+              }
+            })(),
+            executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+          })),
+        },
       };
     },
 

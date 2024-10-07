@@ -4,12 +4,40 @@ import {ssz} from "@lodestar/types";
 import {Endpoints} from "../../../../src/beacon/routes/debug.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const rootHex = toHexString(Buffer.alloc(32, 1));
+const root = new Uint8Array(32).fill(1);
+const rootHex = toHexString(root);
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getDebugChainHeadsV2: {
     args: undefined,
     res: {data: [{slot: 1, root: rootHex, executionOptimistic: true}]},
+  },
+  getDebugForkChoice: {
+    args: undefined,
+    res: {
+      data: {
+        justifiedCheckpoint: {
+          epoch: 2,
+          root,
+        },
+        finalizedCheckpoint: {
+          epoch: 1,
+          root,
+        },
+        forkChoiceNodes: [
+          {
+            slot: 1,
+            blockRoot: rootHex,
+            parentRoot: rootHex,
+            justifiedEpoch: 1,
+            finalizedEpoch: 1,
+            weight: 1,
+            validity: "valid",
+            executionBlockHash: rootHex,
+          },
+        ],
+      },
+    },
   },
   getProtoArrayNodes: {
     args: undefined,
