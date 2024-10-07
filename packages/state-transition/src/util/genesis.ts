@@ -171,8 +171,13 @@ export function applyDeposits(
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
     stateElectra.commit();
-    for (const {index: validatorIndex, amount} of stateElectra.pendingDeposits.getAllReadonly()) {
-      increaseBalance(state, validatorIndex, Number(amount));
+    for (const {pubkey, amount} of stateElectra.pendingDeposits.getAllReadonly()) {
+      const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
+      if (validatorIndex === null) {
+        // Should not happen if the gensis state is correct
+        continue;
+      }
+      increaseBalance(state, validatorIndex, amount);
     }
     stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   }
