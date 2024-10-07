@@ -74,7 +74,9 @@ export function isElectraAttestation(attestation: Attestation): attestation is A
   return (attestation as Attestation<ForkPostElectra>).committeeBits !== undefined;
 }
 
-export function isElectraSingleAttestation(singleAttestation: SingleAttestation): singleAttestation is SingleAttestation<ForkPostElectra> {
+export function isElectraSingleAttestation(
+  singleAttestation: SingleAttestation
+): singleAttestation is SingleAttestation<ForkPostElectra> {
   return (singleAttestation as SingleAttestation<ForkPostElectra>).committeeIndex !== undefined;
 }
 

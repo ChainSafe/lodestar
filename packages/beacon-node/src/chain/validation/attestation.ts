@@ -11,6 +11,8 @@ import {
   CommitteeIndex,
   Attestation,
   IndexedAttestation,
+  SingleAttestation,
+  ValidatorIndex,
 } from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {
@@ -20,6 +22,8 @@ import {
   ForkSeq,
   DOMAIN_BEACON_ATTESTER,
   isForkPostElectra,
+  ForkPostElectra,
+  ForkPreElectra,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -837,4 +841,19 @@ export function getSeenAttDataKeyFromSignedAggregateAndProof(
 
   // pre-electra
   return getAttDataFromSignedAggregateAndProofPhase0(aggregateAndProof);
+}
+
+/**
+ * Convert pre-electra single attestation (`phase0.Attestation`) to post-electra `SingleAttestation`
+ */
+export function toElectraSingleAttestation(
+  attestation: SingleAttestation<ForkPreElectra>,
+  attesterIndex: ValidatorIndex
+): SingleAttestation<ForkPostElectra> {
+  return {
+    committeeIndex: attestation.data.index,
+    attesterIndex,
+    data: attestation.data,
+    signature: attestation.signature,
+  };
 }

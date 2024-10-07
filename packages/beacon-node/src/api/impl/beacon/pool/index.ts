@@ -8,7 +8,7 @@ import {
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostElectra,
 } from "@lodestar/params";
-import {validateApiAttestation} from "../../../../chain/validation/index.js";
+import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
@@ -126,6 +126,13 @@ export function getBeaconPoolApi({
               );
             } else {
               chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
+              chain.emitter.emit(
+                routes.events.EventType.singleAttestation,
+                toElectraSingleAttestation(
+                  attestation as SingleAttestation<ForkPreElectra>,
+                  indexedAttestation.attestingIndices[0]
+                )
+              );
             }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
