@@ -16,12 +16,7 @@ import {DepositData} from "@lodestar/types/lib/phase0/types.js";
 import {DepositRequest} from "@lodestar/types/lib/electra/types.js";
 import {BeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../constants/index.js";
-import {
-  computeDomain,
-  computeSigningRoot,
-  getMaxEffectiveBalance,
-  increaseBalance,
-} from "../util/index.js";
+import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
 
 /**
