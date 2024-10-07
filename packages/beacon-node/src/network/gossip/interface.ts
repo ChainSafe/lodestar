@@ -36,6 +36,9 @@ export enum GossipType {
   bls_to_execution_change = "bls_to_execution_change",
 }
 
+export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
+export type BatchGossipType = GossipType.beacon_attestation;
+
 export enum GossipEncoding {
   ssz_snappy = "ssz_snappy",
 }
@@ -189,11 +192,11 @@ export type SequentialGossipHandler<K extends GossipType> = (
 ) => Promise<void>;
 
 export type SequentialGossipHandlers = {
-  [K in Exclude<GossipType, GossipType.beacon_attestation>]: SequentialGossipHandler<K>;
+  [K in SequentialGossipType]: SequentialGossipHandler<K>;
 };
 
 export type BatchGossipHandlers = {
-  [GossipType.beacon_attestation]: BatchGossipHandler<GossipType.beacon_attestation>;
+  [K in BatchGossipType]: BatchGossipHandler<K>;
 };
 
 export type BatchGossipHandler<K extends GossipType> = (
