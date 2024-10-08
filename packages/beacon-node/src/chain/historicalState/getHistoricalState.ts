@@ -102,6 +102,10 @@ export async function getHistoricalState(
   metrics?.stateTransitionBlocks.observe(blockCount);
   transitionTimer?.();
 
+  if (state.slot !== slot) {
+    throw Error(`Failed to generate historical state for slot ${slot}`);
+  }
+
   const serializeTimer = metrics?.stateSerializationTime.startTimer();
   const stateBytes = state.serialize();
   serializeTimer?.();
