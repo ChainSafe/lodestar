@@ -958,7 +958,7 @@ export function getValidatorApi(
       } else if (epoch === stateEpoch - 1) {
         const indexesPrevEpoch = state.epochCtx.getBeaconProposersPrevEpoch();
         if (indexesPrevEpoch === null) {
-          throw new ApiError(500, `Proposers duties for previous epoch ${epoch} not yet initialized`);
+          throw new ApiError(500, `Proposer duties for previous epoch ${epoch} not yet initialized`);
         }
         indexes = indexesPrevEpoch;
       } else {
