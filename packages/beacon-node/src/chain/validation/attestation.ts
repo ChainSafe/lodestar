@@ -42,12 +42,11 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   getAggregationBitsFromAttestationSerialized,
-  getAttDataFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofElectra,
-  getCommitteeBitsFromAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
   getAttDataFromSignedAggregateAndProofPhase0,
   getSignatureFromAttestationSerialized,
+  getBeaconAttestationGossipIndex,
 } from "../../util/sszBytes.js";
 import {AttestationDataCacheEntry, SeenAttDataKey} from "../seenCache/seenAttestationData.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
@@ -61,7 +60,7 @@ export type BatchResult = {
 };
 
 export type AttestationValidationResult = {
-  attestation: Attestation;
+  attestation: SingleAttestation;
   indexedAttestation: IndexedAttestation;
   subnet: number;
   attDataRootHex: RootHex;
@@ -71,7 +70,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: Attestation; serializedData: null};
+export type ApiAttestation = {attestation: SingleAttestation; serializedData: null};
 
 /** attestation from gossip */
 export type GossipAttestation = {
@@ -104,7 +103,7 @@ export async function validateGossipAttestation(
 }
 
 /**
- * Verify gossip attestations of the same attestation data. The main advantage is we can batch verify bls signatures
+ * Verify gossip single attestations of the same attestation data. The main advantage is we can batch verify bls signatures
  * through verifySignatureSetsSameMessage bls api to improve performance.
  *   - If there are less than 2 signatures (minSameMessageSignatureSetsToBatch), verify each signature individually with batchable = true
  *   - do not prioritize bls signature set
@@ -257,7 +256,7 @@ export async function validateAttestation(
 }
 
 /**
- * Only deserialize the attestation if needed, use the cached AttestationData instead
+ * Only deserialize the single attestation if needed, use the cached AttestationData instead
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
 async function validateGossipAttestationNoSignatureCheck(
@@ -278,14 +277,15 @@ async function validateGossipAttestationNoSignatureCheck(
   // Run the checks that happen before an indexed attestation is constructed.
 
   let attestationOrCache:
-    | {attestation: Attestation; cache: null}
+    | {attestation: SingleAttestation; cache: null}
     | {attestation: null; cache: AttestationDataCacheEntry; serializedData: Uint8Array};
   let attDataKey: SeenAttDataKey | null = null;
   if (attestationOrBytes.serializedData) {
     // gossip
     const attSlot = attestationOrBytes.attSlot;
     attDataKey = getSeenAttDataKeyFromGossipAttestation(fork, attestationOrBytes);
-    const cachedAttData = attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, attDataKey) : null;
+    const committeeIndex = 0; // TODO Electra: extract committee index from attestationOrBytes
+    const cachedAttData = attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, committeeIndex, attDataKey) : null;
     if (cachedAttData === null) {
       const attestation = sszDeserializeAttestation(fork, attestationOrBytes.serializedData);
       // only deserialize on the first AttestationData that's not cached
@@ -524,7 +524,7 @@ async function validateGossipAttestationNoSignatureCheck(
       ? (indexedAttestationContent as electra.IndexedAttestation)
       : (indexedAttestationContent as phase0.IndexedAttestation);
 
-  const attestation: Attestation = attestationOrCache.attestation ?? {
+  const attestation: SingleAttestation = attestationOrCache.attestation ?? {
     aggregationBits,
     data: attData,
     committeeBits,
@@ -803,8 +803,8 @@ export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, co
 
 /**
  * Return fork-dependent seen attestation key
- *   - for pre-electra, it's the AttestationData base64
- *   - for electra and later, it's the AttestationData base64 + committeeBits base64
+ *   - for pre-electra, it's the AttestationData base64 from Attestation
+ *   - for electra and later, it's the AttestationData base64 from SingleAttestation
  *
  * we always have attDataBase64 from the IndexedGossipQueue, getAttDataFromAttestationSerialized() just for backward compatible when beaconAttestationBatchValidation is false
  * TODO: remove beaconAttestationBatchValidation flag since the batch attestation is stable
@@ -814,14 +814,8 @@ export function getSeenAttDataKeyFromGossipAttestation(
   attestation: GossipAttestation
 ): SeenAttDataKey | null {
   const {attDataBase64, serializedData} = attestation;
-  if (isForkPostElectra(fork)) {
-    const attData = attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
-    const committeeBits = getCommitteeBitsFromAttestationSerialized(serializedData);
-    return attData && committeeBits ? attDataBase64 + committeeBits : null;
-  }
-
-  // pre-electra
-  return attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
+  // SeenAttDataKey is the same as gossip index
+  return attDataBase64 ?? getBeaconAttestationGossipIndex(fork, serializedData);
 }
 
 /**
