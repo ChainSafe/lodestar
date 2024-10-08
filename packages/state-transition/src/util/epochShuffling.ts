@@ -129,7 +129,7 @@ function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
 }
 
 export function computeEpochShuffling(
-  // TODO: (@matthewkeil) remove state and pass in seed to clean this up
+  // TODO: (@matthewkeil) remove state/epoch and pass in seed to clean this up
   state: BeaconStateAllForks,
   activeIndices: Uint32Array,
   epoch: Epoch
@@ -147,7 +147,7 @@ export function computeEpochShuffling(
 }
 
 export async function computeEpochShufflingAsync(
-  // TODO: (@matthewkeil) remove state and pass in seed to clean this up
+  // TODO: (@matthewkeil) remove state/epoch and pass in seed to clean this up
   state: BeaconStateAllForks,
   activeIndices: Uint32Array,
   epoch: Epoch
