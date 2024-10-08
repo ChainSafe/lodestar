@@ -253,7 +253,9 @@
         "noDuplicateElseIf": "error",
         "noUselessEscapeInRegex": "error",
         "noIrregularWhitespace": "error",
-        "noOctalEscape": "error"
+        "noOctalEscape": "error",
+        // Need to enable this rule with exception to anonymous functions
+        "useExplicitFunctionReturnType": "off"
       }
     }
   },
