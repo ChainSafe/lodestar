@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb} from "@lodestar/types";
 import {ForkSeq, ForkName} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
-import {blockToHeader, signedBlockToSignedHeader} from "@lodestar/state-transition/src/index.js";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition/src/index.js";
 import {
   BlockInput,
   BlockInputType,
@@ -18,7 +18,7 @@ import {INetwork} from "../interface.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
 import {IExecutionEngine} from "../../execution/index.js";
-import {computeBlobSidecars, computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {matchBlockWithBlobs} from "./beaconBlocksMaybeBlobsByRange.js";
 
 export async function beaconBlocksMaybeBlobsByRoot(
