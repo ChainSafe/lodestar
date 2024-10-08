@@ -103,10 +103,8 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
   return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
 }
 
-function buildCommitteesFromShuffling(
-  activeValidatorCount: number,
-  shuffling: Uint32Array
-): Pick<EpochShuffling, "committees" | "committeesPerSlot"> {
+function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
+  const activeValidatorCount = shuffling.length;
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
@@ -127,10 +125,7 @@ function buildCommitteesFromShuffling(
     committees[slot] = slotCommittees;
   }
 
-  return {
-    committees,
-    committeesPerSlot,
-  };
+  return committees;
 }
 
 export function computeEpochShuffling(
@@ -138,15 +133,15 @@ export function computeEpochShuffling(
   activeIndices: Uint32Array,
   epoch: Epoch
 ): EpochShuffling {
-  const activeValidatorCount = activeIndices.length;
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-
+  const committees = buildCommitteesFromShuffling(shuffling);
   return {
     epoch,
     activeIndices,
     shuffling,
-    ...buildCommitteesFromShuffling(activeValidatorCount, shuffling),
+    committees,
+    committeesPerSlot: committees[0].length,
   };
 }
 
@@ -155,15 +150,15 @@ export async function computeEpochShufflingAsync(
   activeIndices: Uint32Array,
   epoch: Epoch
 ): Promise<EpochShuffling> {
-  const activeValidatorCount = activeIndices.length;
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = await asyncUnshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-
+  const committees = buildCommitteesFromShuffling(shuffling);
   return {
     epoch,
     activeIndices,
     shuffling,
-    ...buildCommitteesFromShuffling(activeValidatorCount, shuffling),
+    committees,
+    committeesPerSlot: committees[0].length,
   };
 }
 
