@@ -121,6 +121,7 @@ export async function beaconBlocksMaybeBlobsByRange(
         peerColumns: peerColumns.join(" "),
         peerId,
         peerClient,
+        prevPartialDownload: partialDownload ? true : false,
       });
 
       const blocks = matchBlockWithDataColumns(
