@@ -13,7 +13,7 @@ export type AttestationDataCacheEntry = {
   committeeValidatorIndices: Uint32Array;
   // undefined for phase0 Attestation
   // TODO: remove this as it's not in SingleAttestation
-  committeeBits?: BitArray;
+  // committeeBits?: BitArray;
   // TODO: remove this? this is available in SingleAttestation
   committeeIndex: CommitteeIndex;
   // IndexedAttestationData signing root, 32 bytes

@@ -136,12 +136,10 @@ export function getBlockRootFromBeaconAttestationSerialized(fork: ForkName, data
 /**
  * Extract aggregation bits from attestation serialized bytes.
  * Return null if data is not long enough to extract aggregation bits.
+ * Pre-electra attestation only
  */
-export function getAggregationBitsFromAttestationSerialized(fork: ForkName, data: Uint8Array): BitArray | null {
-  const aggregationBitsStartIndex =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE
-      : VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
+export function getAggregationBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
+  const aggregationBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
 
   if (data.length < aggregationBitsStartIndex) {
     return null;

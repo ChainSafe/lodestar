@@ -13,6 +13,7 @@ import {
   IndexedAttestation,
   SingleAttestation,
   ValidatorIndex,
+  isElectraSingleAttestation,
 } from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {
@@ -47,9 +48,10 @@ import {
   getAttDataFromSignedAggregateAndProofPhase0,
   getSignatureFromAttestationSerialized,
   getBeaconAttestationGossipIndex,
+  getCommitteeIndexFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {AttestationDataCacheEntry, SeenAttDataKey} from "../seenCache/seenAttestationData.js";
-import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
+import {sszDeserializeAttestation, sszDeserializeSingleAttestation} from "../../network/gossip/topic.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {IBeaconChain} from "../interface.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
@@ -257,10 +259,10 @@ async function validateAttestationNoSignatureCheck(
     // gossip
     const attSlot = attestationOrBytes.attSlot;
     attDataKey = getSeenAttDataKeyFromGossipAttestation(fork, attestationOrBytes);
-    const committeeIndex = 0; // TODO Electra: extract committee index from attestationOrBytes
-    const cachedAttData = attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, committeeIndex, attDataKey) : null;
+    const committeeIndexForLookup = isForkPostElectra(fork) ? getCommitteeIndexFromAttestationOrBytes(fork, attestationOrBytes) ?? 0 : 0;
+    const cachedAttData = attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, committeeIndexForLookup, attDataKey) : null;
     if (cachedAttData === null) {
-      const attestation = sszDeserializeAttestation(fork, attestationOrBytes.serializedData);
+      const attestation = sszDeserializeSingleAttestation(fork, attestationOrBytes.serializedData);
       // only deserialize on the first AttestationData that's not cached
       attestationOrCache = {attestation, cache: null};
     } else {
@@ -281,19 +283,13 @@ async function validateAttestationNoSignatureCheck(
   const targetEpoch = attTarget.epoch;
   let committeeIndex;
   if (attestationOrCache.attestation) {
-    if (isElectraAttestation(attestationOrCache.attestation)) {
+    if (isElectraSingleAttestation(attestationOrCache.attestation)) {
       // api or first time validation of a gossip attestation
-      const {committeeBits} = attestationOrCache.attestation;
-      // throw in both in case of undefined and null
-      if (committeeBits == null) {
-        throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES});
-      }
+      committeeIndex = attestationOrCache.attestation.committeeIndex;
 
-      committeeIndex = committeeBits.getSingleTrueBit();
-      // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
-      if (committeeIndex === null) {
-        throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
-      }
+      // TODO ELectra: [REJECT] The attester is a member of the committee -- i.e.
+      // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
+      // const {attesterIndex} = attestationOrCache.attestation;
 
       // [REJECT] aggregate.data.index == 0
       if (attData.index !== 0) {
@@ -327,23 +323,26 @@ async function validateAttestationNoSignatureCheck(
     verifyPropagationSlotRange(fork, chain, attestationOrCache.attestation.data.slot);
   }
 
-  // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
-  // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
-  // > TODO: Do this check **before** getting the target state but don't recompute zipIndexes
-  const aggregationBits = attestationOrCache.attestation
-    ? attestationOrCache.attestation.aggregationBits
-    : getAggregationBitsFromAttestationSerialized(fork, attestationOrCache.serializedData);
-  if (aggregationBits === null) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
-    });
-  }
+  let aggregationBits: BitArray | null = null; // aggregationBits is always null post-electra
+  if (!isForkPostElectra(fork)) {
+    // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
+    // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
+    // > TODO: Do this check **before** getting the target state but don't recompute zipIndexes
+    aggregationBits = attestationOrCache.attestation
+      ? (attestationOrCache.attestation as SingleAttestation<ForkPreElectra>).aggregationBits
+      : getAggregationBitsFromAttestationSerialized(attestationOrCache.serializedData);
+    if (aggregationBits === null) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
+      });
+    }
 
-  const bitIndex = aggregationBits.getSingleTrueBit();
-  if (bitIndex === null) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
-    });
+    const bitIndex = aggregationBits.getSingleTrueBit();
+    if (bitIndex === null) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
+      });
+    }
   }
 
   let committeeValidatorIndices: Uint32Array;
@@ -397,15 +396,19 @@ async function validateAttestationNoSignatureCheck(
     expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
   }
 
-  const validatorIndex = committeeValidatorIndices[bitIndex];
+  const validatorIndex = isForkPostElectra(fork) ? (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex : committeeValidatorIndices[aggregationBits!.getSingleTrueBit()!];
 
-  // [REJECT] The number of aggregation bits matches the committee size
-  // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
-  // > TODO: Is this necessary? Lighthouse does not do this check.
-  if (aggregationBits.bitLen !== committeeValidatorIndices.length) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
-    });
+  if (!isForkPostElectra(fork)) {
+    // [REJECT] The number of aggregation bits matches the committee size
+    // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
+    // > TODO: Is this necessary? Lighthouse does not do this check.
+    if (aggregationBits !== null) {
+      if (aggregationBits.bitLen !== committeeValidatorIndices.length) {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
+        });
+      }
+    }
   }
 
   // LH > verify_middle_checks
@@ -448,7 +451,6 @@ async function validateAttestationNoSignatureCheck(
     });
   }
 
-  let committeeBits: BitArray | undefined = undefined;
   if (attestationOrCache.cache) {
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
     signatureSet = createSingleSignatureSetFromComponents(
@@ -457,7 +459,6 @@ async function validateAttestationNoSignatureCheck(
       signature
     );
     attDataRootHex = attestationOrCache.cache.attDataRootHex;
-    committeeBits = attestationOrCache.cache.committeeBits;
   } else {
     signatureSet = createSingleSignatureSetFromComponents(
       chain.index2pubkey[validatorIndex],
@@ -467,14 +468,9 @@ async function validateAttestationNoSignatureCheck(
 
     // add cached attestation data before verifying signature
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
-    // if attestation is phase0 the committeeBits is undefined anyway
-    committeeBits = isElectraAttestation(attestationOrCache.attestation)
-      ? attestationOrCache.attestation.committeeBits.clone()
-      : undefined;
     if (attDataKey) {
-      chain.seenAttestationDatas.add(attSlot, attDataKey, {
+      chain.seenAttestationDatas.add(attSlot, committeeIndex, attDataKey, {
         committeeValidatorIndices,
-        committeeBits,
         committeeIndex,
         signingRoot: signatureSet.signingRoot,
         subnet: expectedSubnet,
@@ -497,12 +493,15 @@ async function validateAttestationNoSignatureCheck(
       ? (indexedAttestationContent as electra.IndexedAttestation)
       : (indexedAttestationContent as phase0.IndexedAttestation);
 
-  const attestation: SingleAttestation = attestationOrCache.attestation ?? {
+  const attestationContent = attestationOrCache.attestation ?? {
     aggregationBits,
     data: attData,
-    committeeBits,
+    committeeIndex,
     signature,
   };
+
+  const attestation = ForkSeq[fork] >= ForkSeq.electra ? (attestationContent as SingleAttestation<ForkPostElectra>) : (attestationContent as SingleAttestation<ForkPreElectra>);
+  
   return {
     attestation,
     indexedAttestation,
@@ -805,6 +804,24 @@ export function getSeenAttDataKeyFromSignedAggregateAndProof(
 
   // pre-electra
   return getAttDataFromSignedAggregateAndProofPhase0(aggregateAndProof);
+}
+
+export function getCommitteeIndexFromAttestationOrBytes(fork: ForkName, attestationOrBytes: AttestationOrBytes): CommitteeIndex | null {
+  const isGossipAttestation = attestationOrBytes.serializedData !== null;
+  
+  if (isForkPostElectra(fork)) {
+    if (isGossipAttestation) {
+      return getCommitteeIndexFromSingleAttestationSerialized(attestationOrBytes.serializedData);
+    } else {
+      return (attestationOrBytes.attestation as SingleAttestation<ForkPostElectra>).committeeIndex;
+    }
+  } else {
+    if (isGossipAttestation) {
+      return null; // TODO Electra
+    } else {
+      return (attestationOrBytes.attestation as SingleAttestation<ForkPreElectra>).data.index;
+    }
+  }
 }
 
 /**

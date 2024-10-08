@@ -75,7 +75,7 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
       } else {
         expect(getSlotFromAttestationSerialized(bytes)).toBe(attestation.data.slot);
         expect(getBlockRootFromAttestationSerialized(bytes)).toBe(toRootHex(attestation.data.beaconBlockRoot));
-        expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, bytes)?.toBoolArray()).toEqual(
+        expect(getAggregationBitsFromAttestationSerialized(bytes)?.toBoolArray()).toEqual(
           attestation.aggregationBits.toBoolArray()
         );
         const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
@@ -110,8 +110,8 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
   it("getAggregationBitsFromAttestationSerialized - invalid data", () => {
     const invalidAggregationBitsDataSizes = [0, 4, 100, 128, 227];
     for (const size of invalidAggregationBitsDataSizes) {
-      expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, Buffer.alloc(size))).toBeNull();
-      expect(getAggregationBitsFromAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
+      expect(getAggregationBitsFromAttestationSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getAggregationBitsFromAttestationSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 

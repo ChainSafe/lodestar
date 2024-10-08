@@ -127,7 +127,9 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 }
 
 /**
+ * @deprecated
  * Deserialize a gossip serialized data into an Attestation object.
+ * No longer used post-electra. Use `sszDeserializeSingleAttestation` instead
  */
 export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   try {
