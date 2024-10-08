@@ -936,7 +936,7 @@ export function getValidatorApi(
           const stateViewDU =
             res.state instanceof Uint8Array
               ? config.getForkTypes(startSlot).BeaconState.deserializeToViewDU(res.state)
-              : res.state;
+              : res.state.clone();
 
           state = createCachedBeaconState(stateViewDU, {
             config: chain.config,
