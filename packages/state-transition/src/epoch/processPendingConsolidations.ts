@@ -1,7 +1,7 @@
 import {ValidatorIndex} from "@lodestar/types";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/balance.js";
-import {getActiveBalance} from "../util/validator.js";
+import {getMaxEffectiveBalance} from "../util/validator.js";
 import {switchToCompoundingValidator} from "../util/electra.js";
 
 /**
@@ -40,12 +40,13 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
     switchToCompoundingValidator(state, targetIndex);
     newCompoundingValidators.add(targetIndex);
     // Move active balance to target. Excess balance is withdrawable.
-    const activeBalance = getActiveBalance(state, sourceIndex);
-    decreaseBalance(state, sourceIndex, activeBalance);
-    increaseBalance(state, targetIndex, activeBalance);
+    const maxEffectiveBalance = getMaxEffectiveBalance(state.validators.getReadonly(sourceIndex).withdrawalCredentials);
+    const sourceEffectiveBalance = Math.min(state.balances.get(sourceIndex), maxEffectiveBalance);
+    decreaseBalance(state, sourceIndex, sourceEffectiveBalance);
+    increaseBalance(state, targetIndex, sourceEffectiveBalance);
     if (cachedBalances) {
-      cachedBalances[sourceIndex] -= activeBalance;
-      cachedBalances[targetIndex] += activeBalance;
+      cachedBalances[sourceIndex] -= sourceEffectiveBalance;
+      cachedBalances[targetIndex] += sourceEffectiveBalance;
     }
 
     nextPendingConsolidation++;
