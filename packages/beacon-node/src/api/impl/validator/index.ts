@@ -1,3 +1,4 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
@@ -938,11 +939,16 @@ export function getValidatorApi(
               ? config.getForkTypes(startSlot).BeaconState.deserializeToViewDU(res.state)
               : res.state.clone();
 
-          state = createCachedBeaconState(stateViewDU, {
-            config: chain.config,
-            pubkey2index: chain.pubkey2index,
-            index2pubkey: chain.index2pubkey,
-          });
+          state = createCachedBeaconState(
+            stateViewDU,
+            {
+              config: chain.config,
+              // Not required to compute proposers
+              pubkey2index: new PubkeyIndexMap(),
+              index2pubkey: [],
+            },
+            {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
+          );
         }
       }
 
