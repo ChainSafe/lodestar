@@ -16,7 +16,7 @@ import {
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
-import {ApiError} from "../../errors.js";
+import {ApiError, FailureList, IndexedError} from "../../errors.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -88,7 +88,7 @@ export function getBeaconPoolApi({
 
     async submitPoolAttestationsV2({signedAttestations}) {
       const seenTimestampSec = Date.now() / 1000;
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         signedAttestations.map(async (attestation, i) => {
@@ -127,7 +127,7 @@ export function getBeaconPoolApi({
               return;
             }
 
-            errors.push(e as Error);
+            failures.push({index: i, message: (e as Error).message});
             logger.error(`Error on submitPoolAttestations [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
@@ -136,10 +136,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolAttestations\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing attestations", failures);
       }
     },
 
@@ -168,7 +166,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolBLSToExecutionChange({blsToExecutionChanges}) {
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
@@ -184,7 +182,7 @@ export function getBeaconPoolApi({
               await network.publishBlsToExecutionChange(blsToExecutionChange);
             }
           } catch (e) {
-            errors.push(e as Error);
+            failures.push({index: i, message: (e as Error).message});
             logger.error(
               `Error on submitPoolBLSToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
@@ -194,10 +192,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolBLSToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing BLS to execution changes", failures);
       }
     },
 
@@ -221,7 +217,7 @@ export function getBeaconPoolApi({
       // TODO: Fetch states at signature slots
       const state = chain.getHeadState();
 
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         signatures.map(async (signature, i) => {
@@ -261,7 +257,7 @@ export function getBeaconPoolApi({
               return;
             }
 
-            errors.push(e as Error);
+            failures.push({index: i, message: (e as Error).message});
             logger.debug(
               `Error on submitPoolSyncCommitteeSignatures [${i}]`,
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
@@ -274,10 +270,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolSyncCommitteeSignatures\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing sync committee signatures", failures);
       }
     },
   };
