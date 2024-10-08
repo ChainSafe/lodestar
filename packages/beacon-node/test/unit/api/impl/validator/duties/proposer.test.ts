@@ -14,7 +14,7 @@ import {SyncState} from "../../../../../../src/sync/interface.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 
 describe("get proposers api impl", function () {
-  const currentEpoch = 3;
+  const currentEpoch = 2;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
 
   let api: ReturnType<typeof getValidatorApi>;
@@ -66,7 +66,7 @@ describe("get proposers api impl", function () {
     vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SECONDS_PER_SLOT * 1000);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.SyncingHead);
 
-    await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - headSlot 0 currentSlot 33");
+    await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - headSlot 0 currentSlot 25");
   });
 
   it("should raise error if node stalled", async () => {
@@ -123,7 +123,7 @@ describe("get proposers api impl", function () {
 
   it("should raise error for more than one epoch in the future", async () => {
     await expect(api.getProposerDuties({epoch: currentEpoch + 2})).rejects.toThrow(
-      "Requested epoch 5 must not be more than one epoch in the future"
+      "Requested epoch 4 must not be more than one epoch in the future"
     );
   });
 
