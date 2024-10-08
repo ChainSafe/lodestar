@@ -41,11 +41,11 @@ export {
   EpochCacheError,
   EpochCacheErrorCode,
 } from "./cache/epochCache.js";
+export {toMemoryEfficientHexStr} from "./cache/pubkeyCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 
 // Aux data-structures
 export {
-  PubkeyIndexMap,
   type Index2PubkeyCache,
   type UnfinalizedPubkeyIndexMap,
   newUnfinalizedPubkeyIndexMap,

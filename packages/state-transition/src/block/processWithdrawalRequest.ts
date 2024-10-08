@@ -33,7 +33,7 @@ export function processWithdrawalRequest(
   // bail out if validator is not in beacon state
   // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
   const validatorIndex = pubkey2index.get(withdrawalRequest.validatorPubkey);
-  if (validatorIndex === undefined) {
+  if (validatorIndex === null) {
     return;
   }
 

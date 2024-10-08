@@ -1358,7 +1358,7 @@ export function getValidatorApi(
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
         const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
-        if (validatorIndex === undefined) return false;
+        if (validatorIndex === null) return false;
 
         const validator = headState.validators.getReadonly(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);

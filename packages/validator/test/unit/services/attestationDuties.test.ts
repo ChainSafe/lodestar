@@ -52,7 +52,7 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.mockResolvedValue(
+    api.beacon.postStateValidators.mockResolvedValue(
       mockApiResponse({data: [validatorResponse], meta: {executionOptimistic: false, finalized: false}})
     );
   });

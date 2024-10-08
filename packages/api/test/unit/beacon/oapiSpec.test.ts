@@ -20,9 +20,9 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.6.0-alpha.1";
+const version = "v3.0.0-alpha.6";
 const openApiFile: OpenApiFile = {
-  url: `https://raw.githubusercontent.com/nflaig/beacon-api-spec/main/${version}/beacon-node-oapi.json`,
+  url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
@@ -55,7 +55,6 @@ const ignoredOperations = [
   /* missing route */
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
-  "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
   /* Must support ssz response body */
   "getLightClientUpdatesByRange", // https://github.com/ChainSafe/lodestar/issues/6841
 ];

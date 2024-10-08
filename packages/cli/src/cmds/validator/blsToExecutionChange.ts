@@ -60,7 +60,7 @@ like to choose for BLS To Execution Change.",
     const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
     const config = createBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
     const validator = validators[0];
     if (validator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);

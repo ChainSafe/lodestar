@@ -121,7 +121,7 @@ describe("lightclient api", function () {
     const committeeRes = await lightclient.getLightClientCommitteeRoot({startPeriod: 0, count: 1});
     committeeRes.assertOk();
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
-    const validators = (await client.getStateValidators({stateId: "head"})).value();
+    const validators = (await client.postStateValidators({stateId: "head"})).value();
     const pubkeys = validators.map((v) => v.validator.pubkey);
     expect(pubkeys.length).toBe(validatorCount);
     // only 2 validators spreading to 512 committee slots
