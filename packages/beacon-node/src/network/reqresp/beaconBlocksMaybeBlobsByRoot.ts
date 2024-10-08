@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb} from "@lodestar/types";
 import {ForkSeq, ForkName} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition/src/index.js";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BlockInput,
   BlockInputType,
