@@ -141,7 +141,7 @@
     "it-all": "^3.0.4",
     "it-pipe": "^3.0.1",
     "jwt-simple": "0.5.6",
-    "libp2p": "2.1.2",
+    "libp2p": "2.1.7",
     "multiformats": "^11.0.1",
     "prom-client": "^15.1.0",
     "qs": "^6.11.1",

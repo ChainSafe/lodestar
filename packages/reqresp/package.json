@@ -67,10 +67,10 @@
   "devDependencies": {
     "@lodestar/logger": "^1.22.0",
     "@lodestar/types": "^1.22.0",
-    "libp2p": "2.1.2"
+    "libp2p": "2.1.7"
   },
   "peerDependencies": {
-    "libp2p": "~2.1.2"
+    "libp2p": "~2.1.7"
   },
   "keywords": [
     "ethereum",
