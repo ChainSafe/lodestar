@@ -931,6 +931,8 @@ export function getValidatorApi(
 
       if (!state) {
         if (epoch >= currentEpoch - 1) {
+          // Cached beacon state stores proposers for previous, current and next epoch. The
+          // requested epoch is within that range, we can use the head state at current epoch
           state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
         } else {
           const res = await getStateResponseWithRegen(chain, startSlot);
