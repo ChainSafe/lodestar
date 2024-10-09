@@ -20,8 +20,7 @@ export type ConsolidationRequests = ValueOf<typeof ssz.ConsolidationRequests>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
-
-export type ExecutionPayloadAndBlobsBundle = ValueOf<typeof ssz.ExecutionPayloadAndBlobsBundle>;
+export type ExecutionRequests = ValueOf<typeof ssz.ExecutionRequests>;
 
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
@@ -33,13 +32,10 @@ export type BlindedBeaconBlockBody = ValueOf<typeof ssz.BlindedBeaconBlockBody>;
 export type BlindedBeaconBlock = ValueOf<typeof ssz.BlindedBeaconBlock>;
 export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlock>;
 
-export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
-
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
 export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;
 
-export type LightClientHeader = ValueOf<typeof ssz.LightClientHeader>;
 export type LightClientBootstrap = ValueOf<typeof ssz.LightClientBootstrap>;
 export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;
 export type LightClientFinalityUpdate = ValueOf<typeof ssz.LightClientFinalityUpdate>;

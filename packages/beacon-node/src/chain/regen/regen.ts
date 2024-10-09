@@ -218,7 +218,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       blockPromises[i] = this.modules.db.block.get(fromHex(protoBlock.blockRoot));
     }
 
-    const logCtx = {stateRoot, replaySlots: replaySlots.join(",")};
+    const logCtx = {stateRoot, caller, replaySlots: replaySlots.join(",")};
     this.modules.logger.debug("Replaying blocks to get state", logCtx);
 
     const loadBlocksTimer = this.modules.metrics?.regenGetState.loadBlocks.startTimer({caller});

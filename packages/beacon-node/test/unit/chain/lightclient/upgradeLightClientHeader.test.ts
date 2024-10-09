@@ -28,7 +28,7 @@ describe("UpgradeLightClientHeader", function () {
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
-      electra: ssz.electra.LightClientHeader.defaultValue(),
+      electra: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {

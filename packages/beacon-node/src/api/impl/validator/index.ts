@@ -41,6 +41,7 @@ import {
   BeaconBlock,
   BlockContents,
   BlindedBeaconBlock,
+  getValidatorStatus,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth, toRootHex} from "@lodestar/utils";
@@ -61,7 +62,6 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
@@ -1359,7 +1359,7 @@ export function getValidatorApi(
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
         const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
-        if (validatorIndex === undefined) return false;
+        if (validatorIndex === null) return false;
 
         const validator = headState.validators.getReadonly(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);

@@ -189,8 +189,11 @@ export class ApiResponse<E extends Endpoint> extends Response {
   private getErrorMessage(): string {
     const errBody = this.resolvedErrorBody();
     try {
-      const errJson = JSON.parse(errBody) as {message?: string};
+      const errJson = JSON.parse(errBody) as {message?: string; failures?: {message: string}[]};
       if (errJson.message) {
+        if (errJson.failures) {
+          return `${errJson.message}\n` + errJson.failures.map((e) => e.message).join("\n");
+        }
         return errJson.message;
       } else {
         return errBody;

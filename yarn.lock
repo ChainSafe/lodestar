@@ -569,6 +569,42 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/prometheus-gc-stats/-/prometheus-gc-stats-1.0.2.tgz#585f8f1555251db156d7e50ef8c86dd4f3e78f70"
   integrity sha512-h3mFKduSX85XMVbOdWOYvx9jNq99jGcRVNyW5goGOqju1CsI+ZJLhu5z4zBb/G+ksL0R4uLVulu/mIMe7Y0rNg==
 
+"@chainsafe/pubkey-index-map-darwin-arm64@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map-darwin-arm64/-/pubkey-index-map-darwin-arm64-2.0.0.tgz#e468e772787f2411ecab8e8316da6c801356b72d"
+  integrity sha512-7eROFdQvwN1b0zJy0YJd1wBSv8j+Sp8tc3HsyaLQvjX7w93LcPPe+2Y5QpMkECBFzD2BcvKFpYxIvkDzV2v8rw==
+
+"@chainsafe/pubkey-index-map-darwin-x64@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map-darwin-x64/-/pubkey-index-map-darwin-x64-2.0.0.tgz#995755f71bcb49e5393a6af122c11a850aef4ce4"
+  integrity sha512-HfKIV83Y+AOugw0jaeUIHqe4Ikfwo47baFg97fpdcpUwPfWnw4Blej5C1zAyEX2IuUo2S1D450neTBSUgSdNCA==
+
+"@chainsafe/pubkey-index-map-linux-arm64-gnu@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map-linux-arm64-gnu/-/pubkey-index-map-linux-arm64-gnu-2.0.0.tgz#0c25ffb451d9861515e26e68006aa08e18ebc42d"
+  integrity sha512-t7Tdy+m9lZF2gqs0LmxFTAztNe6tDuSxje0xS8LTYanBSWQ6ADbWjTxcp/63yBbIYGzncigePZG2iis9nxB95Q==
+
+"@chainsafe/pubkey-index-map-linux-x64-gnu@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map-linux-x64-gnu/-/pubkey-index-map-linux-x64-gnu-2.0.0.tgz#26c3628faaeb1ef9b47952cc03ae209d7e9656d8"
+  integrity sha512-1DKoITe7ZwjClhCBpIZq7SOIOJbUNLxgsFuV7e0ZcBq+tz5UqhKB8SSRzNn7THoo+XRg1mJiDyFPzDKGxHxRkg==
+
+"@chainsafe/pubkey-index-map-win32-x64-msvc@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map-win32-x64-msvc/-/pubkey-index-map-win32-x64-msvc-2.0.0.tgz#0e35c67ed9dcaaee6ff9e582ed6a733d852473e9"
+  integrity sha512-hnEZBtTFxTl52lytogexOtzqPQyUKKB28mLbLTZnl2OicsEfNcczJpgF6o1uQ0O0zktAn/m1Tc6/iHmQg2VuhQ==
+
+"@chainsafe/pubkey-index-map@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map/-/pubkey-index-map-2.0.0.tgz#a8262b353e8335e9acf5e750353a53c55e5cf9be"
+  integrity sha512-2mVvWrHGApF3mPS7ecp8k3dI/C3QF5824bpQNSRWDsmZEU9H3HzITIj256v14QiB+22MIitpWkBc6hl2bjhJ+Q==
+  optionalDependencies:
+    "@chainsafe/pubkey-index-map-darwin-arm64" "2.0.0"
+    "@chainsafe/pubkey-index-map-darwin-x64" "2.0.0"
+    "@chainsafe/pubkey-index-map-linux-arm64-gnu" "2.0.0"
+    "@chainsafe/pubkey-index-map-linux-x64-gnu" "2.0.0"
+    "@chainsafe/pubkey-index-map-win32-x64-msvc" "2.0.0"
+
 "@chainsafe/ssz@^0.11.1":
   version "0.11.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.11.1.tgz#d4aec883af2ec5196ae67b96242c467da20b2476"

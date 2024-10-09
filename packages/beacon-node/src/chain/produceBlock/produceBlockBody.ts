@@ -17,6 +17,7 @@ import {
   BlindedBeaconBlockBody,
   BlindedBeaconBlock,
   sszTypesFor,
+  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -258,7 +259,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
-          const {executionPayload, blobsBundle} = engineRes;
+          const {executionPayload, blobsBundle, executionRequests} = engineRes;
           shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
           (blockBody as BeaconBlockBody<ForkExecution>).executionPayload = executionPayload;
@@ -297,6 +298,13 @@ export async function produceBlockBody<T extends BlockType>(
             Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
+          }
+
+          if (ForkSeq[fork] >= ForkSeq.electra) {
+            if (executionRequests === undefined) {
+              throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
+            }
+            (blockBody as electra.BeaconBlockBody).executionRequests = executionRequests;
           }
         }
       } catch (e) {
