@@ -9,3 +9,4 @@ export * from "./utils/typeguards.js";
 export {StringType, stringType} from "./utils/stringType.js";
 // Container utils
 export * from "./utils/container.js";
+export * from "./utils/validatorStatus.js";
