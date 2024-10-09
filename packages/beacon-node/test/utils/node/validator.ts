@@ -97,7 +97,7 @@ export function getApiFromServerHandlers(api: BeaconApiMethods): ApiClient {
       return async (args: unknown) => {
         try {
           const apiResponse = new ApiResponse({} as any, null, new Response(null, {status: HttpStatusCode.OK}));
-          const result = await api(args, {});
+          const result = await api.call(apiModule, args, {});
           apiResponse.value = () => result.data;
           apiResponse.meta = () => result.meta;
           return apiResponse;

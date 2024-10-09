@@ -1,10 +1,18 @@
 import {PublicKey} from "@chainsafe/blst";
-import {ValidatorIndex} from "@lodestar/types";
-import {BeaconStateAllForks} from "./types.js";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import * as immutable from "immutable";
+import {ValidatorIndex, phase0} from "@lodestar/types";
 
 export type Index2PubkeyCache = PublicKey[];
+/**
+ * OrderedMap preserves the order of entries in which they are `set()`.
+ * We assume `values()` yields validator indices in strictly increasing order
+ * as new validator indices are assigned in increasing order.
+ * EIP-6914 will break this assumption.
+ */
+export type UnfinalizedPubkeyIndexMap = immutable.Map<PubkeyHex, ValidatorIndex>;
 
-type PubkeyHex = string;
+export type PubkeyHex = string;
 
 /**
  * toHexString() creates hex strings via string concatenation, which are very memory inefficient.
@@ -14,7 +22,7 @@ type PubkeyHex = string;
  *
  * See https://github.com/ChainSafe/lodestar/issues/3446
  */
-function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
+export function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   if (typeof hex === "string") {
     if (hex.startsWith("0x")) {
       hex = hex.slice(2);
@@ -25,24 +33,11 @@ function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   return Buffer.from(hex.buffer, hex.byteOffset, hex.byteLength).toString("hex");
 }
 
-export class PubkeyIndexMap {
-  // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
-  readonly map = new Map<PubkeyHex, ValidatorIndex>();
-
-  get size(): number {
-    return this.map.size;
-  }
-
-  /**
-   * Must support reading with string for API support where pubkeys are already strings
-   */
-  get(key: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
-    return this.map.get(toMemoryEfficientHexStr(key));
-  }
-
-  set(key: Uint8Array, value: ValidatorIndex): void {
-    this.map.set(toMemoryEfficientHexStr(key), value);
-  }
+/**
+ * A wrapper for calling immutable.js. To abstract the initialization of UnfinalizedPubkeyIndexMap
+ */
+export function newUnfinalizedPubkeyIndexMap(): UnfinalizedPubkeyIndexMap {
+  return immutable.Map<PubkeyHex, ValidatorIndex>();
 }
 
 /**
@@ -53,7 +48,7 @@ export class PubkeyIndexMap {
  * If pubkey caches are empty: SLOW CODE - 🐢
  */
 export function syncPubkeys(
-  state: BeaconStateAllForks,
+  validators: phase0.Validator[],
   pubkey2index: PubkeyIndexMap,
   index2pubkey: Index2PubkeyCache
 ): void {
@@ -61,16 +56,14 @@ export function syncPubkeys(
     throw new Error(`Pubkey indices have fallen out of sync: ${pubkey2index.size} != ${index2pubkey.length}`);
   }
 
-  // Get the validators sub tree once for all the loop
-  const validators = state.validators;
-
-  const newCount = state.validators.length;
+  const newCount = validators.length;
+  index2pubkey.length = newCount;
   for (let i = pubkey2index.size; i < newCount; i++) {
-    const pubkey = validators.getReadonly(i).pubkey;
+    const pubkey = validators[i].pubkey;
     pubkey2index.set(pubkey, i);
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key is the state consider validated.
     // > Do not do any validation here
-    index2pubkey.push(PublicKey.fromBytes(pubkey)); // Optimize for aggregation
+    index2pubkey[i] = PublicKey.fromBytes(pubkey); // Optimize for aggregation
   }
 }

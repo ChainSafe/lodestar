@@ -1,4 +1,4 @@
-import {ExecutionPayload, Root, RootHex, Wei} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
@@ -37,6 +37,7 @@ import {
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
+  serializeExecutionRequests,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -195,14 +196,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fork: ForkName,
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
-    parentBlockRoot?: Root
+    parentBlockRoot?: Root,
+    executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_newPayloadV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_newPayloadV2"
-          : "engine_newPayloadV1";
+      ForkSeq[fork] >= ForkSeq.electra
+        ? "engine_newPayloadV4"
+        : ForkSeq[fork] >= ForkSeq.deneb
+          ? "engine_newPayloadV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_newPayloadV2"
+            : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -218,12 +222,28 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
       const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
 
-      const method = "engine_newPayloadV3";
-      engineRequest = {
-        method,
-        params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
-        methodOpts: notifyNewPayloadOpts,
-      };
+      if (ForkSeq[fork] >= ForkSeq.electra) {
+        if (executionRequests === undefined) {
+          throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
+        }
+        const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
+        engineRequest = {
+          method: "engine_newPayloadV4",
+          params: [
+            serializedExecutionPayload,
+            serializedVersionedHashes,
+            parentBeaconBlockRoot,
+            serializedExecutionRequests,
+          ],
+          methodOpts: notifyNewPayloadOpts,
+        };
+      } else {
+        engineRequest = {
+          method: "engine_newPayloadV3",
+          params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
+          methodOpts: notifyNewPayloadOpts,
+        };
+      }
     } else {
       const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
       engineRequest = {
@@ -389,14 +409,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
+    executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
     const method =
-      ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_getPayloadV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_getPayloadV2"
-          : "engine_getPayloadV1";
+      ForkSeq[fork] >= ForkSeq.electra
+        ? "engine_getPayloadV4"
+        : ForkSeq[fork] >= ForkSeq.deneb
+          ? "engine_getPayloadV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_getPayloadV2"
+            : "engine_getPayloadV1";
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -414,7 +437,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.payloadIdCache.prune();
   }
 
-  async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
+  async getPayloadBodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
     const response = await this.rpc.fetchWithRetries<
@@ -425,6 +448,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getPayloadBodiesByRange(
+    fork: ForkName,
     startBlockNumber: number,
     blockCount: number
   ): Promise<(ExecutionPayloadBody | null)[]> {

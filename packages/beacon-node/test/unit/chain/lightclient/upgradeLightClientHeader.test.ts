@@ -15,6 +15,7 @@ describe("UpgradeLightClientHeader", function () {
     BELLATRIX_FORK_EPOCH: 2,
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
+    ELECTRA_FORK_EPOCH: 5,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -27,6 +28,7 @@ describe("UpgradeLightClientHeader", function () {
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
+      electra: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -35,6 +37,7 @@ describe("UpgradeLightClientHeader", function () {
       bellatrix: 17,
       capella: 25,
       deneb: 33,
+      electra: 41,
     };
   });
 

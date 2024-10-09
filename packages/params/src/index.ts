@@ -93,6 +93,21 @@ export const {
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BLOBS_PER_BLOCK,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
+
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
+  MIN_ACTIVATION_BALANCE,
+  PENDING_BALANCE_DEPOSITS_LIMIT,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
+  PENDING_CONSOLIDATIONS_LIMIT,
+  MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_ATTESTATIONS_ELECTRA,
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
 } = activePreset;
 
 ////////////
@@ -109,11 +124,14 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const BASE_REWARDS_PER_EPOCH = 4;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
+export const ZERO_HASH = Buffer.alloc(32, 0);
+export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
 // Withdrawal prefixes
 // Since the prefixes are just 1 byte, we define and use them as number
 export const BLS_WITHDRAWAL_PREFIX = 0;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
+export const COMPOUNDING_WITHDRAWAL_PREFIX = 2;
 
 // Domain types
 
@@ -128,7 +146,6 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
-export const DOMAIN_BLOB_SIDECAR = Uint8Array.from([11, 0, 0, 0]);
 
 // Application specific domains
 
@@ -244,3 +261,13 @@ export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_C
 
 // ssz.deneb.BlobSidecars.elementType.fixedSize
 export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131672 : 131928;
+
+// Electra Misc
+export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;
+export const FULL_EXIT_REQUEST_AMOUNT = 0;
+export const FINALIZED_ROOT_GINDEX_ELECTRA = 169;
+export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
+export const FINALIZED_ROOT_INDEX_ELECTRA = 41;
+export const NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA = 87;
+export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
+export const NEXT_SYNC_COMMITTEE_INDEX_ELECTRA = 23;

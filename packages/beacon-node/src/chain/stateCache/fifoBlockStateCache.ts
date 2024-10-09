@@ -1,7 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
+import {toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
 import {StateCloneOpts} from "../regen/interface.js";
@@ -13,9 +13,14 @@ export type FIFOBlockStateCacheOpts = {
 };
 
 /**
- * Regen state if there's a reorg distance > 32 slots.
+ * Given `maxSkipSlots` = 32 and `DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE` = 32, lodestar doesn't need to
+ * reload states in order to process a gossip block.
+ *
+ * |-----------------------------------------------|-----------------------------------------------|
+ *                 maxSkipSlots                      DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE    ^
+ *                                                                                             clock slot
  */
-export const DEFAULT_MAX_BLOCK_STATES = 32;
+export const DEFAULT_MAX_BLOCK_STATES = 64;
 
 /**
  * New implementation of BlockStateCache that keeps the most recent n states consistently
@@ -107,7 +112,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
    * In importBlock() steps, normally it'll call add() with isHead = false first. Then call setHeadState() to set the head.
    */
   add(item: CachedBeaconStateAllForks, isHead = false): void {
-    const key = toHexString(item.hashTreeRoot());
+    const key = toRootHex(item.hashTreeRoot());
     if (this.cache.get(key) != null) {
       if (!this.keyOrder.has(key)) {
         throw Error(`State exists but key not found in keyOrder: ${key}`);
@@ -183,11 +188,15 @@ export class FIFOBlockStateCache implements BlockStateCache {
   dumpSummary(): routes.lodestar.StateCacheItem[] {
     return Array.from(this.cache.entries()).map(([key, state]) => ({
       slot: state.slot,
-      root: toHexString(state.hashTreeRoot()),
+      root: toRootHex(state.hashTreeRoot()),
       reads: this.cache.readCount.get(key) ?? 0,
       lastRead: this.cache.lastRead.get(key) ?? 0,
       checkpointState: false,
     }));
+  }
+
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+    return this.cache.values();
   }
 
   /**

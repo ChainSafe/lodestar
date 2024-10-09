@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkBlobs} from "@lodestar/params";
+import {isForkBlobs, isForkPostElectra} from "@lodestar/params";
 import {
   altair,
   BLSSignature,
@@ -17,7 +17,10 @@ import {
   stringType,
   BeaconBlockOrContents,
   BlindedBeaconBlock,
+  Attestation,
+  sszTypesFor,
 } from "@lodestar/types";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
 import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
@@ -41,6 +44,7 @@ import {
   VersionMeta,
   VersionType,
 } from "../../utils/metadata.js";
+import {fromHeaders} from "../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -80,15 +84,6 @@ export type ProduceBlockV3Meta = ValueOf<typeof ProduceBlockV3MetaType> & {
   /** Lodestar-specific (non-standardized) value */
   executionPayloadSource: ProducedBlockSource;
 };
-
-export const BlockContentsType = new ContainerType(
-  {
-    block: ssz.deneb.BeaconBlock,
-    kzgProofs: ssz.deneb.KZGProofs,
-    blobs: ssz.deneb.Blobs,
-  },
-  {jsonCase: "eth2"}
-);
 
 export const AttesterDutyType = new ContainerType(
   {
@@ -208,7 +203,8 @@ export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
 export const AttesterDutyListType = ArrayOf(AttesterDutyType);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
 export const SyncDutyListType = ArrayOf(SyncDutyType);
-export const SignedAggregateAndProofListType = ArrayOf(ssz.phase0.SignedAggregateAndProof);
+export const SignedAggregateAndProofListPhase0Type = ArrayOf(ssz.phase0.SignedAggregateAndProof);
+export const SignedAggregateAndProofListElectraType = ArrayOf(ssz.electra.SignedAggregateAndProof);
 export const SignedContributionAndProofListType = ArrayOf(ssz.altair.SignedContributionAndProof);
 export const BeaconCommitteeSubscriptionListType = ArrayOf(BeaconCommitteeSubscriptionType);
 export const SyncCommitteeSubscriptionListType = ArrayOf(SyncCommitteeSubscriptionType);
@@ -225,7 +221,9 @@ export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
 export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
 export type SyncDuty = ValueOf<typeof SyncDutyType>;
 export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
-export type SignedAggregateAndProofList = ValueOf<typeof SignedAggregateAndProofListType>;
+export type SignedAggregateAndProofListPhase0 = ValueOf<typeof SignedAggregateAndProofListPhase0Type>;
+export type SignedAggregateAndProofListElectra = ValueOf<typeof SignedAggregateAndProofListElectraType>;
+export type SignedAggregateAndProofList = SignedAggregateAndProofListPhase0 | SignedAggregateAndProofListElectra;
 export type SignedContributionAndProofList = ValueOf<typeof SignedContributionAndProofListType>;
 export type BeaconCommitteeSubscription = ValueOf<typeof BeaconCommitteeSubscriptionType>;
 export type BeaconCommitteeSubscriptionList = ValueOf<typeof BeaconCommitteeSubscriptionListType>;
@@ -413,13 +411,43 @@ export type Endpoints = {
   >;
 
   /**
+   * Get aggregated attestation
+   * Aggregates all attestations matching given attestation data root, slot and committee index
+   * Returns an aggregated `Attestation` object with same `AttestationData` root.
+   */
+  getAggregatedAttestationV2: Endpoint<
+    "GET",
+    {
+      /** HashTreeRoot of AttestationData that validator want's aggregated */
+      attestationDataRoot: Root;
+      slot: Slot;
+      committeeIndex: number;
+    },
+    {query: {attestation_data_root: string; slot: number; committee_index: number}},
+    Attestation,
+    VersionMeta
+  >;
+
+  /**
    * Publish multiple aggregate and proofs
    * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
    */
   publishAggregateAndProofs: Endpoint<
     "POST",
-    {signedAggregateAndProofs: SignedAggregateAndProofList},
+    {signedAggregateAndProofs: SignedAggregateAndProofListPhase0},
     {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Publish multiple aggregate and proofs
+   * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+   */
+  publishAggregateAndProofsV2: Endpoint<
+    "POST",
+    {signedAggregateAndProofs: SignedAggregateAndProofList},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -536,7 +564,7 @@ export type Endpoints = {
   >;
 };
 
-export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getAttesterDuties: {
       url: "/eth/v1/validator/duties/attester/{epoch}",
@@ -596,7 +624,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         writeReq: ({slot, randaoReveal, graffiti, feeRecipient, builderSelection, strictFeeRecipientCheck}) => ({
           params: {slot},
           query: {
-            randao_reveal: toHexString(randaoReveal),
+            randao_reveal: toHex(randaoReveal),
             graffiti: toGraffitiHex(graffiti),
             fee_recipient: feeRecipient,
             builder_selection: builderSelection,
@@ -605,7 +633,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         }),
         parseReq: ({params, query}) => ({
           slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
+          randaoReveal: fromHex(query.randao_reveal),
           graffiti: fromGraffitiHex(query.graffiti),
           feeRecipient: query.fee_recipient,
           builderSelection: query.builder_selection as BuilderSelection,
@@ -624,7 +652,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: {
         data: WithVersion(
-          (fork) => (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
+          (fork) =>
+            (isForkBlobs(fork) ? sszTypesFor(fork).BlockContents : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
       },
@@ -646,7 +675,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         }) => ({
           params: {slot},
           query: {
-            randao_reveal: toHexString(randaoReveal),
+            randao_reveal: toHex(randaoReveal),
             graffiti: toGraffitiHex(graffiti),
             skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
             fee_recipient: feeRecipient,
@@ -658,7 +687,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         }),
         parseReq: ({params, query}) => ({
           slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
+          randaoReveal: fromHex(query.randao_reveal),
           graffiti: fromGraffitiHex(query.graffiti),
           skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
           feeRecipient: query.fee_recipient,
@@ -687,7 +716,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
             (executionPayloadBlinded
               ? getExecutionForkTypes(version).BlindedBeaconBlock
               : isForkBlobs(version)
-                ? BlockContentsType
+                ? sszTypesFor(version).BlockContents
                 : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
         ),
         meta: {
@@ -737,11 +766,11 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: {
         writeReq: ({slot, randaoReveal, graffiti}) => ({
           params: {slot},
-          query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
+          query: {randao_reveal: toHex(randaoReveal), graffiti: toGraffitiHex(graffiti)},
         }),
         parseReq: ({params, query}) => ({
           slot: params.slot,
-          randaoReveal: fromHexString(query.randao_reveal),
+          randaoReveal: fromHex(query.randao_reveal),
           graffiti: fromGraffitiHex(query.graffiti),
         }),
         schema: {
@@ -777,12 +806,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: {
         writeReq: ({slot, subcommitteeIndex, beaconBlockRoot}) => ({
-          query: {slot, subcommittee_index: subcommitteeIndex, beacon_block_root: toHexString(beaconBlockRoot)},
+          query: {slot, subcommittee_index: subcommitteeIndex, beacon_block_root: toRootHex(beaconBlockRoot)},
         }),
         parseReq: ({query}) => ({
           slot: query.slot,
           subcommitteeIndex: query.subcommittee_index,
-          beaconBlockRoot: fromHexString(query.beacon_block_root),
+          beaconBlockRoot: fromHex(query.beacon_block_root),
         }),
         schema: {
           query: {
@@ -802,11 +831,17 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: {
         writeReq: ({attestationDataRoot, slot}) => ({
-          query: {attestation_data_root: toHexString(attestationDataRoot), slot},
+          query: {attestation_data_root: toRootHex(attestationDataRoot), slot},
         }),
-        parseReq: ({query}) => ({attestationDataRoot: fromHexString(query.attestation_data_root), slot: query.slot}),
+        parseReq: ({query}) => ({
+          attestationDataRoot: fromHex(query.attestation_data_root),
+          slot: query.slot,
+        }),
         schema: {
-          query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
+          query: {
+            attestation_data_root: Schema.StringRequired,
+            slot: Schema.UintRequired,
+          },
         },
       },
       resp: {
@@ -814,20 +849,102 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         meta: EmptyMetaCodec,
       },
     },
+    getAggregatedAttestationV2: {
+      url: "/eth/v2/validator/aggregate_attestation",
+      method: "GET",
+      req: {
+        writeReq: ({attestationDataRoot, slot, committeeIndex}) => ({
+          query: {attestation_data_root: toHex(attestationDataRoot), slot, committee_index: committeeIndex},
+        }),
+        parseReq: ({query}) => ({
+          attestationDataRoot: fromHex(query.attestation_data_root),
+          slot: query.slot,
+          committeeIndex: query.committee_index,
+        }),
+        schema: {
+          query: {
+            attestation_data_root: Schema.StringRequired,
+            slot: Schema.UintRequired,
+            committee_index: Schema.UintRequired,
+          },
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => (isForkPostElectra(fork) ? ssz.electra.Attestation : ssz.phase0.Attestation)),
+        meta: VersionCodec,
+      },
+    },
     publishAggregateAndProofs: {
       url: "/eth/v1/validator/aggregate_and_proofs",
       method: "POST",
       req: {
         writeReqJson: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListType.toJson(signedAggregateAndProofs),
+          body: SignedAggregateAndProofListPhase0Type.toJson(signedAggregateAndProofs),
         }),
-        parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.fromJson(body)}),
+        parseReqJson: ({body}) => ({
+          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body),
+        }),
         writeReqSsz: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListType.serialize(signedAggregateAndProofs),
+          body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs),
         }),
-        parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.deserialize(body)}),
+        parseReqSsz: ({body}) => ({
+          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body),
+        }),
         schema: {
           body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    publishAggregateAndProofsV2: {
+      url: "/eth/v2/validator/aggregate_and_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedAggregateAndProofs}) => {
+          const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
+          return {
+            body: isForkPostElectra(fork)
+              ? SignedAggregateAndProofListElectraType.toJson(
+                  signedAggregateAndProofs as SignedAggregateAndProofListElectra
+                )
+              : SignedAggregateAndProofListPhase0Type.toJson(
+                  signedAggregateAndProofs as SignedAggregateAndProofListPhase0
+                ),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedAggregateAndProofs: isForkPostElectra(fork)
+              ? SignedAggregateAndProofListElectraType.fromJson(body)
+              : SignedAggregateAndProofListPhase0Type.fromJson(body),
+          };
+        },
+        writeReqSsz: ({signedAggregateAndProofs}) => {
+          const fork = config.getForkName(signedAggregateAndProofs[0]?.message.aggregate.data.slot ?? 0);
+          return {
+            body: isForkPostElectra(fork)
+              ? SignedAggregateAndProofListElectraType.serialize(
+                  signedAggregateAndProofs as SignedAggregateAndProofListElectra
+                )
+              : SignedAggregateAndProofListPhase0Type.serialize(
+                  signedAggregateAndProofs as SignedAggregateAndProofListPhase0
+                ),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedAggregateAndProofs: isForkPostElectra(fork)
+              ? SignedAggregateAndProofListElectraType.deserialize(body)
+              : SignedAggregateAndProofListPhase0Type.deserialize(body),
+          };
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
         },
       },
       resp: EmptyResponseCodec,

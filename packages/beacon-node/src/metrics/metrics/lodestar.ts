@@ -18,6 +18,7 @@ import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
+import {AllocSource} from "../../util/bufferPool.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -332,6 +333,10 @@ export function createLodestarMetrics(
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
     }),
+    numEffectiveBalanceUpdates: register.gauge({
+      name: "lodestar_stfn_effective_balance_updates_count",
+      help: "Total count of effective balance updates",
+    }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",
@@ -373,6 +378,17 @@ export function createLodestarMetrics(
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
+
+    epochCache: {
+      finalizedPubkeyDuplicateInsert: register.gauge({
+        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert_total",
+        help: "Total count of duplicate insert of finalized pubkeys",
+      }),
+      newUnFinalizedPubkey: register.gauge({
+        name: "lodestar_epoch_cache_new_unfinalized_pubkey_total",
+        help: "Total count of unfinalized pubkeys added",
+      }),
+    },
 
     // BLS verifier thread pool and queue
 
@@ -1150,13 +1166,15 @@ export function createLodestarMetrics(
         name: "lodestar_buffer_pool_length",
         help: "Buffer pool length",
       }),
-      hits: register.counter({
+      hits: register.counter<{source: AllocSource}>({
         name: "lodestar_buffer_pool_hits_total",
         help: "Total number of buffer pool hits",
+        labelNames: ["source"],
       }),
-      misses: register.counter({
+      misses: register.counter<{source: AllocSource}>({
         name: "lodestar_buffer_pool_misses_total",
         help: "Total number of buffer pool misses",
+        labelNames: ["source"],
       }),
       grows: register.counter({
         name: "lodestar_buffer_pool_grows_total",
@@ -1200,10 +1218,10 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      stateSerializeDuration: register.histogram({
-        name: "lodestar_cp_state_cache_state_serialize_seconds",
-        help: "Histogram of time to serialize state to db",
-        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      numStatesUpdated: register.histogram({
+        name: "lodestar_cp_state_cache_state_updated_count",
+        help: "Histogram of number of state cache items updated every time removing and adding pubkeys to pubkey cache",
+        buckets: [1, 2, 5, 10, 50, 250],
       }),
       statePruneFromMemoryCount: register.gauge({
         name: "lodestar_cp_state_cache_state_prune_from_memory_count",
@@ -1251,10 +1269,6 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_persisted_state_remove_count",
         help: "Total number of persisted states removed",
       }),
-      persistedStateAllocCount: register.counter({
-        name: "lodestar_cp_state_cache_persisted_state_alloc_count",
-        help: "Total number time to allocate memory for persisted state",
-      }),
     },
 
     balancesCache: {
@@ -1278,21 +1292,44 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_size",
         help: "Shuffling cache size",
       }),
-      processStateInsertNew: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_insert_new_total",
-        help: "Total number of times processState is called resulting a new shuffling",
-      }),
-      processStateUpdatePromise: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_update_promise_total",
-        help: "Total number of times processState is called resulting a promise being updated with shuffling",
-      }),
-      processStateNoOp: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_no_op_total",
-        help: "Total number of times processState is called resulting no changes",
-      }),
       insertPromiseCount: register.gauge({
         name: "lodestar_shuffling_cache_insert_promise_count",
         help: "Total number of times insertPromise is called",
+      }),
+      hit: register.gauge({
+        name: "lodestar_shuffling_cache_hit_count",
+        help: "Count of shuffling cache hit",
+      }),
+      miss: register.gauge({
+        name: "lodestar_shuffling_cache_miss_count",
+        help: "Count of shuffling cache miss",
+      }),
+      shufflingBuiltMultipleTimes: register.gauge({
+        name: "lodestar_shuffling_cache_recalculated_shuffling_count",
+        help: "Count of shuffling that were build multiple times",
+      }),
+      shufflingPromiseNotResolvedAndThrownAway: register.gauge({
+        name: "lodestar_shuffling_cache_promise_not_resolved_and_thrown_away_count",
+        help: "Count of shuffling cache promises that were discarded and the shuffling was built synchronously",
+      }),
+      shufflingPromiseNotResolved: register.gauge({
+        name: "lodestar_shuffling_cache_promise_not_resolved_count",
+        help: "Count of shuffling cache promises that were requested before the promise was resolved",
+      }),
+      nextShufflingNotOnEpochCache: register.gauge({
+        name: "lodestar_shuffling_cache_next_shuffling_not_on_epoch_cache",
+        help: "The next shuffling was not on the epoch cache before the epoch transition",
+      }),
+      shufflingPromiseResolutionTime: register.histogram({
+        name: "lodestar_shuffling_cache_promise_resolution_time_seconds",
+        help: "Time from promise insertion until promise resolution when shuffling was ready in seconds",
+        buckets: [0.5, 1, 1.5, 2],
+      }),
+      shufflingCalculationTime: register.histogram<{source: "build" | "getSync"}>({
+        name: "lodestar_shuffling_cache_shuffling_calculation_time_seconds",
+        help: "Run time of shuffling calculation",
+        buckets: [0.5, 0.75, 1, 1.25, 1.5],
+        labelNames: ["source"],
       }),
     },
 
@@ -1373,10 +1410,59 @@ export function createLodestarMetrics(
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
     }),
+    regenFnAddPubkeyTime: register.histogram({
+      name: "lodestar_regen_fn_add_pubkey_time_seconds",
+      help: "Historgram of time spent on adding pubkeys to all state cache items in seconds",
+      buckets: [0.01, 0.1, 0.5, 1, 2, 5],
+    }),
+    regenFnDeletePubkeyTime: register.histogram({
+      name: "lodestar_regen_fn_delete_pubkey_time_seconds",
+      help: "Histrogram of time spent on deleting pubkeys from all state cache items in seconds",
+      buckets: [0.01, 0.1, 0.5, 1],
+    }),
+    regenFnNumStatesUpdated: register.histogram({
+      name: "lodestar_regen_state_cache_state_updated_count",
+      help: "Histogram of number of state cache items updated every time removing pubkeys from unfinalized cache",
+      buckets: [1, 2, 5, 10, 50, 250],
+    }),
     unhandledPromiseRejections: register.gauge({
       name: "lodestar_unhandled_promise_rejections_total",
       help: "UnhandledPromiseRejection total count",
     }),
+    stateSerializeDuration: register.histogram<{source: AllocSource}>({
+      name: "lodestar_state_serialize_seconds",
+      help: "Histogram of time to serialize state",
+      labelNames: ["source"],
+      buckets: [0.1, 0.5, 1, 2, 3, 4],
+    }),
+
+    // regen.getState metrics
+    regenGetState: {
+      blockCount: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_block_count",
+        help: "Block count in regen.getState",
+        labelNames: ["caller"],
+        buckets: [4, 8, 16, 32, 64],
+      }),
+      getSeedState: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_get_seed_state_seconds",
+        help: "Duration of get seed state in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      loadBlocks: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_load_blocks_seconds",
+        help: "Duration of load blocks in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      stateTransition: register.histogram<{caller: RegenCaller}>({
+        name: "lodestar_regen_get_state_state_transition_seconds",
+        help: "Duration of state transition in regen.getState",
+        labelNames: ["caller"],
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+    },
 
     // Precompute next epoch transition
     precomputeNextEpochTransition: {

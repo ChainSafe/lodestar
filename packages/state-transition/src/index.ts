@@ -11,6 +11,7 @@ export type {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
+  CachedBeaconStateElectra,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
@@ -19,6 +20,7 @@ export type {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
+  BeaconStateElectra,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";
@@ -39,10 +41,15 @@ export {
   EpochCacheError,
   EpochCacheErrorCode,
 } from "./cache/epochCache.js";
+export {toMemoryEfficientHexStr} from "./cache/pubkeyCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 
 // Aux data-structures
-export {PubkeyIndexMap, type Index2PubkeyCache} from "./cache/pubkeyCache.js";
+export {
+  type Index2PubkeyCache,
+  type UnfinalizedPubkeyIndexMap,
+  newUnfinalizedPubkeyIndexMap,
+} from "./cache/pubkeyCache.js";
 
 export {
   type EffectiveBalanceIncrements,

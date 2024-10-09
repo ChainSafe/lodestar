@@ -170,5 +170,7 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
     ).excessBlobGas;
   }
 
+  // No change in Electra
+
   return bellatrixPayloadFields;
 }

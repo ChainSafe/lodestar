@@ -6,6 +6,9 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {IStateRegenerator} from "../regen/interface.js";
 import {getStateSlotFromBytes} from "../../util/multifork.js";
+import {serializeState} from "../serializeState.js";
+import {AllocSource, BufferPool} from "../../util/bufferPool.js";
+import {Metrics} from "../../metrics/metrics.js";
 
 /**
  * Minimum number of epochs between single temp archived states
@@ -30,7 +33,8 @@ export class StatesArchiver {
     private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
     private readonly logger: Logger,
-    private readonly opts: StatesArchiverOpts
+    private readonly opts: StatesArchiverOpts,
+    private readonly bufferPool?: BufferPool | null
   ) {}
 
   /**
@@ -45,13 +49,13 @@ export class StatesArchiver {
    * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
    * ```
    */
-  async maybeArchiveState(finalized: CheckpointWithHex): Promise<void> {
+  async maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
     const {archiveStateEpochFrequency} = this.opts;
 
     if (finalized.epoch - lastStoredEpoch >= Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
-      await this.archiveState(finalized);
+      await this.archiveState(finalized, metrics);
 
       // Only check the current and previous intervals
       const minEpoch = Math.max(
@@ -83,7 +87,7 @@ export class StatesArchiver {
    * Archives finalized states from active bucket to archive bucket.
    * Only the new finalized state is stored to disk
    */
-  async archiveState(finalized: CheckpointWithHex): Promise<void> {
+  async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalized);
     const {rootHex} = finalized;
@@ -95,8 +99,17 @@ export class StatesArchiver {
       await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
       this.logger.verbose("Archived finalized state bytes", {epoch: finalized.epoch, slot, root: rootHex});
     } else {
-      // state
-      await this.db.stateArchive.put(finalizedStateOrBytes.slot, finalizedStateOrBytes);
+      // serialize state using BufferPool if provided
+      const timer = metrics?.stateSerializeDuration.startTimer({source: AllocSource.ARCHIVE_STATE});
+      await serializeState(
+        finalizedStateOrBytes,
+        AllocSource.ARCHIVE_STATE,
+        (stateBytes) => {
+          timer?.();
+          return this.db.stateArchive.putBinary(finalizedStateOrBytes.slot, stateBytes);
+        },
+        this.bufferPool
+      );
       // don't delete states before the finalized state, auto-prune will take care of it
       this.logger.verbose("Archived finalized state", {
         epoch: finalized.epoch,

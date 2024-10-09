@@ -4,7 +4,7 @@ import {digest} from "@chainsafe/as-sha256";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
 import snappyWasm from "@chainsafe/snappy-wasm";
-import {intToBytes, toHex} from "@lodestar/utils";
+import {intToBytes} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {getGossipSSZType, GossipTopicCache} from "./topic.js";
@@ -19,6 +19,9 @@ const h64Seed = BigInt(Math.floor(Math.random() * 1e9));
 const encoder = new snappyWasm.Encoder();
 const decoder = new snappyWasm.Decoder();
 
+// Shared buffer to convert msgId to string
+const sharedMsgIdBuf = Buffer.alloc(20);
+
 /**
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
@@ -32,7 +35,9 @@ export function fastMsgIdFn(rpcMsg: RPC.Message): string {
 }
 
 export function msgIdToStrFn(msgId: Uint8Array): string {
-  return toHex(msgId);
+  // this is the same logic to `toHex(msgId)` with better performance
+  sharedMsgIdBuf.set(msgId);
+  return `0x${sharedMsgIdBuf.toString("hex")}`;
 }
 
 /**

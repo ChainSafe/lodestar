@@ -43,6 +43,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
     fn: (state) => {
       const cache = beforeProcessEpoch(state);
       processEpoch(fork, state as CachedBeaconStatePhase0, cache);
+      state.slot++;
       state.epochCtx.afterProcessEpoch(state, cache);
       // Simulate root computation through the next block to account for changes
       state.hashTreeRoot();
@@ -102,7 +103,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - phase0 processRegistryUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processRegistryUpdates(state, cache.value),
+    fn: (state) => processRegistryUpdates(ForkSeq.phase0, state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
@@ -123,7 +124,9 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - phase0 processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEffectiveBalanceUpdates(state, cache.value),
+    fn: (state) => {
+      processEffectiveBalanceUpdates(ForkSeq.phase0, state, cache.value);
+    },
   });
 
   itBench({
@@ -160,6 +163,9 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
       return {state, cache: cacheAfter};
     },
     beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
-    fn: ({state, cache}) => state.epochCtx.afterProcessEpoch(state, cache),
+    fn: ({state, cache}) => {
+      state.slot++;
+      state.epochCtx.afterProcessEpoch(state, cache);
+    },
   });
 }

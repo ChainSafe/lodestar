@@ -41,7 +41,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     genesisSlot
   );
 
-  const balances = new Uint8Array(Array.from({length: opts.initialValidatorCount}, () => 32));
+  const balances = new Uint16Array(Array.from({length: opts.initialValidatorCount}, () => 32));
 
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot,

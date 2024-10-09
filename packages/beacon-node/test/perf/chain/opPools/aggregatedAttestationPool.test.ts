@@ -2,6 +2,7 @@ import {itBench} from "@dapplion/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
+  computeAnchorCheckpoint,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
@@ -10,10 +11,11 @@ import {
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
+
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 // eslint-disable-next-line import/no-relative-packages
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
-import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
 
 const vc = 1_500_000;
 
@@ -230,7 +232,9 @@ function getAggregatedAttestationPool(
   numMissedVotes: number,
   numBadVotes: number
 ): AggregatedAttestationPool {
-  const pool = new AggregatedAttestationPool();
+  const config = createChainForkConfig(defaultChainConfig);
+
+  const pool = new AggregatedAttestationPool(config);
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
     const slot = state.slot - 1 - epochSlot;
     const epoch = computeEpochAtSlot(slot);

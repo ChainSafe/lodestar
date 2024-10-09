@@ -1,7 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";
@@ -17,7 +17,7 @@ export async function validateGossipSyncCommittee(
   subnet: number
 ): Promise<{indexInSubcommittee: IndexInSubcommittee}> {
   const {slot, validatorIndex, beaconBlockRoot} = syncCommittee;
-  const messageRoot = toHexString(beaconBlockRoot);
+  const messageRoot = toRootHex(beaconBlockRoot);
 
   const headState = chain.getHeadState();
   const indexInSubcommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);

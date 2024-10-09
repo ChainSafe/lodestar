@@ -3,6 +3,9 @@ import {toBufferLE, toBigIntLE, toBufferBE, toBigIntBE} from "bigint-buffer";
 type Endianness = "le" | "be";
 
 const hexByByte: string[] = [];
+/**
+ * @deprecated Use toHex() instead.
+ */
 export function toHexString(bytes: Uint8Array): string {
   let hex = "0x";
   for (const byte of bytes) {
@@ -46,17 +49,22 @@ export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"):
   throw new Error("endianness must be either 'le' or 'be'");
 }
 
-export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): string {
-  if (Buffer.isBuffer(buffer)) {
-    return "0x" + buffer.toString("hex");
-  } else if (buffer instanceof Uint8Array) {
-    return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset, buffer.length).toString("hex");
-  } else {
-    return "0x" + Buffer.from(buffer).toString("hex");
+export function formatBytes(bytes: number): string {
+  if (bytes < 0) {
+    throw new Error("bytes must be a positive number, got " + bytes);
   }
-}
 
-export function fromHex(hex: string): Uint8Array {
-  const b = Buffer.from(hex.replace("0x", ""), "hex");
-  return new Uint8Array(b.buffer, b.byteOffset, b.length);
+  if (bytes === 0) {
+    return "0 Bytes";
+  }
+
+  // size of a kb
+  const k = 1024;
+
+  // only support up to GB
+  const units = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+  const formattedSize = (bytes / Math.pow(k, i)).toFixed(2);
+
+  return `${formattedSize} ${units[i]}`;
 }

@@ -1,11 +1,10 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
-import {CliCommand} from "@lodestar/utils";
+import {CliCommand, fromHex} from "@lodestar/utils";
 
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -61,19 +60,19 @@ like to choose for BLS To Execution Change.",
     const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
     const config = createBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
     const validator = validators[0];
     if (validator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
 
-    const blsPrivkey = SecretKey.fromBytes(fromHexString(args.fromBlsPrivkey));
+    const blsPrivkey = SecretKey.fromBytes(fromHex(args.fromBlsPrivkey));
     const fromBlsPubkey = blsPrivkey.toPublicKey().toBytes();
 
     const blsToExecutionChange: capella.BLSToExecutionChange = {
       validatorIndex: validator.index,
       fromBlsPubkey,
-      toExecutionAddress: fromHexString(args.toExecutionAddress),
+      toExecutionAddress: fromHex(args.toExecutionAddress),
     };
 
     const signatureFork = ForkName.phase0;

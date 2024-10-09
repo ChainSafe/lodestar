@@ -1,5 +1,5 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {Epoch, Root, ssz} from "@lodestar/types";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 
 export const blsPubkeyLen = 48;
 export const ZERO_ROOT = ssz.Root.defaultValue();
@@ -13,11 +13,11 @@ export function isEqualNonZeroRoot(root1: Root, root2: Root): boolean {
 }
 
 export function fromOptionalHexString(hex: string | undefined): Root {
-  return hex ? fromHexString(hex) : ZERO_ROOT;
+  return hex ? fromHex(hex) : ZERO_ROOT;
 }
 
 export function toOptionalHexString(root: Root): string | undefined {
-  return isEqualRoot(root, ZERO_ROOT) ? undefined : toHexString(root);
+  return isEqualRoot(root, ZERO_ROOT) ? undefined : toRootHex(root);
 }
 
 /**
@@ -34,7 +34,7 @@ export function minEpoch(epochs: Epoch[]): Epoch | null {
 export function uniqueVectorArr(buffers: Uint8Array[]): Uint8Array[] {
   const bufferStr = new Set<string>();
   return buffers.filter((buffer) => {
-    const str = toHexString(buffer);
+    const str = toHex(buffer);
     const seen = bufferStr.has(str);
     bufferStr.add(str);
     return !seen;

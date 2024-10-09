@@ -14,7 +14,8 @@ const ARTIFACT_FILENAMES = new Set([
 ]);
 
 export interface SkipOpts {
-  skippedPrefixes?: string[];
+  skippedTestSuites?: RegExp[];
+  skippedTests?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];
   skippedHandlers?: string[];
@@ -57,15 +58,17 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip6110"],
+  skippedForks: ["eip7594"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently
-  skippedPrefixes: [
-    "capella/light_client/single_merkle_proof/BeaconBlockBody",
-    "deneb/light_client/single_merkle_proof/BeaconBlockBody",
+  skippedTestSuites: [
+    /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
   ],
-  skippedRunners: ["merkle_proof"],
+  skippedTests: [],
+  skippedRunners: ["merkle_proof", "networking"],
 };
 
 /**
@@ -100,7 +103,10 @@ export function specTestIterator(
   opts: SkipOpts = defaultSkipOpts
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
-    if (opts?.skippedForks?.includes(forkStr)) {
+    if (
+      opts?.skippedForks?.includes(forkStr) ||
+      (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
+    ) {
       continue;
     }
     const fork = forkStr as ForkName;
@@ -134,7 +140,7 @@ export function specTestIterator(
         for (const testSuite of readdirSyncSpec(testHandlerDirpath)) {
           const testId = `${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
 
-          if (opts?.skippedPrefixes?.some((skippedPrefix) => testId.startsWith(skippedPrefix))) {
+          if (opts?.skippedTestSuites?.some((skippedMatch) => testId.match(skippedMatch))) {
             displaySkipTest(testId);
           } else if (fork === undefined) {
             displayFailTest(testId, `Unknown fork ${forkStr}`);
@@ -150,7 +156,11 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-
+              if (opts.skippedTests && options.shouldSkip === undefined) {
+                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
+                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+                };
+              }
               describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
             }
           }

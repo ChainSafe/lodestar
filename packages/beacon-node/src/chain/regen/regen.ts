@@ -1,5 +1,4 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {phase0, Slot, RootHex, BeaconBlock} from "@lodestar/types";
+import {phase0, Slot, RootHex, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -8,9 +7,10 @@ import {
   DataAvailableStatus,
   processSlots,
   stateTransition,
+  StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Logger} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
@@ -89,7 +89,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, opts, regenCaller, allowDiskReload);
+    return this.getBlockSlotState(toRootHex(cp.root), checkpointStartSlot, opts, regenCaller, allowDiskReload);
   }
 
   /**
@@ -145,7 +145,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    */
   async getState(
     stateRoot: RootHex,
-    _rCaller: RegenCaller,
+    caller: RegenCaller,
     opts?: StateCloneOpts,
     // internal option, don't want to expose to external caller
     allowDiskReload = false
@@ -154,6 +154,13 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const cachedStateCtx = this.modules.blockStateCache.get(stateRoot, opts);
     if (cachedStateCtx) {
       return cachedStateCtx;
+    }
+
+    // in block gossip validation (getPreState() call), dontTransferCache is specified as true because we only want to transfer cache in verifyBlocksStateTransitionOnly()
+    // but here we want to process blocks as fast as possible so force to transfer cache in this case
+    if (opts && allowDiskReload) {
+      // if there is no `opts` specified, it already means "false"
+      opts.dontTransferCache = false;
     }
 
     // Otherwise we have to use the fork choice to traverse backwards, block by block,
@@ -166,6 +173,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const blocksToReplay = [block];
     let state: CachedBeaconStateAllForks | null = null;
     const {checkpointStateCache} = this.modules;
+
+    const getSeedStateTimer = this.modules.metrics?.regenGetState.getSeedState.startTimer({caller});
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
       state = this.modules.blockStateCache.get(b.stateRoot, opts);
@@ -181,6 +190,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       }
       blocksToReplay.push(b);
     }
+    getSeedStateTimer?.();
 
     if (state === null) {
       throw new RegenError({
@@ -188,19 +198,50 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
+    const blockCount = blocksToReplay.length;
     const MAX_EPOCH_TO_PROCESS = 5;
-    if (blocksToReplay.length > MAX_EPOCH_TO_PROCESS * SLOTS_PER_EPOCH) {
+    if (blockCount > MAX_EPOCH_TO_PROCESS * SLOTS_PER_EPOCH) {
       throw new RegenError({
         code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED,
         stateRoot,
       });
     }
 
-    const replaySlots = blocksToReplay.map((b) => b.slot).join(",");
-    this.modules.logger.debug("Replaying blocks to get state", {stateRoot, replaySlots});
-    for (const b of blocksToReplay.reverse()) {
-      const block = await this.modules.db.block.get(fromHexString(b.blockRoot));
-      if (!block) {
+    this.modules.metrics?.regenGetState.blockCount.observe({caller}, blockCount);
+
+    const replaySlots = new Array<Slot>(blockCount);
+    const blockPromises = new Array<Promise<SignedBeaconBlock | null>>(blockCount);
+
+    const protoBlocksAsc = blocksToReplay.reverse();
+    for (const [i, protoBlock] of protoBlocksAsc.entries()) {
+      replaySlots[i] = protoBlock.slot;
+      blockPromises[i] = this.modules.db.block.get(fromHex(protoBlock.blockRoot));
+    }
+
+    const logCtx = {stateRoot, caller, replaySlots: replaySlots.join(",")};
+    this.modules.logger.debug("Replaying blocks to get state", logCtx);
+
+    const loadBlocksTimer = this.modules.metrics?.regenGetState.loadBlocks.startTimer({caller});
+    const blockOrNulls = await Promise.all(blockPromises);
+    loadBlocksTimer?.();
+
+    const blocksByRoot = new Map<RootHex, SignedBeaconBlock>();
+    for (const [i, blockOrNull] of blockOrNulls.entries()) {
+      // checking early here helps prevent unneccessary state transition below
+      if (blockOrNull === null) {
+        throw new RegenError({
+          code: RegenErrorCode.BLOCK_NOT_IN_DB,
+          blockRoot: protoBlocksAsc[i].blockRoot,
+        });
+      }
+      blocksByRoot.set(protoBlocksAsc[i].blockRoot, blockOrNull);
+    }
+
+    const stateTransitionTimer = this.modules.metrics?.regenGetState.stateTransition.startTimer({caller});
+    for (const b of protoBlocksAsc) {
+      const block = blocksByRoot.get(b.blockRoot);
+      // just to make compiler happy, we checked in the above for loop already
+      if (block === undefined) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_DB,
           blockRoot: b.blockRoot,
@@ -224,7 +265,12 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           this.modules.metrics
         );
 
-        const stateRoot = toHexString(state.hashTreeRoot());
+        const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
+          source: StateHashTreeRootSource.regenState,
+        });
+        const stateRoot = toRootHex(state.hashTreeRoot());
+        hashTreeRootTimer?.();
+
         if (b.stateRoot !== stateRoot) {
           throw new RegenError({
             slot: b.slot,
@@ -238,9 +284,6 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           // also with allowDiskReload flag, we "reload" it to the state cache too
           this.modules.blockStateCache.add(state);
         }
-
-        // this avoids keeping our node busy processing blocks
-        await nextEventLoop();
       } catch (e) {
         throw new RegenError({
           code: RegenErrorCode.STATE_TRANSITION_ERROR,
@@ -248,7 +291,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         });
       }
     }
-    this.modules.logger.debug("Replayed blocks to get state", {stateRoot, replaySlots});
+    stateTransitionTimer?.();
+
+    this.modules.logger.debug("Replayed blocks to get state", {...logCtx, stateSlot: state.slot});
 
     return state;
   }

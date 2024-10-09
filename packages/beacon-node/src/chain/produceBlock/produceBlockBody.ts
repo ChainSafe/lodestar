@@ -17,6 +17,7 @@ import {
   BlindedBeaconBlockBody,
   BlindedBeaconBlock,
   sszTypesFor,
+  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -32,7 +33,7 @@ import {
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep, Logger} from "@lodestar/utils";
+import {toHex, sleep, Logger, toRootHex} from "@lodestar/utils";
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
@@ -258,7 +259,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
-          const {executionPayload, blobsBundle} = engineRes;
+          const {executionPayload, blobsBundle, executionRequests} = engineRes;
           shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
           (blockBody as BeaconBlockBody<ForkExecution>).executionPayload = executionPayload;
@@ -273,7 +274,7 @@ export async function produceBlockBody<T extends BlockType>(
             prepType,
             payloadId,
             fetchedTime,
-            executionHeadBlockHash: toHex(engineRes.executionPayload.blockHash),
+            executionHeadBlockHash: toRootHex(engineRes.executionPayload.blockHash),
           });
           if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
@@ -290,13 +291,20 @@ export async function produceBlockBody<T extends BlockType>(
             }
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-            const blockHash = toHex(executionPayload.blockHash);
+            const blockHash = toRootHex(executionPayload.blockHash);
             const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
             blobsResult = {type: BlobsResultType.produced, contents, blockHash};
 
             Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
+          }
+
+          if (ForkSeq[fork] >= ForkSeq.electra) {
+            if (executionRequests === undefined) {
+              throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
+            }
+            (blockBody as electra.BeaconBlockBody).executionRequests = executionRequests;
           }
         }
       } catch (e) {
@@ -380,7 +388,7 @@ export async function prepareExecutionPayload(
   const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
 
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
-    headBlockHash: toHex(parentHash),
+    headBlockHash: toRootHex(parentHash),
     finalizedBlockHash,
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
@@ -414,7 +422,7 @@ export async function prepareExecutionPayload(
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
-      toHex(parentHash),
+      toRootHex(parentHash),
       safeBlockHash,
       finalizedBlockHash,
       attributes
@@ -559,7 +567,9 @@ function preparePayloadAttributes(
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
+    // withdrawals logic is now fork aware as it changes on electra fork post capella
     (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+      ForkSeq[fork],
       prepareState as CachedBeaconStateCapella
     ).withdrawals;
   }

@@ -1,6 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochTransitionCache, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
 import {
@@ -9,6 +9,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -18,6 +19,7 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
+  upgradeStateToElectra,
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
@@ -52,6 +54,7 @@ export enum StateHashTreeRootSource {
   blockTransition = "block_transition",
   prepareNextSlot = "prepare_next_slot",
   prepareNextEpoch = "prepare_next_epoch",
+  regenState = "regen_state",
   computeNewStateRoot = "compute_new_state_root",
 }
 
@@ -123,7 +126,7 @@ export function stateTransition(
 
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
-        `Invalid state root at slot ${block.slot}, expected=${toHexString(block.stateRoot)}, actual=${toHexString(
+        `Invalid state root at slot ${block.slot}, expected=${toRootHex(block.stateRoot)}, actual=${toRootHex(
           stateRoot
         )}`
       );
@@ -164,6 +167,25 @@ export function processSlots(
 
 /**
  * All processSlot() logic but separate so stateTransition() can recycle the caches
+ *
+ * Epoch transition will be processed at the last slot of an epoch. Note that compute_shuffling() is going
+ * to be executed in parallel (either by napi-rs or worker thread) with processEpoch() like below:
+ *
+ *   state-transition
+ *   ╔══════════════════════════════════════════════════════════════════════════════════╗
+ *   ║   beforeProcessEpoch          processEpoch                 afterPRocessEpoch     ║
+ *   ║  |-------------------------|--------------------|-------------------------------|║
+ *   ║                       |                         |     |                          ║
+ *   ╚═══════════════════════|═══════════════════════════════|══════════════════════════╝
+ *                           |                               |
+ *                         build()                          get()
+ *                           |                               |
+ *   ╔═══════════════════════V═══════════════════════════════V═══════════════════════════╗
+ *   ║                       |                               |                           ║
+ *   ║                       |-------------------------------|                           ║
+ *   ║                          compute_shuffling()                                      ║
+ *   ╚═══════════════════════════════════════════════════════════════════════════════════╝
+ *   beacon-node ShufflingCache
  */
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
@@ -226,18 +248,21 @@ function processSlotsWithTransientCache(
       epochTransitionTimer?.();
 
       // Upgrade state if exactly at epoch boundary
-      const stateSlot = computeEpochAtSlot(postState.slot);
-      if (stateSlot === config.ALTAIR_FORK_EPOCH) {
+      const stateEpoch = computeEpochAtSlot(postState.slot);
+      if (stateEpoch === config.ALTAIR_FORK_EPOCH) {
         postState = upgradeStateToAltair(postState as CachedBeaconStatePhase0) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.BELLATRIX_FORK_EPOCH) {
+      if (stateEpoch === config.BELLATRIX_FORK_EPOCH) {
         postState = upgradeStateToBellatrix(postState as CachedBeaconStateAltair) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.CAPELLA_FORK_EPOCH) {
+      if (stateEpoch === config.CAPELLA_FORK_EPOCH) {
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.DENEB_FORK_EPOCH) {
+      if (stateEpoch === config.DENEB_FORK_EPOCH) {
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
+      }
+      if (stateEpoch === config.ELECTRA_FORK_EPOCH) {
+        postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

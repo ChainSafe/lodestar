@@ -1,5 +1,6 @@
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {phase0, ssz, Slot, BeaconState} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -7,6 +8,7 @@ import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
+  ForkSeq,
   MAX_ATTESTATIONS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
@@ -16,7 +18,6 @@ import {
   interopSecretKey,
   computeEpochAtSlot,
   getActiveValidatorIndices,
-  PubkeyIndexMap,
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
@@ -273,7 +274,12 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     const activeValidatorIndices = getActiveValidatorIndices(altairState, epoch);
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrements(altairState);
-    const {syncCommittee} = getNextSyncCommittee(altairState, activeValidatorIndices, effectiveBalanceIncrements);
+    const {syncCommittee} = getNextSyncCommittee(
+      ForkSeq.altair,
+      altairState,
+      activeValidatorIndices,
+      effectiveBalanceIncrements
+    );
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
 

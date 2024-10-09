@@ -1,13 +1,9 @@
 import worker from "node:worker_threads";
 import {Transfer, expose} from "@chainsafe/threads/worker";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {
-  EpochTransitionStep,
-  PubkeyIndexMap,
-  StateCloneSource,
-  StateHashTreeRootSource,
-} from "@lodestar/state-transition";
+import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {LevelDbController} from "@lodestar/db";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {JobFnQueue} from "../../util/queue/fnQueue.js";
@@ -81,6 +77,10 @@ if (metricsRegister) {
       help: "Time to compute the hash tree root of a post state in seconds",
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
+    }),
+    numEffectiveBalanceUpdates: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
+      help: "Count of effective balance updates in epoch transition",
     }),
     preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
       name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",

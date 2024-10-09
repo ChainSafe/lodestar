@@ -1,4 +1,3 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -14,8 +13,10 @@ import {
   BLS_WITHDRAWAL_PREFIX,
   MAX_ATTESTER_SLASHINGS,
   ForkSeq,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
 } from "@lodestar/params";
-import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock} from "@lodestar/types";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock, AttesterSlashing} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
@@ -83,10 +84,10 @@ export class OpPool {
       persistDiff(
         db.attesterSlashing,
         Array.from(this.attesterSlashings.entries()).map(([key, value]) => ({
-          key: fromHexString(key),
+          key: fromHex(key),
           value: value.attesterSlashing,
         })),
-        toHexString
+        toHex
       ),
       persistDiff(
         db.proposerSlashing,
@@ -135,7 +136,7 @@ export class OpPool {
     if (!rootHash) rootHash = ssz.phase0.AttesterSlashing.hashTreeRoot(attesterSlashing);
     // TODO: Do once and cache attached to the AttesterSlashing object
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-    this.attesterSlashings.set(toHexString(rootHash), {
+    this.attesterSlashings.set(toRootHex(rootHash), {
       attesterSlashing,
       intersectingIndices,
     });
@@ -173,7 +174,7 @@ export class OpPool {
     blockType: BlockType,
     metrics: Metrics | null
   ): [
-    phase0.AttesterSlashing[],
+    AttesterSlashing[],
     phase0.ProposerSlashing[],
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[],
@@ -207,7 +208,8 @@ export class OpPool {
     });
 
     const endAttesterSlashings = stepsMetrics?.startTimer();
-    const attesterSlashings: phase0.AttesterSlashing[] = [];
+    const attesterSlashings: AttesterSlashing[] = [];
+    const maxAttesterSlashings = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
     attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
       /** Indices slashable in this attester slashing */
       const slashableIndices = new Set<ValidatorIndex>();
@@ -222,7 +224,7 @@ export class OpPool {
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
         }
-        if (attesterSlashings.length >= MAX_ATTESTER_SLASHINGS) {
+        if (attesterSlashings.length >= maxAttesterSlashings) {
           break attesterSlashing;
         }
       }
@@ -282,6 +284,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
+  // TODO Electra: Update to adapt electra.AttesterSlashing
   getAllAttesterSlashings(): phase0.AttesterSlashing[] {
     return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
   }

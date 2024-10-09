@@ -1,4 +1,4 @@
-import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {
   computeEpochAtSlot,
@@ -19,6 +19,8 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   DOMAIN_APPLICATION_BUILDER,
+  ForkSeq,
+  MAX_COMMITTEES_PER_SLOT,
 } from "@lodestar/params";
 import {
   altair,
@@ -35,8 +37,12 @@ import {
   Slot,
   ssz,
   ValidatorIndex,
+  Attestation,
+  AggregateAndProof,
+  SignedAggregateAndProof,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
@@ -453,8 +459,8 @@ export class ValidatorStore {
 
     logger?.debug("Signing the block proposal", {
       slot: signingSlot,
-      blockRoot: toHexString(blockRoot),
-      signingRoot: toHexString(signingRoot),
+      blockRoot: toRootHex(blockRoot),
+      signingRoot: toRootHex(signingRoot),
     });
 
     try {
@@ -493,7 +499,7 @@ export class ValidatorStore {
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<phase0.Attestation> {
+  ): Promise<Attestation> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -525,21 +531,30 @@ export class ValidatorStore {
       data: attestationData,
     };
 
-    return {
-      aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
-      data: attestationData,
-      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-    };
+    if (this.config.getForkSeq(signingSlot) >= ForkSeq.electra) {
+      return {
+        aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
+        data: attestationData,
+        signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+        committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
+      };
+    } else {
+      return {
+        aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
+        data: attestationData,
+        signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+      } as phase0.Attestation;
+    }
   }
 
   async signAggregateAndProof(
     duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
-    aggregate: phase0.Attestation
-  ): Promise<phase0.SignedAggregateAndProof> {
+    aggregate: Attestation
+  ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
-    const aggregateAndProof: phase0.AggregateAndProof = {
+    const aggregateAndProof: AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
       selectionProof,
@@ -547,10 +562,13 @@ export class ValidatorStore {
 
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
-    const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
+    const isPostElectra = this.config.getForkSeq(signingSlot) >= ForkSeq.electra;
+    const signingRoot = isPostElectra
+      ? computeSigningRoot(ssz.electra.AggregateAndProof, aggregateAndProof, domain)
+      : computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
 
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.AGGREGATE_AND_PROOF,
+      type: isPostElectra ? SignableMessageType.AGGREGATE_AND_PROOF_V2 : SignableMessageType.AGGREGATE_AND_PROOF,
       data: aggregateAndProof,
     };
 
@@ -675,8 +693,8 @@ export class ValidatorStore {
     regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
     _slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
-    const pubkey = typeof pubkeyMaybeHex === "string" ? fromHexString(pubkeyMaybeHex) : pubkeyMaybeHex;
-    const feeRecipient = fromHexString(regAttributes.feeRecipient);
+    const pubkey = typeof pubkeyMaybeHex === "string" ? fromHex(pubkeyMaybeHex) : pubkeyMaybeHex;
+    const feeRecipient = fromHex(regAttributes.feeRecipient);
     const {gasLimit} = regAttributes;
 
     const validatorRegistration: bellatrix.ValidatorRegistrationV1 = {
@@ -706,7 +724,7 @@ export class ValidatorStore {
     regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
     slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
-    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toHexString(pubkeyMaybeHex);
+    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);
     const {feeRecipient, gasLimit} = regAttributes;
     const regFullKey = `${feeRecipient}-${gasLimit}`;
     const validatorData = this.validators.get(pubkeyHex);
@@ -730,8 +748,8 @@ export class ValidatorStore {
     signingSlot: Slot,
     signableMessage: SignableMessage
   ): Promise<BLSSignature> {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
 
     const signer = this.validators.get(pubkeyHex)?.signer;
     if (!signer) {
@@ -757,7 +775,7 @@ export class ValidatorStore {
             signingSlot,
             signableMessage
           );
-          return fromHexString(signatureHex);
+          return fromHex(signatureHex);
         } catch (e) {
           this.metrics?.remoteSignErrors.inc();
           throw e;
@@ -769,8 +787,8 @@ export class ValidatorStore {
   }
 
   private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
     const signer = this.validators.get(pubkeyHex)?.signer;
     if (!signer) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
@@ -783,15 +801,20 @@ export class ValidatorStore {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
-    if (duty.committeeIndex != data.index) {
+
+    const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
+    if (!isPostElectra && duty.committeeIndex != data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
+    if (isPostElectra && data.index !== 0) {
+      throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
+    }
   }
 
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
-    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
+    const pubkeyHex = typeof pubKey === "string" ? pubKey : toPubkeyHex(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
       throw new Error(`Doppelganger state for key ${pubkeyHex} is not safe`);
     }
@@ -801,7 +824,7 @@ export class ValidatorStore {
 function getSignerPubkeyHex(signer: Signer): PubkeyHex {
   switch (signer.type) {
     case SignerType.Local:
-      return toHexString(signer.secretKey.toPublicKey().toBytes());
+      return toPubkeyHex(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

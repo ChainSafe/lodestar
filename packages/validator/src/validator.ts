@@ -1,8 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger, toPrintableUrl} from "@lodestar/utils";
+import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {getClient, ApiClient, routes, ApiRequestInit, defaultInit} from "@lodestar/api";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
@@ -16,10 +15,11 @@ import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/exter
 import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
+import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {BeaconHealth, Metrics} from "./metrics.js";
+import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
@@ -35,6 +35,7 @@ export type ValidatorModules = {
   api: ApiClient;
   clock: IClock;
   chainHeaderTracker: ChainHeaderTracker;
+  syncingStatusTracker: SyncingStatusTracker;
   logger: Logger;
   db: LodestarValidatorDatabaseController;
   metrics: Metrics | null;
@@ -89,6 +90,7 @@ export class Validator {
   private readonly api: ApiClient;
   private readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
+  readonly syncingStatusTracker: SyncingStatusTracker;
   private readonly logger: Logger;
   private readonly db: LodestarValidatorDatabaseController;
   private state: Status;
@@ -106,6 +108,7 @@ export class Validator {
     api,
     clock,
     chainHeaderTracker,
+    syncingStatusTracker,
     logger,
     db,
     metrics,
@@ -121,6 +124,7 @@ export class Validator {
     this.api = api;
     this.clock = clock;
     this.chainHeaderTracker = chainHeaderTracker;
+    this.syncingStatusTracker = syncingStatusTracker;
     this.logger = logger;
     this.controller = controller;
     this.db = db;
@@ -145,12 +149,6 @@ export class Validator {
 
       if (metrics) {
         this.db.setMetrics(metrics.db);
-
-        this.clock.runEverySlot(() =>
-          this.fetchBeaconHealth()
-            .then((health) => metrics.beaconHealth.set(health))
-            .catch((e) => this.logger.error("Error on fetchBeaconHealth", {}, e))
-        );
       }
 
       // "start" the validator
@@ -225,6 +223,7 @@ export class Validator {
     emitter.setMaxListeners(Infinity);
 
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
+    const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       useProduceBlockV3: opts.useProduceBlockV3,
@@ -239,7 +238,9 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
+      syncingStatusTracker,
       metrics,
+      config,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
@@ -255,6 +256,7 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
+      syncingStatusTracker,
       metrics,
       {
         scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction,
@@ -274,6 +276,7 @@ export class Validator {
       api,
       clock,
       chainHeaderTracker,
+      syncingStatusTracker,
       logger,
       db,
       metrics,
@@ -369,7 +372,9 @@ export class Validator {
    * Create a signed voluntary exit message for the given validator by its key.
    */
   async signVoluntaryExit(publicKey: string, exitEpoch?: number): Promise<phase0.SignedVoluntaryExit> {
-    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validators = (
+      await this.api.beacon.postStateValidators({stateId: "head", validatorIds: [publicKey]})
+    ).value();
 
     const validator = validators[0];
     if (validator === undefined) {
@@ -382,21 +387,6 @@ export class Validator {
 
     return this.validatorStore.signVoluntaryExit(publicKey, validator.index, exitEpoch);
   }
-
-  private async fetchBeaconHealth(): Promise<BeaconHealth> {
-    try {
-      const {status: healthCode} = await this.api.node.getHealth();
-
-      if (healthCode === routes.node.NodeHealth.READY) return BeaconHealth.READY;
-      if (healthCode === routes.node.NodeHealth.SYNCING) return BeaconHealth.SYNCING;
-      if (healthCode === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
-        return BeaconHealth.NOT_INITIALIZED_OR_ISSUES;
-      else return BeaconHealth.UNKNOWN;
-    } catch (e) {
-      // TODO: Filter by network error type
-      return BeaconHealth.ERROR;
-    }
-  }
 }
 
 /** Assert the same genesisValidatorRoot and genesisTime */
@@ -408,14 +398,14 @@ async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Pro
     if (!ssz.Root.equals(genesisValidatorsRoot, nodeGenesisValidatorRoot)) {
       // this happens when the existing validator db served another network before
       opts.logger.error("Not the same genesisValidatorRoot", {
-        expected: toHexString(nodeGenesisValidatorRoot),
-        actual: toHexString(genesisValidatorsRoot),
+        expected: toRootHex(nodeGenesisValidatorRoot),
+        actual: toRootHex(genesisValidatorsRoot),
       });
       throw new NotEqualParamsError("Not the same genesisValidatorRoot");
     }
   } else {
     await metaDataRepository.setGenesisValidatorsRoot(nodeGenesisValidatorRoot);
-    opts.logger.info("Persisted genesisValidatorRoot", toHexString(nodeGenesisValidatorRoot));
+    opts.logger.info("Persisted genesisValidatorRoot", toRootHex(nodeGenesisValidatorRoot));
   }
 
   const nodeGenesisTime = genesis.genesisTime;

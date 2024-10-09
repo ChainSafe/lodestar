@@ -1,5 +1,5 @@
 import {deneb, Root, Slot, ssz} from "@lodestar/types";
-import {toHex, verifyMerkleBranch} from "@lodestar/utils";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {KZG_COMMITMENT_INCLUSION_PROOF_DEPTH, KZG_COMMITMENT_SUBTREE_INDEX0} from "@lodestar/params";
 
@@ -57,7 +57,7 @@ export async function validateGossipBlobSidecar(
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
   const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-  const blockHex = toHex(blockRoot);
+  const blockHex = toRootHex(blockRoot);
   if (chain.forkChoice.getBlockHex(blockHex) !== null) {
     throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockHex});
   }
@@ -68,7 +68,7 @@ export async function validateGossipBlobSidecar(
   // _[IGNORE]_ The blob's block's parent (defined by `sidecar.block_parent_root`) has been seen (via both
   // gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is
   // retrieved).
-  const parentRoot = toHex(blobSidecar.signedBlockHeader.message.parentRoot);
+  const parentRoot = toRootHex(blobSidecar.signedBlockHeader.message.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
@@ -183,9 +183,9 @@ export function validateBlobSidecars(
         !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
       ) {
         throw new Error(
-          `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toHex(blobBlockRoot)} index=${
+          `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toRootHex(blobBlockRoot)} index=${
             blobSidecar.index
-          } for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} index=${index}`
+          } for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} index=${index}`
         );
       }
       blobs.push(blobSidecar.blob);

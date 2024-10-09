@@ -1,14 +1,16 @@
 import {SecretKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
-  PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
+  CachedBeaconStateElectra,
+  BeaconStateElectra,
 } from "@lodestar/state-transition";
-import {BeaconState, altair, bellatrix, ssz} from "@lodestar/types";
+import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
@@ -64,6 +66,7 @@ export function generateState(
       : generateValidators(numValidators, validatorOpts));
 
   state.genesisTime = Math.floor(Date.now() / 1000);
+  state.slot = stateSlot;
   state.fork.previousVersion = config.GENESIS_FORK_VERSION;
   state.fork.currentVersion = config.GENESIS_FORK_VERSION;
   state.latestBlockHeader.bodyRoot = ssz.phase0.BeaconBlockBody.hashTreeRoot(ssz.phase0.BeaconBlockBody.defaultValue());
@@ -92,11 +95,18 @@ export function generateState(
     };
   }
 
+  if (forkSeq >= ForkSeq.electra) {
+    const stateElectra = state as electra.BeaconState;
+    stateElectra.depositRequestsStartIndex = 2023n;
+    stateElectra.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
+  }
+
   return config.getForkTypes(stateSlot).BeaconState.toViewDU(state);
 }
 
 /**
  * This generates state with default pubkey
+ * TODO: (@matthewkeil) - this is duplicated and exists in state-transition as well
  */
 export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.phase0);
@@ -137,6 +147,18 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   });
 }
 
+/**
+ * This generates state with default pubkey
+ */
+export function generateCachedElectraState(opts?: TestBeaconState): CachedBeaconStateElectra {
+  const config = getConfig(ForkName.electra);
+  const state = generateState(opts, config);
+  return createCachedBeaconState(state as BeaconStateElectra, {
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
+  });
+}
 export const zeroProtoBlock: ProtoBlock = {
   slot: 0,
   blockRoot: ZERO_HASH_HEX,

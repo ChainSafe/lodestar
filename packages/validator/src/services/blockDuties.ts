@@ -1,8 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
-import {sleep} from "@lodestar/utils";
+import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {ChainConfig} from "@lodestar/config";
 import {IClock, differenceHex, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -67,7 +66,7 @@ export class BlockDutiesService {
     if (dutyAtEpoch) {
       for (const proposer of dutyAtEpoch.data) {
         if (proposer.slot === slot) {
-          publicKeys.set(toHexString(proposer.pubkey), proposer.pubkey);
+          publicKeys.set(toPubkeyHex(proposer.pubkey), proposer.pubkey);
         }
       }
     }
@@ -78,7 +77,7 @@ export class BlockDutiesService {
   removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const blockDutyAtEpoch of this.proposers.values()) {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
-        return toHexString(proposer.pubkey) !== pubkey;
+        return toPubkeyHex(proposer.pubkey) !== pubkey;
       });
     }
   }
@@ -187,7 +186,7 @@ export class BlockDutiesService {
     const proposerDuties = res.value();
     const {dependentRoot} = res.meta();
     const relevantDuties = proposerDuties.filter((duty) => {
-      const pubkeyHex = toHexString(duty.pubkey);
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });
 

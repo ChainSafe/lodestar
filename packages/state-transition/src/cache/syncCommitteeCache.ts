@@ -1,6 +1,7 @@
-import {CompositeViewDU, toHexString} from "@chainsafe/ssz";
+import {CompositeViewDU} from "@chainsafe/ssz";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ssz, ValidatorIndex} from "@lodestar/types";
-import {PubkeyIndexMap} from "./pubkeyCache.js";
+import {toPubkeyHex} from "@lodestar/utils";
 
 type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
 
@@ -81,8 +82,8 @@ function computeSyncCommitteeIndices(
   const pubkeys = syncCommittee.pubkeys.getAllReadonly();
   for (const pubkey of pubkeys) {
     const validatorIndex = pubkey2index.get(pubkey);
-    if (validatorIndex === undefined) {
-      throw Error(`SyncCommittee pubkey is unknown ${toHexString(pubkey)}`);
+    if (validatorIndex === null) {
+      throw Error(`SyncCommittee pubkey is unknown ${toPubkeyHex(pubkey)}`);
     }
 
     validatorIndices.push(validatorIndex);

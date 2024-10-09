@@ -16,10 +16,15 @@ export function getApiClientStub(): ApiClientStub {
   return {
     beacon: {
       getStateValidators: vi.fn(),
+      postStateValidators: vi.fn(),
       publishBlindedBlockV2: vi.fn(),
       publishBlockV2: vi.fn(),
       submitPoolSyncCommitteeSignatures: vi.fn(),
       submitPoolAttestations: vi.fn(),
+      submitPoolAttestationsV2: vi.fn(),
+    },
+    node: {
+      getSyncingStatus: vi.fn(),
     },
     validator: {
       getProposerDuties: vi.fn(),
@@ -33,7 +38,9 @@ export function getApiClientStub(): ApiClientStub {
       submitSyncCommitteeSelections: vi.fn(),
       produceAttestationData: vi.fn(),
       getAggregatedAttestation: vi.fn(),
+      getAggregatedAttestationV2: vi.fn(),
       publishAggregateAndProofs: vi.fn(),
+      publishAggregateAndProofsV2: vi.fn(),
       submitBeaconCommitteeSelections: vi.fn(),
     },
     httpClient: httpClientStub,

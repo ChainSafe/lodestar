@@ -1,4 +1,4 @@
-import {phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {ssz, Attestation, sszTypesFor} from "@lodestar/types";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -87,13 +87,13 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.beacon_aggregate_and_proof:
-      return ssz.phase0.SignedAggregateAndProof;
+      return sszTypesFor(topic.fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return ssz.phase0.Attestation;
+      return sszTypesFor(topic.fork).Attestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
-      return ssz.phase0.AttesterSlashing;
+      return sszTypesFor(topic.fork).AttesterSlashing;
     case GossipType.voluntary_exit:
       return ssz.phase0.SignedVoluntaryExit;
     case GossipType.sync_committee_contribution_and_proof:
@@ -128,9 +128,9 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 /**
  * Deserialize a gossip serialized data into an Attestation object.
  */
-export function sszDeserializeAttestation(serializedData: Uint8Array): phase0.Attestation {
+export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   try {
-    return ssz.phase0.Attestation.deserialize(serializedData);
+    return sszTypesFor(fork).Attestation.deserialize(serializedData);
   } catch (e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }

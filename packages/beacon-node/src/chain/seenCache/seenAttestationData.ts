@@ -1,12 +1,21 @@
-import {phase0, RootHex, Slot} from "@lodestar/types";
+import {BitArray} from "@chainsafe/ssz";
+import {CommitteeIndex, phase0, RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
-import {AttDataBase64} from "../../util/sszBytes.js";
 import {InsertOutcome} from "../opPools/types.js";
+
+export type SeenAttDataKey = AttDataBase64 | AttDataCommitteeBitsBase64;
+// pre-electra, AttestationData is used to cache attestations
+type AttDataBase64 = string;
+// electra, AttestationData + CommitteeBits are used to cache attestations
+type AttDataCommitteeBitsBase64 = string;
 
 export type AttestationDataCacheEntry = {
   // part of shuffling data, so this does not take memory
-  committeeIndices: Uint32Array;
+  committeeValidatorIndices: Uint32Array;
+  // undefined for phase0 Attestation
+  committeeBits?: BitArray;
+  committeeIndex: CommitteeIndex;
   // IndexedAttestationData signing root, 32 bytes
   signingRoot: Uint8Array;
   // to be consumed by forkchoice and oppool
@@ -38,12 +47,14 @@ const DEFAULT_MAX_CACHE_SIZE_PER_SLOT = 200;
 const DEFAULT_CACHE_SLOT_DISTANCE = 2;
 
 /**
+ * Cached seen AttestationData to improve gossip validation. For Electra, this still take into account attestationIndex
+ * even through it is moved outside of AttestationData.
  * As of April 2023, validating gossip attestation takes ~12% of cpu time for a node subscribing to all subnets on mainnet.
  * Having this cache help saves a lot of cpu time since most of the gossip attestations are on the same slot.
  */
 export class SeenAttestationDatas {
-  private cacheEntryByAttDataBase64BySlot = new MapDef<Slot, Map<AttDataBase64, AttestationDataCacheEntry>>(
-    () => new Map<AttDataBase64, AttestationDataCacheEntry>()
+  private cacheEntryByAttDataBase64BySlot = new MapDef<Slot, Map<SeenAttDataKey, AttestationDataCacheEntry>>(
+    () => new Map<SeenAttDataKey, AttestationDataCacheEntry>()
   );
   private lowestPermissibleSlot = 0;
 
@@ -57,14 +68,14 @@ export class SeenAttestationDatas {
   }
 
   // TODO: Move InsertOutcome type definition to a common place
-  add(slot: Slot, attDataBase64: AttDataBase64, cacheEntry: AttestationDataCacheEntry): InsertOutcome {
+  add(slot: Slot, attDataKey: SeenAttDataKey, cacheEntry: AttestationDataCacheEntry): InsertOutcome {
     if (slot < this.lowestPermissibleSlot) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.too_old});
       return InsertOutcome.Old;
     }
 
     const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataBase64BySlot.getOrDefault(slot);
-    if (cacheEntryByAttDataBase64.has(attDataBase64)) {
+    if (cacheEntryByAttDataBase64.has(attDataKey)) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.already_known});
       return InsertOutcome.AlreadyKnown;
     }
@@ -74,11 +85,11 @@ export class SeenAttestationDatas {
       return InsertOutcome.ReachLimit;
     }
 
-    cacheEntryByAttDataBase64.set(attDataBase64, cacheEntry);
+    cacheEntryByAttDataBase64.set(attDataKey, cacheEntry);
     return InsertOutcome.NewData;
   }
 
-  get(slot: Slot, attDataBase64: AttDataBase64): AttestationDataCacheEntry | null {
+  get(slot: Slot, attDataBase64: SeenAttDataKey): AttestationDataCacheEntry | null {
     const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataBase64BySlot.get(slot);
     const cacheEntry = cacheEntryByAttDataBase64?.get(attDataBase64);
     if (cacheEntry) {

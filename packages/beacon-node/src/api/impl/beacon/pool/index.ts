@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {Epoch, ssz} from "@lodestar/types";
-import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {Attestation, Epoch, isElectraAttestation, ssz} from "@lodestar/types";
+import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -16,6 +16,7 @@ import {
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
+import {ApiError, FailureList, IndexedError} from "../../errors.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -26,7 +27,15 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      let attestations: Attestation[] = chain.aggregatedAttestationPool.getAll(slot);
+      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getPoolAttestationsV2 to retrieve pool attestations for post-electra fork=${fork}`
+        );
+      }
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
@@ -35,8 +44,30 @@ export function getBeaconPoolApi({
       return {data: attestations};
     },
 
+    async getPoolAttestationsV2({slot, committeeIndex}) {
+      // Already filtered by slot
+      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
+      const isPostElectra = isForkPostElectra(fork);
+
+      attestations = attestations.filter((attestation) =>
+        isPostElectra ? isElectraAttestation(attestation) : !isElectraAttestation(attestation)
+      );
+
+      if (committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
+      }
+
+      return {data: attestations, meta: {version: fork}};
+    },
+
     async getPoolAttesterSlashings() {
       return {data: chain.opPool.getAllAttesterSlashings()};
+    },
+
+    async getPoolAttesterSlashingsV2() {
+      // TODO Electra: Determine fork based on data returned by api
+      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: ForkName.phase0}};
     },
 
     async getPoolProposerSlashings() {
@@ -52,8 +83,12 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations({signedAttestations}) {
+      await this.submitPoolAttestationsV2({signedAttestations});
+    },
+
+    async submitPoolAttestationsV2({signedAttestations}) {
       const seenTimestampSec = Date.now() / 1000;
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         signedAttestations.map(async (attestation, i) => {
@@ -65,7 +100,7 @@ export function getBeaconPoolApi({
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
+            const {indexedAttestation, subnet, attDataRootHex, committeeIndex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
               network,
               chain,
@@ -74,7 +109,7 @@ export function getBeaconPoolApi({
             );
 
             if (network.shouldAggregate(subnet, slot)) {
-              const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+              const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
@@ -92,7 +127,7 @@ export function getBeaconPoolApi({
               return;
             }
 
-            errors.push(e as Error);
+            failures.push({index: i, message: (e as Error).message});
             logger.error(`Error on submitPoolAttestations [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
@@ -101,10 +136,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolAttestations\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing attestations", failures);
       }
     },
 
@@ -112,6 +145,11 @@ export function getBeaconPoolApi({
       await validateApiAttesterSlashing(chain, attesterSlashing);
       chain.opPool.insertAttesterSlashing(attesterSlashing);
       await network.publishAttesterSlashing(attesterSlashing);
+    },
+
+    async submitPoolAttesterSlashingsV2({attesterSlashing}) {
+      // TODO Electra: Refactor submitPoolAttesterSlashings and submitPoolAttesterSlashingsV2
+      await this.submitPoolAttesterSlashings({attesterSlashing});
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
@@ -128,7 +166,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolBLSToExecutionChange({blsToExecutionChanges}) {
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
@@ -144,7 +182,7 @@ export function getBeaconPoolApi({
               await network.publishBlsToExecutionChange(blsToExecutionChange);
             }
           } catch (e) {
-            errors.push(e as Error);
+            failures.push({index: i, message: (e as Error).message});
             logger.error(
               `Error on submitPoolBLSToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
@@ -154,10 +192,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolBLSToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing BLS to execution changes", failures);
       }
     },
 
@@ -181,7 +217,7 @@ export function getBeaconPoolApi({
       // TODO: Fetch states at signature slots
       const state = chain.getHeadState();
 
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         signatures.map(async (signature, i) => {
@@ -221,7 +257,7 @@ export function getBeaconPoolApi({
               return;
             }
 
-            errors.push(e as Error);
+            failures.push({index: i, message: (e as Error).message});
             logger.debug(
               `Error on submitPoolSyncCommitteeSignatures [${i}]`,
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
@@ -234,10 +270,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolSyncCommitteeSignatures\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing sync committee signatures", failures);
       }
     },
   };

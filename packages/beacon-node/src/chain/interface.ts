@@ -1,4 +1,5 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {
   UintNum64,
   Root,
@@ -21,7 +22,6 @@ import {
   CachedBeaconStateAllForks,
   EpochShuffling,
   Index2PubkeyCache,
-  PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
@@ -30,6 +30,7 @@ import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {IClock} from "../util/clock.js";
+import {BufferPool} from "../util/bufferPool.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {IBlsVerifier} from "./bls/index.js";
@@ -86,6 +87,7 @@ export interface IBeaconChain {
   readonly config: BeaconConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
+  readonly bufferPool: BufferPool | null;
 
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;

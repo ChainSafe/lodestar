@@ -1,7 +1,6 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {Logger, toHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
@@ -48,7 +47,7 @@ export async function archiveBlocks(
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
-    root: fromHexString(block.blockRoot),
+    root: fromHex(block.blockRoot),
   }));
 
   if (finalizedCanonicalBlockRoots.length > 0) {
@@ -68,7 +67,7 @@ export async function archiveBlocks(
   // deleteNonCanonicalBlocks
   // loop through forkchoice single time
 
-  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHexString(summary.blockRoot));
+  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
   if (nonCanonicalBlockRoots.length > 0) {
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {
@@ -137,14 +136,14 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
       canonicalBlocks.map(async (block) => {
         const blockBuffer = await db.block.getBinary(block.root);
         if (!blockBuffer) {
-          throw Error(`No block found for slot ${block.slot} root ${toHex(block.root)}`);
+          throw Error(`No block found for slot ${block.slot} root ${toRootHex(block.root)}`);
         }
         return {
           key: block.slot,
           value: blockBuffer,
           slot: block.slot,
           blockRoot: block.root,
-          // TODO: Benchmark if faster to slice Buffer or fromHexString()
+          // TODO: Benchmark if faster to slice Buffer or fromHex()
           parentRoot: getParentRootFromSignedBlock(blockBuffer),
         };
       })
@@ -177,7 +176,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
         .map(async (block) => {
           const bytes = await db.blobSidecars.getBinary(block.root);
           if (!bytes) {
-            throw Error(`No blobSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
+            throw Error(`No blobSidecars found for slot ${block.slot} root ${toRootHex(block.root)}`);
           }
           return {key: block.slot, value: bytes};
         })

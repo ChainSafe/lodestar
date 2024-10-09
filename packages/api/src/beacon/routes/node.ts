@@ -43,6 +43,22 @@ export const PeerCountType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+export const SyncingStatusType = new ContainerType(
+  {
+    /** Head slot node is trying to reach */
+    headSlot: ssz.Slot,
+    /** How many slots node needs to process to reach head. 0 if synced. */
+    syncDistance: ssz.Slot,
+    /** Set to true if the node is syncing, false if the node is synced. */
+    isSyncing: ssz.Boolean,
+    /** Set to true if the node is optimistically tracking head. */
+    isOptimistic: ssz.Boolean,
+    /** Set to true if the connected el client is offline */
+    elOffline: ssz.Boolean,
+  },
+  {jsonCase: "eth2"}
+);
+
 export type NetworkIdentity = ValueOf<typeof NetworkIdentityType>;
 
 export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";
@@ -66,18 +82,7 @@ export type FilterGetPeers = {
   direction?: PeerDirection[];
 };
 
-export type SyncingStatus = {
-  /** Head slot node is trying to reach */
-  headSlot: string;
-  /** How many slots node needs to process to reach head. 0 if synced. */
-  syncDistance: string;
-  /** Set to true if the node is syncing, false if the node is synced. */
-  isSyncing: boolean;
-  /** Set to true if the node is optimistically tracking head. */
-  isOptimistic: boolean;
-  /** Set to true if the connected el client is offline */
-  elOffline: boolean;
-};
+export type SyncingStatus = ValueOf<typeof SyncingStatusType>;
 
 export enum NodeHealth {
   READY = HttpStatusCode.OK,
@@ -243,7 +248,10 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       url: "/eth/v1/node/syncing",
       method: "GET",
       req: EmptyRequestCodec,
-      resp: JsonOnlyResponseCodec,
+      resp: {
+        data: SyncingStatusType,
+        meta: EmptyMetaCodec,
+      },
     },
     getHealth: {
       url: "/eth/v1/node/health",

@@ -13,6 +13,7 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/chainHeaderTracker.js");
@@ -45,20 +46,22 @@ describe("AttestationDutiesService", function () {
   let controller: AbortController; // To stop clock
   beforeEach(() => {
     controller = new AbortController();
-  });
-  afterEach(() => controller.abort());
-
-  it("Should fetch indexes and duties", async function () {
     // Reply with an active validator that has an index
     const validatorResponse = {
       ...defaultValidator,
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.mockResolvedValue(
+    api.beacon.postStateValidators.mockResolvedValue(
       mockApiResponse({data: [validatorResponse], meta: {executionOptimistic: false, finalized: false}})
     );
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    controller.abort();
+  });
 
+  it("Should fetch indexes and duties", async function () {
     // Reply with some duties
     const slot = 1;
     const epoch = computeEpochAtSlot(slot);
@@ -78,9 +81,18 @@ describe("AttestationDutiesService", function () {
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
 
-    // Clock will call runAttesterDutiesTasks() immediately
+    // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -107,16 +119,6 @@ describe("AttestationDutiesService", function () {
   });
 
   it("Should remove signer from attestation duties", async function () {
-    // Reply with an active validator that has an index
-    const validatorResponse = {
-      ...defaultValidator,
-      index,
-      validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
-    };
-    api.beacon.getStateValidators.mockResolvedValue(
-      mockApiResponse({data: [validatorResponse], meta: {executionOptimistic: false, finalized: false}})
-    );
-
     // Reply with some duties
     const slot = 1;
     const duty: routes.validator.AttesterDuty = {
@@ -135,9 +137,18 @@ describe("AttestationDutiesService", function () {
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
 
-    // Clock will call runAttesterDutiesTasks() immediately
+    // Clock will call runDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -152,5 +163,82 @@ describe("AttestationDutiesService", function () {
     // then remove
     dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
     expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).toEqual({});
+  });
+
+  it("Should fetch duties when node is resynced", async function () {
+    // Node is syncing
+    api.node.getSyncingStatus.mockResolvedValue(
+      mockApiResponse({data: {headSlot: 0, syncDistance: 1, isSyncing: true, isOptimistic: false, elOffline: false}})
+    );
+    api.validator.getAttesterDuties.mockRejectedValue(Error("Node is syncing"));
+    api.validator.prepareBeaconCommitteeSubnet.mockRejectedValue(Error("Node is syncing"));
+
+    // Clock will call runDutiesTasks() immediately
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+
+    // Trigger clock for slot and epoch
+    await clock.tickEpochFns(0, controller.signal);
+    await clock.tickSlotFns(1, controller.signal);
+
+    const dutySlot = 3;
+    const epoch = computeEpochAtSlot(dutySlot);
+
+    // Duties for slot should be empty as node is still syncing
+    expect(dutiesService.getDutiesAtSlot(dutySlot)).toEqual([]);
+
+    // Node is synced now
+    api.node.getSyncingStatus.mockResolvedValue(
+      mockApiResponse({data: {headSlot: 1, syncDistance: 0, isSyncing: false, isOptimistic: false, elOffline: false}})
+    );
+
+    // Reply with some duties on next call
+    const duty: routes.validator.AttesterDuty = {
+      slot: dutySlot,
+      committeeIndex: 1,
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: index,
+      pubkey: pubkeys[0],
+    };
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({data: [duty], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
+
+    // Accept all subscriptions
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
+
+    // Only tick clock for slot to not trigger regular polling
+    await clock.tickSlotFns(2, controller.signal);
+
+    // Validator index should be persisted
+    expect(validatorStore.getAllLocalIndices()).toEqual([index]);
+    expect(validatorStore.getPubkeyOfIndex(index)).toBe(toHexString(pubkeys[0]));
+
+    // Duties for this and next epoch should be persisted
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch)?.dutiesByIndex || new Map())).toEqual({
+      // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
+      [index]: {duty, selectionProof: null},
+    });
+    expect(
+      Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch + 1)?.dutiesByIndex || new Map())
+    ).toEqual({
+      // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
+      [index]: {duty, selectionProof: null},
+    });
+
+    expect(dutiesService.getDutiesAtSlot(dutySlot)).toEqual([{duty, selectionProof: null}]);
+
+    expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
   });
 });

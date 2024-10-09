@@ -1,15 +1,16 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ValidatorIndex} from "@lodestar/types";
-import {Logger, MapDef} from "@lodestar/utils";
+import {Logger, MapDef, toPubkeyHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
 /**
- * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
- * For reasoning on the specific number see: https://github.com/ethereum/beacon-APIs/pull/328
+ * This is to prevent the "Request body is too large" issue for http post.
+ * Typical servers accept up to 1MB (2 ** 20 bytes) of request body, for example fastify and nginx.
+ * A hex encoded public key with "0x"-prefix has a size of 98 bytes + 2 bytes to account for commas
+ * and other JSON padding. `Math.floor(2 ** 20 / 100) == 10485`, we can send up to ~10k keys per request.
  */
-const PUBKEYS_PER_REQUEST = 64;
+const PUBKEYS_PER_REQUEST = 10_000;
 
 // To assist with readability
 type PubkeyHex = string;
@@ -109,7 +110,7 @@ export class IndicesService {
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
-    // support up to 1000 pubkeys per poll
+    // support up to 10k pubkeys per poll
     const pubkeysHexBatches = batchItems(pubkeysHexToDiscover, {batchSize: PUBKEYS_PER_REQUEST});
 
     const newIndices: number[] = [];
@@ -124,7 +125,7 @@ export class IndicesService {
   }
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: pubkeysHex})).value();
+    const validators = (await this.api.beacon.postStateValidators({stateId: "head", validatorIds: pubkeysHex})).value();
 
     const newIndices = [];
 
@@ -135,7 +136,7 @@ export class IndicesService {
       const status = statusToSimpleStatusMapping(validator.status);
       allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
 
-      const pubkeyHex = toHexString(validator.validator.pubkey);
+      const pubkeyHex = toPubkeyHex(validator.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.info("Validator seen on beacon chain", {
           validatorIndex: validator.index,

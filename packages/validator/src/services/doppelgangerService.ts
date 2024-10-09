@@ -1,7 +1,6 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
-import {Logger, sleep, truncBytes} from "@lodestar/utils";
+import {Logger, fromHex, sleep, truncBytes} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
@@ -69,7 +68,7 @@ export class DoppelgangerService {
     if (remainingEpochs > 0) {
       const previousEpoch = currentEpoch - 1;
       const attestedInPreviousEpoch = await this.slashingProtection.hasAttestedInEpoch(
-        fromHexString(pubkeyHex),
+        fromHex(pubkeyHex),
         previousEpoch
       );
 

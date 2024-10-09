@@ -49,7 +49,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getSyncingStatus: {
     args: undefined,
-    res: {data: {headSlot: "1", syncDistance: "2", isSyncing: false, isOptimistic: true, elOffline: false}},
+    res: {data: {headSlot: 1, syncDistance: 2, isSyncing: false, isOptimistic: true, elOffline: false}},
   },
   getHealth: {
     args: {syncingStatus: 206},

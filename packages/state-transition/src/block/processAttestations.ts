@@ -1,4 +1,4 @@
-import {phase0} from "@lodestar/types";
+import {Attestation} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
 import {processAttestationPhase0} from "./processAttestationPhase0.js";
@@ -10,7 +10,7 @@ import {processAttestationsAltair} from "./processAttestationsAltair.js";
 export function processAttestations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attestations: phase0.Attestation[],
+  attestations: Attestation[],
   verifySignatures = true
 ): void {
   if (fork === ForkSeq.phase0) {

@@ -1,4 +1,4 @@
-import {capella, deneb, Wei, bellatrix, Root, ExecutionPayload} from "@lodestar/types";
+import {capella, deneb, electra, Wei, bellatrix, Root, ExecutionPayload, ExecutionRequests} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -28,6 +28,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
+  engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -51,6 +52,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
+  engine_getPayloadV4: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -83,6 +85,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV1: PayloadStatus;
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
+  engine_newPayloadV4: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -101,6 +104,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV1: ExecutionPayloadRpc;
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
+  engine_getPayloadV4: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -114,13 +118,20 @@ type ExecutionPayloadRpcWithValue = {
   // even though CL tracks this as executionPayloadValue, EL returns this as blockValue
   blockValue: QUANTITY;
   blobsBundle?: BlobsBundleRpc;
+  requests?: ExecutionRequestsRpc;
   shouldOverrideBuilder?: boolean;
 };
 type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithValue;
 
-export type ExecutionPayloadBodyRpc = {transactions: DATA[]; withdrawals: WithdrawalV1[] | null};
+export type ExecutionPayloadBodyRpc = {
+  transactions: DATA[];
+  withdrawals: WithdrawalV1[] | null | undefined;
+};
 
-export type ExecutionPayloadBody = {transactions: bellatrix.Transaction[]; withdrawals: capella.Withdrawals | null};
+export type ExecutionPayloadBody = {
+  transactions: bellatrix.Transaction[];
+  withdrawals: capella.Withdrawals | null;
+};
 
 export type ExecutionPayloadRpc = {
   parentHash: DATA; // 32 bytes
@@ -148,6 +159,30 @@ export type WithdrawalRpc = {
   validatorIndex: QUANTITY;
   address: DATA;
   amount: QUANTITY;
+};
+
+export type ExecutionRequestsRpc = {
+  deposits: DepositRequestRpc[];
+  withdrawals: WithdrawalRequestRpc[];
+  consolidations: ConsolidationRequestRpc[];
+};
+
+export type DepositRequestRpc = {
+  pubkey: DATA;
+  withdrawalCredentials: DATA;
+  amount: QUANTITY;
+  signature: DATA;
+  index: QUANTITY;
+};
+export type WithdrawalRequestRpc = {
+  sourceAddress: DATA;
+  validatorPubkey: DATA;
+  amount: QUANTITY;
+};
+export type ConsolidationRequestRpc = {
+  sourceAddress: DATA;
+  sourcePubkey: DATA;
+  targetPubkey: DATA;
 };
 
 export type VersionedHashesRpc = DATA[];
@@ -212,6 +247,8 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
     payload.excessBlobGas = numToQuantity(excessBlobGas);
   }
 
+  // No changes in Electra
+
   return payload;
 }
 
@@ -230,23 +267,27 @@ export function parseExecutionPayload(
   executionPayload: ExecutionPayload;
   executionPayloadValue: Wei;
   blobsBundle?: BlobsBundle;
+  executionRequests?: ExecutionRequests;
   shouldOverrideBuilder?: boolean;
 } {
   let data: ExecutionPayloadRpc;
   let executionPayloadValue: Wei;
   let blobsBundle: BlobsBundle | undefined;
+  let executionRequests: ExecutionRequests | undefined;
   let shouldOverrideBuilder: boolean;
 
   if (hasPayloadValue(response)) {
     executionPayloadValue = quantityToBigint(response.blockValue);
     data = response.executionPayload;
     blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
+    executionRequests = response.requests ? deserializeExecutionRequests(response.requests) : undefined;
     shouldOverrideBuilder = response.shouldOverrideBuilder ?? false;
   } else {
     data = response;
     // Just set it to zero as default
     executionPayloadValue = BigInt(0);
     blobsBundle = undefined;
+    executionRequests = undefined;
     shouldOverrideBuilder = false;
   }
 
@@ -297,7 +338,9 @@ export function parseExecutionPayload(
     (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
   }
 
-  return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
+  // No changes in Electra
+
+  return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }
 
 export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttributesRpc {
@@ -361,6 +404,76 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
     // Both CL and EL now deal in Gwei, just big-endian to little-endian conversion required
     amount: quantityToBigint(serialized.amount),
   } as capella.Withdrawal;
+}
+
+function serializeDepositRequest(depositRequest: electra.DepositRequest): DepositRequestRpc {
+  return {
+    pubkey: bytesToData(depositRequest.pubkey),
+    withdrawalCredentials: bytesToData(depositRequest.withdrawalCredentials),
+    amount: numToQuantity(depositRequest.amount),
+    signature: bytesToData(depositRequest.signature),
+    index: numToQuantity(depositRequest.index),
+  };
+}
+
+function deserializeDepositRequest(serialized: DepositRequestRpc): electra.DepositRequest {
+  return {
+    pubkey: dataToBytes(serialized.pubkey, 48),
+    withdrawalCredentials: dataToBytes(serialized.withdrawalCredentials, 32),
+    amount: quantityToNum(serialized.amount),
+    signature: dataToBytes(serialized.signature, 96),
+    index: quantityToNum(serialized.index),
+  } as electra.DepositRequest;
+}
+
+function serializeWithdrawalRequest(withdrawalRequest: electra.WithdrawalRequest): WithdrawalRequestRpc {
+  return {
+    sourceAddress: bytesToData(withdrawalRequest.sourceAddress),
+    validatorPubkey: bytesToData(withdrawalRequest.validatorPubkey),
+    amount: numToQuantity(withdrawalRequest.amount),
+  };
+}
+
+function deserializeWithdrawalRequest(withdrawalRequest: WithdrawalRequestRpc): electra.WithdrawalRequest {
+  return {
+    sourceAddress: dataToBytes(withdrawalRequest.sourceAddress, 20),
+    validatorPubkey: dataToBytes(withdrawalRequest.validatorPubkey, 48),
+    amount: quantityToBigint(withdrawalRequest.amount),
+  };
+}
+
+function serializeConsolidationRequest(consolidationRequest: electra.ConsolidationRequest): ConsolidationRequestRpc {
+  return {
+    sourceAddress: bytesToData(consolidationRequest.sourceAddress),
+    sourcePubkey: bytesToData(consolidationRequest.sourcePubkey),
+    targetPubkey: bytesToData(consolidationRequest.targetPubkey),
+  };
+}
+
+function deserializeConsolidationRequest(consolidationRequest: ConsolidationRequestRpc): electra.ConsolidationRequest {
+  return {
+    sourceAddress: dataToBytes(consolidationRequest.sourceAddress, 20),
+    sourcePubkey: dataToBytes(consolidationRequest.sourcePubkey, 48),
+    targetPubkey: dataToBytes(consolidationRequest.targetPubkey, 48),
+  };
+}
+
+export function serializeExecutionRequests(executionRequests: ExecutionRequests): ExecutionRequestsRpc {
+  const {deposits, withdrawals, consolidations} = executionRequests;
+  return {
+    deposits: deposits.map(serializeDepositRequest),
+    withdrawals: withdrawals.map(serializeWithdrawalRequest),
+    consolidations: consolidations.map(serializeConsolidationRequest),
+  };
+}
+
+export function deserializeExecutionRequests(executionRequests: ExecutionRequestsRpc): ExecutionRequests {
+  const {deposits, withdrawals, consolidations} = executionRequests;
+  return {
+    deposits: deposits.map(deserializeDepositRequest),
+    withdrawals: withdrawals.map(deserializeWithdrawalRequest),
+    consolidations: consolidations.map(deserializeConsolidationRequest),
+  };
 }
 
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {

@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.20.2",
+  "version": "1.22.0",
   "type": "module",
   "exports": {
     ".": {
@@ -28,6 +28,9 @@
     },
     "./deneb": {
       "import": "./lib/deneb/index.js"
+    },
+    "./electra": {
+      "import": "./lib/electra/index.js"
     },
     "./phase0": {
       "import": "./lib/phase0/index.js"
@@ -70,8 +73,8 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.15.1",
-    "@lodestar/params": "^1.20.2",
+    "@chainsafe/ssz": "^0.17.1",
+    "@lodestar/params": "^1.22.0",
     "ethereum-cryptography": "^2.0.0"
   },
   "keywords": [

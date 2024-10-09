@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Epoch, phase0} from "@lodestar/types";
-import {Logger, toHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -119,7 +119,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       syncType,
       startEpoch,
       targetSlot: target.slot,
-      targetRoot: toHex(target.root),
+      targetRoot: toRootHex(target.root),
     });
 
     // If the peer existed in any other chain, remove it.
@@ -242,7 +242,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         syncType,
         firstEpoch: syncChain.firstBatchEpoch,
         targetSlot: syncChain.target.slot,
-        targetRoot: toHex(syncChain.target.root),
+        targetRoot: toRootHex(syncChain.target.root),
       });
     }
 
@@ -274,7 +274,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           lastValidatedSlot: syncChain.lastValidatedSlot,
           firstEpoch: syncChain.firstBatchEpoch,
           targetSlot: syncChain.target.slot,
-          targetRoot: toHex(syncChain.target.root),
+          targetRoot: toRootHex(syncChain.target.root),
           validatedEpochs: syncChain.validatedEpochs,
         });
 

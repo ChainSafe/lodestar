@@ -46,6 +46,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
     fn: (state) => {
       const cache = beforeProcessEpoch(state);
       processEpoch(fork, state as CachedBeaconStateAltair, cache);
+      state.slot++;
       state.epochCtx.afterProcessEpoch(state, cache);
       // Simulate root computation through the next block to account for changes
       // 74184 hash64 ops - 92.730 ms
@@ -120,7 +121,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair processRegistryUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processRegistryUpdates(state, cache.value),
+    fn: (state) => processRegistryUpdates(ForkSeq.altair, state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
@@ -141,7 +142,9 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEffectiveBalanceUpdates(state, cache.value),
+    fn: (state) => {
+      processEffectiveBalanceUpdates(ForkSeq.altair, state, cache.value);
+    },
   });
 
   itBench({
@@ -172,7 +175,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     id: `${stateId} - altair processSyncCommitteeUpdates`,
     convergeFactor: 1 / 100, // Very unstable make it converge faster
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
-    fn: (state) => processSyncCommitteeUpdates(state),
+    fn: (state) => processSyncCommitteeUpdates(ForkSeq.altair, state),
   });
 
   itBench<StateEpoch, StateEpoch>({
@@ -185,6 +188,9 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
       return {state, cache: cacheAfter};
     },
     beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
-    fn: ({state, cache}) => state.epochCtx.afterProcessEpoch(state, cache),
+    fn: ({state, cache}) => {
+      state.slot++;
+      state.epochCtx.afterProcessEpoch(state, cache);
+    },
   });
 }

@@ -1,8 +1,9 @@
-import {toHexString} from "@chainsafe/ssz";
-import {BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
+import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
-import {sleep} from "@lodestar/utils";
+import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -10,6 +11,7 @@ import {ValidatorStore} from "./validatorStore.js";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
 import {groupAttDutiesByCommitteeIndex} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
 export type AttestationServiceOpts = {
@@ -40,12 +42,23 @@ export class AttestationService {
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     chainHeadTracker: ChainHeaderTracker,
+    syncingStatusTracker: SyncingStatusTracker,
     private readonly metrics: Metrics | null,
+    private readonly config: ChainForkConfig,
     private readonly opts?: AttestationServiceOpts
   ) {
-    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics, {
-      distributedAggregationSelection: opts?.distributedAggregationSelection,
-    });
+    this.dutiesService = new AttestationDutiesService(
+      logger,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      metrics,
+      {
+        distributedAggregationSelection: opts?.distributedAggregationSelection,
+      }
+    );
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);
@@ -126,7 +139,7 @@ export class AttestationService {
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
-    await this.produceAndPublishAggregates(attestation, dutiesSameCommittee);
+    await this.produceAndPublishAggregates(attestation, index, dutiesSameCommittee);
   }
 
   private async runAttestationTasksGrouped(
@@ -146,13 +159,14 @@ export class AttestationService {
     this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
+    const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
     await Promise.all(
       Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
-        const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
-        return this.produceAndPublishAggregates(attestationData, dutiesSameCommittee);
+        const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: isPostElectra ? 0 : index};
+        return this.produceAndPublishAggregates(attestationData, index, dutiesSameCommittee);
       })
     );
   }
@@ -179,13 +193,14 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: phase0.Attestation[] = [];
-    const headRootHex = toHexString(attestationNoCommittee.beaconBlockRoot);
+    const signedAttestations: Attestation[] = [];
+    const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
+    const isPostElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
 
     await Promise.all(
       duties.map(async ({duty}) => {
-        const index = duty.committeeIndex;
+        const index = isPostElectra ? 0 : duty.committeeIndex;
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
         const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
 
@@ -221,8 +236,16 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
-      this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
+      if (isPostElectra) {
+        (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
+      } else {
+        (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
+      }
+      this.logger.info("Published attestations", {
+        ...logCtx,
+        head: prettyBytes(headRootHex),
+        count: signedAttestations.length,
+      });
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
       // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
@@ -243,9 +266,11 @@ export class AttestationService {
    */
   private async produceAndPublishAggregates(
     attestation: phase0.AttestationData,
+    committeeIndex: number,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const logCtx = {slot: attestation.slot, index: attestation.index};
+    const logCtx = {slot: attestation.slot, index: committeeIndex};
+    const isPostElectra = this.config.getForkSeq(attestation.slot) >= ForkSeq.electra;
 
     // No validator is aggregator, skip
     if (duties.every(({selectionProof}) => selectionProof === null)) {
@@ -253,14 +278,21 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const res = await this.api.validator.getAggregatedAttestation({
-      attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
-      slot: attestation.slot,
-    });
+    const res = isPostElectra
+      ? await this.api.validator.getAggregatedAttestationV2({
+          attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
+          slot: attestation.slot,
+          committeeIndex,
+        })
+      : await this.api.validator.getAggregatedAttestation({
+          attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
+          slot: attestation.slot,
+        });
     const aggregate = res.value();
-    this.metrics?.numParticipantsInAggregate.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
+    const participants = aggregate.aggregationBits.getTrueBitIndexes().length;
+    this.metrics?.numParticipantsInAggregate.observe(participants);
 
-    const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
+    const signedAggregateAndProofs: SignedAggregateAndProof[] = [];
 
     await Promise.all(
       duties.map(async ({duty, selectionProof}) => {
@@ -283,8 +315,16 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
-        this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
+        if (isPostElectra) {
+          (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
+        } else {
+          (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
+        }
+        this.logger.info("Published aggregateAndProofs", {
+          ...logCtx,
+          participants,
+          count: signedAggregateAndProofs.length,
+        });
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {
         this.logger.error("Error publishing aggregateAndProofs", logCtx, e as Error);

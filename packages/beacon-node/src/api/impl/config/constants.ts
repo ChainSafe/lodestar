@@ -36,13 +36,16 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   BLOB_TX_TYPE,
   VERSIONED_HASH_VERSION_KZG,
+  COMPOUNDING_WITHDRAWAL_PREFIX,
+  UNSET_DEPOSIT_REQUESTS_START_INDEX,
+  FULL_EXIT_REQUEST_AMOUNT,
 } from "@lodestar/params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 /**
  * Hand-picked list of constants declared in consensus-spec .md files.
- * This list is asserted to be up-to-date with the test `test/e2e/api/specConstants.test.ts`
+ * This list is asserted to be up-to-date with the test `test/e2e/api/impl/config.test.ts`
  */
 export const specConstants = {
   // phase0/beacon-chain.md
@@ -57,6 +60,7 @@ export const specConstants = {
   // ## Withdrawal prefixes
   BLS_WITHDRAWAL_PREFIX,
   ETH1_ADDRESS_WITHDRAWAL_PREFIX,
+  COMPOUNDING_WITHDRAWAL_PREFIX,
   // ## Domain types
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BEACON_ATTESTER,
@@ -100,4 +104,8 @@ export const specConstants = {
   // Deneb types
   BLOB_TX_TYPE,
   VERSIONED_HASH_VERSION_KZG,
+
+  // electra
+  UNSET_DEPOSIT_REQUESTS_START_INDEX,
+  FULL_EXIT_REQUEST_AMOUNT,
 };
