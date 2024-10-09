@@ -125,7 +125,7 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
 
   try {
     return decodeErrorMessage(bytes);
-  } catch {
+  } catch (_e) {
     // Error message is optional and may not be included in the response stream
     return Buffer.prototype.toString.call(bytes, "hex");
   }

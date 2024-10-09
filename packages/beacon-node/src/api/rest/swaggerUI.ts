@@ -43,7 +43,7 @@ async function getAsset(name: string): Promise<Buffer | undefined> {
     const url = await import("node:url");
     const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
     return await fs.readFile(path.join(__dirname, "../../../../../assets/", name));
-  } catch {
+  } catch (_e) {
     return undefined;
   }
 }

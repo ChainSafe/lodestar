@@ -132,7 +132,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
         if (options.shouldError?.(testCase)) {
           try {
             await testFunction(testCase, name);
-          } catch {
+          } catch (_e) {
             return;
           }
         } else {

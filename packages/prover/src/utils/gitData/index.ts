@@ -11,7 +11,7 @@ export function readAndGetGitData(): GitData {
     let persistedGitData: Partial<GitData>;
     try {
       persistedGitData = readGitDataFile();
-    } catch {
+    } catch (_e) {
       persistedGitData = {};
     }
 
@@ -29,7 +29,7 @@ export function readAndGetGitData(): GitData {
           ? currentGitData.commit
           : (persistedGitData.commit ?? ""),
     };
-  } catch {
+  } catch (_e) {
     return {
       branch: "",
       commit: "",
@@ -49,7 +49,7 @@ export function getGitData(): GitData {
 function getBranch(): string {
   try {
     return shellSilent("git rev-parse --abbrev-ref HEAD");
-  } catch {
+  } catch (_e) {
     return "";
   }
 }
@@ -58,7 +58,7 @@ function getBranch(): string {
 function getCommit(): string {
   try {
     return shellSilent("git rev-parse --verify HEAD");
-  } catch {
+  } catch (_e) {
     return "";
   }
 }

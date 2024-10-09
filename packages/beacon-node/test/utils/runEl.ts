@@ -83,7 +83,7 @@ async function waitForELOnline(url: string, signal: AbortSignal): Promise<void> 
       console.log("Waiting for few seconds for EL to fully setup, for e.g. unlock the account...");
       await sleep(5000, signal);
       return; // Done
-    } catch {
+    } catch (_e) {
       await sleep(1000, signal);
     }
   }

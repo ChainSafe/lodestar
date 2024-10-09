@@ -114,7 +114,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   for (const enrStr of bootEnrs) {
     try {
       ENR.decodeTxt(enrStr);
-    } catch {
+    } catch (_e) {
       throw new YargsError(`Provided ENR in bootnodes is invalid:\n    ${enrStr}`);
     }
   }

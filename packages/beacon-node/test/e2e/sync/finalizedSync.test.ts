@@ -113,7 +113,7 @@ describe("sync / finalized sync", function () {
     try {
       await waitForSynced;
       loggerNodeB.info("Node B synced to Node A, received head block", {slot: head.message.slot});
-    } catch {
+    } catch (_e) {
       assert.fail("Failed to sync to other node in time");
     }
   });

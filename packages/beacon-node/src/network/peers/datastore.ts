@@ -147,7 +147,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     if (this._dirtyItems.size >= this._threshold) {
       try {
         await this._commitData();
-      } catch {}
+      } catch (_e) {}
     }
   }
 

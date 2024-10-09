@@ -66,7 +66,7 @@ describe("C-KZG", () => {
     blobSidecars.forEach(async (blobSidecar) => {
       try {
         await validateGossipBlobSidecar(chain, blobSidecar, blobSidecar.index);
-      } catch {
+      } catch (_e) {
         // We expect some error from here
         // console.log(error);
       }

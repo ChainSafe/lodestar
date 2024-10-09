@@ -200,7 +200,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
       } else {
         return errBody;
       }
-    } catch {
+    } catch (_e) {
       return errBody || this.statusText;
     }
   }

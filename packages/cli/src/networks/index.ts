@@ -126,7 +126,7 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
   for (const enrStr of bootnodes) {
     try {
       ENR.decodeTxt(enrStr);
-    } catch {
+    } catch (_e) {
       throw new Error(`Invalid ENR found in ${bootnodesFilePath}:\n    ${enrStr}`);
     }
   }
