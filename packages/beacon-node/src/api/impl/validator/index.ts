@@ -956,21 +956,29 @@ export function getValidatorApi(
       const stateEpoch = state.epochCtx.epoch;
       let indexes: ValidatorIndex[] = [];
 
-      if (epoch === stateEpoch) {
-        indexes = state.epochCtx.getBeaconProposers();
-      } else if (epoch === stateEpoch + 1) {
-        // Requesting duties for next epoch is allow since they can be predicted with high probabilities.
-        // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
-        indexes = state.epochCtx.getBeaconProposersNextEpoch();
-      } else if (epoch === stateEpoch - 1) {
-        const indexesPrevEpoch = state.epochCtx.getBeaconProposersPrevEpoch();
-        if (indexesPrevEpoch === null) {
-          throw new ApiError(500, `Proposer duties for previous epoch ${epoch} not yet initialized`);
+      switch (epoch) {
+        case stateEpoch:
+          indexes = state.epochCtx.getBeaconProposers();
+          break;
+
+        case stateEpoch + 1:
+          // Requesting duties for next epoch is allowed since they can be predicted with high probabilities.
+          // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
+          indexes = state.epochCtx.getBeaconProposersNextEpoch();
+          break;
+
+        case stateEpoch - 1: {
+          const indexesPrevEpoch = state.epochCtx.getBeaconProposersPrevEpoch();
+          if (indexesPrevEpoch === null) {
+            throw new ApiError(500, `Proposer duties for previous epoch ${epoch} not yet initialized`);
+          }
+          indexes = indexesPrevEpoch;
+          break;
         }
-        indexes = indexesPrevEpoch;
-      } else {
-        // Should never happen, epoch is checked to be in bounds above
-        throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
+
+        default:
+          // Should never happen, epoch is checked to be in bounds above
+          throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
       }
 
       // NOTE: this is the fastest way of getting compressed pubkeys.
