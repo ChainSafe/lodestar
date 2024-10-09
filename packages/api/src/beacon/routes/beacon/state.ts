@@ -2,7 +2,7 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType} from "@lodestar/types";
+import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType, ValidatorStatus} from "@lodestar/types";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
 import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
@@ -24,17 +24,7 @@ export type StateArgs = {
 
 export type ValidatorId = string | number;
 
-export type ValidatorStatus =
-  | "active"
-  | "pending_initialized"
-  | "pending_queued"
-  | "active_ongoing"
-  | "active_exiting"
-  | "active_slashed"
-  | "exited_unslashed"
-  | "exited_slashed"
-  | "withdrawal_possible"
-  | "withdrawal_done";
+export type {ValidatorStatus};
 
 export const RandaoResponseType = new ContainerType({
   randao: ssz.Root,
