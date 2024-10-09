@@ -10,12 +10,11 @@
   },
   "formatter": {
     "enabled": true,
-    "formatWithErrors": false,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineEnding": "lf",
+    "formatWithErrors": true,
+    "useEditorconfig": true,
     "lineWidth": 120,
     "attributePosition": "auto",
+    "bracketSpacing": false,
     "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
   },
   "organizeImports": {
