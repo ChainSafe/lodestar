@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {StringType, ssz, stringType} from "@lodestar/types";

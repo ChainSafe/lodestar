@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
@@ -269,7 +268,7 @@ export type Endpoints = {
   >;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const stateIdOnlyReq: RequestCodec<Endpoint<"GET", {stateId: StateId}, {params: {state_id: string}}, any, any>> = {
   writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
   parseReq: ({params}) => ({stateId: params.state_id}),

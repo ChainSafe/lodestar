@@ -69,7 +69,6 @@ export async function startExternalSigner({
   stream
     .on("data", (line) => process.stdout.write(line))
     .on("err", (line) => process.stderr.write(line))
-    // eslint-disable-next-line no-console
     .on("end", () => console.log("Stream closed"));
 
   return {

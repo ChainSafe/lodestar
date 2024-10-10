@@ -105,7 +105,6 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson): Map<OperationId, Rou
       try {
         preprocessSchema(responseOkSchema);
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.log(responseOkSchema);
         throw e;
       }

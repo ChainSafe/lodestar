@@ -7,6 +7,5 @@ if (process.env.LODESTAR_PRESET === undefined) {
 // Override FIELD_ELEMENTS_PER_BLOB if its a dev run, mostly to distinguish from
 // spec runs
 if (process.env.LODESTAR_PRESET === "minimal" && process.env.DEV_RUN) {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
 }

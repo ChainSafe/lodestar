@@ -4,7 +4,6 @@ export type Err<T> = {[symErr]: true; error: T};
 
 export type Result<T, E> = T | Err<E>;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export function Err<T>(error: T): Err<T> {
   return {[symErr]: true, error};
 }

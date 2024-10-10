@@ -173,7 +173,7 @@ function isValidDepositSignature(
     const signature = Signature.fromBytes(depositSignature, true);
 
     return verify(signingRoot, publicKey, signature);
-  } catch (e) {
+  } catch (_e) {
     return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }
 }

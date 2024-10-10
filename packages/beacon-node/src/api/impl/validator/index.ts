@@ -1147,7 +1147,6 @@ export function getValidatorApi(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
-            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
             const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node

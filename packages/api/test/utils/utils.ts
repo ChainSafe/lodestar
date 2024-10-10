@@ -14,7 +14,6 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
   addSszContentTypeParser(server);
 
   server.addHook("onError", (_request, _reply, error, done) => {
-    // eslint-disable-next-line no-console
     console.log(`onError: ${error.toString()}`);
     done();
   });

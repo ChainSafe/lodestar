@@ -1,5 +1,4 @@
 import {describe, it, expect, beforeEach} from "vitest";
-// eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../state-transition/test/perf/util.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 

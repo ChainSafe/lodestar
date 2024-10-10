@@ -6,7 +6,6 @@ import {phase0, Slot, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
-  // eslint-disable-next-line import/no-relative-packages
 } from "../../../../state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";

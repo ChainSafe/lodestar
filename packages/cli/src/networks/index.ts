@@ -109,7 +109,6 @@ export async function getNetworkBootnodes(network: NetworkName): Promise<string[
       const bootEnrs = await fetchBootnodes(network);
       bootnodes.push(...bootEnrs);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
     }
   }
@@ -127,7 +126,7 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
   for (const enrStr of bootnodes) {
     try {
       ENR.decodeTxt(enrStr);
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Invalid ENR found in ${bootnodesFilePath}:\n    ${enrStr}`);
     }
   }

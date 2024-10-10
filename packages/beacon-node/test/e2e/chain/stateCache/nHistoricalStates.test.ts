@@ -24,7 +24,6 @@ describe("regen/reload states with n-historical states configuration", function 
 
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 

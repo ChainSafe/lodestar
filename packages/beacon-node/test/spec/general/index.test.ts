@@ -5,8 +5,6 @@ import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {blsTestRunner} from "./bls.js";
 import {sszGeneric} from "./ssz_generic.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
 // to an issue marking it as pending to re-enable and an aproximate timeline of when it will
 // be fixed.

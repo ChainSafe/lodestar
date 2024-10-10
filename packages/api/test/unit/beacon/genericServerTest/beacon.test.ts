@@ -8,7 +8,6 @@ import {testData} from "../testData/beacon.js";
 
 describe("beacon / beacon", () => {
   runGenericServerTest<Endpoints>(
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2}),
     getClient,
     getRoutes,

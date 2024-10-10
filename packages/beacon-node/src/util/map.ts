@@ -43,7 +43,6 @@ export class OrderedMap<K, V> {
   }
 
   values(): IterableIterator<V> {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const _self = this;
     return (function* generateValues() {
       for (const key of _self.keys()) {

@@ -1,4 +1,4 @@
-import {EventEmitter} from "events";
+import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";

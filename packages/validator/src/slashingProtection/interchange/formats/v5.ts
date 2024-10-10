@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {InterchangeLodestar} from "../types.js";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";

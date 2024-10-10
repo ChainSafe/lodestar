@@ -86,7 +86,7 @@ export function isPidRunning(pid: number): boolean {
     // Signal 0 is a special signal that checks if the process exists
     process.kill(pid, 0);
     return true;
-  } catch {
+  } catch (_e) {
     return false;
   }
 }
@@ -304,7 +304,7 @@ export async function spawnChildProcess(
           });
           proc.removeAllListeners("exit");
           resolve(proc);
-        } catch (error) {
+        } catch (_e) {
           reject(
             new Error(
               `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(healthTimeoutMs ?? 0)}`

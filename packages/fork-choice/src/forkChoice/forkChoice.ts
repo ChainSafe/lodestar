@@ -198,6 +198,7 @@ export class ForkChoice implements IForkChoice {
         return {head, isHeadTimely, notReorgedReason};
       }
       case UpdateHeadOpt.GetCanonicialHead:
+        return {head: canonicialHeadBlock};
       default:
         return {head: canonicialHeadBlock};
     }
@@ -413,7 +414,8 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    return (this.head = headNode);
+    this.head = headNode;
+    return this.head;
   }
 
   /**

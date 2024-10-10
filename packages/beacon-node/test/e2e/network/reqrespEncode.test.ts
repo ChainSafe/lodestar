@@ -35,7 +35,6 @@ describe("reqresp encoder", () => {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function getLibp2p() {
     const listen = `/ip4/127.0.0.1/tcp/${port++}`;
     const libp2p = await createLibp2p({
@@ -50,7 +49,6 @@ describe("reqresp encoder", () => {
     return {libp2p, multiaddr: multiaddr(`${listen}/p2p/${libp2p.peerId.toString()}`)};
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function getReqResp(getHandler?: GetReqRespHandlerFn) {
     const {libp2p, multiaddr} = await getLibp2p();
 
@@ -76,7 +74,6 @@ describe("reqresp encoder", () => {
     return {libp2p, multiaddr, reqresp: new ReqRespBeaconNode(modules)};
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function dialProtocol({
     dialer,
     toMultiaddr,

@@ -12,7 +12,7 @@ import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {ExecutionPayloadStatus, ExecutionEngineState} from "./interface.js";
 
 export type JsonRpcBackend = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   readonly handlers: Record<string, (...args: any[]) => any>;
 };
 
@@ -27,8 +27,7 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
       if (handler === undefined) {
         throw Error(`Unknown method ${payload.method}`);
       }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       return handler(...(payload.params as any[])) as R;
     }, payload);
   }
