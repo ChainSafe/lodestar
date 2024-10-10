@@ -173,7 +173,6 @@ export type DepositRequestsRpc = DATA;
 export type WithdrawalRequestsRpc = DATA;
 export type ConsolidationRequestsRpc = DATA;
 
-
 export type VersionedHashesRpc = DATA[];
 
 export type PayloadAttributesRpc = {
@@ -411,7 +410,9 @@ function deserializeWithdrawalRequest(serialized: WithdrawalRequestsRpc): electr
   return ssz.electra.WithdrawalRequests.deserialize(dataToBytes(serialized, null));
 }
 
-function serializeConsolidationRequests(consolidationRequests: electra.ConsolidationRequests): ConsolidationRequestsRpc {
+function serializeConsolidationRequests(
+  consolidationRequests: electra.ConsolidationRequests
+): ConsolidationRequestsRpc {
   return bytesToData(ssz.electra.ConsolidationRequests.serialize(consolidationRequests));
 }
 
@@ -421,12 +422,16 @@ function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc):
 
 /**
  * This is identical to get_execution_requests_list in
- * https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.8/specs/electra/beacon-chain.md#new-get_execution_requests_list 
+ * https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.8/specs/electra/beacon-chain.md#new-get_execution_requests_list
  */
 export function serializeExecutionRequests(executionRequests: ExecutionRequests): ExecutionRequestsRpc {
   const {deposits, withdrawals, consolidations} = executionRequests;
 
-  return [serializeDepositRequests(deposits), serializeWithdrawalRequests(withdrawals), serializeConsolidationRequests(consolidations)];
+  return [
+    serializeDepositRequests(deposits),
+    serializeWithdrawalRequests(withdrawals),
+    serializeConsolidationRequests(consolidations),
+  ];
 }
 
 export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): ExecutionRequests {
