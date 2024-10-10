@@ -8,7 +8,6 @@ describe("UpgradeLightClientHeader", function () {
   let lcHeaderByFork: Record<ForkName, LightClientHeader>;
   let testSlots: Record<ForkName, number>;
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 1,

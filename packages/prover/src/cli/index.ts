@@ -14,7 +14,7 @@ void prover
       // Show command help message when no command is provided
       if (msg.includes("Not enough non-option arguments")) {
         yarg.showHelp();
-        // eslint-disable-next-line no-console
+        // biome-ignore lint/suspicious/noConsoleLog: This code will run only in browser so console will be available.
         console.log("\n");
       }
     }
@@ -22,7 +22,6 @@ void prover
     const errorMessage =
       err !== undefined ? (err instanceof YargsError ? err.message : err.stack) : msg || "Unknown error";
 
-    // eslint-disable-next-line no-console
     console.error(` ✖ ${errorMessage}\n`);
     process.exit(1);
   })

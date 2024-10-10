@@ -20,7 +20,6 @@ describe("sync / finalized sync", function () {
 
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 
@@ -114,7 +113,7 @@ describe("sync / finalized sync", function () {
     try {
       await waitForSynced;
       loggerNodeB.info("Node B synced to Node A, received head block", {slot: head.message.slot});
-    } catch (e) {
+    } catch (_e) {
       assert.fail("Failed to sync to other node in time");
     }
   });

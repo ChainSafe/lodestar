@@ -1,5 +1,4 @@
 import {itBench} from "@dapplion/benchmark";
-// eslint-disable-next-line import/no-relative-packages
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 import {linspace} from "../../../../../src/util/numpy.js";

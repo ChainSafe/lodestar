@@ -5,11 +5,8 @@ import {Eth1Block} from "../../../../src/eth1/interface.js";
 describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
   it("should return optimized block diff to find genesis time", () => {
     const params = {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       MIN_GENESIS_TIME: 1578009600,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_DELAY: 172800,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       SECONDS_PER_ETH1_BLOCK: 14,
     };
     const initialTimeDiff = params.GENESIS_DELAY * 2;

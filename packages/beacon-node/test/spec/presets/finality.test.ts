@@ -15,8 +15,6 @@ import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
@@ -49,7 +47,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
       shouldError: (testCase) => !testCase.post,
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

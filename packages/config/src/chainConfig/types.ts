@@ -1,7 +1,5 @@
 import {PresetName} from "@lodestar/params";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * Run-time chain configuration
  */

@@ -1,4 +1,4 @@
-import {EventEmitter} from "events";
+import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
 import {phase0, RootHex} from "@lodestar/types";
 import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";

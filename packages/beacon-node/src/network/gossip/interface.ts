@@ -203,7 +203,7 @@ export type BatchGossipHandler<K extends GossipType> = (
   gossipHandlerParams: GossipHandlerParamGeneric<K>[]
 ) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
   ? T
   : never;

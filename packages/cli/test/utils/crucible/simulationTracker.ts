@@ -68,7 +68,7 @@ async function pathExists(filePath: string): Promise<boolean> {
   try {
     await fs.access(filePath);
     return true;
-  } catch {
+  } catch (_e) {
     return false;
   }
 }

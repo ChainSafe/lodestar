@@ -78,7 +78,7 @@ type IndicesLengths = {
  * Create a state that causes `changeRatio` fraction (0,1) of validators to change their effective balance.
  */
 function getRegistryUpdatesTestData(
-  vc: number,
+  _vc: number,
   lengths: IndicesLengths
 ): {
   state: CachedBeaconStateAllForks;

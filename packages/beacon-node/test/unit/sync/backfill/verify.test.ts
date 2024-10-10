@@ -12,7 +12,6 @@ import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/b
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("backfill sync - verify block sequence", function () {
@@ -43,7 +42,9 @@ describe("backfill sync - verify block sequence", function () {
       const {error} = verifyBlockSequence(
         beaconConfig,
         // remove middle block
-        blocks.filter((b) => b.data.message.slot !== 2).slice(0, blocks.length - 2),
+        blocks
+          .filter((b) => b.data.message.slot !== 2)
+          .slice(0, blocks.length - 2),
         blocks[blocks.length - 1].data.message.parentRoot
       );
       if (error != null) throw new BackfillSyncError({code: error});

@@ -60,7 +60,7 @@ describe("Result Err", () => {
       try {
         await mapOkResultsAsync([], async () => [0]);
         throw Error("did not throw");
-      } catch (e) {
+      } catch (_e) {
         // Ok
       }
     });

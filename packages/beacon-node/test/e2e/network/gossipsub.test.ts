@@ -35,7 +35,6 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
 
   // Schedule all forks at ALTAIR_FORK_EPOCH to avoid generating the pubkeys cache
-  /* eslint-disable @typescript-eslint/naming-convention */
   const config = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 1,
@@ -44,7 +43,6 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
   const START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules(gossipHandlersPartial?: Partial<GossipHandlers>) {
     const [netA, closeA] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-A`, config, {
       opts: {useWorker},
@@ -65,7 +63,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("Publish and receive a voluntaryExit", async function () {
     let onVoluntaryExit: (ve: Uint8Array) => void;
-    const onVoluntaryExitPromise = new Promise<Uint8Array>((resolve) => (onVoluntaryExit = resolve));
+    const onVoluntaryExitPromise = new Promise<Uint8Array>((resolve) => {
+      onVoluntaryExit = resolve;
+    });
 
     const {netA, netB} = await mockModules({
       [GossipType.voluntary_exit]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
@@ -100,7 +100,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("Publish and receive a blsToExecutionChange", async function () {
     let onBlsToExecutionChange: (blsToExec: Uint8Array) => void;
-    const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => (onBlsToExecutionChange = resolve));
+    const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => {
+      onBlsToExecutionChange = resolve;
+    });
 
     const {netA, netB} = await mockModules({
       [GossipType.bls_to_execution_change]: async ({
@@ -136,7 +138,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("Publish and receive an attesterSlashing", async function () {
     let onAttesterSlashingChange: (payload: Uint8Array) => void;
-    const onAttesterSlashingChangePromise = new Promise<Uint8Array>((resolve) => (onAttesterSlashingChange = resolve));
+    const onAttesterSlashingChangePromise = new Promise<Uint8Array>((resolve) => {
+      onAttesterSlashingChange = resolve;
+    });
 
     const {netA, netB} = await mockModules({
       [GossipType.attester_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
@@ -168,7 +172,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("Publish and receive a proposerSlashing", async function () {
     let onProposerSlashingChange: (payload: Uint8Array) => void;
-    const onProposerSlashingChangePromise = new Promise<Uint8Array>((resolve) => (onProposerSlashingChange = resolve));
+    const onProposerSlashingChangePromise = new Promise<Uint8Array>((resolve) => {
+      onProposerSlashingChange = resolve;
+    });
 
     const {netA, netB} = await mockModules({
       [GossipType.proposer_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
@@ -200,9 +206,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("Publish and receive a LightClientOptimisticUpdate", async function () {
     let onLightClientOptimisticUpdate: (ou: Uint8Array) => void;
-    const onLightClientOptimisticUpdatePromise = new Promise<Uint8Array>(
-      (resolve) => (onLightClientOptimisticUpdate = resolve)
-    );
+    const onLightClientOptimisticUpdatePromise = new Promise<Uint8Array>((resolve) => {
+      onLightClientOptimisticUpdate = resolve;
+    });
 
     const {netA, netB} = await mockModules({
       [GossipType.light_client_optimistic_update]: async ({
@@ -239,9 +245,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("Publish and receive a LightClientFinalityUpdate", async function () {
     let onLightClientFinalityUpdate: (fu: Uint8Array) => void;
-    const onLightClientFinalityUpdatePromise = new Promise<Uint8Array>(
-      (resolve) => (onLightClientFinalityUpdate = resolve)
-    );
+    const onLightClientFinalityUpdatePromise = new Promise<Uint8Array>((resolve) => {
+      onLightClientFinalityUpdate = resolve;
+    });
 
     const {netA, netB} = await mockModules({
       [GossipType.light_client_finality_update]: async ({

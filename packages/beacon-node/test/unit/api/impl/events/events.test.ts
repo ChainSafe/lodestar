@@ -11,7 +11,6 @@ vi.mock("../../../../../src/chain/index.js", async (importActual) => {
 
   return {
     ...mod,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(() => {
       return {
         emitter: new ChainEventEmitter(),

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ChildProcess} from "node:child_process";
 import {Web3} from "web3";
 import {SecretKey} from "@chainsafe/blst";

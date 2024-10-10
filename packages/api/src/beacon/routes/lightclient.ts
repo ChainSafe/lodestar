@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {
   LightClientBootstrap,
