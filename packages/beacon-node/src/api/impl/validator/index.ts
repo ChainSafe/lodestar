@@ -12,6 +12,7 @@ import {
   getCurrentSlot,
   beaconBlockToBlinded,
   createCachedBeaconState,
+  loadState,
 } from "@lodestar/state-transition";
 import {
   GENESIS_SLOT,
@@ -939,7 +940,7 @@ export function getValidatorApi(
 
           const stateViewDU =
             res.state instanceof Uint8Array
-              ? config.getForkTypes(startSlot).BeaconState.deserializeToViewDU(res.state)
+              ? loadState(config, chain.getHeadState(), res.state).state
               : res.state.clone();
 
           state = createCachedBeaconState(
