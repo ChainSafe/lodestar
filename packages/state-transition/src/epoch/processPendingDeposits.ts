@@ -109,7 +109,7 @@ function applyPendingDeposit(
     }
   } else {
     // Increase balance
-    increaseBalance(state, validatorIndex, deposit.amount);
+    increaseBalance(state, validatorIndex, amount);
     if (cachedBalances) {
       cachedBalances[validatorIndex] += amount;
     }
