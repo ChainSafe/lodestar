@@ -1363,7 +1363,6 @@ export function getValidatorApi(
         const validator = headState.validators.getReadonly(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);
         return (
-          status === "active" ||
           status === "active_exiting" ||
           status === "active_ongoing" ||
           status === "active_slashed" ||
