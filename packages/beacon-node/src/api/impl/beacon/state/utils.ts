@@ -83,17 +83,26 @@ export async function getStateResponseWithRegen(
   return res;
 }
 
-function mapToGeneralStatus(subStatus: string): string {
-  if (["active_ongoing", "active_exiting", "active_slashed"].includes(subStatus)) {
-    return "active";
-  } else if (["pending_initialized", "pending_queued"].includes(subStatus)) {
-    return "pending";
-  } else if (["exited_slashed", "exited_unslashed"].includes(subStatus)) {
-    return "exited";
-  } else if (["withdrawal_possible", "withdrawal_done"].includes(subStatus)) {
-    return "withdrawal";
+export type GeneralValidatorStatus = routes.beacon.ValidatorStatus | "active" | "pending" | "exited" | "withdrawal";
+
+function mapToGeneralStatus(subStatus: routes.beacon.ValidatorStatus): GeneralValidatorStatus {
+  switch (subStatus) {
+    case "active_ongoing":
+    case "active_exiting":
+    case "active_slashed":
+      return "active";
+    case "pending_initialized":
+    case "pending_queued":
+      return "pending";
+    case "exited_slashed":
+    case "exited_unslashed":
+      return "exited";
+    case "withdrawal_possible":
+    case "withdrawal_done":
+      return "withdrawal";
+    default:
+      throw new Error(`Unknown substatus: ${subStatus}`);
   }
-  throw new Error(`Unknown substatus: ${subStatus}`);
 }
 
 /**
