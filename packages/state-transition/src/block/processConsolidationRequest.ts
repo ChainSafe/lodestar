@@ -43,9 +43,8 @@ export function processConsolidationRequest(
 
   const sourceValidator = state.validators.get(sourceIndex);
   const targetValidator = state.validators.getReadonly(targetIndex);
+  const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   const currentEpoch = state.epochCtx.epoch;
-  const sourceWithdrawalAddressStr = toHex(sourceValidator.withdrawalCredentials.subarray(12));
-  const sourceAddressStr = toHex(sourceAddress);
 
   // Verify withdrawal credentials
   if (
@@ -55,7 +54,7 @@ export function processConsolidationRequest(
     return;
   }
 
-  if (sourceWithdrawalAddressStr !== sourceAddressStr) {
+  if (Buffer.compare(sourceWithdrawalAddress, sourceAddress) !== 0) {
     return;
   }
 
