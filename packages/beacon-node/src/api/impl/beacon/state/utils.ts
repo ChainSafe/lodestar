@@ -83,7 +83,7 @@ export async function getStateResponseWithRegen(
   return res;
 }
 
-export type GeneralValidatorStatus = routes.beacon.ValidatorStatus | "active" | "pending" | "exited" | "withdrawal";
+export type GeneralValidatorStatus = "active" | "pending" | "exited" | "withdrawal";
 
 function mapToGeneralStatus(subStatus: routes.beacon.ValidatorStatus): GeneralValidatorStatus {
   switch (subStatus) {
