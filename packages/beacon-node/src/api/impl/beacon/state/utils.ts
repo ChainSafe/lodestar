@@ -163,10 +163,9 @@ export function filterStateValidatorsByStatus(
 
   for (const validator of validatorsArr) {
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
-    const generalStatus = mapToGeneralStatus(validatorStatus);
 
     const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
-    if (resp.valid && (statusSet.has(validatorStatus) || statusSet.has(generalStatus))) {
+    if (resp.valid && statusSet.has(validatorStatus)) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
       );
