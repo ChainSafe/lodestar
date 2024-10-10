@@ -58,6 +58,7 @@ import {ShufflingCache} from "./shufflingCache.js";
 import {BlockRewards} from "./rewards/blockRewards.js";
 import {AttestationsRewards} from "./rewards/attestationsRewards.js";
 import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
+import {IHistoricalStateRegen} from "./historicalState/types.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -97,6 +98,7 @@ export interface IBeaconChain {
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: IStateRegenerator;
+  readonly historicalStateRegen?: IHistoricalStateRegen;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly pubkey2index: PubkeyIndexMap;

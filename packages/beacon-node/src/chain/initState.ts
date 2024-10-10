@@ -21,7 +21,7 @@ export async function persistGenesisResult(
   genesisBlock: SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
-    db.stateArchive.add(genesisResult.state),
+    db.stateSnapshotArchive.add(genesisResult.state),
     db.blockArchive.add(genesisBlock),
     db.depositDataRoot.putList(genesisResult.depositTree.getAllReadonlyValues()),
     db.eth1Data.put(genesisResult.block.timestamp, {
@@ -43,10 +43,10 @@ export async function persistAnchorState(
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),
-      db.stateArchive.putBinary(anchorState.slot, anchorStateBytes),
+      db.stateSnapshotArchive.putBinary(anchorState.slot, anchorStateBytes),
     ]);
   } else {
-    await db.stateArchive.putBinary(anchorState.slot, anchorStateBytes);
+    await db.stateSnapshotArchive.add(anchorState);
   }
 }
 
@@ -136,7 +136,7 @@ export async function initStateFromDb(
   db: IBeaconDb,
   logger: Logger
 ): Promise<BeaconStateAllForks> {
-  const state = await db.stateArchive.lastValue();
+  const state = await db.stateSnapshotArchive.lastValue();
   if (!state) {
     throw new Error("No state exists in database");
   }

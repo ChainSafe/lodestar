@@ -46,7 +46,6 @@ export async function getNetworkForTest(
   const chain = new BeaconChain(
     {
       safeSlotsToImportOptimistically: 0,
-      archiveStateEpochFrequency: 0,
       suggestedFeeRecipient: "",
       blsVerifyAllMainThread: true,
       disableOnBlockError: true,

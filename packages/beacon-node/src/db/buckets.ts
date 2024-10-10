@@ -61,6 +61,9 @@ export enum Bucket {
   // 54 was for bestPartialLightClientUpdate, allocate a fresh one
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
+
+  // Store the state binary diff for finalized states
+  allForks_stateDiffArchive = 60, // Root -> phase0.BeaconState
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {

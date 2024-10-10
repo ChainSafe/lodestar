@@ -9,7 +9,7 @@ import {
   DepositDataRootRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
-  StateArchiveRepository,
+  StateSnapshotArchiveRepository,
   VoluntaryExitRepository,
   BestLightClientUpdateRepository,
   CheckpointHeaderRepository,
@@ -22,6 +22,7 @@ import {
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {StateDiffArchiveRepository} from "./repositories/stateDiffArchive.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;
@@ -35,7 +36,8 @@ export class BeaconDb implements IBeaconDb {
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
 
-  stateArchive: StateArchiveRepository;
+  stateSnapshotArchive: StateSnapshotArchiveRepository;
+  stateDiffArchive: StateDiffArchiveRepository;
   checkpointState: CheckpointStateRepository;
 
   voluntaryExit: VoluntaryExitRepository;
@@ -68,7 +70,8 @@ export class BeaconDb implements IBeaconDb {
     this.blobSidecars = new BlobSidecarsRepository(config, db);
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
 
-    this.stateArchive = new StateArchiveRepository(config, db);
+    this.stateSnapshotArchive = new StateSnapshotArchiveRepository(config, db);
+    this.stateDiffArchive = new StateDiffArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);

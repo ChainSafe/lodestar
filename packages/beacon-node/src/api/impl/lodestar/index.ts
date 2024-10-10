@@ -183,7 +183,7 @@ export function getLodestarApi({
     },
 
     async dumpDbStateIndex() {
-      return {data: await db.stateArchive.dumpRootIndexEntries()};
+      return {data: await db.stateSnapshotArchive.dumpRootIndexEntries()};
     },
   };
 }

@@ -89,7 +89,6 @@ import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produ
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {HistoricalStateRegen} from "./historicalState/index.js";
 import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
@@ -101,6 +100,8 @@ import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
+import {DiffLayers} from "./historicalState/diffLayers.js";
+import {IHistoricalStateRegen} from "./historicalState/types.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -130,7 +131,7 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly historicalStateRegen?: HistoricalStateRegen;
+  readonly historicalStateRegen?: IHistoricalStateRegen;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -201,7 +202,7 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
-      historicalStateRegen?: HistoricalStateRegen;
+      historicalStateRegen?: IHistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -345,7 +346,8 @@ export class BeaconChain implements IBeaconChain {
     this.bls = bls;
     this.emitter = emitter;
 
-    this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
+    // TODO: Decouple DiffLayers from archiver
+    this.archiver = new Archiver(db, this, new DiffLayers(), logger, signal, opts);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -532,7 +534,7 @@ export class BeaconChain implements IBeaconChain {
       };
     }
 
-    const data = await this.db.stateArchive.getByRoot(fromHex(stateRoot));
+    const data = await this.db.stateSnapshotArchive.getByRoot(fromHex(stateRoot));
     return data && {state: data, executionOptimistic: false, finalized: true};
   }
 

@@ -141,7 +141,6 @@ describe("options / beaconNodeOptions", () => {
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
-        archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         trustedSetup: "",
         minSameMessageSignatureSetsToBatch: 32,

@@ -5,6 +5,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {DiffLayers} from "../historicalState/diffLayers.js";
 import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 
@@ -44,13 +45,14 @@ export class Archiver {
   constructor(
     private readonly db: IBeaconDb,
     private readonly chain: IBeaconChain,
+    private readonly diffLayers: DiffLayers,
     private readonly logger: Logger,
     signal: AbortSignal,
     opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
-    this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts, chain.bufferPool);
+    this.statesArchiver = new StatesArchiver(chain.historicalStateRegen, chain.regen, db, logger, opts);
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
@@ -107,7 +109,7 @@ export class Archiver {
       this.prevFinalized = finalized;
 
       // should be after ArchiveBlocksTask to handle restart cleanly
-      await this.statesArchiver.maybeArchiveState(finalized, this.metrics);
+      await this.statesArchiver.maybeArchiveState(finalized);
 
       this.chain.regen.pruneOnFinalized(finalizedEpoch);
 

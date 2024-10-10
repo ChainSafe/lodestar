@@ -19,6 +19,7 @@ export enum RegenCaller {
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
   onForkChoiceFinalized = "onForkChoiceFinalized",
   restApi = "restApi",
+  historicalState = "historicalState",
 }
 
 export enum RegenFnName {

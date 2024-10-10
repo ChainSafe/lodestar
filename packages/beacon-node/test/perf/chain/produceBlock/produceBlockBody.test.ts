@@ -35,7 +35,6 @@ describe("produceBlockBody", () => {
         disableArchiveOnCheckpoint: true,
         suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
         skipCreateStateCacheIfAvailable: true,
-        archiveStateEpochFrequency: 1024,
         minSameMessageSignatureSetsToBatch: 32,
       },
       {

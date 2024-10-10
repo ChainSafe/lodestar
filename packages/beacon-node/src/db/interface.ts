@@ -7,7 +7,7 @@ import {
   DepositDataRootRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
-  StateArchiveRepository,
+  StateSnapshotArchiveRepository,
   VoluntaryExitRepository,
   BestLightClientUpdateRepository,
   CheckpointHeaderRepository,
@@ -20,6 +20,7 @@ import {
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {StateDiffArchiveRepository} from "./repositories/stateDiffArchive.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -36,7 +37,10 @@ export interface IBeaconDb {
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
 
   // finalized states
-  stateArchive: StateArchiveRepository;
+  stateSnapshotArchive: StateSnapshotArchiveRepository;
+  // finalized state binary diff
+  stateDiffArchive: StateDiffArchiveRepository;
+
   // checkpoint states
   checkpointState: CheckpointStateRepository;
 

@@ -22,7 +22,6 @@ export type ChainArgs = {
   "chain.maxSkipSlots"?: number;
   "chain.trustedSetup"?: string;
   "safe-slots-to-import-optimistically": number;
-  "chain.archiveStateEpochFrequency": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -54,7 +53,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxSkipSlots: args["chain.maxSkipSlots"],
     trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
-    archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     emitPayloadAttributes: args["emitPayloadAttributes"],
     broadcastValidationStrictness: args["broadcastValidationStrictness"],
     minSameMessageSignatureSetsToBatch:
@@ -199,14 +197,6 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
     default: defaultOptions.chain.safeSlotsToImportOptimistically,
-    group: "chain",
-  },
-
-  "chain.archiveStateEpochFrequency": {
-    hidden: true,
-    description: "Minimum number of epochs between archived states",
-    default: defaultOptions.chain.archiveStateEpochFrequency,
-    type: "number",
     group: "chain",
   },
 
