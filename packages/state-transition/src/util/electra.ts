@@ -40,7 +40,7 @@ export function queueExcessActiveBalance(state: CachedBeaconStateElectra, index:
       withdrawalCredentials: validator.withdrawalCredentials,
       amount: excessBalance,
       // Use bls.G2_POINT_AT_INFINITY as a signature field placeholder
-      signature: new Uint8Array(G2_POINT_AT_INFINITY),
+      signature: G2_POINT_AT_INFINITY,
       // Use GENESIS_SLOT to distinguish from a pending deposit request
       slot: GENESIS_SLOT,
     });
@@ -61,7 +61,7 @@ export function queueEntireBalanceAndResetValidator(state: CachedBeaconStateElec
     pubkey: validator.pubkey,
     withdrawalCredentials: validator.withdrawalCredentials,
     amount: balance,
-    signature: new Uint8Array(G2_POINT_AT_INFINITY),
+    signature: G2_POINT_AT_INFINITY,
     slot: GENESIS_SLOT,
   });
   state.pendingDeposits.push(pendingDeposit);

@@ -59,7 +59,7 @@ export function applyDeposit(
   const {pubkey, withdrawalCredentials, amount, signature} = deposit;
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
-  const isNewValidator = cachedIndex === null || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length;
+  const isNewValidator = cachedIndex === null || !Number.isSafeInteger(cachedIndex);
 
   if (fork < ForkSeq.electra) {
     if (isNewValidator) {
