@@ -91,7 +91,7 @@
     "test:spec:minimal": "LODESTAR_PRESET=minimal vitest --run --config vitest.spec.config.ts --dir test/spec/presets/",
     "test:spec:mainnet": "LODESTAR_PRESET=mainnet vitest --run --config vitest.spec.config.ts --dir test/spec/presets/",
     "test:spec": "yarn test:spec:bls && yarn test:spec:general && yarn test:spec:minimal && yarn test:spec:mainnet",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json"
   },
   "dependencies": {
     "@chainsafe/as-sha256": "^0.5.0",

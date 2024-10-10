@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {},
+  // `typescript-docs-verifier` uses `ts-node` to compile README snippets
+  // and hence it is required to disable `transpileOnly` mode as it disables
+  // all type checks. Set at root to be directly forwarded to `ts-node` until
+  // https://github.com/bbc/typescript-docs-verifier/issues/31 is resolved
+  "transpileOnly": false
+}

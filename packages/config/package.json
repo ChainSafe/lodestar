@@ -51,7 +51,7 @@
     "lint:fix": "yarn run lint --fix",
     "test": "yarn test:unit",
     "test:unit": "yarn vitest --run --dir test/unit/",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json"
   },
   "repository": {
     "type": "git",

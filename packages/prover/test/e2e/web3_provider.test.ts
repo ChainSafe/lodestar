@@ -54,7 +54,7 @@ describe("web3_provider", function () {
           mutateProvider: false,
         });
 
-        const web3 = new Web3(nonVerifiedProvider);
+        const web3 = new Web3(verifiedProvider); //TODO: type is not compatible
         const accounts = await web3.eth.getAccounts();
 
         await expect(verifiedProvider.request("eth_getBalance", [accounts[0], "latest"])).resolves.toBeDefined();

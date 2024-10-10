@@ -67,7 +67,7 @@
     "lint:fix": "yarn run lint --fix",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json"
   },
   "dependencies": {
     "@chainsafe/persistent-merkle-tree": "^0.8.0",

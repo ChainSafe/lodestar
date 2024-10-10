@@ -49,7 +49,7 @@
     "lint:fix": "yarn run lint --fix",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "typescript-docs-verifier --project tsconfig.doc.json"
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.1.1",
