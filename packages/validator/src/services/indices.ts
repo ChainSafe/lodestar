@@ -20,7 +20,6 @@ type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn";
 
 const statusToSimpleStatusMapping = (status: routes.beacon.ValidatorStatus): SimpleValidatorStatus => {
   switch (status) {
-    case "active":
     case "active_exiting":
     case "active_slashed":
     case "active_ongoing":
