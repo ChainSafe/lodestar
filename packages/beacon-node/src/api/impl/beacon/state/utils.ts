@@ -1,8 +1,8 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BLSPubkey, Epoch, getValidatorStatus, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {IBeaconChain} from "../../../../chain/index.js";
@@ -105,38 +105,6 @@ function mapToGeneralStatus(subStatus: routes.beacon.ValidatorStatus): GeneralVa
   }
 }
 
-/**
- * Get the status of the validator
- * based on conditions outlined in https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
- */
-export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Epoch): routes.beacon.ValidatorStatus {
-  // pending
-  if (validator.activationEpoch > currentEpoch) {
-    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
-      return "pending_initialized";
-    } else if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
-      return "pending_queued";
-    }
-  }
-  // active
-  if (validator.activationEpoch <= currentEpoch && currentEpoch < validator.exitEpoch) {
-    if (validator.exitEpoch === FAR_FUTURE_EPOCH) {
-      return "active_ongoing";
-    } else if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
-      return validator.slashed ? "active_slashed" : "active_exiting";
-    }
-  }
-  // exited
-  if (validator.exitEpoch <= currentEpoch && currentEpoch < validator.withdrawableEpoch) {
-    return validator.slashed ? "exited_slashed" : "exited_unslashed";
-  }
-  // withdrawal
-  if (validator.withdrawableEpoch <= currentEpoch) {
-    return validator.effectiveBalance !== 0 ? "withdrawal_possible" : "withdrawal_done";
-  }
-  throw new Error("ValidatorStatus unknown");
-}
-
 export function toValidatorResponse(
   index: ValidatorIndex,
   validator: phase0.Validator,
@@ -163,9 +131,10 @@ export function filterStateValidatorsByStatus(
 
   for (const validator of validatorsArr) {
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
+    const generalStatus = mapToGeneralStatus(validatorStatus);
 
     const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
-    if (resp.valid && statusSet.has(validatorStatus)) {
+    if (resp.valid && (statusSet.has(validatorStatus) || statusSet.has(generalStatus))) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
       );
