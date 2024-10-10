@@ -3,7 +3,6 @@ import {BeaconPreset} from "../types.js";
 // Mainnet preset
 // https://github.com/ethereum/consensus-specs/tree/dev/presets/mainnet
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export const mainnetPreset: BeaconPreset = {
   // Misc
   // ---------------------------------------------------------------

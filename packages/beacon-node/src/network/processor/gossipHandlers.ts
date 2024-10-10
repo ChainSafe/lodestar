@@ -680,7 +680,6 @@ export async function validateGossipFnRetryUnknownRoot<T>(
   blockRoot: Root
 ): Promise<T> {
   let unknownBlockRootRetries = 0;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       return await fn();

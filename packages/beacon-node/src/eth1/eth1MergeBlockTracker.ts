@@ -167,7 +167,6 @@ export class Eth1MergeBlockTracker {
 
     this.status = {code: StatusCode.SEARCHING};
     this.logger.info("Starting search for terminal POW block", {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       TERMINAL_TOTAL_DIFFICULTY: this.config.TERMINAL_TOTAL_DIFFICULTY,
     });
 
@@ -268,7 +267,6 @@ export class Eth1MergeBlockTracker {
       // this class can start eagerly looking for the merge block when not necessary, startPollingMergeBlock() should
       // only be called when there is certainty that a mergeBlock search is necessary.
 
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (block.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
           // TTD not reached yet

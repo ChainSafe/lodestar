@@ -6,7 +6,7 @@ import {
   createAggregateSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "../index.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";

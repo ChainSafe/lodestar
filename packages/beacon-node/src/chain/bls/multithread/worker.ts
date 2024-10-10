@@ -75,7 +75,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
           // Re-verify all sigs
           nonBatchableSets.push(...batchableChunk);
         }
-      } catch (e) {
+      } catch (_e) {
         // TODO: Ignore this error expecting that the same error will happen when re-verifying the set individually
         //       It's not ideal but '@chainsafe/blst' may throw errors on some conditions
         batchRetries++;

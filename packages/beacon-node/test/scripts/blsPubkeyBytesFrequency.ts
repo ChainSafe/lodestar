@@ -58,7 +58,6 @@ function analyzeBytesFrequencies(pubkeys: string[]): void {
       byte0Freq[byte0] = 1 + (byte0Freq[byte0] ?? 0);
     }
 
-    // eslint-disable-next-line no-console
     console.log(
       `Byte[${i}] frequency distribution`,
       JSON.stringify(
@@ -95,7 +94,6 @@ function analyzeBytesCollisions(pubkeys: string[]): void {
       }
     }
 
-    // eslint-disable-next-line no-console
     console.log(`bytes ${i}, collision rate ${collisions.size / 256 ** i}`);
   }
 }
@@ -120,7 +118,6 @@ async function writePubkeys(): Promise<void> {
 }
 
 run().catch((e) => {
-  // eslint-disable-next-line no-console
   console.error(e);
   process.exit(1);
 });

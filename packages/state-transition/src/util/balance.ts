@@ -2,7 +2,7 @@ import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {Gwei, ValidatorIndex} from "@lodestar/types";
 import {bigIntMax} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {BeaconStateAllForks} from "..";
+import {BeaconStateAllForks} from "../index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
 /**

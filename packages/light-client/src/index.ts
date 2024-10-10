@@ -224,7 +224,6 @@ export class Lightclient {
   }
 
   private async runLoop(): Promise<void> {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const currentPeriod = computeSyncPeriodAtSlot(this.currentSlot);
       // Check if we have a sync committee for the current clock period

@@ -22,7 +22,6 @@ import {enrRelevance, ENRRelevance} from "./utils.js";
 
 // Cloned data from instatiation
 const workerData = worker.workerData as Discv5WorkerData;
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
 
 const logger = getNodeLogger(workerData.loggerOpts);

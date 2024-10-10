@@ -20,8 +20,6 @@ import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("SyncCommitteeDutiesService", function () {
   const api = getApiClientStub();
 
@@ -210,7 +208,6 @@ describe("SyncCommitteeDutiesService", function () {
       validatorSyncCommitteeIndices: [7],
     };
     when(api.validator.getSyncCommitteeDuties)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       .calledWith({epoch: expect.any(Number), indices})
       .thenResolve(mockApiResponse({data: [duty1, duty2], meta: {executionOptimistic: false}}));
 

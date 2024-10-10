@@ -106,7 +106,6 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.bellatrix) break;
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.capella:
       (upgradedHeader as LightClientHeader<ForkName.capella>).execution =
         ssz.capella.LightClientHeader.fields.execution.defaultValue();
@@ -116,7 +115,6 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.capella) break;
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.deneb:
       (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.blobGasUsed =
         ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
@@ -126,7 +124,6 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.electra:
       // No changes to LightClientHeader in Electra
 

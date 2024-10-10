@@ -5,8 +5,6 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const abortController = new AbortController();
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export const testData: GenericServerTestCases<Endpoints> = {
   eventstream: {
     args: {topics: [EventType.head, EventType.chainReorg], signal: abortController.signal, onEvent: () => {}},

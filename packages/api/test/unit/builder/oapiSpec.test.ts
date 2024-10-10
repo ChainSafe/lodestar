@@ -10,7 +10,6 @@ import {testData} from "./testData.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const version = "v0.2.0";
@@ -23,7 +22,6 @@ const openApiFile: OpenApiFile = {
 };
 
 const definitions = getDefinitions(
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0})
 );
 

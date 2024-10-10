@@ -42,7 +42,6 @@ export async function matchReqSuccess(url: string, method: Method = "GET"): Prom
  * Wait for a given endpoint to return a given status code
  */
 export async function waitForEndpoint(url: string, statusCode = 200): Promise<void> {
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const status = await getReqStatus(url);
 

@@ -4,7 +4,6 @@ import {GossipType} from "./interface.js";
 
 export type Eth2GossipsubMetrics = ReturnType<typeof createEth2GossipsubMetrics>;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
   return {
     gossipPeer: {

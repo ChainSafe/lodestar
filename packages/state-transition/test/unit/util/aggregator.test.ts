@@ -8,8 +8,6 @@ import {
 } from "@lodestar/params";
 import {isAggregatorFromCommitteeLength, isSyncCommitteeAggregator} from "../../../src/util/aggregator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("isAttestationAggregator", function () {
   const committeeLength = 130;
 

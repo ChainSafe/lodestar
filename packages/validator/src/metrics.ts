@@ -25,7 +25,6 @@ export type LodestarGitData = {
 /**
  * A collection of metrics used by the validator client
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 

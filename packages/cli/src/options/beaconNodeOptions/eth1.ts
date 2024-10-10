@@ -59,7 +59,9 @@ export const options: CliCommandOptions<Eth1Args> = {
     string: true,
     coerce: (urls: string[]): string[] =>
       // Parse ["url1,url2"] to ["url1", "url2"]
-      urls.map((item) => item.split(",")).flat(1),
+      urls
+        .map((item) => item.split(","))
+        .flat(1),
     group: "eth1",
   },
 

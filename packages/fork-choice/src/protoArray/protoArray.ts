@@ -964,7 +964,6 @@ export class ProtoArray {
    * Returns a common ancestor for nodeA or nodeB or null if there's none
    */
   getCommonAncestor(nodeA: ProtoNode, nodeB: ProtoNode): ProtoNode | null {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       // If nodeA is higher than nodeB walk up nodeA tree
       if (nodeA.slot > nodeB.slot) {

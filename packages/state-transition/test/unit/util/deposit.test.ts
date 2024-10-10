@@ -29,7 +29,6 @@ describe("getEth1DepositCount", () => {
     const postElectraState = createCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
-        /* eslint-disable @typescript-eslint/naming-convention */
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
@@ -63,7 +62,6 @@ describe("getEth1DepositCount", () => {
     const postElectraState = createCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
-        /* eslint-disable @typescript-eslint/naming-convention */
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,

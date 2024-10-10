@@ -1,0 +1,376 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.3/schema.json",
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  },
+  "files": {
+    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts"]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "useEditorconfig": true,
+    "lineWidth": 120,
+    "attributePosition": "auto",
+    "bracketSpacing": false,
+    "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
+  },
+  "organizeImports": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noForEach": "off",
+        "noStaticOnlyClass": "off",
+        "noThisInStatic": "off",
+        "noUselessEmptyExport": "off",
+        "noUselessTypeConstraint": "error",
+        "useArrowFunction": "off",
+        "useFlatMap": "off",
+        "useLiteralKeys": "off",
+        "useOptionalChain": "off",
+        "useRegexLiterals": "off",
+        "noBannedTypes": "error",
+        "noUselessThisAlias": "error"
+      },
+      "correctness": {
+        "noInvalidConstructorSuper": "off",
+        "noInvalidUseBeforeDeclaration": "off",
+        "noPrecisionLoss": "error",
+        "noUnusedVariables": "error",
+        "noVoidTypeReturn": "off",
+        "useYield": "off",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "suggestedExtensions": {
+              "ts": {
+                "module": "js",
+                "component": "jsx"
+              }
+            }
+          }
+        },
+        "useArrayLiterals": "error",
+        "noUndeclaredDependencies": "off", // TODO: Need to see why this rule is not detecting monorepo packages
+        "noUndeclaredVariables": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "off",
+        "noDelete": "off"
+      },
+      "style": {
+        "noCommaOperator": "off",
+        "noInferrableTypes": "off",
+        "noNonNullAssertion": "error",
+        "noParameterAssign": "off",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": ["fetch"]
+          }
+        },
+        "noUnusedTemplateLiteral": "off",
+        "noUselessElse": "off",
+        "noVar": "error",
+        "useConst": "error",
+        "useEnumInitializers": "off",
+        "useExponentiationOperator": "off",
+        "useExportType": "off",
+        "useImportType": "off",
+        "useLiteralEnumMembers": "off",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": false,
+            "conventions": [
+              {
+                "selector": {
+                  "kind": "any"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralProperty"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "classMethod"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "functionParameter"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "formats": ["camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeLike"
+                },
+                "formats": ["PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "enum"
+                },
+                "formats": ["PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "enumMember"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeProperty"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "classMember"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralMethod"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeMethod"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "importAlias"
+                },
+                "formats": ["PascalCase", "camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "importNamespace"
+                },
+                "formats": ["PascalCase", "camelCase"]
+              }
+            ]
+          }
+        },
+        "useNumberNamespace": "off",
+        "useSingleVarDeclarator": "off",
+        "useTemplate": "off",
+        "noNamespace": "error",
+        "useAsConstAssertion": "error"
+      },
+      "suspicious": {
+        "noAssignInExpressions": "error",
+        "noAsyncPromiseExecutor": "off",
+        "noConfusingVoidType": "off",
+        "noConsoleLog": "error",
+        "noDoubleEquals": "off",
+        "noDuplicateTestHooks": "off",
+        "noExplicitAny": "error",
+        "noExportsInTest": "off",
+        "noFallthroughSwitchClause": "off",
+        "noGlobalIsFinite": "off",
+        "noGlobalIsNan": "off",
+        "noImplicitAnyLet": "off",
+        "noPrototypeBuiltins": "off",
+        "noRedundantUseStrict": "off",
+        "noShadowRestrictedNames": "off",
+        "useDefaultSwitchClauseLast": "off",
+        "useGetterReturn": "off",
+        "noExtraNonNullAssertion": "error",
+        "noMisleadingInstantiator": "error",
+        "noUnsafeDeclarationMerging": "error",
+        "noEmptyBlockStatements": "off" // There is a lot of empty code blocks, should be enabled and clean up separately.
+      },
+      "nursery": {
+        "useConsistentMemberAccessibility": {
+          "level": "error",
+          "options": {
+            "accessibility": "noPublic"
+          }
+        },
+        "noCommonJs": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "child_process": "Please use node:child_process instead.",
+              "crypto": "Please use node:crypto instead.",
+              "fs": "Please use node:fs instead.",
+              "http": "Please use node:https instead.",
+              "net": "Please use node:net instead.",
+              "os": "Please use node:os instead.",
+              "path": "Please use node:path instead.",
+              "stream": "Please use node:stream instead.",
+              "util": "Please use node:util instead.",
+              "url": "Please use node:url instead.",
+              "worker_threads": "Please use node:worker_threads instead."
+            }
+          }
+        },
+        "noDuplicateElseIf": "error",
+        "noUselessEscapeInRegex": "error",
+        "noIrregularWhitespace": "error",
+        "noOctalEscape": "error",
+        // Need to enable this rule with exception to anonymous functions
+        "useExplicitFunctionReturnType": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "es5",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSpacing": false,
+      "bracketSameLine": false,
+      "quoteStyle": "double",
+      "attributePosition": "auto",
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    },
+    "globals": ["BigInt"]
+  },
+  "overrides": [
+    {
+      "include": ["packages/**/test/perf/**/*.test.ts", "packages/state-transition/test/utils/beforeValueMocha.ts"],
+      "javascript": {
+        // These are used by mocha
+        "globals": ["describe", "it", "before", "after"]
+      }
+    },
+    {
+      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": [
+        "**/*.config.js",
+        "**/*.config.mjs",
+        "**/*.config.cjs",
+        "**/*.config.ts",
+        "scripts/vitest/**/*.ts",
+        "scripts/vite/**/*.ts",
+        "**/types/**/*.ts",
+        "packages/api/src/beacon/routes/*.ts",
+        "packages/api/src/**/routes.ts",
+        "packages/api/src/utils/server/handler.ts",
+        "packages/api/test/unit/client/urlFormat.test.ts",
+        "packages/beacon-node/src/api/impl/config/constants.ts",
+        "packages/beacon-node/src/eth1/provider/eth1Provider.ts",
+        ""
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "off",
+              "options": {
+                "strictCase": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "include": [
+        "**/test/**/*.ts",
+        "packages/*/test/**/*.js",
+        "packages/api/src/utils/**/*.ts",
+        "packages/beacon-node/src/db/repositories/checkpointState.ts",
+        "packages/spec-test-util/src/single.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["packages/beacon-node/test/e2e/eth1/jsonRpcHttpClient.test.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["**/test/**/*.ts", "packages/*/test/**/*.js"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["**/perf/**/*.ts"],
+      "linter": {
+        "rules": {}
+      }
+    },
+    {
+      "include": ["**/test/**/*.test.ts"],
+      "linter": {
+        "rules": {}
+      }
+    }
+  ]
+}

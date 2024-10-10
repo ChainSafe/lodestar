@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {vi, Mocked, Mock} from "vitest";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ChainForkConfig} from "@lodestar/config";
@@ -120,12 +119,10 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getClientVersion: vi.fn(),
       },
       executionBuilder: {},
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
       aggregatedAttestationPool: new AggregatedAttestationPool(config),
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),
@@ -169,7 +166,6 @@ export type MockedBeaconChainOptions = {
 
 export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): MockedBeaconChain {
   const {clock, genesisTime, config} = opts ?? {};
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-expect-error
   return new BeaconChain({
     clock: clock ?? "fake",

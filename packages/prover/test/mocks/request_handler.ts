@@ -116,7 +116,6 @@ export function generateReqHandlerOptionsMock(
       getExecutionPayload: vi.fn().mockResolvedValue(executionPayload),
       config: {
         ...config,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         PRESET_BASE: data.network as unknown as PresetName,
       },
       network: data.network,

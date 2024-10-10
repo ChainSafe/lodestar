@@ -55,6 +55,8 @@ export function initializeExecutionEngine(
       return getExecutionEngineFromBackend(new ExecutionEngineMockBackend(opts), modules);
 
     case "http":
+      return getExecutionEngineHttp(opts, modules);
+
     default:
       return getExecutionEngineHttp(opts, modules);
   }

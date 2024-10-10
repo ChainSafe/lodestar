@@ -10,8 +10,6 @@ import {
 } from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export const testFnByType: Record<string, "skip" | ((data: any) => any)> = {
   aggregate_verify,
   aggregate,
@@ -44,7 +42,7 @@ function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signatu
       pubkeys.map((pk) => PublicKey.fromHex(pk)),
       Signature.fromHex(signature)
     );
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -78,7 +76,7 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
       pubkeys.map((hex) => PublicKey.fromHex(hex, true)),
       Signature.fromHex(signature, true)
     );
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -103,7 +101,7 @@ function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures:
         sig: Signature.fromHex(signatures[i], true),
       }))
     );
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -137,7 +135,7 @@ function verify(input: {pubkey: string; message: string; signature: string}): bo
   const {pubkey, message, signature} = input;
   try {
     return _verify(fromHexString(message), PublicKey.fromHex(pubkey), Signature.fromHex(signature));
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -153,7 +151,7 @@ function deserialization_G1(input: {pubkey: string}): boolean {
   try {
     PublicKey.fromHex(input.pubkey, true);
     return true;
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -169,7 +167,7 @@ function deserialization_G2(input: {signature: string}): boolean {
   try {
     Signature.fromHex(input.signature, true);
     return true;
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }

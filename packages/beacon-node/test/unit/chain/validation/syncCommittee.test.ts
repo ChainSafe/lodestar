@@ -20,7 +20,6 @@ describe("Sync Committee Signature validation", function () {
   let altairForkEpochBk: Epoch;
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
   // all validators have same pubkey
   const validatorIndexInSyncCommittee = 15;

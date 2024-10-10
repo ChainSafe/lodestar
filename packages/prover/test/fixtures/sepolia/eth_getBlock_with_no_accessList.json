@@ -5,10 +5,7 @@
     "id": 809162,
     "jsonrpc": "2.0",
     "method": "eth_getBlockByHash",
-    "params": [
-      "0x75b10426177f0f4bd8683999e2c7c597007c6e7c4551d6336c0f880b12c6f3bf",
-      true
-    ]
+    "params": ["0x75b10426177f0f4bd8683999e2c7c597007c6e7c4551d6336c0f880b12c6f3bf", true]
   },
   "response": {
     "jsonrpc": "2.0",

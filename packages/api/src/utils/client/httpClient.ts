@@ -198,8 +198,7 @@ export class HttpClient implements IHttpClient {
               this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: printableUrl, score: this.urlsScore[i]});
             }
 
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            const i_ = i; // Keep local copy of i variable to index urlScore after requestMethod() resolves
+            const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
 
             const urlInit = this.urlsInits[i];
             if (urlInit === undefined) {

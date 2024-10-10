@@ -68,7 +68,6 @@ describe.skip("eth1 / Eth1Provider", function () {
 
     // Resolves when Eth1ForBlockProduction has fetched both blocks and deposits
     const {eth1Datas, deposits} = await (async function resolveWithEth1DataAndDeposits() {
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const eth1Datas = await db.eth1Data.entries();
         const deposits = await db.depositEvent.values();

@@ -6,7 +6,6 @@ import {
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_getTransactionCount: ELVerifiedRequestHandler<
   [address: string, block?: number | string],
   string
@@ -15,7 +14,6 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
     params: [address, block],
   } = payload;
   const result = await verifyAccount({proofProvider, logger, rpc, address, block});
-
   if (result.valid) {
     return getResponseForRequest(payload, result.data.nonce);
   }

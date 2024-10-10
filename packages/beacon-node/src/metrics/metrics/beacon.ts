@@ -11,7 +11,6 @@ export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
  * https://github.com/ethereum/beacon-metrics/ and
  * https://hackmd.io/D5FmoeFZScim_squBFl8oA
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createBeaconMetrics(register: RegistryMetricCreator) {
   return {
     // From https://github.com/ethereum/beacon-metrics/blob/master/metrics.md

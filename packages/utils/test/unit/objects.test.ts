@@ -17,8 +17,6 @@ describe("Objects helper", () => {
   });
 });
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("objectToExpectedCase", () => {
   const testCases: {
     id: string;

@@ -57,7 +57,9 @@ export const startOptions: CliCommandOptions<StartArgs> = {
     string: true,
     coerce: (urls: string[]): string[] =>
       // Parse ["url1,url2"] to ["url1", "url2"]
-      urls.map((item) => item.split(",")).flat(),
+      urls
+        .map((item) => item.split(","))
+        .flat(),
     demandOption: true,
     group: "beacon",
   },

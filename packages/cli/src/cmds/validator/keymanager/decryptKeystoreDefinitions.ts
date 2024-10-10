@@ -51,7 +51,7 @@ export async function decryptKeystoreDefinitions(
       opts.logger.debug("Loaded keystores via keystore cache");
 
       return signers;
-    } catch {
+    } catch (_e) {
       // Some error loading the cache, ignore and invalidate cache
       await clearKeystoreCache(opts.cacheFilePath);
     }

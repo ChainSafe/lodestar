@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";

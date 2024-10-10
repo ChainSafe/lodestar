@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {toHexString} from "@chainsafe/ssz";
 import {describe, it, expect} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/blst";

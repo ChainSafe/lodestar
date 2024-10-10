@@ -8,11 +8,11 @@ export class DistanceMapStore {
     this.map = new Map<number, number>();
   }
 
-  async get(pubkey: BLSPubkey, epoch: number): Promise<number | null> {
+  async get(_pubkey: BLSPubkey, epoch: number): Promise<number | null> {
     return this.map.get(epoch) ?? null;
   }
 
-  async setBatch(pubkey: BLSPubkey, values: DistanceEntry[]): Promise<void> {
+  async setBatch(_pubkey: BLSPubkey, values: DistanceEntry[]): Promise<void> {
     for (const {source, distance} of values) {
       this.map.set(source, distance);
     }

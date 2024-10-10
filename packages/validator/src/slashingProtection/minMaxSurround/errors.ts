@@ -24,8 +24,4 @@ type SurroundAttestationErrorType =
       attestation2Target: number;
     };
 
-export class SurroundAttestationError extends LodestarError<SurroundAttestationErrorType> {
-  constructor(type: SurroundAttestationErrorType) {
-    super(type);
-  }
-}
+export class SurroundAttestationError extends LodestarError<SurroundAttestationErrorType> {}

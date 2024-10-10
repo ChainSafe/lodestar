@@ -21,7 +21,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
     console.log(
       JSON.stringify(
         testData.jsonValue,
-        (key, value: unknown) => (typeof value === "bigint" ? value.toString() : value),
+        (_key, value: unknown) => (typeof value === "bigint" ? value.toString() : value),
         2
       )
     );

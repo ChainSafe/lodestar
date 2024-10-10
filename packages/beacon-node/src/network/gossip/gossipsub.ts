@@ -26,7 +26,6 @@ import {
   GOSSIP_D_LOW,
 } from "./scoringParameters.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 

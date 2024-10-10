@@ -108,7 +108,6 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
   let source = seed; // just setting it to a Bytes32
   let byteV = 0;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     // spec: pivot = bytes_to_int(hash(seed + int_to_bytes1(round))[0:8]) % list_size
     // This is the "int_to_bytes1(round)", appended to the seed.

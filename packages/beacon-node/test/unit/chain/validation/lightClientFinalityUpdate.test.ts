@@ -12,7 +12,6 @@ describe("Light Client Finality Update validation", function () {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   const config = createChainForkConfig({
     ...defaultChainConfig,
-    /* eslint-disable @typescript-eslint/naming-convention */
     ALTAIR_FORK_EPOCH: 1,
     BELLATRIX_FORK_EPOCH: 3,
     CAPELLA_FORK_EPOCH: Infinity,

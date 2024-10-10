@@ -77,7 +77,7 @@ function validateClientStats(data: ReceivedData, schema: ClientStatsSchema): voi
   schema.forEach((s) => {
     try {
       expect(data[s.key]).toBeInstanceOf(s.type);
-    } catch {
+    } catch (_e) {
       throw new Error(
         `Validation of property "${s.key}" failed. Expected type "${s.type}" but received "${typeof data[s.key]}".`
       );

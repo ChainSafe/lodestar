@@ -1,4 +1,4 @@
-import {EventEmitter} from "events";
+import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";

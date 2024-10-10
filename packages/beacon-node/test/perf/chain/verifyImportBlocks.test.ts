@@ -4,17 +4,9 @@ import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/pa
 import {LevelDbController} from "@lodestar/db";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-// eslint-disable-next-line import/no-relative-packages
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
-import {
-  getNetworkCachedState,
-  getNetworkCachedBlock,
-  // eslint-disable-next-line import/no-relative-packages
-} from "../../../../state-transition/test/utils/testFileCache.js";
-import {
-  beforeValue,
-  // eslint-disable-next-line import/no-relative-packages
-} from "../../../../state-transition/test/utils/beforeValueMocha.js";
+import {getNetworkCachedState, getNetworkCachedBlock} from "../../../../state-transition/test/utils/testFileCache.js";
+import {beforeValue} from "../../../../state-transition/test/utils/beforeValueMocha.js";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";

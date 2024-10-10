@@ -142,7 +142,7 @@ export abstract class Repository<I extends Id, T> {
 
   async batchRemove(values: T[]): Promise<void> {
     // handle single value in batchDelete
-    await this.batchDelete(Array.from({length: values.length}, (ignored, i) => this.getId(values[i])));
+    await this.batchDelete(Array.from({length: values.length}, (_ignored, i) => this.getId(values[i])));
   }
 
   async keys(opts?: FilterOptions<I>): Promise<I[]> {

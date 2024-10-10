@@ -229,7 +229,7 @@ export class MonitoringService {
       }
 
       return url;
-    } catch {
+    } catch (_e) {
       throw new Error(`Monitoring endpoint must be a valid URL: ${endpoint}`);
     }
   }

@@ -41,8 +41,6 @@ import {
   FULL_EXIT_REQUEST_AMOUNT,
 } from "@lodestar/params";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * Hand-picked list of constants declared in consensus-spec .md files.
  * This list is asserted to be up-to-date with the test `test/e2e/api/impl/config.test.ts`

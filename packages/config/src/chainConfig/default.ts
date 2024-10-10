@@ -10,9 +10,10 @@ switch (ACTIVE_PRESET) {
     defaultChainConfig = minimal;
     break;
   case PresetName.mainnet:
-  default:
     defaultChainConfig = mainnet;
     break;
+  default:
+    defaultChainConfig = mainnet;
 }
 
 export {defaultChainConfig};

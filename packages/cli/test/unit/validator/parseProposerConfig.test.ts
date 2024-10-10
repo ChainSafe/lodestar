@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {describe, it, expect} from "vitest";
@@ -27,6 +26,7 @@ const testValue = {
       builder: {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.BuilderAlways,
+        // biome-ignore lint/correctness/noPrecisionLoss: <explanation>
         boostFactor: BigInt(18446744073709551616),
       },
     },

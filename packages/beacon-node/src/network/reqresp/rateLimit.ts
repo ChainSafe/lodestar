@@ -76,7 +76,7 @@ function getRequestCountFn<T extends ReqRespMethod>(
   return (reqData: Uint8Array) => {
     try {
       return (type && fn(type.deserialize(reqData))) ?? 1;
-    } catch (e) {
+    } catch (_e) {
       return 1;
     }
   };

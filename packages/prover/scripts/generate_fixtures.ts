@@ -2,9 +2,7 @@
 import {writeFile, mkdir} from "node:fs/promises";
 import path from "node:path";
 import url from "node:url";
-// eslint-disable-next-line import/no-extraneous-dependencies
 import axios from "axios";
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
 type JSONRequest = {method: string; params: unknown[]};
@@ -95,17 +93,14 @@ async function generateFixture(label: string, generator: Generator, network: NET
   }
 
   const beacon = {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    executionPayload: ((await rawBeacon(network, `eth/v2/beacon/blocks/${slot}`)) as any).data.message.body
+        executionPayload: ((await rawBeacon(network, `eth/v2/beacon/blocks/${slot}`)) as any).data.message.body
       .execution_payload,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    headers: ((await rawBeacon(network, `eth/v1/beacon/headers/${slot}`)) as any).data,
+        headers: ((await rawBeacon(network, `eth/v1/beacon/headers/${slot}`)) as any).data,
   };
 
   const payloadBlock = await getBlockByHash(
     network,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    (beacon.executionPayload as {block_hash: string}).block_hash,
+        (beacon.executionPayload as {block_hash: string}).block_hash,
     true
   );
 

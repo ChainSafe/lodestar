@@ -26,6 +26,7 @@ export class ConsoleDynamicLevel extends transports.Console {
     return this.levelByModule.delete(module);
   }
 
+  // biome-ignore lint/correctness/noUndeclaredVariables: BufferEncoding is not been identified by the biomejs
   _write(info: WinstonLogInfo, enc: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
     const moduleLevel = this.levelByModule.get(info.module) ?? this.defaultLevel;
 

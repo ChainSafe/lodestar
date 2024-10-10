@@ -4,8 +4,12 @@ import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {ELBlock} from "../../../src/types.js";
 import {eth_getBlockByNumber} from "../../../src/verified_requests/eth_getBlockByNumber.js";
-import ethGetBlockWithContractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {type: "json"};
-import ethGetBlockWithNoAccessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {type: "json"};
+import ethGetBlockWithContractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {
+  type: "json",
+};
+import ethGetBlockWithNoAccessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {
+  type: "json",
+};
 import {TestFixture, cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
@@ -88,7 +92,6 @@ describe("verified_requests / eth_getBlockByNumber", () => {
         // Temper the execution payload
         const testCase = cloneTestFixture(t, {
           beacon: {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
             executionPayload: {parent_hash: "0xbdbd90ab601a073c3d128111eafb12fa7ece4af239abdc8be60184a08c6d7ef4"},
           },
         });

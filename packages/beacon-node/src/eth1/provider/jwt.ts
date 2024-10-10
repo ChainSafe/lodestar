@@ -2,7 +2,6 @@ import type {TAlgorithm} from "jwt-simple";
 // TODO: fix jwt-simple types
 import jwt from "jwt-simple";
 
-// eslint-disable-next-line import/no-named-as-default-member
 const {encode, decode} = jwt;
 
 /**

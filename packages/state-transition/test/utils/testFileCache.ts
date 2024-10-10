@@ -96,7 +96,6 @@ export async function getNetworkCachedBlock(
 
 async function downloadTestFile(fileId: string): Promise<Buffer> {
   const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
-  // eslint-disable-next-line no-console
   console.log(`Downloading file ${fileUrl}`);
 
   const res = await got(fileUrl, {responseType: "buffer"}).catch((e: Error) => {

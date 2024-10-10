@@ -11,7 +11,6 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 export class CheckpointStateRepository extends Repository<Uint8Array, BeaconStateAllForks> {
   constructor(config: ChainForkConfig, db: Db) {
     // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     const type = ssz.phase0.BeaconState as any;
     const bucket = Bucket.allForks_checkpointState;
     super(config, db, bucket, type, getBucketNameByValue(bucket));

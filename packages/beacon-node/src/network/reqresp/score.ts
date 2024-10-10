@@ -8,7 +8,6 @@ import {ReqRespMethod} from "./types.js";
  * https://github.com/libp2p/js-libp2p/blob/6350a187c7c207086e42436ccbcabd59af6f5e3d/src/errors.js#L32
  */
 const libp2pErrorCodes = {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   ERR_UNSUPPORTED_PROTOCOL: "ERR_UNSUPPORTED_PROTOCOL",
 };
 

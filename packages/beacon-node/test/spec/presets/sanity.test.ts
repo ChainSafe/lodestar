@@ -18,8 +18,6 @@ import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuite) => {
   switch (testName) {
     case "slots":
@@ -50,7 +48,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
       shouldError: (testCase) => !testCase.post,
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
@@ -88,7 +86,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
       shouldError: (testCase) => testCase.post === undefined,
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

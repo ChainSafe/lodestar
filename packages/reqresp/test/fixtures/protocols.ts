@@ -5,7 +5,6 @@ import {ContextBytesType, DialOnlyProtocol, Encoding, ProtocolHandler, Protocol}
 import {getEmptyHandler} from "./messages.js";
 import {beaconConfig} from "./messages.js";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const NumToStrReq = new ContainerType(
   {
     value: new UintNumberType(4),
@@ -15,7 +14,6 @@ const NumToStrReq = new ContainerType(
 
 export type NumToStrReqType = ValueOf<typeof NumToStrReq>;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const NumToStrResp = new ContainerType(
   {
     value: new ListBasicType(new UintNumberType(1), 4),

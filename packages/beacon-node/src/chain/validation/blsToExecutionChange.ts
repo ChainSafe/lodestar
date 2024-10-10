@@ -4,7 +4,7 @@ import {
   getBlsToExecutionChangeSignatureSet,
   CachedBeaconStateCapella,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "../index.js";
 import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateApiBlsToExecutionChange(

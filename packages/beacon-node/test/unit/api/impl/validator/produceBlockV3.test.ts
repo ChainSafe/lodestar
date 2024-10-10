@@ -12,7 +12,6 @@ import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 import {zeroProtoBlock} from "../../../../utils/state.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getValidatorApi>;
@@ -143,7 +142,7 @@ describe("api/validator - produceBlockV3", function () {
         });
 
         const expectedBlock = finalSelection === "builder" ? blindedBlock : fullBlock;
-        const expectedExecution = finalSelection === "builder" ? true : false;
+        const expectedExecution = finalSelection === "builder";
 
         expect(block).toEqual(expectedBlock);
         expect(meta.executionPayloadBlinded).toEqual(expectedExecution);

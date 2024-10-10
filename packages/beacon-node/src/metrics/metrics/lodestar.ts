@@ -25,7 +25,6 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 /**
  * Extra Lodestar custom metrics
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
