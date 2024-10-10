@@ -973,7 +973,9 @@ export function getValidatorApi(
         case stateEpoch - 1: {
           const indexesPrevEpoch = state.epochCtx.getBeaconProposersPrevEpoch();
           if (indexesPrevEpoch === null) {
-            throw new ApiError(500, `Proposer duties for previous epoch ${epoch} not yet initialized`);
+            // Should not happen as previous proposer duties should be initialized for head state
+            // and if we load state from `Uint8Array` it will always be the state of requested epoch
+            throw Error(`Proposer duties for previous epoch ${epoch} not yet initialized`);
           }
           indexes = indexesPrevEpoch;
           break;
