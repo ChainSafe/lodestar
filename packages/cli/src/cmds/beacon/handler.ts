@@ -184,7 +184,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const logger = initLogger(args, beaconPaths.dataDir, config);
   const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
 
-  if (args.discv5) {
+  if (args.discv5 !== false) {
     // Inject ENR to beacon options
     beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
 
