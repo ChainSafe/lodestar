@@ -40,7 +40,6 @@
       },
       "correctness": {
         "noUnusedVariables": "error",
-        "useYield": "off",
         "useImportExtensions": {
           "level": "error",
           "options": {

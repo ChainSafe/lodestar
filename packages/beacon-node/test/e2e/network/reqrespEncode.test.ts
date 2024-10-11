@@ -53,6 +53,7 @@ describe("reqresp encoder", () => {
     const {libp2p, multiaddr} = await getLibp2p();
 
     const getHandlerNoop: GetReqRespHandlerFn = () =>
+      // biome-ignore lint/correctness/useYield: No need for yield in test context
       async function* <T>(): AsyncIterable<T> {
         throw Error("not implemented");
       };

@@ -205,6 +205,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
+        // biome-ignore lint/correctness/useYield: No need for yield in test context
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             throw Error(testErrorMessage);
@@ -287,6 +288,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   it("Sleep infinite on first byte", async function () {
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
+        // biome-ignore lint/correctness/useYield: No need for yield in test context
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             await sleep(100000000);
