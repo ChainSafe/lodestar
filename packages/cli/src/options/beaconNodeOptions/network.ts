@@ -216,7 +216,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     // Each bootnode entry could be comma separated, just deserialize it into a single array
     // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
     // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
-    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
+    coerce: (args: string[]) => args.flatMap((item) => item.split(",")),
   },
 
   targetPeers: {

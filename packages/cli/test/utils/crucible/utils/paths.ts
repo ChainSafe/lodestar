@@ -79,11 +79,10 @@ export const getNodeMountedPaths = <T extends ExecutionPaths | BeaconPaths | Val
   mount: boolean
 ): MountedPaths<T> => {
   return Object.entries(paths)
-    .map(([key, value]) => [
+    .flatMap(([key, value]) => [
       [key, value],
       [`${key}Mounted`, mount ? (value as string).replace(paths.rootDir, mountPath) : value],
     ])
-    .flat()
     .reduce(
       (o, [key, value]) => {
         o[key] = value as string;

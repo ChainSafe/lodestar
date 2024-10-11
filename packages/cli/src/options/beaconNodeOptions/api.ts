@@ -59,7 +59,7 @@ export const options: CliCommandOptions<ApiArgs> = {
       // Enable all
       if (namespaces.includes(enabledAll)) return allNamespaces;
       // Parse ["debug,lodestar"] to ["debug", "lodestar"]
-      return namespaces.map((val) => val.split(",")).flat(1);
+      return namespaces.flatMap((val) => val.split(","));
     },
   },
 

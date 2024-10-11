@@ -12,7 +12,7 @@ import {
 // We need to make it easy for the user to pass the args for the CLI
 // yargs treat `["--preset minimal"] as a single arg, so we need to split it ["--preset", "minimal"]
 function parseArgs(args: string[]): string[] {
-  return args.map((a) => a.split(" ")).flat();
+  return args.flatMap((a) => a.split(" "));
 }
 
 type CommandRunOptions = {

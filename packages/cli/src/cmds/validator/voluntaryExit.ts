@@ -59,8 +59,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       coerce: (pubkeys: string[]): string[] =>
         // Parse ["0x11,0x22"] to ["0x11", "0x22"]
         pubkeys
-          .map((item) => item.split(","))
-          .flat(1)
+          .flatMap((item) => item.split(","))
           .map(ensure0xPrefix),
     },
 

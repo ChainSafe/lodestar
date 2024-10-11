@@ -8,9 +8,9 @@ export function getAttesterSlashingsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
-  return signedBlock.message.body.attesterSlashings
-    .map((attesterSlashing) => getAttesterSlashingSignatureSets(state, attesterSlashing))
-    .flat(1);
+  return signedBlock.message.body.attesterSlashings.flatMap((attesterSlashing) =>
+    getAttesterSlashingSignatureSets(state, attesterSlashing)
+  );
 }
 
 /** Get signature sets from a single AttesterSlashing object */
