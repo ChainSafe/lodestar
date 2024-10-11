@@ -211,7 +211,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   bootnodes: {
     type: "array",
     description: "Bootnodes for discv5 discovery",
-    defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
+    defaultDescription: JSON.stringify(defaultOptions.network.discv5?.bootEnrs || []),
     group: "network",
     // Each bootnode entry could be comma separated, just deserialize it into a single array
     // as comma separated entries are generally most friendly in ansible kind of setups, i.e.

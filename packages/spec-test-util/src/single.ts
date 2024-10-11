@@ -124,7 +124,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
         let testCase = loadInputFiles(testSubDirPath, options, meta);
         if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
-        if (options.shouldSkip && options.shouldSkip(testCase, testName, 0)) {
+        if (options.shouldSkip?.(testCase, testName, 0)) {
           context.skip();
           return;
         }

@@ -98,7 +98,7 @@ export function shouldDeleteLogFile(prefix: string, extension: string, logFileNa
   const maxDifferenceMs = maxFiles * 24 * 60 * 60 * 1000;
   const match = logFileName.match(new RegExp(`${prefix}-([0-9]{4}-[0-9]{2}-[0-9]{2}).${extension}`));
   // if match[1] exists, it should be the date pattern of YYYY-MM-DD
-  if (match && match[1] && Date.now() - new Date(match[1]).getTime() > maxDifferenceMs) {
+  if (match?.[1] && Date.now() - new Date(match[1]).getTime() > maxDifferenceMs) {
     return true;
   }
   return false;

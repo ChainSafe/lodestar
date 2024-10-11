@@ -372,7 +372,7 @@ export class PeerDiscovery {
       if (
         this.libp2p.services.components.connectionManager
           .getDialQueue()
-          .find((pendingDial) => pendingDial.peerId && pendingDial.peerId.equals(peerId))
+          .find((pendingDial) => pendingDial.peerId?.equals(peerId))
       ) {
         return DiscoveredPeerStatus.already_dialing;
       }
@@ -473,7 +473,7 @@ export class PeerDiscovery {
   /** Check if there is 1+ open connection with this peer */
   private isPeerConnected(peerIdStr: PeerIdStr): boolean {
     const connections = getConnectionsMap(this.libp2p).get(peerIdStr);
-    return Boolean(connections && connections.some((connection) => connection.status === "open"));
+    return Boolean(connections?.some((connection) => connection.status === "open"));
   }
 }
 

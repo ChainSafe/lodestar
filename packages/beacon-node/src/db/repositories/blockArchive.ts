@@ -105,7 +105,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
     const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
-    const step = (opts && opts.step) ?? 1;
+    const step = opts?.step ?? 1;
 
     for await (const value of valuesStream) {
       if ((value.message.slot - firstSlot) % step === 0) {

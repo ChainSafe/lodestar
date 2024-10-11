@@ -18,7 +18,7 @@ export function toExpectedCase(
   customCasingMap?: Record<string, string>
 ): string {
   if (expectedCase === "notransform") return value;
-  if (customCasingMap && customCasingMap[value]) return customCasingMap[value];
+  if (customCasingMap?.[value]) return customCasingMap[value];
   switch (expectedCase) {
     case "param":
       return Case.kebab(value);

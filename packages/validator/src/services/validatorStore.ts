@@ -272,7 +272,7 @@ export class ValidatorStore {
 
   getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
     const selection =
-      (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
+      this.validators.get(pubkeyHex)?.builder?.selection ?? this.defaultProposerConfig.builder.selection;
 
     let boostFactor;
     switch (selection) {
@@ -284,7 +284,7 @@ export class ValidatorStore {
 
       case routes.validator.BuilderSelection.MaxProfit:
         boostFactor =
-          (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+          this.validators.get(pubkeyHex)?.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
         break;
 
       case routes.validator.BuilderSelection.BuilderAlways:
@@ -388,7 +388,7 @@ export class ValidatorStore {
 
   async addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): Promise<void> {
     const pubkey = getSignerPubkeyHex(signer);
-    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
+    const proposerConfig = valProposerConfig?.proposerConfig?.[pubkey];
     const builderBoostFactor = proposerConfig?.builder?.boostFactor;
     if (builderBoostFactor !== undefined && builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
       throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for pubkey=${pubkey}`);

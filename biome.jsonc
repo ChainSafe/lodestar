@@ -29,8 +29,8 @@
         "noUselessEmptyExport": "off",
         // We use normal functions for to ease with debugging context
         "useArrowFunction": "off",
+        // This pattern is used a lot earlier in code so disabling this rule
         "useLiteralKeys": "off",
-        "useOptionalChain": "off",
         "useRegexLiterals": "off",
         "noBannedTypes": "error",
         "noUselessThisAlias": "error"
