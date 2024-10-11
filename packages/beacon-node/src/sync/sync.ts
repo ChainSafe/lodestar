@@ -163,6 +163,8 @@ export class BeaconSync implements IBeaconSync {
         return SyncState.SyncingHead;
       case RangeSyncStatus.Idle:
         return SyncState.Stalled;
+      default:
+        return SyncState.Stalled;
     }
   }
 
