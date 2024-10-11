@@ -631,7 +631,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Engine disabled"));
 
     const [builder, engine] = await resolveOrRacePromises([builderPromise, enginePromise], {
-      resolveTimeoutMs: Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.secFromSlot(slot) * 1000),
+      resolveTimeoutMs: Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000)),
       raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
       signal: controller.signal,
     });
