@@ -14,7 +14,7 @@ const signatureSlot = ssz.Slot.defaultValue();
 export const testData: GenericServerTestCases<Endpoints> = {
   getLightClientUpdatesByRange: {
     args: {startPeriod: 1, count: 2},
-    res: {data: [lightClientUpdate], meta: {versions: [ForkName.bellatrix]}},
+    res: {data: [lightClientUpdate, lightClientUpdate], meta: {versions: [ForkName.altair, ForkName.altair]}},
   },
   getLightClientOptimisticUpdate: {
     args: undefined,
