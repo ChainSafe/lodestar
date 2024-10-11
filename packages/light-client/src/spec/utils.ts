@@ -96,6 +96,7 @@ export function upgradeLightClientHeader(
   const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork] + 1];
 
   switch (startUpgradeFromFork) {
+    // biome-ignore lint/suspicious/useDefaultSwitchClauseLast: We want default to evaluate at first to throw error early
     default:
       throw Error(
         `Invalid startUpgradeFromFork=${startUpgradeFromFork} for headerFork=${headerFork} in upgradeLightClientHeader to targetFork=${targetFork}`

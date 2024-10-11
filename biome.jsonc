@@ -196,7 +196,6 @@
         "noConsoleLog": "error",
         // There are lot of cases in our code that need a separate PR to enable this rule
         "noImplicitAnyLet": "off",
-        "useDefaultSwitchClauseLast": "off",
         "useGetterReturn": "off",
         "noExtraNonNullAssertion": "error",
         "noMisleadingInstantiator": "error",
