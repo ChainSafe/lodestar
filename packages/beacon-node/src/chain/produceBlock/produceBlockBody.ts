@@ -224,7 +224,7 @@ export async function produceBlockBody<T extends BlockType>(
       if (ForkSeq[fork] >= ForkSeq.electra) {
         const {executionRequests} = builderRes;
         if (executionRequests === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing exeuctionRequests`);
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
         }
         (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
       }
