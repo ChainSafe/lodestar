@@ -42,7 +42,7 @@ export function processEffectiveBalanceUpdates(
   // update effective balances with hysteresis
 
   // epochTransitionCache.balances is initialized in processRewardsAndPenalties()
-  // and updated in processPendingBalanceDeposits() and processPendingConsolidations()
+  // and updated in processPendingDeposits() and processPendingConsolidations()
   // so it's recycled here for performance.
   const balances = cache.balances ?? state.balances.getAll();
   const currentEpochValidators = cache.validators;

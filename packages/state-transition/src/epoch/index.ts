@@ -28,7 +28,7 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
-import {processPendingBalanceDeposits} from "./processPendingBalanceDeposits.js";
+import {processPendingDeposits} from "./processPendingDeposits.js";
 import {processPendingConsolidations} from "./processPendingConsolidations.js";
 
 // For spec tests
@@ -48,7 +48,7 @@ export {
   processParticipationFlagUpdates,
   processSyncCommitteeUpdates,
   processHistoricalSummariesUpdate,
-  processPendingBalanceDeposits,
+  processPendingDeposits,
   processPendingConsolidations,
 };
 
@@ -70,7 +70,7 @@ export enum EpochTransitionStep {
   processEffectiveBalanceUpdates = "processEffectiveBalanceUpdates",
   processParticipationFlagUpdates = "processParticipationFlagUpdates",
   processSyncCommitteeUpdates = "processSyncCommitteeUpdates",
-  processPendingBalanceDeposits = "processPendingBalanceDeposits",
+  processPendingDeposits = "processPendingDeposits",
   processPendingConsolidations = "processPendingConsolidations",
 }
 
@@ -131,9 +131,9 @@ export function processEpoch(
     const stateElectra = state as CachedBeaconStateElectra;
     {
       const timer = metrics?.epochTransitionStepTime.startTimer({
-        step: EpochTransitionStep.processPendingBalanceDeposits,
+        step: EpochTransitionStep.processPendingDeposits,
       });
-      processPendingBalanceDeposits(stateElectra, cache);
+      processPendingDeposits(stateElectra, cache);
       timer?.();
     }
 

@@ -1,6 +1,7 @@
-import {COMPOUNDING_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {COMPOUNDING_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, GENESIS_SLOT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra} from "../types.js";
+import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
@@ -28,14 +29,20 @@ export function switchToCompoundingValidator(state: CachedBeaconStateElectra, in
 export function queueExcessActiveBalance(state: CachedBeaconStateElectra, index: ValidatorIndex): void {
   const balance = state.balances.get(index);
   if (balance > MIN_ACTIVATION_BALANCE) {
+    const validator = state.validators.getReadonly(index);
     const excessBalance = balance - MIN_ACTIVATION_BALANCE;
     state.balances.set(index, MIN_ACTIVATION_BALANCE);
 
-    const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
-      index,
-      amount: BigInt(excessBalance),
+    const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
+      pubkey: validator.pubkey,
+      withdrawalCredentials: validator.withdrawalCredentials,
+      amount: excessBalance,
+      // Use bls.G2_POINT_AT_INFINITY as a signature field placeholder
+      signature: G2_POINT_AT_INFINITY,
+      // Use GENESIS_SLOT to distinguish from a pending deposit request
+      slot: GENESIS_SLOT,
     });
-    state.pendingBalanceDeposits.push(pendingBalanceDeposit);
+    state.pendingDeposits.push(pendingDeposit);
   }
 }
 
@@ -48,9 +55,12 @@ export function queueEntireBalanceAndResetValidator(state: CachedBeaconStateElec
   state.epochCtx.effectiveBalanceIncrementsSet(index, 0);
   validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
 
-  const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
-    index,
-    amount: BigInt(balance),
+  const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
+    pubkey: validator.pubkey,
+    withdrawalCredentials: validator.withdrawalCredentials,
+    amount: balance,
+    signature: G2_POINT_AT_INFINITY,
+    slot: GENESIS_SLOT,
   });
-  state.pendingBalanceDeposits.push(pendingBalanceDeposit);
+  state.pendingDeposits.push(pendingDeposit);
 }
