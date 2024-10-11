@@ -92,7 +92,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         const timestampTDD = tdTimeSeries.computeY0Point();
         // It is possible to get ttd estimate with an error at imminent merge
         const secToTTD = Math.max(Math.floor(timestampTDD - Date.now() / 1000), 0);
-        const timeLeft = isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
+        const timeLeft = Number.isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
 
         logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
       }
@@ -104,7 +104,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
           const slotsPerSecond = Math.max(headSlotTimeSeries.computeLinearSpeed(), 0);
           const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
-          const timeLeft = isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
+          const timeLeft = Number.isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
           // Syncing - time left - speed - head - finalized - clock - peers
           nodeState = [
             "Syncing",

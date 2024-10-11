@@ -121,7 +121,7 @@ export class Eth2Gossipsub extends GossipSub {
       // TODO: figure out a way to dynamically transition to the size
       dataTransform: new DataTransformSnappy(
         gossipTopicCache,
-        isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
+        Number.isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister

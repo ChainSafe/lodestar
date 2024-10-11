@@ -50,7 +50,7 @@ export type U64Str = string;
 
 export function fromU64Str(u64Str: U64Str): number {
   const u64 = parseInt(u64Str, 10);
-  if (!isFinite(u64)) {
+  if (!Number.isFinite(u64)) {
     throw Error(`Invalid uin64 ${u64Str}`);
   }
   return u64;
