@@ -28,6 +28,7 @@ export async function runCliCommand<T>(
   opts: CommandRunOptions = {timeoutMs: 1000}
 ): Promise<string> {
   return wrapTimeout(
+    // biome-ignore lint/suspicious/noAsyncPromiseExecutor: We want to resolve with parser call back not on main promise
     new Promise(async (resolve, reject) => {
       try {
         await cli

@@ -54,7 +54,6 @@
         "useArrayLiterals": "error",
         "noUndeclaredVariables": "error"
       },
-      "performance": {},
       "style": {
         "noCommaOperator": "off",
         "noInferrableTypes": "off",
@@ -192,8 +191,6 @@
         "useAsConstAssertion": "error"
       },
       "suspicious": {
-        "noAssignInExpressions": "error",
-        "noAsyncPromiseExecutor": "off",
         "noConfusingVoidType": "off",
         "noConsoleLog": "error",
         "noDoubleEquals": "off",
