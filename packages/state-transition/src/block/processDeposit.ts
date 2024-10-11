@@ -55,7 +55,7 @@ export function applyDeposit(
   state: CachedBeaconStateAllForks,
   deposit: DepositData | DepositRequest
 ): void {
-  const {config, validators, epochCtx} = state;
+  const {config, epochCtx} = state;
   const {pubkey, withdrawalCredentials, amount, signature} = deposit;
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
