@@ -211,6 +211,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
     executionPayloadHeader: ExecutionPayloadHeader,
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
+    executionRequests: ExecutionRequests, // New in ELECTRA
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -235,6 +236,7 @@ export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader, // Modified in ELECTRA
     blindedBlobsBundle: denebSsz.BlobKzgCommitments,
+    executionRequests: ExecutionRequests, // New in ELECTRA
     value: UintBn256,
     pubkey: BLSPubkey,
   },

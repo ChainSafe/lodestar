@@ -8,6 +8,7 @@ import {
   SignedBeaconBlockOrContents,
   ExecutionPayloadHeader,
   SignedBlindedBeaconBlock,
+  electra,
 } from "@lodestar/types";
 import {ForkExecution} from "@lodestar/params";
 
@@ -36,6 +37,7 @@ export interface IExecutionBuilder {
     header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionRequests?: electra.ExecutionRequests;
   }>;
   submitBlindedBlock(signedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents>;
 }
