@@ -46,7 +46,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     epochFns.processSyncCommitteeUpdates(fork, state as CachedBeaconStateAltair);
   },
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
-  pending_balance_deposits: epochFns.processPendingBalanceDeposits as EpochTransitionFn,
+  pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
 };
 

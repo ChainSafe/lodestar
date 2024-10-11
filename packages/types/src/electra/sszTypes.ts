@@ -17,7 +17,7 @@ import {
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  PENDING_BALANCE_DEPOSITS_LIMIT,
+  PENDING_DEPOSITS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PENDING_CONSOLIDATIONS_LIMIT,
   FINALIZED_ROOT_DEPTH_ELECTRA,
@@ -249,15 +249,20 @@ export const SignedBuilderBid = new ContainerType(
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
 
-export const PendingBalanceDeposit = new ContainerType(
+export const PendingDeposit = new ContainerType(
   {
-    index: ValidatorIndex,
-    amount: Gwei,
+    pubkey: BLSPubkey,
+    withdrawalCredentials: Bytes32,
+    // this is actually gwei uintbn64 type, but super unlikely to get a high amount here
+    // to warrant a bn type
+    amount: UintNum64,
+    signature: BLSSignature,
+    slot: Slot,
   },
-  {typeName: "PendingBalanceDeposit", jsonCase: "eth2"}
+  {typeName: "PendingDeposit", jsonCase: "eth2"}
 );
 
-export const PendingBalanceDeposits = new ListCompositeType(PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT);
+export const PendingDeposits = new ListCompositeType(PendingDeposit, PENDING_DEPOSITS_LIMIT);
 
 export const PendingPartialWithdrawal = new ContainerType(
   {
@@ -325,7 +330,7 @@ export const BeaconState = new ContainerType(
     earliestExitEpoch: Epoch, // New in ELECTRA:EIP7251
     consolidationBalanceToConsume: Gwei, // New in ELECTRA:EIP7251
     earliestConsolidationEpoch: Epoch, // New in ELECTRA:EIP7251
-    pendingBalanceDeposits: PendingBalanceDeposits, // New in ELECTRA:EIP7251
+    pendingDeposits: PendingDeposits, // New in ELECTRA:EIP7251
     pendingPartialWithdrawals: new ListCompositeType(PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // New in ELECTRA:EIP7251
     pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // New in ELECTRA:EIP7251
   },

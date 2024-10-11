@@ -81,8 +81,6 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.earliestExitEpoch = Math.max(...exitEpochs) + 1;
   stateElectraView.consolidationBalanceToConsume = BigInt(0);
   stateElectraView.earliestConsolidationEpoch = computeActivationExitEpoch(currentEpochPre);
-  // stateElectraView.pendingBalanceDeposits = ssz.electra.PendingBalanceDeposits.defaultViewDU();
-  // pendingBalanceDeposits, pendingPartialWithdrawals, pendingConsolidations are default  values
   // TODO-electra: can we improve this?
   stateElectraView.commit();
   const tmpElectraState = getCachedBeaconState(stateElectraView, stateDeneb);
