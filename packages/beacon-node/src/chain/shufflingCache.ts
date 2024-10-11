@@ -4,11 +4,11 @@ import {
   IShufflingCache,
   ShufflingBuildProps,
   computeEpochShuffling,
+  computeEpochShufflingAsync,
 } from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
-import {callInNextEventLoop} from "../util/eventLoop.js";
 
 /**
  * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
@@ -178,14 +178,19 @@ export class ShufflingCache implements IShufflingCache {
     this.insertPromise(epoch, decisionRoot);
     /**
      * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
-     * on a NICE thread with a rust implementation
+     * on a NICE thread
      */
-    callInNextEventLoop(() => {
-      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "build"});
-      const shuffling = computeEpochShuffling(state, activeIndices, epoch);
-      timer?.();
-      this.set(shuffling, decisionRoot);
-    });
+    const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "build"});
+    computeEpochShufflingAsync(state, activeIndices, epoch)
+      .then((shuffling) => {
+        this.set(shuffling, decisionRoot);
+      })
+      .catch((err) =>
+        this.logger?.error(`error building shuffling for epoch ${epoch} at decisionRoot ${decisionRoot}`, {}, err)
+      )
+      .finally(() => {
+        timer?.();
+      });
   }
 
   /**
