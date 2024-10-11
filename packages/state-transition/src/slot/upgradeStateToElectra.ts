@@ -103,7 +103,7 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
       pubkey: validator.pubkey,
       withdrawalCredentials: validator.withdrawalCredentials,
       amount: balance,
-      signature: new Uint8Array(G2_POINT_AT_INFINITY),
+      signature: G2_POINT_AT_INFINITY,
       slot: GENESIS_SLOT,
     });
     stateElectra.pendingDeposits.push(pendingDeposit);
