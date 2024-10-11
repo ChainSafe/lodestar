@@ -68,7 +68,8 @@ export function applyDeposit(
       }
     } else {
       // increase balance by deposit amount right away pre-electra
-      increaseBalance(state, cachedIndex, amount);    }
+      increaseBalance(state, cachedIndex, amount);
+    }
   } else {
     const stateElectra = state as CachedBeaconStateElectra;
     const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
