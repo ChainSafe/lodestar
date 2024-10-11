@@ -1,3 +1,4 @@
+import {asyncUnshuffleList, unshuffleList} from "@chainsafe/swap-or-not-shuffle";
 import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {GaugeExtra, intDiv, Logger, NoLabels, toRootHex} from "@lodestar/utils";
 import {
@@ -6,11 +7,11 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
+  SHUFFLE_ROUND_COUNT,
 } from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
-import {unshuffleList} from "./shuffle.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
@@ -102,24 +103,15 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
   return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
 }
 
-export function computeEpochShuffling(
-  state: BeaconStateAllForks,
-  activeIndices: Uint32Array,
-  epoch: Epoch
-): EpochShuffling {
-  const activeValidatorCount = activeIndices.length;
-
-  const shuffling = activeIndices.slice();
-  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
-  unshuffleList(shuffling, seed);
-
+function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
+  const activeValidatorCount = shuffling.length;
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
-
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
-  const committees: Uint32Array[][] = [];
+  const committees = new Array<Uint32Array[]>(SLOTS_PER_EPOCH);
   for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
-    const slotCommittees: Uint32Array[] = [];
+    const slotCommittees = new Array<Uint32Array>(committeesPerSlot);
+
     for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
       const index = slot * committeesPerSlot + committeeIndex;
       const startOffset = Math.floor((activeValidatorCount * index) / committeeCount);
@@ -127,17 +119,48 @@ export function computeEpochShuffling(
       if (!(startOffset <= endOffset)) {
         throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
       }
-      slotCommittees.push(shuffling.subarray(startOffset, endOffset));
+      slotCommittees[committeeIndex] = shuffling.subarray(startOffset, endOffset);
     }
-    committees.push(slotCommittees);
+
+    committees[slot] = slotCommittees;
   }
 
+  return committees;
+}
+
+export function computeEpochShuffling(
+  // TODO: (@matthewkeil) remove state/epoch and pass in seed to clean this up
+  state: BeaconStateAllForks,
+  activeIndices: Uint32Array,
+  epoch: Epoch
+): EpochShuffling {
+  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
+  const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
+  const committees = buildCommitteesFromShuffling(shuffling);
   return {
     epoch,
     activeIndices,
     shuffling,
     committees,
-    committeesPerSlot,
+    committeesPerSlot: committees[0].length,
+  };
+}
+
+export async function computeEpochShufflingAsync(
+  // TODO: (@matthewkeil) remove state/epoch and pass in seed to clean this up
+  state: BeaconStateAllForks,
+  activeIndices: Uint32Array,
+  epoch: Epoch
+): Promise<EpochShuffling> {
+  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
+  const shuffling = await asyncUnshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
+  const committees = buildCommitteesFromShuffling(shuffling);
+  return {
+    epoch,
+    activeIndices,
+    shuffling,
+    committees,
+    committeesPerSlot: committees[0].length,
   };
 }
 
