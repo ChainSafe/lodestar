@@ -1,7 +1,6 @@
 import {electra, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 
-import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra} from "../types.js";
 import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
 import {hasExecutionWithdrawalCredential, switchToCompoundingValidator} from "../util/electra.js";
@@ -107,10 +106,9 @@ function isValidSwitchToCompoundRequest(
   }
 
   const sourceValidator = state.validators.getReadonly(sourceIndex);
-  const addressStr = toHex(sourceValidator.withdrawalCredentials.subarray(12));
-  const sourceAddressStr = toHex(sourceAddress);
+  const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   // Verify request has been authorized
-  if (addressStr !== sourceAddressStr) {
+  if (Buffer.compare(sourceWithdrawalAddress, sourceAddress) !== 0) {
     return false;
   }
 
