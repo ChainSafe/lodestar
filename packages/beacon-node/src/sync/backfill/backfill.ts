@@ -457,6 +457,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               this.status = BackfillSyncStatus.aborted;
               break;
             case BackfillSyncErrorCode.NOT_ANCHORED:
+            // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
             case BackfillSyncErrorCode.NOT_LINEAR:
               // Lets try to jump directly to the parent of this anchorBlock as previous
               // (segment) of blocks could be orphaned/missed

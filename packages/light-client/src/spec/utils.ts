@@ -102,10 +102,12 @@ export function upgradeLightClientHeader(
       );
 
     case ForkName.altair:
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.bellatrix:
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.bellatrix) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.capella:
       (upgradedHeader as LightClientHeader<ForkName.capella>).execution =
         ssz.capella.LightClientHeader.fields.execution.defaultValue();
@@ -115,6 +117,7 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.capella) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.deneb:
       (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.blobGasUsed =
         ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
