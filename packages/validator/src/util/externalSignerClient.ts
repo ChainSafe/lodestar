@@ -21,8 +21,6 @@ import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-tr
 import {toHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export enum SignableMessageType {
   AGGREGATION_SLOT = "AGGREGATION_SLOT",
   AGGREGATE_AND_PROOF = "AGGREGATE_AND_PROOF",

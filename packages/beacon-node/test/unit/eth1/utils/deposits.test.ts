@@ -99,7 +99,6 @@ describe("eth1 / util / deposits", function () {
       },
     ];
 
-    /* eslint-disable @typescript-eslint/naming-convention */
     const postElectraConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 1,
       BELLATRIX_FORK_EPOCH: 2,

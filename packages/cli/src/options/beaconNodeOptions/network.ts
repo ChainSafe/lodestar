@@ -57,18 +57,17 @@ function validateMultiaddrArg<T extends Record<string, string | undefined>>(args
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function parseListenArgs(args: NetworkArgs) {
   // If listenAddress is explicitly set, use it
   // If listenAddress6 is not set, use defaultListenAddress
   const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
-  const port = listenAddress ? args.port ?? defaultP2pPort : undefined;
-  const discoveryPort = listenAddress ? args.discoveryPort ?? args.port ?? defaultP2pPort : undefined;
+  const port = listenAddress ? (args.port ?? defaultP2pPort) : undefined;
+  const discoveryPort = listenAddress ? (args.discoveryPort ?? args.port ?? defaultP2pPort) : undefined;
 
   // Only use listenAddress6 if it is explicitly set
   const listenAddress6 = args.listenAddress6;
-  const port6 = listenAddress6 ? args.port6 ?? defaultP2pPort6 : undefined;
-  const discoveryPort6 = listenAddress6 ? args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6 : undefined;
+  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort6) : undefined;
+  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6) : undefined;
 
   return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
 }
@@ -115,7 +114,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   for (const enrStr of bootEnrs) {
     try {
       ENR.decodeTxt(enrStr);
-    } catch (e) {
+    } catch (_e) {
       throw new YargsError(`Provided ENR in bootnodes is invalid:\n    ${enrStr}`);
     }
   }
@@ -129,7 +128,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
             ip6: bindMu6,
           },
           bootEnrs,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           enr: undefined as any,
         }
       : null,

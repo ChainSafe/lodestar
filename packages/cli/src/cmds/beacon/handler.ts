@@ -158,7 +158,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 }
 
 /** Separate function to simplify unit testing of options merging */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 
@@ -175,14 +174,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 
-  // Combine bootnodes from different sources
-  const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
-    args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
-    isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
-  );
-  // Deduplicate and set combined bootnodes
-  beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
-
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {
     const {depositContractDeployBlock} = getNetworkData(network);
@@ -191,8 +182,19 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
   const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
-  // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+
+  if (args.discv5 !== false) {
+    // Inject ENR to beacon options
+    beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+
+    // Combine bootnodes from different sources
+    const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
+      args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
+      isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
+    );
+    // Deduplicate and set combined bootnodes
+    beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
+  }
 
   if (args.disableLightClientServer) {
     beaconNodeOptions.set({chain: {disableLightClientServer: true}});

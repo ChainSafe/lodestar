@@ -13,7 +13,6 @@ export const validSignature = fromHexString(
 );
 
 describe("AttestationPool", function () {
-  /* eslint-disable @typescript-eslint/naming-convention */
   const config = createChainForkConfig({
     ...defaultChainConfig,
     ELECTRA_FORK_EPOCH: 5,

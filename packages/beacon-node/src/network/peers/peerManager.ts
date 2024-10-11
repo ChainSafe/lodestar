@@ -384,7 +384,7 @@ export class PeerManager {
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
-    } catch (e) {
+    } catch (_e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -396,7 +396,7 @@ export class PeerManager {
       // If peer replies a PING request also update lastReceivedMsg
       const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) peerData.lastReceivedMsgUnixTsMs = Date.now();
-    } catch (e) {
+    } catch (_e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -404,7 +404,7 @@ export class PeerManager {
   private async requestStatus(peer: PeerId, localStatus: phase0.Status): Promise<void> {
     try {
       this.onStatus(peer, await this.reqResp.sendStatus(peer, localStatus));
-    } catch (e) {
+    } catch (_e) {
       // TODO: Failed to get peer latest status: downvote but don't disconnect
     }
   }
@@ -424,7 +424,7 @@ export class PeerManager {
    * NOTE: Discovery should only add a new query if one isn't already queued.
    */
   private heartbeat(): void {
-    // timer is safe without a try {} catch {}, in case of error the metric won't register and timer is GC'ed
+    // timer is safe without a try {} catch (_e) {}, in case of error the metric won't register and timer is GC'ed
     const timer = this.metrics?.peerManager.heartbeatDuration.startTimer();
 
     const connectedPeers = this.getConnectedPeerIds();

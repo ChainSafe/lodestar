@@ -93,7 +93,7 @@ export class HttpActiveSocketsTracker {
       await waitFor(() => this.sockets.size === 0, {
         timeout: GRACEFUL_TERMINATION_TIMEOUT,
       });
-    } catch {
+    } catch (_e) {
       // Ignore timeout error
     } finally {
       for (const socket of this.sockets) {

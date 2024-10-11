@@ -83,6 +83,28 @@ export async function getStateResponseWithRegen(
   return res;
 }
 
+type GeneralValidatorStatus = "active" | "pending" | "exited" | "withdrawal";
+
+function mapToGeneralStatus(subStatus: routes.beacon.ValidatorStatus): GeneralValidatorStatus {
+  switch (subStatus) {
+    case "active_ongoing":
+    case "active_exiting":
+    case "active_slashed":
+      return "active";
+    case "pending_initialized":
+    case "pending_queued":
+      return "pending";
+    case "exited_slashed":
+    case "exited_unslashed":
+      return "exited";
+    case "withdrawal_possible":
+    case "withdrawal_done":
+      return "withdrawal";
+    default:
+      throw new Error(`Unknown substatus: ${subStatus}`);
+  }
+}
+
 export function toValidatorResponse(
   index: ValidatorIndex,
   validator: phase0.Validator,
@@ -109,9 +131,10 @@ export function filterStateValidatorsByStatus(
 
   for (const validator of validatorsArr) {
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
+    const generalStatus = mapToGeneralStatus(validatorStatus);
 
     const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
-    if (resp.valid && statusSet.has(validatorStatus)) {
+    if (resp.valid && (statusSet.has(validatorStatus) || statusSet.has(generalStatus))) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
       );
@@ -134,7 +157,7 @@ export function getStateValidatorIndex(
     if (id.startsWith("0x")) {
       try {
         id = fromHex(id);
-      } catch (e) {
+      } catch (_e) {
         return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
       }
     } else {

@@ -28,7 +28,6 @@ export async function runCliCommand<T>(
   opts: CommandRunOptions = {timeoutMs: 1000}
 ): Promise<string> {
   return wrapTimeout(
-    // eslint-disable-next-line no-async-promise-executor
     new Promise(async (resolve, reject) => {
       try {
         await cli

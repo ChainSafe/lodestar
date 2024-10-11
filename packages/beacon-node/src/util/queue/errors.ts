@@ -7,11 +7,7 @@ export enum QueueErrorCode {
 
 export type QueueErrorCodeType = {code: QueueErrorCode.QUEUE_ABORTED} | {code: QueueErrorCode.QUEUE_MAX_LENGTH};
 
-export class QueueError extends LodestarError<QueueErrorCodeType> {
-  constructor(type: QueueErrorCodeType) {
-    super(type);
-  }
-}
+export class QueueError extends LodestarError<QueueErrorCodeType> {}
 
 export function isQueueErrorAborted(e: unknown): e is QueueError {
   return e instanceof QueueError && e.type.code === QueueErrorCode.QUEUE_ABORTED;

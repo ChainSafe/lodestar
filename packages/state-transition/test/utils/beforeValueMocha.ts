@@ -20,7 +20,7 @@ export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): Lazy
   return new Proxy<{value: T}>(
     {value},
     {
-      get: function (target, prop) {
+      get: function (_target, prop) {
         if (prop === "value") {
           if (value === null) {
             throw Error("beforeValue has not yet run the before() block");

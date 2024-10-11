@@ -20,8 +20,6 @@ import {BaseSpecTest, RunnerType, shouldVerify, TestRunnerFn} from "../utils/typ
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // Define above to re-use in sync_aggregate and sync_aggregate_random
 const sync_aggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
   state,
@@ -156,7 +154,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

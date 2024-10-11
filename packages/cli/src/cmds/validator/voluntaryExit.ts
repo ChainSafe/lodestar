@@ -203,7 +203,6 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function resolveValidatorIndexes(client: ApiClient, signersToExit: SignerPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 

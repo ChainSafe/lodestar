@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-
 import fs from "node:fs";
 import path from "node:path";
 import {ValidatorProposerConfig} from "@lodestar/validator";

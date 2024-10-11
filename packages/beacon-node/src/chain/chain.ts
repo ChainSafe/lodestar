@@ -60,7 +60,7 @@ import {
 } from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
-import {initializeForkChoice} from "./forkChoice/index.js";
+import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
   SeenAttesters,
@@ -784,9 +784,9 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  recomputeForkChoiceHead(): ProtoBlock {
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.recomputeForkChoiceHead});
+    const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
       return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
@@ -800,7 +800,7 @@ export class BeaconChain implements IBeaconChain {
 
   predictProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.predictProposerHead});
+    const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
 
     try {
       return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
@@ -814,7 +814,7 @@ export class BeaconChain implements IBeaconChain {
 
   getProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.getProposerHead});
+    const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.getProposerHead});
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
@@ -1060,8 +1060,8 @@ export class BeaconChain implements IBeaconChain {
     if (this.forkChoice.irrecoverableError) {
       this.processShutdownCallback(this.forkChoice.irrecoverableError);
     }
-    this.forkChoice.updateTime(slot);
 
+    this.forkChoice.updateTime(slot);
     this.metrics?.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);

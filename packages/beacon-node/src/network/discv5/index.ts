@@ -1,4 +1,4 @@
-import EventEmitter from "events";
+import EventEmitter from "node:events";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import {StrictEventEmitter} from "strict-event-emitter-types";

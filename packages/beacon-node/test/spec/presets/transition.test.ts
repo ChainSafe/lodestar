@@ -78,7 +78,7 @@ const transition =
         shouldError: (testCase) => testCase.post === undefined,
         timeout: 10000,
         getExpected: (testCase) => testCase.post,
-        expectFunc: (testCase, expected, actual) => {
+        expectFunc: (_testCase, expected, actual) => {
           expectEqualBeaconState(forkNext, expected, actual);
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
@@ -87,8 +87,6 @@ const transition =
       },
     };
   };
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainConfig> {
   switch (fork) {

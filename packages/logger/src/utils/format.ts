@@ -21,8 +21,8 @@ export function getFormat(opts: LoggerOptions): Format {
   switch (opts.format) {
     case "json":
       return jsonLogFormat(opts);
-
     case "human":
+      return humanReadableLogFormat(opts);
     default:
       return humanReadableLogFormat(opts);
   }
@@ -49,6 +49,7 @@ function formatTimestamp(opts: LoggerOptions): Format {
       };
 
     case TimestampFormatCode.DateRegular:
+      return format.timestamp({format: "MMM-DD HH:mm:ss.SSS"});
     default:
       return format.timestamp({format: "MMM-DD HH:mm:ss.SSS"});
   }
@@ -70,7 +71,8 @@ function jsonLogFormat(opts: LoggerOptions): Format {
 /**
  * Winston template function print a human readable string given a log object
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 function humanReadableTemplateFn(_info: {[key: string]: any; level: string; message: string}): string {
   const info = _info as WinstonInfoArg;
 

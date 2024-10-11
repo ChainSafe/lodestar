@@ -1,8 +1,10 @@
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {Epoch, phase0} from "../types.js";
 
+/**
+ * [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
+ */
 export type ValidatorStatus =
-  | "active"
   | "pending_initialized"
   | "pending_queued"
   | "active_ongoing"

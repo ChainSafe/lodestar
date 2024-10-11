@@ -396,7 +396,9 @@ export class NetworkProcessor {
         if (item) {
           this.gossipTopicConcurrency[topic] += numMessages;
           this.processPendingGossipsubMessage(item)
-            .finally(() => (this.gossipTopicConcurrency[topic] -= numMessages))
+            .finally(() => {
+              this.gossipTopicConcurrency[topic] -= numMessages;
+            })
             .catch((e) => this.logger.error("processGossipAttestations must not throw", {}, e));
 
           jobsSubmitted += numMessages;

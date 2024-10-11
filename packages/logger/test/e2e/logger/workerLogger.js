@@ -9,7 +9,6 @@ if (!parentPort) throw Error("parentPort must be defined");
 const file = fs.createWriteStream(workerData.logFilepath, {flags: "a"});
 
 parentPort.on("message", (data) => {
-  // eslint-disable-next-line no-console
   console.log(data);
   file.write(data);
 });

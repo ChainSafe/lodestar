@@ -132,7 +132,7 @@ export async function initStateFromEth1({
  * Restore the latest beacon state from db
  */
 export async function initStateFromDb(
-  config: ChainForkConfig,
+  _config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
 ): Promise<BeaconStateAllForks> {

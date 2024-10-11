@@ -21,8 +21,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   }
 
   // depositDataRoots stored by depositData index
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getId(value: Root): number {
+  getId(_value: Root): number {
     throw new Error("Unable to create depositIndex from root");
   }
 

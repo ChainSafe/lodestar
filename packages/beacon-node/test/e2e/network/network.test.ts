@@ -38,7 +38,6 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
   afterEach(() => controller.abort());
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNode(nodeName: string) {
     const [network, closeAll] = await getNetworkForTest(nodeName, config, {opts: {useWorker}});
 

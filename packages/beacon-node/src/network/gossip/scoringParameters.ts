@@ -12,8 +12,6 @@ import {Eth2Context, Eth2GossipsubModules} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 import {stringifyGossipTopic} from "./topic.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export const GOSSIP_D = 8;
 export const GOSSIP_D_LOW = 6;
 export const GOSSIP_D_HIGH = 12;

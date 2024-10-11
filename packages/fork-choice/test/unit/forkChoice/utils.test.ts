@@ -4,7 +4,6 @@ import {ssz} from "@lodestar/types";
 import {assertValidTerminalPowBlock, ExecutionStatus} from "../../../src/index.js";
 
 describe("assertValidTerminalPowBlock", function () {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig({TERMINAL_TOTAL_DIFFICULTY: BigInt(10)});
   const block = ssz.bellatrix.BeaconBlock.defaultValue();
   const executionStatus = ExecutionStatus.Valid;

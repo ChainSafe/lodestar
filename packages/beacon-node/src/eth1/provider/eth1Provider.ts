@@ -21,8 +21,6 @@ import {
 } from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * Binds return types to Ethereum JSON RPC methods
  */

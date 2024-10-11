@@ -1,6 +1,5 @@
 import {waitForEndpoint} from "@lodestar/test-utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export const rpcUrl = "http://0.0.0.0:8001";
 export const beaconUrl = "http://0.0.0.0:5001";
 export const proxyPort = 8888;

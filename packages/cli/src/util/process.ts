@@ -8,7 +8,6 @@ const exitSignals = ["SIGTERM", "SIGINT"] as NodeJS.Signals[];
  */
 export function onGracefulShutdown(
   cleanUpFunction: () => Promise<void>,
-  // eslint-disable-next-line no-console
   logFn: (msg: string) => void = console.log
 ): void {
   for (const signal of exitSignals) {

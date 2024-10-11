@@ -9,8 +9,6 @@ import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {TestRunnerFn} from "../../utils/types.js";
 import {testLogger} from "../../../utils/logger.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
 type SyncTestCase = {
   meta: {

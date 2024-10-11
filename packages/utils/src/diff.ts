@@ -203,10 +203,12 @@ export function getDiffs(val1: Diffable, val2: Diffable, objectPath: string): Di
  */
 export function diff(val1: unknown, val2: unknown, outputValues = false, filename?: string): void {
   if (!isDiffable(val1)) {
+    // biome-ignore lint/suspicious/noConsoleLog: <explanation>
     console.log("val1 is not Diffable");
     return;
   }
   if (!isDiffable(val2)) {
+    // biome-ignore lint/suspicious/noConsoleLog: <explanation>
     console.log("val2 is not Diffable");
     return;
   }
@@ -226,6 +228,7 @@ export function diff(val1: unknown, val2: unknown, outputValues = false, filenam
     if (filename) {
       fs.writeFileSync(filename, output);
     } else {
+      // biome-ignore lint/suspicious/noConsoleLog: <explanation>
       console.log(output);
     }
   }
