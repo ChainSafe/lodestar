@@ -63,8 +63,4 @@ type InvalidAttestationErrorType =
       minTargetEpoch: Epoch;
     };
 
-export class InvalidAttestationError extends LodestarError<InvalidAttestationErrorType> {
-  constructor(type: InvalidAttestationErrorType) {
-    super(type);
-  }
-}
+export class InvalidAttestationError extends LodestarError<InvalidAttestationErrorType> {}

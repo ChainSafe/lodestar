@@ -24,6 +24,7 @@ import {
   isInInactivityLeak,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
+import {fromHex} from "@lodestar/utils";
 
 export type AttestationsRewards = routes.beacon.AttestationsRewards;
 type IdealAttestationsReward = routes.beacon.IdealAttestationsReward;
@@ -35,9 +36,9 @@ const defaultAttestationsReward = {head: 0, target: 0, source: 0, inclusionDelay
 const defaultAttestationsPenalty = {target: 0, source: 0};
 
 export async function computeAttestationsRewards(
-  epoch: Epoch,
+  _epoch: Epoch,
   state: CachedBeaconStateAllForks,
-  config: BeaconConfig,
+  _config: BeaconConfig,
   validatorIds?: (ValidatorIndex | string)[]
 ): Promise<AttestationsRewards> {
   const fork = state.config.getForkName(state.slot);
@@ -143,7 +144,7 @@ function computeTotalAttestationsRewardsAltair(
   const {flags} = transitionCache;
   const {epochCtx, config} = state;
   const validatorIndices = validatorIds
-    .map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(id)))
+    .map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(fromHex(id))))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;

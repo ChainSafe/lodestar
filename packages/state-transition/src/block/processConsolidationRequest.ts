@@ -24,7 +24,7 @@ export function processConsolidationRequest(
   const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
   const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
 
-  if (sourceIndex === undefined || targetIndex === undefined) {
+  if (sourceIndex === null || targetIndex === null) {
     return;
   }
 

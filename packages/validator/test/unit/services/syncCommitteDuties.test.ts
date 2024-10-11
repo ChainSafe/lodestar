@@ -20,8 +20,6 @@ import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("SyncCommitteeDutiesService", function () {
   const api = getApiClientStub();
 
@@ -38,7 +36,7 @@ describe("SyncCommitteeDutiesService", function () {
   const defaultValidator: routes.beacon.ValidatorResponse = {
     index: indices[0],
     balance: 32e9,
-    status: "active",
+    status: "active_ongoing",
     validator: ssz.phase0.Validator.defaultValue(),
   };
 
@@ -60,7 +58,7 @@ describe("SyncCommitteeDutiesService", function () {
       index: indices[i],
       validator: {...defaultValidator.validator, pubkey: pubkeys[i]},
     }));
-    api.beacon.getStateValidators.mockResolvedValue(
+    api.beacon.postStateValidators.mockResolvedValue(
       mockApiResponse({data: validatorResponses, meta: {executionOptimistic: false, finalized: false}})
     );
   });
@@ -210,7 +208,6 @@ describe("SyncCommitteeDutiesService", function () {
       validatorSyncCommitteeIndices: [7],
     };
     when(api.validator.getSyncCommitteeDuties)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       .calledWith({epoch: expect.any(Number), indices})
       .thenResolve(mockApiResponse({data: [duty1, duty2], meta: {executionOptimistic: false}}));
 

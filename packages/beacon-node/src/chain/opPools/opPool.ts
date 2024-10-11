@@ -1,4 +1,3 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -16,7 +15,7 @@ import {
   ForkSeq,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
 } from "@lodestar/params";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock, AttesterSlashing} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
@@ -85,10 +84,10 @@ export class OpPool {
       persistDiff(
         db.attesterSlashing,
         Array.from(this.attesterSlashings.entries()).map(([key, value]) => ({
-          key: fromHexString(key),
+          key: fromHex(key),
           value: value.attesterSlashing,
         })),
-        toHexString
+        toHex
       ),
       persistDiff(
         db.proposerSlashing,

@@ -1,9 +1,9 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   DataAvailableStatus,
   ExecutionPayloadStatus,
-  PubkeyIndexMap,
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
@@ -101,6 +101,10 @@ export async function getHistoricalState(
   }
   metrics?.stateTransitionBlocks.observe(blockCount);
   transitionTimer?.();
+
+  if (state.slot !== slot) {
+    throw Error(`Failed to generate historical state for slot ${slot}`);
+  }
 
   const serializeTimer = metrics?.stateSerializationTime.startTimer();
   const stateBytes = state.serialize();

@@ -56,8 +56,4 @@ export type ProtoArrayErrorType =
   | {code: ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS; root: RootHex}
   | ({code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE} & LVHExecError);
 
-export class ProtoArrayError extends LodestarError<ProtoArrayErrorType> {
-  constructor(type: ProtoArrayErrorType) {
-    super(type);
-  }
-}
+export class ProtoArrayError extends LodestarError<ProtoArrayErrorType> {}

@@ -35,7 +35,7 @@ export function createBlobsAssertion(
           gasLimit: "0xc350",
           maxPriorityFeePerGas: "0x3b9aca00",
           maxFeePerGas: "0x3ba26b20",
-          maxFeePerBlobGas: "0x3e8",
+          maxFeePerBlobGas: "0x3e",
           value: "0x10000",
           nonce: `0x${(nonce ?? 0).toString(16)}`,
           blobVersionedHashes,

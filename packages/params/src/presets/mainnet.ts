@@ -3,7 +3,6 @@ import {BeaconPreset} from "../types.js";
 // Mainnet preset
 // https://github.com/ethereum/consensus-specs/tree/dev/presets/mainnet
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export const mainnetPreset: BeaconPreset = {
   // Misc
   // ---------------------------------------------------------------
@@ -127,7 +126,6 @@ export const mainnetPreset: BeaconPreset = {
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: 8,
   // 2**11 * 10**9 (= 2,048,000,000,000) Gwei
   MAX_EFFECTIVE_BALANCE_ELECTRA: 2048000000000,
-  // 2**16 (= 65536)
   MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: 4096,
   MIN_ACTIVATION_BALANCE: 32000000000,
   PENDING_BALANCE_DEPOSITS_LIMIT: 134217728,

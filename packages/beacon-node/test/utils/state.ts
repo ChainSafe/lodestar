@@ -1,10 +1,10 @@
 import {SecretKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
-  PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
   CachedBeaconStateElectra,
@@ -106,6 +106,7 @@ export function generateState(
 
 /**
  * This generates state with default pubkey
+ * TODO: (@matthewkeil) - this is duplicated and exists in state-transition as well
  */
 export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.phase0);

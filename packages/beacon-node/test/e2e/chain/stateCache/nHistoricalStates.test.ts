@@ -24,7 +24,6 @@ describe("regen/reload states with n-historical states configuration", function 
 
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 
@@ -412,11 +411,10 @@ describe("regen/reload states with n-historical states configuration", function 
         )?.value
       ).toEqual(reloadCount);
 
-      const stateSszMetricValues = await (followupBn.metrics?.cpStateCache.stateSerializeDuration as Histogram).get();
+      const stateSszMetricValues = await (followupBn.metrics?.stateSerializeDuration as Histogram).get();
       expect(
-        stateSszMetricValues?.values.find(
-          (value) => value.metricName === "lodestar_cp_state_cache_state_serialize_seconds_count"
-        )?.value
+        stateSszMetricValues?.values.find((value) => value.metricName === "lodestar_state_serialize_seconds_count")
+          ?.value
       ).toEqual(persistCount);
 
       // assert number of persisted/in-memory states

@@ -108,7 +108,6 @@ describe("monitoring / service", () => {
       expect(logger.info).toHaveBeenCalledWith(
         "Started monitoring service",
         // TODO: Debug why `expect.any` causing type error
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         expect.objectContaining({interval: expect.any(Number), machine: null, remote: expect.any(String)})
       );
     });

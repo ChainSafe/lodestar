@@ -1,3 +1,4 @@
+import {MediaType} from "./headers.js";
 import {Endpoint, HeaderParams, PathParams, QueryParams} from "./types.js";
 
 // Reasoning: Allows to declare JSON schemas for server routes in a succinct typesafe way.
@@ -91,7 +92,16 @@ export function getFastifySchema<T extends Endpoint["request"]>(schemaDef: Schem
   const schema: {params?: JsonSchemaObj; querystring?: JsonSchemaObj; headers?: JsonSchemaObj; body?: JsonSchema} = {};
 
   if (schemaDef.body != null) {
-    schema.body = getJsonSchemaItem(schemaDef.body);
+    schema.body = {
+      content: {
+        [MediaType.json]: {
+          schema: getJsonSchemaItem(schemaDef.body),
+        },
+        [MediaType.ssz]: {
+          schema: {},
+        },
+      },
+    };
   }
 
   if (schemaDef.params) {

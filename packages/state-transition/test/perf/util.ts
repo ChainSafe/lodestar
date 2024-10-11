@@ -1,5 +1,6 @@
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {phase0, ssz, Slot, BeaconState} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -17,7 +18,6 @@ import {
   interopSecretKey,
   computeEpochAtSlot,
   getActiveValidatorIndices,
-  PubkeyIndexMap,
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
@@ -61,7 +61,6 @@ const secretKeyByModIndex = new Map<number, SecretKey>();
 const epoch = 23638;
 export const perfStateEpoch = epoch;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getPubkeys(vc = numValidators) {
   const pubkeysMod = interopPubkeysCached(keypairsMod);
   const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.fromBytes(pk));
@@ -85,7 +84,6 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
   return sk;
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function getPubkeyCaches({pubkeysMod, pubkeysModObj}: ReturnType<typeof getPubkeys>) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkey2index = new PubkeyIndexMap();
@@ -223,7 +221,6 @@ export function generatePerfTestCachedStateAltair(opts?: {
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
   const {pubkey2index, index2pubkey} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);

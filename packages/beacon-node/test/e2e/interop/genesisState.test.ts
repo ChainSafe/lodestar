@@ -9,7 +9,6 @@ describe("interop / initDevState", () => {
   it("Create interop deposits", () => {
     const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultViewDU(), 1);
 
-    /* eslint-disable @typescript-eslint/naming-convention */
     expect(deposits.map((deposit) => ssz.phase0.Deposit.toJson(deposit))).toEqual([
       {
         proof: [

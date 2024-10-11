@@ -1,4 +1,5 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {
   UintNum64,
   Root,
@@ -21,7 +22,6 @@ import {
   CachedBeaconStateAllForks,
   EpochShuffling,
   Index2PubkeyCache,
-  PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
@@ -58,6 +58,7 @@ import {ShufflingCache} from "./shufflingCache.js";
 import {BlockRewards} from "./rewards/blockRewards.js";
 import {AttestationsRewards} from "./rewards/attestationsRewards.js";
 import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
+import {ForkchoiceCaller} from "./forkChoice/index.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -204,7 +205,7 @@ export interface IBeaconChain {
 
   getStatus(): phase0.Status;
 
-  recomputeForkChoiceHead(): ProtoBlock;
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
 
   /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
   predictProposerHead(slot: Slot): ProtoBlock;

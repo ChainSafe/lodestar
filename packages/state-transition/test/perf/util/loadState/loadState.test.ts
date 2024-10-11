@@ -1,8 +1,9 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {PublicKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
-import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
+import {Index2PubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {generatePerfTestCachedStateAltair} from "../../util.js";
 
 /**
@@ -79,17 +80,15 @@ describe("loadState", function () {
           pubkey2index.set(pubkey, validatorIndex);
           index2pubkey[validatorIndex] = PublicKey.fromBytes(pubkey);
         }
-        // skip computimg shuffling in performance test because in reality we have a ShufflingCache
-        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const shufflingGetter = () => seedState.epochCtx.currentShuffling;
         createCachedBeaconState(
           migratedState,
           {
             config: seedState.config,
             pubkey2index,
             index2pubkey,
+            shufflingCache: seedState.epochCtx.shufflingCache,
           },
-          {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
+          {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
         );
       },
     });

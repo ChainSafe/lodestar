@@ -5,12 +5,13 @@ import {CheckpointWithHex, ExecutionStatus, ForkChoice, DataAvailabilityStatus} 
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  computeAnchorCheckpoint,
   computeEpochAtSlot,
   getEffectiveBalanceIncrementsZeroed,
 } from "@lodestar/state-transition";
 import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
 import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
-import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain/index.js";
+import {ChainEventEmitter, initializeForkChoice} from "../../../../src/chain/index.js";
 import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {generateState} from "../../../utils/state.js";

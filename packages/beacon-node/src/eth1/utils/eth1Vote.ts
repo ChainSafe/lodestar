@@ -120,7 +120,6 @@ function getKeysWithMaxValue<T>(map: Map<T, number>): T[] {
  * ✓ pickEth1Vote - max votes                                            37.89912 ops/s    26.38583 ms/op        -         29 runs   1.27 s
  */
 function getEth1DataKey(eth1Data: phase0.Eth1Data): string {
-  // return toHexString(ssz.phase0.Eth1Data.hashTreeRoot(eth1Data));
   return fastSerializeEth1Data(eth1Data);
 }
 

@@ -1,14 +1,18 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
+  calculateCommitteeAssignments,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
   getCurrentSlot,
   beaconBlockToBlinded,
+  createCachedBeaconState,
+  loadState,
 } from "@lodestar/state-transition";
 import {
   GENESIS_SLOT,
@@ -40,6 +44,7 @@ import {
   BeaconBlock,
   BlockContents,
   BlindedBeaconBlock,
+  getValidatorStatus,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth, toRootHex} from "@lodestar/utils";
@@ -60,7 +65,7 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {getValidatorStatus} from "../beacon/state/utils.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
@@ -388,10 +393,6 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // Process the queued attestations in the forkchoice for correct head estimation
-      // forkChoice.updateTime() might have already been called by the onSlot clock
-      // handler, in which case this should just return.
-      chain.forkChoice.updateTime(slot);
       parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
@@ -458,10 +459,6 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // Process the queued attestations in the forkchoice for correct head estimation
-      // forkChoice.updateTime() might have already been called by the onSlot clock
-      // handler, in which case this should just return.
-      chain.forkChoice.updateTime(slot);
       parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
@@ -534,10 +531,6 @@ export function getValidatorApi(
     notWhileSyncing();
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-    // Process the queued attestations in the forkchoice for correct head estimation
-    // forkChoice.updateTime() might have already been called by the onSlot clock
-    // handler, in which case this should just return.
-    chain.forkChoice.updateTime(slot);
     const parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     notOnOutOfRangeData(parentBlockRoot);
 
@@ -899,15 +892,16 @@ export function getValidatorApi(
     async getProposerDuties({epoch}) {
       notWhileSyncing();
 
-      // Early check that epoch is within [current_epoch, current_epoch + 1], or allow for pre-genesis
+      // Early check that epoch is no more than current_epoch + 1, or allow for pre-genesis
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
-      if (currentEpoch >= 0 && epoch !== currentEpoch && epoch !== nextEpoch) {
-        throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${nextEpoch}`);
+      if (currentEpoch >= 0 && epoch > nextEpoch) {
+        throw new ApiError(400, `Requested epoch ${epoch} must not be more than one epoch in the future`);
       }
 
       const head = chain.forkChoice.getHead();
       let state: CachedBeaconStateAllForks | undefined = undefined;
+      const startSlot = computeStartSlotAtEpoch(epoch);
       const slotMs = config.SECONDS_PER_SLOT * 1000;
       const prepareNextSlotLookAheadMs = slotMs / SCHEDULER_LOOKAHEAD_FACTOR;
       const toNextEpochMs = msToNextEpoch();
@@ -925,21 +919,63 @@ export function getValidatorApi(
       }
 
       if (!state) {
-        state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+        if (epoch >= currentEpoch - 1) {
+          // Cached beacon state stores proposers for previous, current and next epoch. The
+          // requested epoch is within that range, we can use the head state at current epoch
+          state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+        } else {
+          const res = await getStateResponseWithRegen(chain, startSlot);
+
+          const stateViewDU =
+            res.state instanceof Uint8Array
+              ? loadState(config, chain.getHeadState(), res.state).state
+              : res.state.clone();
+
+          state = createCachedBeaconState(
+            stateViewDU,
+            {
+              config: chain.config,
+              // Not required to compute proposers
+              pubkey2index: new PubkeyIndexMap(),
+              index2pubkey: [],
+            },
+            {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
+          );
+
+          if (state.epochCtx.epoch !== epoch) {
+            throw Error(`Loaded state epoch ${state.epochCtx.epoch} does not match requested epoch ${epoch}`);
+          }
+        }
       }
 
       const stateEpoch = state.epochCtx.epoch;
       let indexes: ValidatorIndex[] = [];
 
-      if (epoch === stateEpoch) {
-        indexes = state.epochCtx.getBeaconProposers();
-      } else if (epoch === stateEpoch + 1) {
-        // Requesting duties for next epoch is allow since they can be predicted with high probabilities.
-        // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
-        indexes = state.epochCtx.getBeaconProposersNextEpoch();
-      } else {
-        // Should never happen, epoch is checked to be in bounds above
-        throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
+      switch (epoch) {
+        case stateEpoch:
+          indexes = state.epochCtx.getBeaconProposers();
+          break;
+
+        case stateEpoch + 1:
+          // Requesting duties for next epoch is allowed since they can be predicted with high probabilities.
+          // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
+          indexes = state.epochCtx.getBeaconProposersNextEpoch();
+          break;
+
+        case stateEpoch - 1: {
+          const indexesPrevEpoch = state.epochCtx.getBeaconProposersPrevEpoch();
+          if (indexesPrevEpoch === null) {
+            // Should not happen as previous proposer duties should be initialized for head state
+            // and if we load state from `Uint8Array` it will always be the state of requested epoch
+            throw Error(`Proposer duties for previous epoch ${epoch} not yet initialized`);
+          }
+          indexes = indexesPrevEpoch;
+          break;
+        }
+
+        default:
+          // Should never happen, epoch is checked to be in bounds above
+          throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
       }
 
       // NOTE: this is the fastest way of getting compressed pubkeys.
@@ -948,7 +984,6 @@ export function getValidatorApi(
       // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
       const pubkeys = getPubkeysForIndices(state.validators, indexes);
 
-      const startSlot = computeStartSlotAtEpoch(epoch);
       const duties: routes.validator.ProposerDuty[] = [];
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
@@ -995,7 +1030,15 @@ export function getValidatorApi(
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state.validators, indices);
-      const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, indices);
+      const decisionRoot = state.epochCtx.getShufflingDecisionRoot(epoch);
+      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      if (!shuffling) {
+        throw new ApiError(
+          500,
+          `No shuffling found to calculate committee assignments for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
+        );
+      }
+      const committeeAssignments = calculateCommitteeAssignments(shuffling, indices);
       const duties: routes.validator.AttesterDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
@@ -1078,7 +1121,7 @@ export function getValidatorApi(
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      const dataRootHex = toHex(attestationDataRoot);
+      const dataRootHex = toRootHex(attestationDataRoot);
       const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
       const fork = chain.config.getForkName(slot);
 
@@ -1138,7 +1181,6 @@ export function getValidatorApi(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
-            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
             const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
@@ -1350,12 +1392,11 @@ export function getValidatorApi(
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
         const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
-        if (validatorIndex === undefined) return false;
+        if (validatorIndex === null) return false;
 
         const validator = headState.validators.getReadonly(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);
         return (
-          status === "active" ||
           status === "active_exiting" ||
           status === "active_ongoing" ||
           status === "active_slashed" ||

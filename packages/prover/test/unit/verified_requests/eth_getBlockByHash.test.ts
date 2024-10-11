@@ -3,8 +3,12 @@ import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_getBlockByHash} from "../../../src/verified_requests/eth_getBlockByHash.js";
-import ethGetBlockWithContractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {type: "json"};
-import ethGetBlockWithNoAccessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {type: "json"};
+import ethGetBlockWithContractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {
+  type: "json",
+};
+import ethGetBlockWithNoAccessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {
+  type: "json",
+};
 import {TestFixture, cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {ELBlock} from "../../../src/types.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";

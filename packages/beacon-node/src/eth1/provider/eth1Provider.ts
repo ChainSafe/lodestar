@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex, isErrorAborted, createElapsedTimeTracker, toPrintableUrl} from "@lodestar/utils";
+import {fromHex, isErrorAborted, createElapsedTimeTracker, toPrintableUrl, toHex} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 
 import {FetchError, isFetchError} from "@lodestar/api";
@@ -21,8 +20,6 @@ import {
   ReqOpts,
 } from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 /**
  * Binds return types to Ethereum JSON RPC methods
@@ -72,7 +69,7 @@ export class Eth1Provider implements IEth1Provider {
   ) {
     this.logger = opts.logger;
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
-    this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
+    this.depositContractAddress = toHex(config.DEPOSIT_CONTRACT_ADDRESS);
 
     const providerUrls = opts.providerUrls ?? DEFAULT_PROVIDER_URLS;
     this.rpc = new JsonRpcHttpClient(providerUrls, {

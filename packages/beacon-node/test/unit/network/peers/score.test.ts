@@ -24,7 +24,6 @@ describe("simple block provider score tracking", function () {
   const MIN_SCORE = -100;
   const actionName = "test-action";
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function mockStore() {
     const scoreStore = new PeerRpcScoreStore();
     const peerScores = scoreStore["scores"] as MapDef<string, RealScore>;

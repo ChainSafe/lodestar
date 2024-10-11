@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {electra, phase0, ssz} from "@lodestar/types";
 import {
   FAR_FUTURE_EPOCH,
@@ -8,6 +7,7 @@ import {
   ForkSeq,
 } from "@lodestar/params";
 
+import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
@@ -33,7 +33,7 @@ export function processWithdrawalRequest(
   // bail out if validator is not in beacon state
   // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
   const validatorIndex = pubkey2index.get(withdrawalRequest.validatorPubkey);
-  if (validatorIndex === undefined) {
+  if (validatorIndex === null) {
     return;
   }
 
@@ -85,8 +85,8 @@ function isValidatorEligibleForWithdrawOrExit(
   state: CachedBeaconStateElectra
 ): boolean {
   const {withdrawalCredentials} = validator;
-  const addressStr = toHexString(withdrawalCredentials.subarray(12));
-  const sourceAddressStr = toHexString(sourceAddress);
+  const addressStr = toHex(withdrawalCredentials.subarray(12));
+  const sourceAddressStr = toHex(sourceAddress);
   const {epoch: currentEpoch, config} = state.epochCtx;
 
   return (

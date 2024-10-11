@@ -1,18 +1,30 @@
-import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {fetch} from "@lodestar/api";
-import {phase0, altair, capella, BeaconBlock, BlindedBeaconBlock} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {
+  phase0,
+  altair,
+  capella,
+  BeaconBlock,
+  BlindedBeaconBlock,
+  AggregateAndProof,
+  sszTypesFor,
+  ssz,
+  Slot,
+  Epoch,
+  RootHex,
+  Root,
+} from "@lodestar/types";
+import {ForkPreExecution, ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
-import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 export enum SignableMessageType {
   AGGREGATION_SLOT = "AGGREGATION_SLOT",
   AGGREGATE_AND_PROOF = "AGGREGATE_AND_PROOF",
+  AGGREGATE_AND_PROOF_V2 = "AGGREGATE_AND_PROOF_V2",
   ATTESTATION = "ATTESTATION",
   BLOCK_V2 = "BLOCK_V2",
   DEPOSIT = "DEPOSIT",
@@ -62,8 +74,9 @@ const SyncAggregatorSelectionDataType = new ContainerType(
 export type SignableMessage =
   | {type: SignableMessageType.AGGREGATION_SLOT; data: {slot: Slot}}
   | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
+  | {type: SignableMessageType.AGGREGATE_AND_PROOF_V2; data: AggregateAndProof}
   | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
-  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock | BlindedBeaconBlock}
+  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock<ForkPreExecution> | BlindedBeaconBlock}
   | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
   | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
   | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}
@@ -76,6 +89,7 @@ export type SignableMessage =
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
   [SignableMessageType.AGGREGATE_AND_PROOF]: true,
+  [SignableMessageType.AGGREGATE_AND_PROOF_V2]: true,
   [SignableMessageType.ATTESTATION]: true,
   [SignableMessageType.BLOCK_V2]: true,
   [SignableMessageType.DEPOSIT]: false,
@@ -131,17 +145,17 @@ export async function externalSignerPostSignature(
   const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
 
   requestObj.type = signableMessage.type;
-  requestObj.signingRoot = toHexString(signingRoot);
+  requestObj.signingRoot = toRootHex(signingRoot);
 
   if (requiresForkInfo[signableMessage.type]) {
     const forkInfo = config.getForkInfo(signingSlot);
     requestObj.fork_info = {
       fork: {
-        previous_version: toHexString(forkInfo.prevVersion),
-        current_version: toHexString(forkInfo.version),
+        previous_version: toHex(forkInfo.prevVersion),
+        current_version: toHex(forkInfo.version),
         epoch: String(computeEpochAtSlot(signingSlot)),
       },
-      genesis_validators_root: toHexString(config.genesisValidatorsRoot),
+      genesis_validators_root: toRootHex(config.genesisValidatorsRoot),
     };
   }
 
@@ -201,6 +215,16 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.AGGREGATE_AND_PROOF:
       return {aggregate_and_proof: ssz.phase0.AggregateAndProof.toJson(payload.data)};
+
+    case SignableMessageType.AGGREGATE_AND_PROOF_V2: {
+      const fork = config.getForkName(payload.data.aggregate.data.slot);
+      return {
+        aggregate_and_proof: {
+          version: fork.toUpperCase(),
+          data: sszTypesFor(fork).AggregateAndProof.toJson(payload.data),
+        },
+      };
+    }
 
     case SignableMessageType.ATTESTATION:
       return {attestation: ssz.phase0.AttestationData.toJson(payload.data)};

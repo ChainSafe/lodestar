@@ -127,7 +127,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
 
               expect(reqSsz.body).toBeInstanceOf(Uint8Array);
               expect(reqCodec.onlySupport).not.toBe(WireFormat.json);
-            } catch {
+            } catch (_e) {
               throw Error("Must support ssz request body");
             }
           }
@@ -167,7 +167,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
 
               expect(sszBytes).toBeInstanceOf(Uint8Array);
               expect(routeDef.resp.onlySupport).not.toBe(WireFormat.json);
-            } catch {
+            } catch (_e) {
               throw Error("Must support ssz response body");
             }
           }
@@ -183,7 +183,6 @@ function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown
   try {
     validate = ajv.compile(schema);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(JSON.stringify(schema, null, 2));
     (e as Error).message = `${id} schema - ${(e as Error).message}`;
     throw e;

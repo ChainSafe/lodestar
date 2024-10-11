@@ -33,7 +33,7 @@ describe("AttestationDutiesService", function () {
   const defaultValidator: routes.beacon.ValidatorResponse = {
     index,
     balance: 32e9,
-    status: "active",
+    status: "active_ongoing",
     validator: ssz.phase0.Validator.defaultValue(),
   };
 
@@ -52,7 +52,7 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.mockResolvedValue(
+    api.beacon.postStateValidators.mockResolvedValue(
       mockApiResponse({data: [validatorResponse], meta: {executionOptimistic: false, finalized: false}})
     );
   });

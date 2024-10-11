@@ -11,11 +11,10 @@ import {DownloadTestsOptions} from "@lodestar/spec-test-util/downloadTests";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const ethereumConsensusSpecsTests: DownloadTestsOptions = {
-  specVersion: "v1.5.0-alpha.5",
+  specVersion: "v1.5.0-alpha.6",
   // Target directory is the host package root: 'packages/*/spec-tests'
   outputDir: path.join(__dirname, "../../spec-tests"),
   specTestsRepoUrl: "https://github.com/ethereum/consensus-spec-tests",

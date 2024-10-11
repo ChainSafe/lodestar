@@ -68,6 +68,7 @@ export interface SpecTestOptions<TestCase extends {meta?: any}, Result> {
    * Optionally pass function to transform loaded values
    * (values from input files)
    */
+
   inputProcessing?: {[K: string]: (value: any) => any};
 
   shouldError?: (testCase: TestCase) => boolean;
@@ -86,7 +87,7 @@ const defaultOptions: SpecTestOptions<any, any> = {
   getExpected: (testCase) => testCase,
   shouldError: () => false,
   shouldSkip: () => false,
-  expectFunc: (testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
+  expectFunc: (_testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
   timeout: 10 * 60 * 1000,
 };
 
@@ -101,7 +102,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
     throw new Error(`${testCaseDirectoryPath} is not directory`);
   }
 
-  describe(name, function () {
+  describe(name, () => {
     if (options.timeout !== undefined) {
       vi.setConfig({testTimeout: options.timeout ?? 10 * 60 * 1000});
     }
@@ -114,7 +115,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
       // Use full path here, not just `testSubDirname` to allow usage of `vitest -t`
       const testName = `${name}/${testSubDirname}`;
-      it(testName, async function (context) {
+      it(testName, async (context) => {
         // some tests require to load meta.yaml first in order to know respective ssz types.
         const metaFilePath = path.join(testSubDirPath, "meta.yaml");
         const meta: TestCase["meta"] = fs.existsSync(metaFilePath)
@@ -131,7 +132,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
         if (options.shouldError?.(testCase)) {
           try {
             await testFunction(testCase, name);
-          } catch (e) {
+          } catch (_e) {
             return;
           }
         } else {

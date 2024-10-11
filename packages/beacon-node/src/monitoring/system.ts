@@ -3,7 +3,6 @@
 import os from "node:os";
 import path from "node:path";
 // We want to keep `system` export as it's more readable and easier to understand
-// eslint-disable-next-line import/no-named-as-default
 import system from "systeminformation";
 import {Logger} from "@lodestar/utils";
 

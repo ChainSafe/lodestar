@@ -5,8 +5,6 @@ import {InputType} from "@lodestar/spec-test-util";
 import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {TestRunnerFn} from "../../utils/types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/update_ranking.md
 type UpdateRankingTestCase = {
   meta: {

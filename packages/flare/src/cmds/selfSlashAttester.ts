@@ -79,7 +79,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pksHex})).value();
+    const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: pksHex})).value();
 
     // All validators in the batch will be part of the same AttesterSlashing
     const attestingIndices = validators.map((v) => v.index);
@@ -92,7 +92,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       const pkHex = pksHex[i];
       const validatorPkHex = toPubkeyHex(validator.pubkey);
       if (validatorPkHex !== pkHex) {
-        throw Error(`getStateValidators did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
+        throw Error(`Beacon node did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
       }
 
       if (status === "active_slashed" || status === "exited_slashed") {

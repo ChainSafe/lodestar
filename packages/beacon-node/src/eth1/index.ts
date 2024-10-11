@@ -1,6 +1,6 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
@@ -92,7 +92,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   async getTerminalPowBlock(): Promise<Root | null> {
     const block = await this.eth1MergeBlockTracker.getTerminalPowBlock();
-    return block && fromHexString(block.blockHash);
+    return block && fromHex(block.blockHash);
   }
 
   getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {

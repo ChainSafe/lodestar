@@ -1,4 +1,3 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {phase0, Slot, RootHex, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -11,7 +10,7 @@ import {
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
@@ -216,10 +215,10 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const protoBlocksAsc = blocksToReplay.reverse();
     for (const [i, protoBlock] of protoBlocksAsc.entries()) {
       replaySlots[i] = protoBlock.slot;
-      blockPromises[i] = this.modules.db.block.get(fromHexString(protoBlock.blockRoot));
+      blockPromises[i] = this.modules.db.block.get(fromHex(protoBlock.blockRoot));
     }
 
-    const logCtx = {stateRoot, replaySlots: replaySlots.join(",")};
+    const logCtx = {stateRoot, caller, replaySlots: replaySlots.join(",")};
     this.modules.logger.debug("Replaying blocks to get state", logCtx);
 
     const loadBlocksTimer = this.modules.metrics?.regenGetState.loadBlocks.startTimer({caller});

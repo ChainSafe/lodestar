@@ -4,6 +4,7 @@ import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 
@@ -45,7 +46,8 @@ export class Archiver {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     signal: AbortSignal,
-    opts: ArchiverOpts
+    opts: ArchiverOpts,
+    private readonly metrics?: Metrics | null
   ) {
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
     this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts, chain.bufferPool);
@@ -105,7 +107,7 @@ export class Archiver {
       this.prevFinalized = finalized;
 
       // should be after ArchiveBlocksTask to handle restart cleanly
-      await this.statesArchiver.maybeArchiveState(finalized);
+      await this.statesArchiver.maybeArchiveState(finalized, this.metrics);
 
       this.chain.regen.pruneOnFinalized(finalizedEpoch);
 

@@ -1,14 +1,13 @@
-import {Connection, PeerId} from "@libp2p/interface";
+import {Connection, PrivateKey} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {fromHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
+import {fromHex, withTimeout} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Libp2p} from "../interface.js";
@@ -56,7 +55,7 @@ type Mods = {
 export type BaseNetworkInit = {
   opts: NetworkOptions;
   config: BeaconConfig;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   peerStoreDir: string | undefined;
   logger: LoggerNode;
   metricsRegistry: RegistryMetricCreator | null;
@@ -127,7 +126,7 @@ export class NetworkCore implements INetworkCore {
   static async init({
     opts,
     config,
-    peerId,
+    privateKey,
     peerStoreDir,
     logger,
     metricsRegistry,
@@ -137,7 +136,7 @@ export class NetworkCore implements INetworkCore {
     activeValidatorCount,
     initialStatus,
   }: BaseNetworkInit): Promise<NetworkCore> {
-    const libp2p = await createNodeJsLibp2p(peerId, opts, {
+    const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
       metrics: Boolean(metricsRegistry),
       metricsRegistry: metricsRegistry ?? undefined,
@@ -150,7 +149,7 @@ export class NetworkCore implements INetworkCore {
 
     // Bind discv5's ENR to local metadata
     // resolve circular dependency by setting `discv5` variable after the peer manager is instantiated
-    // eslint-disable-next-line prefer-const
+    // biome-ignore lint/style/useConst: <explanation>
     let discv5: Discv5Worker | undefined;
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
@@ -195,14 +194,15 @@ export class NetworkCore implements INetworkCore {
     await gossip.start();
 
     const enr = opts.discv5?.enr;
-    const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
+    const nodeId = enr ? fromHex(ENR.decodeTxt(enr).nodeId) : null;
     const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
       {
+        privateKey,
         libp2p,
-        gossip: gossip,
+        gossip,
         reqResp,
         attnetsService,
         syncnetsService,
@@ -360,7 +360,11 @@ export class NetworkCore implements INetworkCore {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    return getConnectionsMap(this.libp2p);
+    const m = new Map<string, Connection[]>();
+    for (const [k, v] of getConnectionsMap(this.libp2p).entries()) {
+      m.set(k, v.value);
+    }
+    return m;
   }
 
   async getConnectedPeers(): Promise<PeerIdStr[]> {

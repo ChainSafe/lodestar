@@ -1,18 +1,10 @@
 import {mapValues} from "@lodestar/utils";
-import {GossipType} from "../../gossip/interface.js";
+import {BatchGossipType, GossipType, SequentialGossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";
 import {getGossipAttestationIndex} from "../../../util/sszBytes.js";
 import {LinearGossipQueue} from "./linear.js";
-import {
-  DropType,
-  GossipQueue,
-  GossipQueueOpts,
-  QueueType,
-  isIndexedGossipQueueAvgTimeOpts,
-  isIndexedGossipQueueMinSizeOpts,
-} from "./types.js";
+import {DropType, GossipQueue, GossipQueueOpts, QueueType, isIndexedGossipQueueMinSizeOpts} from "./types.js";
 import {IndexedGossipQueueMinSize} from "./indexed.js";
-import {IndexedGossipQueueAvgTime} from "./indexedAvgTime.js";
 
 /**
  * In normal condition, the higher this value the more efficient the signature verification.
@@ -28,8 +20,8 @@ export const MIN_SIGNATURE_SETS_TO_BATCH_VERIFY = 32;
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
  */
-const defaultGossipQueueOpts: {
-  [K in GossipType]: GossipQueueOpts<PendingGossipsubMessage>;
+const linearGossipQueueOpts: {
+  [K in SequentialGossipType]: GossipQueueOpts<PendingGossipsubMessage>;
 } = {
   // validation gossip block asap
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
@@ -44,15 +36,6 @@ const defaultGossipQueueOpts: {
     maxLength: 5120,
     type: QueueType.LIFO,
     dropOpts: {type: DropType.count, count: 1},
-  },
-  // lighthouse has attestation_queue 16384 and unknown_block_attestation_queue 8192, we use single queue
-  // this topic may cause node to be overload and drop 100% of lower priority queues
-  // so we want to drop it by ratio until node is stable enough (queue is empty)
-  // start with dropping 1% of the queue, then increase 1% more each time. Reset when queue is empty
-  [GossipType.beacon_attestation]: {
-    maxLength: 24576,
-    type: QueueType.LIFO,
-    dropOpts: {type: DropType.ratio, start: 0.01, step: 0.01},
   },
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
@@ -82,9 +65,11 @@ const defaultGossipQueueOpts: {
 };
 
 const indexedGossipQueueOpts: {
-  [K in GossipType]?: GossipQueueOpts<PendingGossipsubMessage>;
+  [K in BatchGossipType]: GossipQueueOpts<PendingGossipsubMessage>;
 } = {
   [GossipType.beacon_attestation]: {
+    // lighthouse has attestation_queue 16384 and unknown_block_attestation_queue 8192, we use single queue
+    // this topic may cause node to be overload and drop 100% of lower priority queues
     maxLength: 24576,
     indexFn: (item: PendingGossipsubMessage) => {
       // Note indexFn is fork agnostic despite changes introduced in Electra
@@ -111,17 +96,14 @@ const indexedGossipQueueOpts: {
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function createGossipQueues(beaconAttestationBatchValidation = false): {
+export function createGossipQueues(): {
   [K in GossipType]: GossipQueue<PendingGossipsubMessage>;
 } {
-  const gossipQueueOpts = beaconAttestationBatchValidation
-    ? {...defaultGossipQueueOpts, ...indexedGossipQueueOpts}
-    : defaultGossipQueueOpts;
+  const gossipQueueOpts = {...linearGossipQueueOpts, ...indexedGossipQueueOpts};
+
   return mapValues(gossipQueueOpts, (opts) => {
     if (isIndexedGossipQueueMinSizeOpts(opts)) {
       return new IndexedGossipQueueMinSize(opts);
-    } else if (isIndexedGossipQueueAvgTimeOpts(opts)) {
-      return new IndexedGossipQueueAvgTime(opts);
     } else {
       return new LinearGossipQueue<PendingGossipsubMessage>(opts);
     }

@@ -26,7 +26,6 @@ describe("AttnetsService", () => {
     "be"
   );
   const ALTAIR_FORK_EPOCH = 100;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createBeaconConfig({ALTAIR_FORK_EPOCH}, ZERO_HASH);
   // const {SECONDS_PER_SLOT} = config;
   let service: AttnetsService;

@@ -33,7 +33,6 @@ describe("gossip block validation", function () {
     chain.forkChoice = forkChoice;
     regen = chain.regen;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (chain as any).opts = {maxSkipSlots};
 
     verifySignature = chain.bls.verifySignatureSets;

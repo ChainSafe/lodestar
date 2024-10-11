@@ -37,7 +37,6 @@ function wrapLogWriter(...writers: [writer: object, ...keys: string[]][]): {
     for (const key of keys) {
       originals[index][key] = writer[key as keyof typeof writer];
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       writer[key as keyof typeof writer] = function mockedWriter(data: string) {
         // Our fixtures does not include the new line character
@@ -51,7 +50,6 @@ function wrapLogWriter(...writers: [writer: object, ...keys: string[]][]): {
     restore: () => {
       for (const [index, [writer, ...keys]] of writers.entries()) {
         for (const key of keys) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-expect-error
           writer[key as keyof typeof writer] = originals[index][key];
         }

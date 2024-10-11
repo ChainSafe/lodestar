@@ -37,12 +37,9 @@ import {
   BLOB_TX_TYPE,
   VERSIONED_HASH_VERSION_KZG,
   COMPOUNDING_WITHDRAWAL_PREFIX,
-  DOMAIN_CONSOLIDATION,
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
   FULL_EXIT_REQUEST_AMOUNT,
 } from "@lodestar/params";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 /**
  * Hand-picked list of constants declared in consensus-spec .md files.
@@ -71,7 +68,6 @@ export const specConstants = {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
-  DOMAIN_CONSOLIDATION,
 
   // phase0/validator.md
   TARGET_AGGREGATORS_PER_COMMITTEE,

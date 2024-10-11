@@ -35,7 +35,7 @@ export async function readSszSnappyHeader(bufferedSource: BufferedSource, type: 
     let sszDataLength: number;
     try {
       sszDataLength = varintDecode(buffer.subarray());
-    } catch (e) {
+    } catch (_e) {
       throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: Infinity});
     }
 

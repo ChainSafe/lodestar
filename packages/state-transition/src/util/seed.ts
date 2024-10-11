@@ -155,7 +155,7 @@ export function computeShuffledIndex(index: number, indexCount: number, seed: By
     const position = Math.max(permuted, flip);
     const source = digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
     const byte = source[Math.floor((position % 256) / 8)];
-    const bit = (byte >> position % 8) % 2;
+    const bit = (byte >> (position % 8)) % 2;
     permuted = bit ? flip : permuted;
   }
   return permuted;

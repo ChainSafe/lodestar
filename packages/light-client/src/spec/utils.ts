@@ -7,6 +7,9 @@ import {
   ForkName,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  isForkPostElectra,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
 } from "@lodestar/params";
 import {
   ssz,
@@ -17,17 +20,18 @@ import {
   LightClientUpdate,
   BeaconBlockHeader,
   SyncCommittee,
+  isElectraLightClientUpdate,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {isValidMerkleBranch, computeEpochAtSlot, computeSyncPeriodAtSlot} from "../utils/index.js";
+import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
 import {LightClientStore} from "./store.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
 export const ZERO_PUBKEY = new Uint8Array(48);
 export const ZERO_SYNC_COMMITTEE = ssz.altair.SyncCommittee.defaultValue();
-export const ZERO_NEXT_SYNC_COMMITTEE_BRANCH = Array.from({length: NEXT_SYNC_COMMITTEE_DEPTH}, () => ZERO_HASH);
 export const ZERO_HEADER = ssz.phase0.BeaconBlockHeader.defaultValue();
 export const ZERO_FINALITY_BRANCH = Array.from({length: FINALIZED_ROOT_DEPTH}, () => ZERO_HASH);
 /** From https://notes.ethereum.org/@vbuterin/extended_light_client_protocol#Optimistic-head-determining-function */
@@ -41,10 +45,19 @@ export function getSafetyThreshold(maxActiveParticipants: number): number {
   return Math.floor(maxActiveParticipants / SAFETY_THRESHOLD_FACTOR);
 }
 
+export function getZeroSyncCommitteeBranch(fork: ForkName): Uint8Array[] {
+  const nextSyncCommitteeDepth = isForkPostElectra(fork)
+    ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA
+    : NEXT_SYNC_COMMITTEE_DEPTH;
+
+  return Array.from({length: nextSyncCommitteeDepth}, () => ZERO_HASH);
+}
+
 export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
-    update.nextSyncCommitteeBranch !== ZERO_NEXT_SYNC_COMMITTEE_BRANCH &&
+    update.nextSyncCommitteeBranch !==
+      getZeroSyncCommitteeBranch(isElectraLightClientUpdate(update) ? ForkName.electra : ForkName.altair) &&
     update.nextSyncCommitteeBranch.some((branch) => !byteArrayEquals(branch, ZERO_HASH))
   );
 }
@@ -93,7 +106,6 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.bellatrix) break;
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.capella:
       (upgradedHeader as LightClientHeader<ForkName.capella>).execution =
         ssz.capella.LightClientHeader.fields.execution.defaultValue();
@@ -103,7 +115,6 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.capella) break;
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.deneb:
       (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.blobGasUsed =
         ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
@@ -113,14 +124,8 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.electra:
-      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.depositRequestsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.depositRequestsRoot.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.withdrawalRequestsRoot.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.consolidationRequestsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.consolidationRequestsRoot.defaultValue();
+      // No changes to LightClientHeader in Electra
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
@@ -157,15 +162,6 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
     }
   }
 
-  if (epoch < config.ELECTRA_FORK_EPOCH) {
-    if (
-      (header as LightClientHeader<ForkName.electra>).execution.depositRequestsRoot !== undefined ||
-      (header as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot !== undefined
-    ) {
-      return false;
-    }
-  }
-
   return isValidMerkleBranch(
     config
       .getExecutionForkTypes(header.beacon.slot)
@@ -184,6 +180,14 @@ export function upgradeLightClientUpdate(
 ): LightClientUpdate {
   update.attestedHeader = upgradeLightClientHeader(config, targetFork, update.attestedHeader);
   update.finalizedHeader = upgradeLightClientHeader(config, targetFork, update.finalizedHeader);
+  update.nextSyncCommitteeBranch = normalizeMerkleBranch(
+    update.nextSyncCommitteeBranch,
+    isForkPostElectra(targetFork) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH
+  );
+  update.finalityBranch = normalizeMerkleBranch(
+    update.finalityBranch,
+    isForkPostElectra(targetFork) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH
+  );
 
   return update;
 }
@@ -195,6 +199,10 @@ export function upgradeLightClientFinalityUpdate(
 ): LightClientFinalityUpdate {
   finalityUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader);
   finalityUpdate.finalizedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader);
+  finalityUpdate.finalityBranch = normalizeMerkleBranch(
+    finalityUpdate.finalityBranch,
+    isForkPostElectra(targetFork) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH
+  );
 
   return finalityUpdate;
 }

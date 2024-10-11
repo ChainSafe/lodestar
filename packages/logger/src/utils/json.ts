@@ -1,4 +1,4 @@
-import {LodestarError, mapValues, toHexString} from "@lodestar/utils";
+import {LodestarError, mapValues, toHex} from "@lodestar/utils";
 
 const MAX_DEPTH = 0;
 
@@ -29,7 +29,7 @@ export function logCtxToJson(arg: unknown, depth = 0, fromError = false): LogDat
       if (arg === null) return "null";
 
       if (arg instanceof Uint8Array) {
-        return toHexString(arg);
+        return toHex(arg);
       }
 
       // For any type that may include recursiveness break early at the first level
@@ -90,7 +90,7 @@ export function logCtxToString(arg: unknown, depth = 0, fromError = false): stri
       if (arg === null) return "null";
 
       if (arg instanceof Uint8Array) {
-        return toHexString(arg);
+        return toHex(arg);
       }
 
       // For any type that may include recursiveness break early at the first level
@@ -127,6 +127,7 @@ export function logCtxToString(arg: unknown, depth = 0, fromError = false): stri
     case "string":
     case "undefined":
     case "boolean":
+      return String(arg);
     default:
       return String(arg);
   }

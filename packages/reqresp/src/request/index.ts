@@ -98,7 +98,6 @@ export async function* sendRequest(
       async (timeoutAndParentSignal) => {
         const protocolIds = Array.from(protocolsMap.keys());
         const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!conn) throw Error("dialProtocol timeout");
         return conn;
       },

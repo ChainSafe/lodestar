@@ -124,6 +124,8 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const BASE_REWARDS_PER_EPOCH = 4;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
+export const ZERO_HASH = Buffer.alloc(32, 0);
+export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
 // Withdrawal prefixes
 // Since the prefixes are just 1 byte, we define and use them as number
@@ -144,7 +146,6 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
-export const DOMAIN_CONSOLIDATION = Uint8Array.from([11, 0, 0, 0]);
 
 // Application specific domains
 
@@ -264,7 +265,9 @@ export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131
 // Electra Misc
 export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;
 export const FULL_EXIT_REQUEST_AMOUNT = 0;
+export const FINALIZED_ROOT_GINDEX_ELECTRA = 169;
+export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
+export const FINALIZED_ROOT_INDEX_ELECTRA = 41;
 export const NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA = 87;
 export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
-export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
-export const FINALIZED_ROOT_INDEX_ELECTRA = 169;
+export const NEXT_SYNC_COMMITTEE_INDEX_ELECTRA = 23;

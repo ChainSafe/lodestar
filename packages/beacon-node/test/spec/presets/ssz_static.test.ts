@@ -32,7 +32,7 @@ type Types = Record<string, Type<any>>;
 
 const sszStatic =
   (skippedFork: string, skippedTypes?: string[]) =>
-  (fork: ForkName, typeName: string, testSuite: string, testSuiteDirpath: string): void => {
+  (fork: ForkName, typeName: string, _testSuite: string, testSuiteDirpath: string): void => {
     if (fork === skippedFork) {
       return;
     }
@@ -78,7 +78,6 @@ const sszStatic =
   };
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   ssz_static: {
     type: RunnerType.custom,
     // starting from v1.4.0-beta.6, there is "whisk" fork in ssz_static tests but we ignore them

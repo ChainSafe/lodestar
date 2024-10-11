@@ -21,8 +21,6 @@ vi.mock("../../../src/services/emitter.js");
 vi.mock("../../../src/services/chainHeaderTracker.js");
 vi.mock("../../../src/services/syncingStatusTracker.js");
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("SyncCommitteeService", function () {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
@@ -102,7 +100,7 @@ describe("SyncCommitteeService", function () {
         ];
 
         // Return empty replies to duties service
-        api.beacon.getStateValidators.mockResolvedValue(
+        api.beacon.postStateValidators.mockResolvedValue(
           mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
         );
         api.validator.getSyncCommitteeDuties.mockResolvedValue(

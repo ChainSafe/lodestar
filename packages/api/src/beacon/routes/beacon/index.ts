@@ -25,6 +25,7 @@ export type {
 export type {
   StateId,
   ValidatorId,
+  ValidatorIdentities,
   ValidatorStatus,
   FinalityCheckpoints,
   ValidatorResponse,

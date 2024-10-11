@@ -113,7 +113,6 @@ describe("Json helper", () => {
       // Circular references
       () => {
         const circularReference: any = {};
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         circularReference.myself = circularReference;
         return {
           id: "circular reference",
@@ -161,7 +160,6 @@ describe("Json helper", () => {
 
       // Objects
       {id: "object of basic types", json: {a: 1, b: "a", c: root}, output: `a=1, b=a, c=${rootHex}`},
-      // eslint-disable-next-line quotes
       {id: "object of objects", json: {a: {b: 1}}, output: `a=[object]`},
       {
         id: "error metadata",
@@ -175,7 +173,6 @@ describe("Json helper", () => {
       // Circular references
       () => {
         const circularReference: any = {};
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         circularReference.myself = circularReference;
         return {
           id: "circular reference",

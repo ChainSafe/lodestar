@@ -76,7 +76,7 @@ export async function handleRequest({
           signal
         ).catch((e: unknown) => {
           if (e instanceof TimeoutError) {
-            throw e; // Let outter catch {} re-type the error as SERVER_ERROR
+            throw e; // Let outter catch (_e) {} re-type the error as SERVER_ERROR
           } else {
             throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
           }

@@ -85,7 +85,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     });
 
     this.handlers = {
-      /* eslint-disable @typescript-eslint/naming-convention */
       engine_newPayloadV1: this.notifyNewPayload.bind(this),
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
@@ -98,10 +97,8 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV3: this.getPayload.bind(this),
       engine_getPayloadV4: this.getPayload.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
-      engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
-      engine_getPayloadBodiesByRangeV2: this.getPayloadBodiesByRange.bind(this),
     };
   }
 

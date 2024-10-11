@@ -2,7 +2,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {describe, expect, it} from "vitest";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-// eslint-disable-next-line import/no-relative-packages
+import {LodestarError} from "@lodestar/utils";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
@@ -12,7 +12,7 @@ import {
   getSeenAttDataKeyFromGossipAttestation,
   getSeenAttDataKeyFromSignedAggregateAndProof,
   validateApiAttestation,
-  validateAttestation,
+  validateGossipAttestationsSameAttData,
 } from "../../../../../src/chain/validation/index.js";
 import {getAttDataFromAttestationSerialized} from "../../../../../src/util/sszBytes.js";
 import {memoOnce} from "../../../../utils/cache.js";
@@ -30,7 +30,6 @@ describe("validateAttestation", () => {
 
   const getState = memoOnce(() => generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot}));
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function getValidData(opts?: Partial<AttestationValidDataOpts>) {
     return getAttestationValidData({
       currentSlot: stateSlot,
@@ -75,7 +74,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.BAD_TARGET_EPOCH
@@ -94,7 +93,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.PAST_SLOT
@@ -113,7 +112,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.FUTURE_SLOT
@@ -138,7 +137,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
@@ -158,7 +157,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
@@ -182,7 +181,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
@@ -202,7 +201,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.INVALID_TARGET_ROOT
@@ -229,7 +228,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
@@ -248,7 +247,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       invalidSubnet,
       AttestationErrorCode.INVALID_SUBNET_ID
@@ -268,7 +267,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
@@ -290,7 +289,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       },
       subnet,
       AttestationErrorCode.INVALID_SIGNATURE
@@ -314,7 +313,9 @@ describe("validateAttestation", () => {
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
-    await expectRejectedWithLodestarError(validateAttestation(fork, chain, attestationOrBytes, subnet), errorCode);
+    const {results} = await validateGossipAttestationsSameAttData(fork, chain, [attestationOrBytes], subnet);
+    expect(results.length).toEqual(1);
+    expect((results[0].err as LodestarError<{code: string}>).type.code).toEqual(errorCode);
   }
 });
 

@@ -1,8 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger, toPrintableUrl} from "@lodestar/utils";
+import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {getClient, ApiClient, routes, ApiRequestInit, defaultInit} from "@lodestar/api";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
@@ -373,7 +372,9 @@ export class Validator {
    * Create a signed voluntary exit message for the given validator by its key.
    */
   async signVoluntaryExit(publicKey: string, exitEpoch?: number): Promise<phase0.SignedVoluntaryExit> {
-    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validators = (
+      await this.api.beacon.postStateValidators({stateId: "head", validatorIds: [publicKey]})
+    ).value();
 
     const validator = validators[0];
     if (validator === undefined) {
@@ -397,14 +398,14 @@ async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Pro
     if (!ssz.Root.equals(genesisValidatorsRoot, nodeGenesisValidatorRoot)) {
       // this happens when the existing validator db served another network before
       opts.logger.error("Not the same genesisValidatorRoot", {
-        expected: toHexString(nodeGenesisValidatorRoot),
-        actual: toHexString(genesisValidatorsRoot),
+        expected: toRootHex(nodeGenesisValidatorRoot),
+        actual: toRootHex(genesisValidatorsRoot),
       });
       throw new NotEqualParamsError("Not the same genesisValidatorRoot");
     }
   } else {
     await metaDataRepository.setGenesisValidatorsRoot(nodeGenesisValidatorRoot);
-    opts.logger.info("Persisted genesisValidatorRoot", toHexString(nodeGenesisValidatorRoot));
+    opts.logger.info("Persisted genesisValidatorRoot", toRootHex(nodeGenesisValidatorRoot));
   }
 
   const nodeGenesisTime = genesis.genesisTime;

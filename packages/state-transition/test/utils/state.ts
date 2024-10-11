@@ -1,3 +1,4 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -18,7 +19,6 @@ import {
   CachedBeaconStateAllForks,
   BeaconStateAllForks,
   createCachedBeaconState,
-  PubkeyIndexMap,
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {EpochCacheOpts} from "../../src/cache/epochCache.js";

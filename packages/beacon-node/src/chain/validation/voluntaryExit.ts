@@ -1,6 +1,6 @@
 import {phase0} from "@lodestar/types";
 import {isValidVoluntaryExit, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "../index.js";
 import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 

@@ -26,7 +26,6 @@ import {
   GOSSIP_D_LOW,
 } from "./scoringParameters.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
@@ -136,6 +135,10 @@ export class Eth2Gossipsub extends GossipSub {
       // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
       // publish to some more topic peers to make sure we always publish to at least GOSSIP_D peers
       floodPublish: !opts?.disableFloodPublish,
+      // Only send IDONTWANT messages if the message size is larger than this
+      // This should be large enough to not send IDONTWANT for "small" messages
+      // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
+      idontwantMinDataSize: 16829,
     });
     this.scoreParams = scoreParams;
     this.config = config;

@@ -213,8 +213,10 @@ function getMockBeaconApi(livenessMap: LivenessMap): ApiClient {
 }
 
 class ClockMockMsToSlot extends ClockMock {
-  constructor(public currentEpoch: Epoch) {
+  currentEpoch: Epoch;
+  constructor(currentEpoch: Epoch) {
     super();
+    this.currentEpoch = currentEpoch;
   }
 
   async tickEpoch(epoch: Epoch, signal: AbortSignal): Promise<void> {

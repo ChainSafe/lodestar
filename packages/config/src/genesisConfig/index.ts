@@ -1,6 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH, DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {ForkDigestHex, CachedGenesis} from "./types.js";
 export type {ForkDigestContext} from "./types.js";
@@ -139,7 +139,7 @@ function computeForkDataRoot(currentVersion: Version, genesisValidatorsRoot: Roo
 }
 
 function toHexStringNoPrefix(hex: string | Uint8Array): string {
-  return strip0xPrefix(typeof hex === "string" ? hex : toHexString(hex));
+  return strip0xPrefix(typeof hex === "string" ? hex : toHex(hex));
 }
 
 function strip0xPrefix(hex: string): string {

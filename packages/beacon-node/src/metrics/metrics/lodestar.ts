@@ -25,7 +25,6 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 /**
  * Extra Lodestar custom metrics
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
@@ -381,11 +380,11 @@ export function createLodestarMetrics(
 
     epochCache: {
       finalizedPubkeyDuplicateInsert: register.gauge({
-        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert",
+        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert_total",
         help: "Total count of duplicate insert of finalized pubkeys",
       }),
       newUnFinalizedPubkey: register.gauge({
-        name: "lodestar_epoch_cache_new_unfinalized_pubkey",
+        name: "lodestar_epoch_cache_new_unfinalized_pubkey_total",
         help: "Total count of unfinalized pubkeys added",
       }),
     },
@@ -1218,11 +1217,6 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      stateSerializeDuration: register.histogram({
-        name: "lodestar_cp_state_cache_state_serialize_seconds",
-        help: "Histogram of time to serialize state to db",
-        buckets: [0.1, 0.5, 1, 2, 3, 4],
-      }),
       numStatesUpdated: register.histogram({
         name: "lodestar_cp_state_cache_state_updated_count",
         help: "Histogram of number of state cache items updated every time removing and adding pubkeys to pubkey cache",
@@ -1297,21 +1291,44 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_size",
         help: "Shuffling cache size",
       }),
-      processStateInsertNew: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_insert_new_total",
-        help: "Total number of times processState is called resulting a new shuffling",
-      }),
-      processStateUpdatePromise: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_update_promise_total",
-        help: "Total number of times processState is called resulting a promise being updated with shuffling",
-      }),
-      processStateNoOp: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_no_op_total",
-        help: "Total number of times processState is called resulting no changes",
-      }),
       insertPromiseCount: register.gauge({
         name: "lodestar_shuffling_cache_insert_promise_count",
         help: "Total number of times insertPromise is called",
+      }),
+      hit: register.gauge({
+        name: "lodestar_shuffling_cache_hit_count",
+        help: "Count of shuffling cache hit",
+      }),
+      miss: register.gauge({
+        name: "lodestar_shuffling_cache_miss_count",
+        help: "Count of shuffling cache miss",
+      }),
+      shufflingBuiltMultipleTimes: register.gauge({
+        name: "lodestar_shuffling_cache_recalculated_shuffling_count",
+        help: "Count of shuffling that were build multiple times",
+      }),
+      shufflingPromiseNotResolvedAndThrownAway: register.gauge({
+        name: "lodestar_shuffling_cache_promise_not_resolved_and_thrown_away_count",
+        help: "Count of shuffling cache promises that were discarded and the shuffling was built synchronously",
+      }),
+      shufflingPromiseNotResolved: register.gauge({
+        name: "lodestar_shuffling_cache_promise_not_resolved_count",
+        help: "Count of shuffling cache promises that were requested before the promise was resolved",
+      }),
+      nextShufflingNotOnEpochCache: register.gauge({
+        name: "lodestar_shuffling_cache_next_shuffling_not_on_epoch_cache",
+        help: "The next shuffling was not on the epoch cache before the epoch transition",
+      }),
+      shufflingPromiseResolutionTime: register.histogram({
+        name: "lodestar_shuffling_cache_promise_resolution_time_seconds",
+        help: "Time from promise insertion until promise resolution when shuffling was ready in seconds",
+        buckets: [0.5, 1, 1.5, 2],
+      }),
+      shufflingCalculationTime: register.histogram<{source: "build" | "getSync"}>({
+        name: "lodestar_shuffling_cache_shuffling_calculation_time_seconds",
+        help: "Run time of shuffling calculation",
+        buckets: [0.5, 0.75, 1, 1.25, 1.5],
+        labelNames: ["source"],
       }),
     },
 
@@ -1410,6 +1427,12 @@ export function createLodestarMetrics(
     unhandledPromiseRejections: register.gauge({
       name: "lodestar_unhandled_promise_rejections_total",
       help: "UnhandledPromiseRejection total count",
+    }),
+    stateSerializeDuration: register.histogram<{source: AllocSource}>({
+      name: "lodestar_state_serialize_seconds",
+      help: "Histogram of time to serialize state",
+      labelNames: ["source"],
+      buckets: [0.1, 0.5, 1, 2, 3, 4],
     }),
 
     // regen.getState metrics

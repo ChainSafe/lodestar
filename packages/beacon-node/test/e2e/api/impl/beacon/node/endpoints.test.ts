@@ -67,9 +67,7 @@ describe("beacon node api", function () {
       const bnElOffline = await getDevBeaconNode({
         params: {
           ...chainConfigDef,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
           ALTAIR_FORK_EPOCH: 0,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
           BELLATRIX_FORK_EPOCH: 0,
         },
         options: {

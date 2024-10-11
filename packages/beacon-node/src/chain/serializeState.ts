@@ -15,19 +15,18 @@ export async function serializeState<T>(
   const size = state.type.tree_serializedSize(state.node);
   let stateBytes: Uint8Array | null = null;
   if (bufferPool) {
-    const bufferWithKey = bufferPool.alloc(size, source);
+    using bufferWithKey = bufferPool.alloc(size, source);
     if (bufferWithKey) {
       stateBytes = bufferWithKey.buffer;
       const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
       state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
+      return processFn(stateBytes);
     }
+    // release the buffer back to the pool automatically
   }
 
-  if (!stateBytes) {
-    // we already have metrics in BufferPool so no need to do it here
-    stateBytes = state.serialize();
-  }
+  // we already have metrics in BufferPool so no need to do it here
+  stateBytes = state.serialize();
 
   return processFn(stateBytes);
-  // release the buffer back to the pool automatically
 }

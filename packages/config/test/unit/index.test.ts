@@ -31,7 +31,6 @@ describe("forks", () => {
   });
 
   it("correctly handle pre-genesis", () => {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const postMergeTestnet = createForkConfig({...chainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0});
     expect(postMergeTestnet.getForkName(-1)).toBe(ForkName.bellatrix);
   });

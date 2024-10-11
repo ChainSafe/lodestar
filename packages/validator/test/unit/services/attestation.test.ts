@@ -52,7 +52,6 @@ describe("AttestationService", function () {
     vi.resetAllMocks();
   });
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
 
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
@@ -105,7 +104,7 @@ describe("AttestationService", function () {
         ];
 
         // Return empty replies to duties service
-        api.beacon.getStateValidators.mockResolvedValue(
+        api.beacon.postStateValidators.mockResolvedValue(
           mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
         );
         api.validator.getAttesterDuties.mockResolvedValue(

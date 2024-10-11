@@ -8,7 +8,6 @@ describe("UpgradeLightClientHeader", function () {
   let lcHeaderByFork: Record<ForkName, LightClientHeader>;
   let testSlots: Record<ForkName, number>;
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 1,
@@ -28,7 +27,7 @@ describe("UpgradeLightClientHeader", function () {
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
-      electra: ssz.electra.LightClientHeader.defaultValue(),
+      electra: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {

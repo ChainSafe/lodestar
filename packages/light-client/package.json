@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.22.0",
+  "version": "1.23.0",
   "type": "module",
   "exports": {
     ".": {
@@ -62,8 +62,8 @@
     "check-bundle": "node -e \"(async function() { await import('./dist/lightclient.min.mjs') })()\"",
     "build:release": "yarn clean && yarn run build && yarn run build:bundle",
     "check-types": "tsc",
-    "lint": "eslint --color --ext .ts src/ test/",
-    "lint:fix": "yarn run lint --fix",
+    "lint": "biome check src/ test/",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
@@ -77,17 +77,17 @@
     "@chainsafe/blst": "^0.2.0",
     "@chainsafe/persistent-merkle-tree": "^0.8.0",
     "@chainsafe/ssz": "^0.17.1",
-    "@lodestar/api": "^1.22.0",
-    "@lodestar/config": "^1.22.0",
-    "@lodestar/params": "^1.22.0",
-    "@lodestar/types": "^1.22.0",
-    "@lodestar/utils": "^1.22.0",
+    "@lodestar/api": "^1.23.0",
+    "@lodestar/config": "^1.23.0",
+    "@lodestar/params": "^1.23.0",
+    "@lodestar/types": "^1.23.0",
+    "@lodestar/utils": "^1.23.0",
     "mitt": "^3.0.0"
   },
   "devDependencies": {
     "@chainsafe/as-sha256": "^0.5.0",
     "@types/qs": "^6.9.7",
-    "fastify": "^4.27.0",
+    "fastify": "^5.0.0",
     "qs": "^6.11.1",
     "uint8arrays": "^5.0.1"
   },

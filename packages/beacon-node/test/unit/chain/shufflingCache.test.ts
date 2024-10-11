@@ -1,7 +1,4 @@
 import {describe, it, expect, beforeEach} from "vitest";
-
-import {getShufflingDecisionBlock} from "@lodestar/state-transition";
-// eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../state-transition/test/perf/util.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 
@@ -9,39 +6,43 @@ describe("ShufflingCache", function () {
   const vc = 64;
   const stateSlot = 100;
   const state = generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot});
-  const currentEpoch = state.epochCtx.currentShuffling.epoch;
+  const currentEpoch = state.epochCtx.epoch;
+  const currentDecisionRoot = state.epochCtx.currentDecisionRoot;
   let shufflingCache: ShufflingCache;
 
   beforeEach(() => {
-    shufflingCache = new ShufflingCache(null, {maxShufflingCacheEpochs: 1});
-    shufflingCache.processState(state, currentEpoch);
+    shufflingCache = new ShufflingCache(null, null, {maxShufflingCacheEpochs: 1}, [
+      {
+        shuffling: state.epochCtx.currentShuffling,
+        decisionRoot: currentDecisionRoot,
+      },
+    ]);
   });
 
   it("should get shuffling from cache", async function () {
-    const decisionRoot = getShufflingDecisionBlock(state, currentEpoch);
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
+    expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
   });
 
   it("should bound by maxSize(=1)", async function () {
-    const decisionRoot = getShufflingDecisionBlock(state, currentEpoch);
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
+    expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
     // insert promises at the same epoch does not prune the cache
     shufflingCache.insertPromise(currentEpoch, "0x00");
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
-    // insert shufflings at other epochs does prune the cache
-    shufflingCache.processState(state, currentEpoch + 1);
+    expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
+    // insert shuffling at other epochs does prune the cache
+    shufflingCache["set"](state.epochCtx.previousShuffling, state.epochCtx.previousDecisionRoot);
     // the current shuffling is not available anymore
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toBeNull();
+    expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toBeNull();
   });
 
   it("should return shuffling from promise", async function () {
-    const nextDecisionRoot = getShufflingDecisionBlock(state, currentEpoch + 1);
-    shufflingCache.insertPromise(currentEpoch + 1, nextDecisionRoot);
-    const shufflingRequest0 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
-    const shufflingRequest1 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
-    shufflingCache.processState(state, currentEpoch + 1);
-    expect(await shufflingRequest0).toEqual(state.epochCtx.nextShuffling);
-    expect(await shufflingRequest1).toEqual(state.epochCtx.nextShuffling);
+    const previousEpoch = state.epochCtx.epoch - 1;
+    const previousDecisionRoot = state.epochCtx.previousDecisionRoot;
+    shufflingCache.insertPromise(previousEpoch, previousDecisionRoot);
+    const shufflingRequest0 = shufflingCache.get(previousEpoch, previousDecisionRoot);
+    const shufflingRequest1 = shufflingCache.get(previousEpoch, previousDecisionRoot);
+    shufflingCache["set"](state.epochCtx.previousShuffling, previousDecisionRoot);
+    expect(await shufflingRequest0).toEqual(state.epochCtx.previousShuffling);
+    expect(await shufflingRequest1).toEqual(state.epochCtx.previousShuffling);
   });
 
   it("should support up to 2 promises at a time", async function () {
