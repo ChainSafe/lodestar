@@ -39,11 +39,7 @@
         "noUselessThisAlias": "error"
       },
       "correctness": {
-        "noInvalidConstructorSuper": "off",
-        "noInvalidUseBeforeDeclaration": "off",
-        "noPrecisionLoss": "error",
         "noUnusedVariables": "error",
-        "noVoidTypeReturn": "off",
         "useYield": "off",
         "useImportExtensions": {
           "level": "error",
