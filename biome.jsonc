@@ -31,7 +31,6 @@
         "useArrowFunction": "off",
         // This pattern is used a lot earlier in code so disabling this rule
         "useLiteralKeys": "off",
-        "useRegexLiterals": "off",
         "noBannedTypes": "error",
         "noUselessThisAlias": "error"
       },
