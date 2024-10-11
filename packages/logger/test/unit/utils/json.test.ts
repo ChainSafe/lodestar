@@ -160,7 +160,7 @@ describe("Json helper", () => {
 
       // Objects
       {id: "object of basic types", json: {a: 1, b: "a", c: root}, output: `a=1, b=a, c=${rootHex}`},
-      {id: "object of objects", json: {a: {b: 1}}, output: `a=[object]`},
+      {id: "object of objects", json: {a: {b: 1}}, output: "a=[object]"},
       {
         id: "error metadata",
         json: {

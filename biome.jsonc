@@ -56,8 +56,7 @@
       },
       "style": {
         "noCommaOperator": "off",
-        "noInferrableTypes": "off",
-        "noNonNullAssertion": "error",
+        // There are a lot of places we mutate params, should be fixed in an independent PR.
         "noParameterAssign": "off",
         "noRestrictedGlobals": {
           "level": "error",
@@ -65,7 +64,6 @@
             "deniedGlobals": ["fetch"]
           }
         },
-        "noUnusedTemplateLiteral": "off",
         "noUselessElse": "off",
         "noVar": "error",
         "useConst": "error",
@@ -196,10 +194,8 @@
         "noConsoleLog": "error",
         // There are lot of cases in our code that need a separate PR to enable this rule
         "noImplicitAnyLet": "off",
-        "noExtraNonNullAssertion": "error",
-        "noMisleadingInstantiator": "error",
-        "noUnsafeDeclarationMerging": "error",
-        "noEmptyBlockStatements": "off" // There is a lot of empty code blocks, should be enabled and clean up separately.
+        // There is a lot of empty code blocks, should be enabled and clean up separately.
+        "noEmptyBlockStatements": "off"
       },
       "nursery": {
         "useConsistentMemberAccessibility": {
