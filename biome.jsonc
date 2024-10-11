@@ -52,11 +52,9 @@
           }
         },
         "useArrayLiterals": "error",
-        "noUndeclaredDependencies": "off", // TODO: Need to see why this rule is not detecting monorepo packages
         "noUndeclaredVariables": "error"
       },
       "performance": {
-        "noAccumulatingSpread": "off",
         "noDelete": "off"
       },
       "style": {

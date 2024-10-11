@@ -25,14 +25,14 @@ export function parseBeaconParamsArgs(args: Record<string, string | number>): IB
 }
 
 const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
-  (options: Record<string, CliOptionDefinition>, key): Record<string, CliOptionDefinition> => ({
-    ...options,
-    [getArgKey(key)]: {
+  (options: Record<string, CliOptionDefinition>, key): Record<string, CliOptionDefinition> => {
+    options[getArgKey(key)] = {
       hidden: true,
       type: "string",
       group: "params",
-    },
-  }),
+    };
+    return options;
+  },
   {}
 );
 
