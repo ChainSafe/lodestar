@@ -192,7 +192,7 @@ function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown
   if (!valid) {
     // Remove descriptions, for better clarity in rendering on errors
     applyRecursively(schema, (obj) => {
-      delete obj.description;
+      obj.description = undefined;
     });
 
     throw Error(

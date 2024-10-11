@@ -12,6 +12,7 @@ const validAccountProof = eoaProof.dependentRequests[0].response.result as unkno
 const validStateRoot = hexToBuffer(eoaProof.beacon.executionPayload.state_root);
 
 const invalidAccountProof = deepmerge(validAccountProof, {});
+// biome-ignore lint/performance/noDelete: Can not delete index with undefined assignment
 delete invalidAccountProof.accountProof[0];
 
 describe("uitls/execution", () => {

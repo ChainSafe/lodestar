@@ -30,7 +30,7 @@ describe("ExecutionEngine / http ", () => {
     server.post("/", async (req) => {
       if (errorResponsesBeforeSuccess === 0) {
         reqJsonRpcPayload = req.body;
-        delete (reqJsonRpcPayload as {id?: number}).id;
+        (reqJsonRpcPayload as {id?: number}).id = undefined;
         return returnValue;
       } else {
         --errorResponsesBeforeSuccess;

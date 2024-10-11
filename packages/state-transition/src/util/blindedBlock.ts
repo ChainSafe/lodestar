@@ -92,7 +92,7 @@ export function signedBlindedBlockToFull(
 
   // state transition can't seem to handle executionPayloadHeader presense in merge block
   // so just delete the extra field we don't require
-  delete (signedBlock.message.body as {executionPayloadHeader?: ExecutionPayloadHeader}).executionPayloadHeader;
+  (signedBlock.message.body as {executionPayloadHeader?: ExecutionPayloadHeader}).executionPayloadHeader = undefined;
   return signedBlock;
 }
 

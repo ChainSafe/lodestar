@@ -139,13 +139,13 @@ function preprocessSchema(schema: JsonSchema): void {
 
   // Remove nullable
   applyRecursively(schema, (obj) => {
-    delete obj.nullable;
+    obj.nullable = undefined;
   });
 
   // Remove required: false
   applyRecursively(schema, (obj) => {
     if (typeof obj.required === "boolean") {
-      delete obj.required;
+      obj.required = undefined;
     }
   });
 

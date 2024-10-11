@@ -35,7 +35,7 @@ describe("ExecutionEngine / http", () => {
         return [];
       }
       reqJsonRpcPayload = req.body;
-      delete (reqJsonRpcPayload as {id?: number}).id;
+      (reqJsonRpcPayload as {id?: number}).id = undefined;
       return returnValue;
     });
 

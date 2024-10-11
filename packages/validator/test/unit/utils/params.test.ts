@@ -31,6 +31,7 @@ describe("utils / params / assertEqualParams", () => {
 
   it("should fill missing remote values with default and be equal", () => {
     const chainConfigJson = chainConfigToJson(chainConfig);
+    // biome-ignore lint/performance/noDelete: Can not delete property with undefined assignment
     delete chainConfigJson["DEPOSIT_CONTRACT_ADDRESS"];
     assertEqualParams(chainConfig, chainConfigJson);
   });
