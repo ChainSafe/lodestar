@@ -30,9 +30,7 @@
         // We use normal functions for to ease with debugging context
         "useArrowFunction": "off",
         // This pattern is used a lot earlier in code so disabling this rule
-        "useLiteralKeys": "off",
-        "noBannedTypes": "error",
-        "noUselessThisAlias": "error"
+        "useLiteralKeys": "off"
       },
       "correctness": {
         "noUnusedVariables": "error",
@@ -51,6 +49,7 @@
         "noUndeclaredVariables": "error"
       },
       "style": {
+        // The code usage looks suspicious so it should be enabled in a separate PR
         "noCommaOperator": "off",
         // There are a lot of places we mutate params, should be fixed in an independent PR.
         "noParameterAssign": "off",
@@ -62,12 +61,24 @@
         },
         // There are a lot of places we mutate params, should be fixed in an independent PR.
         "noUselessElse": "off",
-        "noVar": "error",
-        "useConst": "error",
         // We prefer to use `Math.pow` over `**` operator
         "useExponentiationOperator": "off",
         // In some cases the enums are initialized with values of other enums
         "useLiteralEnumMembers": "off",
+        // We prefer to have multiple declarations lines
+        "useSingleVarDeclarator": "off",
+        // We use `+` operator for string concatenation a lot
+        "useTemplate": "off",
+        // We use to export types and object without differentiating
+        "useExportType": "off",
+        // We use to export types and object without differentiating
+        "useImportType": "off",
+        // It's nice to use `Number` namespace but should be done in a separate PR
+        "useNumberNamespace": "off",
+        // We prefer to auto-initialize enums
+        "useEnumInitializers": "off",
+        "noVar": "error",
+        "useConst": "error",
         "useNamingConvention": {
           "level": "error",
           "options": {
@@ -178,28 +189,16 @@
             ]
           }
         },
-        // We prefer to have multiple declarations lines
-        "useSingleVarDeclarator": "off",
-        // We use `+` operator for string concatenation a lot
-        "useTemplate": "off",
-        "noNamespace": "error",
-        // We use to export types and object without differentiating
-        "useExportType": "off",
-        // We use to export types and object without differentiating
-        "useImportType": "off",
-        // It's nice to use `Number` namespace but should be done in a separate PR
-        "useNumberNamespace": "off",
-        // We prefer to auto-initialize enums
-        "useEnumInitializers": "off"
+        "noNamespace": "error"
       },
       "suspicious": {
         // `void` as type is useful in our case when used as generic constraint e.g. K extends number | void
         "noConfusingVoidType": "off",
-        "noConsoleLog": "error",
         // There are lot of cases in our code that need a separate PR to enable this rule
         "noImplicitAnyLet": "off",
         // There is a lot of empty code blocks, should be enabled and clean up separately.
-        "noEmptyBlockStatements": "off"
+        "noEmptyBlockStatements": "off",
+        "noConsoleLog": "error"
       },
       "nursery": {
         "useConsistentMemberAccessibility": {
