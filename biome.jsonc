@@ -195,7 +195,6 @@
         "noConfusingVoidType": "off",
         "noConsoleLog": "error",
         "noExplicitAny": "error",
-        "noExportsInTest": "off",
         "noFallthroughSwitchClause": "off",
         "noGlobalIsFinite": "off",
         "noGlobalIsNan": "off",

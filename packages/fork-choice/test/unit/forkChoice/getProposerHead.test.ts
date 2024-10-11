@@ -13,7 +13,7 @@ import {
   DataAvailabilityStatus,
 } from "../../../src/index.js";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
-import {getBlockRoot, getStateRoot} from "./forkChoice.test.js";
+import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
 
