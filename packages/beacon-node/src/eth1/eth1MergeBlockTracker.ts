@@ -193,7 +193,7 @@ export class Eth1MergeBlockTracker {
           // Persist found merge block here to affect both caller paths:
           // - internal searcher
           // - external caller if STOPPED
-          if (mergeBlock && this.status.code != StatusCode.FOUND) {
+          if (mergeBlock && this.status.code !== StatusCode.FOUND) {
             if (this.status.code === StatusCode.SEARCHING) {
               this.close();
             }

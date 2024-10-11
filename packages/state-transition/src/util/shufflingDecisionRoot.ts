@@ -12,7 +12,7 @@ import {computeStartSlotAtEpoch} from "./epoch.js";
  */
 export function proposerShufflingDecisionRoot(state: CachedBeaconStateAllForks): Root | null {
   const decisionSlot = proposerShufflingDecisionSlot(state);
-  if (state.slot == decisionSlot) {
+  if (state.slot === decisionSlot) {
     return null;
   } else {
     return getBlockRootAtSlot(state, decisionSlot);
@@ -37,7 +37,7 @@ function proposerShufflingDecisionSlot(state: CachedBeaconStateAllForks): Slot {
  */
 export function attesterShufflingDecisionRoot(state: CachedBeaconStateAllForks, requestedEpoch: Epoch): Root | null {
   const decisionSlot = attesterShufflingDecisionSlot(state, requestedEpoch);
-  if (state.slot == decisionSlot) {
+  if (state.slot === decisionSlot) {
     return null;
   } else {
     return getBlockRootAtSlot(state, decisionSlot);

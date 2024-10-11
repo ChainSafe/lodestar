@@ -24,7 +24,7 @@ export class SlashingProtectionBlockService {
   async checkAndInsertBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
     const safeStatus = await this.checkBlockProposal(pubkey, block);
 
-    if (safeStatus != SafeStatus.SAME_DATA) {
+    if (safeStatus !== SafeStatus.SAME_DATA) {
       await this.insertBlockProposal(pubkey, block);
     }
 

@@ -805,7 +805,7 @@ export class ValidatorStore {
     }
 
     const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
-    if (!isPostElectra && duty.committeeIndex != data.index) {
+    if (!isPostElectra && duty.committeeIndex !== data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );

@@ -39,7 +39,7 @@ export class SlashingProtectionAttestationService {
   async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
     const safeStatus = await this.checkAttestation(pubKey, attestation);
 
-    if (safeStatus != SafeStatus.SAME_DATA) {
+    if (safeStatus !== SafeStatus.SAME_DATA) {
       await this.insertAttestation(pubKey, attestation);
     }
 

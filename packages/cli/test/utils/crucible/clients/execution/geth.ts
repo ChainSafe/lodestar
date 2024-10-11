@@ -145,7 +145,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         "--verbosity",
         "5",
         ...(mining ? ["--mine", "--miner.etherbase", EL_GENESIS_ACCOUNT] : []),
-        ...(mode == ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
+        ...(mode === ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
         ...clientOptions,
       ],
       env: {},

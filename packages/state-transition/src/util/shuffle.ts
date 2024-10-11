@@ -81,7 +81,7 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
     // nothing to (un)shuffle
     return;
   }
-  if (SHUFFLE_ROUND_COUNT == 0) {
+  if (SHUFFLE_ROUND_COUNT === 0) {
     // no shuffling
     return;
   }
@@ -145,20 +145,20 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
       // -- step() fn start
       // The pair is i,j. With j being the bigger of the two, hence the "position" identifier of the pair.
       // Every 256th bit (aligned to j).
-      if ((j & 0xff) == 0xff) {
+      if ((j & 0xff) === 0xff) {
         // just overwrite the last part of the buffer, reuse the start (seed, round)
         setPositionUint32(j >> 8, buf);
         source = digest(buf);
       }
 
       // Same trick with byte retrieval. Only every 8th.
-      if ((j & 0x7) == 0x7) {
+      if ((j & 0x7) === 0x7) {
         byteV = source[(j & 0xff) >> 3];
       }
 
       const bitV = (byteV >> (j & 0x7)) & 0x1;
 
-      if (bitV == 1) {
+      if (bitV === 1) {
         // swap the pair items
         const tmp = input[j];
         input[j] = input[i];
@@ -181,20 +181,20 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
       // -- step() fn start
       // The pair is i,j. With j being the bigger of the two, hence the "position" identifier of the pair.
       // Every 256th bit (aligned to j).
-      if ((j & 0xff) == 0xff) {
+      if ((j & 0xff) === 0xff) {
         // just overwrite the last part of the buffer, reuse the start (seed, round)
         setPositionUint32(j >> 8, buf);
         source = digest(buf);
       }
 
       // Same trick with byte retrieval. Only every 8th.
-      if ((j & 0x7) == 0x7) {
+      if ((j & 0x7) === 0x7) {
         byteV = source[(j & 0xff) >> 3];
       }
 
       const bitV = (byteV >> (j & 0x7)) & 0x1;
 
-      if (bitV == 1) {
+      if (bitV === 1) {
         // swap the pair items
         const tmp = input[j];
         input[j] = input[i];
@@ -207,11 +207,11 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
     if (dir) {
       // -> shuffle
       r += 1;
-      if (r == SHUFFLE_ROUND_COUNT) {
+      if (r === SHUFFLE_ROUND_COUNT) {
         break;
       }
     } else {
-      if (r == 0) {
+      if (r === 0) {
         break;
       }
       // -> un-shuffle

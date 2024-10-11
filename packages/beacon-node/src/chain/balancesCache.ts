@@ -35,7 +35,7 @@ export class CheckpointBalancesCache {
     const epochBoundaryRoot =
       epochBoundarySlot === state.slot ? blockRootHex : toRootHex(getBlockRootAtSlot(state, epochBoundarySlot));
 
-    const index = this.items.findIndex((item) => item.epoch === epoch && item.rootHex == epochBoundaryRoot);
+    const index = this.items.findIndex((item) => item.epoch === epoch && item.rootHex === epochBoundaryRoot);
     if (index === -1) {
       if (this.items.length === MAX_BALANCE_CACHE_SIZE) {
         this.items.shift();

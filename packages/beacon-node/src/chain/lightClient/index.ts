@@ -635,7 +635,7 @@ export class LightClientServer {
     if (
       attestedData.isFinalized &&
       finalizedHeaderAttested &&
-      computeSyncPeriodAtSlot(finalizedHeaderAttested.beacon.slot) == syncPeriod
+      computeSyncPeriodAtSlot(finalizedHeaderAttested.beacon.slot) === syncPeriod
     ) {
       isFinalized = true;
       finalityBranch = attestedData.finalityBranch;
