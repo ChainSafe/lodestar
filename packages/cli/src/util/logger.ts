@@ -89,7 +89,9 @@ export function cleanOldLogFiles(args: LogArgs, paths: {defaultLogFilepath: stri
     .filter((logFileName) => shouldDeleteLogFile(prefix, extension, logFileName, args.logFileDailyRotate))
     .map((logFileName) => path.join(folder, logFileName));
   // delete files
-  toDelete.forEach((filename) => fs.unlinkSync(filename));
+  for (const filename of toDelete) {
+    fs.unlinkSync(filename);
+  }
 }
 
 export function shouldDeleteLogFile(prefix: string, extension: string, logFileName: string, maxFiles: number): boolean {

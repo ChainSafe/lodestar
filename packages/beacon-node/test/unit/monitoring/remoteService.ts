@@ -74,7 +74,7 @@ function validateRequestData(data: ReceivedData): void {
 }
 
 function validateClientStats(data: ReceivedData, schema: ClientStatsSchema): void {
-  schema.forEach((s) => {
+  for (const s of schema) {
     try {
       expect(data[s.key]).toBeInstanceOf(s.type);
     } catch (_e) {
@@ -82,5 +82,5 @@ function validateClientStats(data: ReceivedData, schema: ClientStatsSchema): voi
         `Validation of property "${s.key}" failed. Expected type "${s.type}" but received "${typeof data[s.key]}".`
       );
     }
-  });
+  }
 }

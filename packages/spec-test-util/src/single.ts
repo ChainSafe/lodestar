@@ -157,7 +157,8 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
   meta?: TestCase["meta"]
 ): TestCase {
   const testCase: any = {};
-  fs.readdirSync(directory)
+  const files = fs
+    .readdirSync(directory)
     .map((name) => path.join(directory, name))
     .filter((file) => {
       if (isDirectory(file)) {
@@ -170,24 +171,24 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
       options.inputTypes[name] = inputType;
       const extension = inputType.type as string;
       return file.endsWith(extension);
-    })
-    .forEach((file) => {
-      const inputName = path.basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
-      const inputType = getInputType(file);
-      testCase[inputName] = deserializeInputFile(file, inputName, inputType, options, meta);
-      switch (inputType) {
-        case InputType.SSZ:
-          testCase[`${inputName}_raw`] = fs.readFileSync(file);
-          break;
-        case InputType.SSZ_SNAPPY:
-          testCase[`${inputName}_raw`] = uncompress(fs.readFileSync(file));
-          break;
-      }
-      if (!options.inputProcessing) throw Error("inputProcessing is not defined");
-      if (options.inputProcessing[inputName] !== undefined) {
-        testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
-      }
     });
+  for (const file of files) {
+    const inputName = path.basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
+    const inputType = getInputType(file);
+    testCase[inputName] = deserializeInputFile(file, inputName, inputType, options, meta);
+    switch (inputType) {
+      case InputType.SSZ:
+        testCase[`${inputName}_raw`] = fs.readFileSync(file);
+        break;
+      case InputType.SSZ_SNAPPY:
+        testCase[`${inputName}_raw`] = uncompress(fs.readFileSync(file));
+        break;
+    }
+    if (!options.inputProcessing) throw Error("inputProcessing is not defined");
+    if (options.inputProcessing[inputName] !== undefined) {
+      testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
+    }
+  }
   return testCase as TestCase;
 }
 

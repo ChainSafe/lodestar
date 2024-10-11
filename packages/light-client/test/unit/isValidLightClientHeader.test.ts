@@ -87,10 +87,10 @@ describe("isValidLightClientHeader", function () {
     ["capella upgraded to deneb LC header", capellaUpgradedDenebHeader],
   ];
 
-  testCases.forEach(([name, header]: [string, LightClientHeader]) => {
+  for (const [name, header] of testCases) {
     it(name, function () {
       const isValid = isValidLightClientHeader(config, header);
       expect(isValid).toBe(true);
     });
-  });
+  }
 });

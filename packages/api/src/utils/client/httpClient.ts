@@ -352,7 +352,9 @@ export class HttpClient implements IHttpClient {
 
     // Attach global/local signal to this request's controller
     const onSignalAbort = (): void => controller.abort();
-    abortSignals.forEach((s) => s?.addEventListener("abort", onSignalAbort));
+    for (const s of abortSignals) {
+      s?.addEventListener("abort", onSignalAbort);
+    }
 
     const routeId = definition.operationId;
     const {printableUrl, requestWireFormat, responseWireFormat} = init;
@@ -401,7 +403,9 @@ export class HttpClient implements IHttpClient {
       timer?.();
 
       clearTimeout(timeout);
-      abortSignals.forEach((s) => s?.removeEventListener("abort", onSignalAbort));
+      for (const s of abortSignals) {
+        s?.removeEventListener("abort", onSignalAbort);
+      }
     }
   }
 

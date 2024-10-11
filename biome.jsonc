@@ -25,7 +25,6 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "noForEach": "off",
         "noStaticOnlyClass": "off",
         "noThisInStatic": "off",
         "noUselessEmptyExport": "off",
@@ -64,13 +63,13 @@
             "deniedGlobals": ["fetch"]
           }
         },
+        // There are a lot of places we mutate params, should be fixed in an independent PR.
         "noUselessElse": "off",
         "noVar": "error",
         "useConst": "error",
-        "useEnumInitializers": "off",
+        // We prefer to use `Math.pow` over `**` operator
         "useExponentiationOperator": "off",
-        "useExportType": "off",
-        "useImportType": "off",
+        // In some cases the enums are initialized with values of other enums
         "useLiteralEnumMembers": "off",
         "useNamingConvention": {
           "level": "error",
@@ -182,11 +181,19 @@
             ]
           }
         },
-        "useNumberNamespace": "off",
+        // We prefer to have multiple declarations lines
         "useSingleVarDeclarator": "off",
+        // We use `+` operator for string concatenation a lot
         "useTemplate": "off",
         "noNamespace": "error",
-        "useAsConstAssertion": "error"
+        // We use to export types and object without differentiating
+        "useExportType": "off",
+        // We use to export types and object without differentiating
+        "useImportType": "off",
+        // It's nice to use `Number` namespace but should be done in a separate PR
+        "useNumberNamespace": "off",
+        // We prefer to auto-initialize enums
+        "useEnumInitializers": "off"
       },
       "suspicious": {
         // `void` as type is useful in our case when used as generic constraint e.g. K extends number | void
