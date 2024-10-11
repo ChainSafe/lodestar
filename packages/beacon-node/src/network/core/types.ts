@@ -78,7 +78,7 @@ export type NetworkWorkerData = {
   genesisTime: number;
   activeValidatorCount: number;
   initialStatus: phase0.Status;
-  peerIdProto: Uint8Array;
+  privateKeyProto: Uint8Array;
   localMultiaddrs: string[];
   metricsEnabled: boolean;
   peerStoreDir?: string;

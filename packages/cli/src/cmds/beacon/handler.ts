@@ -24,7 +24,7 @@ import {LogArgs} from "../../options/logOptions.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
-import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -34,7 +34,7 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
+  const {config, options, beaconPaths, network, version, commit, privateKey, logger} = await beaconHandlerInit(args);
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
@@ -80,7 +80,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       db,
       logger,
       processShutdownCallback,
-      peerId,
+      privateKey,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
@@ -181,7 +181,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   }
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
+  const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
 
   if (args.discv5 !== false) {
     // Inject ENR to beacon options
@@ -218,7 +218,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  return {config, options, beaconPaths, network, version, commit, peerId, logger};
+  return {config, options, beaconPaths, network, version, commit, privateKey, logger};
 }
 
 export function initLogger(
