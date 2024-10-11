@@ -1,4 +1,4 @@
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -70,7 +70,7 @@ export async function getNetworkForTest(
     }
   );
 
-  const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
+  const modules: Omit<NetworkInitModules, "opts" | "privateKey" | "logger"> = {
     config: beaconConfig,
     chain,
     db,
@@ -81,7 +81,7 @@ export async function getNetworkForTest(
 
   const network = await Network.init({
     ...modules,
-    peerId: await createSecp256k1PeerId(),
+    privateKey: await generateKeyPair("secp256k1"),
     opts: {
       ...defaultNetworkOptions,
       maxPeers: 1,

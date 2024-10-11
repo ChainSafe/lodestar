@@ -1,15 +1,16 @@
 import path from "node:path";
 import fs from "node:fs";
 import {describe, it, expect} from "vitest";
-import {createFromJSON, createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
-import {createPrivateKeyFromPeerId, ENR, SignableENR} from "@chainsafe/enr";
+import {ENR, SignableENR} from "@chainsafe/enr";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
-import {exportToJSON} from "../../../src/config/peerId.js";
+import {createFromJSON, exportToJSON} from "../../../src/config/peerId.js";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
-import {initPeerIdAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
+import {initPrivateKeyAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../src/options/globalOptions.js";
 import {testFilesDir, testLogger} from "../../utils.js";
@@ -55,26 +56,26 @@ describe("cmds / beacon / args handler", () => {
   });
 
   it("Create different PeerId every run", async () => {
-    const {peerId: peerId1} = await runBeaconHandlerInit({});
-    const {peerId: peerId2} = await runBeaconHandlerInit({});
+    const {privateKey: pk1} = await runBeaconHandlerInit({});
+    const {privateKey: pk2} = await runBeaconHandlerInit({});
 
-    expect(peerId1.toString()).not.toBe(peerId2.toString());
+    expect(pk1.equals(pk2)).toBe(false);
   });
 
   it("Re-use existing peer", async () => {
-    const prevPeerId = await createSecp256k1PeerId();
+    const prevPk = await generateKeyPair("secp256k1");
 
     const peerIdFile = path.join(testFilesDir, "peer-id.json");
-    fs.writeFileSync(peerIdFile, JSON.stringify(exportToJSON(prevPeerId)));
-    const enr = SignableENR.createV4(createPrivateKeyFromPeerId(prevPeerId).privateKey);
+    fs.writeFileSync(peerIdFile, JSON.stringify(exportToJSON(prevPk)));
+    const enr = SignableENR.createFromPrivateKey(prevPk);
     const enrFilePath = path.join(testFilesDir, "enr");
     fs.writeFileSync(enrFilePath, enr.encodeTxt());
 
-    const {peerId} = await runBeaconHandlerInit({
+    const {privateKey} = await runBeaconHandlerInit({
       persistNetworkIdentity: true,
     });
 
-    expect(peerId.toString()).toBe(prevPeerId.toString());
+    expect(privateKey.equals(prevPk)).toBe(true);
   });
 
   it("Set known deposit contract", async () => {
@@ -117,48 +118,48 @@ describe("Test isLocalMultiAddr", () => {
 
 describe("initPeerIdAndEnr", () => {
   it("should not reuse peer id, persistNetworkIdentity=false", async () => {
-    const {peerId: peerId1} = await initPeerIdAndEnr(
+    const {privateKey: pk1} = await initPrivateKeyAndEnr(
       {persistNetworkIdentity: false} as BeaconArgs,
       testFilesDir,
       testLogger()
     );
-    const {peerId: peerId2} = await initPeerIdAndEnr(
+    const {privateKey: pk2} = await initPrivateKeyAndEnr(
       {persistNetworkIdentity: false} as BeaconArgs,
       testFilesDir,
       testLogger()
     );
 
-    expect(peerId1.toString()).not.toBe(peerId2.toString());
+    expect(pk1.equals(pk2)).toBe(false);
   });
 
   it("should reuse peer id, persistNetworkIdentity=true", async () => {
-    const {peerId: peerId1} = await initPeerIdAndEnr(
+    const {privateKey: pk1} = await initPrivateKeyAndEnr(
       {persistNetworkIdentity: true} as BeaconArgs,
       testFilesDir,
       testLogger()
     );
-    const {peerId: peerId2} = await initPeerIdAndEnr(
+    const {privateKey: pk2} = await initPrivateKeyAndEnr(
       {persistNetworkIdentity: true} as BeaconArgs,
       testFilesDir,
       testLogger()
     );
 
-    expect(peerId1.toString()).toBe(peerId2.toString());
+    expect(pk1.equals(pk2)).toBe(true);
   });
 
   it("should overwrite invalid peer id", async () => {
     const peerIdFile = path.join(testFilesDir, "peer-id.json");
-    const peerId1Str = "wrong peer id file content";
-    fs.writeFileSync(peerIdFile, peerId1Str);
-    const {peerId: peerId2} = await initPeerIdAndEnr(
+    const pk1Str = "wrong peer id file content";
+    fs.writeFileSync(peerIdFile, pk1Str);
+    const {privateKey: pk2} = await initPrivateKeyAndEnr(
       {persistNetworkIdentity: true} as BeaconArgs,
       testFilesDir,
       testLogger()
     );
-    const filePeerId = await createFromJSON(JSON.parse(fs.readFileSync(peerIdFile, "utf-8")));
+    const filePk = createFromJSON(JSON.parse(fs.readFileSync(peerIdFile, "utf-8")));
 
-    expect(peerId1Str).not.toBe(peerId2.toString());
-    expect(filePeerId.toString()).toBe(peerId2.toString());
+    expect(pk1Str).not.toBe(peerIdFromPrivateKey(pk2).toString());
+    expect(filePk.equals(pk2)).toBe(true);
   });
 
   it("should overwrite invalid enr", async () => {
@@ -166,7 +167,7 @@ describe("initPeerIdAndEnr", () => {
     const invalidEnr = "wrong enr file content";
     fs.writeFileSync(enrFilePath, invalidEnr);
 
-    await initPeerIdAndEnr({persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
+    await initPrivateKeyAndEnr({persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
 
     const validEnr = fs.readFileSync(enrFilePath, "utf-8");
 
@@ -174,13 +175,13 @@ describe("initPeerIdAndEnr", () => {
   });
 
   it("should overwrite enr that doesn't match peer id", async () => {
-    const otherPeerId = await createSecp256k1PeerId();
-    const otherEnr = SignableENR.createFromPeerId(otherPeerId);
+    const otherPk = await generateKeyPair("secp256k1");
+    const otherEnr = SignableENR.createFromPrivateKey(otherPk);
     const enrFilePath = path.join(testFilesDir, "enr");
     const otherEnrStr = otherEnr.encodeTxt();
     fs.writeFileSync(enrFilePath, otherEnrStr);
 
-    const {enr} = await initPeerIdAndEnr({persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
+    const {enr} = await initPrivateKeyAndEnr({persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
 
     expect(enr.nodeId).not.toBe(otherEnr);
   });
