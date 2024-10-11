@@ -27,17 +27,15 @@ describe("Events api impl", function () {
     let chainStub: MockedObject<BeaconChain>;
     let chainEventEmmitter: ChainEventEmitter;
     let api: ReturnType<typeof getEventsApi>;
+    let controller: AbortController;
 
     beforeEach(function () {
       chainStub = vi.mocked(new BeaconChain({} as any, {} as any), {partial: true, deep: false});
       chainEventEmmitter = chainStub.emitter;
       api = getEventsApi({config, chain: chainStub});
-    });
-
-    let controller: AbortController;
-    beforeEach(() => {
       controller = new AbortController();
     });
+
     afterEach(() => controller.abort());
 
     function getEvents(topics: routes.events.EventType[]): routes.events.BeaconEvent[] {

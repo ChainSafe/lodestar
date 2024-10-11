@@ -9,19 +9,7 @@ describe("chain / bls / multithread queue", function () {
   const logger = testLogger();
 
   let controller: AbortController;
-  beforeEach(() => {
-    controller = new AbortController();
-  });
-  afterEach(() => controller.abort());
-
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  afterEach(async () => {
-    while (afterEachCallbacks.length > 0) {
-      const callback = afterEachCallbacks.pop();
-      if (callback) await callback();
-    }
-  });
-
   const sets: ISignatureSet[] = [];
   const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
@@ -44,6 +32,17 @@ describe("chain / bls / multithread queue", function () {
       });
     }
   });
+
+  beforeEach(async () => {
+    controller = new AbortController();
+
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
+
+  afterEach(() => controller.abort());
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});

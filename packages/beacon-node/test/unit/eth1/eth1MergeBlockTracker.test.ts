@@ -16,9 +16,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   let controller: AbortController;
   beforeEach(() => {
     controller = new AbortController();
-  });
-  afterEach(() => controller.abort());
-  beforeEach(() => {
+
     config = {
       // Set time units to 0 to make the test as fast as possible
       SECONDS_PER_ETH1_BLOCK: 0,
@@ -28,6 +26,8 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       TERMINAL_BLOCK_HASH: ZERO_HASH,
     } as Partial<ChainConfig> as ChainConfig;
   });
+
+  afterEach(() => controller.abort());
 
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {
     config.TERMINAL_BLOCK_HASH = Buffer.alloc(32, 1);

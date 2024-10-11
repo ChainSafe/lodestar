@@ -23,16 +23,17 @@ const mu = "/ip4/127.0.0.1/tcp/0";
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("mdns", function () {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  afterEach(async () => {
-    await Promise.all(afterEachCallbacks.map((cb) => cb()));
-    afterEachCallbacks.splice(0, afterEachCallbacks.length);
-  });
-
   let controller: AbortController;
+
   beforeEach(() => {
     controller = new AbortController();
   });
-  afterEach(() => controller.abort());
+
+  afterEach(async () => {
+    await Promise.all(afterEachCallbacks.map((cb) => cb()));
+    afterEachCallbacks.splice(0, afterEachCallbacks.length);
+    controller.abort();
+  });
 
   async function getOpts(peerId: PeerId): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
