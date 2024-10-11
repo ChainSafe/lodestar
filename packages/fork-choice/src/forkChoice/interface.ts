@@ -250,14 +250,3 @@ export type LatestMessage = {
   epoch: Epoch;
   root: RootHex;
 };
-
-/**
- * Used for queuing attestations from the current slot. Only contains the minimum necessary
- * information about the attestation.
- */
-export type QueuedAttestation = {
-  slot: Slot;
-  attestingIndices: ValidatorIndex[];
-  blockRoot: RootHex;
-  targetEpoch: Epoch;
-};
