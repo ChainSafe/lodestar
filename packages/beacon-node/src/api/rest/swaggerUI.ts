@@ -41,15 +41,13 @@ async function getAsset(name: string): Promise<Buffer | undefined> {
     const path = await import("node:path");
     const fs = await import("node:fs/promises");
     const url = await import("node:url");
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
     return await fs.readFile(path.join(__dirname, "../../../../../assets/", name));
-  } catch (e) {
+  } catch (_e) {
     return undefined;
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function getFavicon() {
   const content = await getAsset("round-icon.ico");
   if (!content) {
@@ -67,7 +65,6 @@ export async function getFavicon() {
   ];
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function getLogo() {
   const content = await getAsset("lodestar_icon_text_white.png");
   if (!content) {

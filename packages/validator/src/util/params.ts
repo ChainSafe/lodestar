@@ -5,8 +5,6 @@ export class NotEqualParamsError extends Error {}
 
 type ConfigWithPreset = ChainConfig & BeaconPreset;
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.
  *

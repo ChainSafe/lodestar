@@ -6,7 +6,6 @@ import {ApiClient} from "@lodestar/api";
 const WAITING_FOR_GENESIS_POLL_MS = 12 * 1000;
 
 export async function waitForGenesis(api: ApiClient, logger: Logger, signal?: AbortSignal): Promise<Genesis> {
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       return (await api.beacon.getGenesis()).value();

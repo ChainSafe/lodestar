@@ -78,7 +78,6 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getGossipSSZType(topic: GossipTopic) {
   switch (topic.type) {
     case GossipType.beacon_block:
@@ -120,7 +119,7 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
   const sszType = getGossipSSZType(topic);
   try {
     return sszType.deserialize(serializedData) as SSZTypeOfGossipTopic<T>;
-  } catch (e) {
+  } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
 }
@@ -131,7 +130,7 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   try {
     return sszTypesFor(fork).Attestation.deserialize(serializedData);
-  } catch (e) {
+  } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
 }

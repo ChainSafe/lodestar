@@ -26,8 +26,6 @@ export type TestRunner =
   | {type: RunnerType.default; fn: TestRunnerFn<any, any>}
   | {type: RunnerType.custom; fn: TestRunnerCustom};
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export type BaseSpecTest = {
   meta?: {
     bls_setting?: bigint;

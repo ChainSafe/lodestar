@@ -1,4 +1,4 @@
-import EventEmitter from "events";
+import EventEmitter from "node:events";
 import {PeerId, Secp256k1PeerId} from "@libp2p/interface";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";

@@ -12,10 +12,9 @@ type ApplicationResponseObject<E extends Endpoint> = {
   : {data: E["return"] | (E["return"] extends undefined ? undefined : Uint8Array)}) &
   (E["meta"] extends EmptyMeta ? {meta?: never} : {meta: E["meta"]});
 
-export type ApplicationResponse<E extends Endpoint> =
-  HasOnlyOptionalProps<ApplicationResponseObject<E>> extends true
-    ? ApplicationResponseObject<E> | void
-    : ApplicationResponseObject<E>;
+export type ApplicationResponse<E extends Endpoint> = HasOnlyOptionalProps<ApplicationResponseObject<E>> extends true
+  ? ApplicationResponseObject<E> | void
+  : ApplicationResponseObject<E>;
 
 export type ApiContext = {
   /**

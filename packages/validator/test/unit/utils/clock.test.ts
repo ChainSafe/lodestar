@@ -81,7 +81,6 @@ describe("util / Clock", function () {
   });
 
   describe("getCurrentSlot", function () {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const testConfig = {SECONDS_PER_SLOT: 12} as BeaconConfig;
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
 

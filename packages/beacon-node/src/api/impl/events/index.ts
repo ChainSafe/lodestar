@@ -10,11 +10,10 @@ export function getEventsApi({
       const onAbortFns: (() => void)[] = [];
 
       for (const topic of topics) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         const handler = (data: any): void => {
           // TODO: What happens if this handler throws? Does it break the other chain.emitter listeners?
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           onEvent({type: topic, message: data});
         };
 

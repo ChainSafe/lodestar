@@ -22,7 +22,6 @@ import {ZERO_HASH} from "../../../src/constants/constants.js";
 describe("sync by UnknownBlockSync", () => {
   const logger = testLogger();
   const slotSec = 0.3;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig({...minimalConfig, SECONDS_PER_SLOT: slotSec});
 
   beforeEach(() => {
@@ -119,11 +118,13 @@ describe("sync by UnknownBlockSync", () => {
       ]);
 
       let reportPeerResolveFn: (value: Parameters<INetwork["reportPeer"]>) => void;
-      const reportPeerPromise = new Promise<Parameters<INetwork["reportPeer"]>>((r) => (reportPeerResolveFn = r));
+      const reportPeerPromise = new Promise<Parameters<INetwork["reportPeer"]>>((r) => {
+        reportPeerResolveFn = r;
+      });
       let sendBeaconBlocksByRootResolveFn: (value: Parameters<INetwork["sendBeaconBlocksByRoot"]>) => void;
-      const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>(
-        (r) => (sendBeaconBlocksByRootResolveFn = r)
-      );
+      const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>((r) => {
+        sendBeaconBlocksByRootResolveFn = r;
+      });
 
       const network: Partial<INetwork> = {
         events: new NetworkEventBus(),
@@ -157,8 +158,12 @@ describe("sync by UnknownBlockSync", () => {
 
       let blockAResolver: () => void;
       let blockCResolver: () => void;
-      const blockAProcessed = new Promise<void>((resolve) => (blockAResolver = resolve));
-      const blockCProcessed = new Promise<void>((resolve) => (blockCResolver = resolve));
+      const blockAProcessed = new Promise<void>((resolve) => {
+        blockAResolver = resolve;
+      });
+      const blockCProcessed = new Promise<void>((resolve) => {
+        blockCResolver = resolve;
+      });
 
       const chain: Partial<IBeaconChain> = {
         clock: new ClockStopped(0),

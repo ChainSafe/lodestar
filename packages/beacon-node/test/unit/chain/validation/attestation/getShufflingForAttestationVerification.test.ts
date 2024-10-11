@@ -1,6 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 // We need to import the mock before the packages
-// eslint-disable-next-line import/order
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../../mocks/mockedBeaconChain.js";
 import {EpochShuffling, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {EpochDifference, ProtoBlock} from "@lodestar/fork-choice";

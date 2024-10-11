@@ -5,7 +5,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-// eslint-disable-next-line import/no-relative-packages
 import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
 const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));

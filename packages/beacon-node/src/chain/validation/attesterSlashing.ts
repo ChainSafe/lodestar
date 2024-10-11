@@ -4,7 +4,7 @@ import {
   assertValidAttesterSlashing,
   getAttesterSlashingSignatureSets,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "../index.js";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateApiAttesterSlashing(

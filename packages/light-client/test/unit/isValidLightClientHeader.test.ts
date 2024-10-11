@@ -5,7 +5,6 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
 
 describe("isValidLightClientHeader", function () {
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,

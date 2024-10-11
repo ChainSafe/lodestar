@@ -11,7 +11,6 @@ vi.mock("@lodestar/db", async (importOriginal) => {
 
   return {
     ...mod,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     LevelDbController: vi.spyOn(mod, "LevelDbController").mockImplementation(() => {
       return {
         get: vi.fn(),
@@ -31,7 +30,6 @@ interface TestType {
   bytes: Bytes32;
 }
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const TestSSZType = new ContainerType({
   bool: ssz.Boolean,
   bytes: ssz.Bytes32,

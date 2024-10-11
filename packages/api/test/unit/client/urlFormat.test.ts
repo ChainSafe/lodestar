@@ -7,8 +7,6 @@ import {
   urlToTokens,
 } from "../../../src/utils/urlFormat.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("utils / urlFormat", () => {
   const testCases: {
     urlTemplate: string;

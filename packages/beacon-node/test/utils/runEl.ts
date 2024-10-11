@@ -7,7 +7,6 @@ import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {shell} from "../sim/shell.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable no-console */
 let txRpcId = 1;
 
@@ -84,7 +83,7 @@ async function waitForELOnline(url: string, signal: AbortSignal): Promise<void> 
       console.log("Waiting for few seconds for EL to fully setup, for e.g. unlock the account...");
       await sleep(5000, signal);
       return; // Done
-    } catch (e) {
+    } catch (_e) {
       await sleep(1000, signal);
     }
   }

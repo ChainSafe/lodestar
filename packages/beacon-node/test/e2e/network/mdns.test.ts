@@ -68,7 +68,6 @@ describe.skip("mdns", function () {
     return {block, state, config: beaconConfig};
   });
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNode(nodeName: string) {
     const {config} = getStaticData();
     const chain = getMockedBeaconChain();
@@ -111,7 +110,6 @@ describe.skip("mdns", function () {
     return {network, chain};
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNodesAB() {
     return Promise.all([createTestNode("mdns-A"), createTestNode("mdns-B")]);
   }

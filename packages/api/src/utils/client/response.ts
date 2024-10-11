@@ -26,13 +26,15 @@ export class ApiResponse<E extends Endpoint> extends Response {
   wireFormat(): WireFormat | null {
     if (this._wireFormat === undefined) {
       if (this.definition.resp.isEmpty) {
-        return (this._wireFormat = null);
+        this._wireFormat = null;
+        return this._wireFormat;
       }
 
       const contentType = this.headers.get(HttpHeader.ContentType);
       if (contentType === null) {
         if (this.status === HttpStatusCode.NO_CONTENT) {
-          return (this._wireFormat = null);
+          this._wireFormat = null;
+          return this._wireFormat;
         } else {
           throw Error("Content-Type header is required in response");
         }
@@ -198,7 +200,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
       } else {
         return errBody;
       }
-    } catch (e) {
+    } catch (_e) {
       return errBody || this.statusText;
     }
   }

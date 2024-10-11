@@ -8,8 +8,6 @@ import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/e
 import {Eth1ProviderState, EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
 import {testLogger} from "../../utils/logger.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("eth1 / Eth1MergeBlockTracker", () => {
   const logger = testLogger();
 

@@ -41,6 +41,7 @@ import {
   BeaconBlock,
   BlockContents,
   BlindedBeaconBlock,
+  getValidatorStatus,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth, toRootHex} from "@lodestar/utils";
@@ -61,7 +62,6 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
@@ -389,10 +389,6 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // Process the queued attestations in the forkchoice for correct head estimation
-      // forkChoice.updateTime() might have already been called by the onSlot clock
-      // handler, in which case this should just return.
-      chain.forkChoice.updateTime(slot);
       parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
@@ -459,10 +455,6 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // Process the queued attestations in the forkchoice for correct head estimation
-      // forkChoice.updateTime() might have already been called by the onSlot clock
-      // handler, in which case this should just return.
-      chain.forkChoice.updateTime(slot);
       parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     } else {
       parentBlockRoot = inParentBlockRoot;
@@ -535,10 +527,6 @@ export function getValidatorApi(
     notWhileSyncing();
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-    // Process the queued attestations in the forkchoice for correct head estimation
-    // forkChoice.updateTime() might have already been called by the onSlot clock
-    // handler, in which case this should just return.
-    chain.forkChoice.updateTime(slot);
     const parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     notOnOutOfRangeData(parentBlockRoot);
 
@@ -1147,7 +1135,6 @@ export function getValidatorApi(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
-            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
             const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
@@ -1364,7 +1351,6 @@ export function getValidatorApi(
         const validator = headState.validators.getReadonly(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);
         return (
-          status === "active" ||
           status === "active_exiting" ||
           status === "active_ongoing" ||
           status === "active_slashed" ||

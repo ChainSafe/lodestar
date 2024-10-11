@@ -104,7 +104,7 @@ export function fromGraffitiHex(hex?: string): string | undefined {
   }
   try {
     return new TextDecoder("utf8").decode(fromHex(hex));
-  } catch {
+  } catch (_e) {
     // allow malformed graffiti hex string
     return hex;
   }

@@ -22,7 +22,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
       await execChildProcess(`docker network create --subnet ${dockerNetworkIpRange}.0/24 ${dockerNetworkName}`, {
         logger: this.logger,
       });
-    } catch {
+    } catch (_e) {
       // During multiple sim tests files the network might already exist
     }
   }
@@ -35,7 +35,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
           logger: this.logger,
         });
         return;
-      } catch {
+      } catch (_e) {
         await sleep(5000);
       }
     }

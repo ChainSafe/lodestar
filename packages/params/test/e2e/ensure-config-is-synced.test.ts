@@ -44,7 +44,6 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   );
 
   // Merge all the fetched yamls for the different forks
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const beaconPresetRaw: Record<string, unknown> = Object.assign(
     ...(downloadedParams as unknown as [input: Record<string, unknown>])
   );

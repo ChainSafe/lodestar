@@ -28,8 +28,4 @@ type SszSnappyErrorType =
   | {code: SszSnappyErrorCode.TOO_MANY_BYTES; sszDataLength: number}
   | {code: SszSnappyErrorCode.SOURCE_ABORTED};
 
-export class SszSnappyError extends LodestarError<SszSnappyErrorType> {
-  constructor(type: SszSnappyErrorType) {
-    super(type);
-  }
-}
+export class SszSnappyError extends LodestarError<SszSnappyErrorType> {}

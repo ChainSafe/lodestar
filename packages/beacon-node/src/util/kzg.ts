@@ -3,8 +3,6 @@ import fs from "node:fs";
 import {fileURLToPath} from "node:url";
 import {fromHex, toHex} from "@lodestar/utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // "c-kzg" has hardcoded the mainnet value, do not use params
 export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
 
@@ -87,7 +85,6 @@ export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode
   }
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export interface TrustedSetupJSON {
   setup_G1: string[];
   setup_G2: string[];

@@ -39,7 +39,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
 
   const genesisValidatorsRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
   const slashingProtection: Interchange = {
-    /* eslint-disable @typescript-eslint/naming-convention */
     metadata: {
       interchange_format_version: "5",
       genesis_validators_root: genesisValidatorsRoot,
