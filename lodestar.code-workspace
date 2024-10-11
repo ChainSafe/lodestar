@@ -1,6 +1,6 @@
 {
   "settings": {
-    "window.title": "${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}[${activeRepositoryBranchName}]${separator}[${activeRepositoryBranchName}]",
+    "window.title": "${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}[${activeRepositoryBranchName}]",
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[javascript]": {
       "editor.defaultFormatter": "biomejs.biome"
