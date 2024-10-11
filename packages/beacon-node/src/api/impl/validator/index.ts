@@ -941,6 +941,10 @@ export function getValidatorApi(
             },
             {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
           );
+
+          if (state.epochCtx.epoch !== epoch) {
+            throw Error(`Loaded state epoch ${state.epochCtx.epoch} does not match requested epoch ${epoch}`);
+          }
         }
       }
 
