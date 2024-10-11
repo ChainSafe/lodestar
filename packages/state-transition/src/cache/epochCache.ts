@@ -877,6 +877,10 @@ export class EpochCache {
     return this.proposers;
   }
 
+  getBeaconProposersPrevEpoch(): ValidatorIndex[] | null {
+    return this.proposersPrevEpoch;
+  }
+
   /**
    * We allow requesting proposal duties 1 epoch in the future as in normal network conditions it's possible to predict
    * the correct shuffling with high probability. While knowing the proposers in advance is not useful for consensus,
