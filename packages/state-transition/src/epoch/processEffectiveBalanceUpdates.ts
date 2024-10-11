@@ -46,7 +46,6 @@ export function processEffectiveBalanceUpdates(
   // so it's recycled here for performance.
   const balances = cache.balances ?? state.balances.getAll();
   const currentEpochValidators = cache.validators;
-  const newCompoundingValidators = cache.newCompoundingValidators ?? new Set();
 
   let numUpdate = 0;
   for (let i = 0, len = balances.length; i < len; i++) {
@@ -61,9 +60,9 @@ export function processEffectiveBalanceUpdates(
       effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
     } else {
       // from electra, effectiveBalanceLimit is per validator
-      const isCompoundingValidator =
-        hasCompoundingWithdrawalCredential(currentEpochValidators[i].withdrawalCredentials) ||
-        newCompoundingValidators.has(i);
+      const isCompoundingValidator = hasCompoundingWithdrawalCredential(
+        currentEpochValidators[i].withdrawalCredentials
+      );
       effectiveBalanceLimit = isCompoundingValidator ? MAX_EFFECTIVE_BALANCE_ELECTRA : MIN_ACTIVATION_BALANCE;
     }
 

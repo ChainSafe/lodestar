@@ -140,12 +140,6 @@ export interface EpochTransitionCache {
   validators: phase0.Validator[];
 
   /**
-   * This is for electra only
-   * Validators that're switched to compounding during processPendingConsolidations(), not available in beforeProcessEpoch()
-   */
-  newCompoundingValidators?: Set<ValidatorIndex>;
-
-  /**
    * balances array will be populated by processRewardsAndPenalties() and consumed by processEffectiveBalanceUpdates().
    * processRewardsAndPenalties() already has a regular Javascript array of balances.
    * Then processEffectiveBalanceUpdates() needs to iterate all balances so it can re-use the array pre-computed previously.
@@ -518,8 +512,6 @@ export function beforeProcessEpoch(
     inclusionDelays,
     flags,
     validators,
-    // will be assigned in processPendingConsolidations()
-    newCompoundingValidators: undefined,
     // Will be assigned in processRewardsAndPenalties()
     balances: undefined,
   };
