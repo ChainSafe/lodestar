@@ -3,9 +3,8 @@ import path from "node:path";
 import {spawn, Worker} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
-// eslint-disable-next-line
 // @ts-ignore
-// eslint-disable-next-line
+// biome-ignore lint/suspicious/noGlobalAssign: <explanation>
 self = undefined;
 import {PublicKey} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";

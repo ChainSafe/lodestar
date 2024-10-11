@@ -36,9 +36,9 @@ const defaultAttestationsReward = {head: 0, target: 0, source: 0, inclusionDelay
 const defaultAttestationsPenalty = {target: 0, source: 0};
 
 export async function computeAttestationsRewards(
-  epoch: Epoch,
+  _epoch: Epoch,
   state: CachedBeaconStateAllForks,
-  config: BeaconConfig,
+  _config: BeaconConfig,
   validatorIds?: (ValidatorIndex | string)[]
 ): Promise<AttestationsRewards> {
   const fork = state.config.getForkName(state.slot);

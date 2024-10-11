@@ -304,7 +304,6 @@ export class PeerDiscovery {
     const {id, multiaddrs} = evt.detail;
 
     // libp2p may send us PeerInfos without multiaddrs https://github.com/libp2p/js-libp2p/issues/1873
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!multiaddrs || multiaddrs.length === 0) {
       this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
       return;

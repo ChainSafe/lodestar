@@ -46,7 +46,6 @@ const ZERO_HASH = Buffer.alloc(32, 0);
 /** default config with ZERO_HASH as genesisValidatorsRoot */
 const config = createBeaconConfig(chainConfig, ZERO_HASH);
 
-/* eslint-disable @typescript-eslint/naming-convention */
 function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
   switch (fork) {
     case ForkName.phase0:

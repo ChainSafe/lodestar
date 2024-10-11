@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {fromHex as b} from "@lodestar/utils";
 import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";

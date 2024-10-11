@@ -90,7 +90,7 @@ export type NetworkWorkerData = {
  */
 export type NetworkWorkerApi = INetworkCorePublic & {
   // To satisfy the constraint of `ModuleThread` type
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny:
   [string: string]: (...args: any[]) => Promise<any> | any;
   // Async method through worker boundary
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void>;

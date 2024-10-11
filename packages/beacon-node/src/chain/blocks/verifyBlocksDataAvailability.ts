@@ -83,7 +83,6 @@ async function maybeValidateBlobs(
         return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: blockInput};
       }
 
-    // eslint-disable-next-line no-fallthrough
     case BlockInputType.dataPromise: {
       // run full validation
       const {block} = blockInput;
@@ -136,7 +135,7 @@ async function raceWithCutoff<T>(
 
   try {
     await Promise.race([availabilityPromise, cutoffTimeout]);
-  } catch (e) {
+  } catch (_e) {
     // throw unavailable so that the unknownblock/blobs can be triggered to pull the block
     throw new BlockError(block, {code: BlockErrorCode.DATA_UNAVAILABLE});
   }

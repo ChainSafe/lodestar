@@ -127,6 +127,7 @@ export function logCtxToString(arg: unknown, depth = 0, fromError = false): stri
     case "string":
     case "undefined":
     case "boolean":
+      return String(arg);
     default:
       return String(arg);
   }

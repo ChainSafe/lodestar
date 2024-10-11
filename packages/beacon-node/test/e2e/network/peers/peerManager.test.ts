@@ -33,7 +33,6 @@ describe("network / peers / PeerManager", function () {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules() {
     // Setup fake chain
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();

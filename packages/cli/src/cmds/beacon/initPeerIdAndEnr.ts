@@ -156,14 +156,14 @@ export async function initPeerIdAndEnr(
     // attempt to read stored peer id
     try {
       peerId = await readPeerId(peerIdFile);
-    } catch (e) {
+    } catch (_e) {
       logger.warn("Unable to read peerIdFile, creating a new peer id");
       return {...(await newPeerIdAndENR()), newEnr: true};
     }
     // attempt to read stored enr
     try {
       enr = SignableENR.decodeTxt(fs.readFileSync(enrFile, "utf-8"), createPrivateKeyFromPeerId(peerId).privateKey);
-    } catch (e) {
+    } catch (_e) {
       logger.warn("Unable to decode stored local ENR, creating a new ENR");
       enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
       return {peerId, enr, newEnr: true};

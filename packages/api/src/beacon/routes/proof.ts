@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {ByteListType, ContainerType} from "@chainsafe/ssz";
 import {fromHex, toHex} from "@lodestar/utils";

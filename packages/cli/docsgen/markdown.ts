@@ -117,7 +117,6 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
       defaultValue = `"${defaultValue}"`;
     }
     if (option.type === "array") {
-      // eslint-disable-next-line quotes
       if (!defaultValue.includes(`"`)) {
         defaultValue = `"${defaultValue}"`;
       }

@@ -8,7 +8,6 @@ import {
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_call: ELVerifiedRequestHandler<ELApiParams["eth_call"], ELApiReturn["eth_call"]> = async ({
   rpc,
   payload,

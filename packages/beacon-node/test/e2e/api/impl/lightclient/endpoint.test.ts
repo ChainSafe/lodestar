@@ -13,7 +13,6 @@ import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 describe("lightclient api", function () {
   const SECONDS_PER_SLOT = 1;
   const ALTAIR_FORK_EPOCH = 0;

@@ -38,7 +38,6 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   getAggregationBitsFromAttestationSerialized,
-  getAttDataFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofElectra,
   getCommitteeBitsFromAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
@@ -75,29 +74,14 @@ export type GossipAttestation = {
   serializedData: Uint8Array;
   // available in NetworkProcessor since we check for unknown block root attestations
   attSlot: Slot;
-  // for old LIFO linear gossip queue we don't have attDataBase64
   // for indexed gossip queue we have attDataBase64
-  attDataBase64?: SeenAttDataKey | null;
+  attDataBase64: SeenAttDataKey;
 };
 
 export type Step0Result = AttestationValidationResult & {
   signatureSet: SingleSignatureSet;
   validatorIndex: number;
 };
-
-/**
- * Validate a single gossip attestation, do not prioritize bls signature set
- */
-export async function validateGossipAttestation(
-  fork: ForkName,
-  chain: IBeaconChain,
-  attestationOrBytes: GossipAttestation,
-  /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number
-): Promise<AttestationValidationResult> {
-  const prioritizeBls = false;
-  return validateAttestation(fork, chain, attestationOrBytes, subnet, prioritizeBls);
-}
 
 /**
  * Verify gossip attestations of the same attestation data. The main advantage is we can batch verify bls signatures
@@ -111,7 +95,7 @@ export async function validateGossipAttestationsSameAttData(
   attestationOrBytesArr: GossipAttestation[],
   subnet: number,
   // for unit test, consumers do not need to pass this
-  step0ValidationFn = validateGossipAttestationNoSignatureCheck
+  step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
   if (attestationOrBytesArr.length === 0) {
     return {results: [], batchableBls: false};
@@ -213,22 +197,10 @@ export async function validateApiAttestation(
   attestationOrBytes: ApiAttestation
 ): Promise<AttestationValidationResult> {
   const prioritizeBls = true;
-  return validateAttestation(fork, chain, attestationOrBytes, null, prioritizeBls);
-}
+  const subnet = null;
 
-/**
- * Validate a single unaggregated attestation
- * subnet is null for api attestations
- */
-export async function validateAttestation(
-  fork: ForkName,
-  chain: IBeaconChain,
-  attestationOrBytes: AttestationOrBytes,
-  subnet: number | null,
-  prioritizeBls = false
-): Promise<AttestationValidationResult> {
   try {
-    const step0Result = await validateGossipAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
+    const step0Result = await validateAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
     const {attestation, signatureSet, validatorIndex} = step0Result;
     const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
 
@@ -256,7 +228,7 @@ export async function validateAttestation(
  * Only deserialize the attestation if needed, use the cached AttestationData instead
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
-async function validateGossipAttestationNoSignatureCheck(
+async function validateAttestationNoSignatureCheck(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytes: AttestationOrBytes,
@@ -801,9 +773,6 @@ export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, co
  * Return fork-dependent seen attestation key
  *   - for pre-electra, it's the AttestationData base64
  *   - for electra and later, it's the AttestationData base64 + committeeBits base64
- *
- * we always have attDataBase64 from the IndexedGossipQueue, getAttDataFromAttestationSerialized() just for backward compatible when beaconAttestationBatchValidation is false
- * TODO: remove beaconAttestationBatchValidation flag since the batch attestation is stable
  */
 export function getSeenAttDataKeyFromGossipAttestation(
   fork: ForkName,
@@ -811,13 +780,12 @@ export function getSeenAttDataKeyFromGossipAttestation(
 ): SeenAttDataKey | null {
   const {attDataBase64, serializedData} = attestation;
   if (isForkPostElectra(fork)) {
-    const attData = attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
     const committeeBits = getCommitteeBitsFromAttestationSerialized(serializedData);
-    return attData && committeeBits ? attDataBase64 + committeeBits : null;
+    return attDataBase64 && committeeBits ? attDataBase64 + committeeBits : null;
   }
 
   // pre-electra
-  return attDataBase64 ?? getAttDataFromAttestationSerialized(serializedData);
+  return attDataBase64;
 }
 
 /**

@@ -21,7 +21,7 @@ export type SyncChainDebugState = {
   status: string;
   startEpoch: number;
   peers: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   batches: any[];
 };
 

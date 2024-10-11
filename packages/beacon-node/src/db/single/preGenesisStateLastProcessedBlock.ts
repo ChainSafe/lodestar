@@ -10,7 +10,7 @@ export class PreGenesisStateLastProcessedBlock {
   private readonly db: Db;
   private readonly key: Uint8Array;
 
-  constructor(config: ChainForkConfig, db: Db) {
+  constructor(_config: ChainForkConfig, db: Db) {
     this.db = db;
     this.type = ssz.UintNum64;
     this.bucket = Bucket.phase0_preGenesisStateLastProcessedBlock;

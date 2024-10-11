@@ -35,3 +35,16 @@ export class OnlySupportedByDVT extends ApiError {
     super(501, "Only supported by distributed validator middleware clients");
   }
 }
+
+// Error thrown when processing multiple items failed - https://github.com/ethereum/beacon-APIs/blob/e7f7d70423b0abfe9d9f33b701be2ec03e44eb02/types/http.yaml#L175
+export class IndexedError extends ApiError {
+  failures: FailureList;
+
+  constructor(message: string, failures: FailureList) {
+    super(400, message);
+
+    this.failures = failures.sort((a, b) => a.index - b.index);
+  }
+}
+
+export type FailureList = {index: number; message: string}[];

@@ -80,7 +80,6 @@ export function computeWeakSubjectivityPeriodFromConstituents(
   const t = Math.floor(totalBalanceByIncrement / N);
   const T = MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI;
   const delta = churnLimit;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const Delta = MAX_DEPOSITS * SLOTS_PER_EPOCH;
   const D = SAFETY_DECAY;
 

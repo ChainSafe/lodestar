@@ -41,8 +41,8 @@
     "build:watch": "yarn run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" flare --help",
     "check-types": "tsc",
-    "lint": "eslint --color --ext .ts src/",
-    "lint:fix": "yarn run lint --fix",
+    "lint": "biome check src/",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"

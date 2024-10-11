@@ -11,8 +11,6 @@ import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
   return {
     testFunction: (testcase) => {
@@ -47,7 +45,7 @@ const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
       }),
       timeout: 10000,
       getExpected: (testCase) => testCase.proof,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expect(actual).toEqualWithMessage(expected, "incorrect proof");
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

@@ -90,6 +90,10 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: true,
   },
+  "rest.stacktraces": {
+    ...beaconNodeOptions["rest.stacktraces"],
+    default: true,
+  },
   "rest.swaggerUI": {
     ...beaconNodeOptions["rest.swaggerUI"],
     default: true,

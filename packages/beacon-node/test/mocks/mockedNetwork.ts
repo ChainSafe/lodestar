@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {vi, Mocked} from "vitest";
 import {Network, INetwork} from "../../src/network/index.js";
 

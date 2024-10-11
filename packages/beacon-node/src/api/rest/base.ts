@@ -5,7 +5,7 @@ import bearerAuthPlugin from "@fastify/bearer-auth";
 import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
-import {ApiError, NodeIsSyncing} from "../impl/errors.js";
+import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
 
 export type RestApiServerOpts = {
@@ -15,6 +15,7 @@ export type RestApiServerOpts = {
   bearerToken?: string;
   headerLimit?: number;
   bodyLimit?: number;
+  stacktraces?: boolean;
   swaggerUI?: boolean;
 };
 
@@ -30,9 +31,29 @@ export type RestApiServerMetrics = SocketMetrics & {
 };
 
 /**
+ * Error response body format as defined in beacon-api spec
+ *
+ * See https://github.com/ethereum/beacon-APIs/blob/v2.5.0/types/http.yaml
+ */
+type ErrorResponse = {
+  code: number;
+  message: string;
+  stacktraces?: string[];
+};
+
+type IndexedErrorResponse = ErrorResponse & {
+  failures?: FailureList;
+};
+
+/**
  * Error code used by Fastify if media type is not supported (415)
  */
 const INVALID_MEDIA_TYPE_CODE = errorCodes.FST_ERR_CTP_INVALID_MEDIA_TYPE().code;
+
+/**
+ * Error code used by Fastify if JSON schema validation failed
+ */
+const SCHEMA_VALIDATION_ERROR_CODE = errorCodes.FST_ERR_VALIDATION().code;
 
 /**
  * REST API powered by `fastify` server.
@@ -71,13 +92,36 @@ export class RestApiServer {
 
     // To parse our ApiError -> statusCode
     server.setErrorHandler((err, _req, res) => {
+      const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
       if (err.validation) {
-        void res.status(400).send(err.validation);
+        const {instancePath, message} = err.validation[0];
+        const payload: ErrorResponse = {
+          code: 400,
+          message: `${instancePath.substring(instancePath.lastIndexOf("/") + 1)} ${message}`,
+          stacktraces,
+        };
+        void res.status(400).send(payload);
+      } else if (err instanceof IndexedError) {
+        const payload: IndexedErrorResponse = {
+          code: err.statusCode,
+          message: err.message,
+          failures: err.failures,
+          stacktraces,
+        };
+        void res.status(err.statusCode).send(payload);
       } else {
         // Convert our custom ApiError into status code
         const statusCode = err instanceof ApiError ? err.statusCode : 500;
-        void res.status(statusCode).send(err);
+        const payload: ErrorResponse = {code: statusCode, message: err.message, stacktraces};
+        void res.status(statusCode).send(payload);
       }
+    });
+
+    server.setNotFoundHandler((req, res) => {
+      const message = `Route ${req.raw.method}:${req.raw.url} not found`;
+      this.logger.warn(message);
+      const payload: ErrorResponse = {code: 404, message};
+      void res.code(404).send(payload);
     });
 
     if (opts.cors) {
@@ -127,7 +171,7 @@ export class RestApiServer {
 
       const operationId = getOperationId(req);
 
-      if (err instanceof ApiError || err.code === INVALID_MEDIA_TYPE_CODE) {
+      if (err instanceof ApiError || [INVALID_MEDIA_TYPE_CODE, SCHEMA_VALIDATION_ERROR_CODE].includes(err.code)) {
         this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
       } else {
         this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);

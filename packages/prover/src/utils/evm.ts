@@ -20,7 +20,7 @@ export async function createVM({proofProvider}: {proofProvider: ProofProvider}):
   const blockchain = await Blockchain.create({common});
 
   // Connect blockchain object with existing proof provider for block history
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   (blockchain as any).getBlock = async (blockId: number) => {
     const payload = await proofProvider.getExecutionPayload(blockId);
     return {

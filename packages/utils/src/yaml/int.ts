@@ -162,25 +162,20 @@ export const intType = new Type("tag:yaml.org,2002:int", {
   construct: constructYamlInteger,
   predicate: isInteger,
   instanceOf: BigInt,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   represent: {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     binary: function binary(obj: number) {
       return obj >= 0 ? "0b" + obj.toString(2) : "-0b" + obj.toString(2).slice(1);
     },
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     octal: function octal(obj: number) {
       return obj >= 0 ? "0" + obj.toString(8) : "-0" + obj.toString(8).slice(1);
     },
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     decimal: function decimal(obj: number) {
       return obj.toString(10);
     },
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     hexadecimal: function hexadecimal(obj: number) {
       return obj >= 0 ? "0x" + obj.toString(16).toUpperCase() : "-0x" + obj.toString(16).toUpperCase().slice(1);

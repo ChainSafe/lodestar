@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
@@ -13,6 +14,9 @@ import {SyncState} from "../../../../../../src/sync/interface.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 
 describe("get proposers api impl", function () {
+  const currentEpoch = 2;
+  const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
+
   let api: ReturnType<typeof getValidatorApi>;
   let modules: ApiTestModules;
   let state: BeaconStateAllForks;
@@ -20,12 +24,24 @@ describe("get proposers api impl", function () {
 
   beforeEach(function () {
     vi.useFakeTimers({now: 0});
+    vi.advanceTimersByTime(currentSlot * config.SECONDS_PER_SLOT * 1000);
     modules = getApiTestModules({clock: "real"});
     api = getValidatorApi(defaultApiOptions, modules);
 
+    initializeState(currentSlot);
+
+    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
+    modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
+    modules.forkChoice.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
+    modules.db.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
+
+    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+  });
+
+  function initializeState(slot: Slot): void {
     state = generateState(
       {
-        slot: 0,
+        slot,
         validators: generateValidators(25, {
           effectiveBalance: MAX_EFFECTIVE_BALANCE,
           activationEpoch: 0,
@@ -37,14 +53,10 @@ describe("get proposers api impl", function () {
     );
     cachedState = createCachedBeaconStateTest(state, config);
 
-    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
-    modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
-    modules.db.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
-
-    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
     vi.spyOn(cachedState.epochCtx, "getBeaconProposersNextEpoch");
     vi.spyOn(cachedState.epochCtx, "getBeaconProposers");
-  });
+    vi.spyOn(cachedState.epochCtx, "getBeaconProposersPrevEpoch");
+  }
 
   afterEach(() => {
     vi.useRealTimers();
@@ -54,7 +66,7 @@ describe("get proposers api impl", function () {
     vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SECONDS_PER_SLOT * 1000);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.SyncingHead);
 
-    await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - headSlot 0 currentSlot 9");
+    await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - headSlot 0 currentSlot 25");
   });
 
   it("should raise error if node stalled", async () => {
@@ -65,34 +77,61 @@ describe("get proposers api impl", function () {
   });
 
   it("should get proposers for current epoch", async () => {
-    const {data: result} = (await api.getProposerDuties({epoch: 0})) as {data: routes.validator.ProposerDutyList};
+    const {data: result} = (await api.getProposerDuties({epoch: currentEpoch})) as {
+      data: routes.validator.ProposerDutyList;
+    };
 
     expect(result.length).toBe(SLOTS_PER_EPOCH);
     expect(cachedState.epochCtx.getBeaconProposers).toHaveBeenCalledOnce();
     expect(cachedState.epochCtx.getBeaconProposersNextEpoch).not.toHaveBeenCalled();
-    expect(result.map((p) => p.slot)).toEqual(Array.from({length: SLOTS_PER_EPOCH}, (_, i) => i));
+    expect(cachedState.epochCtx.getBeaconProposersPrevEpoch).not.toHaveBeenCalled();
+    expect(result.map((p) => p.slot)).toEqual(
+      Array.from({length: SLOTS_PER_EPOCH}, (_, i) => currentEpoch * SLOTS_PER_EPOCH + i)
+    );
   });
 
   it("should get proposers for next epoch", async () => {
-    const {data: result} = (await api.getProposerDuties({epoch: 1})) as {data: routes.validator.ProposerDutyList};
+    const nextEpoch = currentEpoch + 1;
+    const {data: result} = (await api.getProposerDuties({epoch: nextEpoch})) as {
+      data: routes.validator.ProposerDutyList;
+    };
 
     expect(result.length).toBe(SLOTS_PER_EPOCH);
     expect(cachedState.epochCtx.getBeaconProposers).not.toHaveBeenCalled();
     expect(cachedState.epochCtx.getBeaconProposersNextEpoch).toHaveBeenCalledOnce();
-    expect(result.map((p) => p.slot)).toEqual(Array.from({length: SLOTS_PER_EPOCH}, (_, i) => SLOTS_PER_EPOCH + i));
+    expect(cachedState.epochCtx.getBeaconProposersPrevEpoch).not.toHaveBeenCalled();
+    expect(result.map((p) => p.slot)).toEqual(
+      Array.from({length: SLOTS_PER_EPOCH}, (_, i) => nextEpoch * SLOTS_PER_EPOCH + i)
+    );
+  });
+
+  it("should get proposers for historical epoch", async () => {
+    const historicalEpoch = currentEpoch - 2;
+    initializeState(currentSlot - 2 * SLOTS_PER_EPOCH);
+    modules.chain.getStateBySlot.mockResolvedValue({state, executionOptimistic: false, finalized: true});
+
+    const {data: result} = (await api.getProposerDuties({epoch: historicalEpoch})) as {
+      data: routes.validator.ProposerDutyList;
+    };
+
+    expect(result.length).toBe(SLOTS_PER_EPOCH);
+    // Spy won't be called as `getProposerDuties` will create a new cached beacon state
+    expect(result.map((p) => p.slot)).toEqual(
+      Array.from({length: SLOTS_PER_EPOCH}, (_, i) => historicalEpoch * SLOTS_PER_EPOCH + i)
+    );
   });
 
   it("should raise error for more than one epoch in the future", async () => {
-    await expect(api.getProposerDuties({epoch: 2})).rejects.toThrow(
-      "Requested epoch 2 must equal current 0 or next epoch 1"
+    await expect(api.getProposerDuties({epoch: currentEpoch + 2})).rejects.toThrow(
+      "Requested epoch 4 must not be more than one epoch in the future"
     );
   });
 
   it("should have different proposer validator public keys for current and next epoch", async () => {
-    const {data: currentProposers} = (await api.getProposerDuties({epoch: 0})) as {
+    const {data: currentProposers} = (await api.getProposerDuties({epoch: currentEpoch})) as {
       data: routes.validator.ProposerDutyList;
     };
-    const {data: nextProposers} = (await api.getProposerDuties({epoch: 1})) as {
+    const {data: nextProposers} = (await api.getProposerDuties({epoch: currentEpoch + 1})) as {
       data: routes.validator.ProposerDutyList;
     };
 
@@ -101,10 +140,10 @@ describe("get proposers api impl", function () {
   });
 
   it("should have different proposer validator indexes for current and next epoch", async () => {
-    const {data: currentProposers} = (await api.getProposerDuties({epoch: 0})) as {
+    const {data: currentProposers} = (await api.getProposerDuties({epoch: currentEpoch})) as {
       data: routes.validator.ProposerDutyList;
     };
-    const {data: nextProposers} = (await api.getProposerDuties({epoch: 1})) as {
+    const {data: nextProposers} = (await api.getProposerDuties({epoch: currentEpoch + 1})) as {
       data: routes.validator.ProposerDutyList;
     };
 
@@ -112,10 +151,10 @@ describe("get proposers api impl", function () {
   });
 
   it("should have different proposer slots for current and next epoch", async () => {
-    const {data: currentProposers} = (await api.getProposerDuties({epoch: 0})) as {
+    const {data: currentProposers} = (await api.getProposerDuties({epoch: currentEpoch})) as {
       data: routes.validator.ProposerDutyList;
     };
-    const {data: nextProposers} = (await api.getProposerDuties({epoch: 1})) as {
+    const {data: nextProposers} = (await api.getProposerDuties({epoch: currentEpoch + 1})) as {
       data: routes.validator.ProposerDutyList;
     };
 

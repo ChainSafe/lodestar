@@ -11,7 +11,6 @@ export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
  * https://github.com/ethereum/beacon-metrics/ and
  * https://hackmd.io/D5FmoeFZScim_squBFl8oA
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createBeaconMetrics(register: RegistryMetricCreator) {
   return {
     // From https://github.com/ethereum/beacon-metrics/blob/master/metrics.md
@@ -59,11 +58,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     // Non-spec'ed
 
     forkChoice: {
-      findHead: register.histogram<{entrypoint: string}>({
+      findHead: register.histogram<{caller: string}>({
         name: "beacon_fork_choice_find_head_seconds",
         help: "Time taken to find head in seconds",
         buckets: [0.1, 1, 10],
-        labelNames: ["entrypoint"],
+        labelNames: ["caller"],
       }),
       requests: register.gauge({
         name: "beacon_fork_choice_requests_total",

@@ -186,7 +186,6 @@ describe("initPeerIdAndEnr", () => {
   });
 });
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function runBeaconHandlerInit(args: Partial<BeaconArgs & GlobalArgs>) {
   return beaconHandlerInit({
     logLevel: LogLevel.info,

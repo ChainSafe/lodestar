@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {Mocked, vi} from "vitest";
 import {BeaconSync} from "../../src/sync/index.js";
 

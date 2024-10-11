@@ -63,7 +63,7 @@ export function isEmptyObject(value: unknown): boolean {
  *
  * Inspired on lodash.mapValues, see https://lodash.com/docs/4.17.15#mapValues
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export function mapValues<T extends {[K: string]: any}, R>(
   obj: T,
   iteratee: (value: T[keyof T], key: keyof T) => R
