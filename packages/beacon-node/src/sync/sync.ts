@@ -164,7 +164,7 @@ export class BeaconSync implements IBeaconSync {
       case RangeSyncStatus.Idle:
         return SyncState.Stalled;
       default:
-        return SyncState.Stalled;
+        throw new Error("Unreachable code");
     }
   }
 
