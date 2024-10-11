@@ -305,7 +305,7 @@ export class BeaconNode {
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
-    return new this({
+    return new BeaconNode({
       opts,
       config,
       db,

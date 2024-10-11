@@ -262,7 +262,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
     const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
-    return new this(opts, {
+    return new BackfillSync(opts, {
       syncAnchor,
       backfillStartFromSlot,
       backfillRangeWrittenSlot,
