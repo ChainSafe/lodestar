@@ -959,7 +959,7 @@ export function getValidatorApi(
         case stateEpoch + 1:
           // Requesting duties for next epoch is allowed since they can be predicted with high probabilities.
           // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
-          indexes = state.epochCtx.getBeaconProposersNextEpoch();
+          indexes = await state.epochCtx.getBeaconProposersNextEpoch();
           break;
 
         case stateEpoch - 1: {
