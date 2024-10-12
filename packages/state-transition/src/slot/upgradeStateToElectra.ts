@@ -1,14 +1,11 @@
 import {Epoch, ValidatorIndex, ssz} from "@lodestar/types";
-import {FAR_FUTURE_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, GENESIS_SLOT, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
-import {
-  hasCompoundingWithdrawalCredential,
-  queueEntireBalanceAndResetValidator,
-  queueExcessActiveBalance,
-} from "../util/electra.js";
+import {hasCompoundingWithdrawalCredential, queueExcessActiveBalance} from "../util/electra.js";
 import {computeActivationExitEpoch} from "../util/epoch.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "../util/validator.js";
+import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 
 /**
  * Upgrade a state from Deneb to Electra.
@@ -93,7 +90,23 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   });
 
   for (const validatorIndex of preActivation) {
-    queueEntireBalanceAndResetValidator(stateElectraView as CachedBeaconStateElectra, validatorIndex);
+    const stateElectra = stateElectraView as CachedBeaconStateElectra;
+    const balance = stateElectra.balances.get(validatorIndex);
+    stateElectra.balances.set(validatorIndex, 0);
+
+    const validator = stateElectra.validators.get(validatorIndex);
+    validator.effectiveBalance = 0;
+    stateElectra.epochCtx.effectiveBalanceIncrementsSet(validatorIndex, 0);
+    validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
+
+    const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
+      pubkey: validator.pubkey,
+      withdrawalCredentials: validator.withdrawalCredentials,
+      amount: balance,
+      signature: G2_POINT_AT_INFINITY,
+      slot: GENESIS_SLOT,
+    });
+    stateElectra.pendingDeposits.push(pendingDeposit);
   }
 
   for (let i = 0; i < validatorsArr.length; i++) {
@@ -107,48 +120,6 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   }
 
   const stateElectra = getCachedBeaconState(stateElectraView, stateDeneb);
-  // Commit new added fields ViewDU to the root node
-  stateElectra.commit();
-  // Clear cache to ensure the cache of deneb fields is not used by new ELECTRA fields
-  stateElectra["clearCache"]();
-
-  return stateElectra;
-}
-
-export function upgradeStateToElectraOriginal(stateDeneb: CachedBeaconStateDeneb): CachedBeaconStateElectra {
-  const {config} = stateDeneb;
-
-  const stateElectraNode = ssz.deneb.BeaconState.commitViewDU(stateDeneb);
-  const stateElectraView = ssz.electra.BeaconState.getViewDU(stateElectraNode);
-
-  const stateElectra = getCachedBeaconState(stateElectraView, stateDeneb);
-
-  stateElectra.fork = ssz.phase0.Fork.toViewDU({
-    previousVersion: stateDeneb.fork.currentVersion,
-    currentVersion: config.ELECTRA_FORK_VERSION,
-    epoch: stateDeneb.epochCtx.epoch,
-  });
-
-  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_REQUESTS_START_INDEX
-  stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
-
-  const validatorsArr = stateElectra.validators.getAllReadonly();
-
-  for (let i = 0; i < validatorsArr.length; i++) {
-    const validator = validatorsArr[i];
-
-    // [EIP-7251]: add validators that are not yet active to pending balance deposits
-    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
-      queueEntireBalanceAndResetValidator(stateElectra, i);
-    }
-
-    // [EIP-7251]: Ensure early adopters of compounding credentials go through the activation churn
-    const withdrawalCredential = validator.withdrawalCredentials;
-    if (hasCompoundingWithdrawalCredential(withdrawalCredential)) {
-      queueExcessActiveBalance(stateElectra, i);
-    }
-  }
-
   // Commit new added fields ViewDU to the root node
   stateElectra.commit();
   // Clear cache to ensure the cache of deneb fields is not used by new ELECTRA fields

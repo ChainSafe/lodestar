@@ -1,4 +1,4 @@
-import {COMPOUNDING_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, GENESIS_SLOT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {COMPOUNDING_WITHDRAWAL_PREFIX, GENESIS_SLOT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra} from "../types.js";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
@@ -44,23 +44,4 @@ export function queueExcessActiveBalance(state: CachedBeaconStateElectra, index:
     });
     state.pendingDeposits.push(pendingDeposit);
   }
-}
-
-export function queueEntireBalanceAndResetValidator(state: CachedBeaconStateElectra, index: ValidatorIndex): void {
-  const balance = state.balances.get(index);
-  state.balances.set(index, 0);
-
-  const validator = state.validators.get(index);
-  validator.effectiveBalance = 0;
-  state.epochCtx.effectiveBalanceIncrementsSet(index, 0);
-  validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-
-  const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
-    pubkey: validator.pubkey,
-    withdrawalCredentials: validator.withdrawalCredentials,
-    amount: balance,
-    signature: G2_POINT_AT_INFINITY,
-    slot: GENESIS_SLOT,
-  });
-  state.pendingDeposits.push(pendingDeposit);
 }
