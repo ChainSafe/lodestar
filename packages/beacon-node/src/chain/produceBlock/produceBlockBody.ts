@@ -220,6 +220,14 @@ export async function produceBlockBody<T extends BlockType>(
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
       }
+
+      if (ForkSeq[fork] >= ForkSeq.electra) {
+        const {executionRequests} = builderRes;
+        if (executionRequests === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
+        }
+        (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
+      }
     }
 
     // blockType === BlockType.Full
@@ -455,6 +463,7 @@ async function prepareExecutionPayloadHeader(
   header: ExecutionPayloadHeader;
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
+  executionRequests?: electra.ExecutionRequests;
 }> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
