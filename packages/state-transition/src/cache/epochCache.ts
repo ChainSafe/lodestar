@@ -920,18 +920,20 @@ export class EpochCache {
    */
   async getBeaconProposersNextEpoch(): Promise<ValidatorIndex[]> {
     if (!this.proposersNextEpoch.computed) {
-      const shuffling = await this.shufflingCache?.get(this.nextEpoch, this.nextDecisionRoot);
-      if (!shuffling) {
+      if (!this.nextShuffling) {
+        this.nextShuffling = (await this.shufflingCache?.get(this.nextEpoch, this.nextDecisionRoot)) ?? null;
+      }
+      if (!this.nextShuffling) {
         throw new EpochCacheError({
           code: EpochCacheErrorCode.NEXT_SHUFFLING_NOT_AVAILABLE,
           epoch: this.nextEpoch,
           decisionRoot: this.getShufflingDecisionRoot(this.nextEpoch),
         });
-      }  
+      }
       const indexes = computeProposers(
         this.config.getForkSeqAtEpoch(this.epoch + 1),
         this.proposersNextEpoch.seed,
-        shuffling,
+        this.nextShuffling,
         this.effectiveBalanceIncrements
       );
       this.proposersNextEpoch = {computed: true, indexes};
