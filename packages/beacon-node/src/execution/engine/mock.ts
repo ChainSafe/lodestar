@@ -99,6 +99,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
+      engine_getBlobsV1: this.getBlobs.bind(this),
     };
   }
 
@@ -393,6 +394,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     _clientVersion: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
   ): EngineApiRpcReturnTypes["engine_getClientVersionV1"] {
     return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
+  }
+
+  private getBlobs(
+    versionedHashes: EngineApiRpcParamTypes["engine_newPayloadV3"][1]
+  ): EngineApiRpcReturnTypes["engine_getBlobsV1"] {
+    return versionedHashes.map((_vh) => null);
   }
 
   private timestampToFork(timestamp: number): ForkExecution {

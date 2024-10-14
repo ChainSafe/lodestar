@@ -16,7 +16,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
+import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes, BlobAndProof} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 export type EngineApiRpcParamTypes = {
@@ -67,6 +67,8 @@ export type EngineApiRpcParamTypes = {
    * Object - Instance of ClientVersion
    */
   engine_getClientVersionV1: [ClientVersionRpc];
+
+  engine_getBlobsV1: [DATA[]];
 };
 
 export type PayloadStatus = {
@@ -109,6 +111,8 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
+
+  engine_getBlobsV1: (BlobAndProofRpc | null)[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -181,6 +185,11 @@ export type ConsolidationRequestRpc = {
   sourceAddress: DATA;
   sourcePubkey: DATA;
   targetPubkey: DATA;
+};
+
+export type BlobAndProofRpc = {
+  blob: DATA;
+  proof: DATA;
 };
 
 export type VersionedHashesRpc = DATA[];
@@ -488,6 +497,15 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
+      }
+    : null;
+}
+
+export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndProof | null {
+  return data
+    ? {
+        blob: dataToBytes(data.blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB),
+        proof: dataToBytes(data.proof, 48),
       }
     : null;
 }

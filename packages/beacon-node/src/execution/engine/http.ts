@@ -11,7 +11,7 @@ import {
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
+import {bytesToData, numToQuantity} from "../../eth1/provider/utils.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
 import {
   ExecutionPayloadStatus,
@@ -24,6 +24,7 @@ import {
   ExecutionEngineState,
   ClientVersion,
   ClientCode,
+  BlobAndProof,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
@@ -38,6 +39,7 @@ import {
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
   serializeExecutionRequests,
+  deserializeBlobAndProofs,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -461,6 +463,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});
     return response.map(deserializeExecutionPayloadBody);
+  }
+
+  async getBlobs(_fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
+    const method = "engine_getBlobsV1";
+    assertReqSizeLimit(versionedHashes.length, 128);
+    const versionedHashesHex = versionedHashes.map(bytesToData);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: [versionedHashesHex]});
+    return response.map(deserializeBlobAndProofs);
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

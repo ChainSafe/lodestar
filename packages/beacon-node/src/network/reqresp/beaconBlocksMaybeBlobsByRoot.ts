@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, ForkName} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BlockInput,
   BlockInputType,
@@ -16,6 +17,8 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
+import {IExecutionEngine} from "../../execution/index.js";
+import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {matchBlockWithBlobs} from "./beaconBlocksMaybeBlobsByRange.js";
 
 export async function beaconBlocksMaybeBlobsByRoot(
@@ -35,6 +38,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
       for (let index = 0; index < blobKzgCommitmentsLen; index++) {
+        // try see if the blob is available locally
         blobIdentifiers.push({blockRoot, index});
       }
     }
@@ -57,8 +61,9 @@ export async function unavailableBeaconBlobsByRoot(
   network: INetwork,
   peerId: PeerIdStr,
   unavailableBlockInput: BlockInput | NullBlockInput,
-  metrics: Metrics | null
+  opts: {executionEngine?: IExecutionEngine; metrics: Metrics | null}
 ): Promise<BlockInput> {
+  const {executionEngine, metrics} = opts;
   if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
     return unavailableBlockInput;
   }
@@ -77,26 +82,62 @@ export async function unavailableBeaconBlobsByRoot(
   }
 
   // resolve missing blobs
-  const blobIdentifiers: deneb.BlobIdentifier[] = [];
+  const blobIdentifiersWithCommitments: (deneb.BlobIdentifier & {kzgCommitment: deneb.KZGCommitment})[] = [];
   const slot = block.message.slot;
+  const fork = config.getForkName(slot);
   const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
 
   const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
   for (let index = 0; index < blobKzgCommitmentsLen; index++) {
-    if (blobsCache.has(index) === false) blobIdentifiers.push({blockRoot, index});
+    if (blobsCache.has(index) === false) {
+      blobIdentifiersWithCommitments.push({
+        blockRoot,
+        index,
+        kzgCommitment: (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments[index],
+      });
+    }
   }
 
-  let allBlobSidecars: deneb.BlobSidecar[];
-  if (blobIdentifiers.length > 0) {
-    allBlobSidecars = await network.sendBlobSidecarsByRoot(peerId, blobIdentifiers);
+  const networkReqIdentifiers: deneb.BlobIdentifier[] = [];
+  if (executionEngine !== undefined) {
+    const signedBlockHeader = signedBlockToSignedHeader(config, block);
+    const versionedHashes = blobIdentifiersWithCommitments.map((bi) => kzgCommitmentToVersionedHash(bi.kzgCommitment));
+    const blobAndProofs = await executionEngine
+      .getBlobs(ForkName.deneb, versionedHashes)
+      .catch((_e) => versionedHashes.map((_vh) => null));
+
+    for (let j = 0; j < versionedHashes.length; j++) {
+      const blobAndProof = blobAndProofs[j];
+      if (blobAndProof !== null) {
+        const blob = blobAndProof.blob;
+        const kzgProof = blobAndProof.proof;
+        const {kzgCommitment, index} = blobIdentifiersWithCommitments[j];
+        const kzgCommitmentInclusionProof = computeInclusionProof(fork, block.message.body, index);
+        const blobSidecar = {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
+        // add them in cache so that its reflected in all the blockInputs that carry this
+        // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
+        // verifyBlocksDataAvailability
+        blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
+      }
+      // may be blobsidecar arrived in the timespan of making the request
+      else if (blobsCache.has(blobIdentifiersWithCommitments[j].index) === false) {
+        const {blockRoot, index} = blobIdentifiersWithCommitments[j];
+        networkReqIdentifiers.push({blockRoot, index});
+      }
+    }
+  }
+
+  let networkResBlobSidecars: deneb.BlobSidecar[];
+  if (networkReqIdentifiers.length > 0) {
+    networkResBlobSidecars = await network.sendBlobSidecarsByRoot(peerId, networkReqIdentifiers);
   } else {
-    allBlobSidecars = [];
+    networkResBlobSidecars = [];
   }
 
   // add them in cache so that its reflected in all the blockInputs that carry this
   // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
   // verifyBlocksDataAvailability
-  for (const blobSidecar of allBlobSidecars) {
+  for (const blobSidecar of networkResBlobSidecars) {
     blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
   }
 
