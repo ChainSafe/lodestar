@@ -247,7 +247,7 @@ export class ValidatorStore {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
     // This should directly modify data in the map
-    delete validatorData["feeRecipient"];
+    delete validatorData.feeRecipient;
   }
 
   getGraffiti(pubkeyHex: PubkeyHex): string | undefined {
@@ -267,7 +267,7 @@ export class ValidatorStore {
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
-    delete validatorData["graffiti"];
+    delete validatorData.graffiti;
   }
 
   getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {

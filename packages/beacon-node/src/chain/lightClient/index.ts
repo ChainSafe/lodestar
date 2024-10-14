@@ -225,7 +225,7 @@ export class LightClientServer {
     this.zero = {
       // Assign the hightest fork's default value because it can always be typecasted down to correct fork
       finalizedHeader: sszTypesFor(highestFork(forkLightClient)).LightClientHeader.defaultValue(),
-      finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
+      finalityBranch: ssz.altair.LightClientUpdate.fields.finalityBranch.defaultValue(),
     };
 
     if (metrics) {

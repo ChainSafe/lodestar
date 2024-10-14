@@ -28,9 +28,7 @@
         // We need couple of empty exports to make those files as esm modules
         "noUselessEmptyExport": "off",
         // We use normal functions for to ease with debugging context
-        "useArrowFunction": "off",
-        // This pattern is used a lot earlier in code so disabling this rule
-        "useLiteralKeys": "off"
+        "useArrowFunction": "off"
       },
       "correctness": {
         "noUnusedVariables": "error",
@@ -350,7 +348,9 @@
       "linter": {
         "rules": {
           "complexity": {
-            "useArrowFunction": "off"
+            "useArrowFunction": "off",
+            // During tests we often need to use private/protected attributes, which is only possible with literal keys
+            "useLiteralKeys": "off"
           }
         }
       }

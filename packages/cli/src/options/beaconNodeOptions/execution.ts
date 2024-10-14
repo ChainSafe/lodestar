@@ -30,10 +30,8 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
      * jwtSecret is parsed as hex instead of bytes because the merge with defaults
      * in beaconOptions messes up the bytes array as as index => value object
      */
-    jwtSecretHex: args["jwtSecret"]
-      ? extractJwtHexSecret(fs.readFileSync(args["jwtSecret"], "utf-8").trim())
-      : undefined,
-    jwtId: args["jwtId"],
+    jwtSecretHex: args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined,
+    jwtId: args.jwtId,
   };
 }
 

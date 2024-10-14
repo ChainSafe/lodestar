@@ -184,10 +184,11 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics): void {
-    const mesh = this["mesh"];
+    const mesh = this.mesh;
+    // biome-ignore lint/complexity/useLiteralKeys: `topics` is a private attribute
     const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this["peers"];
-    const score = this["score"];
+    const peers = this.peers;
+    const score = this.score;
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();
 

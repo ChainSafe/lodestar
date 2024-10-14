@@ -125,6 +125,7 @@ export function overwriteEnrWithCliArgs(
       enr.seq = preSeq + BigInt(1);
     }
     // invalidate cached signature
+    // biome-ignore lint/complexity/useLiteralKeys: `_signature` is a private attribute
     delete enr["_signature"];
   }
 }

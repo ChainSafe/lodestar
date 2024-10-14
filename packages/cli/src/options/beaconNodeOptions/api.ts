@@ -22,7 +22,7 @@ export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
     rest: {
       api: args["rest.namespace"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["rest.cors"],
-      enabled: args["rest"],
+      enabled: args.rest,
       address: args["rest.address"],
       port: args["rest.port"],
       headerLimit: args["rest.headerLimit"],

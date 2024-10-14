@@ -109,6 +109,7 @@ export function getLodestarApi({
 
     async getBlockProcessorQueueItems() {
       return {
+        // biome-ignore lint/complexity/useLiteralKeys: The `blockProcessor` is a protected attribute
         data: (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
           const [blockInputs, opts] = item.args;
           return {
@@ -173,6 +174,7 @@ export function getLodestarApi({
     async dumpDbBucketKeys({bucket}) {
       for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
         if (repo instanceof Repository) {
+          // biome-ignore lint/complexity/useLiteralKeys: `bucket` is protected and `bucketId` is private
           if (String(repo["bucket"]) === bucket || repo["bucketId"] === bucket) {
             return {data: stringifyKeys(await repo.keys())};
           }

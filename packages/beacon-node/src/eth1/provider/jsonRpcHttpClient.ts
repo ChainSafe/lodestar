@@ -268,7 +268,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         };
 
         const token = encodeJwtToken(jwtClaim, this.jwtSecret);
-        headers["Authorization"] = `Bearer ${token}`;
+        headers.Authorization = `Bearer ${token}`;
       }
 
       const res = await fetch(url, {

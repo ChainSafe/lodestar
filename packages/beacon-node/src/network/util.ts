@@ -15,6 +15,7 @@ export function prettyPrintPeerIdStr(id: PeerIdStr): string {
  */
 // Compat function for efficiency reasons
 export function getConnectionsMap(libp2p: Libp2p): Map<string, {key: PeerId; value: Connection[]}> {
+  // biome-ignore lint/complexity/useLiteralKeys: `map` is a private attribute
   return libp2p.services.components.connectionManager.getConnectionsMap()["map"];
 }
 

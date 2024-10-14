@@ -121,6 +121,7 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
     length = buffer.length;
   }
 
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   const bytes = bufferedSource["buffer"].slice(0, length);
 
   try {

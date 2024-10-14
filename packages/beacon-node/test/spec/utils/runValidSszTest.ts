@@ -83,6 +83,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
     if (type.isBasic) {
       console.log("ROOTS Basic", toHexString(type.serialize(testDataValue)));
     } else {
+      // biome-ignore lint/complexity/useLiteralKeys: The `getRoots` is a protected attribute
       const roots = (type as CompositeType<unknown, unknown, unknown>)["getRoots"](testDataValue);
       console.log(
         "ROOTS Composite",
