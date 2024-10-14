@@ -9,13 +9,13 @@ import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
-describe("network / main thread", function () {
+describe("network / main thread", () => {
   vi.setConfig({testTimeout: 3000});
 
   runTests({useWorker: false});
 });
 
-describe("network / worker", function () {
+describe("network / worker", () => {
   vi.setConfig({testTimeout: 10_000});
 
   runTests({useWorker: true});
@@ -66,14 +66,14 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(networkIdentity.peerId).toBe(network.peerId.toString());
   });
 
-  it("should create a peer on connect", async function () {
+  it("should create a peer on connect", async () => {
     const [netA, netB] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
     expect(netA.getConnectedPeerCount()).toBe(1);
     expect(netB.getConnectedPeerCount()).toBe(1);
   });
 
-  it("should delete a peer on disconnect", async function () {
+  it("should delete a peer on disconnect", async () => {
     const [netA, netB] = await createTestNodesAB();
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     await connect(netA, netB);
@@ -92,9 +92,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   // Current implementation of discv5 consumer doesn't allow to deterministically force a peer to be found
   // a random find node lookup can yield no results if there are too few peers in the DHT
-  it.todo("should connect to new peer by subnet", async function () {});
+  it.todo("should connect to new peer by subnet", async () => {});
 
-  it("Should goodbye peers on stop", async function () {
+  it("Should goodbye peers on stop", async () => {
     const [netA, netB] = await createTestNodesAB();
 
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);

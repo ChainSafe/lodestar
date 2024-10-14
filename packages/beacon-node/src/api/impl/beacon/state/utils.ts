@@ -34,7 +34,7 @@ export function resolveStateId(
 
   // id must be slot
   const blockSlot = parseInt(String(stateId), 10);
-  if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+  if (Number.isNaN(blockSlot) && Number.isNaN(blockSlot - 0)) {
     throw new ValidationError(`Invalid block id '${stateId}'`, "blockId");
   }
 

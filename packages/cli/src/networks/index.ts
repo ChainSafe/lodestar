@@ -210,7 +210,7 @@ export async function fetchWeakSubjectivityState(
 }
 
 export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
-  const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
+  const checkpointRegex = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
   const match = checkpointRegex.exec(checkpointStr.toLowerCase());
   if (!match) {
     throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);

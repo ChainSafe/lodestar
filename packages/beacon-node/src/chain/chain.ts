@@ -464,23 +464,23 @@ export class BeaconChain implements IBeaconChain {
         executionOptimistic: isOptimisticBlock(block),
         finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
       };
-    } else {
-      // Just check if state is already in the cache. If it's not dialed to the correct slot,
-      // do not bother in advancing the state. restApiCanTriggerRegen == false means do no work
-      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
-      if (!block) {
-        return null;
-      }
-
-      const state = this.regen.getStateSync(block.stateRoot);
-      return (
-        state && {
-          state,
-          executionOptimistic: isOptimisticBlock(block),
-          finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
-        }
-      );
     }
+
+    // Just check if state is already in the cache. If it's not dialed to the correct slot,
+    // do not bother in advancing the state. restApiCanTriggerRegen == false means do no work
+    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+    if (!block) {
+      return null;
+    }
+
+    const state = this.regen.getStateSync(block.stateRoot);
+    return (
+      state && {
+        state,
+        executionOptimistic: isOptimisticBlock(block),
+        finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
+      }
+    );
   }
 
   async getHistoricalStateBySlot(
@@ -931,28 +931,27 @@ export class BeaconChain implements IBeaconChain {
     const effectiveBalances = this.checkpointBalancesCache.get(checkpoint);
     if (effectiveBalances) {
       return effectiveBalances;
-    } else {
-      // not expected, need metrics
-      this.metrics?.balancesCache.misses.inc();
-      this.logger.debug("checkpointBalances cache miss", {
-        epoch: checkpoint.epoch,
-        root: checkpoint.rootHex,
-      });
-
-      const {state, stateId, shouldWarn} = this.closestJustifiedBalancesStateToCheckpoint(checkpoint, blockState);
-      this.metrics?.balancesCache.closestStateResult.inc({stateId});
-      if (shouldWarn) {
-        this.logger.warn("currentJustifiedCheckpoint state not avail, using closest state", {
-          checkpointEpoch: checkpoint.epoch,
-          checkpointRoot: checkpoint.rootHex,
-          stateId,
-          stateSlot: state.slot,
-          stateRoot: toRootHex(state.hashTreeRoot()),
-        });
-      }
-
-      return getEffectiveBalanceIncrementsZeroInactive(state);
     }
+    // not expected, need metrics
+    this.metrics?.balancesCache.misses.inc();
+    this.logger.debug("checkpointBalances cache miss", {
+      epoch: checkpoint.epoch,
+      root: checkpoint.rootHex,
+    });
+
+    const {state, stateId, shouldWarn} = this.closestJustifiedBalancesStateToCheckpoint(checkpoint, blockState);
+    this.metrics?.balancesCache.closestStateResult.inc({stateId});
+    if (shouldWarn) {
+      this.logger.warn("currentJustifiedCheckpoint state not avail, using closest state", {
+        checkpointEpoch: checkpoint.epoch,
+        checkpointRoot: checkpoint.rootHex,
+        stateId,
+        stateSlot: state.slot,
+        stateRoot: toRootHex(state.hashTreeRoot()),
+      });
+    }
+
+    return getEffectiveBalanceIncrementsZeroInactive(state);
   }
 
   /**

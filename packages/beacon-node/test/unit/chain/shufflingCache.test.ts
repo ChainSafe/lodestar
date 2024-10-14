@@ -2,7 +2,7 @@ import {describe, it, expect, beforeEach} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../state-transition/test/perf/util.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 
-describe("ShufflingCache", function () {
+describe("ShufflingCache", () => {
   const vc = 64;
   const stateSlot = 100;
   const state = generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot});
@@ -19,11 +19,11 @@ describe("ShufflingCache", function () {
     ]);
   });
 
-  it("should get shuffling from cache", async function () {
+  it("should get shuffling from cache", async () => {
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
   });
 
-  it("should bound by maxSize(=1)", async function () {
+  it("should bound by maxSize(=1)", async () => {
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
     // insert promises at the same epoch does not prune the cache
     shufflingCache.insertPromise(currentEpoch, "0x00");
@@ -34,7 +34,7 @@ describe("ShufflingCache", function () {
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toBeNull();
   });
 
-  it("should return shuffling from promise", async function () {
+  it("should return shuffling from promise", async () => {
     const previousEpoch = state.epochCtx.epoch - 1;
     const previousDecisionRoot = state.epochCtx.previousDecisionRoot;
     shufflingCache.insertPromise(previousEpoch, previousDecisionRoot);
@@ -45,7 +45,7 @@ describe("ShufflingCache", function () {
     expect(await shufflingRequest1).toEqual(state.epochCtx.previousShuffling);
   });
 
-  it("should support up to 2 promises at a time", async function () {
+  it("should support up to 2 promises at a time", async () => {
     // insert 2 promises at the same epoch
     shufflingCache.insertPromise(currentEpoch, "0x00");
     shufflingCache.insertPromise(currentEpoch, "0x01");

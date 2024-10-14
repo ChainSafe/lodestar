@@ -6,7 +6,7 @@ import {
   SeenAggregatedAttestations,
 } from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
-describe("SeenAggregatedAttestations.isKnown", function () {
+describe("SeenAggregatedAttestations.isKnown", () => {
   const testCases: {
     id: string;
     seenAttestingBits: number[];
@@ -62,7 +62,7 @@ describe("SeenAggregatedAttestations.isKnown", function () {
   }
 });
 
-describe("insertDesc", function () {
+describe("insertDesc", () => {
   const testCases: {
     id: string;
     arr: number[][];

@@ -9,7 +9,7 @@ import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {getAndInitDevValidators} from "../../../../../utils/node/validator.js";
 
-describe("beacon node api", function () {
+describe("beacon node api", () => {
   vi.setConfig({testTimeout: 60_000});
 
   const restPort = 9596;

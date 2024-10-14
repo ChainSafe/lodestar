@@ -14,7 +14,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {HeadEventData} from "../../../src/chain/index.js";
 
-describe("chain / lightclient", function () {
+describe("chain / lightclient", () => {
   vi.setConfig({testTimeout: 600_000});
 
   /**
@@ -46,7 +46,7 @@ describe("chain / lightclient", function () {
     }
   });
 
-  it("Lightclient track head on server configuration", async function () {
+  it("Lightclient track head on server configuration", async () => {
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
     const genesisSlotsDelay = 7;
@@ -152,7 +152,9 @@ describe("chain / lightclient", function () {
             const lcHeadSlot = lightclient.getHead().beacon.slot;
             if (head.slot - lcHeadSlot > maxLcHeadTrackingDiffSlots) {
               throw Error(`Lightclient head ${lcHeadSlot} is too far behind the beacon node ${head.slot}`);
-            } else if (head.slot > targetSlotToReach) {
+            }
+
+            if (head.slot > targetSlotToReach) {
               resolve();
             }
           } catch (e) {

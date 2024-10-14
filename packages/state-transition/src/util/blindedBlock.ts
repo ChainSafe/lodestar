@@ -102,12 +102,11 @@ export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | Exe
 } {
   if (isExecutionPayloadAndBlobsBundle(data)) {
     return data;
-  } else {
-    return {
-      executionPayload: data,
-      blobsBundle: null,
-    };
   }
+  return {
+    executionPayload: data,
+    blobsBundle: null,
+  };
 }
 
 export function reconstructFullBlockOrContents(
@@ -128,7 +127,6 @@ export function reconstructFullBlockOrContents(
     }
 
     return {signedBlock, ...contents} as SignedBeaconBlockOrContents;
-  } else {
-    return signedBlock as SignedBeaconBlockOrContents;
   }
+  return signedBlock as SignedBeaconBlockOrContents;
 }

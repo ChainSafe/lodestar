@@ -5,7 +5,7 @@ import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../s
 
 const NUM_SLOTS_IN_CACHE = 3;
 
-describe("chain / seenCache / SeenSyncCommittee caches", function () {
+describe("chain / seenCache / SeenSyncCommittee caches", () => {
   describe("SeenSyncCommitteeMessages", () => {
     const slot = 10;
     const subnet = 2;

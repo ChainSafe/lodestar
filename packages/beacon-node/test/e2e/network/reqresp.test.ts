@@ -15,13 +15,13 @@ import {PeerIdStr} from "../../../src/util/peerId.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
-describe("network / reqresp / main thread", function () {
+describe("network / reqresp / main thread", () => {
   vi.setConfig({testTimeout: 3000});
 
   runTests({useWorker: false});
 });
 
-describe("network / reqresp / worker", function () {
+describe("network / reqresp / worker", () => {
   vi.setConfig({testTimeout: 30_000});
 
   runTests({useWorker: true});
@@ -76,7 +76,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
 
-  it("should send/receive signed blocks", async function () {
+  it("should send/receive signed blocks", async () => {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
     const blocks: phase0.SignedBeaconBlock[] = [];
     for (let slot = req.startSlot; slot < req.count; slot++) {
@@ -106,7 +106,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     }
   });
 
-  it("should send/receive a light client bootstrap message", async function () {
+  it("should send/receive a light client bootstrap message", async () => {
     const root: Root = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
     const expectedValue = ssz.altair.LightClientBootstrap.defaultValue();
 
@@ -128,7 +128,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should send/receive a light client optimistic update message", async function () {
+  it("should send/receive a light client optimistic update message", async () => {
     const expectedValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -149,7 +149,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should send/receive a light client finality update message", async function () {
+  it("should send/receive a light client finality update message", async () => {
     const expectedValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -170,7 +170,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should send/receive a light client update message", async function () {
+  it("should send/receive a light client update message", async () => {
     const req: altair.LightClientUpdatesByRange = {startPeriod: 0, count: 2};
     const lightClientUpdates: ResponseOutgoing[] = [];
     for (let slot = req.startPeriod; slot < req.count; slot++) {
@@ -201,10 +201,11 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     }
   });
 
-  it("should handle a server error", async function () {
+  it("should handle a server error", async () => {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
+        // biome-ignore lint/correctness/useYield: No need for yield in test context
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             throw Error(testErrorMessage);
@@ -218,7 +219,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should handle a server error after emitting two blocks", async function () {
+  it("should handle a server error after emitting two blocks", async () => {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -241,7 +242,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("trigger a TTFB_TIMEOUT error", async function () {
+  it("trigger a TTFB_TIMEOUT error", async () => {
     const ttfbTimeoutMs = 250;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -262,7 +263,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("trigger a RESP_TIMEOUT error", async function () {
+  it("trigger a RESP_TIMEOUT error", async () => {
     const respTimeoutMs = 250;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -284,9 +285,10 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Sleep infinite on first byte", async function () {
+  it("Sleep infinite on first byte", async () => {
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
+        // biome-ignore lint/correctness/useYield: No need for yield in test context
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             await sleep(100000000);
@@ -301,7 +303,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Sleep infinite on second response chunk", async function () {
+  it("Sleep infinite on second response chunk", async () => {
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {

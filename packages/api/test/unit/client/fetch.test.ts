@@ -3,7 +3,7 @@ import http from "node:http";
 import {describe, it, expect, afterEach} from "vitest";
 import {FetchError, FetchErrorType, fetch} from "../../../src/utils/client/fetch.js";
 
-describe("FetchError", function () {
+describe("FetchError", () => {
   const port = 37421;
   const randomHex = crypto.randomBytes(32).toString("hex");
 
@@ -87,7 +87,7 @@ describe("FetchError", function () {
 
   const afterHooks: (() => Promise<void>)[] = [];
 
-  afterEach(async function () {
+  afterEach(async () => {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
       if (afterHook)
@@ -100,7 +100,7 @@ describe("FetchError", function () {
   for (const testCase of testCases) {
     const {id, url = `http://localhost:${port}`, requestListener, signalHandler} = testCase;
 
-    it(id, async function () {
+    it(id, async () => {
       if (requestListener) {
         const server = http.createServer(requestListener);
         await new Promise<void>((resolve) => server.listen(port, resolve));

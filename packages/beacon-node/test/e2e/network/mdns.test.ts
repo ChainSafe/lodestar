@@ -21,18 +21,19 @@ let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-describe.skip("mdns", function () {
+describe.skip("mdns", () => {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  afterEach(async () => {
-    await Promise.all(afterEachCallbacks.map((cb) => cb()));
-    afterEachCallbacks.splice(0, afterEachCallbacks.length);
-  });
-
   let controller: AbortController;
+
   beforeEach(() => {
     controller = new AbortController();
   });
-  afterEach(() => controller.abort());
+
+  afterEach(async () => {
+    await Promise.all(afterEachCallbacks.map((cb) => cb()));
+    afterEachCallbacks.splice(0, afterEachCallbacks.length);
+    controller.abort();
+  });
 
   async function getOpts(privateKey: PrivateKey): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
@@ -114,7 +115,7 @@ describe.skip("mdns", function () {
     return Promise.all([createTestNode("mdns-A"), createTestNode("mdns-B")]);
   }
 
-  it("should connect two peers on a LAN", async function () {
+  it("should connect two peers on a LAN", async () => {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     expect(netA.getConnectedPeerCount()).toBe(1);

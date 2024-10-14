@@ -957,20 +957,19 @@ export class EpochCache {
       const validatorIndices = this.getBeaconCommittee(data.slot, data.index);
 
       return aggregationBits.intersectValues(validatorIndices);
-    } else {
-      const {aggregationBits, committeeBits, data} = attestation as electra.Attestation;
-
-      // There is a naming conflict on the term `committeeIndices`
-      // In Lodestar it usually means a list of validator indices of participants in a committee
-      // In the spec it means a list of committee indices according to committeeBits
-      // This `committeeIndices` refers to the latter
-      // TODO Electra: resolve the naming conflicts
-      const committeeIndices = committeeBits.getTrueBitIndexes();
-
-      const validatorIndices = this.getBeaconCommittees(data.slot, committeeIndices);
-
-      return aggregationBits.intersectValues(validatorIndices);
     }
+    const {aggregationBits, committeeBits, data} = attestation as electra.Attestation;
+
+    // There is a naming conflict on the term `committeeIndices`
+    // In Lodestar it usually means a list of validator indices of participants in a committee
+    // In the spec it means a list of committee indices according to committeeBits
+    // This `committeeIndices` refers to the latter
+    // TODO Electra: resolve the naming conflicts
+    const committeeIndices = committeeBits.getTrueBitIndexes();
+
+    const validatorIndices = this.getBeaconCommittees(data.slot, committeeIndices);
+
+    return aggregationBits.intersectValues(validatorIndices);
   }
 
   getCommitteeAssignments(
@@ -1030,9 +1029,8 @@ export class EpochCache {
   getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
     if (this.isPostElectra()) {
       return this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey)) ?? null;
-    } else {
-      return this.pubkey2index.get(pubkey);
     }
+    return this.pubkey2index.get(pubkey);
   }
 
   /**
@@ -1072,12 +1070,11 @@ export class EpochCache {
         // Repeated insert.
         metrics?.finalizedPubkeyDuplicateInsert.inc();
         return;
-      } else {
-        // attempt to insert the same pubkey with different index, should never happen.
-        throw Error(
-          `inserted existing pubkey into finalizedPubkey2index cache with a different index, index=${index} priorIndex=${existingIndex}`
-        );
       }
+      // attempt to insert the same pubkey with different index, should never happen.
+      throw Error(
+        `inserted existing pubkey into finalizedPubkey2index cache with a different index, index=${index} priorIndex=${existingIndex}`
+      );
     }
 
     this.pubkey2index.set(pubkey, index);

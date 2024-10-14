@@ -11,7 +11,7 @@ import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 
-describe("eth1 / util / deposits", function () {
+describe("eth1 / util / deposits", () => {
   describe("getDeposits", () => {
     type TestCase = {
       id: string;
@@ -111,7 +111,7 @@ describe("eth1 / util / deposits", function () {
     for (const testCase of testCases) {
       const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error, postElectra} =
         testCase;
-      it(id, async function () {
+      it(id, async () => {
         const state = postElectra
           ? generateState({slot: postElectraSlot, eth1DepositIndex}, postElectraConfig)
           : generateState({eth1DepositIndex});
@@ -139,7 +139,7 @@ describe("eth1 / util / deposits", function () {
   });
 
   describe("getDepositsWithProofs", () => {
-    it("return empty array if no pending deposits", function () {
+    it("return empty array if no pending deposits", () => {
       const initialValues = [Buffer.alloc(32)];
       const depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(initialValues);
       const depositCount = 0;
@@ -149,7 +149,7 @@ describe("eth1 / util / deposits", function () {
       expect(deposits).toEqual([]);
     });
 
-    it("return deposits with valid proofs", function () {
+    it("return deposits with valid proofs", () => {
       const depositEvents = Array.from(
         {length: 2},
         (_, index): phase0.DepositEvent => ({

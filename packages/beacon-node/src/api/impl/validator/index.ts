@@ -168,7 +168,9 @@ export function getValidatorApi(
 
     if (msToSlot > MAX_API_CLOCK_DISPARITY_MS) {
       throw Error(`Requested slot ${slot} is in the future`);
-    } else if (msToSlot > 0) {
+    }
+
+    if (msToSlot > 0) {
       await chain.clock.waitForSlot(slot);
     }
 
@@ -215,19 +217,19 @@ export function getValidatorApi(
         consensusBlockValue: prettyWeiToEth(consensusValue),
         blockTotalValue: prettyWeiToEth(totalValue),
       };
-    } else if (source === ProducedBlockSource.builder) {
+    }
+    if (source === ProducedBlockSource.builder) {
       return {
         builderExecutionPayloadValue: prettyWeiToEth(executionValue),
         builderConsensusBlockValue: prettyWeiToEth(consensusValue),
         builderBlockTotalValue: prettyWeiToEth(totalValue),
       };
-    } else {
-      return {
-        engineExecutionPayloadValue: prettyWeiToEth(executionValue),
-        engineConsensusBlockValue: prettyWeiToEth(consensusValue),
-        engineBlockTotalValue: prettyWeiToEth(totalValue),
-      };
     }
+    return {
+      engineExecutionPayloadValue: prettyWeiToEth(executionValue),
+      engineConsensusBlockValue: prettyWeiToEth(consensusValue),
+      engineBlockTotalValue: prettyWeiToEth(totalValue),
+    };
   }
 
   /**
@@ -294,9 +296,9 @@ export function getValidatorApi(
         const headSlot = chain.forkChoice.getHead().slot;
         if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
           throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
-        } else {
-          return;
         }
+
+        return;
       }
 
       case SyncState.Synced:
@@ -399,7 +401,7 @@ export function getValidatorApi(
     }
     notOnOutOfRangeData(parentBlockRoot);
 
-    let timer;
+    let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
@@ -465,7 +467,7 @@ export function getValidatorApi(
     }
     notOnOutOfRangeData(parentBlockRoot);
 
-    let timer;
+    let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
@@ -511,9 +513,9 @@ export function getValidatorApi(
           consensusBlockValue,
           shouldOverrideBuilder,
         };
-      } else {
-        return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
       }
+
+      return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
     } finally {
       if (timer) timer({source});
     }
@@ -726,13 +728,13 @@ export function getValidatorApi(
           executionPayloadBlinded: false,
           executionPayloadSource,
         };
-      } else {
-        return {
-          ...builder.value,
-          executionPayloadBlinded: true,
-          executionPayloadSource,
-        };
       }
+
+      return {
+        ...builder.value,
+        executionPayloadBlinded: true,
+        executionPayloadSource,
+      };
     }
 
     throw Error("Unreachable error occurred during the builder and execution block production");
@@ -757,25 +759,25 @@ export function getValidatorApi(
       if (opts.blindedLocal === true && ForkSeq[meta.version] >= ForkSeq.bellatrix) {
         if (meta.executionPayloadBlinded) {
           return {data, meta};
-        } else {
-          if (isBlockContents(data)) {
-            const {block} = data;
-            const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
-            return {
-              data: blindedBlock,
-              meta: {...meta, executionPayloadBlinded: true},
-            };
-          } else {
-            const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
-            return {
-              data: blindedBlock,
-              meta: {...meta, executionPayloadBlinded: true},
-            };
-          }
         }
-      } else {
-        return {data, meta};
+
+        if (isBlockContents(data)) {
+          const {block} = data;
+          const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
+          return {
+            data: blindedBlock,
+            meta: {...meta, executionPayloadBlinded: true},
+          };
+        }
+
+        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
+        return {
+          data: blindedBlock,
+          meta: {...meta, executionPayloadBlinded: true},
+        };
       }
+
+      return {data, meta};
     },
 
     async produceBlindedBlock({slot, randaoReveal, graffiti}) {
@@ -788,12 +790,14 @@ export function getValidatorApi(
         const {block} = data;
         const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
         return {data: blindedBlock, meta: {version}};
-      } else if (isBlindedBeaconBlock(data)) {
-        return {data, meta: {version}};
-      } else {
-        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
-        return {data: blindedBlock, meta: {version}};
       }
+
+      if (isBlindedBeaconBlock(data)) {
+        return {data, meta: {version}};
+      }
+
+      const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
+      return {data: blindedBlock, meta: {version}};
     },
 
     async produceAttestationData({committeeIndex, slot}) {
@@ -1226,7 +1230,9 @@ export function getValidatorApi(
 
       if (errors.length > 1) {
         throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
+      }
+
+      if (errors.length === 1) {
         throw errors[0];
       }
     },
@@ -1282,7 +1288,9 @@ export function getValidatorApi(
 
       if (errors.length > 1) {
         throw Error("Multiple errors on publishContributionAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
+      }
+
+      if (errors.length === 1) {
         throw errors[0];
       }
     },

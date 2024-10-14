@@ -8,9 +8,7 @@ export const schema = FAILSAFE_SCHEMA.extend({
   implicit: [
     new Type("tag:yaml.org,2002:str", {
       kind: "scalar",
-      construct: function (data) {
-        return data !== null ? data : "";
-      },
+      construct: (data) => (data !== null ? data : ""),
     }),
   ],
 });

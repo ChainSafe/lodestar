@@ -4,7 +4,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Clock, ClockEvent} from "../../../src/util/clock.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../src/constants/index.js";
 
-describe("Clock", function () {
+describe("Clock", () => {
   let abortController: AbortController;
   let clock: Clock;
 
@@ -26,7 +26,7 @@ describe("Clock", function () {
   });
 
   // TODO: Debug why this test is fragile after migrating to vitest
-  it.skip("Should notify on new slot", function () {
+  it.skip("Should notify on new slot", () => {
     const spy = vi.fn();
     clock.on(ClockEvent.slot, spy);
     vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000);
@@ -34,7 +34,7 @@ describe("Clock", function () {
     expect(spy).toBeCalledWith(clock.currentSlot);
   });
 
-  it("Should notify on new epoch", function () {
+  it("Should notify on new epoch", () => {
     const spy = vi.fn();
     clock.on(ClockEvent.epoch, spy);
     vi.advanceTimersByTime(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);

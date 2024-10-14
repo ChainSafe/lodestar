@@ -262,7 +262,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
     const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
-    return new this(opts, {
+    return new BackfillSync(opts, {
       syncAnchor,
       backfillStartFromSlot,
       backfillRangeWrittenSlot,
@@ -457,6 +457,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               this.status = BackfillSyncStatus.aborted;
               break;
             case BackfillSyncErrorCode.NOT_ANCHORED:
+            // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
             case BackfillSyncErrorCode.NOT_LINEAR:
               // Lets try to jump directly to the parent of this anchorBlock as previous
               // (segment) of blocks could be orphaned/missed
@@ -674,7 +675,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       );
 
     // If possible, read back till anchorBlock > this.prevFinalizedCheckpointBlock
-    let parentBlock,
+    let parentBlock: SignedBeaconBlock | null,
       backCount = 1;
 
     let isPrevFinWsConfirmedAnchorParent = false;

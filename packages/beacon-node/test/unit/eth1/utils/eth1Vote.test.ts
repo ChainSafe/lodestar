@@ -12,7 +12,7 @@ import {
   Eth1DataGetter,
 } from "../../../../src/eth1/utils/eth1Vote.js";
 
-describe("eth1 / util / eth1Vote", function () {
+describe("eth1 / util / eth1Vote", () => {
   function generateEth1Vote(i: number): phase0.Eth1Data {
     return {
       blockHash: Buffer.alloc(32, i),
@@ -21,7 +21,7 @@ describe("eth1 / util / eth1Vote", function () {
     };
   }
 
-  describe("pickEth1Vote", function () {
+  describe("pickEth1Vote", () => {
     // Function array to scope votes in each test case defintion
     const testCases: (() => {
       id: string;
@@ -82,7 +82,7 @@ describe("eth1 / util / eth1Vote", function () {
 
     for (const testCase of testCases) {
       const {id, eth1DataVotesInState, votesToConsider, expectedEth1Vote} = testCase();
-      it(id, async function () {
+      it(id, async () => {
         const state = generateState({slot: 5, eth1DataVotes: eth1DataVotesInState});
         const eth1Vote = pickEth1Vote(state, votesToConsider);
         expect(ssz.phase0.Eth1Data.toJson(eth1Vote)).toEqual(ssz.phase0.Eth1Data.toJson(expectedEth1Vote));
@@ -90,7 +90,7 @@ describe("eth1 / util / eth1Vote", function () {
     }
   });
 
-  describe("getEth1VotesToConsider", function () {
+  describe("getEth1VotesToConsider", () => {
     // Function array to scope votes in each test case defintion
     const testCases: (() => {
       id: string;
@@ -127,7 +127,7 @@ describe("eth1 / util / eth1Vote", function () {
 
     for (const testCase of testCases) {
       const {id, state, eth1Datas, expectedVotesToConsider} = testCase();
-      it(`get votesToConsider: ${id}`, async function () {
+      it(`get votesToConsider: ${id}`, async () => {
         const eth1DataGetter: Eth1DataGetter = async ({timestampRange}) =>
           filterBy(eth1Datas, timestampRange, (eth1Data) => eth1Data.timestamp);
 

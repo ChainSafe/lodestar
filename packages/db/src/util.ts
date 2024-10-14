@@ -7,7 +7,7 @@ export const uintLen = 8;
  * Prepend a bucket to a key
  */
 export function encodeKey(bucket: number, key: Uint8Array | string | number | bigint): Uint8Array {
-  let buf;
+  let buf: Buffer;
   const prefixLength = BUCKET_LENGTH;
   //all keys are writen with prefixLength offet
   if (typeof key === "string") {

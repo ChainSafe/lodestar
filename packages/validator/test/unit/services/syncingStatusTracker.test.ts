@@ -4,7 +4,7 @@ import {getMockedLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {SyncingStatus, SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 
-describe("SyncingStatusTracker", function () {
+describe("SyncingStatusTracker", () => {
   const api = getApiClientStub();
   const logger = getMockedLogger();
 
@@ -26,7 +26,7 @@ describe("SyncingStatusTracker", function () {
     controller.abort();
   });
 
-  it("should handle transition from syncing to synced", async function () {
+  it("should handle transition from syncing to synced", async () => {
     // Node is syncing
     const syncing: SyncingStatus = {
       headSlot: 0,
@@ -80,7 +80,7 @@ describe("SyncingStatusTracker", function () {
     expect(callOnResynced).toHaveBeenCalledOnce();
   });
 
-  it("should handle errors when checking syncing status", async function () {
+  it("should handle errors when checking syncing status", async () => {
     // Node is offline
     const error = new Error("ECONNREFUSED");
     api.node.getSyncingStatus.mockRejectedValue(error);
@@ -92,7 +92,7 @@ describe("SyncingStatusTracker", function () {
     expect(callOnResynced).not.toHaveBeenCalled();
   });
 
-  it("should not call scheduled tasks if already synced", async function () {
+  it("should not call scheduled tasks if already synced", async () => {
     // Node is already synced
     const syncedHead1: SyncingStatus = {
       headSlot: 1,

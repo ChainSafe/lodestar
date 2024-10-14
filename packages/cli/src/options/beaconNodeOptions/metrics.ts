@@ -9,7 +9,7 @@ export type MetricsArgs = {
 
 export function parseArgs(args: MetricsArgs): IBeaconNodeOptions["metrics"] {
   return {
-    enabled: args["metrics"],
+    enabled: args.metrics,
     port: args["metrics.port"],
     address: args["metrics.address"],
   };

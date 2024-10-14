@@ -11,7 +11,7 @@ import {testLogger} from "../../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {Eth1ProviderState, EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
 
-describe("genesis builder", function () {
+describe("genesis builder", () => {
   const logger = testLogger();
   const schlesiConfig = Object.assign({}, config, {
     MIN_GENESIS_TIME: 1587755000,
