@@ -33,16 +33,18 @@ describe("chain / bls / multithread queue", () => {
     }
   });
 
-  beforeEach(async () => {
+  beforeEach(() => {
     controller = new AbortController();
+  });
+
+  afterEach(async () => {
+    controller.abort();
 
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
     }
   });
-
-  afterEach(() => controller.abort());
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
