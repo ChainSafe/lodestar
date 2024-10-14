@@ -94,6 +94,12 @@ export class ForkChoice implements IForkChoice {
     () => new MapDef(() => new Set())
   );
 
+  /**
+   * It's inconsistent to count number of queued attestations at different intervals of slot.
+   * Instead of that, we count number of queued attestations at the previous slot.
+   */
+  private queuedAttestationsPreviousSlot = 0;
+
   // Note: as of Jun 2022 Lodestar metrics show that 100% of the times updateHead() is called, synced = false.
   // Because we are processing attestations from gossip, recomputing scores is always necessary
   // /** Avoid having to compute deltas all the times. */
@@ -129,13 +135,9 @@ export class ForkChoice implements IForkChoice {
   }
 
   getMetrics(): ForkChoiceMetrics {
-    let numAttestations = 0;
-    for (const indicesByRoot of this.queuedAttestations.values()) {
-      numAttestations += Array.from(indicesByRoot.values()).reduce((acc, indices) => acc + indices.size, 0);
-    }
     return {
       votes: this.votes.length,
-      queuedAttestations: numAttestations,
+      queuedAttestations: this.queuedAttestationsPreviousSlot,
       validatedAttestationDatas: this.validatedAttestationDatas.size,
       balancesLength: this.balances.length,
       nodes: this.protoArray.nodes.length,
@@ -771,6 +773,7 @@ export class ForkChoice implements IForkChoice {
       this.onTick(previousSlot + 1);
     }
 
+    this.queuedAttestationsPreviousSlot = 0;
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
     this.validatedAttestationDatas = new Set();
@@ -1372,6 +1375,10 @@ export class ForkChoice implements IForkChoice {
           for (const validatorIndex of validatorIndices) {
             // equivocatingIndices was checked in onAttestation
             this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+          }
+
+          if (slot === currentSlot - 1) {
+            this.queuedAttestationsPreviousSlot += validatorIndices.size;
           }
         }
       } else {
