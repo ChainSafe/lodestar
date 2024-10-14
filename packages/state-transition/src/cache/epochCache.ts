@@ -918,22 +918,12 @@ export class EpochCache {
    * balances are sampled to adjust the probability of the next selection (32 per epoch on average). So to invalidate
    * the prediction the effective of one of those 32 samples should change and change the random_byte inequality.
    */
-  async getBeaconProposersNextEpoch(): Promise<ValidatorIndex[]> {
+  getBeaconProposersNextEpoch(): ValidatorIndex[] {
     if (!this.proposersNextEpoch.computed) {
-      if (!this.nextShuffling) {
-        this.nextShuffling = (await this.shufflingCache?.get(this.nextEpoch, this.nextDecisionRoot)) ?? null;
-      }
-      if (!this.nextShuffling) {
-        throw new EpochCacheError({
-          code: EpochCacheErrorCode.NEXT_SHUFFLING_NOT_AVAILABLE,
-          epoch: this.nextEpoch,
-          decisionRoot: this.getShufflingDecisionRoot(this.nextEpoch),
-        });
-      }
       const indexes = computeProposers(
-        this.config.getForkSeqAtEpoch(this.epoch + 1),
+        this.config.getForkSeqAtEpoch(this.nextEpoch),
         this.proposersNextEpoch.seed,
-        this.nextShuffling,
+        this.getShufflingAtEpoch(this.nextEpoch),
         this.effectiveBalanceIncrements
       );
       this.proposersNextEpoch = {computed: true, indexes};
