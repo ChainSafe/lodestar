@@ -24,9 +24,11 @@ describe("Json helper", () => {
       {id: "symbol", arg: Symbol("foo"), json: "Symbol(foo)"},
 
       // Functions
-      {id: "function", arg: () => {}, json: "function() {\n      }"},
+      // biome-ignore lint/complexity/useArrowFunction: We need a function for the this test
+      {id: "function", arg: function () {}, json: "function() {\n      }"},
       {id: "arrow function", arg: () => {}, json: "() => {\n      }"},
-      {id: "async function", arg: async () => {}, json: "async function() {\n      }"},
+      // biome-ignore lint/complexity/useArrowFunction: We need a function for the this test
+      {id: "async function", arg: async function () {}, json: "async function() {\n      }"},
       {id: "async arrow function", arg: async () => {}, json: "async () => {\n      }"},
 
       // Arrays
