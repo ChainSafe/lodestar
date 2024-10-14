@@ -3,7 +3,8 @@ import path from "node:path";
 import worker from "node:worker_threads";
 import type {ModuleThread} from "@chainsafe/threads";
 import {expose} from "@chainsafe/threads/worker";
-import {createFromProtobuf} from "@libp2p/peer-id-factory";
+import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
@@ -32,7 +33,8 @@ if (!workerData) throw Error("workerData must be defined");
 if (!parentPort) throw Error("parentPort must be defined");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
-const peerId = await createFromProtobuf(workerData.peerIdProto);
+const privateKey = privateKeyFromProtobuf(workerData.privateKeyProto);
+const peerId = peerIdFromPrivateKey(privateKey);
 
 // TODO: Pass options from main thread for logging
 // TODO: Logging won't be visible in file loggers
@@ -92,7 +94,7 @@ if (networkCoreWorkerMetrics) {
 const core = await NetworkCore.init({
   opts: workerData.opts,
   config,
-  peerId,
+  privateKey,
   peerStoreDir: workerData.peerStoreDir,
   logger,
   metricsRegistry: metricsRegister,

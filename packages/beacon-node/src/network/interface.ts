@@ -12,10 +12,11 @@ import {
   PeerRouting,
   PeerStore,
   Upgrader,
+  PrivateKey,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import type {Datastore} from "interface-datastore";
-import {Identify} from "@chainsafe/libp2p-identify";
+import {Identify} from "@libp2p/identify";
 import {
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -93,6 +94,7 @@ export interface INetwork extends INetworkCorePublic {
 
 export type LodestarComponents = {
   peerId: PeerId;
+  privateKey: PrivateKey;
   nodeInfo: NodeInfo;
   logger: ComponentLogger;
   events: TypedEventTarget<Libp2pEvents>;
