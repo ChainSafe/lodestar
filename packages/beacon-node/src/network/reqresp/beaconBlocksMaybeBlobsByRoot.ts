@@ -66,7 +66,7 @@ export async function unavailableBeaconBlobsByRoot(
   // resolve the block if thats unavailable
   let block: SignedBeaconBlock,
     blobsCache: NullBlockInput["cachedData"]["blobsCache"],
-    blockBytes: Uint8Array,
+    blockBytes: Uint8Array | null,
     resolveAvailability: NullBlockInput["cachedData"]["resolveAvailability"],
     cachedData: NullBlockInput["cachedData"];
   if (unavailableBlockInput.block === null) {
