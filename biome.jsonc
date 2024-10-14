@@ -63,7 +63,7 @@
             "deniedGlobals": ["fetch"]
           }
         },
-        // There are a lot of places we use if/else pattern. Should be fixed in an independent PR. 
+        // There are a lot of places we use if/else pattern. Should be fixed in an independent PR.
         "noUselessElse": "off",
         // We prefer to use `Math.pow` over `**` operator
         "useExponentiationOperator": "off",
