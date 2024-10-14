@@ -94,7 +94,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
       queuedAttestations: register.gauge({
         name: "beacon_fork_choice_queued_attestations_count",
-        help: "Current count of queued_attestations in fork choice data structures",
+        help: "Count of queued_attestations in fork choice per slot",
       }),
       validatedAttestationDatas: register.gauge({
         name: "beacon_fork_choice_validated_attestation_datas_count",
