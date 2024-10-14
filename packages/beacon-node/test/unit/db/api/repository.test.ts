@@ -41,10 +41,10 @@ class TestRepository extends Repository<string, TestType> {
   }
 }
 
-describe("database repository", function () {
+describe("database repository", () => {
   let repository: TestRepository, controller: MockedObject<LevelDbController>;
 
-  beforeEach(function () {
+  beforeEach(() => {
     controller = vi.mocked(new LevelDbController({} as any, {} as any, {} as any));
     repository = new TestRepository(controller as unknown as LevelDbController);
   });
@@ -53,7 +53,7 @@ describe("database repository", function () {
     vi.clearAllMocks();
   });
 
-  it("should get single item", async function () {
+  it("should get single item", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     controller.get.mockResolvedValue(TestSSZType.serialize(item) as Buffer);
     const result = await repository.get("id");
@@ -61,14 +61,14 @@ describe("database repository", function () {
     expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should return null if item not found", async function () {
+  it("should return null if item not found", async () => {
     controller.get.mockResolvedValue(null);
     const result = await repository.get("id");
     expect(result).toEqual(null);
     expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should return true if item exists", async function () {
+  it("should return true if item exists", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     controller.get.mockResolvedValue(TestSSZType.serialize(item) as Buffer);
     const result = await repository.has("id");
@@ -76,31 +76,31 @@ describe("database repository", function () {
     expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should return false if item doesnt exists", async function () {
+  it("should return false if item doesnt exists", async () => {
     controller.get.mockResolvedValue(null);
     const result = await repository.has("id");
     expect(result).toBe(false);
     expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should store with hashTreeRoot as id", async function () {
+  it("should store with hashTreeRoot as id", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.add(item)).resolves.toBeUndefined();
     expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
-  it("should store with given id", async function () {
+  it("should store with given id", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.put("1", item)).resolves.toBeUndefined();
     expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
-  it("should delete", async function () {
+  it("should delete", async () => {
     await expect(repository.delete("1")).resolves.toBeUndefined();
     expect(controller.delete).toHaveBeenCalledTimes(1);
   });
 
-  it("should return all items", async function () {
+  it("should return all items", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     const itemSerialized = TestSSZType.serialize(item);
     const items = [itemSerialized, itemSerialized, itemSerialized];
@@ -110,24 +110,24 @@ describe("database repository", function () {
     expect(controller.values).toHaveBeenCalledTimes(1);
   });
 
-  it("should return range of items", async function () {
+  it("should return range of items", async () => {
     await repository.values({gt: "a", lt: "b"});
     expect(controller.values).toHaveBeenCalledTimes(1);
   });
 
-  it("should delete given items", async function () {
+  it("should delete given items", async () => {
     await repository.batchDelete(["1", "2", "3"]);
     expect(controller.batchDelete.mock.calls[0][0]).toHaveLength(3);
   });
 
-  it("should delete given items by value", async function () {
+  it("should delete given items by value", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await repository.batchRemove([item, item]);
 
     expect(controller.batchDelete.mock.calls[0][0]).toHaveLength(2);
   });
 
-  it("should add multiple values", async function () {
+  it("should add multiple values", async () => {
     await repository.batchAdd([
       {bool: true, bytes: Buffer.alloc(32)},
       {bool: false, bytes: Buffer.alloc(32)},
@@ -136,7 +136,7 @@ describe("database repository", function () {
     expect(controller.batchPut.mock.calls[0][0]).toHaveLength(2);
   });
 
-  it("should fetch values stream", async function () {
+  it("should fetch values stream", async () => {
     async function* sample(): AsyncGenerator<Buffer> {
       yield TestSSZType.serialize({bool: true, bytes: Buffer.alloc(32)}) as Buffer;
       yield TestSSZType.serialize({bool: false, bytes: Buffer.alloc(32)}) as Buffer;

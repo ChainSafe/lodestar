@@ -4,7 +4,7 @@ import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/networ
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 import {config} from "../../../utils/config.js";
 
-describe("network / gossip / topic", function () {
+describe("network / gossip / topic", () => {
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType

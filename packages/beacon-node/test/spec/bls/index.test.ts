@@ -35,7 +35,7 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
 
     const fnTestDirpath = path.join(blsSpecTests.outputDir, fnName);
     for (const testName of readdirSyncSpec(fnTestDirpath)) {
-      it(`${fnName}/${testName}`, function (context) {
+      it(`${fnName}/${testName}`, (context) => {
         if (fn === "skip") {
           context.skip();
           return;

@@ -5,7 +5,7 @@ import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {waitForCapellaFork, minCapellaTimeMs, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 
-describe("web3_provider", function () {
+describe("web3_provider", () => {
   vi.setConfig({hookTimeout: minCapellaTimeMs});
 
   beforeAll(async () => {

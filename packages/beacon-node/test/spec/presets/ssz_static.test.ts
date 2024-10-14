@@ -52,7 +52,7 @@ const sszStatic =
       (ssz.altair as Types)[typeName] ||
       (ssz.phase0 as Types)[typeName];
 
-    it(`${fork} - ${typeName} type exists`, function () {
+    it(`${fork} - ${typeName} type exists`, () => {
       expect(sszType).toEqualWithMessage(expect.any(Type), `SSZ type ${typeName} for fork ${fork} is not defined`);
     });
 
@@ -65,7 +65,7 @@ const sszStatic =
 
     for (const testCase of fs.readdirSync(testSuiteDirpath)) {
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      it(testCase, function () {
+      it(testCase, () => {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {
           vi.setConfig({testTimeout: 30 * 1000});

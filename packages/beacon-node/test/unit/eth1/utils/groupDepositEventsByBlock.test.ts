@@ -2,7 +2,7 @@ import {describe, it, expect} from "vitest";
 import {phase0} from "@lodestar/types";
 import {groupDepositEventsByBlock} from "../../../../src/eth1/utils/groupDepositEventsByBlock.js";
 
-describe("eth1 / util / groupDepositEventsByBlock", function () {
+describe("eth1 / util / groupDepositEventsByBlock", () => {
   it("should return deposit events by block sorted by index", () => {
     const depositData = {
       amount: 0,

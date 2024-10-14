@@ -7,7 +7,7 @@ import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 
-describe("import from fs same cmd as validate", function () {
+describe("import from fs same cmd as validate", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-and-validate-test");

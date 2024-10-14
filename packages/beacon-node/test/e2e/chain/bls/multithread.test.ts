@@ -5,7 +5,7 @@ import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/in
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
-describe("chain / bls / multithread queue", function () {
+describe("chain / bls / multithread queue", () => {
   const logger = testLogger();
 
   let controller: AbortController;

@@ -13,7 +13,7 @@ import {ClockStopped} from "../../../mocks/clock.js";
 import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
-describe("chain / blocks / verifyBlocksSanityChecks", function () {
+describe("chain / blocks / verifyBlocksSanityChecks", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let clock: ClockStopped;
   let modules: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};

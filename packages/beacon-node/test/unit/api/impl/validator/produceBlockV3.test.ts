@@ -12,7 +12,7 @@ import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 import {zeroProtoBlock} from "../../../../utils/state.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 
-describe("api/validator - produceBlockV3", function () {
+describe("api/validator - produceBlockV3", () => {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getValidatorApi>;
 

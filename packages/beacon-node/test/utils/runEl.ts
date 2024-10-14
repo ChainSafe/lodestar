@@ -196,7 +196,7 @@ async function waitForELOffline(ENGINE_PORT: string): Promise<void> {
 async function isPortInUse(port: number): Promise<boolean> {
   return new Promise<boolean>((resolve, reject) => {
     const server = net.createServer();
-    server.once("error", function (err) {
+    server.once("error", (err) => {
       if ((err as unknown as {code: string}).code === "EADDRINUSE") {
         resolve(true);
       } else {
@@ -204,7 +204,7 @@ async function isPortInUse(port: number): Promise<boolean> {
       }
     });
 
-    server.once("listening", function () {
+    server.once("listening", () => {
       // close the server if listening doesn't fail
       server.close(() => {
         resolve(false);

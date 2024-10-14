@@ -14,7 +14,7 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 // It's OKAY to disable temporarily since this functionality is tested indirectly by the sim merge tests.
 // See https://github.com/ChainSafe/lodestar/issues/4197
 // https://github.com/ChainSafe/lodestar/issues/5967
-describe.skip("eth1 / Eth1MergeBlockTracker", function () {
+describe.skip("eth1 / Eth1MergeBlockTracker", () => {
   const logger = testLogger();
 
   function getConfig(ttd: bigint): ChainConfig {

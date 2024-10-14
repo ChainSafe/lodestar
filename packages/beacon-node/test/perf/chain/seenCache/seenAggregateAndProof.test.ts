@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
-describe("SeenAggregatedAttestations perf test", function () {
+describe("SeenAggregatedAttestations perf test", () => {
   const targetEpoch = 2022;
   const attDataRoot = "0x55e1a1cce2aeb66f85b2285b8cb7aa55dfb67148b5e0067f0692b61ddbd2824b";
   const fullByte = 0b11111111;

@@ -10,15 +10,15 @@ import {loadConfigYaml} from "../yaml.js";
 /** https://github.com/ethereum/consensus-specs/releases */
 const specConfigCommit = "v1.5.0-alpha.3";
 
-describe("Ensure config is synced", function () {
+describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
-  it("mainnet", async function () {
+  it("mainnet", async () => {
     const remotePreset = await downloadRemoteConfig("mainnet", specConfigCommit);
     assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
-  it("minimal", async function () {
+  it("minimal", async () => {
     const remotePreset = await downloadRemoteConfig("minimal", specConfigCommit);
     assertCorrectPreset({...minimalPreset}, remotePreset);
   });

@@ -4,7 +4,7 @@ import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/w
 import {getChurnLimit} from "../../../src/util/validator.js";
 
 describe("weak subjectivity tests", () => {
-  describe("computeWeakSubjectivityPeriodFromConstituents", function () {
+  describe("computeWeakSubjectivityPeriodFromConstituents", () => {
     const balance28 = 28;
     const balance32 = 32;
 

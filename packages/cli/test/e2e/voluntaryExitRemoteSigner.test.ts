@@ -14,7 +14,7 @@ import {
 } from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
-describe("voluntaryExit using remote signer", function () {
+describe("voluntaryExit using remote signer", () => {
   vi.setConfig({testTimeout: 30_000});
 
   let externalSigner: StartedExternalSigner;

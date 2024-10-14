@@ -17,7 +17,7 @@ import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
 
-describe("Forkchoice / GetProposerHead", function () {
+describe("Forkchoice / GetProposerHead", () => {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";

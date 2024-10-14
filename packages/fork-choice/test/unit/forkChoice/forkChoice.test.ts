@@ -16,7 +16,7 @@ import {
 } from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
-describe("Forkchoice", function () {
+describe("Forkchoice", () => {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -116,7 +116,7 @@ describe("Forkchoice", function () {
     }
   };
 
-  it("getAllAncestorBlocks", function () {
+  it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
     protoArr.onBlock(block, block.slot);

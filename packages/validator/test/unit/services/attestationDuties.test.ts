@@ -18,7 +18,7 @@ import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/chainHeaderTracker.js");
 
-describe("AttestationDutiesService", function () {
+describe("AttestationDutiesService", () => {
   const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
@@ -61,7 +61,7 @@ describe("AttestationDutiesService", function () {
     controller.abort();
   });
 
-  it("Should fetch indexes and duties", async function () {
+  it("Should fetch indexes and duties", async () => {
     // Reply with some duties
     const slot = 1;
     const epoch = computeEpochAtSlot(slot);
@@ -118,7 +118,7 @@ describe("AttestationDutiesService", function () {
     expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
   });
 
-  it("Should remove signer from attestation duties", async function () {
+  it("Should remove signer from attestation duties", async () => {
     // Reply with some duties
     const slot = 1;
     const duty: routes.validator.AttesterDuty = {
@@ -165,7 +165,7 @@ describe("AttestationDutiesService", function () {
     expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).toEqual({});
   });
 
-  it("Should fetch duties when node is resynced", async function () {
+  it("Should fetch duties when node is resynced", async () => {
     // Node is syncing
     api.node.getSyncingStatus.mockResolvedValue(
       mockApiResponse({data: {headSlot: 0, syncDistance: 1, isSyncing: true, isOptimistic: false, elOffline: false}})

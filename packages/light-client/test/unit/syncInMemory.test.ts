@@ -22,7 +22,7 @@ function getSyncCommittee(
   return syncCommitteeKeys;
 }
 
-describe("syncInMemory", function () {
+describe("syncInMemory", () => {
   // In browser test this process is taking more time than default 2000ms
   vi.setConfig({testTimeout: 10000});
 

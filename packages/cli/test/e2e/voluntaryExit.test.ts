@@ -7,7 +7,7 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {spawnCliCommand, execCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
-describe("voluntaryExit cmd", function () {
+describe("voluntaryExit cmd", () => {
   vi.setConfig({testTimeout: 60_000});
 
   it("Perform a voluntary exit", async () => {

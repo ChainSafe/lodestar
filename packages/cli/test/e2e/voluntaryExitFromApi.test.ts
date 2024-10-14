@@ -8,7 +8,7 @@ import {spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {retry} from "@lodestar/utils";
 import {testFilesDir} from "../utils.js";
 
-describe("voluntary exit from api", function () {
+describe("voluntary exit from api", () => {
   vi.setConfig({testTimeout: 60_000});
 
   it("Perform a voluntary exit", async () => {

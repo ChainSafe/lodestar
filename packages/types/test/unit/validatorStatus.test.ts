@@ -2,8 +2,8 @@ import {describe, it, expect} from "vitest";
 import {getValidatorStatus} from "../../src/utils/validatorStatus.js";
 import {phase0} from "../../src/types.js";
 
-describe("getValidatorStatus", function () {
-  it("should return PENDING_INITIALIZED", function () {
+describe("getValidatorStatus", () => {
+  it("should return PENDING_INITIALIZED", () => {
     const validator = {
       activationEpoch: 1,
       activationEligibilityEpoch: Infinity,
@@ -12,7 +12,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("pending_initialized");
   });
-  it("should return PENDING_QUEUED", function () {
+  it("should return PENDING_QUEUED", () => {
     const validator = {
       activationEpoch: 1,
       activationEligibilityEpoch: 101010101101010,
@@ -21,7 +21,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("pending_queued");
   });
-  it("should return ACTIVE_ONGOING", function () {
+  it("should return ACTIVE_ONGOING", () => {
     const validator = {
       activationEpoch: 1,
       exitEpoch: Infinity,
@@ -30,7 +30,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("active_ongoing");
   });
-  it("should return ACTIVE_SLASHED", function () {
+  it("should return ACTIVE_SLASHED", () => {
     const validator = {
       activationEpoch: 1,
       exitEpoch: 101010101101010,
@@ -40,7 +40,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("active_slashed");
   });
-  it("should return ACTIVE_EXITING", function () {
+  it("should return ACTIVE_EXITING", () => {
     const validator = {
       activationEpoch: 1,
       exitEpoch: 101010101101010,
@@ -50,7 +50,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("active_exiting");
   });
-  it("should return EXITED_SLASHED", function () {
+  it("should return EXITED_SLASHED", () => {
     const validator = {
       exitEpoch: 1,
       withdrawableEpoch: 3,
@@ -60,7 +60,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("exited_slashed");
   });
-  it("should return EXITED_UNSLASHED", function () {
+  it("should return EXITED_UNSLASHED", () => {
     const validator = {
       exitEpoch: 1,
       withdrawableEpoch: 3,
@@ -70,7 +70,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("exited_unslashed");
   });
-  it("should return WITHDRAWAL_POSSIBLE", function () {
+  it("should return WITHDRAWAL_POSSIBLE", () => {
     const validator = {
       withdrawableEpoch: 1,
       effectiveBalance: 32,
@@ -79,7 +79,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("withdrawal_possible");
   });
-  it("should return WITHDRAWAL_DONE", function () {
+  it("should return WITHDRAWAL_DONE", () => {
     const validator = {
       withdrawableEpoch: 1,
       effectiveBalance: 0,
@@ -88,7 +88,7 @@ describe("getValidatorStatus", function () {
     const status = getValidatorStatus(validator, currentEpoch);
     expect(status).toBe("withdrawal_done");
   });
-  it("should error", function () {
+  it("should error", () => {
     const validator = {} as phase0.Validator;
     const currentEpoch = 0;
     try {

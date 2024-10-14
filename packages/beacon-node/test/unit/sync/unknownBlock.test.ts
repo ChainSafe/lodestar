@@ -239,7 +239,7 @@ describe("sync by UnknownBlockSync", () => {
   }
 });
 
-describe("UnknownBlockSync", function () {
+describe("UnknownBlockSync", () => {
   let network: INetwork;
   let chain: MockedBeaconChain;
   const logger = testLogger();

@@ -7,7 +7,7 @@ import {Clock} from "../../../../src/util/clock.js";
 
 vi.mock("../../../../src/util/clock.js");
 
-describe("chain / opPools / SyncCommitteeMessagePool", function () {
+describe("chain / opPools / SyncCommitteeMessagePool", () => {
   let cache: SyncCommitteeMessagePool;
   const subcommitteeIndex = 2;
   const indexInSubcommittee = 3;
@@ -33,7 +33,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
-  afterEach(function () {
+  afterEach(() => {
     vi.clearAllTimers();
     vi.clearAllMocks();
   });

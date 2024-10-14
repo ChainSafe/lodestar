@@ -14,14 +14,14 @@ import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/b
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-describe("backfill sync - verify block sequence", function () {
+describe("backfill sync - verify block sequence", () => {
   //mainnet validators root
   const beaconConfig = createBeaconConfig(
     config,
     ssz.Root.fromJson("0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95")
   );
 
-  it("should verify valid chain of blocks", function () {
+  it("should verify valid chain of blocks", () => {
     const blocks = getBlocks();
 
     expect(() =>
@@ -29,14 +29,14 @@ describe("backfill sync - verify block sequence", function () {
     ).not.toThrow();
   });
 
-  it("should fail with sequence not anchored", function () {
+  it("should fail with sequence not anchored", () => {
     const blocks = getBlocks();
 
     const wrongAncorRoot = ssz.Root.defaultValue();
     expect(() => verifyBlockSequence(beaconConfig, blocks, wrongAncorRoot)).toThrow(BackfillSyncErrorCode.NOT_ANCHORED);
   });
 
-  it("should fail with sequence not linear", function () {
+  it("should fail with sequence not linear", () => {
     const blocks = getBlocks();
     expect(() => {
       const {error} = verifyBlockSequence(

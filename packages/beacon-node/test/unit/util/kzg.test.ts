@@ -16,7 +16,7 @@ describe("C-KZG", () => {
     }
   });
 
-  beforeAll(async function () {
+  beforeAll(async () => {
     await initCKZG();
     loadEthereumTrustedSetup();
   });

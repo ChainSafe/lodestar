@@ -22,7 +22,7 @@ export const remoteServiceError: RemoteServiceError = {status: "error", data: nu
 export async function startRemoteService(): Promise<{baseUrl: URL}> {
   const server = fastify();
 
-  server.post(remoteServiceRoutes.success, {}, async function (request, reply) {
+  server.post(remoteServiceRoutes.success, {}, async (request, reply) => {
     if (Array.isArray(request.body)) {
       request.body.forEach(validateRequestData);
     } else {
@@ -32,11 +32,9 @@ export async function startRemoteService(): Promise<{baseUrl: URL}> {
     return reply.status(200).send();
   });
 
-  server.post(remoteServiceRoutes.error, {}, async function (_request, reply) {
-    return reply.status(400).send(remoteServiceError);
-  });
+  server.post(remoteServiceRoutes.error, {}, async (_request, reply) => reply.status(400).send(remoteServiceError));
 
-  server.post(remoteServiceRoutes.pending, {}, function () {
+  server.post(remoteServiceRoutes.pending, {}, () => {
     // keep request pending until timeout is reached or aborted
   });
 

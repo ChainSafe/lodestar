@@ -14,7 +14,7 @@ import {ChainEvent} from "../../../src/chain/index.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 
-describe("sync / finalized sync", function () {
+describe("sync / finalized sync", () => {
   // chain is finalized at slot 32, plus 4 slots for genesis delay => ~72s it should sync pretty fast
   vi.setConfig({testTimeout: 90_000});
 
@@ -31,7 +31,7 @@ describe("sync / finalized sync", function () {
     }
   });
 
-  it("should do a finalized sync from another BN", async function () {
+  it("should do a finalized sync from another BN", async () => {
     // single node at beginning, use main thread to verify bls
     const genesisSlotsDelay = 4;
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;

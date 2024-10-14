@@ -9,7 +9,7 @@ import {
 } from "../../../../src/chain/stateCache/inMemoryCheckpointsCache.js";
 import {generateCachedState} from "../../../utils/state.js";
 
-describe("InMemoryCheckpointStateCache", function () {
+describe("InMemoryCheckpointStateCache", () => {
   let root0a: Buffer, root0b: Buffer, root1: Buffer, root2: Buffer;
   let cp0a: phase0.Checkpoint, cp0b: phase0.Checkpoint, cp1: phase0.Checkpoint, cp2: phase0.Checkpoint;
   let cp0aHex: CheckpointHex, cp0bHex: CheckpointHex, cp1Hex: CheckpointHex, cp2Hex: CheckpointHex;

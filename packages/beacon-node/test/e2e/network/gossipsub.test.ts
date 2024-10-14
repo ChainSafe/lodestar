@@ -8,7 +8,7 @@ import {GossipType, GossipHandlers, GossipHandlerParamGeneric} from "../../../sr
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 
-describe("gossipsub / main thread", function () {
+describe("gossipsub / main thread", () => {
   vi.setConfig({testTimeout: 3000});
 
   runTests({useWorker: false});
@@ -19,7 +19,7 @@ describe("gossipsub / main thread", function () {
  * Since we use vitest to run tests in parallel, including this causes the test to be unstable.
  * See https://github.com/ChainSafe/lodestar/issues/6358
  */
-describe.skip("gossipsub / worker", function () {
+describe.skip("gossipsub / worker", () => {
   vi.setConfig({testTimeout: 3000});
 
   runTests({useWorker: true});
@@ -61,7 +61,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     return {netA, netB};
   }
 
-  it("Publish and receive a voluntaryExit", async function () {
+  it("Publish and receive a voluntaryExit", async () => {
     let onVoluntaryExit: (ve: Uint8Array) => void;
     const onVoluntaryExitPromise = new Promise<Uint8Array>((resolve) => {
       onVoluntaryExit = resolve;
@@ -98,7 +98,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Publish and receive a blsToExecutionChange", async function () {
+  it("Publish and receive a blsToExecutionChange", async () => {
     let onBlsToExecutionChange: (blsToExec: Uint8Array) => void;
     const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => {
       onBlsToExecutionChange = resolve;
@@ -136,7 +136,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Publish and receive an attesterSlashing", async function () {
+  it("Publish and receive an attesterSlashing", async () => {
     let onAttesterSlashingChange: (payload: Uint8Array) => void;
     const onAttesterSlashingChangePromise = new Promise<Uint8Array>((resolve) => {
       onAttesterSlashingChange = resolve;
@@ -170,7 +170,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(Buffer.from(received)).toEqual(Buffer.from(ssz.phase0.AttesterSlashing.serialize(attesterSlashing)));
   });
 
-  it("Publish and receive a proposerSlashing", async function () {
+  it("Publish and receive a proposerSlashing", async () => {
     let onProposerSlashingChange: (payload: Uint8Array) => void;
     const onProposerSlashingChangePromise = new Promise<Uint8Array>((resolve) => {
       onProposerSlashingChange = resolve;
@@ -204,7 +204,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(Buffer.from(received)).toEqual(Buffer.from(ssz.phase0.ProposerSlashing.serialize(proposerSlashing)));
   });
 
-  it("Publish and receive a LightClientOptimisticUpdate", async function () {
+  it("Publish and receive a LightClientOptimisticUpdate", async () => {
     let onLightClientOptimisticUpdate: (ou: Uint8Array) => void;
     const onLightClientOptimisticUpdatePromise = new Promise<Uint8Array>((resolve) => {
       onLightClientOptimisticUpdate = resolve;
@@ -243,7 +243,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Publish and receive a LightClientFinalityUpdate", async function () {
+  it("Publish and receive a LightClientFinalityUpdate", async () => {
     let onLightClientFinalityUpdate: (fu: Uint8Array) => void;
     const onLightClientFinalityUpdatePromise = new Promise<Uint8Array>((resolve) => {
       onLightClientFinalityUpdate = resolve;

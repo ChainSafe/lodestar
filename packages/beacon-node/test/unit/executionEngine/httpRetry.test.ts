@@ -56,8 +56,8 @@ describe("ExecutionEngine / http ", () => {
     );
   });
 
-  describe("notifyForkchoiceUpdate", function () {
-    it("notifyForkchoiceUpdate no retry when no pay load attributes", async function () {
+  describe("notifyForkchoiceUpdate", () => {
+    it("notifyForkchoiceUpdate no retry when no pay load attributes", async () => {
       errorResponsesBeforeSuccess = 2;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -85,7 +85,7 @@ describe("ExecutionEngine / http ", () => {
       expect(errorResponsesBeforeSuccess).toBe(1);
     });
 
-    it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
+    it("notifyForkchoiceUpdate with retry when pay load attributes", async () => {
       errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retries - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",

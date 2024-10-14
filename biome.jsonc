@@ -26,9 +26,7 @@
       "recommended": true,
       "complexity": {
         // We need couple of empty exports to make those files as esm modules
-        "noUselessEmptyExport": "off",
-        // We use normal functions for to ease with debugging context
-        "useArrowFunction": "off"
+        "noUselessEmptyExport": "off"
       },
       "correctness": {
         "noUnusedVariables": "error",
@@ -348,7 +346,6 @@
       "linter": {
         "rules": {
           "complexity": {
-            "useArrowFunction": "off",
             // During tests we often need to use private/protected attributes, which is only possible with literal keys
             "useLiteralKeys": "off"
           }
