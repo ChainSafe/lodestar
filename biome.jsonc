@@ -59,7 +59,7 @@
             "deniedGlobals": ["fetch"]
           }
         },
-        // There are a lot of places we mutate params, should be fixed in an independent PR.
+        // There are a lot of places we use if/else pattern. Should be fixed in an independent PR. 
         "noUselessElse": "off",
         // We prefer to use `Math.pow` over `**` operator
         "useExponentiationOperator": "off",
@@ -71,7 +71,7 @@
         "useTemplate": "off",
         // We use to export types and object without differentiating
         "useExportType": "off",
-        // We use to export types and object without differentiating
+        // We use to import types and object without differentiating
         "useImportType": "off",
         // It's nice to use `Number` namespace but should be done in a separate PR
         "useNumberNamespace": "off",
