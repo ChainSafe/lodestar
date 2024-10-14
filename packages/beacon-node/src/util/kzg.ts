@@ -154,7 +154,6 @@ export function trustedSetupJsonToTxt(data: TrustedSetupJSON): TrustedSetupTXT {
 function strip0xPrefix(hex: string): string {
   if (hex.startsWith("0x")) {
     return hex.slice(2);
-  } else {
-    return hex;
   }
+  return hex;
 }

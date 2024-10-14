@@ -104,9 +104,8 @@ export function readFileIfExists<T>(filepath: string, acceptedFormats?: string[]
   } catch (e) {
     if ((e as {code: string}).code === "ENOENT") {
       return null;
-    } else {
-      throw e;
     }
+    throw e;
   }
 }
 
@@ -141,9 +140,8 @@ export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array>
   if (isUrl(pathOrUrl)) {
     const res = await got.get(pathOrUrl, {encoding: "binary"});
     return res.rawBody;
-  } else {
-    return fs.promises.readFile(pathOrUrl);
   }
+  return fs.promises.readFile(pathOrUrl);
 }
 
 /**

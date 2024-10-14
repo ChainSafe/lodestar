@@ -191,15 +191,13 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
       const signer = signersByPubkey.get(pubkey);
       if (!signer) {
         throw new YargsError(`Unknown pubkey ${pubkey}`);
-      } else {
-        selectedSigners.push({pubkey, signer});
       }
+      selectedSigners.push({pubkey, signer});
     }
 
     return selectedSigners;
-  } else {
-    return signersWithPubkey;
   }
+  return signersWithPubkey;
 }
 
 async function resolveValidatorIndexes(client: ApiClient, signersToExit: SignerPubkey[]) {

@@ -49,8 +49,7 @@ export function getPeerSyncType(
     return PeerSyncType.Behind;
   }
 
-  //
-  else if (remote.finalizedEpoch > local.finalizedEpoch) {
+  if (remote.finalizedEpoch > local.finalizedEpoch) {
     if (
       // Peer is in next epoch, and head is within range => SYNCED
       (local.finalizedEpoch + 1 === remote.finalizedEpoch &&
@@ -59,26 +58,24 @@ export function getPeerSyncType(
       forkChoice.hasBlock(remote.headRoot)
     ) {
       return PeerSyncType.FullySynced;
-    } else {
-      return PeerSyncType.Advanced;
     }
+    return PeerSyncType.Advanced;
   }
 
   // remote.finalizedEpoch == local.finalizedEpoch
-  else {
-    // NOTE: if a peer has our same `finalizedEpoch` with a different `finalized_root`
-    // they are not considered relevant and won't be propagated to sync.
-    // Check if the peer is the peer is inside the tolerance range to be considered synced.
-    if (remote.headSlot < nearRangeStart) {
-      return PeerSyncType.Behind;
-    } else if (remote.headSlot > nearRangeEnd && !forkChoice.hasBlock(remote.headRoot)) {
-      // This peer has a head ahead enough of ours and we have no knowledge of their best block.
-      return PeerSyncType.Advanced;
-    } else {
-      // This peer is either in the tolerance range, or ahead us with an already rejected block.
-      return PeerSyncType.FullySynced;
-    }
+  // NOTE: if a peer has our same `finalizedEpoch` with a different `finalized_root`
+  // they are not considered relevant and won't be propagated to sync.
+  // Check if the peer is the peer is inside the tolerance range to be considered synced.
+  if (remote.headSlot < nearRangeStart) {
+    return PeerSyncType.Behind;
   }
+
+  if (remote.headSlot > nearRangeEnd && !forkChoice.hasBlock(remote.headRoot)) {
+    // This peer has a head ahead enough of ours and we have no knowledge of their best block.
+    return PeerSyncType.Advanced;
+  }
+  // This peer is either in the tolerance range, or ahead us with an already rejected block.
+  return PeerSyncType.FullySynced;
 }
 
 export enum RangeSyncType {
@@ -99,9 +96,8 @@ export const rangeSyncTypes = Object.keys(RangeSyncType) as RangeSyncType[];
 export function getRangeSyncType(local: phase0.Status, remote: phase0.Status, forkChoice: IForkChoice): RangeSyncType {
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
     return RangeSyncType.Finalized;
-  } else {
-    return RangeSyncType.Head;
   }
+  return RangeSyncType.Head;
 }
 
 export function getRangeSyncTarget(
@@ -134,16 +130,15 @@ export function getRangeSyncTarget(
         root: remote.finalizedRoot,
       },
     };
-  } else {
-    return {
-      syncType: RangeSyncType.Head,
-      // The new peer has the same finalized (earlier filters should prevent a peer with an
-      // earlier finalized chain from reaching here).
-      startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
-      target: {
-        slot: remote.headSlot,
-        root: remote.headRoot,
-      },
-    };
   }
+  return {
+    syncType: RangeSyncType.Head,
+    // The new peer has the same finalized (earlier filters should prevent a peer with an
+    // earlier finalized chain from reaching here).
+    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
+    target: {
+      slot: remote.headSlot,
+      root: remote.headRoot,
+    },
+  };
 }

@@ -152,7 +152,9 @@ describe("chain / lightclient", function () {
             const lcHeadSlot = lightclient.getHead().beacon.slot;
             if (head.slot - lcHeadSlot > maxLcHeadTrackingDiffSlots) {
               throw Error(`Lightclient head ${lcHeadSlot} is too far behind the beacon node ${head.slot}`);
-            } else if (head.slot > targetSlotToReach) {
+            }
+
+            if (head.slot > targetSlotToReach) {
               resolve();
             }
           } catch (e) {

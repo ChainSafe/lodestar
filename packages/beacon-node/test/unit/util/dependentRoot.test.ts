@@ -26,9 +26,8 @@ describe("util / getShufflingDependentRoot", () => {
     forkchoiceStub.getDependentRoot.mockImplementation((block, epochDiff) => {
       if (block === headBattHeadBlock && epochDiff === EpochDifference.previous) {
         return "current";
-      } else {
-        throw new Error("should not be called");
       }
+      throw new Error("should not be called");
     });
     expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toEqual("current");
   });
@@ -39,9 +38,8 @@ describe("util / getShufflingDependentRoot", () => {
     forkchoiceStub.getDependentRoot.mockImplementation((block, epochDiff) => {
       if (block === headBattHeadBlock && epochDiff === EpochDifference.current) {
         return "0x000";
-      } else {
-        throw new Error("should not be called");
       }
+      throw new Error("should not be called");
     });
     expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toEqual("0x000");
   });

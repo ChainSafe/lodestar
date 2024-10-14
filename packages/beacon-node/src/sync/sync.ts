@@ -99,31 +99,31 @@ export class BeaconSync implements IBeaconSync {
         isOptimistic: false,
         elOffline,
       };
-    } else {
-      const head = this.chain.forkChoice.getHead();
+    }
 
-      switch (this.state) {
-        case SyncState.SyncingFinalized:
-        case SyncState.SyncingHead:
-        case SyncState.Stalled:
-          return {
-            headSlot: head.slot,
-            syncDistance: currentSlot - head.slot,
-            isSyncing: true,
-            isOptimistic: isOptimisticBlock(head),
-            elOffline,
-          };
-        case SyncState.Synced:
-          return {
-            headSlot: head.slot,
-            syncDistance: 0,
-            isSyncing: false,
-            isOptimistic: isOptimisticBlock(head),
-            elOffline,
-          };
-        default:
-          throw new Error("Node is stopped, cannot get sync status");
-      }
+    const head = this.chain.forkChoice.getHead();
+
+    switch (this.state) {
+      case SyncState.SyncingFinalized:
+      case SyncState.SyncingHead:
+      case SyncState.Stalled:
+        return {
+          headSlot: head.slot,
+          syncDistance: currentSlot - head.slot,
+          isSyncing: true,
+          isOptimistic: isOptimisticBlock(head),
+          elOffline,
+        };
+      case SyncState.Synced:
+        return {
+          headSlot: head.slot,
+          syncDistance: 0,
+          isSyncing: false,
+          isOptimistic: isOptimisticBlock(head),
+          elOffline,
+        };
+      default:
+        throw new Error("Node is stopped, cannot get sync status");
     }
   }
 

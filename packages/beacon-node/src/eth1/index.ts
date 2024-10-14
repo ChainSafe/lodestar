@@ -53,9 +53,8 @@ export function initializeEth1ForBlockProduction(
       logger: modules.logger,
       signal: modules.signal,
     });
-  } else {
-    return new Eth1ForBlockProductionDisabled();
   }
+  return new Eth1ForBlockProductionDisabled();
 }
 
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
@@ -85,9 +84,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     if (this.eth1DepositDataTracker === null) {
       return {eth1Data: state.eth1Data, deposits: []};
-    } else {
-      return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
     }
+    return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
   }
 
   async getTerminalPowBlock(): Promise<Root | null> {

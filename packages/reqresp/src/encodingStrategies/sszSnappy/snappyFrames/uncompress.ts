@@ -51,9 +51,8 @@ export class SnappyFramesUncompress {
     }
     if (result.length === 0) {
       return null;
-    } else {
-      return result;
     }
+    return result;
   }
 
   reset(): void {

@@ -35,11 +35,11 @@ export class BufferedSource {
         if (done === true) {
           that.isDone = true;
           return {done: true, value: undefined};
-        } else {
-          // Concat new chunk and return a reference to its BufferList instance
-          that.buffer.append(chunk);
-          return {done: false, value: that.buffer};
         }
+
+        // Concat new chunk and return a reference to its BufferList instance
+        that.buffer.append(chunk);
+        return {done: false, value: that.buffer};
       },
     };
   }

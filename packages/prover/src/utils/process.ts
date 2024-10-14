@@ -106,7 +106,6 @@ export async function processAndVerifyRequest({
 
   if (responses.length === 1) {
     return responses[0];
-  } else {
-    return responses;
   }
+  return responses;
 }

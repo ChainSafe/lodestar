@@ -24,12 +24,11 @@ export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): Lazy
         if (prop === "value") {
           if (value === null) {
             throw Error("beforeValue has not yet run the before() block");
-          } else {
-            return value;
           }
-        } else {
-          return undefined;
+          return value;
         }
+
+        return undefined;
       },
     }
   );

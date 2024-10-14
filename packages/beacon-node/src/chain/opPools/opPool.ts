@@ -410,10 +410,9 @@ function isVoluntaryExitSignatureIncludable(stateFork: ForkSeq, voluntaryExitFor
   if (stateFork >= ForkSeq.deneb) {
     // Exists are perpetually valid https://eips.ethereum.org/EIPS/eip-7044
     return true;
-  } else {
-    // Can only include exits from the current and previous fork
-    return voluntaryExitFork === stateFork || voluntaryExitFork === stateFork - 1;
   }
+  // Can only include exits from the current and previous fork
+  return voluntaryExitFork === stateFork || voluntaryExitFork === stateFork - 1;
 }
 
 function isSlashableAtEpoch(validator: phase0.Validator, epoch: Epoch): boolean {

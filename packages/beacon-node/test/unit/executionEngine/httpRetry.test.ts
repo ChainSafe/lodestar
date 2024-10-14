@@ -32,10 +32,10 @@ describe("ExecutionEngine / http ", () => {
         reqJsonRpcPayload = req.body;
         delete (reqJsonRpcPayload as {id?: number}).id;
         return returnValue;
-      } else {
-        --errorResponsesBeforeSuccess;
-        throw Error(`Will succeed after ${errorResponsesBeforeSuccess} more attempts`);
       }
+
+      --errorResponsesBeforeSuccess;
+      throw Error(`Will succeed after ${errorResponsesBeforeSuccess} more attempts`);
     });
 
     afterCallbacks.push(async () => {

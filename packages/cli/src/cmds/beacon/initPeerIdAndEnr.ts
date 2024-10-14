@@ -186,9 +186,8 @@ export async function initPrivateKeyAndEnr(
     writeFile600Perm(peerIdFile, exportToJSON(privateKey));
     writeFile600Perm(enrFile, enr.encodeTxt());
     return {privateKey, enr};
-  } else {
-    const {privateKey, enr} = await newPrivateKeyAndENR();
-    overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});
-    return {privateKey, enr};
   }
+  const {privateKey, enr} = await newPrivateKeyAndENR();
+  overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});
+  return {privateKey, enr};
 }

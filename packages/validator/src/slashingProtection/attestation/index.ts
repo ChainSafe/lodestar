@@ -63,13 +63,12 @@ export class SlashingProtectionAttestationService {
       // Interchange format allows for attestations without signing_root, then assume root is equal
       if (isEqualNonZeroRoot(sameTargetAtt.signingRoot, attestation.signingRoot)) {
         return SafeStatus.SAME_DATA;
-      } else {
-        throw new InvalidAttestationError({
-          code: InvalidAttestationErrorCode.DOUBLE_VOTE,
-          attestation: attestation,
-          prev: sameTargetAtt,
-        });
       }
+      throw new InvalidAttestationError({
+        code: InvalidAttestationErrorCode.DOUBLE_VOTE,
+        attestation: attestation,
+        prev: sameTargetAtt,
+      });
     }
 
     // Check for a surround vote

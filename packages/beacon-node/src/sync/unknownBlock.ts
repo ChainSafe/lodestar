@@ -493,9 +493,8 @@ export class UnknownBlockSync {
     if (lastError) {
       lastError.message = `Error fetching UnknownBlockRoot after ${MAX_ATTEMPTS_PER_BLOCK} attempts: ${lastError.message}`;
       throw lastError;
-    } else {
-      throw Error(`Error fetching UnknownBlockRoot after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
     }
+    throw Error(`Error fetching UnknownBlockRoot after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
   }
 
   /**
@@ -569,9 +568,9 @@ export class UnknownBlockSync {
     if (lastError) {
       lastError.message = `Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK} attempts: ${lastError.message}`;
       throw lastError;
-    } else {
-      throw Error(`Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
     }
+
+    throw Error(`Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
   }
 
   /**

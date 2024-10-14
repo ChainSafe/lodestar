@@ -149,42 +149,42 @@ export class SeenGossipBlockInput {
           blockInput,
           blockInputMeta: {pending: null, haveBlobs: allBlobs.blobs.length, expectedBlobs: blobKzgCommitments.length},
         };
-      } else {
-        const blockInput = getBlockInput.dataPromise(
-          config,
-          signedBlock,
-          BlockSource.gossip,
-          blockBytes ?? null,
-          cachedData
-        );
-
-        resolveBlockInput(blockInput);
-        return {
-          blockInput,
-          blockInputMeta: {
-            pending: GossipedInputType.blob,
-            haveBlobs: blobsCache.size,
-            expectedBlobs: blobKzgCommitments.length,
-          },
-        };
       }
-    } else {
-      // will need to wait for the block to showup
-      if (cachedData === undefined) {
-        throw Error("Missing cachedData for deneb+ blobs");
-      }
-      const {blobsCache} = cachedData;
 
+      const blockInput = getBlockInput.dataPromise(
+        config,
+        signedBlock,
+        BlockSource.gossip,
+        blockBytes ?? null,
+        cachedData
+      );
+
+      resolveBlockInput(blockInput);
       return {
-        blockInput: {
-          block: null,
-          blockRootHex: blockHex,
-          cachedData,
-          blockInputPromise,
+        blockInput,
+        blockInputMeta: {
+          pending: GossipedInputType.blob,
+          haveBlobs: blobsCache.size,
+          expectedBlobs: blobKzgCommitments.length,
         },
-        blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
       };
     }
+
+    // will need to wait for the block to showup
+    if (cachedData === undefined) {
+      throw Error("Missing cachedData for deneb+ blobs");
+    }
+    const {blobsCache} = cachedData;
+
+    return {
+      blockInput: {
+        block: null,
+        blockRootHex: blockHex,
+        cachedData,
+        blockInputPromise,
+      },
+      blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
+    };
   }
 }
 

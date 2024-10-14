@@ -278,9 +278,8 @@ export class PeerDiscovery {
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "ignore"});
       return;
-    } else {
-      this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
+    this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
 
     // Use async version to prevent blocking the event loop
     // Time to completion of this function is not critical, in case this async call add extra lag
@@ -389,13 +388,13 @@ export class PeerDiscovery {
       if (this.shouldDialPeer(cachedPeer)) {
         void this.dialPeer(cachedPeer);
         return DiscoveredPeerStatus.attempt_dial;
-      } else {
-        // Add to pending good peers with a last seen time
-        this.cachedENRs.set(peerId.toString(), cachedPeer);
-        const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
-        // If the cache was already full, count the peer as dropped
-        return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
       }
+
+      // Add to pending good peers with a last seen time
+      this.cachedENRs.set(peerId.toString(), cachedPeer);
+      const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
+      // If the cache was already full, count the peer as dropped
+      return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
     } catch (e) {
       this.logger.error("Error onDiscovered", {}, e as Error);
       return DiscoveredPeerStatus.error;

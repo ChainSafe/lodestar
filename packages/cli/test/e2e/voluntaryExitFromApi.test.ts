@@ -85,9 +85,8 @@ describe("voluntary exit from api", function () {
         const validator = (await beaconClient.getStateValidator({stateId: "head", validatorId: pubkeyToExit})).value();
         if (validator.status !== "active_exiting") {
           throw Error("Validator not exiting");
-        } else {
-          console.log(`Confirmed validator ${pubkeyToExit} = ${validator.status}`);
         }
+        console.log(`Confirmed validator ${pubkeyToExit} = ${validator.status}`);
       },
       {retryDelay: 1000, retries: 20}
     );

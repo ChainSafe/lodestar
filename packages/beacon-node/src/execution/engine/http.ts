@@ -258,9 +258,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     ).catch((e: Error) => {
       if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
         return {status: ExecutionPayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
-      } else {
-        return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
       }
+      return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
     });
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
@@ -379,9 +378,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
-        } else {
-          return null;
         }
+        return null;
 
       case ExecutionPayloadStatus.INVALID:
         throw Error(

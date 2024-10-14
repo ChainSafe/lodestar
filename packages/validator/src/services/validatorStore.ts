@@ -538,13 +538,13 @@ export class ValidatorStore {
         signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
         committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
       };
-    } else {
-      return {
-        aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
-        data: attestationData,
-        signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-      } as phase0.Attestation;
     }
+
+    return {
+      aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
+      data: attestationData,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    } as phase0.Attestation;
   }
 
   async signAggregateAndProof(
@@ -731,15 +731,14 @@ export class ValidatorStore {
     const builderData = validatorData?.builderData;
     if (builderData?.regFullKey === regFullKey) {
       return builderData.validatorRegistration;
-    } else {
-      const validatorRegistration = await this.signValidatorRegistration(pubkeyMaybeHex, regAttributes, slot);
-      // If pubkeyHex was actually registered, then update the regData
-      if (validatorData !== undefined) {
-        validatorData.builderData = {validatorRegistration, regFullKey};
-        this.validators.set(pubkeyHex, validatorData);
-      }
-      return validatorRegistration;
     }
+    const validatorRegistration = await this.signValidatorRegistration(pubkeyMaybeHex, regAttributes, slot);
+    // If pubkeyHex was actually registered, then update the regData
+    if (validatorData !== undefined) {
+      validatorData.builderData = {validatorRegistration, regFullKey};
+      this.validators.set(pubkeyHex, validatorData);
+    }
+    return validatorRegistration;
   }
 
   private async getSignature(

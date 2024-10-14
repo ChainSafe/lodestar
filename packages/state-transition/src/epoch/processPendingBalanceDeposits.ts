@@ -41,14 +41,13 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra, c
       if (processedAmount + amount > availableForProcessing) {
         // Deposit does not fit in the churn, no more deposit processing in this epoch.
         break;
-      } else {
-        // Deposit fits in the churn, process it. Increase balance and consume churn.
-        increaseBalance(state, depositIndex, Number(amount));
-        if (cachedBalances) {
-          cachedBalances[depositIndex] += Number(amount);
-        }
-        processedAmount = processedAmount + amount;
       }
+      // Deposit fits in the churn, process it. Increase balance and consume churn.
+      increaseBalance(state, depositIndex, Number(amount));
+      if (cachedBalances) {
+        cachedBalances[depositIndex] += Number(amount);
+      }
+      processedAmount = processedAmount + amount;
     }
     // Regardless of how the deposit was handled, we move on in the queue.
     nextDepositIndex++;

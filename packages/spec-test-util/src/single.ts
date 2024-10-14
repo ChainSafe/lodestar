@@ -195,9 +195,13 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
 function getInputType(filename: string): InputType {
   if (filename.endsWith(InputType.YAML)) {
     return InputType.YAML;
-  } else if (filename.endsWith(InputType.SSZ_SNAPPY)) {
+  }
+
+  if (filename.endsWith(InputType.SSZ_SNAPPY)) {
     return InputType.SSZ_SNAPPY;
-  } else if (filename.endsWith(InputType.SSZ)) {
+  }
+
+  if (filename.endsWith(InputType.SSZ)) {
     return InputType.SSZ;
   }
   throw new Error(`Could not get InputType from ${filename}`);
@@ -212,7 +216,9 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
 ): any {
   if (inputType === InputType.YAML) {
     return loadYaml(fs.readFileSync(file, "utf8"));
-  } else if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
+  }
+
+  if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
     const sszTypes = options.getSszTypes ? options.getSszTypes(meta) : options.sszTypes;
     if (!sszTypes) throw Error("sszTypes is not defined");
     let data = fs.readFileSync(file);
@@ -240,9 +246,8 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
         throw Error("BeaconState type has no deserializeToViewDU method");
       }
       return sszType.deserializeToViewDU(data);
-    } else {
-      return sszType.deserialize(data);
     }
+    return sszType.deserialize(data);
   }
 }
 

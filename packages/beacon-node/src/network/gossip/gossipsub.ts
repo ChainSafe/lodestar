@@ -324,7 +324,8 @@ export class Eth2Gossipsub extends GossipSub {
  */
 function attSubnetLabel(subnet: number): string {
   if (subnet > 9) return String(subnet);
-  else return `0${subnet}`;
+
+  return `0${subnet}`;
 }
 
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {

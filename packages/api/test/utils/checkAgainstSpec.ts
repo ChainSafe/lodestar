@@ -218,7 +218,9 @@ type StringifiedProperty = string | StringifiedProperty[];
 function stringifyProperty(value: unknown): StringifiedProperty {
   if (typeof value === "number") {
     return value.toString(10);
-  } else if (Array.isArray(value)) {
+  }
+
+  if (Array.isArray(value)) {
     return value.map(stringifyProperty);
   }
   return String(value);

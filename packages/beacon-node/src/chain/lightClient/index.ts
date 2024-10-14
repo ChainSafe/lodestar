@@ -741,7 +741,7 @@ export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<Fork
       execution,
       executionBranch: getBlockBodyExecutionHeaderProof(fork as ForkExecution, blockBody),
     } as LightClientHeader;
-  } else {
-    return {beacon};
   }
+
+  return {beacon};
 }

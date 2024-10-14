@@ -115,9 +115,8 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         if (blockNumber === "latest") {
           if (latestBlockPointer >= blocks.length) {
             throw Error("Fetched too many blocks");
-          } else {
-            return blocks[latestBlockPointer++];
           }
+          return blocks[latestBlockPointer++];
         }
         return blocks[blockNumber];
       },

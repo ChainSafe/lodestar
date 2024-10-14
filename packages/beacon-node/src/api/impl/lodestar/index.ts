@@ -218,8 +218,7 @@ function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {
   return keys.map((key) => {
     if (key instanceof Uint8Array) {
       return toHex(key);
-    } else {
-      return `${key}`;
     }
+    return `${key}`;
   });
 }

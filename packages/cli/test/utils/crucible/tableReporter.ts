@@ -33,9 +33,8 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     // Print slots once, may be called twice for missed block timer
     if (slot <= this.lastPrintedSlot) {
       return;
-    } else {
-      this.lastPrintedSlot = slot;
     }
+    this.lastPrintedSlot = slot;
 
     if (slot <= 0) {
       return;

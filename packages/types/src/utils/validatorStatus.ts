@@ -24,7 +24,9 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
   if (validator.activationEpoch > currentEpoch) {
     if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
       return "pending_initialized";
-    } else if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
+    }
+
+    if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
       return "pending_queued";
     }
   }
@@ -32,7 +34,9 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
   if (validator.activationEpoch <= currentEpoch && currentEpoch < validator.exitEpoch) {
     if (validator.exitEpoch === FAR_FUTURE_EPOCH) {
       return "active_ongoing";
-    } else if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
+    }
+
+    if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
       return validator.slashed ? "active_slashed" : "active_exiting";
     }
   }

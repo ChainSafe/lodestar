@@ -211,12 +211,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     if (payload.transactions.length !== 1) {
       throw Error(`Number of transactions mismatched. Expected: 1, actual: ${payload.transactions.length}`);
-    } else {
-      const actualTransaction = bytesToData(payload.transactions[0]);
+    }
 
-      if (actualTransaction !== depositTransactionB) {
-        throw Error(`Transaction mismatched. Expected: ${depositTransactionB}, actual: ${actualTransaction}`);
-      }
+    const actualTransaction = bytesToData(payload.transactions[0]);
+
+    if (actualTransaction !== depositTransactionB) {
+      throw Error(`Transaction mismatched. Expected: ${depositTransactionB}, actual: ${actualTransaction}`);
     }
 
     if (depositRequests === undefined || depositRequests.length !== 1) {

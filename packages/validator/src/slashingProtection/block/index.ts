@@ -41,13 +41,13 @@ export class SlashingProtectionBlockService {
       // Interchange format allows for blocks without signing_root, then assume root is equal
       if (isEqualNonZeroRoot(sameSlotBlock.signingRoot, block.signingRoot)) {
         return SafeStatus.SAME_DATA;
-      } else {
-        throw new InvalidBlockError({
-          code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL,
-          block,
-          block2: sameSlotBlock,
-        });
       }
+
+      throw new InvalidBlockError({
+        code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL,
+        block,
+        block2: sameSlotBlock,
+      });
     }
 
     // Refuse to sign any block with slot <= min(b.slot for b in data.signed_blocks if b.pubkey == proposer_pubkey),

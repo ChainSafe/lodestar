@@ -208,19 +208,18 @@ export async function validateApiAttestation(
       const targetEpoch = attestation.data.target.epoch;
       chain.seenAttesters.add(targetEpoch, validatorIndex);
       return step0Result;
-    } else {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.INVALID_SIGNATURE,
-      });
     }
+
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.INVALID_SIGNATURE,
+    });
   } catch (err) {
     if (err instanceof EpochCacheError && err.type.code === EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.BAD_TARGET_EPOCH,
       });
-    } else {
-      throw err;
     }
+    throw err;
   }
 }
 
@@ -715,27 +714,27 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
       targetRoot: toRootHex(targetRoot),
       expected: null,
     });
-  } else {
-    const expectedTargetRoot =
-      headBlockEpoch === attestationEpoch
-        ? // If the block is in the same epoch as the attestation, then use the target root
-          // from the block.
-          headBlock.targetRoot
-        : // If the head block is from a previous epoch then skip slots will cause the head block
-          // root to become the target block root.
-          //
-          // We know the head block is from a previous epoch due to a previous check.
-          headBlock.blockRoot;
+  }
 
-    // TODO: Do a fast comparision to convert and compare byte by byte
-    if (expectedTargetRoot !== toRootHex(targetRoot)) {
-      // Reject any attestation with an invalid target root.
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.INVALID_TARGET_ROOT,
-        targetRoot: toRootHex(targetRoot),
-        expected: expectedTargetRoot,
-      });
-    }
+  const expectedTargetRoot =
+    headBlockEpoch === attestationEpoch
+      ? // If the block is in the same epoch as the attestation, then use the target root
+        // from the block.
+        headBlock.targetRoot
+      : // If the head block is from a previous epoch then skip slots will cause the head block
+        // root to become the target block root.
+        //
+        // We know the head block is from a previous epoch due to a previous check.
+        headBlock.blockRoot;
+
+  // TODO: Do a fast comparision to convert and compare byte by byte
+  if (expectedTargetRoot !== toRootHex(targetRoot)) {
+    // Reject any attestation with an invalid target root.
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.INVALID_TARGET_ROOT,
+      targetRoot: toRootHex(targetRoot),
+      expected: expectedTargetRoot,
+    });
   }
 }
 

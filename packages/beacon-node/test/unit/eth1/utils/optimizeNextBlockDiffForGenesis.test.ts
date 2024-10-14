@@ -29,9 +29,8 @@ describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
 
       if (lastFetchedBlock.timestamp > params.MIN_GENESIS_TIME - params.GENESIS_DELAY) {
         break;
-      } else {
-        diffRecord.push({number: lastFetchedBlock.blockNumber, blockDiff});
       }
+      diffRecord.push({number: lastFetchedBlock.blockNumber, blockDiff});
     }
 
     // Make sure the returned diffs converge to genesis time fast

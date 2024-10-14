@@ -14,9 +14,8 @@ export function proposerShufflingDecisionRoot(state: CachedBeaconStateAllForks):
   const decisionSlot = proposerShufflingDecisionSlot(state);
   if (state.slot === decisionSlot) {
     return null;
-  } else {
-    return getBlockRootAtSlot(state, decisionSlot);
   }
+  return getBlockRootAtSlot(state, decisionSlot);
 }
 
 /**
@@ -39,9 +38,8 @@ export function attesterShufflingDecisionRoot(state: CachedBeaconStateAllForks, 
   const decisionSlot = attesterShufflingDecisionSlot(state, requestedEpoch);
   if (state.slot === decisionSlot) {
     return null;
-  } else {
-    return getBlockRootAtSlot(state, decisionSlot);
   }
+  return getBlockRootAtSlot(state, decisionSlot);
 }
 
 /**
@@ -75,7 +73,6 @@ function attesterShufflingDecisionEpoch(state: CachedBeaconStateAllForks, reques
 
   if (requestedEpoch < currentEpoch) {
     throw Error(`EpochTooLow: current ${currentEpoch} requested ${requestedEpoch}`);
-  } else {
-    throw Error(`EpochTooHigh: current ${currentEpoch} requested ${requestedEpoch}`);
   }
+  throw Error(`EpochTooHigh: current ${currentEpoch} requested ${requestedEpoch}`);
 }

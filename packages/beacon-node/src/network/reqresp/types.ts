@@ -90,9 +90,9 @@ export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>
 const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version) => {
   if (version === Version.V1) {
     return ssz.phase0.SignedBeaconBlock;
-  } else {
-    return ssz[fork].SignedBeaconBlock;
   }
+
+  return ssz[fork].SignedBeaconBlock;
 };
 
 export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
@@ -114,9 +114,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
 function onlyLightclientFork(fork: ForkName): ForkLightClient {
   if (isForkLightClient(fork)) {
     return fork;
-  } else {
-    throw Error(`Not a lightclient fork ${fork}`);
   }
+  throw Error(`Not a lightclient fork ${fork}`);
 }
 
 export type RequestTypedContainer = {

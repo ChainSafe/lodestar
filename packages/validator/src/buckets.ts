@@ -19,9 +19,9 @@ export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof type
   const keys = Object.keys(Bucket).filter((x) => {
     if (Number.isNaN(parseInt(x))) {
       return Bucket[x as keyof typeof Bucket] === enumValue;
-    } else {
-      return false;
     }
+
+    return false;
   }) as (keyof typeof Bucket)[];
   if (keys.length > 0) {
     return keys[0];

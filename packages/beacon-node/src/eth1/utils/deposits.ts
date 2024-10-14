@@ -33,7 +33,9 @@ export async function getDeposits<T>(
 
   if (deposits.length < depositsLen) {
     throw new Eth1Error({code: Eth1ErrorCode.NOT_ENOUGH_DEPOSITS, len: deposits.length, expectedLen: depositsLen});
-  } else if (deposits.length > depositsLen) {
+  }
+
+  if (deposits.length > depositsLen) {
     throw new Eth1Error({code: Eth1ErrorCode.TOO_MANY_DEPOSITS, len: deposits.length, expectedLen: depositsLen});
   }
 
