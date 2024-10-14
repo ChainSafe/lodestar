@@ -921,7 +921,7 @@ export class EpochCache {
   getBeaconProposersNextEpoch(): ValidatorIndex[] {
     if (!this.proposersNextEpoch.computed) {
       const indexes = computeProposers(
-        this.config.getForkSeqAtEpoch(this.epoch + 1),
+        this.config.getForkSeqAtEpoch(this.nextEpoch),
         this.proposersNextEpoch.seed,
         this.getShufflingAtEpoch(this.nextEpoch),
         this.effectiveBalanceIncrements

@@ -957,6 +957,8 @@ export function getValidatorApi(
           break;
 
         case stateEpoch + 1:
+          // make sure shuffling is calculated and ready for next call to calculate nextProposers
+          await chain.shufflingCache.get(state.epochCtx.nextEpoch, state.epochCtx.nextDecisionRoot);
           // Requesting duties for next epoch is allowed since they can be predicted with high probabilities.
           // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
           indexes = state.epochCtx.getBeaconProposersNextEpoch();
