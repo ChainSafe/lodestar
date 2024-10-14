@@ -82,7 +82,8 @@ const transition =
           expectEqualBeaconState(forkNext, expected, actual);
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        shouldSkip: (_testcase, name, _index) => skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false,
+        shouldSkip: (_testcase, name, _index) =>
+          skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false,
       },
     };
   };
