@@ -72,9 +72,9 @@ export class SeenGossipBlockInput {
         blockInput: NullBlockInput;
         blockInputMeta: {pending: GossipedInputType.block; haveBlobs: number; expectedBlobs: null};
       } {
-    let blockHex;
-    let blockCache;
-    let fork;
+    let blockHex: RootHex;
+    let blockCache: BlockInputCacheType;
+    let fork: ForkName;
 
     if (gossipedInput.type === GossipedInputType.block) {
       const {signedBlock, blockBytes} = gossipedInput;

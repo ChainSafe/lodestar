@@ -401,7 +401,7 @@ export function getValidatorApi(
     }
     notOnOutOfRangeData(parentBlockRoot);
 
-    let timer;
+    let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
@@ -467,7 +467,7 @@ export function getValidatorApi(
     }
     notOnOutOfRangeData(parentBlockRoot);
 
-    let timer;
+    let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({

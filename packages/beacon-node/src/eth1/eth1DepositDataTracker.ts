@@ -14,7 +14,7 @@ import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
 import {getDeposits} from "./utils/deposits.js";
-import {Eth1DataAndDeposits, IEth1Provider} from "./interface.js";
+import {Eth1DataAndDeposits, EthJsonRpcBlockRaw, IEth1Provider} from "./interface.js";
 import {Eth1Options} from "./options.js";
 import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
@@ -243,7 +243,7 @@ export class Eth1DepositDataTracker {
     const fromBlock = Math.min(remoteFollowBlock, this.getFromBlockToFetch(lastProcessedDepositBlockNumber));
     const toBlock = Math.min(remoteFollowBlock, fromBlock + this.eth1GetLogsBatchSizeDynamic - 1);
 
-    let depositEvents;
+    let depositEvents: phase0.DepositEvent[];
     try {
       depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
       // Increase the batch size linearly even if we scale down exponentially (half each time)
@@ -313,7 +313,7 @@ export class Eth1DepositDataTracker {
       lastProcessedDepositBlockNumber
     );
 
-    let blocksRaw;
+    let blocksRaw: EthJsonRpcBlockRaw[];
     try {
       blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
       // Increase the batch size linearly even if we scale down exponentially (half each time)

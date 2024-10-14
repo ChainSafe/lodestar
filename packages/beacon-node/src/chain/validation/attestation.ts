@@ -273,7 +273,7 @@ async function validateAttestationNoSignatureCheck(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
-  let committeeIndex;
+  let committeeIndex: number | null;
   if (attestationOrCache.attestation) {
     if (isElectraAttestation(attestationOrCache.attestation)) {
       // api or first time validation of a gossip attestation

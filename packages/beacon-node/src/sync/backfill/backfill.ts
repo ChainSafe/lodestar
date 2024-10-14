@@ -675,7 +675,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       );
 
     // If possible, read back till anchorBlock > this.prevFinalizedCheckpointBlock
-    let parentBlock,
+    let parentBlock: SignedBeaconBlock | null,
       backCount = 1;
 
     let isPrevFinWsConfirmedAnchorParent = false;

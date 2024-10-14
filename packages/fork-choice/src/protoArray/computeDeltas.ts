@@ -26,8 +26,8 @@ export function computeDeltas(
   deltas.fill(0);
 
   // avoid creating new variables in the loop to potentially reduce GC pressure
-  let oldBalance, newBalance: number;
-  let currentIndex, nextIndex: number | null;
+  let oldBalance: number, newBalance: number;
+  let currentIndex: number | null, nextIndex: number | null;
 
   for (let vIndex = 0; vIndex < votes.length; vIndex++) {
     const vote = votes[vIndex];

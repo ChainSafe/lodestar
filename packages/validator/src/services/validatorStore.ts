@@ -274,7 +274,7 @@ export class ValidatorStore {
     const selection =
       this.validators.get(pubkeyHex)?.builder?.selection ?? this.defaultProposerConfig.builder.selection;
 
-    let boostFactor;
+    let boostFactor: bigint;
     switch (selection) {
       case routes.validator.BuilderSelection.Default:
         // Default value slightly favors local block to improve censorship resistance of Ethereum

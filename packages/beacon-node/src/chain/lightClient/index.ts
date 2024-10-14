@@ -630,7 +630,7 @@ export class LightClientServer {
       ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root)
       : null;
 
-    let isFinalized, finalityBranch, finalizedHeader;
+    let isFinalized: boolean, finalityBranch: Uint8Array[], finalizedHeader: LightClientHeader;
 
     if (
       attestedData.isFinalized &&

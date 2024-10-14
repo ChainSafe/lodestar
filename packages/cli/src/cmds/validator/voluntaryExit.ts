@@ -150,7 +150,7 @@ async function processVoluntaryExit(
   const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
   const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
-  let signature;
+  let signature: Signature;
   switch (signer.type) {
     case SignerType.Local:
       signature = signer.secretKey.sign(signingRoot);

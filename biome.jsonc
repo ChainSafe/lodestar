@@ -192,8 +192,6 @@
       "suspicious": {
         // `void` as type is useful in our case when used as generic constraint e.g. K extends number | void
         "noConfusingVoidType": "off",
-        // There are lot of cases in our code that need a separate PR to enable this rule
-        "noImplicitAnyLet": "off",
         // There is a lot of empty code blocks, should be enabled and clean up separately.
         "noEmptyBlockStatements": "off",
         "noConsoleLog": "error"
@@ -348,6 +346,10 @@
           "complexity": {
             // During tests we often need to use private/protected attributes, which is only possible with literal keys
             "useLiteralKeys": "off"
+          },
+          "suspicious": {
+            // During tests it's quicker to define variables with `let` without specifying types
+            "noImplicitAnyLet": "off"
           }
         }
       }

@@ -141,7 +141,7 @@ export class AggregatedAttestationPool {
       attestationGroupByIndexByDataHash.set(dataRootHex, attestationGroupByIndex);
     }
 
-    let committeeIndex;
+    let committeeIndex: number | null;
 
     if (isForkPostElectra(this.config.getForkName(slot))) {
       if (!isElectraAttestation(attestation)) {
@@ -714,7 +714,7 @@ export function getValidateAttestationDataFn(
   const stateEpoch = state.epochCtx.epoch;
   return (attData: phase0.AttestationData) => {
     const targetEpoch = attData.target.epoch;
-    let justifiedCheckpoint;
+    let justifiedCheckpoint: phase0.Checkpoint;
     // simple check first
     if (targetEpoch === stateEpoch) {
       justifiedCheckpoint = currentJustifiedCheckpoint;
@@ -759,7 +759,7 @@ export function isValidAttestationData(
   data: phase0.AttestationData
 ): boolean {
   const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
-  let justifiedCheckpoint;
+  let justifiedCheckpoint: phase0.Checkpoint;
   const stateEpoch = state.epochCtx.epoch;
   const targetEpoch = data.target.epoch;
 

@@ -27,7 +27,7 @@ function resolveYamlInteger(data: string): boolean {
   if (data === null) return false;
 
   const max = data.length;
-  let ch,
+  let ch: string,
     index = 0,
     hasDigits = false;
 
@@ -111,7 +111,7 @@ function resolveYamlInteger(data: string): boolean {
 function constructYamlInteger(data: string): bigint {
   let value: string | bigint = data,
     sign = 1,
-    ch,
+    ch: string,
     base: number | bigint;
   const digits: number[] = [];
 
