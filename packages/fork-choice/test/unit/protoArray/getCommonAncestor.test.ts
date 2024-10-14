@@ -79,7 +79,11 @@ describe("getCommonAncestor", () => {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
       // biome-ignore lint/style/noNonNullAssertion: <explanation>
       const ancestorNode = fc.getCommonAncestor(fc.getNode(nodeA)!, fc.getNode(nodeB)!);
-      expect(ancestorNode?.blockRoot).toBe(ancestor);
+      if(ancestorNode) {
+        expect(ancestorNode?.blockRoot).toBe(ancestor);
+      } else {
+        expect(ancestorNode).toBeNull();
+      }
     });
   }
 
