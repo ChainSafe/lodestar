@@ -155,12 +155,10 @@ export class HttpClient implements IHttpClient {
 
       if (init.retries > 0) {
         return this.requestWithRetries(definition, args, init);
-      } else {
-        return this.getRequestMethod(init)(definition, args, init);
       }
-    } else {
-      return this.requestWithFallbacks(definition, args, localInit);
+      return this.getRequestMethod(init)(definition, args, init);
     }
+    return this.requestWithFallbacks(definition, args, localInit);
   }
 
   /**
@@ -252,19 +250,16 @@ export class HttpClient implements IHttpClient {
         });
         if (res.ok) {
           return res;
-        } else {
-          if (i >= this.urlsInits.length - 1) {
-            return res;
-          } else {
-            this.logger?.debug("Request error, retrying", {}, res.error() as Error);
-          }
         }
+        if (i >= this.urlsInits.length - 1) {
+          return res;
+        }
+        this.logger?.debug("Request error, retrying", {}, res.error() as Error);
       } catch (e) {
         if (i >= this.urlsInits.length - 1) {
           throw e;
-        } else {
-          this.logger?.debug("Request error, retrying", {}, e as Error);
         }
+        this.logger?.debug("Request error, retrying", {}, e as Error);
       }
     }
 
@@ -352,7 +347,9 @@ export class HttpClient implements IHttpClient {
 
     // Attach global/local signal to this request's controller
     const onSignalAbort = (): void => controller.abort();
-    abortSignals.forEach((s) => s?.addEventListener("abort", onSignalAbort));
+    for (const s of abortSignals) {
+      s?.addEventListener("abort", onSignalAbort);
+    }
 
     const routeId = definition.operationId;
     const {printableUrl, requestWireFormat, responseWireFormat} = init;
@@ -389,19 +386,20 @@ export class HttpClient implements IHttpClient {
       if (isAbortedError(e)) {
         if (abortSignals.some((s) => s?.aborted)) {
           throw new ErrorAborted(`${routeId} request`);
-        } else if (controller.signal.aborted) {
-          throw new TimeoutError(`${routeId} request`);
-        } else {
-          throw Error("Unknown aborted error");
         }
-      } else {
-        throw e;
+        if (controller.signal.aborted) {
+          throw new TimeoutError(`${routeId} request`);
+        }
+        throw Error("Unknown aborted error");
       }
+      throw e;
     } finally {
       timer?.();
 
       clearTimeout(timeout);
-      abortSignals.forEach((s) => s?.removeEventListener("abort", onSignalAbort));
+      for (const s of abortSignals) {
+        s?.removeEventListener("abort", onSignalAbort);
+      }
     }
   }
 

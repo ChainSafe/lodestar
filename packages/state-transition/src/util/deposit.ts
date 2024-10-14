@@ -15,10 +15,8 @@ export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?:
 
     if (state.eth1DepositIndex < eth1DataIndexLimit) {
       return Math.min(MAX_DEPOSITS, eth1DataIndexLimit - state.eth1DepositIndex);
-    } else {
-      return 0;
     }
-  } else {
-    return Math.min(MAX_DEPOSITS, eth1DataToUse.depositCount - state.eth1DepositIndex);
+    return 0;
   }
+  return Math.min(MAX_DEPOSITS, eth1DataToUse.depositCount - state.eth1DepositIndex);
 }

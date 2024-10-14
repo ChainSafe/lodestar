@@ -313,7 +313,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.workers[0].status.code === WorkerStatusCode.initializationError &&
       this.workers.every((worker) => worker.status.code === WorkerStatusCode.initializationError)
     ) {
-      return job.reject(this.workers[0].status.error);
+      job.reject(this.workers[0].status.error);
+      return;
     }
 
     // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.

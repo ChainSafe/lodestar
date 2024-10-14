@@ -28,13 +28,22 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
   });
 
-  before("Check correct params", () => {
+  let db: BeaconDb;
+
+  before("Check correct params", async () => {
     // Must start at the first slot of the epoch to have a proper checkpoint state.
     // Using `computeStartSlotAtEpoch(...) - 1` will cause the chain to initialize with a state that's not the checkpoint
     // state, so processing the first block of the epoch will cause error `BLOCK_ERROR_WOULD_REVERT_FINALIZED_SLOT`
     if (rangeSyncTest.startSlot % SLOTS_PER_EPOCH !== 0) {
       throw Error("startSlot must be the first slot in the epoch");
     }
+
+    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
+  });
+
+  after(async () => {
+    // If before blocks fail, db won't be declared
+    if (db !== undefined) await db.close();
   });
 
   const blocks = beforeValue(
@@ -56,15 +65,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     state.hashTreeRoot();
     return state;
   }, timeoutInfura);
-
-  let db: BeaconDb;
-  before(async () => {
-    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
-  });
-  after(async () => {
-    // If before blocks fail, db won't be declared
-    if (db !== undefined) await db.close();
-  });
 
   itBench({
     id: `altair verifyImport ${network}_s${startSlot}:${slotCount}`,

@@ -92,7 +92,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         const timestampTDD = tdTimeSeries.computeY0Point();
         // It is possible to get ttd estimate with an error at imminent merge
         const secToTTD = Math.max(Math.floor(timestampTDD - Date.now() / 1000), 0);
-        const timeLeft = isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
+        const timeLeft = Number.isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
 
         logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
       }
@@ -104,7 +104,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
           const slotsPerSecond = Math.max(headSlotTimeSeries.computeLinearSpeed(), 0);
           const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
-          const timeLeft = isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
+          const timeLeft = Number.isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
           // Syncing - time left - speed - head - finalized - clock - peers
           nodeState = [
             "Syncing",
@@ -148,9 +148,8 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   } catch (e) {
     if (e instanceof ErrorAborted) {
       return; // Ok
-    } else {
-      logger.error("Node notifier error", {}, e as Error);
     }
+    logger.error("Node notifier error", {}, e as Error);
   }
 }
 
@@ -167,10 +166,9 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   if (isFirstTime) {
     // at the 1st time we may miss middle of the current clock slot
     return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
-  } else {
-    // after the 1st time always wait until middle of next clock slot
-    return msToNextSlot + msPerHalfSlot;
   }
+  // after the 1st time always wait until middle of next clock slot
+  return msToNextSlot + msPerHalfSlot;
 }
 
 function getHeadExecutionInfo(
@@ -181,26 +179,25 @@ function getHeadExecutionInfo(
 ): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
-  } else {
-    const executionStatusStr = headInfo.executionStatus.toLowerCase();
-
-    // Add execution status to notifier only if head is on/post bellatrix
-    if (isExecutionCachedStateType(headState)) {
-      if (isMergeTransitionComplete(headState)) {
-        const executionPayloadHashInfo =
-          headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
-        const executionPayloadNumberInfo =
-          headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-        return [
-          `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
-            executionPayloadHashInfo
-          )})`,
-        ];
-      } else {
-        return [`exec-block: ${executionStatusStr}`];
-      }
-    } else {
-      return [];
-    }
   }
+
+  const executionStatusStr = headInfo.executionStatus.toLowerCase();
+
+  // Add execution status to notifier only if head is on/post bellatrix
+  if (isExecutionCachedStateType(headState)) {
+    if (isMergeTransitionComplete(headState)) {
+      const executionPayloadHashInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+      const executionPayloadNumberInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
+      return [
+        `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+          executionPayloadHashInfo
+        )})`,
+      ];
+    }
+    return [`exec-block: ${executionStatusStr}`];
+  }
+
+  return [];
 }

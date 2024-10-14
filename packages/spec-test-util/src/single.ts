@@ -124,7 +124,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
         let testCase = loadInputFiles(testSubDirPath, options, meta);
         if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
-        if (options.shouldSkip && options.shouldSkip(testCase, testName, 0)) {
+        if (options.shouldSkip?.(testCase, testName, 0)) {
           context.skip();
           return;
         }
@@ -157,7 +157,8 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
   meta?: TestCase["meta"]
 ): TestCase {
   const testCase: any = {};
-  fs.readdirSync(directory)
+  const files = fs
+    .readdirSync(directory)
     .map((name) => path.join(directory, name))
     .filter((file) => {
       if (isDirectory(file)) {
@@ -170,33 +171,37 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
       options.inputTypes[name] = inputType;
       const extension = inputType.type as string;
       return file.endsWith(extension);
-    })
-    .forEach((file) => {
-      const inputName = path.basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
-      const inputType = getInputType(file);
-      testCase[inputName] = deserializeInputFile(file, inputName, inputType, options, meta);
-      switch (inputType) {
-        case InputType.SSZ:
-          testCase[`${inputName}_raw`] = fs.readFileSync(file);
-          break;
-        case InputType.SSZ_SNAPPY:
-          testCase[`${inputName}_raw`] = uncompress(fs.readFileSync(file));
-          break;
-      }
-      if (!options.inputProcessing) throw Error("inputProcessing is not defined");
-      if (options.inputProcessing[inputName] !== undefined) {
-        testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
-      }
     });
+  for (const file of files) {
+    const inputName = path.basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
+    const inputType = getInputType(file);
+    testCase[inputName] = deserializeInputFile(file, inputName, inputType, options, meta);
+    switch (inputType) {
+      case InputType.SSZ:
+        testCase[`${inputName}_raw`] = fs.readFileSync(file);
+        break;
+      case InputType.SSZ_SNAPPY:
+        testCase[`${inputName}_raw`] = uncompress(fs.readFileSync(file));
+        break;
+    }
+    if (!options.inputProcessing) throw Error("inputProcessing is not defined");
+    if (options.inputProcessing[inputName] !== undefined) {
+      testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
+    }
+  }
   return testCase as TestCase;
 }
 
 function getInputType(filename: string): InputType {
   if (filename.endsWith(InputType.YAML)) {
     return InputType.YAML;
-  } else if (filename.endsWith(InputType.SSZ_SNAPPY)) {
+  }
+
+  if (filename.endsWith(InputType.SSZ_SNAPPY)) {
     return InputType.SSZ_SNAPPY;
-  } else if (filename.endsWith(InputType.SSZ)) {
+  }
+
+  if (filename.endsWith(InputType.SSZ)) {
     return InputType.SSZ;
   }
   throw new Error(`Could not get InputType from ${filename}`);
@@ -211,7 +216,9 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
 ): any {
   if (inputType === InputType.YAML) {
     return loadYaml(fs.readFileSync(file, "utf8"));
-  } else if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
+  }
+
+  if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
     const sszTypes = options.getSszTypes ? options.getSszTypes(meta) : options.sszTypes;
     if (!sszTypes) throw Error("sszTypes is not defined");
     let data = fs.readFileSync(file);
@@ -239,9 +246,8 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
         throw Error("BeaconState type has no deserializeToViewDU method");
       }
       return sszType.deserializeToViewDU(data);
-    } else {
-      return sszType.deserialize(data);
     }
+    return sszType.deserialize(data);
   }
 }
 

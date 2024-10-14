@@ -53,9 +53,9 @@ export function abortableSource<T>(
 
         if (result.done) {
           return;
-        } else {
-          yield result.value;
         }
+
+        yield result.value;
       }
     } catch (err) {
       // End the iterator if it is a generator

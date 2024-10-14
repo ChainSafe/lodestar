@@ -1,7 +1,7 @@
 import {describe, it, expect} from "vitest";
 import {ssz} from "../../src/index.js";
 
-describe("size", function () {
+describe("size", () => {
   it("should calculate correct minSize and maxSize", () => {
     const minSize = ssz.phase0.BeaconState.minSize;
     const maxSize = ssz.phase0.BeaconState.maxSize;
@@ -11,8 +11,8 @@ describe("size", function () {
   });
 });
 
-describe("container serialization/deserialization field casing(s)", function () {
-  it("AttesterSlashing", function () {
+describe("container serialization/deserialization field casing(s)", () => {
+  it("AttesterSlashing", () => {
     const test = {
       attestation1: ssz.phase0.IndexedAttestation.defaultValue(),
       attestation2: ssz.phase0.IndexedAttestation.defaultValue(),
@@ -27,7 +27,7 @@ describe("container serialization/deserialization field casing(s)", function () 
     expect(back).toEqual(json);
   });
 
-  it("ProposerSlashing", function () {
+  it("ProposerSlashing", () => {
     const test = {
       signedHeader1: ssz.phase0.SignedBeaconBlockHeader.defaultValue(),
       signedHeader2: ssz.phase0.SignedBeaconBlockHeader.defaultValue(),

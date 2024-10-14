@@ -1,7 +1,7 @@
 import {describe, it, expect} from "vitest";
 import {batchItems} from "../../../src/util/index.js";
 
-describe("util / batch", function () {
+describe("util / batch", () => {
   const testCases: {items: string[]; expected: string[][]}[] = [
     {items: [], expected: []},
     {items: ["1"], expected: [["1"]]},

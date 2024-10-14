@@ -52,7 +52,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
   const slot = BigInt(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
-  if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
+  if (Number.isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
   if (batchSize <= 0) throw Error(`batchSize must be > 0: ${batchSize}`);
 
   // TODO: Ask the user to confirm the range and slash action

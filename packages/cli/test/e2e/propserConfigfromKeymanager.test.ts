@@ -9,7 +9,7 @@ import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {startValidatorWithKeyManager} from "../utils/validator.js";
 
-describe("import keystores from api, test DefaultProposerConfig", function () {
+describe("import keystores from api, test DefaultProposerConfig", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "proposer-config-test");

@@ -241,14 +241,14 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
             block_header: ssz.phase0.BeaconBlockHeader.toJson(blindedOrFullBlockToHeader(config, payload.data)),
           },
         };
-      } else {
-        return {
-          beacon_block: {
-            version,
-            block: config.getForkTypes(payload.data.slot).BeaconBlock.toJson(payload.data),
-          },
-        };
       }
+
+      return {
+        beacon_block: {
+          version,
+          block: config.getForkTypes(payload.data.slot).BeaconBlock.toJson(payload.data),
+        },
+      };
     }
 
     case SignableMessageType.DEPOSIT:

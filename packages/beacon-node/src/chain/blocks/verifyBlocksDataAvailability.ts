@@ -78,6 +78,7 @@ async function maybeValidateBlobs(
     case BlockInputType.outOfRangeData:
       return {dataAvailabilityStatus: DataAvailabilityStatus.OutOfRange, availableBlockInput: blockInput};
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case BlockInputType.availableData:
       if (opts.validBlobSidecars === BlobSidecarValidation.Full) {
         return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: blockInput};

@@ -10,7 +10,7 @@ import {getGitData} from "../../../src/util/index.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-describe("util / gitData", function () {
+describe("util / gitData", () => {
   // .gitData file is created at build time with the command
   // ```
   // npm run write-git-data

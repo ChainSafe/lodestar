@@ -277,11 +277,14 @@ export class PeerManager {
 
       switch (request.method) {
         case ReqRespMethod.Ping:
-          return this.onPing(peer, request.body);
+          this.onPing(peer, request.body);
+          return;
         case ReqRespMethod.Goodbye:
-          return this.onGoodbye(peer, request.body);
+          this.onGoodbye(peer, request.body);
+          return;
         case ReqRespMethod.Status:
-          return this.onStatus(peer, request.body);
+          this.onStatus(peer, request.body);
+          return;
       }
     } catch (e) {
       this.logger.error("Error onRequest handler", {}, e as Error);

@@ -12,7 +12,7 @@ import {
 // We need to make it easy for the user to pass the args for the CLI
 // yargs treat `["--preset minimal"] as a single arg, so we need to split it ["--preset", "minimal"]
 function parseArgs(args: string[]): string[] {
-  return args.map((a) => a.split(" ")).flat();
+  return args.flatMap((a) => a.split(" "));
 }
 
 type CommandRunOptions = {
@@ -28,6 +28,7 @@ export async function runCliCommand<T>(
   opts: CommandRunOptions = {timeoutMs: 1000}
 ): Promise<string> {
   return wrapTimeout(
+    // biome-ignore lint/suspicious/noAsyncPromiseExecutor: We want to resolve with parser call back not on main promise
     new Promise(async (resolve, reject) => {
       try {
         await cli

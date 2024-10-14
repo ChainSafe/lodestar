@@ -194,7 +194,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     ) as CachedBeaconStatePhase0;
     phase0CachedState23638.slot += 1;
   }
-  const resultingState = opts && opts.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
+  const resultingState = opts?.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
 
   return resultingState.clone();
 }
@@ -241,7 +241,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
     ) as CachedBeaconStateAltair;
     altairCachedState23638.slot += 1;
   }
-  const resultingState = opts && opts.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
+  const resultingState = opts?.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
 
   return resultingState.clone();
 }

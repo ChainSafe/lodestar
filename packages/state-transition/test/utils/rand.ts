@@ -3,7 +3,7 @@
  * Source https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
  */
 export function mulberry32(a: number) {
-  return function () {
+  return () => {
     a += 0x6d2b79f5;
     let t = a;
     t = Math.imul(t ^ (t >>> 15), t | 1);

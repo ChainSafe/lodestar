@@ -3,7 +3,7 @@ import {toHex, toRootHex} from "../../src/bytes/nodejs.js";
 import {toHex as browserToHex, toRootHex as browserToRootHex} from "../../src/bytes/browser.js";
 import {toHexString} from "../../src/bytes.js";
 
-describe("bytes utils", function () {
+describe("bytes utils", () => {
   const runsFactor = 1000;
   const blockRoot = new Uint8Array(Array.from({length: 32}, (_, i) => i));
 

@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 
-describe("bytes utils", function () {
+describe("bytes utils", () => {
   const roots: Uint8Array[] = [];
   let buffers: Buffer[] = [];
   const count = 32;

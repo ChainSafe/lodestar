@@ -89,14 +89,16 @@ export function cleanOldLogFiles(args: LogArgs, paths: {defaultLogFilepath: stri
     .filter((logFileName) => shouldDeleteLogFile(prefix, extension, logFileName, args.logFileDailyRotate))
     .map((logFileName) => path.join(folder, logFileName));
   // delete files
-  toDelete.forEach((filename) => fs.unlinkSync(filename));
+  for (const filename of toDelete) {
+    fs.unlinkSync(filename);
+  }
 }
 
 export function shouldDeleteLogFile(prefix: string, extension: string, logFileName: string, maxFiles: number): boolean {
   const maxDifferenceMs = maxFiles * 24 * 60 * 60 * 1000;
   const match = logFileName.match(new RegExp(`${prefix}-([0-9]{4}-[0-9]{2}-[0-9]{2}).${extension}`));
   // if match[1] exists, it should be the date pattern of YYYY-MM-DD
-  if (match && match[1] && Date.now() - new Date(match[1]).getTime() > maxDifferenceMs) {
+  if (match?.[1] && Date.now() - new Date(match[1]).getTime() > maxDifferenceMs) {
     return true;
   }
   return false;

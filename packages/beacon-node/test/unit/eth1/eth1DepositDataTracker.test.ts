@@ -8,7 +8,7 @@ import {defaultEth1Options} from "../../../src/eth1/options.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 
-describe("Eth1DepositDataTracker", function () {
+describe("Eth1DepositDataTracker", () => {
   const controller = new AbortController();
 
   const logger = testLogger();
@@ -43,7 +43,7 @@ describe("Eth1DepositDataTracker", function () {
     vi.clearAllMocks();
   });
 
-  it("Should dynamically adjust blocks batch size", async function () {
+  it("Should dynamically adjust blocks batch size", async () => {
     let expectedSize = 1000;
     expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).toBe(expectedSize);
 
@@ -66,7 +66,7 @@ describe("Eth1DepositDataTracker", function () {
     expect(expectedSize).toBe(1000);
   });
 
-  it("Should dynamically adjust logs batch size", async function () {
+  it("Should dynamically adjust logs batch size", async () => {
     let expectedSize = 1000;
     expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).toBe(expectedSize);
 

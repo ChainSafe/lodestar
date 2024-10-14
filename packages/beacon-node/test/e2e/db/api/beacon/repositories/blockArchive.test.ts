@@ -4,7 +4,7 @@ import {ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../../../../src/db/index.js";
 import {startTmpBeaconDb} from "../../../../../utils/db.js";
 
-describe("BlockArchiveRepository", function () {
+describe("BlockArchiveRepository", () => {
   let db: BeaconDb;
   const sampleBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
 

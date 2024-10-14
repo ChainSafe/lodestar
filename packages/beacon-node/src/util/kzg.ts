@@ -59,7 +59,7 @@ export enum TrustedFileMode {
  */
 export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode.Txt, filePath?: string): void {
   try {
-    let setupFilePath;
+    let setupFilePath: string;
     if (mode === TrustedFileMode.Bin) {
       const binPath = filePath ?? TRUSTED_SETUP_BIN_FILEPATH;
       const bytes = fs.readFileSync(binPath);
@@ -154,7 +154,6 @@ export function trustedSetupJsonToTxt(data: TrustedSetupJSON): TrustedSetupTXT {
 function strip0xPrefix(hex: string): string {
   if (hex.startsWith("0x")) {
     return hex.slice(2);
-  } else {
-    return hex;
   }
+  return hex;
 }

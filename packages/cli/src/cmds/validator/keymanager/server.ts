@@ -80,6 +80,7 @@ function readFileIfExists(filepath: string): string | null {
     return fs.readFileSync(filepath, "utf8").trim();
   } catch (e) {
     if ((e as {code: string}).code === "ENOENT") return null;
-    else throw e;
+
+    throw e;
   }
 }

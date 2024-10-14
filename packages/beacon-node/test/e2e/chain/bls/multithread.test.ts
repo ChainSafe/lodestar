@@ -5,23 +5,11 @@ import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/in
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
-describe("chain / bls / multithread queue", function () {
+describe("chain / bls / multithread queue", () => {
   const logger = testLogger();
 
   let controller: AbortController;
-  beforeEach(() => {
-    controller = new AbortController();
-  });
-  afterEach(() => controller.abort());
-
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  afterEach(async () => {
-    while (afterEachCallbacks.length > 0) {
-      const callback = afterEachCallbacks.pop();
-      if (callback) await callback();
-    }
-  });
-
   const sets: ISignatureSet[] = [];
   const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
@@ -42,6 +30,19 @@ describe("chain / bls / multithread queue", function () {
         publicKey: pk,
         signature: sk.sign(sameMessage).toBytes(),
       });
+    }
+  });
+
+  beforeEach(() => {
+    controller = new AbortController();
+  });
+
+  afterEach(async () => {
+    controller.abort();
+
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
     }
   });
 

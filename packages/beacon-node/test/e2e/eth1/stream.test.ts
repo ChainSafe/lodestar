@@ -6,7 +6,7 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-describe.skip("Eth1 streams", function () {
+describe.skip("Eth1 streams", () => {
   let controller: AbortController;
   beforeEach(() => {
     controller = new AbortController();
@@ -30,7 +30,7 @@ describe.skip("Eth1 streams", function () {
   const depositsToFetch = 1000;
   const eth1Params = {...config, maxBlocksPerPoll};
 
-  it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async function () {
+  it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async () => {
     const depositsStream = getDepositsStream(
       medallaTestnetConfig.blockWithDepositActivity,
       getEth1Provider(),
@@ -49,7 +49,7 @@ describe.skip("Eth1 streams", function () {
     expect(depositCount).toBeGreaterThan(depositsToFetch);
   });
 
-  it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async function () {
+  it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async () => {
     const stream = getDepositsAndBlockStreamForGenesis(
       medallaTestnetConfig.blockWithDepositActivity,
       getEth1Provider(),

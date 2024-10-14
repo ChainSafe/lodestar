@@ -58,11 +58,11 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
   } as unknown as BeaconArgs & GlobalArgs;
 
   if (engineMock) {
-    rcConfig["eth1"] = false;
+    rcConfig.eth1 = false;
     rcConfig["execution.engineMock"] = true;
     rcConfig["execution.urls"] = [];
   } else {
-    rcConfig["eth1"] = true;
+    rcConfig.eth1 = true;
     rcConfig["execution.engineMock"] = false;
     rcConfig["execution.urls"] = [...engineUrls];
   }

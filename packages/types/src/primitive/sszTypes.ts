@@ -1,6 +1,7 @@
 import {ByteVectorType, UintNumberType, UintBigintType, BooleanType} from "@chainsafe/ssz";
 import {ExecutionAddressType} from "../utils/executionAddress.js";
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want this name for variable
 export const Boolean = new BooleanType();
 export const Byte = new UintNumberType(1);
 export const Bytes4 = new ByteVectorType(4);

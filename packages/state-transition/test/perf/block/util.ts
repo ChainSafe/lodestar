@@ -206,7 +206,9 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0
 
   // Fill depositRootViewDU up to depositCount
   // Instead of actually filling it, just mutate the length to allow .set()
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   depositRootViewDU["_length"] = depositCount + count;
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   depositRootViewDU["dirtyLength"] = true;
 
   for (let i = 0; i < count; i++) {

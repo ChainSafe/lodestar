@@ -28,7 +28,8 @@ describe("retry", () => {
       id: "Succeed at the last attempt",
       fn: async (attempt) => {
         if (attempt < retries) throw sampleError;
-        else return sampleResult;
+
+        return sampleResult;
       },
       opts: {retries},
       result: sampleResult,

@@ -65,6 +65,6 @@ export const logOptions: CliCommandOptions<LogArgs> = {
     description: "Set log level for a specific module by name: 'chain=debug' or 'network=debug,chain=debug'",
     type: "array",
     string: true,
-    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
+    coerce: (args: string[]) => args.flatMap((item) => item.split(",")),
   },
 };

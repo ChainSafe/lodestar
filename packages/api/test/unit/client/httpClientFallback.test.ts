@@ -56,12 +56,12 @@ describe("httpClient fallback", () => {
           // which is handled separately from network errors
           // but the fallback logic should be the same
           return new Response(null, {status: 500});
-        } else {
-          throw Error(`test_error_server_${i}`);
         }
-      } else {
-        return new Response(null, {status: 200});
+
+        throw Error(`test_error_server_${i}`);
       }
+
+      return new Response(null, {status: 200});
     });
   });
 

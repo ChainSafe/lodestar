@@ -8,7 +8,7 @@ import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientErro
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
-describe("Light Client Finality Update validation", function () {
+describe("Light Client Finality Update validation", () => {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   const config = createChainForkConfig({
     ...defaultChainConfig,

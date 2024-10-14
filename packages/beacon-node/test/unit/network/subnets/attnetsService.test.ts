@@ -35,7 +35,7 @@ describe("AttnetsService", () => {
   let clock: IClock;
   const logger = testLogger();
 
-  beforeEach(function () {
+  beforeEach(() => {
     vi.useFakeTimers({now: Date.now()});
     gossipStub = vi.mocked(new Eth2Gossipsub({} as any, {} as any));
     vi.spyOn(gossipStub, "subscribeTopic").mockReturnValue(undefined);

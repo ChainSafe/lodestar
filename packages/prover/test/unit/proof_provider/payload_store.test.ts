@@ -53,7 +53,7 @@ const buildBlockResponse = ({
   return apiResponse;
 };
 
-describe("proof_provider/payload_store", function () {
+describe("proof_provider/payload_store", () => {
   let api: ApiClient & {beacon: MockedObject<ApiClient["beacon"]>};
   let logger: Logger;
   let store: PayloadStore;

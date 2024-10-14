@@ -21,10 +21,10 @@ async function validateTest(job: string, tracker: string[], opts: ValidateOpts):
 async function getStateFromCache(retrieveSync: boolean): Promise<number> {
   if (retrieveSync) {
     return 1;
-  } else {
-    await sleep(0);
-    return 2;
   }
+
+  await sleep(0);
+  return 2;
 }
 
 describe("event loop with branching async", () => {

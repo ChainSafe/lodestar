@@ -1,7 +1,7 @@
 import {describe, it, expect, beforeEach} from "vitest";
 import {ReprocessController} from "../../../src/chain/reprocess.js";
 
-describe("ReprocessController", function () {
+describe("ReprocessController", () => {
   let controller: ReprocessController;
 
   beforeEach(() => {

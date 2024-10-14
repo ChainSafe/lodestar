@@ -22,7 +22,7 @@ function getSyncCommittee(
   return syncCommitteeKeys;
 }
 
-describe("syncInMemory", function () {
+describe("syncInMemory", () => {
   // In browser test this process is taking more time than default 2000ms
   vi.setConfig({testTimeout: 10000});
 
@@ -39,9 +39,7 @@ describe("syncInMemory", function () {
     expect(sk.toPublicKey().toHex()).toBe(
       "0xaa1a1c26055a329817a5759d877a2795f9499b97d6056edde0eea39512f24e8bc874b4471f0501127abb1ea0d9f68ac1"
     );
-  });
 
-  beforeAll(() => {
     // Create a state that has as nextSyncCommittee the committee 2
     const finalizedBlockSlot = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
     const headerBlockSlot = finalizedBlockSlot + 1;

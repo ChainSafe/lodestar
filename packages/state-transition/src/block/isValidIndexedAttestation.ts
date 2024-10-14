@@ -18,9 +18,8 @@ export function isValidIndexedAttestation(
 
   if (verifySignature) {
     return verifySignatureSet(getIndexedAttestationSignatureSet(state, indexedAttestation));
-  } else {
-    return true;
   }
+  return true;
 }
 
 export function isValidIndexedAttestationBigint(
@@ -34,9 +33,8 @@ export function isValidIndexedAttestationBigint(
 
   if (verifySignature) {
     return verifySignatureSet(getIndexedAttestationBigintSignatureSet(state, indexedAttestation));
-  } else {
-    return true;
   }
+  return true;
 }
 
 /**

@@ -41,23 +41,23 @@ export async function getNetworkCachedState(
   if (fs.existsSync(filepath)) {
     const stateSsz = fs.readFileSync(filepath);
     return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
-  } else {
-    const stateSsz = await tryEach([
-      () => downloadTestFile(fileId),
-      () => {
-        const client = getClient(
-          {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
-          {config}
-        );
-        return client.debug.getStateV2({stateId: slot}).then((r) => {
-          return r.ssz();
-        });
-      },
-    ]);
-
-    fs.writeFileSync(filepath, stateSsz);
-    return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
   }
+
+  const stateSsz = await tryEach([
+    () => downloadTestFile(fileId),
+    () => {
+      const client = getClient(
+        {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
+        {config}
+      );
+      return client.debug.getStateV2({stateId: slot}).then((r) => {
+        return r.ssz();
+      });
+    },
+  ]);
+
+  fs.writeFileSync(filepath, stateSsz);
+  return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
 }
 
 /**
@@ -76,22 +76,22 @@ export async function getNetworkCachedBlock(
   if (fs.existsSync(filepath)) {
     const blockSsz = fs.readFileSync(filepath);
     return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
-  } else {
-    const blockSsz = await tryEach([
-      () => downloadTestFile(fileId),
-      async () => {
-        const client = getClient(
-          {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
-          {config}
-        );
-
-        return (await client.beacon.getBlockV2({blockId: slot})).ssz();
-      },
-    ]);
-
-    fs.writeFileSync(filepath, blockSsz);
-    return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
   }
+
+  const blockSsz = await tryEach([
+    () => downloadTestFile(fileId),
+    async () => {
+      const client = getClient(
+        {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
+        {config}
+      );
+
+      return (await client.beacon.getBlockV2({blockId: slot})).ssz();
+    },
+  ]);
+
+  fs.writeFileSync(filepath, blockSsz);
+  return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
 }
 
 async function downloadTestFile(fileId: string): Promise<Buffer> {

@@ -35,7 +35,7 @@ export function getProposerSlashingsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
-  return signedBlock.message.body.proposerSlashings
-    .map((proposerSlashing) => getProposerSlashingSignatureSets(state, proposerSlashing))
-    .flat(1);
+  return signedBlock.message.body.proposerSlashings.flatMap((proposerSlashing) =>
+    getProposerSlashingSignatureSets(state, proposerSlashing)
+  );
 }

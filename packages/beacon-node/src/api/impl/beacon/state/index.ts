@@ -103,7 +103,9 @@ export function getBeaconStateApi({
           data: validatorResponses,
           meta: {executionOptimistic, finalized},
         };
-      } else if (statuses.length) {
+      }
+
+      if (statuses.length) {
         const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,

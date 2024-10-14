@@ -13,7 +13,7 @@ import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconStat
 import {SyncState} from "../../../../../../src/sync/interface.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 
-describe("get proposers api impl", function () {
+describe("get proposers api impl", () => {
   const currentEpoch = 2;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
 
@@ -22,7 +22,7 @@ describe("get proposers api impl", function () {
   let state: BeaconStateAllForks;
   let cachedState: ReturnType<typeof createCachedBeaconStateTest>;
 
-  beforeEach(function () {
+  beforeEach(() => {
     vi.useFakeTimers({now: 0});
     vi.advanceTimersByTime(currentSlot * config.SECONDS_PER_SLOT * 1000);
     modules = getApiTestModules({clock: "real"});

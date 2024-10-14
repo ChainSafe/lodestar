@@ -88,11 +88,11 @@ export class SyncCommitteeMessagePool {
     if (contribution) {
       // Aggregate mutating
       return aggregateSignatureInto(contribution, signature, indexInSubcommittee);
-    } else {
-      // Create new aggregate
-      contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubcommittee));
-      return InsertOutcome.NewData;
     }
+
+    // Create new aggregate
+    contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubcommittee));
+    return InsertOutcome.NewData;
   }
 
   /**

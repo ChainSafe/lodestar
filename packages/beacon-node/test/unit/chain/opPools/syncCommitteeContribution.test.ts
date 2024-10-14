@@ -15,7 +15,7 @@ import {EMPTY_SIGNATURE} from "../../../../src/constants/index.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {VALID_BLS_SIGNATURE_RAND} from "../../../utils/typeGenerator.js";
 
-describe("chain / opPools / SyncContributionAndProofPool", function () {
+describe("chain / opPools / SyncContributionAndProofPool", () => {
   let cache: SyncContributionAndProofPool;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
@@ -44,7 +44,7 @@ describe("chain / opPools / SyncContributionAndProofPool", function () {
   });
 });
 
-describe("replaceIfBetter", function () {
+describe("replaceIfBetter", () => {
   const numParticipants = 2;
   let bestContribution: SyncContributionFast;
   // const subnetSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
@@ -77,7 +77,7 @@ describe("replaceIfBetter", function () {
   });
 });
 
-describe("aggregate", function () {
+describe("aggregate", () => {
   const sks: SecretKey[] = [];
   let bestContributionBySubnet: Map<number, SyncContributionFast>;
   beforeAll(async () => {

@@ -9,14 +9,14 @@ import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
-describe("block archiver task", function () {
+describe("block archiver task", () => {
   const logger = testLogger();
 
   let dbStub: MockedBeaconDb;
   let forkChoiceStub: MockedBeaconChain["forkChoice"];
   let lightclientServer: MockedBeaconChain["lightClientServer"];
 
-  beforeEach(function () {
+  beforeEach(() => {
     const chain = getMockedBeaconChain();
     dbStub = getMockedBeaconDb();
     forkChoiceStub = chain.forkChoice;
@@ -30,7 +30,7 @@ describe("block archiver task", function () {
     vi.clearAllMocks();
   });
 
-  it("should archive finalized blocks", async function () {
+  it("should archive finalized blocks", async () => {
     const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue());
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(Buffer.from(blockBytes));
     // block i has slot i+1

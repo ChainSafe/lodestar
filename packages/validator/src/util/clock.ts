@@ -119,17 +119,14 @@ export class Clock implements IClock {
     if (timeItem === TimeItem.Slot) {
       if (msFromGenesis >= 0) {
         return milliSecondsPerSlot - (msFromGenesis % milliSecondsPerSlot);
-      } else {
-        return Math.abs(msFromGenesis % milliSecondsPerSlot);
       }
-    } else {
-      const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
-      if (msFromGenesis >= 0) {
-        return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
-      } else {
-        return Math.abs(msFromGenesis % milliSecondsPerEpoch);
-      }
+      return Math.abs(msFromGenesis % milliSecondsPerSlot);
     }
+    const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
+    if (msFromGenesis >= 0) {
+      return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
+    }
+    return Math.abs(msFromGenesis % milliSecondsPerEpoch);
   }
 }
 

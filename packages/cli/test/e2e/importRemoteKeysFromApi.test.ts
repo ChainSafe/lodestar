@@ -20,7 +20,7 @@ async function expectKeys(keymanagerClient: ApiClient, expectedPubkeys: string[]
   );
 }
 
-describe("import remoteKeys from api", function () {
+describe("import remoteKeys from api", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-remoteKeys-test");
@@ -65,7 +65,7 @@ describe("import remoteKeys from api", function () {
     );
   });
 
-  it("run 'validator' check keys are loaded + delete", async function () {
+  it("run 'validator' check keys are loaded + delete", async () => {
     const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();
@@ -86,7 +86,7 @@ describe("import remoteKeys from api", function () {
     await expectKeys(keymanagerClient, [], "Wrong listRemoteKeys after deleting");
   });
 
-  it("reject calls without bearerToken", async function () {
+  it("reject calls without bearerToken", async () => {
     const {stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();

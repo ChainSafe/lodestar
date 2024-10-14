@@ -29,7 +29,7 @@ describe("prover/proxy", () => {
     const paramsFilePath = path.join("/tmp", "e2e-test-env", "params.json");
     const web3: Web3 = new Web3(proxyUrl);
 
-    beforeAll(async function () {
+    beforeAll(async () => {
       await waitForCapellaFork();
       await mkdir(path.dirname(paramsFilePath), {recursive: true});
       await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config as ChainConfig)));

@@ -224,6 +224,7 @@ export class NetworkCore implements INetworkCore {
     reqResp.registerProtocolsAtFork(forkCurrentSlot);
 
     // Bind discv5's ENR to local metadata
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     discv5 = peerManager["discovery"]?.discv5;
 
     // Initialize ENR with clock's fork
@@ -277,6 +278,7 @@ export class NetworkCore implements INetworkCore {
   async scrapeMetrics(): Promise<string> {
     return [
       (await this.metrics?.register.metrics()) ?? "",
+      // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
       (await this.peerManager["discovery"]?.discv5.scrapeMetrics()) ?? "",
     ]
       .filter((str) => str.length > 0)
@@ -344,6 +346,7 @@ export class NetworkCore implements INetworkCore {
   // REST API queries
 
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     const enr = await this.peerManager["discovery"]?.discv5.enr();
     const discoveryAddresses = [
       enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
@@ -410,6 +413,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   async dumpDiscv5KadValues(): Promise<string[]> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return (await this.peerManager["discovery"]?.discv5?.kadValues())?.map((enr) => enr.encodeTxt()) ?? [];
   }
 
@@ -426,6 +430,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return this.peerManager["discovery"]?.discv5.writeProfile(durationMs, dirpath) ?? "no discv5";
   }
 
@@ -434,6 +439,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return this.peerManager["discovery"]?.discv5.writeHeapSnapshot(prefix, dirpath) ?? Promise.resolve("no discv5");
   }
 

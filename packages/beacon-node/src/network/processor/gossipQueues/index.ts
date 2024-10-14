@@ -104,8 +104,7 @@ export function createGossipQueues(): {
   return mapValues(gossipQueueOpts, (opts) => {
     if (isIndexedGossipQueueMinSizeOpts(opts)) {
       return new IndexedGossipQueueMinSize(opts);
-    } else {
-      return new LinearGossipQueue<PendingGossipsubMessage>(opts);
     }
+    return new LinearGossipQueue<PendingGossipsubMessage>(opts);
   });
 }

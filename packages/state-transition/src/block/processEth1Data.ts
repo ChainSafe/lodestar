@@ -58,9 +58,8 @@ export function becomesNewEth1Data(
   // The +1 is to account for the `eth1Data` supplied to the function.
   if ((sameVotesCount + 1) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 function isEqualEth1DataView(

@@ -90,10 +90,9 @@ export class SyncContributionAndProofPool {
     const bestContribution = bestContributionBySubnet.get(subnet);
     if (bestContribution) {
       return replaceIfBetter(bestContribution, contribution, syncCommitteeParticipants);
-    } else {
-      bestContributionBySubnet.set(subnet, contributionToFast(contribution, syncCommitteeParticipants));
-      return InsertOutcome.NewData;
     }
+    bestContributionBySubnet.set(subnet, contributionToFast(contribution, syncCommitteeParticipants));
+    return InsertOutcome.NewData;
   }
 
   /**

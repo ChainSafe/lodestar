@@ -85,7 +85,7 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
   for (let i = 0; i < PARTICIPATION_FLAG_WEIGHTS.length; i++) {
     const weight = PARTICIPATION_FLAG_WEIGHTS[i];
 
-    let unslashedStakeByIncrement;
+    let unslashedStakeByIncrement: number;
     let flagName: keyof IdealAttestationsReward;
 
     switch (i) {

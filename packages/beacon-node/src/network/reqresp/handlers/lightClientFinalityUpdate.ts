@@ -9,12 +9,12 @@ export async function* onLightClientFinalityUpdate(chain: IBeaconChain): AsyncIt
   const update = chain.lightClientServer.getFinalityUpdate();
   if (update === null) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest finality update available");
-  } else {
-    const fork = chain.config.getForkName(update.signatureSlot);
-    const type = responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate](fork, 0);
-    yield {
-      data: type.serialize(update),
-      fork,
-    };
   }
+
+  const fork = chain.config.getForkName(update.signatureSlot);
+  const type = responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate](fork, 0);
+  yield {
+    data: type.serialize(update),
+    fork,
+  };
 }

@@ -1,11 +1,11 @@
 export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): string {
   if (Buffer.isBuffer(buffer)) {
     return "0x" + buffer.toString("hex");
-  } else if (buffer instanceof Uint8Array) {
-    return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset, buffer.length).toString("hex");
-  } else {
-    return "0x" + Buffer.from(buffer).toString("hex");
   }
+  if (buffer instanceof Uint8Array) {
+    return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset, buffer.length).toString("hex");
+  }
+  return "0x" + Buffer.from(buffer).toString("hex");
 }
 
 // Shared buffer to convert root to hex

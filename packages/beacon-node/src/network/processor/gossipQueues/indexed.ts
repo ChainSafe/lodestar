@@ -123,9 +123,8 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
         this.minChunkSizeKeys.delete(firstKey, true);
       }
       return 1;
-    } else {
-      return 0;
     }
+    return 0;
   }
 
   /**

@@ -129,7 +129,7 @@ export class Eth1DepositsCache {
    */
   async getHighestDepositEventBlockNumber(): Promise<number | null> {
     const latestEvent = await this.db.depositEvent.lastValue();
-    return latestEvent && latestEvent.blockNumber;
+    return latestEvent?.blockNumber || null;
   }
 
   /**
@@ -137,6 +137,6 @@ export class Eth1DepositsCache {
    */
   async getLowestDepositEventBlockNumber(): Promise<number | null> {
     const firstEvent = await this.db.depositEvent.firstValue();
-    return firstEvent && firstEvent.blockNumber;
+    return firstEvent?.blockNumber || null;
   }
 }

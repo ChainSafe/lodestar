@@ -6,7 +6,7 @@ describe("db buckets", () => {
     let prevBucket = -1;
 
     for (const key of Object.keys(Bucket)) {
-      if (isNaN(parseInt(key))) {
+      if (Number.isNaN(parseInt(key))) {
         const bucket = (Bucket as unknown as Record<string, number>)[key];
         if (bucket < prevBucket) {
           throw Error(`Bucket ${key} not sorted`);

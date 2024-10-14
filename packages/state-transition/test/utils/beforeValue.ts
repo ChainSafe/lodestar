@@ -14,23 +14,21 @@ export type LazyValue<T> = {value: T};
 export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): LazyValue<T> {
   let value: T = null as unknown as T;
 
-  beforeAll(async function () {
+  beforeAll(async () => {
     value = await fn();
   }, timeout ?? 300_000);
 
   return new Proxy<{value: T}>(
     {value},
     {
-      get: function (_target, prop) {
+      get: (_target, prop) => {
         if (prop === "value") {
           if (value === null) {
             throw Error("beforeValue has not yet run the before() block");
-          } else {
-            return value;
           }
-        } else {
-          return undefined;
+          return value;
         }
+        return undefined;
       },
     }
   );

@@ -104,7 +104,7 @@ describe("Array", () => {
 
   let arr: number[];
 
-  before(function () {
+  before(() => {
     arr = createArray(n);
   });
 

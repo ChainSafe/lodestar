@@ -16,7 +16,7 @@ import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
 
-describe("BlockDutiesService", function () {
+describe("BlockDutiesService", () => {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
   const validatorStore = vi.mocked(new ValidatorStore());
@@ -36,7 +36,7 @@ describe("BlockDutiesService", function () {
   });
   afterEach(() => controller.abort());
 
-  it("Should produce, sign, and publish a block", async function () {
+  it("Should produce, sign, and publish a block", async () => {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     api.validator.getProposerDuties.mockResolvedValue(
@@ -111,7 +111,7 @@ describe("BlockDutiesService", function () {
     ]);
   });
 
-  it("Should produce, sign, and publish a blinded block", async function () {
+  it("Should produce, sign, and publish a blinded block", async () => {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     api.validator.getProposerDuties.mockResolvedValue(

@@ -12,7 +12,7 @@ describe("aggregationBits", () => {
   let indexes: number[];
   let bitlistTree: BitArray;
 
-  before(function () {
+  before(() => {
     const aggregationBits = BitArray.fromBoolArray(Array.from({length: len}, () => true));
     bitlistTree = ssz.phase0.CommitteeBits.toViewDU(aggregationBits);
     indexes = Array.from({length: len}, () => 165432);

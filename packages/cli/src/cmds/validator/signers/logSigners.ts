@@ -60,11 +60,11 @@ function groupRemoteSignersByUrl(remoteSigners: SignerRemote[]): {url: string; p
  * is connected with fetching enabled, but otherwise exit the process and suggest a different configuration.
  */
 export function warnOrExitNoSigners(args: IValidatorCliArgs, logger: Pick<Logger, LogLevel.warn>): void {
-  if (args["keymanager"] && !args["externalSigner.fetch"]) {
+  if (args.keymanager && !args["externalSigner.fetch"]) {
     logger.warn("No local keystores or remote keys found with current args, expecting to be added via keymanager");
-  } else if (!args["keymanager"] && args["externalSigner.fetch"]) {
+  } else if (!args.keymanager && args["externalSigner.fetch"]) {
     logger.warn("No remote keys found with current args, expecting to be added to external signer and fetched later");
-  } else if (args["keymanager"] && args["externalSigner.fetch"]) {
+  } else if (args.keymanager && args["externalSigner.fetch"]) {
     logger.warn(
       "No local keystores or remote keys found with current args, expecting to be added via keymanager or fetched from external signer later"
     );

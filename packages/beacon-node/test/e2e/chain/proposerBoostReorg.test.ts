@@ -12,7 +12,7 @@ import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {ReorgEventData} from "../../../src/chain/emitter.js";
 
-describe("proposer boost reorg", function () {
+describe("proposer boost reorg", () => {
   vi.setConfig({testTimeout: 60000});
 
   const validatorCount = 8;

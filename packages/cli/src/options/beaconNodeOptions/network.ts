@@ -100,16 +100,16 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const bindMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.discoveryPort6}` : undefined;
   const localMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
 
-  const targetPeers = args["targetPeers"];
+  const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
     throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
   }
   // Set discv5 opts to null to disable only if explicitly disabled
-  const enableDiscv5 = args["discv5"] ?? true;
+  const enableDiscv5 = args.discv5 ?? true;
 
   // TODO: Okay to set to empty array?
-  const bootEnrs = args["bootnodes"] ?? [];
+  const bootEnrs = args.bootnodes ?? [];
   // throw if user-provided enrs are invalid
   for (const enrStr of bootEnrs) {
     try {
@@ -135,10 +135,10 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
-    subscribeAllSubnets: args["subscribeAllSubnets"],
+    subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
-      args["slotsToSubscribeBeforeAggregatorDuty"] ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
-    disablePeerScoring: args["disablePeerScoring"],
+      args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
+    disablePeerScoring: args.disablePeerScoring,
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
@@ -148,7 +148,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     gossipsubDHigh: args["network.gossipsubDHigh"],
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
     disableFloodPublish: args["network.disableFloodPublish"],
-    mdns: args["mdns"],
+    mdns: args.mdns,
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
@@ -211,12 +211,12 @@ export const options: CliCommandOptions<NetworkArgs> = {
   bootnodes: {
     type: "array",
     description: "Bootnodes for discv5 discovery",
-    defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
+    defaultDescription: JSON.stringify(defaultOptions.network.discv5?.bootEnrs || []),
     group: "network",
     // Each bootnode entry could be comma separated, just deserialize it into a single array
     // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
     // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
-    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
+    coerce: (args: string[]) => args.flatMap((item) => item.split(",")),
   },
 
   targetPeers: {

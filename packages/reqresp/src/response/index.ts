@@ -77,9 +77,8 @@ export async function handleRequest({
         ).catch((e: unknown) => {
           if (e instanceof TimeoutError) {
             throw e; // Let outter catch (_e) {} re-type the error as SERVER_ERROR
-          } else {
-            throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
           }
+          throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
         });
 
         logger.debug("Req  received", logCtx);
@@ -134,8 +133,7 @@ export async function handleRequest({
   if (responseError !== null) {
     logger.verbose("Resp error", logCtx, responseError);
     throw responseError;
-  } else {
-    // NOTE: Only log once per request to verbose, intermediate steps to debug
-    logger.verbose("Resp done", logCtx);
   }
+  // NOTE: Only log once per request to verbose, intermediate steps to debug
+  logger.verbose("Resp done", logCtx);
 }

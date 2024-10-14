@@ -36,7 +36,7 @@ export type ChainArgs = {
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
-    suggestedFeeRecipient: args["suggestedFeeRecipient"],
+    suggestedFeeRecipient: args.suggestedFeeRecipient,
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
@@ -55,8 +55,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
-    emitPayloadAttributes: args["emitPayloadAttributes"],
-    broadcastValidationStrictness: args["broadcastValidationStrictness"],
+    emitPayloadAttributes: args.emitPayloadAttributes,
+    broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,

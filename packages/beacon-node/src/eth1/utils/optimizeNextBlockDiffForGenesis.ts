@@ -13,7 +13,6 @@ export function optimizeNextBlockDiffForGenesis(
   const numBlocksToGenesis = Math.floor(timeToGenesis / params.SECONDS_PER_ETH1_BLOCK);
   if (numBlocksToGenesis <= 2) {
     return 1;
-  } else {
-    return Math.max(1, Math.floor(numBlocksToGenesis / 2));
   }
+  return Math.max(1, Math.floor(numBlocksToGenesis / 2));
 }

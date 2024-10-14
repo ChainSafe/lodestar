@@ -43,8 +43,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
         coerce: (pubkeys: string[]): string[] =>
           // Parse ["0x11,0x22"] to ["0x11", "0x22"]
           pubkeys
-            .map((item) => item.split(","))
-            .flat(1)
+            .flatMap((item) => item.split(","))
             .map(ensure0xPrefix),
       },
     },

@@ -814,7 +814,7 @@ function renderAttestationSummary(
   }
 
   //
-  else if (flags.timelyTarget) {
+  if (flags.timelyTarget) {
     // timelyHead == false, means at least one is true
     // - attestation voted incorrect head
     // - attestation was included late
@@ -870,57 +870,55 @@ function renderAttestationSummary(
   }
 
   //
-  else if (flags.timelySource) {
+  if (flags.timelySource) {
     // timelyTarget == false && timelySource == true means that
     // - attestation voted the wrong target but distance is <= integer_squareroot(SLOTS_PER_EPOCH)
     return "wrong_target_timely_source";
   }
 
   //
-  else {
-    // timelySource == false, either:
-    // - attestation was not included in the block
-    // - included in block with wrong target (very unlikely)
-    // - included in block with distance > SLOTS_PER_EPOCH (very unlikely)
+  // timelySource == false, either:
+  // - attestation was not included in the block
+  // - included in block with wrong target (very unlikely)
+  // - included in block with distance > SLOTS_PER_EPOCH (very unlikely)
 
-    // Validator failed to submit an attestation for this epoch, validator client is probably offline
-    if (!summary || summary.poolSubmitDelayMinSec === null) {
-      return "no_submission";
-    }
-
-    const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
-    if (canonicalBlockInclusion) {
-      // Canonical block inclusion with no participation flags set means wrong target + late source
-      return "wrong_target_late_source";
-    }
-
-    const submittedLate =
-      summary.poolSubmitDelayMinSec >
-      (INTERVALS_LATE_ATTESTATION_SUBMISSION * config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
-
-    const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
-
-    if (submittedLate && aggregateInclusion) {
-      return "late_submit";
-    } else if (submittedLate && !aggregateInclusion) {
-      return "late_submit_no_aggregate_inclusion";
-    } else if (!submittedLate && aggregateInclusion) {
-      // TODO: Why was it missed then?
-      if (summary.blockInclusions.length) {
-        return "block_inclusion_but_orphan";
-      } else {
-        return "aggregate_inclusion_but_missed";
-      }
-      // } else if (!submittedLate && !aggregateInclusion) {
-    } else {
-      // Did the node had enough peers?
-      if (summary.poolSubmitSentPeers === 0) {
-        return "sent_to_zero_peers";
-      } else {
-        return "no_aggregate_inclusion";
-      }
-    }
+  // Validator failed to submit an attestation for this epoch, validator client is probably offline
+  if (!summary || summary.poolSubmitDelayMinSec === null) {
+    return "no_submission";
   }
+
+  const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
+  if (canonicalBlockInclusion) {
+    // Canonical block inclusion with no participation flags set means wrong target + late source
+    return "wrong_target_late_source";
+  }
+
+  const submittedLate =
+    summary.poolSubmitDelayMinSec >
+    (INTERVALS_LATE_ATTESTATION_SUBMISSION * config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
+
+  const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
+
+  if (submittedLate && aggregateInclusion) {
+    return "late_submit";
+  }
+  if (submittedLate && !aggregateInclusion) {
+    return "late_submit_no_aggregate_inclusion";
+  }
+
+  if (!submittedLate && aggregateInclusion) {
+    // TODO: Why was it missed then?
+    if (summary.blockInclusions.length) {
+      return "block_inclusion_but_orphan";
+    }
+    return "aggregate_inclusion_but_missed";
+    // } else if (!submittedLate && !aggregateInclusion) {
+  }
+  // Did the node had enough peers?
+  if (summary.poolSubmitSentPeers === 0) {
+    return "sent_to_zero_peers";
+  }
+  return "no_aggregate_inclusion";
 }
 
 function whyIsHeadVoteWrong(rootCache: RootHexCache, canonicalBlockInclusion: AttestationBlockInclusion): string {
@@ -968,9 +966,7 @@ function whyIsHeadVoteWrong(rootCache: RootHexCache, canonicalBlockInclusion: At
   //     \_(A)_(A)
   //
   // Vote for different heads on skipped slot
-  else {
-    return "wrong_head_vote";
-  }
+  return "wrong_head_vote";
 }
 
 function whyIsDistanceNotOk(
@@ -989,9 +985,7 @@ function whyIsDistanceNotOk(
   }
 
   //
-  else {
-    return "late_unknown";
-  }
+  return "late_unknown";
 }
 
 /** Returns true if the state's root record includes `block` */

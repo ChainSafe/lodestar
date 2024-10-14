@@ -57,7 +57,7 @@ class BrowserConsole extends Transport {
 
   constructor(opts: winston.transport.TransportStreamOptions | undefined) {
     super(opts);
-    this.level = opts?.level && this.levels.hasOwnProperty(opts.level) ? opts.level : "info";
+    this.level = opts?.level && Object.prototype.hasOwnProperty.call(this.levels, opts.level) ? opts.level : "info";
   }
 
   log(info: WinstonLogInfo, callback: () => void): void {

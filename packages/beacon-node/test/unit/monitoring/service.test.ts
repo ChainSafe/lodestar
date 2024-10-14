@@ -169,7 +169,7 @@ describe("monitoring / service", () => {
       service?.close();
     });
 
-    (["beacon", "validator"] as const).forEach((client) => {
+    for (const client of ["beacon", "validator"] as const) {
       it(`should collect and send ${client} stats to remote service`, async () => {
         const endpoint = `${baseUrl}${remoteServiceRoutes.success}`;
         service = new MonitoringService(client, {endpoint, collectSystemStats: true}, {register, logger});
@@ -181,7 +181,7 @@ describe("monitoring / service", () => {
         // Fail test if warning was logged due to a 500 response.
         expect(logger.warn).not.toHaveBeenCalledWith("Failed to send client stats");
       });
-    });
+    }
 
     it("should properly handle remote service errors", async () => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.error}`;

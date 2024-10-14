@@ -14,7 +14,7 @@ import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {getConfig} from "../../../../../utils/config.js";
 
-describe("beacon block api", function () {
+describe("beacon block api", () => {
   vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
 
   const restPort = 9596;

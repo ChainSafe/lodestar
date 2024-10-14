@@ -265,18 +265,17 @@ export class BlockProposingService {
         debugLogCtx,
         builderSelection
       );
-    } else {
-      Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
-      const res = await this.api.validator.produceBlindedBlock({slot, randaoReveal, graffiti});
-      const {version} = res.meta();
-      const executionPayloadSource = ProducedBlockSource.builder;
-
-      return parseProduceBlockResponse(
-        {data: res.value(), executionPayloadBlinded: true, executionPayloadSource, version},
-        debugLogCtx,
-        builderSelection
-      );
     }
+    Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
+    const res = await this.api.validator.produceBlindedBlock({slot, randaoReveal, graffiti});
+    const {version} = res.meta();
+    const executionPayloadSource = ProducedBlockSource.builder;
+
+    return parseProduceBlockResponse(
+      {data: res.value(), executionPayloadBlinded: true, executionPayloadSource, version},
+      debugLogCtx,
+      builderSelection
+    );
   };
 }
 
@@ -311,26 +310,26 @@ function parseProduceBlockResponse(
       executionPayloadSource,
       debugLogCtx,
     } as FullOrBlindedBlockWithContents & DebugLogCtx;
-  } else {
-    const data = response.data;
-    if (isBlockContents(data)) {
-      return {
-        block: data.block,
-        contents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
-        version: response.version,
-        executionPayloadBlinded: false,
-        executionPayloadSource,
-        debugLogCtx,
-      } as FullOrBlindedBlockWithContents & DebugLogCtx;
-    } else {
-      return {
-        block: response.data,
-        contents: null,
-        version: response.version,
-        executionPayloadBlinded: false,
-        executionPayloadSource,
-        debugLogCtx,
-      } as FullOrBlindedBlockWithContents & DebugLogCtx;
-    }
   }
+
+  const data = response.data;
+  if (isBlockContents(data)) {
+    return {
+      block: data.block,
+      contents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
+      version: response.version,
+      executionPayloadBlinded: false,
+      executionPayloadSource,
+      debugLogCtx,
+    } as FullOrBlindedBlockWithContents & DebugLogCtx;
+  }
+
+  return {
+    block: response.data,
+    contents: null,
+    version: response.version,
+    executionPayloadBlinded: false,
+    executionPayloadSource,
+    debugLogCtx,
+  } as FullOrBlindedBlockWithContents & DebugLogCtx;
 }

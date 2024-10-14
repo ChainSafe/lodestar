@@ -34,7 +34,8 @@ export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): nu
 export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Buffer {
   if (endianness === "le") {
     return toBufferLE(value, length);
-  } else if (endianness === "be") {
+  }
+  if (endianness === "be") {
     return toBufferBE(value, length);
   }
   throw new Error("endianness must be either 'le' or 'be'");
@@ -43,7 +44,8 @@ export function bigIntToBytes(value: bigint, length: number, endianness: Endiann
 export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"): bigint {
   if (endianness === "le") {
     return toBigIntLE(value as Buffer);
-  } else if (endianness === "be") {
+  }
+  if (endianness === "be") {
     return toBigIntBE(value as Buffer);
   }
   throw new Error("endianness must be either 'le' or 'be'");

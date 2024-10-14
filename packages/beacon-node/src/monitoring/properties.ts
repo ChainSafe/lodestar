@@ -140,11 +140,11 @@ export class MetricProperty<T extends RecordValue> implements ClientStatsPropert
         case JsonType.Boolean:
           if (this.definition.rangeValue != null) {
             return value === this.definition.rangeValue;
-          } else if (this.definition.threshold != null) {
-            return value >= this.definition.threshold;
-          } else {
-            return value > 0;
           }
+          if (this.definition.threshold != null) {
+            return value >= this.definition.threshold;
+          }
+          return value > 0;
       }
     }
     return value;

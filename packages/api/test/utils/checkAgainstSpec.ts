@@ -93,13 +93,13 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
         }
       });
 
-      it(`${operationId}_route`, function () {
+      it(`${operationId}_route`, () => {
         expect(routeDef.method.toLowerCase()).toBe(routeSpec.method.toLowerCase());
         expect(routeDef.url).toBe(routeSpec.url);
       });
 
       if (requestSchema != null) {
-        it(`${operationId}_request`, function () {
+        it(`${operationId}_request`, () => {
           const reqJson = isRequestWithoutBody(routeDef)
             ? routeDef.req.writeReq(testData.args)
             : (routeDef.req as RequestWithBodyCodec<Es[string]>).writeReqJson(testData.args);
@@ -135,7 +135,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
       }
 
       if (responseOkSchema) {
-        it(`${operationId}_response`, function () {
+        it(`${operationId}_response`, () => {
           const data = routeDef.resp.data.toJson(testData.res?.data, testData.res?.meta);
           const metaJson = routeDef.resp.meta.toJson(testData.res?.meta);
           const headers = parseHeaders(routeDef.resp.meta.toHeadersObject(testData.res?.meta));
@@ -218,7 +218,9 @@ type StringifiedProperty = string | StringifiedProperty[];
 function stringifyProperty(value: unknown): StringifiedProperty {
   if (typeof value === "number") {
     return value.toString(10);
-  } else if (Array.isArray(value)) {
+  }
+
+  if (Array.isArray(value)) {
     return value.map(stringifyProperty);
   }
   return String(value);

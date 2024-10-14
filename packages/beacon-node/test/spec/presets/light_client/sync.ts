@@ -128,7 +128,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
             }
 
             const headerSlot = Number(step.process_update.checks.optimistic_header.slot);
-            const update = config.getLightClientForkTypes(headerSlot)["LightClientUpdate"].deserialize(updateBytes);
+            const update = config.getLightClientForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
 
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 

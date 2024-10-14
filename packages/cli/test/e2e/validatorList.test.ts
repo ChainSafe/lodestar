@@ -9,7 +9,7 @@ import {runCliCommand} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {getLodestarCli} from "../../src/cli.js";
 
-describe("cmds / validator", function () {
+describe("cmds / validator", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const lodestar = getLodestarCli();
@@ -54,7 +54,7 @@ describe("cmds / validator", function () {
     expect(console.log).toHaveBeenCalledWith(`Imported keystore ${pkHex} ${keystoreFilepath}`);
   });
 
-  it("should list validators", async function () {
+  it("should list validators", async () => {
     fs.mkdirSync(path.join(dataDir, "keystores"), {recursive: true});
     fs.mkdirSync(path.join(dataDir, "secrets"), {recursive: true});
 

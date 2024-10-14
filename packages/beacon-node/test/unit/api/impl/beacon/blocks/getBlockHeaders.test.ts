@@ -7,12 +7,12 @@ import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 
-describe("api - beacon - getBlockHeaders", function () {
+describe("api - beacon - getBlockHeaders", () => {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconBlockApi>;
   const parentRoot = toHexString(Buffer.alloc(32, 1));
 
-  beforeEach(function () {
+  beforeEach(() => {
     modules = getApiTestModules();
     api = getBeaconBlockApi(modules);
 
@@ -24,7 +24,7 @@ describe("api - beacon - getBlockHeaders", function () {
     vi.clearAllMocks();
   });
 
-  it.skip("no filters - assume head slot", async function () {
+  it.skip("no filters - assume head slot", async () => {
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 1}));
     when(modules.chain.getCanonicalBlockAtSlot)
       .calledWith(1)
@@ -55,13 +55,13 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(modules.db.block.get).toHaveBeenCalledTimes(1);
   });
 
-  it("future slot", async function () {
+  it("future slot", async () => {
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 1}));
     const {data: blockHeaders} = await api.getBlockHeaders({slot: 2});
     expect(blockHeaders.length).toBe(0);
   });
 
-  it("finalized slot", async function () {
+  it("finalized slot", async () => {
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 2}));
     when(modules.chain.getCanonicalBlockAtSlot)
       .calledWith(0)
@@ -72,14 +72,14 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(blockHeaders[0].canonical).toBe(true);
   });
 
-  it("skip slot", async function () {
+  it("skip slot", async () => {
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 2}));
     when(modules.chain.getCanonicalBlockAtSlot).calledWith(0).thenResolve(null);
     const {data: blockHeaders} = await api.getBlockHeaders({slot: 0});
     expect(blockHeaders.length).toBe(0);
   });
 
-  it.skip("parent root filter - both finalized and non finalized results", async function () {
+  it.skip("parent root filter - both finalized and non finalized results", async () => {
     modules.db.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([
       generateProtoBlock({slot: 2}),
@@ -99,7 +99,7 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(blockHeaders.filter((b) => b.canonical).length).toBe(2);
   });
 
-  it("parent root - no finalized block", async function () {
+  it("parent root - no finalized block", async () => {
     modules.db.blockArchive.getByParentRoot.mockResolvedValue(null);
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([generateProtoBlock({slot: 1})]);
     when(modules.forkChoice.getCanonicalBlockAtSlot).calledWith(1).thenReturn(generateProtoBlock());
@@ -109,14 +109,14 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(blockHeaders.length).toBe(1);
   });
 
-  it("parent root - no non finalized blocks", async function () {
+  it("parent root - no non finalized blocks", async () => {
     modules.db.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([]);
     const {data: blockHeaders} = await api.getBlockHeaders({parentRoot});
     expect(blockHeaders.length).toBe(1);
   });
 
-  it("parent root + slot filter", async function () {
+  it("parent root + slot filter", async () => {
     modules.db.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([
       generateProtoBlock({slot: 2}),

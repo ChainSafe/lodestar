@@ -12,7 +12,7 @@ import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} fr
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
-describe("web3signer signature test", function () {
+describe("web3signer signature test", () => {
   vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
 
   const altairSlot = 2375711;
@@ -82,7 +82,7 @@ describe("web3signer signature test", function () {
     });
   }
 
-  it("signRandao", async function () {
+  it("signRandao", async () => {
     await assertSameSignature("signRandao", pubkeyBytes, epoch);
   });
 

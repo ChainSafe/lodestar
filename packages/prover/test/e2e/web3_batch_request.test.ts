@@ -5,7 +5,7 @@ import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {rpcUrl, beaconUrl, config, waitForCapellaFork, minCapellaTimeMs} from "../utils/e2e_env.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 
-describe("web3_batch_requests", function () {
+describe("web3_batch_requests", () => {
   vi.setConfig({hookTimeout: minCapellaTimeMs});
 
   let web3: Web3;

@@ -14,7 +14,7 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   "BLOB_SIDECAR_SUBNET_COUNT",
 ]);
 
-describe("api / impl / config", function () {
+describe("api / impl / config", () => {
   it("Ensure all constants are exposed", async () => {
     const constantNames = await downloadRemoteConstants(ethereumConsensusSpecsTests.specVersion);
 

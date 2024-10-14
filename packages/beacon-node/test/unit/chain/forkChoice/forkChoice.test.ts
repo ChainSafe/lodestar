@@ -20,7 +20,7 @@ import {generateValidators} from "../../../utils/validator.js";
 // We mock this package globally
 vi.unmock("@lodestar/fork-choice");
 
-describe("LodestarForkChoice", function () {
+describe("LodestarForkChoice", () => {
   let forkChoice: ForkChoice;
   const anchorState = createCachedBeaconStateTest(
     generateState(
@@ -71,7 +71,7 @@ describe("LodestarForkChoice", function () {
     );
   });
 
-  describe("forkchoice", function () {
+  describe("forkchoice", () => {
     /**
      * slot 32(checkpoint) - orphaned (36)
      *                     \

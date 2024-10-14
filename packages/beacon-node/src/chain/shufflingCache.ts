@@ -130,10 +130,9 @@ export class ShufflingCache implements IShufflingCache {
     if (isShufflingCacheItem(cacheItem)) {
       this.metrics?.shufflingCache.hit.inc();
       return cacheItem.shuffling;
-    } else {
-      this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
-      return cacheItem.promise;
     }
+    this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
+    return cacheItem.promise;
   }
 
   /**

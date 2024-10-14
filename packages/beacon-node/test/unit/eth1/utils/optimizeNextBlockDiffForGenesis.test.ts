@@ -2,7 +2,7 @@ import {describe, it, expect} from "vitest";
 import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
 import {Eth1Block} from "../../../../src/eth1/interface.js";
 
-describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
+describe("eth1 / utils / optimizeNextBlockDiffForGenesis", () => {
   it("should return optimized block diff to find genesis time", () => {
     const params = {
       MIN_GENESIS_TIME: 1578009600,
@@ -29,9 +29,8 @@ describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
 
       if (lastFetchedBlock.timestamp > params.MIN_GENESIS_TIME - params.GENESIS_DELAY) {
         break;
-      } else {
-        diffRecord.push({number: lastFetchedBlock.blockNumber, blockDiff});
       }
+      diffRecord.push({number: lastFetchedBlock.blockNumber, blockDiff});
     }
 
     // Make sure the returned diffs converge to genesis time fast

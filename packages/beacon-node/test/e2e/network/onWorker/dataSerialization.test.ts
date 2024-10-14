@@ -30,7 +30,7 @@ import {CommitteeSubscription} from "../../../../src/network/subnets/interface.j
 import {EchoWorker, getEchoWorker} from "./workerEchoHandler.js";
 
 // TODO: Need to find the way to load the echoWorker in the test environment
-describe.skip("data serialization through worker boundary", function () {
+describe.skip("data serialization through worker boundary", () => {
   let echoWorker: EchoWorker;
 
   beforeAll(async () => {

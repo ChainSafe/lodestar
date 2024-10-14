@@ -10,7 +10,7 @@ describe("validator / signers / importKeystoreDefinitionsFromExternalDir", () =>
     if (tmpDir) fs.rmSync(tmpDir, {recursive: true});
   });
 
-  it("should filter out deposit data files", function () {
+  it("should filter out deposit data files", () => {
     tmpDir = fs.mkdtempSync("cli-keystores-import-test");
 
     // Populate dir

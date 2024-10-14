@@ -1,7 +1,7 @@
 import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
 import {shouldDeleteLogFile} from "../../../src/util/logger.js";
 
-describe("shouldDeleteLogFile", function () {
+describe("shouldDeleteLogFile", () => {
   const prefix = "beacon";
   const extension = "log";
 

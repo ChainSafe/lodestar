@@ -41,9 +41,8 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (_fork, testNam
         const {message} = e as Error;
         if (message.includes("BLST_ERROR") || message === "EMPTY_AGGREGATE_ARRAY" || message === "ZERO_SECRET_KEY") {
           return null;
-        } else {
-          throw e;
         }
+        throw e;
       }
     },
     options: {

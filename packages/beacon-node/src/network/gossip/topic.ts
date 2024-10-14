@@ -137,7 +137,7 @@ export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8A
 
 // Parsing
 
-const gossipTopicRegex = new RegExp("^/eth2/(\\w+)/(\\w+)/(\\w+)");
+const gossipTopicRegex = /^\/eth2\/(\w+)\/(\w+)\/(\w+)/;
 
 /**
  * Parse a `GossipTopic` object from its stringified form.

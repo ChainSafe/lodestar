@@ -2,7 +2,7 @@ import {describe, it, expect} from "vitest";
 import {ForkName, isForkExecution} from "@lodestar/params";
 import {ssz} from "../../src/index.js";
 
-describe("blinded data structures", function () {
+describe("blinded data structures", () => {
   it("should have the same number of fields as non-blinded", () => {
     const blindedTypes = [
       {a: "BlindedBeaconBlockBody" as const, b: "BeaconBlockBody" as const},

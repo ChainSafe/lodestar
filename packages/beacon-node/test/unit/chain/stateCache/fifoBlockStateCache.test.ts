@@ -5,7 +5,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 
-describe("FIFOBlockStateCache", function () {
+describe("FIFOBlockStateCache", () => {
   let cache: FIFOBlockStateCache;
   const shuffling: EpochShuffling = {
     epoch: 0,
@@ -27,7 +27,7 @@ describe("FIFOBlockStateCache", function () {
   const key3 = toHexString(state3.hashTreeRoot());
   state3.epochCtx.currentShuffling = {...shuffling, epoch: 2};
 
-  beforeEach(function () {
+  beforeEach(() => {
     // max 2 items
     cache = new FIFOBlockStateCache({maxBlockStates: 2}, {});
     cache.add(state1);

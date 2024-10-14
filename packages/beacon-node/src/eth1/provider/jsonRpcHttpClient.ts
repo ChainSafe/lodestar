@@ -268,7 +268,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         };
 
         const token = encodeJwtToken(jwtClaim, this.jwtSecret);
-        headers["Authorization"] = `Bearer ${token}`;
+        headers.Authorization = `Bearer ${token}`;
       }
 
       const res = await fetch(url, {
@@ -296,12 +296,10 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         // controller will abort on both parent signal abort + timeout of this specific request
         if (this.opts?.signal?.aborted) {
           throw new ErrorAborted("request");
-        } else {
-          throw new TimeoutError("request");
         }
-      } else {
-        throw e;
+        throw new TimeoutError("request");
       }
+      throw e;
     } finally {
       timer?.();
       this.metrics?.activeRequests.dec({routeId}, 1);
@@ -315,11 +313,11 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 function parseRpcResponse<R, P>(res: RpcResponse<R>, payload: RpcPayload<P>): R {
   if (res.result !== undefined) {
     return res.result;
-  } else if (res.error !== undefined) {
-    throw new ErrorJsonRpcResponse(res, payload.method);
-  } else {
-    throw Error(`Invalid JSON RPC response, no result or error property: ${jsonSerializeTry(res)}`);
   }
+  if (res.error !== undefined) {
+    throw new ErrorJsonRpcResponse(res, payload.method);
+  }
+  throw Error(`Invalid JSON RPC response, no result or error property: ${jsonSerializeTry(res)}`);
 }
 
 /**

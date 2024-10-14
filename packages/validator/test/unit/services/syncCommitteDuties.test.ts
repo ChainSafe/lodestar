@@ -20,7 +20,7 @@ import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
-describe("SyncCommitteeDutiesService", function () {
+describe("SyncCommitteeDutiesService", () => {
   const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
@@ -67,7 +67,7 @@ describe("SyncCommitteeDutiesService", function () {
     controller.abort();
   });
 
-  it("Should fetch indexes and duties", async function () {
+  it("Should fetch indexes and duties", async () => {
     // Reply with some duties
     const slot = 1;
     const duty: routes.validator.SyncDuty = {
@@ -127,7 +127,7 @@ describe("SyncCommitteeDutiesService", function () {
   /**
    * Reproduce https://github.com/ChainSafe/lodestar/issues/3572
    */
-  it("should remove redundant duties", async function () {
+  it("should remove redundant duties", async () => {
     // Reply with some duties
     const duty: routes.validator.SyncDuty = {
       pubkey: pubkeys[0],
@@ -195,7 +195,7 @@ describe("SyncCommitteeDutiesService", function () {
     } as typeof dutiesByIndexByPeriodObj);
   });
 
-  it("Should remove signer from sync committee duties", async function () {
+  it("Should remove signer from sync committee duties", async () => {
     // Reply with some duties
     const duty1: routes.validator.SyncDuty = {
       pubkey: pubkeys[0],
@@ -264,7 +264,7 @@ describe("SyncCommitteeDutiesService", function () {
     } as typeof dutiesByIndexByPeriodObjAfterRemoval);
   });
 
-  it("Should fetch duties when node is resynced", async function () {
+  it("Should fetch duties when node is resynced", async () => {
     // Node is syncing
     api.node.getSyncingStatus.mockResolvedValue(
       mockApiResponse({data: {headSlot: 0, syncDistance: 1, isSyncing: true, isOptimistic: false, elOffline: false}})

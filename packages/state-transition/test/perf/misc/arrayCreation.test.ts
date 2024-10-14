@@ -1,4 +1,4 @@
-describe.skip("array creation", function () {
+describe.skip("array creation", () => {
   const testCases: {id: string; fn: (n: number) => void}[] = [
     {
       id: "Array.from(() => 0)",

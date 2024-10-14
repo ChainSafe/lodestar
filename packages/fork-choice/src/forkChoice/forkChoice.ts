@@ -1248,7 +1248,9 @@ export class ForkChoice implements IForkChoice {
           currentEpoch: epochNow,
         },
       });
-    } else if (!forceImport && targetEpoch + 1 < epochNow) {
+    }
+
+    if (!forceImport && targetEpoch + 1 < epochNow) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
@@ -1533,7 +1535,9 @@ export function assertValidTerminalPowBlock(
       throw Error(
         `Invalid terminal POW block: total difficulty not reached expected >= ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlock.totalDifficulty}`
       );
-    } else if (!isParentTotalDifficultyValid) {
+    }
+
+    if (!isParentTotalDifficultyValid) {
       throw Error(
         `Invalid terminal POW block parent: expected < ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlockParent.totalDifficulty}`
       );

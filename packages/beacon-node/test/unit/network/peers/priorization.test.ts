@@ -265,7 +265,7 @@ describe("network / peers / priorization", async () => {
   }
 });
 
-describe("sortPeersToPrune", async function () {
+describe("sortPeersToPrune", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
     const pk = await generateKeyPair("secp256k1");

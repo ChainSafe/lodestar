@@ -16,7 +16,7 @@ describe("C-KZG", () => {
     }
   });
 
-  beforeAll(async function () {
+  beforeAll(async () => {
     await initCKZG();
     loadEthereumTrustedSetup();
   });
@@ -63,14 +63,14 @@ describe("C-KZG", () => {
     // Full validation
     validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
 
-    blobSidecars.forEach(async (blobSidecar) => {
+    for (const blobSidecar of blobSidecars) {
       try {
         await validateGossipBlobSidecar(chain, blobSidecar, blobSidecar.index);
       } catch (_e) {
         // We expect some error from here
         // console.log(error);
       }
-    });
+    }
   });
 });
 

@@ -91,13 +91,13 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
 
     if (committeeIndices.length === 0) {
       throw Error("Attestation should have at least one committee bit set");
-    } else {
-      const lastCommitteeIndex = committeeIndices[committeeIndices.length - 1];
-      if (lastCommitteeIndex >= committeeCount) {
-        throw new Error(
-          `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
-        );
-      }
+    }
+
+    const lastCommitteeIndex = committeeIndices[committeeIndices.length - 1];
+    if (lastCommitteeIndex >= committeeCount) {
+      throw new Error(
+        `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
+      );
     }
 
     // Get total number of attestation participant of every committee specified
@@ -133,9 +133,8 @@ export function isTimelyTarget(fork: ForkSeq, inclusionDistance: Slot): boolean 
   // post deneb attestation is valid till end of next epoch for target
   if (fork >= ForkSeq.deneb) {
     return true;
-  } else {
-    return inclusionDistance <= SLOTS_PER_EPOCH;
   }
+  return inclusionDistance <= SLOTS_PER_EPOCH;
 }
 
 export function checkpointToStr(checkpoint: phase0.Checkpoint): string {

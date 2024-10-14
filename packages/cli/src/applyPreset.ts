@@ -90,6 +90,3 @@ function valueOfArg(argName: string): string | null {
 
   return null;
 }
-
-// Add empty export to make this a module
-export {};

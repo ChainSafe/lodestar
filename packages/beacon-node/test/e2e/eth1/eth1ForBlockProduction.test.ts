@@ -25,7 +25,7 @@ const pyrmontDepositsDataRoot = [
 ];
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-describe.skip("eth1 / Eth1Provider", function () {
+describe.skip("eth1 / Eth1Provider", () => {
   const controller = new AbortController();
 
   const config = getTestnetConfig();
@@ -48,7 +48,7 @@ describe.skip("eth1 / Eth1Provider", function () {
     await LevelDbController.destroy(dbLocation);
   });
 
-  it("Should fetch real Pyrmont eth1 data for block proposing", async function () {
+  it("Should fetch real Pyrmont eth1 data for block proposing", async () => {
     const eth1Options: Eth1Options = {
       enabled: true,
       providerUrls: [getGoerliRpcUrl()],

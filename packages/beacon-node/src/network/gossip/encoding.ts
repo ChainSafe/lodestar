@@ -25,9 +25,8 @@ const sharedMsgIdBuf = Buffer.alloc(20);
 export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
     return xxhash.h64Raw(rpcMsg.data, h64Seed).toString(16);
-  } else {
-    return "0000000000000000";
   }
+  return "0000000000000000";
 }
 
 export function msgIdToStrFn(msgId: Uint8Array): string {

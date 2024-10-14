@@ -71,13 +71,13 @@ export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean
       // TODO: Performance
       ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
     );
-  } else {
-    return !ssz.capella.ExecutionPayloadHeader.equals(
-      state.latestExecutionPayloadHeader,
-      // TODO: Performance
-      ssz.capella.ExecutionPayloadHeader.defaultValue()
-    );
   }
+
+  return !ssz.capella.ExecutionPayloadHeader.equals(
+    state.latestExecutionPayloadHeader,
+    // TODO: Performance
+    ssz.capella.ExecutionPayloadHeader.defaultValue()
+  );
 }
 
 /** Type guard for bellatrix.BeaconState */
@@ -112,11 +112,13 @@ export function getFullOrBlindedPayloadFromBody(
 ): ExecutionPayload | ExecutionPayloadHeader {
   if (isBlindedBeaconBlockBody(body)) {
     return body.executionPayloadHeader;
-  } else if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
-    return (body as bellatrix.BeaconBlockBody).executionPayload;
-  } else {
-    throw Error("Not full or blinded beacon block");
   }
+
+  if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
+    return (body as bellatrix.BeaconBlockBody).executionPayload;
+  }
+
+  throw Error("Not full or blinded beacon block");
 }
 
 export function isCapellaPayload(

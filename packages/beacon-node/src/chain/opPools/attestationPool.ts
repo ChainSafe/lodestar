@@ -145,11 +145,10 @@ export class AttestationPool {
     if (aggregate) {
       // Aggregate mutating
       return aggregateAttestationInto(aggregate, attestation);
-    } else {
-      // Create new aggregate
-      aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation));
-      return InsertOutcome.NewData;
     }
+    // Create new aggregate
+    aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation));
+    return InsertOutcome.NewData;
   }
 
   /**

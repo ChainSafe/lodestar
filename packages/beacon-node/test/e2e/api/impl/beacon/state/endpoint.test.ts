@@ -8,7 +8,7 @@ import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 
-describe("beacon state api", function () {
+describe("beacon state api", () => {
   const restPort = 9596;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
   const validatorCount = 512;

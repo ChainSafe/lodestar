@@ -15,7 +15,7 @@ import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
 
-describe("validation", function () {
+describe("validation", () => {
   // In browser test this process is taking more time than default 2000ms
   // specially on the CI
   vi.setConfig({testTimeout: 15000});
@@ -26,7 +26,7 @@ describe("validation", function () {
   let update: altair.LightClientUpdate;
   let snapshot: LightClientSnapshotFast;
 
-  beforeAll(function () {
+  beforeAll(() => {
     // Update slot must > snapshot slot
     // attestedHeaderSlot must == updateHeaderSlot + 1
     const snapshotHeaderSlot = 1;

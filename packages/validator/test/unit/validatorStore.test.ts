@@ -11,7 +11,7 @@ import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
 import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";
 
-describe("ValidatorStore", function () {
+describe("ValidatorStore", () => {
   const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
@@ -48,7 +48,7 @@ describe("ValidatorStore", function () {
     vi.resetAllMocks();
   });
 
-  it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async function () {
+  it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async () => {
     //pubkeys[0] values
     expect(validatorStore.getGraffiti(toHexString(pubkeys[0]))).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].graffiti

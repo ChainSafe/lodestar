@@ -40,17 +40,15 @@ describe("getShufflingForAttestationVerification", () => {
     forkchoiceStub.getDependentRoot.mockImplementationOnce((block, epochDiff) => {
       if (block === attHeadBlock && epochDiff === EpochDifference.previous) {
         return previousDependentRoot;
-      } else {
-        throw new Error("Unexpected input");
       }
+      throw new Error("Unexpected input");
     });
     const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
     shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === previousDependentRoot) {
         return Promise.resolve(expectedShuffling);
-      } else {
-        return Promise.resolve(null);
       }
+      return Promise.resolve(null);
     });
     const resultShuffling = await getShufflingForAttestationVerification(
       chain,
@@ -72,17 +70,15 @@ describe("getShufflingForAttestationVerification", () => {
     forkchoiceStub.getDependentRoot.mockImplementationOnce((block, epochDiff) => {
       if (block === attHeadBlock && epochDiff === EpochDifference.current) {
         return currentDependentRoot;
-      } else {
-        throw new Error("Unexpected input");
       }
+      throw new Error("Unexpected input");
     });
     const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
     shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === currentDependentRoot) {
         return Promise.resolve(expectedShuffling);
-      } else {
-        return Promise.resolve(null);
       }
+      return Promise.resolve(null);
     });
     const resultShuffling = await getShufflingForAttestationVerification(
       chain,
@@ -107,12 +103,10 @@ describe("getShufflingForAttestationVerification", () => {
         if (callCount === 0) {
           callCount++;
           return Promise.resolve(null);
-        } else {
-          return Promise.resolve(expectedShuffling);
         }
-      } else {
-        return Promise.resolve(null);
+        return Promise.resolve(expectedShuffling);
       }
+      return Promise.resolve(null);
     });
     chain.regenStateForAttestationVerification.mockImplementationOnce(() => Promise.resolve(expectedShuffling));
 

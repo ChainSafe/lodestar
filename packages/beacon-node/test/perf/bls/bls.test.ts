@@ -11,7 +11,7 @@ import {
 } from "@chainsafe/blst";
 import {linspace} from "../../../src/util/numpy.js";
 
-describe("BLS ops", function () {
+describe("BLS ops", () => {
   type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
   // signature needs to be in Uint8Array to match real situation
   type BlsSet = {publicKey: PublicKey; message: Uint8Array; signature: Uint8Array};

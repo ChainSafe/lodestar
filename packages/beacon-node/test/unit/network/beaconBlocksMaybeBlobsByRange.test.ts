@@ -10,7 +10,7 @@ import {INetwork} from "../../../src/network/interface.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
-  beforeAll(async function () {
+  beforeAll(async () => {
     await initCKZG();
     loadEthereumTrustedSetup();
   });

@@ -32,7 +32,7 @@ export const attestationsCountAssertion: Assertion<"attestationsCount", number, 
 
   async assert({clock, store, epoch, node, dependantStores}) {
     const errors: AssertionResult[] = [];
-    const inclusionDelayStore = dependantStores["inclusionDelay"];
+    const inclusionDelayStore = dependantStores.inclusionDelay;
 
     const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
     const endSlot = clock.getLastSlotOfEpoch(epoch);

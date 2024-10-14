@@ -68,11 +68,11 @@ export const EmptyResponseCodec: ResponseCodec<EmptyResponseEndpoint> = {
 export function ArrayOf<T>(elementType: Type<T>, limit = Infinity): ArrayType<Type<T>, unknown, unknown> {
   if (isCompositeType(elementType)) {
     return new ListCompositeType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  } else if (isBasicType(elementType)) {
-    return new ListBasicType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  } else {
-    throw Error(`Unknown type ${elementType.typeName}`);
   }
+  if (isBasicType(elementType)) {
+    return new ListBasicType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
+  }
+  throw Error(`Unknown type ${elementType.typeName}`);
 }
 
 export function WithMeta<T, M extends {version: ForkName}>(getType: (m: M) => Type<T>): ResponseDataCodec<T, M> {

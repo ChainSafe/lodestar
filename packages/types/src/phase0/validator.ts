@@ -1,6 +1,7 @@
 import {ByteViews, ContainerNodeStructType, ValueOfFields} from "@chainsafe/ssz";
 import * as primitiveSsz from "../primitive/sszTypes.js";
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Boolean` name to be imported
 const {Boolean, Bytes32, UintNum64, BLSPubkey, EpochInf} = primitiveSsz;
 
 // this is to work with uint32, see https://github.com/ChainSafe/ssz/blob/ssz-v0.15.1/packages/ssz/src/type/uint.ts

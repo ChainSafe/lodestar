@@ -49,7 +49,7 @@ describe("isActiveValidator", () => {
 describe("isSlashableValidator", () => {
   let validator: phase0.Validator;
 
-  beforeEach(function () {
+  beforeEach(() => {
     validator = generateValidator();
   });
 
