@@ -24,10 +24,6 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "complexity": {
-        // We need couple of empty exports to make those files as esm modules
-        "noUselessEmptyExport": "off"
-      },
       "correctness": {
         "noUnusedVariables": "error",
         "useImportExtensions": {
