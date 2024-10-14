@@ -225,7 +225,7 @@ export class Eth1DepositDataTracker {
 
     // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
     // fetch and track any deposit data yet
-    if (remoteFollowBlock < this.eth1Provider.deployBlock ?? 0) return true;
+    if (remoteFollowBlock < (this.eth1Provider.deployBlock ?? 0)) return true;
 
     const hasCaughtUpDeposits = await this.updateDepositCache(remoteFollowBlock);
     const hasCaughtUpBlocks = await this.updateBlockCache(remoteFollowBlock);
