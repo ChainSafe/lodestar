@@ -48,6 +48,10 @@
         "useArrayLiterals": "error",
         "noUndeclaredVariables": "error"
       },
+      "performance": {
+        // This rule should be enabled but with considerations and careful review
+        "noDelete": "off"
+      },
       "style": {
         // The code usage looks suspicious so it should be enabled in a separate PR
         "noCommaOperator": "off",

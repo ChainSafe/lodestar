@@ -30,7 +30,6 @@ describe("verified_requests / eth_getTransactionCount", () => {
 
       it("should return the json-rpc response with error for an invalid account", async () => {
         const testCase = cloneTestFixture(t);
-        // biome-ignore lint/performance/noDelete: Can not delete index with undefined assignment
         delete testCase.dependentRequests[0].response.result.accountProof[0];
 
         const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);

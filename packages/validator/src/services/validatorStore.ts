@@ -247,7 +247,7 @@ export class ValidatorStore {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
     // This should directly modify data in the map
-    validatorData["feeRecipient"] = undefined;
+    delete validatorData["feeRecipient"];
   }
 
   getGraffiti(pubkeyHex: PubkeyHex): string | undefined {
@@ -267,7 +267,7 @@ export class ValidatorStore {
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
-    validatorData["graffiti"] = undefined;
+    delete validatorData["graffiti"];
   }
 
   getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
@@ -327,7 +327,6 @@ export class ValidatorStore {
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
-    // biome-ignore lint/performance/noDelete: Can not delete property with undefined assignment
     delete validatorData.builder?.gasLimit;
   }
 
@@ -356,7 +355,6 @@ export class ValidatorStore {
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
-    // biome-ignore lint/performance/noDelete: Can not delete property with undefined assignment>
     delete validatorData.builder?.boostFactor;
   }
 

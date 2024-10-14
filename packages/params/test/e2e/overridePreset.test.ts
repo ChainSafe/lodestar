@@ -21,7 +21,7 @@ describe("Override preset", function () {
 
   it("Should correctly override preset", async () => {
     // `LODESTAR_PRESET` must not be set to properly test preset override
-    if (process.env.LODESTAR_PRESET) process.env.LODESTAR_PRESET = undefined;
+    if (process.env.LODESTAR_PRESET) delete process.env.LODESTAR_PRESET;
 
     await exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.ok)}`);
   });

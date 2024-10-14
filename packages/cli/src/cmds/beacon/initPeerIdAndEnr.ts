@@ -125,7 +125,7 @@ export function overwriteEnrWithCliArgs(
       enr.seq = preSeq + BigInt(1);
     }
     // invalidate cached signature
-    enr["_signature"] = undefined;
+    delete enr["_signature"];
   }
 }
 
