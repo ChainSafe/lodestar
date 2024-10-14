@@ -4,11 +4,16 @@
     "emitDeclarationOnly": false,
     "incremental": false,
     // Required to run benchmark command from root directory
-    "typeRoots": ["node_modules/@types", "./types"],
+    "typeRoots": [
+      "node_modules/@types",
+      "./types",
+      "${configDir}/node_modules/@types",
+      "${configDir}/types"
+    ],
+    "noCheck": false,
     "noEmit": true,
     // To be used in the test fixtures
     "resolveJsonModule": true,
-
     // We want to speed up the CI run for all tests, which require us to use the
     // `transpileOnly` mode for the `ts-node`. This change requires to treat types for each module 
     // independently, which is done by setting the `isolatedModules` flag to `true`.

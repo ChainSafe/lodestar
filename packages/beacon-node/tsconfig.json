@@ -1,7 +1,4 @@
 {
   "extends": "../../tsconfig.json",
-  "exclude": ["../../node_modules/it-pipe"],
-  "compilerOptions": {
-    "typeRoots": ["../../node_modules/@types", "../../types"]
-  }
+  "exclude": ["../../node_modules/it-pipe"]
 }
