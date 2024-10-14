@@ -42,8 +42,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   maxYoungGenerationSizeMb: 152,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
-  // this should only be set to true if useWorker is true
-  beaconAttestationBatchValidation: true,
   // This will enable the light client server by default
   disableLightClientServer: false,
   // enable quic by default

@@ -1,7 +1,6 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
@@ -48,7 +47,7 @@ export async function archiveBlocks(
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
-    root: fromHexString(block.blockRoot),
+    root: fromHex(block.blockRoot),
   }));
 
   if (finalizedCanonicalBlockRoots.length > 0) {
@@ -68,7 +67,7 @@ export async function archiveBlocks(
   // deleteNonCanonicalBlocks
   // loop through forkchoice single time
 
-  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHexString(summary.blockRoot));
+  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
   if (nonCanonicalBlockRoots.length > 0) {
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {
@@ -144,7 +143,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
           value: blockBuffer,
           slot: block.slot,
           blockRoot: block.root,
-          // TODO: Benchmark if faster to slice Buffer or fromHexString()
+          // TODO: Benchmark if faster to slice Buffer or fromHex()
           parentRoot: getParentRootFromSignedBlock(blockBuffer),
         };
       })

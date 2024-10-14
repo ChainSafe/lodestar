@@ -136,7 +136,7 @@ export class WorkerNetworkCore implements INetworkCore {
       resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
     } as ConstructorParameters<typeof Worker>[1]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     const networkThreadApi = (await spawn<any>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout

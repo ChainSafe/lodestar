@@ -12,7 +12,7 @@ import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.j
 import {ZERO_HASH} from "../../../../src/constants/constants.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
-describe("Sync Committee Signature validation", function () {
+describe("Sync Committee Signature validation", () => {
   let chain: MockedBeaconChain;
   let clockStub: MockedBeaconChain["clock"];
   let forkchoiceStub: MockedBeaconChain["forkChoice"];
@@ -20,21 +20,20 @@ describe("Sync Committee Signature validation", function () {
   let altairForkEpochBk: Epoch;
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
   // all validators have same pubkey
   const validatorIndexInSyncCommittee = 15;
 
-  beforeAll(async function () {
+  beforeAll(async () => {
     altairForkEpochBk = config.ALTAIR_FORK_EPOCH;
     config.ALTAIR_FORK_EPOCH = altairForkEpoch;
   });
 
-  afterAll(function () {
+  afterAll(() => {
     config.ALTAIR_FORK_EPOCH = altairForkEpochBk;
   });
 
-  beforeEach(function () {
+  beforeEach(() => {
     chain = getMockedBeaconChain();
     (
       chain as {
@@ -46,11 +45,11 @@ describe("Sync Committee Signature validation", function () {
     vi.spyOn(clockStub, "isCurrentSlotGivenGossipDisparity").mockReturnValue(true);
   });
 
-  afterEach(function () {
+  afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should throw error - the signature's slot is in the past", async function () {
+  it("should throw error - the signature's slot is in the past", async () => {
     (clockStub.isCurrentSlotGivenGossipDisparity as Mock).mockReturnValue(false);
     vi.spyOn(clockStub, "currentSlot", "get").mockReturnValue(100);
 
@@ -61,7 +60,7 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  it("should throw error - messageRoot is same to prevRoot", async function () {
+  it("should throw error - messageRoot is same to prevRoot", async () => {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.mockReturnValue(headState);
@@ -72,7 +71,7 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  it("should throw error - messageRoot is different to prevRoot but not forkchoice head", async function () {
+  it("should throw error - messageRoot is different to prevRoot but not forkchoice head", async () => {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.mockReturnValue(headState);
@@ -85,7 +84,7 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  it("should throw error - the validator is not part of the current sync committee", async function () {
+  it("should throw error - the validator is not part of the current sync committee", async () => {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, 100);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.mockReturnValue(headState);
@@ -100,7 +99,7 @@ describe("Sync Committee Signature validation", function () {
    * Skip this spec check: [REJECT] The subnet_id is correct, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index)
    * because it's the same to VALIDATOR_NOT_IN_SYNC_COMMITTEE
    */
-  it.skip("should throw error - incorrect subnet", async function () {
+  it.skip("should throw error - incorrect subnet", async () => {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, 1);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.mockReturnValue(headState);
@@ -110,7 +109,7 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  it("should throw error - invalid signature", async function () {
+  it("should throw error - invalid signature", async () => {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
@@ -122,7 +121,7 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  it("should pass, no prev root", async function () {
+  it("should pass, no prev root", async () => {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const subnet = 3;
     const {slot, validatorIndex} = syncCommittee;
@@ -143,7 +142,7 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  it("should pass, there is prev root but message root is forkchoice head", async function () {
+  it("should pass, there is prev root but message root is forkchoice head", async () => {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 

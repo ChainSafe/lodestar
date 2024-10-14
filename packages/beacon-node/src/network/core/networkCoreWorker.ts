@@ -29,7 +29,6 @@ import {
 // Cloned data from instantiation
 const workerData = worker.workerData as NetworkWorkerData;
 const parentPort = worker.parentPort;
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
 if (!parentPort) throw Error("parentPort must be defined");
 

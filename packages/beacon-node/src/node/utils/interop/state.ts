@@ -20,6 +20,7 @@ export type InteropStateOpts = {
   withEth1Credentials?: boolean;
 };
 
+// TODO: (@matthewkeil) - Only used by initDevState.  Consider combining into that function
 export function getInteropState(
   config: ChainForkConfig,
   {

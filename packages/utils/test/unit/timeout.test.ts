@@ -2,7 +2,7 @@ import {describe, it, expect, afterEach} from "vitest";
 import {withTimeout} from "../../src/timeout.js";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
 
-describe("withTimeout", function () {
+describe("withTimeout", () => {
   const data = "DATA";
   const shortTimeoutMs = 10;
   const longTimeoutMs = 5000;
@@ -27,19 +27,19 @@ describe("withTimeout", function () {
     return returnValue;
   }
 
-  it("Should resolve timeout", async function () {
+  it("Should resolve timeout", async () => {
     const res = await withTimeout(() => pause(shortTimeoutMs, data), longTimeoutMs);
     expect(res).toBe(data);
   });
 
-  it("Should resolve timeout with not triggered signal", async function () {
+  it("Should resolve timeout with not triggered signal", async () => {
     const controller = new AbortController();
 
     const res = await withTimeout(() => pause(shortTimeoutMs, data), longTimeoutMs, controller.signal);
     expect(res).toBe(data);
   });
 
-  it("Should abort timeout with triggered signal", async function () {
+  it("Should abort timeout with triggered signal", async () => {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), shortTimeoutMs);
 
@@ -48,11 +48,11 @@ describe("withTimeout", function () {
     );
   });
 
-  it("Should timeout with no signal", async function () {
+  it("Should timeout with no signal", async () => {
     await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs)).rejects.toThrow(TimeoutError);
   });
 
-  it("Should timeout with not triggered signal", async function () {
+  it("Should timeout with not triggered signal", async () => {
     const controller = new AbortController();
 
     await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs, controller.signal)).rejects.toThrow(
@@ -60,7 +60,7 @@ describe("withTimeout", function () {
     );
   });
 
-  it("Should abort timeout with already aborted signal", async function () {
+  it("Should abort timeout with already aborted signal", async () => {
     const controller = new AbortController();
 
     controller.abort();

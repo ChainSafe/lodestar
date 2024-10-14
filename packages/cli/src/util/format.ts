@@ -1,5 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHex} from "@lodestar/utils";
 
 /**
  * 0x prefix a string if not prefixed already
@@ -36,8 +36,8 @@ export function parseRange(range: string): number[] {
 
   const [from, to] = range.split("..").map((n) => parseInt(n));
 
-  if (isNaN(from)) throw Error(`Invalid range from isNaN '${range}'`);
-  if (isNaN(to)) throw Error(`Invalid range to isNaN '${range}'`);
+  if (Number.isNaN(from)) throw Error(`Invalid range from isNaN '${range}'`);
+  if (Number.isNaN(to)) throw Error(`Invalid range to isNaN '${range}'`);
   if (from > to) throw Error(`Invalid range from > to '${range}'`);
 
   const arr: number[] = [];
@@ -50,7 +50,7 @@ export function parseRange(range: string): number[] {
 
 export function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
-    const pubkeyBytes = fromHexString(pubkeyHex);
+    const pubkeyBytes = fromHex(pubkeyHex);
     PublicKey.fromBytes(pubkeyBytes, true);
   }
 }

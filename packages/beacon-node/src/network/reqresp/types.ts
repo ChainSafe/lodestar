@@ -1,7 +1,20 @@
 import {Type} from "@chainsafe/ssz";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
-import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  Metadata,
+  Root,
+  SignedBeaconBlock,
+  altair,
+  deneb,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -48,10 +61,10 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
-  [ReqRespMethod.LightClientBootstrap]: altair.LightClientBootstrap;
-  [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdate;
-  [ReqRespMethod.LightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
-  [ReqRespMethod.LightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
+  [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
+  [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
+  [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
+  [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -77,16 +90,16 @@ export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>
 const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version) => {
   if (version === Version.V1) {
     return ssz.phase0.SignedBeaconBlock;
-  } else {
-    return ssz[fork].SignedBeaconBlock;
   }
+
+  return ssz[fork].SignedBeaconBlock;
 };
 
 export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
   [ReqRespMethod.Status]: () => ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
-  [ReqRespMethod.Metadata]: (_, version) => (version == Version.V1 ? ssz.phase0.Metadata : ssz.altair.Metadata),
+  [ReqRespMethod.Metadata]: (_, version) => (version === Version.V1 ? ssz.phase0.Metadata : ssz.altair.Metadata),
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
@@ -101,9 +114,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
 function onlyLightclientFork(fork: ForkName): ForkLightClient {
   if (isForkLightClient(fork)) {
     return fork;
-  } else {
-    throw Error(`Not a lightclient fork ${fork}`);
   }
+  throw Error(`Not a lightclient fork ${fork}`);
 }
 
 export type RequestTypedContainer = {

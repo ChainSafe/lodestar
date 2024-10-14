@@ -17,7 +17,7 @@ export const nodeAssertion: Assertion<"node", {health: number; keyManagerKeys: s
 
     let keyManagerKeys: string[];
     // There is an authentication issue with the lighthouse keymanager client
-    if (node.validator.client == ValidatorClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
+    if (node.validator.client === ValidatorClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
       keyManagerKeys = [];
     } else {
       const keys = (await node.validator.keyManager.listKeys()).value();
@@ -30,7 +30,7 @@ export const nodeAssertion: Assertion<"node", {health: number; keyManagerKeys: s
     const errors: AssertionResult[] = [];
 
     // There is an authentication issue with the lighthouse keymanager client
-    if (node.validator?.client == ValidatorClient.Lighthouse) return errors;
+    if (node.validator?.client === ValidatorClient.Lighthouse) return errors;
 
     const {health, keyManagerKeys} = store[slot];
 

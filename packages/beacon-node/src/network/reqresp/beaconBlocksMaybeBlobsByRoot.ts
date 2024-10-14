@@ -1,7 +1,7 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, deneb} from "@lodestar/types";
+import {phase0, deneb, SignedBeaconBlock} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
+import {fromHex} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputType,
@@ -64,9 +64,13 @@ export async function unavailableBeaconBlobsByRoot(
   }
 
   // resolve the block if thats unavailable
-  let block, blobsCache, blockBytes, resolveAvailability, cachedData;
+  let block: SignedBeaconBlock,
+    blobsCache: NullBlockInput["cachedData"]["blobsCache"],
+    blockBytes: Uint8Array | null,
+    resolveAvailability: NullBlockInput["cachedData"]["resolveAvailability"],
+    cachedData: NullBlockInput["cachedData"];
   if (unavailableBlockInput.block === null) {
-    const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHexString(unavailableBlockInput.blockRootHex)]);
+    const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHex(unavailableBlockInput.blockRootHex)]);
     block = allBlocks[0].data;
     blockBytes = allBlocks[0].bytes;
     cachedData = unavailableBlockInput.cachedData;

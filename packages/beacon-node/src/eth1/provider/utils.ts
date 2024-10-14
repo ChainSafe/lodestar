@@ -1,6 +1,5 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
-import {bytesToBigInt, bigIntToBytes} from "@lodestar/utils";
+import {bytesToBigInt, bigIntToBytes, toHex, fromHex} from "@lodestar/utils";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
@@ -32,7 +31,7 @@ export function bytesToHex(bytes: Uint8Array): string {
     return "0x" + bytes[0].toString(16);
   }
 
-  return toHexString(bytes);
+  return toHex(bytes);
 }
 
 /**
@@ -54,7 +53,7 @@ export function numToQuantity(num: number | bigint): QUANTITY {
  */
 export function quantityToNum(hex: QUANTITY, id = ""): number {
   const num = parseInt(hex, 16);
-  if (isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
+  if (Number.isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
   return num;
 }
 
@@ -100,7 +99,7 @@ export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
  * - WRONG: 004200 (must be prefixed 0x)
  */
 export function bytesToData(bytes: Uint8Array): DATA {
-  return toHexString(bytes);
+  return toHex(bytes);
 }
 
 /**
@@ -108,7 +107,7 @@ export function bytesToData(bytes: Uint8Array): DATA {
  */
 export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
   try {
-    const bytes = fromHexString(hex);
+    const bytes = fromHex(hex);
     if (fixedLength != null && bytes.length !== fixedLength) {
       throw Error(`Wrong data length ${bytes.length} expected ${fixedLength}`);
     }

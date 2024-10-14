@@ -3,9 +3,8 @@ import path from "node:path";
 import {spawn, Worker} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
-// eslint-disable-next-line
 // @ts-ignore
-// eslint-disable-next-line
+// biome-ignore lint/suspicious/noGlobalAssign: <explanation>
 self = undefined;
 import {PublicKey} from "@chainsafe/blst";
 import {Logger} from "@lodestar/utils";
@@ -314,7 +313,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.workers[0].status.code === WorkerStatusCode.initializationError &&
       this.workers.every((worker) => worker.status.code === WorkerStatusCode.initializationError)
     ) {
-      return job.reject(this.workers[0].status.error);
+      job.reject(this.workers[0].status.error);
+      return;
     }
 
     // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.

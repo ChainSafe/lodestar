@@ -17,6 +17,7 @@ import {
   BlindedBeaconBlockBody,
   BlindedBeaconBlock,
   sszTypesFor,
+  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -258,7 +259,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
-          const {executionPayload, blobsBundle} = engineRes;
+          const {executionPayload, blobsBundle, executionRequests} = engineRes;
           shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
           (blockBody as BeaconBlockBody<ForkExecution>).executionPayload = executionPayload;
@@ -297,6 +298,13 @@ export async function produceBlockBody<T extends BlockType>(
             Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
+          }
+
+          if (ForkSeq[fork] >= ForkSeq.electra) {
+            if (executionRequests === undefined) {
+              throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
+            }
+            (blockBody as electra.BeaconBlockBody).executionRequests = executionRequests;
           }
         }
       } catch (e) {
@@ -473,26 +481,26 @@ export async function getExecutionPayloadParentHash(
   if (isMergeTransitionComplete(state)) {
     // Post-merge, normal payload
     return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};
-  } else {
-    if (
-      !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
-      getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-    )
-      throw new Error(
-        `InvalidMergeTBH epoch: expected >= ${
-          chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-        }, actual: ${getCurrentEpoch(state)}`
-      );
-
-    const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
-    if (terminalPowBlockHash === null) {
-      // Pre-merge, no prepare payload call is needed
-      return {isPremerge: true};
-    } else {
-      // Signify merge via producing on top of the last PoW block
-      return {isPremerge: false, parentHash: terminalPowBlockHash};
-    }
   }
+
+  if (
+    !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
+    getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+  ) {
+    throw new Error(
+      `InvalidMergeTBH epoch: expected >= ${
+        chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+      }, actual: ${getCurrentEpoch(state)}`
+    );
+  }
+
+  const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
+  if (terminalPowBlockHash === null) {
+    // Pre-merge, no prepare payload call is needed
+    return {isPremerge: true};
+  }
+  // Signify merge via producing on top of the last PoW block
+  return {isPremerge: false, parentHash: terminalPowBlockHash};
 }
 
 export async function getPayloadAttributesForSSE(
@@ -528,9 +536,9 @@ export async function getPayloadAttributesForSSE(
       payloadAttributes,
     };
     return ssePayloadAttributes;
-  } else {
-    throw Error("The execution is still pre-merge");
   }
+
+  throw Error("The execution is still pre-merge");
 }
 
 function preparePayloadAttributes(

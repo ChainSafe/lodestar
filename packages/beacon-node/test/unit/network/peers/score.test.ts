@@ -19,19 +19,18 @@ vi.mock("../../../../src/network/peers/score/index.js", async (importActual) => 
   };
 });
 
-describe("simple block provider score tracking", function () {
+describe("simple block provider score tracking", () => {
   const peer = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
   const MIN_SCORE = -100;
   const actionName = "test-action";
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function mockStore() {
     const scoreStore = new PeerRpcScoreStore();
     const peerScores = scoreStore["scores"] as MapDef<string, RealScore>;
     return {scoreStore, peerScores};
   }
 
-  it("Should return default score, without any previous action", function () {
+  it("Should return default score, without any previous action", () => {
     const {scoreStore} = mockStore();
     const score = scoreStore.getScore(peer);
     expect(score).toBe(0);
@@ -70,7 +69,7 @@ describe("simple block provider score tracking", function () {
       expect(scoreStore.getScore(peer)).toBeGreaterThan(minScore);
     });
 
-  it("should not go below min score", function () {
+  it("should not go below min score", () => {
     const {scoreStore} = mockStore();
     scoreStore.applyAction(peer, PeerAction.Fatal, actionName);
     scoreStore.applyAction(peer, PeerAction.Fatal, actionName);
@@ -78,7 +77,7 @@ describe("simple block provider score tracking", function () {
   });
 });
 
-describe("updateGossipsubScores", function () {
+describe("updateGossipsubScores", () => {
   let peerRpcScoresStub: PeerRpcScoreStore;
 
   beforeEach(() => {

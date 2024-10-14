@@ -81,13 +81,17 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     default: true,
   },
   eth1: {
-    ...beaconNodeOptions["eth1"],
+    ...beaconNodeOptions.eth1,
     defaultDescription: undefined,
     default: false,
   },
   rest: {
-    ...beaconNodeOptions["rest"],
+    ...beaconNodeOptions.rest,
     defaultDescription: undefined,
+    default: true,
+  },
+  "rest.stacktraces": {
+    ...beaconNodeOptions["rest.stacktraces"],
     default: true,
   },
   "rest.swaggerUI": {

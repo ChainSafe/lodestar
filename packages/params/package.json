@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/params",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -50,8 +50,8 @@
     "build:watch": "yarn run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "lint": "eslint --color --ext .ts src/ test/",
-    "lint:fix": "yarn run lint --fix",
+    "lint": "biome check src/ test/",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",

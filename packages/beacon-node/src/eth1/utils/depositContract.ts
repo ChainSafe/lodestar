@@ -1,6 +1,6 @@
 import {Interface} from "@ethersproject/abi";
-import {fromHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 
 const depositEventFragment =
   "event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)";
@@ -23,15 +23,15 @@ export function parseDepositLog(log: {blockNumber: number; data: string; topics:
     blockNumber: log.blockNumber,
     index: parseHexNumLittleEndian(values.index),
     depositData: {
-      pubkey: fromHexString(values.pubkey),
-      withdrawalCredentials: fromHexString(values.withdrawal_credentials),
+      pubkey: fromHex(values.pubkey),
+      withdrawalCredentials: fromHex(values.withdrawal_credentials),
       amount: parseHexNumLittleEndian(values.amount),
-      signature: fromHexString(values.signature),
+      signature: fromHex(values.signature),
     },
   };
 }
 
 function parseHexNumLittleEndian(hex: string): number {
   // Can't use parseInt() because amount is a hex string in little endian
-  return ssz.UintNum64.deserialize(fromHexString(hex));
+  return ssz.UintNum64.deserialize(fromHex(hex));
 }

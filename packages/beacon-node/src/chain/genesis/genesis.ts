@@ -124,9 +124,9 @@ export class GenesisBuilder implements IGenesisBuilder {
           depositTree: this.depositTree,
           block,
         };
-      } else {
-        this.throttledLog(`Waiting for min genesis time ${block.timestamp} / ${this.config.MIN_GENESIS_TIME}`);
       }
+
+      this.throttledLog(`Waiting for min genesis time ${block.timestamp} / ${this.config.MIN_GENESIS_TIME}`);
     }
 
     throw Error("depositsStream stopped without a valid genesis state");
@@ -147,11 +147,11 @@ export class GenesisBuilder implements IGenesisBuilder {
       if (this.activatedValidatorCount >= this.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
         this.logger.info("Found enough genesis validators", {blockNumber});
         return blockNumber;
-      } else {
-        this.throttledLog(
-          `Found ${this.state.validators.length} / ${this.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT} validators to genesis`
-        );
       }
+
+      this.throttledLog(
+        `Found ${this.state.validators.length} / ${this.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT} validators to genesis`
+      );
     }
 
     throw Error("depositsStream stopped without a valid genesis state");

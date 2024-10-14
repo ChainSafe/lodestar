@@ -4,11 +4,10 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
 
-describe("UpgradeLightClientHeader", function () {
+describe("UpgradeLightClientHeader", () => {
   let lcHeaderByFork: Record<ForkName, LightClientHeader>;
   let testSlots: Record<ForkName, number>;
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 1,
@@ -21,14 +20,14 @@ describe("UpgradeLightClientHeader", function () {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
-  beforeEach(function () {
+  beforeEach(() => {
     lcHeaderByFork = {
       phase0: ssz.altair.LightClientHeader.defaultValue(),
       altair: ssz.altair.LightClientHeader.defaultValue(),
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
-      electra: ssz.electra.LightClientHeader.defaultValue(),
+      electra: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -46,7 +45,7 @@ describe("UpgradeLightClientHeader", function () {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];
 
-      it(`Successful upgrade ${fromFork}=>${toFork}`, function () {
+      it(`Successful upgrade ${fromFork}=>${toFork}`, () => {
         lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
         lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
 
@@ -61,7 +60,7 @@ describe("UpgradeLightClientHeader", function () {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];
 
-      it(`Throw upgrade error ${fromFork}=>${toFork}`, function () {
+      it(`Throw upgrade error ${fromFork}=>${toFork}`, () => {
         lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
         lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
 

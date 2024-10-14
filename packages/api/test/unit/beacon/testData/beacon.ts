@@ -191,6 +191,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {stateId: "head", validatorIds: [pubkeyHex, 1300], statuses: ["active_ongoing"]},
     res: {data: [validatorResponse], meta: {executionOptimistic: true, finalized: false}},
   },
+  postStateValidatorIdentities: {
+    args: {stateId: "head", validatorIds: [1300]},
+    res: {
+      data: [{index: 1300, pubkey: ssz.BLSPubkey.defaultValue(), activationEpoch: 1}],
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
   getStateValidator: {
     args: {stateId: "head", validatorId: pubkeyHex},
     res: {data: validatorResponse, meta: {executionOptimistic: true, finalized: false}},

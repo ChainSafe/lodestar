@@ -24,8 +24,7 @@ export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconC
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
       throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, (e as Error).message);
-    } else {
-      throw new ResponseError(RespStatus.SERVER_ERROR, (e as Error).message);
     }
+    throw new ResponseError(RespStatus.SERVER_ERROR, (e as Error).message);
   }
 }

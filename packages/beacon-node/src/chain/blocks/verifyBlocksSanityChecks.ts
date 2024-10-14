@@ -45,9 +45,8 @@ export function verifyBlocksSanityChecks(
     if (blockSlot === 0) {
       if (opts.ignoreIfKnown) {
         continue;
-      } else {
-        throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
       }
+      throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
     }
 
     // Not finalized slot
@@ -56,9 +55,8 @@ export function verifyBlocksSanityChecks(
     if (blockSlot <= finalizedSlot) {
       if (opts.ignoreIfFinalized) {
         continue;
-      } else {
-        throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
       }
+      throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
     }
 
     let parentBlockSlot: Slot;
@@ -71,10 +69,9 @@ export function verifyBlocksSanityChecks(
       parentBlock = chain.forkChoice.getBlockHex(parentRoot);
       if (!parentBlock) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
-      } else {
-        // Parent is known to the fork-choice
-        parentBlockSlot = parentBlock.slot;
       }
+      // Parent is known to the fork-choice
+      parentBlockSlot = parentBlock.slot;
     }
 
     // Block not in the future, also checks for infinity
@@ -89,9 +86,9 @@ export function verifyBlocksSanityChecks(
     if (chain.forkChoice.hasBlockHex(blockHash)) {
       if (opts.ignoreIfKnown) {
         continue;
-      } else {
-        throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
       }
+
+      throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
     }
 
     // Block is relevant

@@ -128,7 +128,7 @@ export class WinstonLoggerNode extends WinstonLogger implements LoggerNode {
   }
 
   static fromOpts(opts: LoggerNodeOpts, transports: winston.transport[]): WinstonLoggerNode {
-    return new WinstonLoggerNode(this.createWinstonInstance(opts, transports), opts);
+    return new WinstonLoggerNode(WinstonLoggerNode.createWinstonInstance(opts, transports), opts);
   }
 
   static fromNewTransports(opts: LoggerNodeOpts): WinstonLoggerNode {

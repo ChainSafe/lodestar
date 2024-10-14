@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/flare",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "description": "Beacon chain debugging tool",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -41,8 +41,8 @@
     "build:watch": "yarn run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" flare --help",
     "check-types": "tsc",
-    "lint": "eslint --color --ext .ts src/",
-    "lint:fix": "yarn run lint --fix",
+    "lint": "biome check src/",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"
@@ -60,12 +60,12 @@
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/blst": "^2.0.3",
-    "@lodestar/api": "^1.21.0",
-    "@lodestar/config": "^1.21.0",
-    "@lodestar/params": "^1.21.0",
-    "@lodestar/state-transition": "^1.21.0",
-    "@lodestar/types": "^1.21.0",
-    "@lodestar/utils": "^1.21.0",
+    "@lodestar/api": "^1.22.0",
+    "@lodestar/config": "^1.22.0",
+    "@lodestar/params": "^1.22.0",
+    "@lodestar/state-transition": "^1.22.0",
+    "@lodestar/types": "^1.22.0",
+    "@lodestar/utils": "^1.22.0",
     "source-map-support": "^0.5.21",
     "yargs": "^17.7.1"
   },

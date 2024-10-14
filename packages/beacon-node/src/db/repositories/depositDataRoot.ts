@@ -21,8 +21,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   }
 
   // depositDataRoots stored by depositData index
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getId(value: Root): number {
+  getId(_value: Root): number {
     throw new Error("Unable to create depositIndex from root");
   }
 
@@ -70,7 +69,9 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     // TODO: Review and fix properly
     if (index > depositRootTree.length) {
       throw Error(`Error setting depositRootTree index ${index} > length ${depositRootTree.length}`);
-    } else if (index === depositRootTree.length) {
+    }
+
+    if (index === depositRootTree.length) {
       depositRootTree.push(value);
     } else {
       depositRootTree.set(index, value);

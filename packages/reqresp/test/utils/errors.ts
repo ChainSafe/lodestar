@@ -53,9 +53,10 @@ export function expectLodestarError<T extends {code: string}>(err1: LodestarErro
 export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | unknown): unknown {
   if (err instanceof LodestarError) {
     return mapValues(err.getMetadata(), (value) => getErrorMetadata(value as any));
-  } else if (err instanceof Error) {
-    return err.message;
-  } else {
-    return err;
   }
+
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return err;
 }

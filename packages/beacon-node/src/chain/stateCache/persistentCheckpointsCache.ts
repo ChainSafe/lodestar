@@ -1,7 +1,6 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
-import {Logger, MapDef, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
@@ -54,10 +53,11 @@ type CacheItem = InMemoryCacheItem | PersistedCacheItem;
 type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array};
 
 /**
- * Before n-historical states, lodestar keeps mostly 3 states in memory with 1 finalized state
- * Since Jan 2024, lodestar stores the finalized state in disk and keeps up to 2 epochs in memory
+ * Before n-historical states, lodestar keeps all checkpoint states since finalized
+ * Since Sep 2024, lodestar stores 3 most recent checkpoint states in memory and the rest on disk. The finalized state
+ * may not be available in memory, and stay on disk instead.
  */
-export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 2;
+export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
@@ -95,7 +95,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<CacheKey, CacheItem>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<RootHex>>(() => new Set<string>());
-  private readonly metrics: Metrics["cpStateCache"] | null | undefined;
+  private readonly metrics: Metrics | null | undefined;
   private readonly logger: Logger;
   private readonly clock: IClock | null | undefined;
   private readonly signal: AbortSignal | undefined;
@@ -124,7 +124,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
-      this.metrics = metrics.cpStateCache;
+      this.metrics = metrics;
       metrics.cpStateCache.size.addCollect(() => {
         let persistCount = 0;
         let inMemoryCount = 0;
@@ -193,40 +193,29 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       return stateOrStateBytesData?.clone(opts?.dontTransferCache) ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
-    const logMeta = {persistedKey: toHexString(persistedKey)};
+    const logMeta = {persistedKey: toHex(persistedKey)};
     this.logger.debug("Reload: read state successful", logMeta);
-    this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
+    this.metrics?.cpStateCache.stateReloadSecFromSlot.observe(
+      this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0
+    );
     const seedState = this.findSeedStateToReload(cp);
-    this.metrics?.stateReloadEpochDiff.observe(Math.abs(seedState.epochCtx.epoch - cp.epoch));
+    this.metrics?.cpStateCache.stateReloadEpochDiff.observe(Math.abs(seedState.epochCtx.epoch - cp.epoch));
     this.logger.debug("Reload: found seed state", {...logMeta, seedSlot: seedState.slot});
 
     try {
       // 80% of validators serialization time comes from memory allocation, this is to avoid it
-      const sszTimer = this.metrics?.stateReloadValidatorsSerializeDuration.startTimer();
+      const sszTimer = this.metrics?.cpStateCache.stateReloadValidatorsSerializeDuration.startTimer();
       // automatically free the buffer pool after this scope
       using validatorsBytesWithKey = this.serializeStateValidators(seedState);
       let validatorsBytes = validatorsBytesWithKey?.buffer;
       if (validatorsBytes == null) {
         // fallback logic in case we can't use the buffer pool
-        this.metrics?.stateReloadValidatorsSerializeAllocCount.inc();
+        this.metrics?.cpStateCache.stateReloadValidatorsSerializeAllocCount.inc();
         validatorsBytes = seedState.validators.serialize();
       }
       sszTimer?.();
-      const timer = this.metrics?.stateReloadDuration.startTimer();
-      const newCachedState = loadCachedBeaconState(
-        seedState,
-        stateBytes,
-        {
-          shufflingGetter: (shufflingEpoch, decisionRootHex) => {
-            const shuffling = this.shufflingCache.getSync(shufflingEpoch, decisionRootHex);
-            if (shuffling == null) {
-              this.metrics?.stateReloadShufflingCacheMiss.inc();
-            }
-            return shuffling;
-          },
-        },
-        validatorsBytes
-      );
+      const timer = this.metrics?.cpStateCache.stateReloadDuration.startTimer();
+      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {}, validatorsBytes);
       newCachedState.commit();
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
       timer?.();
@@ -289,7 +278,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
 
     const persistedKey = cacheItem.value;
-    const dbReadTimer = this.metrics?.stateReloadDbReadTime.startTimer();
+    const dbReadTimer = this.metrics?.cpStateCache.stateReloadDbReadTime.startTimer();
     const stateBytes = await this.datastore.read(persistedKey);
     dbReadTimer?.();
 
@@ -303,7 +292,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * Similar to get() api without reloading from disk
    */
   get(cpOrKey: CheckpointHex | string, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
-    this.metrics?.lookups.inc();
+    this.metrics?.cpStateCache.lookups.inc();
     const cpKey = typeof cpOrKey === "string" ? cpOrKey : toCacheKey(cpOrKey);
     const cacheItem = this.cache.get(cpKey);
 
@@ -311,7 +300,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       return null;
     }
 
-    this.metrics?.hits.inc();
+    this.metrics?.cpStateCache.hits.inc();
 
     if (cpKey === this.preComputedCheckpoint) {
       this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
@@ -319,7 +308,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
     if (isInMemoryCacheItem(cacheItem)) {
       const {state} = cacheItem;
-      this.metrics?.stateClonedCount.observe(state.clonedCount);
+      this.metrics?.cpStateCache.stateClonedCount.observe(state.clonedCount);
       return state.clone(opts?.dontTransferCache);
     }
 
@@ -333,7 +322,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const cpHex = toCheckpointHex(cp);
     const key = toCacheKey(cpHex);
     const cacheItem = this.cache.get(key);
-    this.metrics?.adds.inc();
+    this.metrics?.cpStateCache.adds.inc();
     if (cacheItem !== undefined && isPersistedCacheItem(cacheItem)) {
       const persistedKey = cacheItem.value;
       // was persisted to disk, set back to memory
@@ -341,7 +330,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.logger.verbose("Added checkpoint state to memory but a persisted key existed", {
         epoch: cp.epoch,
         rootHex: cpHex.rootHex,
-        persistedKey: toHexString(persistedKey),
+        persistedKey: toHex(persistedKey),
       });
     } else {
       this.cache.set(key, {type: CacheItemType.inMemory, state});
@@ -657,7 +646,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     let persistCount = 0;
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
-      epochBoundarySlot === state.slot ? fromHexString(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
+      epochBoundarySlot === state.slot ? fromHex(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
     const epochBoundaryHex = toRootHex(epochBoundaryRoot);
     const prevEpochRoot = toRootHex(getBlockRootAtSlot(state, epochBoundarySlot - 1));
 
@@ -688,7 +677,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           stateSlot: state.slot,
           rootHex,
           epochBoundaryHex,
-          persistedKey: persistedKey ? toHexString(persistedKey) : "",
+          persistedKey: persistedKey ? toHex(persistedKey) : "",
         };
 
         if (persistedRootHexes.has(rootHex)) {
@@ -697,26 +686,33 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             this.logger.verbose("Pruned checkpoint state from memory but no need to persist", logMeta);
           } else {
             // persist and do not update epochIndex
-            this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-            const cpPersist = {epoch: epoch, root: fromHexString(rootHex)};
+            this.metrics?.cpStateCache.statePersistSecFromSlot.observe(
+              this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0
+            );
+            const cpPersist = {epoch: epoch, root: fromHex(rootHex)};
             // It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
             // As monitored on holesky as of Jan 2024:
             //   - This does not increase heap allocation while gc time is the same
             //   - It helps stabilize persist time and save ~300ms in average (1.5s vs 1.2s)
             //   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
             //   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
-            const timer = this.metrics?.stateSerializeDuration.startTimer();
+            const timer = this.metrics?.stateSerializeDuration.startTimer({
+              source: AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
+            });
             persistedKey = await serializeState(
               state,
               AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
-              (stateBytes) => this.datastore.write(cpPersist, stateBytes),
+              (stateBytes) => {
+                timer?.();
+                return this.datastore.write(cpPersist, stateBytes);
+              },
               this.bufferPool
             );
-            timer?.();
+
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
               ...logMeta,
-              persistedKey: toHexString(persistedKey),
+              persistedKey: toHex(persistedKey),
             });
           }
           // overwrite cpKey, this means the state is deleted from memory
@@ -732,7 +728,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             this.cache.delete(cpKey);
             this.epochIndex.get(epoch)?.delete(rootHex);
           }
-          this.metrics?.statePruneFromMemoryCount.inc();
+          this.metrics?.cpStateCache.statePruneFromMemoryCount.inc();
           this.logger.verbose("Pruned checkpoint state from memory", logMeta);
         }
       }
@@ -756,7 +752,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         if (persistedKey) {
           await this.datastore.remove(persistedKey);
           persistCount++;
-          this.metrics?.persistedStateRemoveCount.inc();
+          this.metrics?.cpStateCache.persistedStateRemoveCount.inc();
         }
       }
       this.cache.delete(key);

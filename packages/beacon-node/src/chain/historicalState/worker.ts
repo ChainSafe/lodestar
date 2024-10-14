@@ -1,13 +1,9 @@
 import worker from "node:worker_threads";
 import {Transfer, expose} from "@chainsafe/threads/worker";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {
-  EpochTransitionStep,
-  PubkeyIndexMap,
-  StateCloneSource,
-  StateHashTreeRootSource,
-} from "@lodestar/state-transition";
+import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {LevelDbController} from "@lodestar/db";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {JobFnQueue} from "../../util/queue/fnQueue.js";

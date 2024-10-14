@@ -7,7 +7,7 @@ import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {RpcPayload} from "../../../src/eth1/interface.js";
 
-describe("eth1 / jsonRpcHttpClient", function () {
+describe("eth1 / jsonRpcHttpClient", () => {
   vi.setConfig({testTimeout: 10_000});
 
   const port = 36421;
@@ -113,7 +113,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
 
   const afterHooks: (() => Promise<void>)[] = [];
 
-  afterEach(async function () {
+  afterEach(async () => {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
       if (afterHook) await afterHook();
@@ -124,7 +124,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     const {id, requestListener, abort, timeout} = testCase;
     let {url, payload} = testCase;
 
-    it(id, async function () {
+    it(id, async () => {
       if (requestListener) {
         if (!url) url = `http://localhost:${port}`;
 
@@ -162,25 +162,24 @@ describe("eth1 / jsonRpcHttpClient", function () {
   }
 });
 
-describe("eth1 / jsonRpcHttpClient - with retries", function () {
+describe("eth1 / jsonRpcHttpClient - with retries", () => {
   vi.setConfig({testTimeout: 10_000});
 
   const port = 36421;
   const noMethodError = {code: -32601, message: "Method not found"};
   const afterHooks: (() => Promise<void>)[] = [];
 
-  afterEach(async function () {
+  afterEach(async () => {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
       if (afterHook)
         await afterHook().catch((e: Error) => {
-          // eslint-disable-next-line no-console
           console.error("Error in afterEach hook", e);
         });
     }
   });
 
-  it("should retry ENOTFOUND", async function () {
+  it("should retry ENOTFOUND", async () => {
     let retryCount = 0;
 
     const url = "https://goerli.fake-website.io";
@@ -202,7 +201,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(retryCount).toBeWithMessage(retries, "ENOTFOUND should be retried before failing");
   });
 
-  it("should retry ECONNREFUSED", async function () {
+  it("should retry ECONNREFUSED", async () => {
     let retryCount = 0;
 
     const url = `http://localhost:${port + 1}`;
@@ -224,7 +223,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(retryCount).toBeWithMessage(retries, "code ECONNREFUSED should be retried before failing");
   });
 
-  it("should retry 404", async function () {
+  it("should retry 404", async () => {
     let requestCount = 0;
 
     const server = http.createServer((req, res) => {
@@ -254,7 +253,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(requestCount).toBeWithMessage(retries + 1, "404 responses should be retried before failing");
   });
 
-  it("should retry timeout", async function () {
+  it("should retry timeout", async () => {
     let requestCount = 0;
 
     const server = http.createServer(async () => {
@@ -285,7 +284,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(requestCount).toBeWithMessage(retries + 1, "Timeout request should be retried before failing");
   });
 
-  it("should not retry aborted", async function () {
+  it("should not retry aborted", async () => {
     let requestCount = 0;
     const server = http.createServer(() => {
       requestCount++;
@@ -315,7 +314,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(requestCount).toBeWithMessage(1, "Aborted request should not be retried");
   });
 
-  it("should not retry payload error", async function () {
+  it("should not retry payload error", async () => {
     let requestCount = 0;
 
     const server = http.createServer((req, res) => {

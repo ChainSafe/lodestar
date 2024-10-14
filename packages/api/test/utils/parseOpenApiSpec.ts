@@ -105,7 +105,6 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson): Map<OperationId, Rou
       try {
         preprocessSchema(responseOkSchema);
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.log(responseOkSchema);
         throw e;
       }
@@ -152,7 +151,7 @@ function preprocessSchema(schema: JsonSchema): void {
 
   // Remove non-intersecting allOf enum
   applyRecursively(schema, (obj) => {
-    if (obj.allOf && obj.allOf.every((s) => s.enum)) {
+    if (obj.allOf?.every((s) => s.enum)) {
       obj.allOf = [obj.allOf[0]];
     }
   });

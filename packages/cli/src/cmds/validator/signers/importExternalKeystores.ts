@@ -28,17 +28,17 @@ export function importKeystoreDefinitionsFromExternalDir(args: {
 export async function readPassphraseOrPrompt(args: {importKeystoresPassword?: string}): Promise<string> {
   if (args.importKeystoresPassword) {
     return readPassphraseFile(args.importKeystoresPassword);
-  } else {
-    const answers = await inquirer.prompt<{password: string}>([
-      {
-        name: "password",
-        type: "password",
-        message: "Enter the keystore(s) password",
-      },
-    ]);
-
-    return answers.password;
   }
+
+  const answers = await inquirer.prompt<{password: string}>([
+    {
+      name: "password",
+      type: "password",
+      message: "Enter the keystore(s) password",
+    },
+  ]);
+
+  return answers.password;
 }
 
 /**

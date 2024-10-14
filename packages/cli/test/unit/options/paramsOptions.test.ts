@@ -11,9 +11,7 @@ describe("options / paramsOptions", () => {
     };
 
     const expectedBeaconParams: Partial<IBeaconParamsUnparsed> = {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: "0x00000001",
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       DEPOSIT_CONTRACT_ADDRESS: "0x1234567890123456789012345678901234567890",
     };
 

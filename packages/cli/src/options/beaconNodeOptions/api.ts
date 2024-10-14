@@ -12,6 +12,7 @@ export type ApiArgs = {
   "rest.port": number;
   "rest.headerLimit"?: number;
   "rest.bodyLimit"?: number;
+  "rest.stacktraces"?: boolean;
   "rest.swaggerUI"?: boolean;
 };
 
@@ -21,11 +22,12 @@ export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
     rest: {
       api: args["rest.namespace"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["rest.cors"],
-      enabled: args["rest"],
+      enabled: args.rest,
       address: args["rest.address"],
       port: args["rest.port"],
       headerLimit: args["rest.headerLimit"],
       bodyLimit: args["rest.bodyLimit"],
+      stacktraces: args["rest.stacktraces"],
       swaggerUI: args["rest.swaggerUI"],
     },
   };
@@ -57,7 +59,7 @@ export const options: CliCommandOptions<ApiArgs> = {
       // Enable all
       if (namespaces.includes(enabledAll)) return allNamespaces;
       // Parse ["debug,lodestar"] to ["debug", "lodestar"]
-      return namespaces.map((val) => val.split(",")).flat(1);
+      return namespaces.flatMap((val) => val.split(","));
     },
   },
 
@@ -90,6 +92,13 @@ export const options: CliCommandOptions<ApiArgs> = {
     hidden: true,
     type: "number",
     description: "Defines the maximum payload, in bytes, the server is allowed to accept",
+  },
+
+  "rest.stacktraces": {
+    hidden: true,
+    type: "boolean",
+    description: "Return stacktraces in HTTP error responses",
+    group: "api",
   },
 
   "rest.swaggerUI": {

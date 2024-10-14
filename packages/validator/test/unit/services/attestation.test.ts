@@ -22,7 +22,7 @@ vi.mock("../../../src/services/emitter.js");
 vi.mock("../../../src/services/chainHeaderTracker.js");
 vi.mock("../../../src/services/syncingStatusTracker.js");
 
-describe("AttestationService", function () {
+describe("AttestationService", () => {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
   const validatorStore = vi.mocked(new ValidatorStore());
@@ -52,7 +52,6 @@ describe("AttestationService", function () {
     vi.resetAllMocks();
   });
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
 
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
@@ -105,7 +104,7 @@ describe("AttestationService", function () {
         ];
 
         // Return empty replies to duties service
-        api.beacon.getStateValidators.mockResolvedValue(
+        api.beacon.postStateValidators.mockResolvedValue(
           mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
         );
         api.validator.getAttesterDuties.mockResolvedValue(

@@ -26,16 +26,17 @@ export class ApiResponse<E extends Endpoint> extends Response {
   wireFormat(): WireFormat | null {
     if (this._wireFormat === undefined) {
       if (this.definition.resp.isEmpty) {
-        return (this._wireFormat = null);
+        this._wireFormat = null;
+        return this._wireFormat;
       }
 
       const contentType = this.headers.get(HttpHeader.ContentType);
       if (contentType === null) {
         if (this.status === HttpStatusCode.NO_CONTENT) {
-          return (this._wireFormat = null);
-        } else {
-          throw Error("Content-Type header is required in response");
+          this._wireFormat = null;
+          return this._wireFormat;
         }
+        throw Error("Content-Type header is required in response");
       }
 
       const mediaType = parseContentTypeHeader(contentType);
@@ -189,13 +190,15 @@ export class ApiResponse<E extends Endpoint> extends Response {
   private getErrorMessage(): string {
     const errBody = this.resolvedErrorBody();
     try {
-      const errJson = JSON.parse(errBody) as {message?: string};
+      const errJson = JSON.parse(errBody) as {message?: string; failures?: {message: string}[]};
       if (errJson.message) {
+        if (errJson.failures) {
+          return `${errJson.message}\n` + errJson.failures.map((e) => e.message).join("\n");
+        }
         return errJson.message;
-      } else {
-        return errBody;
       }
-    } catch (e) {
+      return errBody;
+    } catch (_e) {
       return errBody || this.statusText;
     }
   }

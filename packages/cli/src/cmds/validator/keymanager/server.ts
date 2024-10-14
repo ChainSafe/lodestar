@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import {toHexString} from "@chainsafe/ssz";
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {KeymanagerApiMethods, registerRoutes} from "@lodestar/api/keymanager/server";
 import {ChainForkConfig} from "@lodestar/config";
+import {toHex} from "@lodestar/utils";
 import {writeFile600Perm} from "../../../util/index.js";
 
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {
@@ -21,6 +21,7 @@ export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
   isAuthEnabled: true,
   // Slashing protection DB has been reported to be 3MB https://github.com/ChainSafe/lodestar/issues/4530
   bodyLimit: 20 * 1024 * 1024, // 20MB
+  stacktraces: false,
 };
 
 export type KeymanagerRestApiServerModules = RestApiServerModules & {
@@ -50,7 +51,7 @@ export class KeymanagerRestApiServer extends RestApiServer {
 
     if (opts.isAuthEnabled) {
       // Generate a new token if token file does not exist or file do exist, but is empty
-      bearerToken = readFileIfExists(apiTokenPath) ?? `api-token-${toHexString(crypto.randomBytes(32))}`;
+      bearerToken = readFileIfExists(apiTokenPath) ?? `api-token-${toHex(crypto.randomBytes(32))}`;
       writeFile600Perm(apiTokenPath, bearerToken, {encoding: "utf8"});
     }
 
@@ -79,6 +80,7 @@ function readFileIfExists(filepath: string): string | null {
     return fs.readFileSync(filepath, "utf8").trim();
   } catch (e) {
     if ((e as {code: string}).code === "ENOENT") return null;
-    else throw e;
+
+    throw e;
   }
 }

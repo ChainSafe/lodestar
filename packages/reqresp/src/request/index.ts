@@ -98,7 +98,6 @@ export async function* sendRequest(
       async (timeoutAndParentSignal) => {
         const protocolIds = Array.from(protocolsMap.keys());
         const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!conn) throw Error("dialProtocol timeout");
         return conn;
       },
@@ -107,9 +106,8 @@ export async function* sendRequest(
     ).catch((e: Error) => {
       if (e instanceof TimeoutError) {
         throw new RequestError({code: RequestErrorCode.DIAL_TIMEOUT});
-      } else {
-        throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e});
       }
+      throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e});
     });
 
     // TODO: Does the TTFB timer start on opening stream or after receiving request
@@ -134,9 +132,8 @@ export async function* sendRequest(
 
         if (e instanceof TimeoutError) {
           throw new RequestError({code: RequestErrorCode.REQUEST_TIMEOUT});
-        } else {
-          throw new RequestError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
         }
+        throw new RequestError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
       }
     );
 
@@ -211,8 +208,7 @@ export async function* sendRequest(
 
     if (e instanceof ResponseError) {
       throw new RequestError(responseStatusErrorToRequestError(e));
-    } else {
-      throw e;
     }
+    throw e;
   }
 }

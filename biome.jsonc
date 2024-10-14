@@ -1,0 +1,354 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.3/schema.json",
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  },
+  "files": {
+    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts"]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "useEditorconfig": true,
+    "lineWidth": 120,
+    "attributePosition": "auto",
+    "bracketSpacing": false,
+    "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
+  },
+  "organizeImports": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedVariables": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "suggestedExtensions": {
+              "ts": {
+                "module": "js",
+                "component": "jsx"
+              }
+            }
+          }
+        },
+        "useArrayLiterals": "error",
+        "noUndeclaredVariables": "error"
+      },
+      "performance": {
+        // This rule should be enabled but with considerations and careful review
+        "noDelete": "off"
+      },
+      "style": {
+        // The code usage looks suspicious so it should be enabled in a separate PR
+        "noCommaOperator": "off",
+        // There are a lot of places we mutate params, should be fixed in an independent PR.
+        "noParameterAssign": "off",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": ["fetch"]
+          }
+        },
+        // We prefer to use `Math.pow` over `**` operator
+        "useExponentiationOperator": "off",
+        // In some cases the enums are initialized with values of other enums
+        "useLiteralEnumMembers": "off",
+        // We prefer to have multiple declarations lines
+        "useSingleVarDeclarator": "off",
+        // We use `+` operator for string concatenation a lot
+        "useTemplate": "off",
+        // We use to export types and object without differentiating
+        "useExportType": "off",
+        // We use to import types and object without differentiating
+        "useImportType": "off",
+        // It's nice to use `Number` namespace but should be done in a separate PR
+        "useNumberNamespace": "off",
+        // We prefer to auto-initialize enums
+        "useEnumInitializers": "off",
+        "noVar": "error",
+        "useConst": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": false,
+            "conventions": [
+              {
+                "selector": {
+                  "kind": "any"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralProperty"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "classMethod"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "functionParameter"
+                },
+                "formats": ["camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "formats": ["camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeLike"
+                },
+                "formats": ["PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "enum"
+                },
+                "formats": ["PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "enumMember"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeProperty"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "classMember"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralMethod"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeMethod"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "importAlias"
+                },
+                "formats": ["PascalCase", "camelCase"]
+              },
+              {
+                "selector": {
+                  "kind": "importNamespace"
+                },
+                "formats": ["PascalCase", "camelCase"]
+              }
+            ]
+          }
+        },
+        "noNamespace": "error"
+      },
+      "suspicious": {
+        // `void` as type is useful in our case when used as generic constraint e.g. K extends number | void
+        "noConfusingVoidType": "off",
+        // There is a lot of empty code blocks, should be enabled and clean up separately.
+        "noEmptyBlockStatements": "off",
+        "noConsoleLog": "error"
+      },
+      "nursery": {
+        "useConsistentMemberAccessibility": {
+          "level": "error",
+          "options": {
+            "accessibility": "noPublic"
+          }
+        },
+        "noCommonJs": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "child_process": "Please use node:child_process instead.",
+              "crypto": "Please use node:crypto instead.",
+              "fs": "Please use node:fs instead.",
+              "http": "Please use node:https instead.",
+              "net": "Please use node:net instead.",
+              "os": "Please use node:os instead.",
+              "path": "Please use node:path instead.",
+              "stream": "Please use node:stream instead.",
+              "util": "Please use node:util instead.",
+              "url": "Please use node:url instead.",
+              "worker_threads": "Please use node:worker_threads instead."
+            }
+          }
+        },
+        "noDuplicateElseIf": "error",
+        "noUselessEscapeInRegex": "error",
+        "noIrregularWhitespace": "error",
+        "noOctalEscape": "error",
+        // Need to enable this rule with exception to anonymous functions
+        "useExplicitFunctionReturnType": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "es5",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSpacing": false,
+      "bracketSameLine": false,
+      "quoteStyle": "double",
+      "attributePosition": "auto",
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    },
+    "globals": ["BigInt"]
+  },
+  "overrides": [
+    {
+      "include": ["packages/**/test/perf/**/*.test.ts", "packages/state-transition/test/utils/beforeValueMocha.ts"],
+      "javascript": {
+        // These are used by mocha
+        "globals": ["describe", "it", "before", "after"]
+      }
+    },
+    {
+      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": [
+        "**/*.config.js",
+        "**/*.config.mjs",
+        "**/*.config.cjs",
+        "**/*.config.ts",
+        "scripts/vitest/**/*.ts",
+        "scripts/vite/**/*.ts",
+        "**/types/**/*.ts",
+        "packages/api/src/beacon/routes/*.ts",
+        "packages/api/src/**/routes.ts",
+        "packages/api/src/utils/server/handler.ts",
+        "packages/api/test/unit/client/urlFormat.test.ts",
+        "packages/beacon-node/src/api/impl/config/constants.ts",
+        "packages/beacon-node/src/eth1/provider/eth1Provider.ts",
+        ""
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "off",
+              "options": {
+                "strictCase": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "include": [
+        "**/test/**/*.ts",
+        "packages/*/test/**/*.js",
+        "packages/api/src/utils/**/*.ts",
+        "packages/beacon-node/src/db/repositories/checkpointState.ts",
+        "packages/spec-test-util/src/single.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["packages/beacon-node/test/e2e/eth1/jsonRpcHttpClient.test.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["**/test/**/*.ts", "packages/*/test/**/*.js"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["**/perf/**/*.ts"],
+      "linter": {
+        "rules": {}
+      }
+    },
+    {
+      "include": ["**/test/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            // During tests we often need to use private/protected attributes, which is only possible with literal keys
+            "useLiteralKeys": "off"
+          },
+          "suspicious": {
+            // During tests it's quicker to define variables with `let` without specifying types
+            "noImplicitAnyLet": "off"
+          }
+        }
+      }
+    }
+  ]
+}

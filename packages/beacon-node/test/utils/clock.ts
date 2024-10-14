@@ -4,11 +4,14 @@ import {Slot, Epoch} from "@lodestar/types";
 import {IClock} from "../../src/util/clock.js";
 
 export class ClockStatic extends EventEmitter implements IClock {
+  genesisTime: number;
+
   constructor(
     readonly currentSlot: Slot,
-    public genesisTime = 0
+    genesisTime = 0
   ) {
     super();
+    this.genesisTime = genesisTime;
   }
 
   get currentEpoch(): Epoch {

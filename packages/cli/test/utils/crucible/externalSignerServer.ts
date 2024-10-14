@@ -29,7 +29,6 @@ export class ExternalSignerServer {
       return [...this.secretKeyMap.keys()];
     });
 
-    /* eslint-disable @typescript-eslint/naming-convention */
     this.server.post<{
       Params: {
         /** BLS public key as a hex string. */

@@ -72,7 +72,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   const {syncCommittee, indices} = getNextSyncCommittee(
     ForkSeq.altair,
     stateAltair,
-    stateAltair.epochCtx.nextShuffling.activeIndices,
+    stateAltair.epochCtx.nextActiveIndices,
     stateAltair.epochCtx.effectiveBalanceIncrements
   );
   const syncCommitteeView = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
@@ -92,6 +92,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   //
   // TODO: This could only drop the caches of index 15,16. However this would couple this code tightly with SSZ ViewDU
   //       internals. If the cache is not cleared, consuming the ViewDU instance could break in strange ways.
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateAltair["clearCache"]();
 
   // TODO: describe issue. Compute progressive target balances

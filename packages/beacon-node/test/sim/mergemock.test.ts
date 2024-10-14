@@ -29,7 +29,7 @@ import {shell} from "./shell.js";
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
-describe("executionEngine / ExecutionEngineHttp", function () {
+describe("executionEngine / ExecutionEngineHttp", () => {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
     throw Error(
       `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
@@ -64,7 +64,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   });
 
   for (const useProduceBlockV3 of [false, true]) {
-    it(`Test builder with useProduceBlockV3=${useProduceBlockV3}`, async function () {
+    it(`Test builder with useProduceBlockV3=${useProduceBlockV3}`, async () => {
       console.log("\n\nPost-merge, run for a few blocks\n\n");
       const {elClient, tearDownCallBack} = await runEL(
         {...elSetupConfig, mode: ELStartMode.PostMerge},
@@ -173,7 +173,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // Enable builder by default, else because of circuit breaker we always start it with disabled
     bn.chain.executionBuilder.updateStatus(true);
 
-    afterEachCallbacks.push(async function () {
+    afterEachCallbacks.push(async () => {
       await bn.close();
       await sleep(1000);
     });
@@ -204,7 +204,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       useProduceBlockV3,
     });
 
-    afterEachCallbacks.push(async function () {
+    afterEachCallbacks.push(async () => {
       await Promise.all(validators.map((v) => v.close()));
     });
 

@@ -12,7 +12,7 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 
-describe("eth1 / util / getEth1DataForBlocks", function () {
+describe("eth1 / util / getEth1DataForBlocks", () => {
   type TestCase = {
     id: string;
     blocks: Eth1Block[];
@@ -95,7 +95,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   for (const testCase of testCases) {
     const {id, blocks, deposits, depositRootTree, lastProcessedDepositBlockNumber, expectedEth1Data, error} =
       testCase();
-    it(id, async function () {
+    it(id, async () => {
       const eth1DatasPromise = getEth1DataForBlocks(
         blocks,
         // Simulate a descending stream reading from DB
@@ -117,7 +117,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   }
 });
 
-describe("eth1 / util / getDepositsByBlockNumber", function () {
+describe("eth1 / util / getDepositsByBlockNumber", () => {
   type TestCase = {
     id: string;
     fromBlock: number;
@@ -181,7 +181,7 @@ describe("eth1 / util / getDepositsByBlockNumber", function () {
 
   for (const testCase of testCases) {
     const {id, fromBlock, toBlock, deposits, expectedResult} = testCase();
-    it(id, async function () {
+    it(id, async () => {
       const result = await getDepositsByBlockNumber(
         fromBlock,
         toBlock, // Simulate a descending stream reading from DB
@@ -192,7 +192,7 @@ describe("eth1 / util / getDepositsByBlockNumber", function () {
   }
 });
 
-describe("eth1 / util / getDepositRootByDepositCount", function () {
+describe("eth1 / util / getDepositRootByDepositCount", () => {
   type TestCase = {
     id: string;
     depositCounts: number[];
@@ -243,7 +243,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
 
   for (const testCase of testCases) {
     const {id, depositCounts, depositRootTree, expectedMap} = testCase();
-    it(id, function () {
+    it(id, () => {
       const map = getDepositRootByDepositCount(depositCounts, depositRootTree);
       expect(renderDepositRootByDepositCount(map)).toEqual(renderDepositRootByDepositCount(expectedMap));
     });

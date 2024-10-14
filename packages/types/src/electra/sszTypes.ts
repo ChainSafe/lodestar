@@ -8,7 +8,6 @@ import {
 } from "@chainsafe/ssz";
 import {
   HISTORICAL_ROOTS_LIMIT,
-  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
   MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
@@ -116,6 +115,8 @@ export const DepositRequest = new ContainerType(
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
+    // this is actually gwei uintbn64 type, but super unlikely to get a high amount here
+    // to warrant a bn type
     amount: UintNum64,
     signature: BLSSignature,
     index: DepositIndex,
@@ -129,7 +130,7 @@ export const WithdrawalRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
     validatorPubkey: BLSPubkey,
-    amount: UintNum64,
+    amount: Gwei,
   },
   {typeName: "WithdrawalRequest", jsonCase: "eth2"}
 );
@@ -147,25 +148,18 @@ export const ConsolidationRequests = new ListCompositeType(
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
 );
 
-export const ExecutionPayload = new ContainerType(
+export const ExecutionRequests = new ContainerType(
   {
-    ...denebSsz.ExecutionPayload.fields,
-    depositRequests: DepositRequests, // New in ELECTRA
-    withdrawalRequests: WithdrawalRequests, // New in ELECTRA
-    consolidationRequests: ConsolidationRequests, // New in ELECTRA
+    deposits: DepositRequests,
+    withdrawals: WithdrawalRequests,
+    consolidations: ConsolidationRequests,
   },
-  {typeName: "ExecutionPayload", jsonCase: "eth2"}
+  {typeName: "ExecutionRequests", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadHeader = new ContainerType(
-  {
-    ...denebSsz.ExecutionPayloadHeader.fields,
-    depositRequestsRoot: Root, // New in ELECTRA
-    withdrawalRequestsRoot: Root, // New in ELECTRA
-    consolidationRequestsRoot: Root, // New in ELECTRA
-  },
-  {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
-);
+// Explicitly defining electra containers for consistency's sake
+export const ExecutionPayloadHeader = denebSsz.ExecutionPayloadHeader;
+export const ExecutionPayload = denebSsz.ExecutionPayload;
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
 export const BeaconBlockBody = new ContainerType(
@@ -179,9 +173,10 @@ export const BeaconBlockBody = new ContainerType(
     deposits: phase0Ssz.BeaconBlockBody.fields.deposits,
     voluntaryExits: phase0Ssz.BeaconBlockBody.fields.voluntaryExits,
     syncAggregate: altairSsz.BeaconBlockBody.fields.syncAggregate,
-    executionPayload: ExecutionPayload, // Modified in ELECTRA
+    executionPayload: ExecutionPayload,
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
+    executionRequests: ExecutionRequests, // New in ELECTRA:EIP7251
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -213,7 +208,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
     deposits: phase0Ssz.BeaconBlockBody.fields.deposits,
     voluntaryExits: phase0Ssz.BeaconBlockBody.fields.voluntaryExits,
     syncAggregate: altairSsz.SyncAggregate,
-    executionPayloadHeader: ExecutionPayloadHeader, // Modified in ELECTRA
+    executionPayloadHeader: ExecutionPayloadHeader,
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
   },
@@ -252,14 +247,6 @@ export const SignedBuilderBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
-);
-
-export const ExecutionPayloadAndBlobsBundle = new ContainerType(
-  {
-    executionPayload: ExecutionPayload, // Modified in ELECTRA
-    blobsBundle: denebSsz.BlobsBundle,
-  },
-  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 export const PendingBalanceDeposit = new ContainerType(
@@ -326,7 +313,7 @@ export const BeaconState = new ContainerType(
     currentSyncCommittee: altairSsz.SyncCommittee,
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
-    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in ELECTRA
+    latestExecutionPayloadHeader: ExecutionPayloadHeader,
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
@@ -345,18 +332,9 @@ export const BeaconState = new ContainerType(
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
-export const LightClientHeader = new ContainerType(
-  {
-    beacon: phase0Ssz.BeaconBlockHeader,
-    execution: ExecutionPayloadHeader, // Modified in ELECTRA
-    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
-  },
-  {typeName: "LightClientHeader", jsonCase: "eth2"}
-);
-
 export const LightClientBootstrap = new ContainerType(
   {
-    header: LightClientHeader,
+    header: denebSsz.LightClientHeader,
     currentSyncCommittee: altairSsz.SyncCommittee,
     currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA),
   },
@@ -365,11 +343,11 @@ export const LightClientBootstrap = new ContainerType(
 
 export const LightClientUpdate = new ContainerType(
   {
-    attestedHeader: LightClientHeader,
+    attestedHeader: denebSsz.LightClientHeader,
     nextSyncCommittee: altairSsz.SyncCommittee,
-    nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA),
-    finalizedHeader: LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA),
+    nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA), // Modified in ELECTRA
+    finalizedHeader: denebSsz.LightClientHeader,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA), // Modified in ELECTRA
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
@@ -378,9 +356,9 @@ export const LightClientUpdate = new ContainerType(
 
 export const LightClientFinalityUpdate = new ContainerType(
   {
-    attestedHeader: LightClientHeader,
-    finalizedHeader: LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA),
+    attestedHeader: denebSsz.LightClientHeader,
+    finalizedHeader: denebSsz.LightClientHeader,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA), // Modified in ELECTRA
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
@@ -389,7 +367,7 @@ export const LightClientFinalityUpdate = new ContainerType(
 
 export const LightClientOptimisticUpdate = new ContainerType(
   {
-    attestedHeader: LightClientHeader,
+    attestedHeader: denebSsz.LightClientHeader,
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },

@@ -176,9 +176,8 @@ export function getBeaconBlockApi({
           const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
           if (chain.opts.broadcastValidationStrictness === "error") {
             throw Error(message);
-          } else {
-            chain.logger.warn(message, valLogMeta);
           }
+          chain.logger.warn(message, valLogMeta);
         }
         break;
       }
@@ -193,9 +192,8 @@ export function getBeaconBlockApi({
         const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
         if (chain.opts.broadcastValidationStrictness === "error") {
           throw Error(message);
-        } else {
-          chain.logger.warn(message, valLogMeta);
         }
+        chain.logger.warn(message, valLogMeta);
       }
     }
 
@@ -224,15 +222,17 @@ export function getBeaconBlockApi({
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway
-        chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
-          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
-              blockInput: blockForImport,
-              peer: IDENTITY_PEER_ID,
-            });
-          }
-          throw e;
-        }),
+        chain
+          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .catch((e) => {
+            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+              network.events.emit(NetworkEvent.unknownBlockParent, {
+                blockInput: blockForImport,
+                peer: IDENTITY_PEER_ID,
+              });
+            }
+            throw e;
+          }),
     ];
     await promiseAllMaybeAsync(publishPromises);
   };
@@ -258,25 +258,25 @@ export function getBeaconBlockApi({
       chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const contents = executionPayload
-        ? chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null
+        ? (chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null)
         : null;
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, opts);
-    } else {
-      const source = ProducedBlockSource.builder;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
-
-      const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
-
-      // the full block is published by relay and it's possible that the block is already known to us
-      // by gossip
-      //
-      // see: https://github.com/ChainSafe/lodestar/issues/5404
-      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
     }
+
+    const source = ProducedBlockSource.builder;
+    chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
+
+    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
+
+    // the full block is published by relay and it's possible that the block is already known to us
+    // by gossip
+    //
+    // see: https://github.com/ChainSafe/lodestar/issues/5404
+    chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+    return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
   };
 
   return {

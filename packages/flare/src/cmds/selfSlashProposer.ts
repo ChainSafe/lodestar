@@ -52,7 +52,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
   const slot = BigInt(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
-  if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
+  if (Number.isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
   if (batchSize <= 0) throw Error(`batchSize must be > 0: ${batchSize}`);
 
   // TODO: Ask the user to confirm the range and slash action
@@ -77,7 +77,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pksHex})).value();
+    const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: pksHex})).value();
 
     // Submit all ProposerSlashing for range at once
     await Promise.all(
@@ -88,7 +88,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
         try {
           const validatorPkHex = toPubkeyHex(validator.pubkey);
           if (validatorPkHex !== pkHex) {
-            throw Error(`getStateValidators did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
+            throw Error(`Beacon node did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
           }
 
           if (status === "active_slashed" || status === "exited_slashed") {

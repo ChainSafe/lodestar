@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {objectToExpectedCase} from "@lodestar/utils";
@@ -20,11 +19,8 @@ export type EmptyRequest = Record<never, never>;
 export type EmptyResponseData = void;
 export type EmptyMeta = void;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyEndpoint = Endpoint<any, any, any, any, any>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EmptyRequestEndpoint = Endpoint<any, EmptyArgs, EmptyRequest, any, any>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EmptyResponseEndpoint = Endpoint<any, any, any, EmptyResponseData, EmptyMeta>;
 
 /** Shortcut for routes that have no params, query */
@@ -72,11 +68,11 @@ export const EmptyResponseCodec: ResponseCodec<EmptyResponseEndpoint> = {
 export function ArrayOf<T>(elementType: Type<T>, limit = Infinity): ArrayType<Type<T>, unknown, unknown> {
   if (isCompositeType(elementType)) {
     return new ListCompositeType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  } else if (isBasicType(elementType)) {
-    return new ListBasicType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  } else {
-    throw Error(`Unknown type ${elementType.typeName}`);
   }
+  if (isBasicType(elementType)) {
+    return new ListBasicType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
+  }
+  throw Error(`Unknown type ${elementType.typeName}`);
 }
 
 export function WithMeta<T, M extends {version: ForkName}>(getType: (m: M) => Type<T>): ResponseDataCodec<T, M> {

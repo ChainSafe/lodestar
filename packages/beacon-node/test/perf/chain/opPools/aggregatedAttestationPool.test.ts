@@ -2,6 +2,7 @@ import {itBench} from "@dapplion/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
+  computeAnchorCheckpoint,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
@@ -12,10 +13,8 @@ import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, DataAvailabil
 import {ssz} from "@lodestar/types";
 
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-// eslint-disable-next-line import/no-relative-packages
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
-import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
 
 const vc = 1_500_000;
 

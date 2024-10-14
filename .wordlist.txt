@@ -26,7 +26,6 @@ EIPs
 EL
 ENR
 ENRs
-ESLint
 ETH
 Edgington
 Erigon

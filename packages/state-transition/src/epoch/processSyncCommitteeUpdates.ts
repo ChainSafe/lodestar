@@ -14,7 +14,7 @@ export function processSyncCommitteeUpdates(fork: ForkSeq, state: CachedBeaconSt
   const nextEpoch = state.epochCtx.epoch + 1;
 
   if (nextEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
-    const activeValidatorIndices = state.epochCtx.nextShuffling.activeIndices;
+    const activeValidatorIndices = state.epochCtx.nextActiveIndices;
     const {effectiveBalanceIncrements} = state.epochCtx;
 
     const nextSyncCommitteeIndices = getNextSyncCommitteeIndices(

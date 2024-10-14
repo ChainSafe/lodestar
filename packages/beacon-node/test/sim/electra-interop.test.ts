@@ -36,7 +36,7 @@ import {shell} from "./shell.js";
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retries = defaultExecutionEngineHttpOpts.retries;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
-describe("executionEngine / ExecutionEngineHttp", function () {
+describe("executionEngine / ExecutionEngineHttp", () => {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
     throw Error(
       `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
@@ -171,7 +171,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       blockHash: dataToBytes(newPayloadBlockHash, 32),
       receiptsRoot: dataToBytes("0x0b67bea29f17eeb290685e01e9a2e4cd77a83471d9985a8ce27997a7ed3ee3f8", 32),
       blobGasUsed: 0n,
-      withdrawalRequests: [],
     };
     const parentBeaconBlockRoot = dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32);
     const payloadResult = await executionEngine.notifyNewPayload(
@@ -208,22 +207,23 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await sleep(1000);
     const payloadAndBlockValue = await executionEngine.getPayload(ForkName.electra, payloadId2);
     const payload = payloadAndBlockValue.executionPayload as electra.ExecutionPayload;
+    const depositRequests = payloadAndBlockValue.executionRequests?.deposits;
 
     if (payload.transactions.length !== 1) {
       throw Error(`Number of transactions mismatched. Expected: 1, actual: ${payload.transactions.length}`);
-    } else {
-      const actualTransaction = bytesToData(payload.transactions[0]);
-
-      if (actualTransaction !== depositTransactionB) {
-        throw Error(`Transaction mismatched. Expected: ${depositTransactionB}, actual: ${actualTransaction}`);
-      }
     }
 
-    if (payload.depositRequests.length !== 1) {
-      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${payload.depositRequests.length}`);
+    const actualTransaction = bytesToData(payload.transactions[0]);
+
+    if (actualTransaction !== depositTransactionB) {
+      throw Error(`Transaction mismatched. Expected: ${depositTransactionB}, actual: ${actualTransaction}`);
     }
 
-    const actualDepositRequest = payload.depositRequests[0];
+    if (depositRequests === undefined || depositRequests.length !== 1) {
+      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${depositRequests?.length}`);
+    }
+
+    const actualDepositRequest = depositRequests[0];
     assert.deepStrictEqual(
       actualDepositRequest,
       depositRequestB,
@@ -234,7 +234,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   });
 
   // TODO: get this post merge run working
-  it.skip("Post-merge, run for a few blocks", async function () {
+  it.skip("Post-merge, run for a few blocks", async () => {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
       {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
@@ -331,7 +331,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       withEth1Credentials: true,
     });
 
-    afterEachCallbacks.push(async function () {
+    afterEachCallbacks.push(async () => {
       await bn.close();
       await sleep(1000);
     });
@@ -355,7 +355,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       valProposerConfig,
     });
 
-    afterEachCallbacks.push(async function () {
+    afterEachCallbacks.push(async () => {
       await Promise.all(validators.map((v) => v.close()));
     });
 

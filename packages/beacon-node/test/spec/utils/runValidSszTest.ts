@@ -21,7 +21,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
     console.log(
       JSON.stringify(
         testData.jsonValue,
-        (key, value: unknown) => (typeof value === "bigint" ? value.toString() : value),
+        (_key, value: unknown) => (typeof value === "bigint" ? value.toString() : value),
         2
       )
     );
@@ -83,6 +83,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
     if (type.isBasic) {
       console.log("ROOTS Basic", toHexString(type.serialize(testDataValue)));
     } else {
+      // biome-ignore lint/complexity/useLiteralKeys: The `getRoots` is a protected attribute
       const roots = (type as CompositeType<unknown, unknown, unknown>)["getRoots"](testDataValue);
       console.log(
         "ROOTS Composite",
@@ -168,9 +169,8 @@ function wrapErr<T>(fn: () => T, prefix: string): T {
 export function toJsonOrString(value: unknown): unknown {
   if (typeof value === "number" || typeof value === "bigint") {
     return value.toString(10);
-  } else {
-    return value;
   }
+  return value;
 }
 
 function renderTree(node: Node): void {

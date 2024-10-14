@@ -10,14 +10,13 @@ import {INetwork} from "../../../src/network/interface.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
-  beforeAll(async function () {
+  beforeAll(async () => {
     await initCKZG();
     loadEthereumTrustedSetup();
   });
 
   const peerId = "Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi";
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,

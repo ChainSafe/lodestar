@@ -62,7 +62,7 @@ import {
 
 const config = getChainForkConfigFromNetwork("sepolia");
 const logger = getConsoleLogger({logDebug: Boolean(process.env.DEBUG)});
-const api = getApiFromUrl({urls: ["https://lodestar-sepolia.chainsafe.io"]}, {config});
+const api = getApiFromUrl("https://lodestar-sepolia.chainsafe.io", "sepolia");
 
 const lightclient = await Lightclient.initializeFromCheckpointRoot({
   config,
@@ -82,11 +82,11 @@ await lightclient.start();
 logger.info("Lightclient synced");
 
 lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finalityUpdate) => {
-  logger.info(finalityUpdate);
+  logger.info("Received finality update", {slot: finalityUpdate.beacon.slot});
 });
 
 lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
-  logger.info(optimisticUpdate);
+  logger.info("Received optimistic update", {slot: optimisticUpdate.beacon.slot});
 });
 ```
 

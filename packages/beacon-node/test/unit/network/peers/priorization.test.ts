@@ -15,7 +15,6 @@ import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 
 type Result = ReturnType<typeof prioritizePeers>;
 
-// eslint-disable-next-line vitest/valid-describe-callback
 describe("network / peers / priorization", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
@@ -266,8 +265,7 @@ describe("network / peers / priorization", async () => {
   }
 });
 
-// eslint-disable-next-line vitest/valid-describe-callback
-describe("sortPeersToPrune", async function () {
+describe("sortPeersToPrune", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
     const pk = await generateKeyPair("secp256k1");

@@ -5,7 +5,7 @@ import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {testLogger} from "../../../utils/logger.js";
 
-describe("BlsVerifier ", function () {
+describe("BlsVerifier ", () => {
   // take time for creating thread pool
   const numKeys = 3;
   const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));

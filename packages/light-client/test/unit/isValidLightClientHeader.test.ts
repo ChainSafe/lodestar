@@ -4,8 +4,7 @@ import {LightClientHeader, ssz} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
 
-describe("isValidLightClientHeader", function () {
-  /* eslint-disable @typescript-eslint/naming-convention */
+describe("isValidLightClientHeader", () => {
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
@@ -88,10 +87,10 @@ describe("isValidLightClientHeader", function () {
     ["capella upgraded to deneb LC header", capellaUpgradedDenebHeader],
   ];
 
-  testCases.forEach(([name, header]: [string, LightClientHeader]) => {
-    it(name, function () {
+  for (const [name, header] of testCases) {
+    it(name, () => {
       const isValid = isValidLightClientHeader(config, header);
       expect(isValid).toBe(true);
     });
-  });
+  }
 });

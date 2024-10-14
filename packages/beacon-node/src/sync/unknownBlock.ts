@@ -1,6 +1,5 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Root, RootHex, deneb} from "@lodestar/types";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
@@ -16,7 +15,7 @@ import {
   beaconBlocksMaybeBlobsByRoot,
   unavailableBeaconBlobsByRoot,
 } from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
-import {wrapError} from "../util/wrapError.js";
+import {Result, wrapError} from "../util/wrapError.js";
 import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface.js";
 import {getDescendantBlocks, getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {SyncOptions} from "./options.js";
@@ -169,7 +168,7 @@ export class UnknownBlockSync {
     blockInputOrRootHex: RootHex | BlockInput | NullBlockInput,
     peerIdStr?: string
   ): Exclude<PendingBlockType, PendingBlockType.UNKNOWN_PARENT> {
-    let blockRootHex;
+    let blockRootHex: RootHex;
     let blockInput: BlockInput | NullBlockInput | null;
     let unknownBlockType: Exclude<PendingBlockType, PendingBlockType.UNKNOWN_PARENT>;
 
@@ -286,9 +285,9 @@ export class UnknownBlockSync {
 
     block.status = PendingBlockStatus.fetching;
 
-    let res;
+    let res: Result<{blockInput: BlockInput; peerIdStr: string}>;
     if (block.blockInput === null) {
-      res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
+      res = await wrapError(this.fetchUnknownBlockRoot(fromHex(block.blockRootHex), connectedPeers));
     } else {
       res = await wrapError(this.fetchUnavailableBlockInput(block.blockInput, connectedPeers));
     }
@@ -494,9 +493,8 @@ export class UnknownBlockSync {
     if (lastError) {
       lastError.message = `Error fetching UnknownBlockRoot after ${MAX_ATTEMPTS_PER_BLOCK} attempts: ${lastError.message}`;
       throw lastError;
-    } else {
-      throw Error(`Error fetching UnknownBlockRoot after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
     }
+    throw Error(`Error fetching UnknownBlockRoot after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
   }
 
   /**
@@ -512,14 +510,14 @@ export class UnknownBlockSync {
     }
 
     const shuffledPeers = shuffle(connectedPeers);
-    let blockRootHex;
-    let pendingBlobs;
-    let blobKzgCommitmentsLen;
-    let blockRoot;
+    let blockRootHex: RootHex;
+    let pendingBlobs: number | undefined;
+    let blobKzgCommitmentsLen: number | undefined;
+    let blockRoot: Uint8Array;
 
     if (unavailableBlockInput.block === null) {
       blockRootHex = unavailableBlockInput.blockRootHex;
-      blockRoot = fromHexString(blockRootHex);
+      blockRoot = fromHex(blockRootHex);
     } else {
       const unavailableBlock = unavailableBlockInput.block;
       blockRoot = this.config
@@ -570,9 +568,9 @@ export class UnknownBlockSync {
     if (lastError) {
       lastError.message = `Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK} attempts: ${lastError.message}`;
       throw lastError;
-    } else {
-      throw Error(`Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
     }
+
+    throw Error(`Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
   }
 
   /**

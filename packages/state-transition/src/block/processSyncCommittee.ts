@@ -96,9 +96,8 @@ export function getSyncCommitteeSignatureSet(
     // https://github.com/ethereum/eth2.0-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
     if (byteArrayEquals(signature, G2_POINT_AT_INFINITY)) {
       return null;
-    } else {
-      throw Error("Empty sync committee signature is not infinity");
     }
+    throw Error("Empty sync committee signature is not infinity");
   }
 
   const domain = state.config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, previousSlot);

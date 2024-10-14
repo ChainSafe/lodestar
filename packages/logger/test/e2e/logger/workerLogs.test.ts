@@ -7,10 +7,9 @@ import {LoggerWorker, getLoggerWorker} from "./workerLoggerHandler.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-describe("worker logs", function () {
+describe("worker logs", () => {
   vi.setConfig({testTimeout: 60_000});
 
   const logFilepath = path.join(__dirname, "../../../test-logs/test_worker_logs.log");

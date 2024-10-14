@@ -41,7 +41,7 @@ export function readCsv<T extends Record<string, number>>(filepath: string): T[]
     for (let i = 0; i < headers.length; i++) {
       const str = valuesRow[i];
       const num = parseInt(str);
-      value[headers[i] as keyof T] = (isNaN(num) ? str : num) as T[keyof T];
+      value[headers[i] as keyof T] = (Number.isNaN(num) ? str : num) as T[keyof T];
     }
     values[j] = value;
   }

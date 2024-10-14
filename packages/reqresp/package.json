@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.21.0",
+  "version": "1.22.0",
   "type": "module",
   "exports": {
     ".": {
@@ -45,18 +45,18 @@
     "build:release": "yarn clean && yarn run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "lint": "eslint --color --ext .ts src/ test/",
-    "lint:fix": "yarn run lint --fix",
+    "lint": "biome check src/ test/",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.1.1",
-    "@libp2p/interface": "^2.0.1",
-    "@lodestar/config": "^1.21.0",
-    "@lodestar/params": "^1.21.0",
-    "@lodestar/utils": "^1.21.0",
+    "@libp2p/interface": "^2.1.2",
+    "@lodestar/config": "^1.22.0",
+    "@lodestar/params": "^1.22.0",
+    "@lodestar/utils": "^1.22.0",
     "it-all": "^3.0.4",
     "it-pipe": "^3.0.1",
     "snappy": "^7.2.2",
@@ -65,12 +65,12 @@
     "uint8arraylist": "^2.4.7"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.21.0",
-    "@lodestar/types": "^1.21.0",
-    "libp2p": "2.0.2"
+    "@lodestar/logger": "^1.22.0",
+    "@lodestar/types": "^1.22.0",
+    "libp2p": "2.1.7"
   },
   "peerDependencies": {
-    "libp2p": "~2.0.2"
+    "libp2p": "~2.1.7"
   },
   "keywords": [
     "ethereum",

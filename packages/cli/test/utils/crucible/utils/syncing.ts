@@ -148,7 +148,9 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   } catch (error) {
     if (!(error as Error).message.includes("BLOCK_ERROR_PARENT_UNKNOWN")) {
       env.tracker.record({
-        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${(error as Error).message}"`,
+        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${
+          (error as Error).message
+        }"`,
         slot: env.clock.currentSlot,
         assertionId: "unknownBlockParent",
       });
@@ -178,13 +180,11 @@ export async function waitForNodeSync(
 }
 
 export async function waitForNodeSyncStatus(env: Simulation, node: NodePair): Promise<void> {
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = (await node.beacon.api.node.getSyncingStatus()).value();
     if (!result.isSyncing) {
       break;
-    } else {
-      await sleep(1000, env.options.controller.signal);
     }
+    await sleep(1000, env.options.controller.signal);
   }
 }

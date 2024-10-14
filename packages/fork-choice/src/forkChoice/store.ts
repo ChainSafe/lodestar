@@ -55,18 +55,22 @@ export class ForkChoiceStore implements IForkChoiceStore {
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   equivocatingIndices = new Set<ValidatorIndex>();
+  justifiedBalancesGetter: JustifiedBalancesGetter;
+  currentSlot: Slot;
 
   constructor(
-    public currentSlot: Slot,
+    currentSlot: Slot,
     justifiedCheckpoint: phase0.Checkpoint,
     finalizedCheckpoint: phase0.Checkpoint,
     justifiedBalances: EffectiveBalanceIncrements,
-    public justifiedBalancesGetter: JustifiedBalancesGetter,
+    justifiedBalancesGetter: JustifiedBalancesGetter,
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
     }
   ) {
+    this.justifiedBalancesGetter = justifiedBalancesGetter;
+    this.currentSlot = currentSlot;
     const justified = {
       checkpoint: toCheckpointWithHex(justifiedCheckpoint),
       balances: justifiedBalances,

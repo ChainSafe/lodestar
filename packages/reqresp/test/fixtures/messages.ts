@@ -14,7 +14,6 @@ type MessageFixture = {
 };
 
 const phase0Metadata = ssz.phase0.Metadata.fromJson({
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   seq_number: "9",
   attnets: "0x0000000000000000",
 });
@@ -37,7 +36,6 @@ export const sszSnappyPhase0Metadata: MessageFixture = {
 };
 
 const altairMetadata = ssz.altair.Metadata.fromJson({
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   seq_number: "8",
   attnets: "0x0000000000000000",
   syncnets: "0x00",
@@ -178,7 +176,6 @@ if (slotBlockAltair - slotBlockPhase0 < SLOTS_PER_EPOCH) {
   throw Error("phase0 block slot must be an epoch apart from altair block slot");
 }
 const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const beaconConfig = createBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
 
 export const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): AsyncGenerator<T> {};

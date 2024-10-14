@@ -1,6 +1,11 @@
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {FINALIZED_ROOT_GINDEX, BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX, ForkExecution} from "@lodestar/params";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {
+  FINALIZED_ROOT_GINDEX,
+  BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
+  ForkExecution,
+  FINALIZED_ROOT_GINDEX_ELECTRA,
+} from "@lodestar/params";
 import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
 
 import {SyncCommitteeWitness} from "./types.js";
@@ -40,9 +45,10 @@ export function getCurrentSyncCommitteeBranch(syncCommitteesWitness: SyncCommitt
   return [syncCommitteesWitness.nextSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 }
 
-export function getFinalizedRootProof(state: BeaconStateAllForks): Uint8Array[] {
+export function getFinalizedRootProof(state: CachedBeaconStateAllForks): Uint8Array[] {
   state.commit();
-  return new Tree(state.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
+  const finalizedRootGindex = state.epochCtx.isPostElectra() ? FINALIZED_ROOT_GINDEX_ELECTRA : FINALIZED_ROOT_GINDEX;
+  return new Tree(state.node).getSingleProof(BigInt(finalizedRootGindex));
 }
 
 export function getBlockBodyExecutionHeaderProof(

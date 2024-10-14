@@ -91,6 +91,7 @@ export type KeymanagerArgs = {
   "keymanager.cors"?: string;
   "keymanager.headerLimit"?: number;
   "keymanager.bodyLimit"?: number;
+  "keymanager.stacktraces"?: boolean;
 };
 
 export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
@@ -141,6 +142,11 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     type: "number",
     description: "Defines the maximum payload, in bytes, the server is allowed to accept",
   },
+  "keymanager.stacktraces": {
+    hidden: true,
+    type: "boolean",
+    description: "Return stacktraces in HTTP error responses",
+  },
 };
 
 export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
@@ -189,7 +195,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     string: true,
     coerce: (urls: string[]): string[] =>
       // Parse ["url1,url2"] to ["url1", "url2"]
-      urls.map((item) => item.split(",")).flat(1),
+      urls.flatMap((item) => item.split(",")),
     alias: ["server"], // for backwards compatibility
   },
 
@@ -346,8 +352,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
       pubkeys
-        .map((item) => item.split(","))
-        .flat(1)
+        .flatMap((item) => item.split(","))
         .map(ensure0xPrefix),
     group: "externalSigner",
   },

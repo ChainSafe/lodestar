@@ -72,7 +72,7 @@ describe("sync / range / chain", () => {
         }
       };
 
-      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
+      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (_peerId, request) => {
         const blocks: BlockInput[] = [];
         for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
           if (skippedSlots?.has(i)) {
@@ -124,7 +124,7 @@ describe("sync / range / chain", () => {
     const peers = [peer];
 
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
-    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
+    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (_peer, request) => {
       const blocks: BlockInput[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         blocks.push(

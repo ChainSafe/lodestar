@@ -1,4 +1,4 @@
-import {LodestarError, mapValues, toHexString} from "@lodestar/utils";
+import {LodestarError, mapValues, toHex} from "@lodestar/utils";
 
 const MAX_DEPTH = 0;
 
@@ -29,7 +29,7 @@ export function logCtxToJson(arg: unknown, depth = 0, fromError = false): LogDat
       if (arg === null) return "null";
 
       if (arg instanceof Uint8Array) {
-        return toHexString(arg);
+        return toHex(arg);
       }
 
       // For any type that may include recursiveness break early at the first level
@@ -44,10 +44,9 @@ export function logCtxToJson(arg: unknown, depth = 0, fromError = false): LogDat
         if (arg instanceof LodestarError) {
           if (fromError) {
             return "[LodestarErrorCircular]";
-          } else {
-            // Allow one extra depth level for LodestarError
-            metadata = logCtxToJson(arg.getMetadata(), depth - 1, true) as Record<string, unknown>;
           }
+          // Allow one extra depth level for LodestarError
+          metadata = logCtxToJson(arg.getMetadata(), depth - 1, true) as Record<string, unknown>;
         } else {
           metadata = {message: arg.message};
         }
@@ -90,7 +89,7 @@ export function logCtxToString(arg: unknown, depth = 0, fromError = false): stri
       if (arg === null) return "null";
 
       if (arg instanceof Uint8Array) {
-        return toHexString(arg);
+        return toHex(arg);
       }
 
       // For any type that may include recursiveness break early at the first level
@@ -105,10 +104,9 @@ export function logCtxToString(arg: unknown, depth = 0, fromError = false): stri
         if (arg instanceof LodestarError) {
           if (fromError) {
             return "[LodestarErrorCircular]";
-          } else {
-            // Allow one extra depth level for LodestarError
-            metadata = logCtxToString(arg.getMetadata(), depth - 1, true);
           }
+          // Allow one extra depth level for LodestarError
+          metadata = logCtxToString(arg.getMetadata(), depth - 1, true);
         } else {
           metadata = arg.message;
         }
@@ -127,6 +125,7 @@ export function logCtxToString(arg: unknown, depth = 0, fromError = false): stri
     case "string":
     case "undefined":
     case "boolean":
+      return String(arg);
     default:
       return String(arg);
   }

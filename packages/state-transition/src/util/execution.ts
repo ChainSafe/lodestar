@@ -2,7 +2,6 @@ import {
   bellatrix,
   capella,
   deneb,
-  electra,
   isBlindedBeaconBlockBody,
   ssz,
   BeaconBlock,
@@ -72,13 +71,13 @@ export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean
       // TODO: Performance
       ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
     );
-  } else {
-    return !ssz.capella.ExecutionPayloadHeader.equals(
-      state.latestExecutionPayloadHeader,
-      // TODO: Performance
-      ssz.capella.ExecutionPayloadHeader.defaultValue()
-    );
   }
+
+  return !ssz.capella.ExecutionPayloadHeader.equals(
+    state.latestExecutionPayloadHeader,
+    // TODO: Performance
+    ssz.capella.ExecutionPayloadHeader.defaultValue()
+  );
 }
 
 /** Type guard for bellatrix.BeaconState */
@@ -113,11 +112,13 @@ export function getFullOrBlindedPayloadFromBody(
 ): ExecutionPayload | ExecutionPayloadHeader {
   if (isBlindedBeaconBlockBody(body)) {
     return body.executionPayloadHeader;
-  } else if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
-    return (body as bellatrix.BeaconBlockBody).executionPayload;
-  } else {
-    throw Error("Not full or blinded beacon block");
   }
+
+  if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
+    return (body as bellatrix.BeaconBlockBody).executionPayload;
+  }
+
+  throw Error("Not full or blinded beacon block");
 }
 
 export function isCapellaPayload(
@@ -171,14 +172,7 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
     ).excessBlobGas;
   }
 
-  if (fork >= ForkSeq.electra) {
-    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).depositRequestsRoot =
-      ssz.electra.DepositRequests.hashTreeRoot((payload as electra.ExecutionPayload).depositRequests);
-    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).withdrawalRequestsRoot =
-      ssz.electra.WithdrawalRequests.hashTreeRoot((payload as electra.ExecutionPayload).withdrawalRequests);
-    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).consolidationRequestsRoot =
-      ssz.electra.ConsolidationRequests.hashTreeRoot((payload as electra.ExecutionPayload).consolidationRequests);
-  }
+  // No change in Electra
 
   return bellatrixPayloadFields;
 }

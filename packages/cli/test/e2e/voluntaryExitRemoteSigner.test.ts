@@ -14,7 +14,7 @@ import {
 } from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
-describe("voluntaryExit using remote signer", function () {
+describe("voluntaryExit using remote signer", () => {
   vi.setConfig({testTimeout: 30_000});
 
   let externalSigner: StartedExternalSigner;
@@ -100,10 +100,8 @@ describe("voluntaryExit using remote signer", function () {
           const validator = (await client.beacon.getStateValidator({stateId: "head", validatorId: pubkey})).value();
           if (validator.status !== "active_exiting") {
             throw Error("Validator not exiting");
-          } else {
-            // eslint-disable-next-line no-console
-            console.log(`Confirmed validator ${pubkey} = ${validator.status}`);
           }
+          console.log(`Confirmed validator ${pubkey} = ${validator.status}`);
         },
         {retryDelay: 1000, retries: 20}
       );

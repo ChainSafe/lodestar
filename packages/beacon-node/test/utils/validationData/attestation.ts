@@ -1,17 +1,11 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  getShufflingDecisionBlock,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProtoBlock, IForkChoice, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
-  // eslint-disable-next-line import/no-relative-packages
 } from "../../../../state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
@@ -81,10 +75,20 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 
-  const shufflingCache = new ShufflingCache();
-  shufflingCache.processState(state, state.epochCtx.currentShuffling.epoch);
-  shufflingCache.processState(state, state.epochCtx.nextShuffling.epoch);
-  const dependentRoot = getShufflingDecisionBlock(state, state.epochCtx.currentShuffling.epoch);
+  const shufflingCache = new ShufflingCache(null, null, {}, [
+    {
+      shuffling: state.epochCtx.previousShuffling,
+      decisionRoot: state.epochCtx.previousDecisionRoot,
+    },
+    {
+      shuffling: state.epochCtx.currentShuffling,
+      decisionRoot: state.epochCtx.currentDecisionRoot,
+    },
+    {
+      shuffling: state.epochCtx.nextShuffling,
+      decisionRoot: state.epochCtx.nextDecisionRoot,
+    },
+  ]);
 
   const forkChoice = {
     getBlock: (root) => {
@@ -95,7 +99,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
-    getDependentRoot: () => dependentRoot,
+    getDependentRoot: () => state.epochCtx.currentDecisionRoot,
   } as Partial<IForkChoice> as IForkChoice;
 
   const committeeIndices = state.epochCtx.getBeaconCommittee(attSlot, attIndex);

@@ -167,6 +167,25 @@ export function processSlots(
 
 /**
  * All processSlot() logic but separate so stateTransition() can recycle the caches
+ *
+ * Epoch transition will be processed at the last slot of an epoch. Note that compute_shuffling() is going
+ * to be executed in parallel (either by napi-rs or worker thread) with processEpoch() like below:
+ *
+ *   state-transition
+ *   ╔══════════════════════════════════════════════════════════════════════════════════╗
+ *   ║   beforeProcessEpoch          processEpoch                 afterPRocessEpoch     ║
+ *   ║  |-------------------------|--------------------|-------------------------------|║
+ *   ║                       |                         |     |                          ║
+ *   ╚═══════════════════════|═══════════════════════════════|══════════════════════════╝
+ *                           |                               |
+ *                         build()                          get()
+ *                           |                               |
+ *   ╔═══════════════════════V═══════════════════════════════V═══════════════════════════╗
+ *   ║                       |                               |                           ║
+ *   ║                       |-------------------------------|                           ║
+ *   ║                          compute_shuffling()                                      ║
+ *   ╚═══════════════════════════════════════════════════════════════════════════════════╝
+ *   beacon-node ShufflingCache
  */
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,

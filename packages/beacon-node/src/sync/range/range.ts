@@ -1,4 +1,4 @@
-import {EventEmitter} from "events";
+import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
@@ -150,17 +150,15 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       if (chain.isSyncing) {
         if (chain.syncType === RangeSyncType.Finalized) {
           return {status: RangeSyncStatus.Finalized, target: chain.target};
-        } else {
-          syncingHeadTargets.push(chain.target);
         }
+        syncingHeadTargets.push(chain.target);
       }
     }
 
     if (syncingHeadTargets.length > 0) {
       return {status: RangeSyncStatus.Head, targets: syncingHeadTargets};
-    } else {
-      return {status: RangeSyncStatus.Idle};
     }
+    return {status: RangeSyncStatus.Idle};
   }
 
   /** Full debug state for lodestar API */

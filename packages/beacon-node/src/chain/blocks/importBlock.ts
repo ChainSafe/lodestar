@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
 import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -20,6 +19,7 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
@@ -65,7 +65,6 @@ export async function importBlock(
   const blockRootHex = toRootHex(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(blockSlot);
-  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
@@ -210,7 +209,7 @@ export async function importBlock(
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();
-  const newHead = this.recomputeForkChoiceHead();
+  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
@@ -336,12 +335,6 @@ export async function importBlock(
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
-  if (parentEpoch < blockEpoch) {
-    // current epoch and previous epoch are likely cached in previous states
-    this.shufflingCache.processState(postState, postState.epochCtx.nextShuffling.epoch);
-    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
-  }
-
   if (blockSlot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
@@ -433,8 +426,8 @@ export async function importBlock(
             blockRoot: blockRootHex,
             slot: blockSlot,
             index,
-            kzgCommitment: toHexString(kzgCommitment),
-            versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+            kzgCommitment: toHex(kzgCommitment),
+            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
           });
         }
       }

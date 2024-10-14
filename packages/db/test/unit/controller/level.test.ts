@@ -137,7 +137,7 @@ describe("LevelDB controller", () => {
         if (res?.startsWith("Usage: gdu ")) {
           return "gdu";
         }
-      } catch {
+      } catch (_e) {
         /* eslint-disable no-console */
         console.error("Cannot find gdu command, falling back to du");
       }

@@ -12,7 +12,6 @@ export enum LogLevel {
   trace = "trace",
 }
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const LogLevels = Object.values(LogLevel);
 
 export type LogHandler = (message: string, context?: LogData, error?: Error) => void;

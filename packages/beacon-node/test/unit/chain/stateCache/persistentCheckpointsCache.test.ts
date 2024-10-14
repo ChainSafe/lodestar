@@ -12,7 +12,7 @@ import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
 import {FIFOBlockStateCache, toCheckpointHex} from "../../../../src/chain/index.js";
 
-describe("PersistentCheckpointStateCache", function () {
+describe("PersistentCheckpointStateCache", () => {
   let root0a: Buffer, root0b: Buffer, root1: Buffer, root2: Buffer;
   let cp0a: phase0.Checkpoint, cp0b: phase0.Checkpoint, cp1: phase0.Checkpoint, cp2: phase0.Checkpoint;
   let cp0aHex: CheckpointHex, cp0bHex: CheckpointHex, cp1Hex: CheckpointHex, cp2Hex: CheckpointHex;
@@ -135,7 +135,7 @@ describe("PersistentCheckpointStateCache", function () {
     expect((await cache.getOrReloadLatest(cp0bHex.rootHex, cp0b.epoch - 1))?.serialize()).toBeUndefined();
   });
 
-  it("pruneFinalized and getStateOrBytes", async function () {
+  it("pruneFinalized and getStateOrBytes", async () => {
     cache.add(cp2, states["cp2"]);
     expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
       states["cp0b"].hashTreeRoot()
@@ -182,7 +182,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       |0b--------root1--------root2
     //                       |
     //                       0a
-    it("single state at lowest memory epoch", async function () {
+    it("single state at lowest memory epoch", async () => {
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
       expect(cache.findSeedStateToReload(cp0aHex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
@@ -198,7 +198,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       0a------------------------------root3
     //                                    ^           ^
     //                           cp1a={0a, 21}       {0a, 22}=cp2a
-    it("multiple states at lowest memory epoch", async function () {
+    it("multiple states at lowest memory epoch", async () => {
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
 
@@ -259,7 +259,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       |0b--------root1--------root2-----root3
     //                       |
     //                       0a
-    it("no reorg", async function () {
+    it("no reorg", async () => {
       expect(fileApisBuffer.size).toEqual(0);
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -293,7 +293,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       |0b--------root1--------root2-root3 |
     //                       |                        |
     //                       0a                       |---------root4
-    it("reorg in same epoch", async function () {
+    it("reorg in same epoch", async () => {
       // mostly the same to the above test
       expect(fileApisBuffer.size).toEqual(0);
       cache.add(cp2, states["cp2"]);
@@ -338,7 +338,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                                            1a  ^
     //                                                |
     //                                               {1a, 22}=cp2a
-    it("reorg 1 epoch", async function () {
+    it("reorg 1 epoch", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -382,7 +382,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                                 0a ^           ^
     //                                    |           |
     //                            cp1a={0a, 21}     {0a, 22}=cp2a
-    it("reorg 2 epochs", async function () {
+    it("reorg 2 epochs", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -435,7 +435,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                                    ^           ^
     //                                    |           |
     //                            cp1a={0a, 21}     {0a, 22}=cp2a
-    it("reorg 3 epochs, persist cp 0a", async function () {
+    it("reorg 3 epochs, persist cp 0a", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -491,7 +491,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                      0a            ^           ^
     //                                    |           |
     //                            cp1b={0b, 21}     {0b, 22}=cp2b
-    it("reorg 3 epochs, prune but no persist", async function () {
+    it("reorg 3 epochs, prune but no persist", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);

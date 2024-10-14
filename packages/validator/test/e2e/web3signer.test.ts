@@ -5,14 +5,14 @@ import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lod
 import {createBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
-import {ssz} from "@lodestar/types";
+import {ssz, sszTypesFor} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {getKeystoresStr, StartedExternalSigner, startExternalSigner} from "@lodestar/test-utils";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
-describe("web3signer signature test", function () {
+describe("web3signer signature test", () => {
   vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
 
   const altairSlot = 2375711;
@@ -82,7 +82,7 @@ describe("web3signer signature test", function () {
     });
   }
 
-  it("signRandao", async function () {
+  it("signRandao", async () => {
     await assertSameSignature("signRandao", pubkeyBytes, epoch);
   });
 
@@ -93,17 +93,27 @@ describe("web3signer signature test", function () {
     await assertSameSignature("signAttestation", duty, attestationData, epoch);
   });
 
-  it("signAggregateAndProof", async () => {
-    const aggregateAndProof = ssz.phase0.AggregateAndProof.defaultValue();
-    aggregateAndProof.aggregate.data.slot = duty.slot;
-    aggregateAndProof.aggregate.data.index = duty.committeeIndex;
-    await assertSameSignature(
-      "signAggregateAndProof",
-      duty,
-      aggregateAndProof.selectionProof,
-      aggregateAndProof.aggregate
-    );
-  });
+  for (const fork of config.forksAscendingEpochOrder) {
+    it(`signAggregateAndProof ${fork.name}`, async ({skip}) => {
+      // Only test till the fork the signer version supports
+      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
+        skip();
+        return;
+      }
+
+      const aggregateAndProof = sszTypesFor(fork.name).AggregateAndProof.defaultValue();
+      const slot = computeStartSlotAtEpoch(fork.epoch);
+      aggregateAndProof.aggregate.data.slot = slot;
+      aggregateAndProof.aggregate.data.index = duty.committeeIndex;
+
+      await assertSameSignature(
+        "signAggregateAndProof",
+        {...duty, slot},
+        aggregateAndProof.selectionProof,
+        aggregateAndProof.aggregate
+      );
+    });
+  }
 
   it("signSyncCommitteeSignature", async () => {
     const beaconBlockRoot = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;

@@ -59,8 +59,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       coerce: (pubkeys: string[]): string[] =>
         // Parse ["0x11,0x22"] to ["0x11", "0x22"]
         pubkeys
-          .map((item) => item.split(","))
-          .flat(1)
+          .flatMap((item) => item.split(","))
           .map(ensure0xPrefix),
     },
 
@@ -151,7 +150,7 @@ async function processVoluntaryExit(
   const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
   const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
-  let signature;
+  let signature: Signature;
   switch (signer.type) {
     case SignerType.Local:
       signature = signer.secretKey.sign(signingRoot);
@@ -192,22 +191,19 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
       const signer = signersByPubkey.get(pubkey);
       if (!signer) {
         throw new YargsError(`Unknown pubkey ${pubkey}`);
-      } else {
-        selectedSigners.push({pubkey, signer});
       }
+      selectedSigners.push({pubkey, signer});
     }
 
     return selectedSigners;
-  } else {
-    return signersWithPubkey;
   }
+  return signersWithPubkey;
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function resolveValidatorIndexes(client: ApiClient, signersToExit: SignerPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 
-  const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pubkeys})).value();
+  const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: pubkeys})).value();
 
   const dataByPubkey = new Map(validators.map((item) => [toPubkeyHex(item.validator.pubkey), item]));
 

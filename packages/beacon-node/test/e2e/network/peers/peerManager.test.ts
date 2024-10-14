@@ -22,7 +22,7 @@ import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 
 const logger = testLogger("peerManager");
 
-describe("network / peers / PeerManager", function () {
+describe("network / peers / PeerManager", () => {
   const peerId1 = getValidPeerId();
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -33,7 +33,6 @@ describe("network / peers / PeerManager", function () {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules() {
     // Setup fake chain
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -157,7 +156,7 @@ describe("network / peers / PeerManager", function () {
     remotePeer: peerId1,
   } as Connection;
 
-  it("Should emit peer connected event on relevant peer status", async function () {
+  it("Should emit peer connected event on relevant peer status", async () => {
     const {statusCache, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
@@ -176,7 +175,7 @@ describe("network / peers / PeerManager", function () {
     await peerConnectedPromise;
   });
 
-  it("On peerConnect handshake flow", async function () {
+  it("On peerConnect handshake flow", async () => {
     const {statusCache, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy

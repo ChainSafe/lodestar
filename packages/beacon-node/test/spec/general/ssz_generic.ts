@@ -15,7 +15,7 @@ import {getTestType} from "./ssz_generic_types.js";
 
 export const sszGeneric =
   (skippedTypes: string[]): TestRunnerCustom =>
-  (fork, typeName, testSuite, testSuiteDirpath) => {
+  (_fork, typeName, testSuite, testSuiteDirpath) => {
     if (testSuite === "invalid") {
       for (const testCase of fs.readdirSync(testSuiteDirpath)) {
         it(testCase, () => {

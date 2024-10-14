@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
+import {routes, fetch} from "@lodestar/api";
+import {ssz} from "@lodestar/types";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
@@ -40,7 +40,7 @@ await env.start({runTimeoutMs: estimatedTimeoutMs});
 const node = env.nodes[0].beacon;
 await waitForSlot("Wait for 2 slots before checking endpoints", {env, slot: 2});
 
-const validators = (await node.api.beacon.getStateValidators({stateId: "head"})).value();
+const validators = (await node.api.beacon.postStateValidators({stateId: "head"})).value();
 
 await env.tracker.assert("should have correct validators count called without filters", async () => {
   assert.equal(validators.length, validatorCount);
@@ -55,12 +55,12 @@ await env.tracker.assert("should have correct validator index for second validat
 });
 
 await env.tracker.assert(
-  "should return correct number of filtered validators when getStateValidators called with filters",
+  "should return correct number of filtered validators when postStateValidators called with filters",
   async () => {
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const res = await node.api.beacon.getStateValidators({stateId: "head", validatorIds: [filterPubKey]});
+    const res = await node.api.beacon.postStateValidators({stateId: "head", validatorIds: [filterPubKey]});
 
     assert.equal(res.value().length, 1);
 
@@ -71,12 +71,12 @@ await env.tracker.assert(
 );
 
 await env.tracker.assert(
-  "should return correct filtered validators when getStateValidators called with filters",
+  "should return correct filtered validators when postStateValidators called with filters",
   async () => {
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const res = await node.api.beacon.getStateValidators({stateId: "head", validatorIds: [filterPubKey]});
+    const res = await node.api.beacon.postStateValidators({stateId: "head", validatorIds: [filterPubKey]});
 
     assert.equal(toHexString(res.value()[0].validator.pubkey), filterPubKey);
   }
@@ -104,6 +104,35 @@ await env.tracker.assert(
     assert.equal(toHexString(res.value().validator.pubkey), hexPubKey);
   }
 );
+
+await env.tracker.assert("should return HTTP error responses in a spec compliant format", async () => {
+  // ApiError with status 400 is thrown by handler
+  const res1 = await node.api.beacon.getStateValidator({stateId: "current", validatorId: 1});
+  assert.deepStrictEqual(JSON.parse(await res1.errorBody()), {code: 400, message: "Invalid block id 'current'"});
+
+  // JSON schema validation failed
+  const res2 = await node.api.beacon.getPoolAttestationsV2({slot: "current" as unknown as number, committeeIndex: 123});
+  assert.deepStrictEqual(JSON.parse(await res2.errorBody()), {code: 400, message: "slot must be integer"});
+
+  // Error processing multiple items
+  const signedAttestations = Array.from({length: 3}, () => ssz.phase0.Attestation.defaultValue());
+  const res3 = await node.api.beacon.submitPoolAttestationsV2({signedAttestations});
+  const errBody = JSON.parse(await res3.errorBody()) as {code: number; message: string; failures: unknown[]};
+  assert.equal(errBody.code, 400);
+  assert.equal(errBody.message, "Error processing attestations");
+  assert.equal(errBody.failures.length, signedAttestations.length);
+  assert.deepStrictEqual(errBody.failures[0], {
+    index: 0,
+    message: "ATTESTATION_ERROR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET",
+  });
+
+  // Route does not exist
+  const res4 = await fetch(`${node.restPublicUrl}/not/implemented/route`);
+  assert.deepStrictEqual(JSON.parse(await res4.text()), {
+    code: 404,
+    message: "Route GET:/not/implemented/route not found",
+  });
+});
 
 await env.tracker.assert("BN Not Synced", async () => {
   const expectedSyncStatus: routes.node.SyncingStatus = {

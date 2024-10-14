@@ -175,7 +175,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     stateBytes,
     seedValidatorsBytes
   );
-  const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
+  const {pubkey2index, index2pubkey, shufflingCache} = cachedSeedState.epochCtx;
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
@@ -191,6 +191,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
       config: cachedSeedState.config,
       pubkey2index,
       index2pubkey,
+      shufflingCache,
     },
     {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;
@@ -253,9 +254,11 @@ export function isCachedBeaconState<T extends BeaconStateAllForks>(
 // This cache is populated during epoch transition, and should be preserved for performance.
 // If the cache is missing too often, means that our clone strategy is not working well.
 export function isStateValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   return state.validators["nodesPopulated"] === true;
 }
 
 export function isStateBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   return state.balances["nodesPopulated"] === true;
 }

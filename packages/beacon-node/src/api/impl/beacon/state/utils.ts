@@ -1,7 +1,8 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {GENESIS_SLOT} from "@lodestar/params";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {BLSPubkey, Epoch, getValidatorStatus, phase0, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {IBeaconChain} from "../../../../chain/index.js";
@@ -33,7 +34,7 @@ export function resolveStateId(
 
   // id must be slot
   const blockSlot = parseInt(String(stateId), 10);
-  if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+  if (Number.isNaN(blockSlot) && Number.isNaN(blockSlot - 0)) {
     throw new ValidationError(`Invalid block id '${stateId}'`, "blockId");
   }
 
@@ -82,36 +83,26 @@ export async function getStateResponseWithRegen(
   return res;
 }
 
-/**
- * Get the status of the validator
- * based on conditions outlined in https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
- */
-export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Epoch): routes.beacon.ValidatorStatus {
-  // pending
-  if (validator.activationEpoch > currentEpoch) {
-    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
-      return "pending_initialized";
-    } else if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
-      return "pending_queued";
-    }
+type GeneralValidatorStatus = "active" | "pending" | "exited" | "withdrawal";
+
+function mapToGeneralStatus(subStatus: routes.beacon.ValidatorStatus): GeneralValidatorStatus {
+  switch (subStatus) {
+    case "active_ongoing":
+    case "active_exiting":
+    case "active_slashed":
+      return "active";
+    case "pending_initialized":
+    case "pending_queued":
+      return "pending";
+    case "exited_slashed":
+    case "exited_unslashed":
+      return "exited";
+    case "withdrawal_possible":
+    case "withdrawal_done":
+      return "withdrawal";
+    default:
+      throw new Error(`Unknown substatus: ${subStatus}`);
   }
-  // active
-  if (validator.activationEpoch <= currentEpoch && currentEpoch < validator.exitEpoch) {
-    if (validator.exitEpoch === FAR_FUTURE_EPOCH) {
-      return "active_ongoing";
-    } else if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
-      return validator.slashed ? "active_slashed" : "active_exiting";
-    }
-  }
-  // exited
-  if (validator.exitEpoch <= currentEpoch && currentEpoch < validator.withdrawableEpoch) {
-    return validator.slashed ? "exited_slashed" : "exited_unslashed";
-  }
-  // withdrawal
-  if (validator.withdrawableEpoch <= currentEpoch) {
-    return validator.effectiveBalance !== 0 ? "withdrawal_possible" : "withdrawal_done";
-  }
-  throw new Error("ValidatorStatus unknown");
 }
 
 export function toValidatorResponse(
@@ -140,9 +131,10 @@ export function filterStateValidatorsByStatus(
 
   for (const validator of validatorsArr) {
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
+    const generalStatus = mapToGeneralStatus(validatorStatus);
 
     const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
-    if (resp.valid && statusSet.has(validatorStatus)) {
+    if (resp.valid && (statusSet.has(validatorStatus) || statusSet.has(generalStatus))) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
       );
@@ -165,7 +157,7 @@ export function getStateValidatorIndex(
     if (id.startsWith("0x")) {
       try {
         id = fromHex(id);
-      } catch (e) {
+      } catch (_e) {
         return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
       }
     } else {
@@ -187,7 +179,7 @@ export function getStateValidatorIndex(
 
   // typeof id === Uint8Array
   const validatorIndex = pubkey2index.get(id);
-  if (validatorIndex === undefined) {
+  if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }
   if (validatorIndex >= state.validators.length) {
