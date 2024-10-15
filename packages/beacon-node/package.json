@@ -95,7 +95,7 @@
   },
   "dependencies": {
     "@chainsafe/as-sha256": "^0.5.0",
-    "@chainsafe/blst": "^2.0.3",
+    "@chainsafe/blst": "file:../../temp-deps/blst-ts",
     "@chainsafe/discv5": "^10.0.1",
     "@chainsafe/enr": "^4.0.1",
     "@chainsafe/libp2p-gossipsub": "^14.1.0",

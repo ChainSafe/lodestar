@@ -59,7 +59,7 @@
   ],
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
-    "@chainsafe/blst": "^2.0.3",
+    "@chainsafe/blst": "file:../../temp-deps/blst-ts",
     "@lodestar/api": "^1.22.0",
     "@lodestar/config": "^1.22.0",
     "@lodestar/params": "^1.22.0",
