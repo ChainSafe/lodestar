@@ -89,7 +89,7 @@ import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProdu
 export const SYNC_TOLERANCE_EPOCHS = 1;
 
 /**
- * Cutoff time to wait for execution and builder block production apis to resolve
+ * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve
  * Post this time, race execution and builder to pick whatever resolves first
  *
  * Empirically the builder block resolves in ~1.5+ seconds, and execution should resolve <1 sec.
@@ -637,7 +637,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Engine disabled"));
 
     const [builder, engine] = await resolveOrRacePromises([builderPromise, enginePromise], {
-      resolveTimeoutMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
+      resolveTimeoutMs: Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000)),
       raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
       signal: controller.signal,
     });
