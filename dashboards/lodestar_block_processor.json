@@ -3985,10 +3985,10 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         },
         "tooltipOptions": {
@@ -4001,10 +4001,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(beacon_fork_choice_find_head_seconds_sum[$rate_interval])/rate(beacon_fork_choice_find_head_seconds_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "find head",
+          "legendFormat": "{{caller}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -4103,10 +4105,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "beacon_fork_choice_errors_total",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -4189,10 +4193,10 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         },
         "tooltipOptions": {
@@ -4205,10 +4209,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "12 * rate(beacon_fork_choice_find_head_seconds_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "updateHead calls",
+          "legendFormat": "{{caller}}_updateHead_calls",
+          "range": true,
           "refId": "A"
         },
         {
@@ -4228,11 +4234,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(beacon_fork_choice_find_head_seconds_sum[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "usage rate",
+          "legendFormat": "{{caller}}_usage_rate",
+          "range": true,
           "refId": "C"
         }
       ],
