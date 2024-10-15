@@ -21,7 +21,7 @@ import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
 // Define above to re-use in sync_aggregate and sync_aggregate_random
-const sync_aggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
+const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
   state,
   testCase: {sync_aggregate: altair.SyncAggregate}
 ) => {
@@ -60,8 +60,8 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processProposerSlashing(fork, state, testCase.proposer_slashing);
   },
 
-  sync_aggregate,
-  sync_aggregate_random: sync_aggregate,
+  sync_aggregate: syncAggregate,
+  sync_aggregate_random: syncAggregate,
 
   voluntary_exit: (state, testCase: {voluntary_exit: phase0.SignedVoluntaryExit}) => {
     const fork = state.config.getForkSeq(state.slot);

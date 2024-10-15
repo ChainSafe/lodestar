@@ -71,54 +71,29 @@
         "useNumberNamespace": "off",
         // We prefer to auto-initialize enums
         "useEnumInitializers": "off",
-        "noVar": "error",
-        "useConst": "error",
         "useNamingConvention": {
           "level": "error",
           "options": {
             "strictCase": false,
+            "requireAscii": true,
             "conventions": [
               {
                 "selector": {
-                  "kind": "any"
+                  "kind": "variable"
                 },
-                "formats": ["camelCase"]
-              },
-              {
-                "selector": {
-                  "kind": "classProperty"
-                },
-                "formats": ["camelCase"]
-              },
-              {
-                "selector": {
-                  "kind": "objectLiteralProperty"
-                },
-                "formats": ["camelCase"]
-              },
-              {
-                "selector": {
-                  "kind": "classMethod"
-                },
-                "formats": ["camelCase"]
-              },
-              {
-                "selector": {
-                  "kind": "functionParameter"
-                },
-                "formats": ["camelCase"]
+                "match": "(?:__dirname)|(?:_.*)|(.*)"
               },
               {
                 "selector": {
                   "kind": "variable"
                 },
-                "formats": ["camelCase", "CONSTANT_CASE"]
+                "formats": ["camelCase", "PascalCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "typeLike"
                 },
-                "formats": ["PascalCase"]
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
@@ -128,57 +103,57 @@
               },
               {
                 "selector": {
-                  "kind": "enumMember"
+                  "kind": "objectLiteralProperty"
                 },
-                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
-              },
-              {
-                "selector": {
-                  "kind": "classProperty"
-                },
-                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
-              },
-              {
-                "selector": {
-                  "kind": "typeProperty"
-                },
-                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
-              },
-              {
-                "selector": {
-                  "kind": "classMember"
-                },
-                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "objectLiteralMethod"
                 },
-                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "match": "(?:_.*)|(.*)"
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
                   "kind": "typeMethod"
                 },
-                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
-                  "kind": "variable"
+                  "kind": "enumMember"
                 },
-                "formats": ["PascalCase", "camelCase", "CONSTANT_CASE"]
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
               },
               {
                 "selector": {
-                  "kind": "importAlias"
+                  "kind": "indexParameter"
                 },
-                "formats": ["PascalCase", "camelCase"]
+                "formats": ["camelCase", "PascalCase"]
               },
               {
                 "selector": {
-                  "kind": "importNamespace"
+                  "kind": "function"
                 },
-                "formats": ["PascalCase", "camelCase"]
+                "formats": ["camelCase", "PascalCase"]
               }
             ]
           }
@@ -246,13 +221,7 @@
     "globals": ["BigInt"]
   },
   "overrides": [
-    {
-      "include": ["packages/**/test/perf/**/*.test.ts", "packages/state-transition/test/utils/beforeValueMocha.ts"],
-      "javascript": {
-        // These are used by mocha
-        "globals": ["describe", "it", "before", "after"]
-      }
-    },
+    // Code using console output
     {
       "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
       "linter": {
@@ -263,70 +232,9 @@
         }
       }
     },
+    // All test files
     {
-      "include": [
-        "**/*.config.js",
-        "**/*.config.mjs",
-        "**/*.config.cjs",
-        "**/*.config.ts",
-        "scripts/vitest/**/*.ts",
-        "scripts/vite/**/*.ts",
-        "**/types/**/*.ts",
-        "packages/api/src/beacon/routes/*.ts",
-        "packages/api/src/**/routes.ts",
-        "packages/api/src/utils/server/handler.ts",
-        "packages/api/test/unit/client/urlFormat.test.ts",
-        "packages/beacon-node/src/api/impl/config/constants.ts",
-        "packages/beacon-node/src/eth1/provider/eth1Provider.ts",
-        ""
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "useNamingConvention": {
-              "level": "off",
-              "options": {
-                "strictCase": false
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "include": [
-        "**/test/**/*.ts",
-        "packages/*/test/**/*.js",
-        "packages/api/src/utils/**/*.ts",
-        "packages/beacon-node/src/db/repositories/checkpointState.ts",
-        "packages/spec-test-util/src/single.ts"
-      ],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noExplicitAny": "off"
-          }
-        }
-      }
-    },
-    {
-      "include": ["**/test/**/*.ts", "packages/*/test/**/*.js"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noConsoleLog": "off"
-          }
-        }
-      }
-    },
-    {
-      "include": ["**/perf/**/*.ts"],
-      "linter": {
-        "rules": {}
-      }
-    },
-    {
-      "include": ["**/test/**/*.test.ts"],
+      "include": ["**/test/**/*.ts", "packages/spec-test-util/src"],
       "linter": {
         "rules": {
           "complexity": {
@@ -335,7 +243,46 @@
           },
           "suspicious": {
             // During tests it's quicker to define variables with `let` without specifying types
-            "noImplicitAnyLet": "off"
+            "noImplicitAnyLet": "off",
+            // During testing we use `any` type for quick assignments
+            "noExplicitAny": "off",
+            // Console logging is often used in tests
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    // Dependencies still using mocha
+    {
+      "include": ["packages/**/test/perf/**/*.test.ts", "packages/state-transition/test/utils/beforeValueMocha.ts"],
+      "javascript": {
+        // These are used by mocha
+        "globals": ["describe", "it", "before", "after"]
+      }
+    },
+    {
+      "include": [
+        // These files are using mix cases e.g. `engine_newPayloadV4`
+        // It's a mix of snake_case and camelCase, which can't validated by biome
+        "packages/beacon-node/src/db/buckets.ts",
+        "packages/beacon-node/src/execution/engine/mock.ts",
+        "packages/beacon-node/src/execution/engine/types.ts",
+        "packages/beacon-node/src/eth1/provider/eth1Provider.ts",
+        "packages/validator/src/buckets.ts",
+        "packages/prover/src/types.ts",
+        "prover/src/utils/process.ts",
+        "prover/src/verified_requests/**/*.ts",
+        "packages/types/src/utils/**/*.ts",
+        // This file is using snake_case function names
+        "packages/beacon-node/test/spec/bls/bls.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "off",
+              "options": {}
+            }
           }
         }
       }

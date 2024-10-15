@@ -5,8 +5,8 @@ import {
   Signature,
   aggregateSerializedPublicKeys,
   aggregateSignatures,
-  aggregateVerify,
-  fastAggregateVerify,
+  aggregateVerify as BLSAggregateVerify,
+  fastAggregateVerify as BLSFastAggregateVerify,
   verify as _verify,
 } from "@chainsafe/blst";
 import {InputType} from "@lodestar/spec-test-util";
@@ -14,10 +14,10 @@ import {TestRunnerFn} from "../utils/types.js";
 
 const testFnByType: Record<string, (data: any) => any> = {
   aggregate,
-  aggregate_verify,
-  eth_aggregate_pubkeys,
-  eth_fast_aggregate_verify,
-  fast_aggregate_verify,
+  aggregate_verify: aggregateVerify,
+  eth_aggregate_pubkeys: ethAggregatePubkeys,
+  eth_fast_aggregate_verify: ethFastAggregateVerify,
+  fast_aggregate_verify: fastAggregateVerify,
   sign,
   verify,
 };
@@ -86,10 +86,10 @@ function aggregate(input: string[]): string | null {
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
+function aggregateVerify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
   try {
-    return aggregateVerify(
+    return BLSAggregateVerify(
       messages.map(fromHexString),
       pubkeys.map((pk) => PublicKey.fromHex(pk)),
       Signature.fromHex(signature)
@@ -105,7 +105,7 @@ function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signatu
  * output: BLS Signature -- expected output, single BLS signature or empty.
  * ```
  */
-function eth_aggregate_pubkeys(input: string[]): string | null {
+function ethAggregatePubkeys(input: string[]): string | null {
   // Don't add this checks in the source as beacon nodes check the pubkeys for inf when onboarding
   for (const pk of input) {
     if (pk === G1_POINT_AT_INFINITY) return null;
@@ -127,7 +127,7 @@ function eth_aggregate_pubkeys(input: string[]): string | null {
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean {
+function ethFastAggregateVerify(input: {pubkeys: string[]; message: string; signature: string}): boolean {
   const {pubkeys, message, signature} = input;
 
   if (pubkeys.length === 0 && signature === G2_POINT_AT_INFINITY) {
@@ -140,7 +140,7 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
   }
 
   try {
-    return fastAggregateVerify(
+    return BLSFastAggregateVerify(
       fromHexString(message),
       pubkeys.map((hex) => PublicKey.fromHex(hex)),
       Signature.fromHex(signature)
@@ -159,10 +159,10 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
+function fastAggregateVerify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    return fastAggregateVerify(
+    return BLSFastAggregateVerify(
       fromHexString(message),
       pubkeys.map((hex) => PublicKey.fromHex(hex, true)),
       Signature.fromHex(signature, true)
