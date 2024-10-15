@@ -310,16 +310,6 @@
       }
     },
     {
-      "include": ["packages/beacon-node/test/e2e/eth1/jsonRpcHttpClient.test.ts"],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "noUnusedVariables": "off"
-          }
-        }
-      }
-    },
-    {
       "include": ["**/test/**/*.ts", "packages/*/test/**/*.js"],
       "linter": {
         "rules": {

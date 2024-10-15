@@ -41,13 +41,13 @@ describe("eth1 / jsonRpcHttpClient", () => {
     {
       id: "Bad port",
       url: `http://localhost:${port + 1}`,
-      requestListener: (req, res) => res.end(),
+      requestListener: (_req, res) => res.end(),
       error: "",
       errorCode: "ECONNREFUSED",
     },
     {
       id: "Not a JSON RPC endpoint",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "text/html");
         res.end("<html></html>");
       },
@@ -55,7 +55,7 @@ describe("eth1 / jsonRpcHttpClient", () => {
     },
     {
       id: "Endpoint returns HTTP error",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.statusCode = 404;
         res.end();
       },
@@ -63,7 +63,7 @@ describe("eth1 / jsonRpcHttpClient", () => {
     },
     {
       id: "RPC payload with error",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: noMethodError}));
       },
@@ -71,7 +71,7 @@ describe("eth1 / jsonRpcHttpClient", () => {
     },
     {
       id: "RPC payload with non-spec error: error has no message",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: {code: noMethodError.code}}));
       },
@@ -79,7 +79,7 @@ describe("eth1 / jsonRpcHttpClient", () => {
     },
     {
       id: "RPC payload with non-spec error: error is a string",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: notInSpecError}));
       },
@@ -87,7 +87,7 @@ describe("eth1 / jsonRpcHttpClient", () => {
     },
     {
       id: "RPC payload with no result",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83}));
       },
@@ -226,7 +226,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
   it("should retry 404", async () => {
     let requestCount = 0;
 
-    const server = http.createServer((req, res) => {
+    const server = http.createServer((_req, res) => {
       requestCount++;
       res.statusCode = 404;
       res.end();
@@ -317,7 +317,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
   it("should not retry payload error", async () => {
     let requestCount = 0;
 
-    const server = http.createServer((req, res) => {
+    const server = http.createServer((_req, res) => {
       requestCount++;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: noMethodError}));
