@@ -148,16 +148,25 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.prune(headStateRoot);
   }
 
-  pruneOnFinalized(finalizedEpoch: number): void {
-    this.checkpointStateCache.pruneFinalized(finalizedEpoch);
+  pruneOnFinalized(finalizedEpoch: number): Map<Epoch, CachedBeaconStateAllForks[]> | null {
+    const prunedStates = this.checkpointStateCache.pruneFinalized(finalizedEpoch);
     this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
+
+    return prunedStates;
   }
 
-  processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void {
-    this.blockStateCache.add(postState);
-    this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
-      this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e);
-    });
+  async processState(
+    blockRootHex: RootHex,
+    postState: CachedBeaconStateAllForks
+  ): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
+    let prunedStates: Map<Epoch, CachedBeaconStateAllForks[]> | null = null;
+    try {
+      prunedStates = await this.checkpointStateCache.processState(blockRootHex, postState);
+    } catch (e) {
+      this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e as Error);
+    }
+
+    return prunedStates;
   }
 
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {

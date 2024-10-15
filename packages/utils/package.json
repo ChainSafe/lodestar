@@ -39,7 +39,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^0.5.0",
+    "@chainsafe/as-sha256": "file:../../../ssz/packages/as-sha256",
     "any-signal": "3.0.1",
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",

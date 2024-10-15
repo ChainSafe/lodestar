@@ -67,6 +67,7 @@ import {
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
 import {CachedBeaconStateAllForks} from "./stateCache.js";
+import {IBalancesTreeCache} from "./balancesTreeCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -76,6 +77,7 @@ export type EpochCacheImmutableData = {
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
   shufflingCache?: IShufflingCache;
+  balancesTreeCache?: IBalancesTreeCache;
 };
 
 export type EpochCacheOpts = {
@@ -135,6 +137,7 @@ export class EpochCache {
    * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
    */
   unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
+  balancesTreeCache?: IBalancesTreeCache;
   /**
    * ShufflingCache is passed in from `beacon-node` so should be available at runtime but may not be
    * present during testing.
@@ -273,6 +276,7 @@ export class EpochCache {
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
+    balancesTreeCache?: IBalancesTreeCache;
     shufflingCache?: IShufflingCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
@@ -306,6 +310,7 @@ export class EpochCache {
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
     this.unfinalizedPubkey2index = data.unfinalizedPubkey2index;
+    this.balancesTreeCache = data.balancesTreeCache;
     this.shufflingCache = data.shufflingCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
@@ -344,7 +349,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey, shufflingCache}: EpochCacheImmutableData,
+    {config, pubkey2index, index2pubkey, balancesTreeCache, shufflingCache}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     const currentEpoch = computeEpochAtSlot(state.slot);
@@ -553,6 +558,7 @@ export class EpochCache {
       index2pubkey,
       // `createFromFinalizedState()` creates cache with empty unfinalizedPubkey2index. Be cautious to only pass in finalized state
       unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap(),
+      balancesTreeCache,
       shufflingCache,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
@@ -599,6 +605,7 @@ export class EpochCache {
       index2pubkey: this.index2pubkey,
       // No need to clone this reference. On each mutation the `unfinalizedPubkey2index` reference is replaced, @see `addPubkey`
       unfinalizedPubkey2index: this.unfinalizedPubkey2index,
+      balancesTreeCache: this.balancesTreeCache,
       shufflingCache: this.shufflingCache,
       // Immutable data
       proposers: this.proposers,

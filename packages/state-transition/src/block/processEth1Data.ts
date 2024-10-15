@@ -48,12 +48,11 @@ export function becomesNewEth1Data(
   // Then isEqualEth1DataView compares cached roots (HashObject as of Jan 2022) which is much cheaper
   // than doing structural equality, which requires tree -> value conversions
   let sameVotesCount = 0;
-  const eth1DataVotes = state.eth1DataVotes.getAllReadonly();
-  for (let i = 0; i < eth1DataVotes.length; i++) {
-    if (isEqualEth1DataView(eth1DataVotes[i], newEth1Data)) {
+  state.eth1DataVotes.forEach((eth1DataVote) => {
+    if (isEqualEth1DataView(eth1DataVote, newEth1Data)) {
       sameVotesCount++;
     }
-  }
+  });
 
   // The +1 is to account for the `eth1Data` supplied to the function.
   if ((sameVotesCount + 1) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD) {

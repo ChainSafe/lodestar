@@ -1332,6 +1332,21 @@ export function createLodestarMetrics(
       }),
     },
 
+    balancesTreeCache: {
+      size: register.gauge({
+        name: "lodestar_balances_tree_cache_size",
+        help: "Balances tree cache size",
+      }),
+      hit: register.gauge({
+        name: "lodestar_balances_tree_cache_hit_total",
+        help: "Total number of balances tree cache hits",
+      }),
+      miss: register.gauge({
+        name: "lodestar_balances_tree_cache_miss_total",
+        help: "Total number of balances tree cache misses",
+      }),
+    },
+
     seenCache: {
       aggregatedAttestations: {
         superSetCheckTotal: register.histogram({

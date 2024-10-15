@@ -75,8 +75,8 @@
   "dependencies": {
     "@chainsafe/bls": "7.1.3",
     "@chainsafe/blst": "^0.2.0",
-    "@chainsafe/persistent-merkle-tree": "^0.8.0",
-    "@chainsafe/ssz": "^0.17.1",
+    "@chainsafe/persistent-merkle-tree": "file:../../../ssz/packages/persistent-merkle-tree",
+    "@chainsafe/ssz": "file:../../../ssz/packages/ssz",
     "@lodestar/api": "^1.22.0",
     "@lodestar/config": "^1.22.0",
     "@lodestar/params": "^1.22.0",
@@ -85,7 +85,7 @@
     "mitt": "^3.0.0"
   },
   "devDependencies": {
-    "@chainsafe/as-sha256": "^0.5.0",
+    "@chainsafe/as-sha256": "file:../../../ssz/packages/as-sha256",
     "@types/qs": "^6.9.7",
     "fastify": "^5.0.0",
     "qs": "^6.11.1",

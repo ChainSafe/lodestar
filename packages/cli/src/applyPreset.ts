@@ -1,6 +1,6 @@
 // MUST import this file first before anything and not import any Lodestar code.
 
-import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/as-sha256.js";
+import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/hashtree.js";
 import {setHasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/index.js";
 
 // without setting this first, persistent-merkle-tree will use noble instead

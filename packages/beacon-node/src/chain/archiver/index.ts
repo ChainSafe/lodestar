@@ -109,7 +109,7 @@ export class Archiver {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized, this.metrics);
 
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
+      this.chain.pruneOnFinalized(finalizedEpoch);
 
       // tasks rely on extended fork choice
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
