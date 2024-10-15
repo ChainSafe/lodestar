@@ -1,0 +1,83 @@
+{
+  "name": "@chainsafe/blst",
+  "version": "2.0.3",
+  "description": "Typescript wrapper for supranational/blst native bindings, a highly performant BLS12-381 signature library",
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "build:fuzz": "tsc --project tsconfig.fuzz.json",
+    "postbuild:fuzz": "cp *.node fuzz-tests",
+    "clean": "rimraf target cargo.lock *.node",
+    "download-spec-tests": "node -r ts-node/register test/spec/downloadTests.ts",
+    "lint": "npm run lint:rs && npm run lint:ts",
+    "lint:rs": "cargo fmt --check",
+    "lint:ts": "eslint --color --ext .js,.mjs,.cjs,.ts test/",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "yarn test:unit && yarn test:spec",
+    "test:fuzz": "ts-node test/fuzz/fuzz.test.ts",
+    "test:memory": "node -r ts-node/register --expose-gc test/memory/memory.test.ts",
+    "test:perf": "node -r ts-node/register node_modules/.bin/benchmark --config .benchrc.yaml test/perf/*.test.ts",
+    "test:spec": "mocha test/spec/**/*.test.ts",
+    "test:unit": "mocha test/unit/**/*.test.ts",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "main": "index.js",
+  "type": "commonjs",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "keywords": [
+    "bls",
+    "bls12-381",
+    "blst",
+    "crypto",
+    "ethereum",
+    "napi"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChainSafe/blst-ts"
+  },
+  "napi": {
+    "name": "blst",
+    "triples": {
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "x86_64-unknown-linux-musl"
+      ]
+    }
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@dapplion/benchmark": "^0.2.4",
+    "@napi-rs/cli": "^2.18.3",
+    "@types/chai": "^4.3.16",
+    "@types/js-yaml": "^4.0.9",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^20.14.9",
+    "@types/tar": "^6.1.13",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "chai": "^4.3.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "js-yaml": "^4.1.0",
+    "mocha": "^8.3.2",
+    "prettier": "^3.3.2",
+    "rimraf": "^5.0.8",
+    "tar": "^7.4.0",
+    "ts-node": "^9.1.1",
+    "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">= 16"
+  }
+}
