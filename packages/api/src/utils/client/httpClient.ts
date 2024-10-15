@@ -196,7 +196,8 @@ export class HttpClient implements IHttpClient {
               this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: printableUrl, score: this.urlsScore[i]});
             }
 
-            const localIndex = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
+            // biome-ignore lint/style/useNamingConvention: Author preferred this format
+            const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
 
             const urlInit = this.urlsInits[i];
             if (urlInit === undefined) {
@@ -209,17 +210,11 @@ export class HttpClient implements IHttpClient {
             requestMethod(definition, args, init).then(
               async (res) => {
                 if (res.ok) {
-                  this.urlsScore[localIndex] = Math.min(
-                    URL_SCORE_MAX,
-                    this.urlsScore[localIndex] + URL_SCORE_DELTA_SUCCESS
-                  );
+                  this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
                   // Resolve immediately on success
                   resolve(res);
                 } else {
-                  this.urlsScore[localIndex] = Math.max(
-                    URL_SCORE_MIN,
-                    this.urlsScore[localIndex] - URL_SCORE_DELTA_ERROR
-                  );
+                  this.urlsScore[i_] = Math.max(URL_SCORE_MIN, this.urlsScore[i_] - URL_SCORE_DELTA_ERROR);
 
                   // Resolve failed response only when all queried URLs have errored
                   if (++errorCount >= requestCount) {
@@ -234,10 +229,7 @@ export class HttpClient implements IHttpClient {
                 }
               },
               (err) => {
-                this.urlsScore[localIndex] = Math.max(
-                  URL_SCORE_MIN,
-                  this.urlsScore[localIndex] - URL_SCORE_DELTA_ERROR
-                );
+                this.urlsScore[i_] = Math.max(URL_SCORE_MIN, this.urlsScore[i_] - URL_SCORE_DELTA_ERROR);
 
                 // Reject only when all queried URLs have errored
                 // TODO: Currently rejects with last error only, should join errors?
