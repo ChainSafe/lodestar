@@ -589,9 +589,12 @@ export function getValidatorApi(
     });
     logger.debug("Produced common block body", loggerContext);
 
+    // Calculate cutoff time based on start of the slot
+    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
+
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
-      cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
+      cutoffMs,
       timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
     });
 
@@ -637,7 +640,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Engine disabled"));
 
     const [builder, engine] = await resolveOrRacePromises([builderPromise, enginePromise], {
-      resolveTimeoutMs: Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000)),
+      resolveTimeoutMs: cutoffMs,
       raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
       signal: controller.signal,
     });
