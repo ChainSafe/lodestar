@@ -1,9 +1,5 @@
-.github/
-doc/
-test/
-
-
 coverage
+build
 release
 dist
 node_modules

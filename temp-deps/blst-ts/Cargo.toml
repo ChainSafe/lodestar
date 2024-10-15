@@ -7,7 +7,7 @@ version = "0.0.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-blst = { path = "blst/bindings/rust" }
+blst = { version = "0.3.13", features = ["portable"] }
 hex = "0.4.3"
 napi = { version = "2.16.8", default-features = false, features = ["napi8"] }
 napi-derive = "2.16.8"
