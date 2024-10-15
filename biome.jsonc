@@ -71,12 +71,15 @@
         "useNumberNamespace": "off",
         // We prefer to auto-initialize enums
         "useEnumInitializers": "off",
+        // Namespaces are deprecated way to organize modules in TS
+        "noNamespace": "error",
         "useNamingConvention": {
           "level": "error",
           "options": {
             "strictCase": false,
             "requireAscii": true,
             "conventions": [
+              // Skip __dirname and any variable starting with _, for rest check next convention
               {
                 "selector": {
                   "kind": "variable"
@@ -113,6 +116,7 @@
                 },
                 "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
               },
+              // Skip any property starting with _ and then check for next convention
               {
                 "selector": {
                   "kind": "classProperty"
@@ -157,8 +161,7 @@
               }
             ]
           }
-        },
-        "noNamespace": "error"
+        }
       },
       "suspicious": {
         // `void` as type is useful in our case when used as generic constraint e.g. K extends number | void
