@@ -90,6 +90,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -252,7 +253,6 @@
         }
       ],
       "title": "Full block production avg time with steps",
-      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -266,6 +266,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -428,7 +429,6 @@
         }
       ],
       "title": "Blinded block production avg time with steps",
-      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -442,6 +442,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -599,6 +600,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -683,6 +685,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -822,7 +825,8 @@
         },
         "showValue": "never",
         "tooltip": {
-          "show": true,
+          "mode": "single",
+          "showColorScale": false,
           "yHistogram": false
         },
         "yAxis": {
@@ -831,7 +835,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -874,6 +878,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1028,145 +1033,73 @@
       "type": "timeseries"
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fill": 1,
-      "fillGradient": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 25
-      },
-      "hiddenSeries": false,
-      "id": 378,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": false,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "10.1.1",
-      "pointradius": 0.5,
-      "points": true,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "12 * rate(lodestar_api_rest_response_time_seconds_count{operationId=~\"produceBlindedBlock|publishBlindedBlock|registerValidator\"}[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "{{operationId}}",
-          "refId": "D"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Builder API queries / slot",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:580",
-          "format": "none",
-          "logBase": 2,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:581",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "points",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "none"
         },
         "overrides": []
       },
-      "fill": 1,
-      "fillGradient": 1,
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 33
+        "x": 12,
+        "y": 25
       },
-      "hiddenSeries": false,
-      "id": 376,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "hideEmpty": false,
-        "hideZero": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": false,
-      "linewidth": 1,
-      "nullPointMode": "null",
+      "id": 378,
       "options": {
-        "alertThreshold": true
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
-      "percentage": false,
-      "pluginVersion": "10.1.1",
-      "pointradius": 0.5,
-      "points": true,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -1175,45 +1108,16 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(lodestar_api_rest_response_time_seconds_sum{operationId=~\"produceBlindedBlock|publishBlindedBlock|registerValidator\"}[$rate_interval])\n/\nrate(lodestar_api_rest_response_time_seconds_count{operationId=~\"produceBlindedBlock|publishBlindedBlock|registerValidator\"}[$rate_interval])",
+          "expr": "12 * rate(lodestar_builder_http_client_request_time_seconds_count[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{operationId}}",
+          "legendFormat": "{{routeId}}",
           "range": true,
-          "refId": "B"
+          "refId": "D"
         }
       ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Builder API response times",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:87",
-          "format": "s",
-          "logBase": 2,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:88",
-          "format": "s",
-          "logBase": 1,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
+      "title": "Builder API queries / slot",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -1226,6 +1130,93 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "id": 376,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(lodestar_builder_http_client_request_time_seconds_sum[$rate_interval])\n/\nrate(lodestar_builder_http_client_request_time_seconds_count[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{routeId}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Builder API request times",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1328,6 +1319,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1436,6 +1428,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1540,10 +1533,12 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "exemplar": false,
@@ -1567,6 +1562,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1580,6 +1576,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1683,6 +1680,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1766,6 +1764,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1903,7 +1902,8 @@
           "layout": "auto"
         },
         "tooltip": {
-          "show": true,
+          "mode": "single",
+          "showColorScale": false,
           "yHistogram": false
         },
         "yAxis": {
@@ -1911,7 +1911,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -1981,7 +1981,8 @@
           "layout": "auto"
         },
         "tooltip": {
-          "show": true,
+          "mode": "single",
+          "showColorScale": false,
           "yHistogram": false
         },
         "yAxis": {
@@ -1989,7 +1990,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -2018,6 +2019,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -2031,6 +2033,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2055,7 +2058,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 73
       },
       "id": 539,
       "options": {
@@ -2100,8 +2103,7 @@
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [
     "lodestar"
   ],
