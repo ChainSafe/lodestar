@@ -72,7 +72,7 @@ export interface CheckpointStateCache {
   ): Promise<CachedBeaconStateAllForks | null>;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
-  pruneFinalized(finalizedEpoch: Epoch): Map<Epoch, CachedBeaconStateAllForks[]> | null;
+  pruneFinalized(finalizedEpoch: Epoch): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null>;
   processState(
     blockRootHex: RootHex,
     state: CachedBeaconStateAllForks

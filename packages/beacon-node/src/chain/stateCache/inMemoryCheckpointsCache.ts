@@ -122,7 +122,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
     return previousHits;
   }
 
-  pruneFinalized(finalizedEpoch: Epoch): Map<Epoch, CachedBeaconStateAllForks[]> {
+  async pruneFinalized(finalizedEpoch: Epoch): Promise<Map<Epoch, CachedBeaconStateAllForks[]>> {
     const result = new Map<Epoch, CachedBeaconStateAllForks[]>();
 
     for (const epoch of this.epochIndex.keys()) {

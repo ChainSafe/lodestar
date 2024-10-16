@@ -148,8 +148,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.prune(headStateRoot);
   }
 
-  pruneOnFinalized(finalizedEpoch: number): Map<Epoch, CachedBeaconStateAllForks[]> | null {
-    const prunedStates = this.checkpointStateCache.pruneFinalized(finalizedEpoch);
+  async pruneOnFinalized(finalizedEpoch: number): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
+    const prunedStates = await this.checkpointStateCache.pruneFinalized(finalizedEpoch);
     this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
 
     return prunedStates;

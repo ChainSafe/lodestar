@@ -410,17 +410,23 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Prune all checkpoint states before the provided finalized epoch.
    */
-  pruneFinalized(finalizedEpoch: Epoch): Map<Epoch, CachedBeaconStateAllForks[]> | null {
+  async pruneFinalized(finalizedEpoch: Epoch): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
+    const result = new Map<Epoch, CachedBeaconStateAllForks[]>();
+
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
-        this.deleteAllEpochItems(epoch).catch((e) =>
-          this.logger.debug("Error delete all epoch items", {epoch, finalizedEpoch}, e as Error)
-        );
+        try {
+          const prunedStates = await this.deleteAllEpochItems(epoch);
+          result.set(epoch, prunedStates);
+        } catch(e) {
+          this.logger.debug("Error prune finalized epoch", {epoch, finalizedEpoch}, e as Error);
+        }
       }
     }
 
-    // not likely to return anything in-memory state because we may persist states even before they are finalized
-    return null;
+    // we may persist states even before they are finalized
+    // in that case this return null
+    return result;
   }
 
   /**
@@ -472,6 +478,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - 2 then we'll persist {root: b2, epoch n-2} checkpoint state to disk, there are also 2 checkpoint states in memory at epoch n, same to the above (maxEpochsInMemory=1)
    *
    * As of Mar 2024, it takes <=350ms to persist a holesky state on fast server
+   * This function returns a map of pruned states for each epoch
    */
   async processState(
     blockRootHex: RootHex,
@@ -643,6 +650,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *   - PRCS is the checkpoint state that could be justified/finalized later based on the view of the state
    *   - unknown root checkpoint state is persisted to handle the reorg back to that branch later
    *
+   * This returns pruned states in the epoch
    * Performance note:
    *   - In normal condition, we persist 1 checkpoint state per epoch.
    *   - In reorged condition, we may persist multiple (most likely 2) checkpoint states per epoch.
@@ -760,15 +768,22 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Delete all items of an epoch from disk and memory
    */
-  private async deleteAllEpochItems(epoch: Epoch): Promise<void> {
+  private async deleteAllEpochItems(epoch: Epoch): Promise<CachedBeaconStateAllForks[]> {
     let persistCount = 0;
     const rootHexes = this.epochIndex.get(epoch) || [];
+    const prunedStates: CachedBeaconStateAllForks[] = [];
     for (const rootHex of rootHexes) {
       const key = toCacheKey({rootHex, epoch});
       const cacheItem = this.cache.get(key);
 
       if (cacheItem) {
-        const persistedKey = isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey;
+        let persistedKey: Uint8Array | undefined = undefined;
+        if (isPersistedCacheItem(cacheItem)) {
+          persistedKey = cacheItem.value;
+        } else {
+          persistedKey = cacheItem.persistedKey;
+          prunedStates.push(cacheItem.state);
+        }
         if (persistedKey) {
           await this.datastore.remove(persistedKey);
           persistCount++;
@@ -783,6 +798,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       persistCount,
       rootHexes: Array.from(rootHexes).join(","),
     });
+
+    return prunedStates;
   }
 
   /**

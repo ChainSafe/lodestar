@@ -878,8 +878,8 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  pruneOnFinalized(finalizedEpoch: Epoch): void {
-    const prunedStates = this.regen.pruneOnFinalized(finalizedEpoch);
+  async pruneOnFinalized(finalizedEpoch: Epoch): Promise<void> {
+    const prunedStates = await this.regen.pruneOnFinalized(finalizedEpoch);
     if (prunedStates) {
       // cp states on the same epoch shares the same balances seed tree so only need one of them
       for (const states of prunedStates.values()) {
