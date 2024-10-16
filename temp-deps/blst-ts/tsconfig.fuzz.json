@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig",
+  "include": [
+    "index.js",
+    "test/fuzz"
+  ],
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./fuzz-tests",
+    "module": "CommonJS",
+    "allowJs": true
+  }
+}
