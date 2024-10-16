@@ -2,7 +2,13 @@ import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {
+  SlotInterval,
+  computeEpochAtSlot,
+  computeTimeAtSlot,
+  computeTimeAtSlotInterval,
+  getCurrentSlot,
+} from "@lodestar/state-transition";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
@@ -16,7 +22,9 @@ export interface IClock {
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
   msToSlot(slot: Slot): number;
+  msToSlotInterval(slot: Slot, interval: SlotInterval): number;
   secFromSlot(slot: Slot): number;
+  secFromSlotInterval(slot: Slot, interval: SlotInterval): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
 }
@@ -72,13 +80,32 @@ export class Clock implements IClock {
 
   /** Milliseconds from now to a specific slot */
   msToSlot(slot: Slot): number {
-    const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * slot;
+    const timeAt = computeTimeAtSlot(this.config, slot, this.genesisTime);
+    return timeAt * 1000 - Date.now();
+  }
+
+  /**
+   * Milliseconds from now to the beginning of specific interval in a specific slot
+   * This function will return ms from now to the end of interval if it is called
+   * in `msToSlotInterval(slot, endOfInterval(interval))` manner
+   */
+  msToSlotInterval(slot: Slot, interval: SlotInterval): number {
+    const timeAt = computeTimeAtSlotInterval(this.config, slot, interval, this.genesisTime);
     return timeAt * 1000 - Date.now();
   }
 
   /** Seconds elapsed from a specific slot to now */
   secFromSlot(slot: Slot): number {
-    return Date.now() / 1000 - (this.genesisTime + this.config.SECONDS_PER_SLOT * slot);
+    return Date.now() / 1000 - computeTimeAtSlot(this.config, slot, this.genesisTime);
+  }
+
+  /**
+   * Seconds elapsed from the beginning of specific slot interval to now
+   * This function will return seconds elapsed from end of slot interval to now
+   * if it is called in `secFromSlotInterval(slot, endOfInterval(interval))` manner
+   */
+  secFromSlotInterval(slot: Slot, interval: SlotInterval): number {
+    return Date.now() / 1000 - computeTimeAtSlotInterval(this.config, slot, interval, this.genesisTime);
   }
 
   /**

@@ -13,6 +13,8 @@ import {
   Index2PubkeyCache,
   EpochShuffling,
   computeEndSlotAtEpoch,
+  getSlotFractionFromInterval,
+  SlotInterval,
   computeAnchorCheckpoint,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
@@ -226,7 +228,8 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
-    const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
+    const preAggregateCutOffTime =
+      getSlotFractionFromInterval(SlotInterval.AGGREGATION_PROPAGATION) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(
       config,
       clock,

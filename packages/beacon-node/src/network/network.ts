@@ -22,7 +22,7 @@ import {
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ForkSeq, INTERVALS_PER_SLOT, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -590,9 +590,9 @@ export class Network implements INetwork {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
-      // messages SHOULD be broadcast after one-third of slot has transpired
+      // messages SHOULD be broadcast after one interval of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
-      await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
+      await this.waitOneIntervalOfSlot(finalityUpdate.signatureSlot);
       await this.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
       // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
@@ -607,9 +607,9 @@ export class Network implements INetwork {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
-      // messages SHOULD be broadcast after one-third of slot has transpired
+      // messages SHOULD be broadcast after one interval of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
-      await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
+      await this.waitOneIntervalOfSlot(optimisticUpdate.signatureSlot);
       await this.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
       // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
@@ -620,8 +620,8 @@ export class Network implements INetwork {
     }
   };
 
-  private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
-    const secAtSlot = computeTimeAtSlot(this.config, slot + 1 / 3, this.chain.genesisTime);
+  private waitOneIntervalOfSlot = async (slot: number): Promise<void> => {
+    const secAtSlot = computeTimeAtSlot(this.config, slot + 1 / INTERVALS_PER_SLOT, this.chain.genesisTime);
     const msToSlot = secAtSlot * 1000 - Date.now();
     await sleep(msToSlot, this.controller.signal);
   };
