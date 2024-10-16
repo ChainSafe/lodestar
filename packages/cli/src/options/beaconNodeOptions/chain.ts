@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {ArchiveMode, defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {
@@ -22,12 +22,13 @@ export type ChainArgs = {
   "chain.maxSkipSlots"?: number;
   "chain.trustedSetup"?: string;
   "safe-slots-to-import-optimistically": number;
-  "chain.archiveStateEpochFrequency": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
+  "chain.archiveStateEpochFrequency": number;
   "chain.archiveBlobEpochs"?: number;
+  "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
@@ -54,13 +55,14 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxSkipSlots: args["chain.maxSkipSlots"],
     trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
-    archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
+    archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveBlobEpochs: args["chain.archiveBlobEpochs"],
+    archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
@@ -207,6 +209,16 @@ Will double processing times. Use only for debugging purposes.",
     description: "Minimum number of epochs between archived states",
     default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
+    group: "chain",
+  },
+
+  "chain.archiveMode": {
+    hidden: false,
+    choices: Object.values(ArchiveMode),
+    description: "Strategy to manage archive states",
+    default: defaultOptions.chain.archiveMode,
+    defaultDescription: String(defaultOptions.chain.archiveMode),
+    type: "string",
     group: "chain",
   },
 

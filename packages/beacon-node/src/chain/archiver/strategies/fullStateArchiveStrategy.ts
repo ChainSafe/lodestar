@@ -1,34 +1,23 @@
 import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot, Epoch} from "@lodestar/types";
+import {Slot, Epoch, RootHex} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {IBeaconDb} from "../../db/index.js";
-import {IStateRegenerator} from "../regen/interface.js";
-import {getStateSlotFromBytes} from "../../util/multifork.js";
-import {serializeState} from "../serializeState.js";
-import {AllocSource, BufferPool} from "../../util/bufferPool.js";
-import {Metrics} from "../../metrics/metrics.js";
-
-/**
- * Minimum number of epochs between single temp archived states
- * These states will be pruned once a new state is persisted
- */
-const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
-
-export interface StatesArchiverOpts {
-  /**
-   * Minimum number of epochs between archived states
-   */
-  archiveStateEpochFrequency: number;
-}
+import {IBeaconDb} from "../../../db/index.js";
+import {IStateRegenerator} from "../../regen/interface.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {serializeState} from "../../serializeState.js";
+import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
+import {Metrics} from "../../../metrics/metrics.js";
+import {StateArchiveStrategy, StatesArchiverOpts} from "../interface.js";
+import {PERSIST_TEMP_STATE_EVERY_EPOCHS} from "../constants.js";
 
 /**
  * Archives finalized states from active bucket to archive bucket.
  *
  * Only the new finalized state is stored to disk
  */
-export class StatesArchiver {
+export class FullStateArchiveStrategy implements StateArchiveStrategy {
   constructor(
     private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
@@ -36,6 +25,9 @@ export class StatesArchiver {
     private readonly opts: StatesArchiverOpts,
     private readonly bufferPool?: BufferPool | null
   ) {}
+
+  async onFinalizedCheckpoint(_finalized: CheckpointWithHex, _metrics?: Metrics | null): Promise<void> {}
+  async onCheckpoint(_stateRoot: RootHex, _metrics?: Metrics | null): Promise<void> {}
 
   /**
    * Persist states every some epochs to
@@ -87,7 +79,7 @@ export class StatesArchiver {
    * Archives finalized states from active bucket to archive bucket.
    * Only the new finalized state is stored to disk
    */
-  async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
+  private async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalized);
     const {rootHex} = finalized;
