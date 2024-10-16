@@ -196,6 +196,7 @@ export class HttpClient implements IHttpClient {
               this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: printableUrl, score: this.urlsScore[i]});
             }
 
+            // biome-ignore lint/style/useNamingConvention: Author preferred this format
             const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
 
             const urlInit = this.urlsInits[i];

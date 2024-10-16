@@ -86,7 +86,9 @@ export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode
 }
 
 export interface TrustedSetupJSON {
+  // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
   setup_G1: string[];
+  // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
   setup_G2: string[];
 }
 
@@ -120,7 +122,9 @@ export function trustedSetupJsonToBin(data: TrustedSetupJSON): TrustedSetupBin {
 
 export function trustedSetupBinToJson(bytes: TrustedSetupBin): TrustedSetupJSON {
   const data: TrustedSetupJSON = {
+    // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
     setup_G1: [],
+    // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
     setup_G2: [],
   };
 

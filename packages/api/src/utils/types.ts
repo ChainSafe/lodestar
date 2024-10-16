@@ -6,7 +6,7 @@ import {WireFormat} from "./wireFormat.js";
 
 export type HasOnlyOptionalProps<T> = {
   [K in keyof T]-?: object extends Pick<T, K> ? never : K;
-} extends {[_ in keyof T]: never}
+} extends {[K2 in keyof T]: never}
   ? true
   : false;
 

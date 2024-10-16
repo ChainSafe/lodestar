@@ -11,9 +11,10 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 export class CheckpointStateRepository extends Repository<Uint8Array, BeaconStateAllForks> {
   constructor(config: ChainForkConfig, db: Db) {
     // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
-    const type = ssz.phase0.BeaconState as any;
+    const type = ssz.phase0.BeaconState;
     const bucket = Bucket.allForks_checkpointState;
-    super(config, db, bucket, type, getBucketNameByValue(bucket));
+    // biome-ignore lint/suspicious/noExplicitAny: The type is complex to specify a proper override
+    super(config, db, bucket, type as any, getBucketNameByValue(bucket));
   }
 
   getId(): Uint8Array {
