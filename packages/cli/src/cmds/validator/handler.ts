@@ -106,7 +106,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // Create metrics registry if metrics are enabled or monitoring endpoint is configured
   // Send version and network data for static registries
 
-  const register = args["metrics"] || args["monitoring.endpoint"] ? new RegistryMetricCreator() : null;
+  const register = args.metrics || args["monitoring.endpoint"] ? new RegistryMetricCreator() : null;
   const metrics = register && getMetrics(register, {version, commit, network});
 
   // Start metrics server if metrics are enabled.
@@ -117,7 +117,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
     onGracefulShutdownCbs.push(() => closeMetrics());
 
     // only start server if metrics are explicitly enabled
-    if (args["metrics"]) {
+    if (args.metrics) {
       const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
       const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
       const metricsServer = await getHttpMetricsServer({port, address}, {register, logger});
@@ -186,7 +186,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
-  if (args["keymanager"]) {
+  if (args.keymanager) {
     // if proposerSettingsFile provided disable the key proposerConfigWrite in keymanager
     const proposerConfigWriteDisabled = args.proposerSettingsFile !== undefined;
     if (proposerConfigWriteDisabled) {
@@ -234,7 +234,7 @@ function getProposerConfigFromArgs(
     builder: {
       gasLimit: args.defaultGasLimit,
       selection: parseBuilderSelection(
-        args["builder.selection"] ?? (args["builder"] ? defaultOptions.builderAliasSelection : undefined)
+        args["builder.selection"] ?? (args.builder ? defaultOptions.builderAliasSelection : undefined)
       ),
       boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
     },

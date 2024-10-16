@@ -14,7 +14,7 @@ import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
 import {getDeposits} from "./utils/deposits.js";
-import {Eth1DataAndDeposits, IEth1Provider} from "./interface.js";
+import {Eth1DataAndDeposits, EthJsonRpcBlockRaw, IEth1Provider} from "./interface.js";
 import {Eth1Options} from "./options.js";
 import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
@@ -243,7 +243,7 @@ export class Eth1DepositDataTracker {
     const fromBlock = Math.min(remoteFollowBlock, this.getFromBlockToFetch(lastProcessedDepositBlockNumber));
     const toBlock = Math.min(remoteFollowBlock, fromBlock + this.eth1GetLogsBatchSizeDynamic - 1);
 
-    let depositEvents;
+    let depositEvents: phase0.DepositEvent[];
     try {
       depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
       // Increase the batch size linearly even if we scale down exponentially (half each time)
@@ -313,7 +313,7 @@ export class Eth1DepositDataTracker {
       lastProcessedDepositBlockNumber
     );
 
-    let blocksRaw;
+    let blocksRaw: EthJsonRpcBlockRaw[];
     try {
       blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
       // Increase the batch size linearly even if we scale down exponentially (half each time)
@@ -380,26 +380,24 @@ export class Eth1DepositDataTracker {
       this.eth1FollowDistance = Math.min(this.eth1FollowDistance + delta, this.config.ETH1_FOLLOW_DISTANCE);
 
       return true;
-    } else {
-      // Blocks are slower than expected, reduce eth1FollowDistance. Limit min CATCHUP_MIN_FOLLOW_DISTANCE
-      const delta =
-        this.eth1FollowDistance -
-        Math.max(this.eth1FollowDistance - ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW, ETH_MIN_FOLLOW_DISTANCE);
-      this.eth1FollowDistance = this.eth1FollowDistance - delta;
-
-      // Even if the blocks are slow, when we are all caught up as there is no
-      // further possibility to reduce follow distance, we need to call it quits
-      // for now, else it leads to an incessant poll on the EL
-      return delta === 0;
     }
+    // Blocks are slower than expected, reduce eth1FollowDistance. Limit min CATCHUP_MIN_FOLLOW_DISTANCE
+    const delta =
+      this.eth1FollowDistance -
+      Math.max(this.eth1FollowDistance - ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW, ETH_MIN_FOLLOW_DISTANCE);
+    this.eth1FollowDistance = this.eth1FollowDistance - delta;
+
+    // Even if the blocks are slow, when we are all caught up as there is no
+    // further possibility to reduce follow distance, we need to call it quits
+    // for now, else it leads to an incessant poll on the EL
+    return delta === 0;
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {
     if (lastCachedBlock === null) {
       return this.eth1Provider.deployBlock ?? 0;
-    } else {
-      return lastCachedBlock + 1;
     }
+    return lastCachedBlock + 1;
   }
 
   private async getLastProcessedDepositBlockNumber(): Promise<number | null> {

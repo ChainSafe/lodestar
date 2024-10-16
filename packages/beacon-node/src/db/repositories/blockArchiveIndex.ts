@@ -17,7 +17,7 @@ export async function deleteRootIndex(
   signedBeaconBlockType: SSZTypesFor<ForkAll, "SignedBeaconBlock">,
   block: SignedBeaconBlock
 ): Promise<void> {
-  const beaconBlockType = (signedBeaconBlockType as typeof ssz.phase0.SignedBeaconBlock).fields["message"];
+  const beaconBlockType = (signedBeaconBlockType as typeof ssz.phase0.SignedBeaconBlock).fields.message;
   return db.delete(getRootIndexKey(beaconBlockType.hashTreeRoot(block.message)));
 }
 

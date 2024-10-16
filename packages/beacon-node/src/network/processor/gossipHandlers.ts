@@ -20,7 +20,7 @@ import {
 } from "../../chain/errors/index.js";
 import {
   BatchGossipHandlers,
-  DefaultGossipHandlers,
+  SequentialGossipHandlers,
   GossipHandlerParamGeneric,
   GossipHandlers,
   GossipType,
@@ -36,8 +36,6 @@ import {
   validateGossipBlsToExecutionChange,
   AggregateAndProofValidationResult,
   validateGossipAttestationsSameAttData,
-  validateGossipAttestation,
-  AttestationValidationResult,
   GossipAttestation,
 } from "../../chain/validation/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
@@ -64,8 +62,6 @@ import {AggregatorTracker} from "./aggregatorTracker.js";
 export type GossipHandlerOpts = {
   /** By default pass gossip attestations to forkchoice */
   dontSendGossipAttestationsToForkchoice?: boolean;
-  /** By default don't validate gossip attestations in batch */
-  beaconAttestationBatchValidation?: boolean;
 };
 
 export type ValidatorFnsModules = {
@@ -96,20 +92,15 @@ const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const defaultHandlers = getDefaultHandlers(modules, options);
-  if (options.beaconAttestationBatchValidation) {
-    const batchHandlers = getBatchHandlers(modules, options);
-    return {...defaultHandlers, ...batchHandlers};
-  }
-  return defaultHandlers;
+  return {...getSequentialHandlers(modules, options), ...getBatchHandlers(modules, options)};
 }
 
 /**
  * Default handlers validate gossip messages one by one.
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
-function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): DefaultGossipHandlers {
-  const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
+function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
+  const {chain, config, metrics, events, logger, core} = modules;
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
@@ -458,58 +449,6 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
       chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
-    [GossipType.beacon_attestation]: async ({
-      gossipData,
-      topic,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.beacon_attestation>): Promise<void> => {
-      const {serializedData, msgSlot} = gossipData;
-      if (msgSlot == undefined) {
-        throw Error("msgSlot is undefined for beacon_attestation topic");
-      }
-      const {subnet, fork} = topic;
-
-      // do not deserialize gossipSerializedData here, it's done in validateGossipAttestation only if needed
-      let validationResult: AttestationValidationResult;
-      try {
-        validationResult = await validateGossipAttestation(
-          fork,
-          chain,
-          {attestation: null, serializedData, attSlot: msgSlot},
-          subnet
-        );
-      } catch (e) {
-        if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszBytes(ssz.phase0.Attestation.typeName, serializedData, "gossip_reject");
-        }
-        throw e;
-      }
-
-      // Handler
-      const {indexedAttestation, attDataRootHex, attestation, committeeIndex} = validationResult;
-      metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
-
-      try {
-        // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-        // but don't add to attestation pool, to save CPU and RAM
-        if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-          const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
-          metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
-        }
-      } catch (e) {
-        logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
-      }
-
-      if (!options.dontSendGossipAttestationsToForkchoice) {
-        try {
-          chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
-        } catch (e) {
-          logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
-        }
-      }
-
-      chain.emitter.emit(routes.events.EventType.attestation, attestation);
-    },
 
     [GossipType.attester_slashing]: async ({
       gossipData,
@@ -660,7 +599,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 /**
  * For now, only beacon_attestation topic is batched.
  */
-function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): Partial<BatchGossipHandlers> {
+function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): BatchGossipHandlers {
   const {chain, metrics, logger, aggregatorTracker} = modules;
   return {
     [GossipType.beacon_attestation]: async (
@@ -741,7 +680,6 @@ export async function validateGossipFnRetryUnknownRoot<T>(
   blockRoot: Root
 ): Promise<T> {
   let unknownBlockRootRetries = 0;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       return await fn();

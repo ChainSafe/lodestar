@@ -12,7 +12,7 @@ import {ZERO_HASH} from "../../../../src/constants/index.js";
  * Refer to Teku tests at
  * https://github.com/ConsenSys/teku/blob/e18ab9903442410aa04b590c4cc46734e13d3ffd/networking/eth2/src/test/java/tech/pegasys/teku/networking/eth2/gossip/config/GossipScoringConfiguratorTest.java#L38
  */
-describe("computeGossipPeerScoreParams", function () {
+describe("computeGossipPeerScoreParams", () => {
   const config = createBeaconConfig(mainnetChainConfig, ZERO_HASH);
   // Cheap stub on new BeaconConfig instance
   config.forkName2ForkDigest = () => Buffer.alloc(4, 1);

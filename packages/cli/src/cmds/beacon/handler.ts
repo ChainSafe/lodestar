@@ -24,7 +24,7 @@ import {LogArgs} from "../../options/logOptions.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
-import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -34,7 +34,7 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
+  const {config, options, beaconPaths, network, version, commit, privateKey, logger} = await beaconHandlerInit(args);
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
@@ -80,7 +80,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       db,
       logger,
       processShutdownCallback,
-      peerId,
+      privateKey,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
@@ -158,7 +158,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 }
 
 /** Separate function to simplify unit testing of options merging */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 
@@ -175,14 +174,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 
-  // Combine bootnodes from different sources
-  const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
-    args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
-    isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
-  );
-  // Deduplicate and set combined bootnodes
-  beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
-
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {
     const {depositContractDeployBlock} = getNetworkData(network);
@@ -190,9 +181,20 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   }
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
-  // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+  const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
+
+  if (args.discv5 !== false) {
+    // Inject ENR to beacon options
+    beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+
+    // Combine bootnodes from different sources
+    const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
+      args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
+      isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
+    );
+    // Deduplicate and set combined bootnodes
+    beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
+  }
 
   if (args.disableLightClientServer) {
     beaconNodeOptions.set({chain: {disableLightClientServer: true}});
@@ -216,7 +218,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  return {config, options, beaconPaths, network, version, commit, peerId, logger};
+  return {config, options, beaconPaths, network, version, commit, privateKey, logger};
 }
 
 export function initLogger(

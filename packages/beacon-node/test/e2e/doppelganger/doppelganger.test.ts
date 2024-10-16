@@ -22,7 +22,7 @@ import {BeaconNode} from "../../../src/node/index.js";
 // Attempting to do both 1. and 2. in this e2e test more expensive than necessary.
 // Unit tests in the validator cover 2., so some test in lodestar package should cover 1.
 // https://github.com/ChainSafe/lodestar/issues/5967
-describe.skip("doppelganger / doppelganger test", function () {
+describe.skip("doppelganger / doppelganger test", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -34,7 +34,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   const validatorCount = 1;
   const genesisSlotsDelay = 5;
   const beaconParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 
@@ -78,7 +77,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     return {beaconNode: bn, validators: validatorsWithDoppelganger};
   }
 
-  it("should not have doppelganger protection if started before genesis", async function () {
+  it("should not have doppelganger protection if started before genesis", async () => {
     const committeeIndex = 0;
     const validatorIndex = 0;
 
@@ -114,7 +113,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     );
   });
 
-  it("should shut down validator if same key is active and started after genesis", async function () {
+  it("should shut down validator if same key is active and started after genesis", async () => {
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
 
@@ -123,7 +122,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       doppelgangerProtection: true,
     });
 
-    const {beaconNode: bn2, validators: validators} = await createBNAndVC({
+    const {beaconNode: bn2, validators} = await createBNAndVC({
       genesisTime: bn.chain.getHeadState().genesisTime,
     });
 
@@ -150,7 +149,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     );
   });
 
-  it("should shut down validator if same key is active with same BN and started after genesis", async function () {
+  it("should shut down validator if same key is active with same BN and started after genesis", async () => {
     const doppelgangerProtection = true;
     const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
 
@@ -195,14 +194,14 @@ describe.skip("doppelganger / doppelganger test", function () {
     );
   });
 
-  it("should not shut down validator if key is different", async function () {
+  it("should not shut down validator if key is different", async () => {
     const doppelgangerProtection = true;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       doppelgangerProtection,
     });
 
-    const {beaconNode: bn2, validators: validators} = await createBNAndVC({
+    const {beaconNode: bn2, validators} = await createBNAndVC({
       genesisTime: bn.chain.getHeadState().genesisTime,
       doppelgangerProtection: false,
     });
@@ -228,7 +227,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     );
   });
 
-  it("should not sign block if doppelganger period has not passed and not started at genesis", async function () {
+  it("should not sign block if doppelganger period has not passed and not started at genesis", async () => {
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch
@@ -259,7 +258,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     ).resolves.toBeUndefined();
   });
 
-  it("should not sign attestations if doppelganger period has not passed and started after genesis", async function () {
+  it("should not sign attestations if doppelganger period has not passed and started after genesis", async () => {
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch

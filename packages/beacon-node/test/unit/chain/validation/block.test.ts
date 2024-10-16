@@ -12,7 +12,7 @@ import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedState} from "../../../utils/state.js";
 
-describe("gossip block validation", function () {
+describe("gossip block validation", () => {
   let chain: MockedBeaconChain;
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
@@ -25,7 +25,7 @@ describe("gossip block validation", function () {
   const signature = EMPTY_SIGNATURE;
   const maxSkipSlots = 10;
 
-  beforeEach(function () {
+  beforeEach(() => {
     chain = getMockedBeaconChain();
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
@@ -33,7 +33,6 @@ describe("gossip block validation", function () {
     chain.forkChoice = forkChoice;
     regen = chain.regen;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (chain as any).opts = {maxSkipSlots};
 
     verifySignature = chain.bls.verifySignatureSets;
@@ -50,7 +49,7 @@ describe("gossip block validation", function () {
     job = {signature, message: block};
   });
 
-  it("FUTURE_SLOT", async function () {
+  it("FUTURE_SLOT", async () => {
     // Set the block slot to after the current clock
     const signedBlock = {signature, message: {...block, slot: clockSlot + 1}};
 
@@ -60,7 +59,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("WOULD_REVERT_FINALIZED_SLOT", async function () {
+  it("WOULD_REVERT_FINALIZED_SLOT", async () => {
     // Set finalized epoch to be greater than block's epoch
     forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: Infinity, root: ZERO_HASH, rootHex: ""});
 
@@ -70,7 +69,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("ALREADY_KNOWN", async function () {
+  it("ALREADY_KNOWN", async () => {
     // Make the fork choice return a block summary for the proposed block
     forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
 
@@ -80,7 +79,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("REPEAT_PROPOSAL", async function () {
+  it("REPEAT_PROPOSAL", async () => {
     // Register the proposer as known
     chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
 
@@ -90,7 +89,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("PARENT_UNKNOWN (fork-choice)", async function () {
+  it("PARENT_UNKNOWN (fork-choice)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Return not known for parent block too
@@ -102,7 +101,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("TOO_MANY_SKIPPED_SLOTS", async function () {
+  it("TOO_MANY_SKIPPED_SLOTS", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Return parent block with 1 slot way back than maxSkipSlots
@@ -114,7 +113,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("NOT_LATER_THAN_PARENT", async function () {
+  it("NOT_LATER_THAN_PARENT", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -126,7 +125,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("PARENT_UNKNOWN (regen)", async function () {
+  it("PARENT_UNKNOWN (regen)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -140,7 +139,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("PROPOSAL_SIGNATURE_INVALID", async function () {
+  it("PROPOSAL_SIGNATURE_INVALID", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -156,7 +155,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("INCORRECT_PROPOSER", async function () {
+  it("INCORRECT_PROPOSER", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -175,7 +174,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("valid", async function () {
+  it("valid", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block

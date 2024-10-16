@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {
   LightClientBootstrap,
@@ -8,10 +7,12 @@ import {
   ssz,
   SyncPeriod,
 } from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
-import {ChainForkConfig} from "@lodestar/config";
+import {fromHex} from "@lodestar/utils";
+import {ForkName, ZERO_HASH} from "@lodestar/params";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
+import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
 import {getLightClientForkTypes, toForkName} from "../../utils/fork.js";
 import {
   EmptyArgs,
@@ -20,7 +21,6 @@ import {
   EmptyMetaCodec,
   EmptyRequest,
   WithVersion,
-  JsonOnlyResp,
 } from "../../utils/codecs.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -91,7 +91,18 @@ export type Endpoints = {
   >;
 };
 
-export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  // Cache config so fork digests don't need to be recomputed
+  let beaconConfig: BeaconConfig | undefined;
+
+  const cachedBeaconConfig = (): BeaconConfig => {
+    if (beaconConfig === undefined) {
+      const genesisValidatorsRoot = genesisData[config.CONFIG_NAME as NetworkName]?.genesisValidatorsRoot;
+      beaconConfig = createBeaconConfig(config, genesisValidatorsRoot ? fromHex(genesisValidatorsRoot) : ZERO_HASH);
+    }
+    return beaconConfig;
+  };
+
   return {
     getLightClientUpdatesByRange: {
       url: "/eth/v1/beacon/light_client/updates",
@@ -101,7 +112,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         parseReq: ({query}) => ({startPeriod: query.start_period, count: query.count}),
         schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
       },
-      resp: JsonOnlyResp({
+      resp: {
         data: {
           toJson: (data, meta) => {
             const json: unknown[] = [];
@@ -119,12 +130,44 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
             }
             return value;
           },
+          serialize: (data, meta) => {
+            const chunks: Uint8Array[] = [];
+            for (const [i, update] of data.entries()) {
+              const version = meta.versions[i];
+              const forkDigest = cachedBeaconConfig().forkName2ForkDigest(version);
+              const serialized = getLightClientForkTypes(version).LightClientUpdate.serialize(update);
+              const length = ssz.UintNum64.serialize(4 + serialized.length);
+              chunks.push(length, forkDigest, serialized);
+            }
+            return Buffer.concat(chunks);
+          },
+          deserialize: (data) => {
+            let offset = 0;
+            const updates: LightClientUpdate[] = [];
+            while (offset < data.length) {
+              const length = ssz.UintNum64.deserialize(data.subarray(offset, offset + 8));
+              const forkDigest = ssz.ForkDigest.deserialize(data.subarray(offset + 8, offset + 12));
+              const version = cachedBeaconConfig().forkDigest2ForkName(forkDigest);
+              updates.push(
+                getLightClientForkTypes(version).LightClientUpdate.deserialize(
+                  data.subarray(offset + 12, offset + 8 + length)
+                )
+              );
+              offset += 8 + length;
+            }
+            return updates;
+          },
         },
         meta: {
           toJson: (meta) => meta,
           fromJson: (val) => val as {versions: ForkName[]},
-          toHeadersObject: () => ({}),
-          fromHeaders: () => ({versions: []}),
+          toHeadersObject: (meta) => ({
+            [MetaHeader.Version]: meta.versions.join(","),
+          }),
+          fromHeaders: (headers) => {
+            const versions = headers.getOrDefault(MetaHeader.Version, "");
+            return {versions: versions === "" ? [] : (versions.split(",") as ForkName[])};
+          },
         },
         transform: {
           toResponse: (data, meta) => {
@@ -148,7 +191,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
             return {data: updates, meta};
           },
         },
-      }),
+      },
     },
     getLightClientOptimisticUpdate: {
       url: "/eth/v1/beacon/light_client/optimistic_update",

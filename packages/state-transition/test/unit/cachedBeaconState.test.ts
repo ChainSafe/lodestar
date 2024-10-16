@@ -52,7 +52,6 @@ describe("CachedBeaconState", () => {
     expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
   });
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   it("Clone and mutate cache post-Electra", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(

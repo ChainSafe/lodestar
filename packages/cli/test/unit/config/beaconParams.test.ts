@@ -16,7 +16,6 @@ describe("config / beaconParams", () => {
   const testCases: {
     id: string;
     kwargs: Parameters<typeof getBeaconParams>[0];
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     GENESIS_FORK_VERSION: string;
   }[] = [
     {
@@ -24,7 +23,6 @@ describe("config / beaconParams", () => {
       kwargs: {
         additionalParamsCli: {},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_MAINNET,
     },
     {
@@ -33,7 +31,6 @@ describe("config / beaconParams", () => {
         network: networkName,
         additionalParamsCli: {},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_HOLESKY,
     },
     {
@@ -43,7 +40,6 @@ describe("config / beaconParams", () => {
         paramsFile: paramsFilepath,
         additionalParamsCli: {},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE,
     },
     {
@@ -51,16 +47,13 @@ describe("config / beaconParams", () => {
       kwargs: {
         network: networkName,
         paramsFile: paramsFilepath,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         additionalParamsCli: {GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI,
     },
   ];
 
   beforeAll(() => {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     fs.writeFileSync(paramsFilepath, yaml.dump({GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE}));
   });
 
@@ -68,7 +61,6 @@ describe("config / beaconParams", () => {
     if (fs.existsSync(paramsFilepath)) fs.unlinkSync(paramsFilepath);
   });
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   it.each(testCases)("$id", ({kwargs, GENESIS_FORK_VERSION}) => {
     const params = getBeaconParams(kwargs);
     expect(toHexString(params.GENESIS_FORK_VERSION)).toBe(GENESIS_FORK_VERSION);

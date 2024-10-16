@@ -110,7 +110,6 @@ for (let i = 0; i < 1e8; i++) {
     const heapUsedM = linearRegression(xs, heapUsed).m;
     const rssM = linearRegression(xs, rss).m;
 
-    // eslint-disable-next-line no-console
     console.log(i, {arrayBuffersM, externalM, heapTotalM, heapUsedM, rssM});
   }
 }

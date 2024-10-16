@@ -26,7 +26,6 @@ export type NetworkArgs = {
   "network.connectToDiscv5Bootnodes"?: boolean;
   "network.discv5FirstQueryDelayMs"?: number;
   "network.dontSendGossipAttestationsToForkchoice"?: boolean;
-  "network.beaconAttestationBatchValidation"?: boolean;
   "network.allowPublishToZeroPeers"?: boolean;
   "network.gossipsubD"?: number;
   "network.gossipsubDLow"?: number;
@@ -58,18 +57,17 @@ function validateMultiaddrArg<T extends Record<string, string | undefined>>(args
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function parseListenArgs(args: NetworkArgs) {
   // If listenAddress is explicitly set, use it
   // If listenAddress6 is not set, use defaultListenAddress
   const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
-  const port = listenAddress ? args.port ?? defaultP2pPort : undefined;
-  const discoveryPort = listenAddress ? args.discoveryPort ?? args.port ?? defaultP2pPort : undefined;
+  const port = listenAddress ? (args.port ?? defaultP2pPort) : undefined;
+  const discoveryPort = listenAddress ? (args.discoveryPort ?? args.port ?? defaultP2pPort) : undefined;
 
   // Only use listenAddress6 if it is explicitly set
   const listenAddress6 = args.listenAddress6;
-  const port6 = listenAddress6 ? args.port6 ?? defaultP2pPort6 : undefined;
-  const discoveryPort6 = listenAddress6 ? args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6 : undefined;
+  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort6) : undefined;
+  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6) : undefined;
 
   return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
 }
@@ -102,21 +100,21 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const bindMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.discoveryPort6}` : undefined;
   const localMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
 
-  const targetPeers = args["targetPeers"];
+  const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
     throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
   }
   // Set discv5 opts to null to disable only if explicitly disabled
-  const enableDiscv5 = args["discv5"] ?? true;
+  const enableDiscv5 = args.discv5 ?? true;
 
   // TODO: Okay to set to empty array?
-  const bootEnrs = args["bootnodes"] ?? [];
+  const bootEnrs = args.bootnodes ?? [];
   // throw if user-provided enrs are invalid
   for (const enrStr of bootEnrs) {
     try {
       ENR.decodeTxt(enrStr);
-    } catch (e) {
+    } catch (_e) {
       throw new YargsError(`Provided ENR in bootnodes is invalid:\n    ${enrStr}`);
     }
   }
@@ -130,28 +128,27 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
             ip6: bindMu6,
           },
           bootEnrs,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           enr: undefined as any,
         }
       : null,
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
-    subscribeAllSubnets: args["subscribeAllSubnets"],
+    subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
-      args["slotsToSubscribeBeforeAggregatorDuty"] ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
-    disablePeerScoring: args["disablePeerScoring"],
+      args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
+    disablePeerScoring: args.disablePeerScoring,
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
-    beaconAttestationBatchValidation: args["network.beaconAttestationBatchValidation"],
     allowPublishToZeroPeers: args["network.allowPublishToZeroPeers"],
     gossipsubD: args["network.gossipsubD"],
     gossipsubDLow: args["network.gossipsubDLow"],
     gossipsubDHigh: args["network.gossipsubDHigh"],
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
     disableFloodPublish: args["network.disableFloodPublish"],
-    mdns: args["mdns"],
+    mdns: args.mdns,
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
@@ -214,12 +211,12 @@ export const options: CliCommandOptions<NetworkArgs> = {
   bootnodes: {
     type: "array",
     description: "Bootnodes for discv5 discovery",
-    defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
+    defaultDescription: JSON.stringify(defaultOptions.network.discv5?.bootEnrs || []),
     group: "network",
     // Each bootnode entry could be comma separated, just deserialize it into a single array
     // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
     // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
-    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
+    coerce: (args: string[]) => args.flatMap((item) => item.split(",")),
   },
 
   targetPeers: {
@@ -318,13 +315,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
     hidden: true,
     type: "boolean",
     description: "Pass gossip attestations to forkchoice or not",
-    group: "network",
-  },
-
-  "network.beaconAttestationBatchValidation": {
-    hidden: true,
-    type: "boolean",
-    description: "Validate gossip attestations in batches",
     group: "network",
   },
 

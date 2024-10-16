@@ -16,7 +16,6 @@ export const assert = {
    */
   equal<T>(actual: T, expected: T, message?: string): void {
     if (!(actual === expected)) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new AssertionError(`${message || "Expected values to be equal"}: ${actual} === ${expected}`);
     }
   },

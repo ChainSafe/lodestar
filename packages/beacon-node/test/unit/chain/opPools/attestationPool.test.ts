@@ -8,12 +8,11 @@ import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js"
 import {getMockedClock} from "../../../mocks/clock.js";
 
 /** Valid signature of random data to prevent BLS errors */
-export const validSignature = fromHexString(
+const validSignature = fromHexString(
   "0xb2afb700f6c561ce5e1b4fedaec9d7c06b822d38c720cf588adfda748860a940adf51634b6788f298c552de40183b5a203b2bbe8b7dd147f0bb5bc97080a12efbb631c8888cb31a99cc4706eb3711865b8ea818c10126e4d818b542e9dbf9ae8"
 );
 
-describe("AttestationPool", function () {
-  /* eslint-disable @typescript-eslint/naming-convention */
+describe("AttestationPool", () => {
   const config = createChainForkConfig({
     ...defaultChainConfig,
     ELECTRA_FORK_EPOCH: 5,

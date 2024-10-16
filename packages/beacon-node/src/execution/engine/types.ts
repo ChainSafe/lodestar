@@ -19,8 +19,6 @@ import {
 import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export type EngineApiRpcParamTypes = {
   /**
    * 1. Object - Instance of ExecutionPayload

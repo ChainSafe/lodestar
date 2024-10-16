@@ -13,7 +13,7 @@ import {getResponseForRequest, isBatchRequest, isRequest} from "./json_rpc.js";
 import {isNullish} from "./validation.js";
 import {ELRpcProvider} from "./rpc_provider.js";
 
-/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export const verifiableMethodHandlers: Record<string, ELVerifiedRequestHandler<any, any>> = {
   eth_getBalance: eth_getBalance,
   eth_getTransactionCount: eth_getTransactionCount,
@@ -106,7 +106,6 @@ export async function processAndVerifyRequest({
 
   if (responses.length === 1) {
     return responses[0];
-  } else {
-    return responses;
   }
+  return responses;
 }

@@ -45,9 +45,8 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
 export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, activeValidatorCount: number): number {
   if (fork >= ForkSeq.deneb) {
     return Math.min(config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, getChurnLimit(config, activeValidatorCount));
-  } else {
-    return getChurnLimit(config, activeValidatorCount);
   }
+  return getChurnLimit(config, activeValidatorCount);
 }
 
 export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
@@ -79,9 +78,8 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
   // Compounding withdrawal credential only available since Electra
   if (hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
     return MAX_EFFECTIVE_BALANCE_ELECTRA;
-  } else {
-    return MIN_ACTIVATION_BALANCE;
   }
+  return MIN_ACTIVATION_BALANCE;
 }
 
 export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {

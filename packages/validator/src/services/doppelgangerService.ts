@@ -275,11 +275,12 @@ export class DoppelgangerService {
 function getStatus(state: DoppelgangerState | undefined): DoppelgangerStatus {
   if (!state) {
     return DoppelgangerStatus.Unknown;
-  } else if (state.remainingEpochs <= 0) {
-    return DoppelgangerStatus.VerifiedSafe;
-  } else if (state.remainingEpochs === REMAINING_EPOCHS_IF_DOPPELGANGER) {
-    return DoppelgangerStatus.DoppelgangerDetected;
-  } else {
-    return DoppelgangerStatus.Unverified;
   }
+  if (state.remainingEpochs <= 0) {
+    return DoppelgangerStatus.VerifiedSafe;
+  }
+  if (state.remainingEpochs === REMAINING_EPOCHS_IF_DOPPELGANGER) {
+    return DoppelgangerStatus.DoppelgangerDetected;
+  }
+  return DoppelgangerStatus.Unverified;
 }

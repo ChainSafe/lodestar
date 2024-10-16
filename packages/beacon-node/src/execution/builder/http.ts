@@ -38,6 +38,12 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   timeout: 12000,
 };
 
+/**
+ * Duration given to the builder to provide a `SignedBuilderBid` before the deadline
+ * is reached, aborting the external builder flow in favor of the local build process.
+ */
+const BUILDER_PROPOSAL_DELAY_TOLERANCE = 1000;
+
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
   readonly config: ChainForkConfig;
@@ -63,7 +69,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
           headers: opts.userAgent ? {"User-Agent": opts.userAgent} : undefined,
         },
       },
-      {config, metrics: metrics?.builderHttpClient}
+      {config, metrics: metrics?.builderHttpClient, logger}
     );
     logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
     this.config = config;
@@ -117,7 +123,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     blobKzgCommitments?: deneb.BlobKzgCommitments;
     executionRequests?: electra.ExecutionRequests;
   }> {
-    const signedBuilderBid = (await this.api.getHeader({slot, parentHash, proposerPubkey})).value();
+    const signedBuilderBid = (
+      await this.api.getHeader({slot, parentHash, proposerPubkey}, {timeoutMs: BUILDER_PROPOSAL_DELAY_TOLERANCE})
+    ).value();
 
     if (!signedBuilderBid) {
       throw Error("No bid received");

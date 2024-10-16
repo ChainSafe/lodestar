@@ -191,11 +191,11 @@ export class MonitoringService {
       // error was thrown by abort signal
       if (signal.reason === FetchAbortReason.Close) {
         throw new ErrorAborted("request");
-      } else if (signal.reason === FetchAbortReason.Timeout) {
-        throw new TimeoutError("request");
-      } else {
-        throw e;
       }
+      if (signal.reason === FetchAbortReason.Timeout) {
+        throw new TimeoutError("request");
+      }
+      throw e;
     } finally {
       timer({status: res?.ok ? SendDataStatus.Success : SendDataStatus.Error});
       clearTimeout(timeout);
@@ -229,7 +229,7 @@ export class MonitoringService {
       }
 
       return url;
-    } catch {
+    } catch (_e) {
       throw new Error(`Monitoring endpoint must be a valid URL: ${endpoint}`);
     }
   }

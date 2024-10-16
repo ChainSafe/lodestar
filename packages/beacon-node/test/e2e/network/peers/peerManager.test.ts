@@ -1,7 +1,7 @@
 import {describe, it, afterEach, expect, vi} from "vitest";
 import {Connection} from "@libp2p/interface";
-import {CustomEvent} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {config} from "@lodestar/config/default";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -22,7 +22,7 @@ import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 
 const logger = testLogger("peerManager");
 
-describe("network / peers / PeerManager", function () {
+describe("network / peers / PeerManager", () => {
   const peerId1 = getValidPeerId();
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -33,7 +33,6 @@ describe("network / peers / PeerManager", function () {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules() {
     // Setup fake chain
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -48,7 +47,8 @@ describe("network / peers / PeerManager", function () {
     const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});
     const status = ssz.phase0.Status.defaultValue();
     const statusCache = new LocalStatusCache(status);
-    const libp2p = await createNode("/ip4/127.0.0.1/tcp/0");
+    const privateKey = await generateKeyPair("secp256k1");
+    const libp2p = await createNode("/ip4/127.0.0.1/tcp/0", privateKey);
 
     afterEachCallbacks.push(async () => {
       controller.abort();
@@ -69,6 +69,7 @@ describe("network / peers / PeerManager", function () {
 
     const peerManager = new PeerManager(
       {
+        privateKey,
         libp2p,
         reqResp,
         logger,
@@ -155,11 +156,11 @@ describe("network / peers / PeerManager", function () {
     remotePeer: peerId1,
   } as Connection;
 
-  it("Should emit peer connected event on relevant peer status", async function () {
+  it("Should emit peer connected event on relevant peer status", async () => {
     const {statusCache, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
@@ -174,11 +175,11 @@ describe("network / peers / PeerManager", function () {
     await peerConnectedPromise;
   });
 
-  it("On peerConnect handshake flow", async function () {
+  it("On peerConnect handshake flow", async () => {
     const {statusCache, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
@@ -191,7 +192,7 @@ describe("network / peers / PeerManager", function () {
     reqResp.sendMetadata.mockResolvedValue(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
     libp2p.services.components.events.dispatchEvent(
       new CustomEvent("connection:open", {detail: libp2pConnectionOutboud})
     );

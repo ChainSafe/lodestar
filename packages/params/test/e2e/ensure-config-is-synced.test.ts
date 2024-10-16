@@ -10,15 +10,15 @@ import {loadConfigYaml} from "../yaml.js";
 /** https://github.com/ethereum/consensus-specs/releases */
 const specConfigCommit = "v1.5.0-alpha.3";
 
-describe("Ensure config is synced", function () {
+describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
-  it("mainnet", async function () {
+  it("mainnet", async () => {
     const remotePreset = await downloadRemoteConfig("mainnet", specConfigCommit);
     assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
-  it("minimal", async function () {
+  it("minimal", async () => {
     const remotePreset = await downloadRemoteConfig("minimal", specConfigCommit);
     assertCorrectPreset({...minimalPreset}, remotePreset);
   });
@@ -44,7 +44,6 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   );
 
   // Merge all the fetched yamls for the different forks
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const beaconPresetRaw: Record<string, unknown> = Object.assign(
     ...(downloadedParams as unknown as [input: Record<string, unknown>])
   );

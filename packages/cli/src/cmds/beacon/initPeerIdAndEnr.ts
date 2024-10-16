@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import type {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import type {PrivateKey} from "@libp2p/interface";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {createPrivateKeyFromPeerId, SignableENR} from "@chainsafe/enr";
+import {SignableENR} from "@chainsafe/enr";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {Logger} from "@lodestar/utils";
-import {exportToJSON, readPeerId} from "../../config/index.js";
+import {exportToJSON, readPrivateKey} from "../../config/index.js";
 import {writeFile600Perm} from "../../util/file.js";
 import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
 import {BeaconArgs} from "./options.js";
@@ -125,6 +125,7 @@ export function overwriteEnrWithCliArgs(
       enr.seq = preSeq + BigInt(1);
     }
     // invalidate cached signature
+    // biome-ignore lint/complexity/useLiteralKeys: `_signature` is a private attribute
     delete enr["_signature"];
   }
 }
@@ -132,63 +133,62 @@ export function overwriteEnrWithCliArgs(
 /**
  * Create new PeerId and ENR by default, unless persistNetworkIdentity is provided
  */
-export async function initPeerIdAndEnr(
+export async function initPrivateKeyAndEnr(
   args: BeaconArgs,
   beaconDir: string,
   logger: Logger,
   bootnode?: boolean
-): Promise<{peerId: PeerId; enr: SignableENR}> {
+): Promise<{privateKey: PrivateKey; enr: SignableENR}> {
   const {persistNetworkIdentity} = args;
 
-  const newPeerIdAndENR = async (): Promise<{peerId: PeerId; enr: SignableENR}> => {
-    const peerId = await createSecp256k1PeerId();
-    const enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
-    return {peerId, enr};
+  const newPrivateKeyAndENR = async (): Promise<{privateKey: PrivateKey; enr: SignableENR}> => {
+    const privateKey = await generateKeyPair("secp256k1");
+    const enr = SignableENR.createFromPrivateKey(privateKey);
+    return {privateKey, enr};
   };
 
-  const readPersistedPeerIdAndENR = async (
+  const readPersistedPrivateKeyAndENR = async (
     peerIdFile: string,
     enrFile: string
-  ): Promise<{peerId: PeerId; enr: SignableENR; newEnr: boolean}> => {
-    let peerId: PeerId;
+  ): Promise<{privateKey: PrivateKey; enr: SignableENR; newEnr: boolean}> => {
+    let privateKey: PrivateKey;
     let enr: SignableENR;
 
     // attempt to read stored peer id
     try {
-      peerId = await readPeerId(peerIdFile);
-    } catch (e) {
+      privateKey = readPrivateKey(peerIdFile);
+    } catch (_e) {
       logger.warn("Unable to read peerIdFile, creating a new peer id");
-      return {...(await newPeerIdAndENR()), newEnr: true};
+      return {...(await newPrivateKeyAndENR()), newEnr: true};
     }
     // attempt to read stored enr
     try {
-      enr = SignableENR.decodeTxt(fs.readFileSync(enrFile, "utf-8"), createPrivateKeyFromPeerId(peerId).privateKey);
-    } catch (e) {
+      enr = SignableENR.decodeTxt(fs.readFileSync(enrFile, "utf-8"), privateKey.raw);
+    } catch (_e) {
       logger.warn("Unable to decode stored local ENR, creating a new ENR");
-      enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
-      return {peerId, enr, newEnr: true};
+      enr = SignableENR.createFromPrivateKey(privateKey);
+      return {privateKey, enr, newEnr: true};
     }
     // check stored peer id against stored enr
-    if (!peerId.equals(await enr.peerId())) {
+    if (!privateKey.equals(enr.peerId)) {
       logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
-      enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
-      return {peerId, enr, newEnr: true};
+      enr = SignableENR.createFromPrivateKey(privateKey);
+      return {privateKey, enr, newEnr: true};
     }
-    return {peerId, enr, newEnr: false};
+    return {privateKey, enr, newEnr: false};
   };
 
   if (persistNetworkIdentity) {
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
-    const {peerId, enr, newEnr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
+    const {privateKey, enr, newEnr} = await readPersistedPrivateKeyAndENR(peerIdFile, enrFile);
     overwriteEnrWithCliArgs(enr, args, logger, {newEnr, bootnode});
     // Re-persist peer-id and enr
-    writeFile600Perm(peerIdFile, exportToJSON(peerId));
+    writeFile600Perm(peerIdFile, exportToJSON(privateKey));
     writeFile600Perm(enrFile, enr.encodeTxt());
-    return {peerId, enr};
-  } else {
-    const {peerId, enr} = await newPeerIdAndENR();
-    overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});
-    return {peerId, enr};
+    return {privateKey, enr};
   }
+  const {privateKey, enr} = await newPrivateKeyAndENR();
+  overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});
+  return {privateKey, enr};
 }

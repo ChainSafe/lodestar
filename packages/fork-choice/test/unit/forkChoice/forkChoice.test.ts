@@ -14,11 +14,9 @@ import {
   EpochDifference,
   DataAvailabilityStatus,
 } from "../../../src/index.js";
+import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
-const rootStateBytePrefix = 0xaa;
-const rootBlockBytePrefix = 0xbb;
-
-describe("Forkchoice", function () {
+describe("Forkchoice", () => {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -118,7 +116,7 @@ describe("Forkchoice", function () {
     }
   };
 
-  it("getAllAncestorBlocks", function () {
+  it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
     protoArr.onBlock(block, block.slot);
@@ -174,20 +172,6 @@ describe("Forkchoice", function () {
 
   // TODO: more unit tests for other apis
 });
-
-export function getStateRoot(slot: number): RootHex {
-  const root = Buffer.alloc(32, 0x00);
-  root[0] = rootStateBytePrefix;
-  root[31] = slot;
-  return toHex(root);
-}
-
-export function getBlockRoot(slot: number): RootHex {
-  const root = Buffer.alloc(32, 0x00);
-  root[0] = rootBlockBytePrefix;
-  root[31] = slot;
-  return toHex(root);
-}
 
 function range(from: number, toInclusive: number): number[] {
   const arr: number[] = [];

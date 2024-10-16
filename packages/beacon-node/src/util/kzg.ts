@@ -3,8 +3,6 @@ import fs from "node:fs";
 import {fileURLToPath} from "node:url";
 import {fromHex, toHex} from "@lodestar/utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // "c-kzg" has hardcoded the mainnet value, do not use params
 export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
 
@@ -61,7 +59,7 @@ export enum TrustedFileMode {
  */
 export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode.Txt, filePath?: string): void {
   try {
-    let setupFilePath;
+    let setupFilePath: string;
     if (mode === TrustedFileMode.Bin) {
       const binPath = filePath ?? TRUSTED_SETUP_BIN_FILEPATH;
       const bytes = fs.readFileSync(binPath);
@@ -87,9 +85,10 @@ export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode
   }
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export interface TrustedSetupJSON {
+  // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
   setup_G1: string[];
+  // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
   setup_G2: string[];
 }
 
@@ -123,7 +122,9 @@ export function trustedSetupJsonToBin(data: TrustedSetupJSON): TrustedSetupBin {
 
 export function trustedSetupBinToJson(bytes: TrustedSetupBin): TrustedSetupJSON {
   const data: TrustedSetupJSON = {
+    // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
     setup_G1: [],
+    // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
     setup_G2: [],
   };
 
@@ -157,7 +158,6 @@ export function trustedSetupJsonToTxt(data: TrustedSetupJSON): TrustedSetupTXT {
 function strip0xPrefix(hex: string): string {
   if (hex.startsWith("0x")) {
     return hex.slice(2);
-  } else {
-    return hex;
   }
+  return hex;
 }

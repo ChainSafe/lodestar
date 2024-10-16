@@ -1,4 +1,4 @@
-import {Connection, PeerId} from "@libp2p/interface";
+import {Connection, PrivateKey} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
@@ -55,7 +55,7 @@ type Mods = {
 export type BaseNetworkInit = {
   opts: NetworkOptions;
   config: BeaconConfig;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   peerStoreDir: string | undefined;
   logger: LoggerNode;
   metricsRegistry: RegistryMetricCreator | null;
@@ -126,7 +126,7 @@ export class NetworkCore implements INetworkCore {
   static async init({
     opts,
     config,
-    peerId,
+    privateKey,
     peerStoreDir,
     logger,
     metricsRegistry,
@@ -136,7 +136,7 @@ export class NetworkCore implements INetworkCore {
     activeValidatorCount,
     initialStatus,
   }: BaseNetworkInit): Promise<NetworkCore> {
-    const libp2p = await createNodeJsLibp2p(peerId, opts, {
+    const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
       metrics: Boolean(metricsRegistry),
       metricsRegistry: metricsRegistry ?? undefined,
@@ -149,7 +149,7 @@ export class NetworkCore implements INetworkCore {
 
     // Bind discv5's ENR to local metadata
     // resolve circular dependency by setting `discv5` variable after the peer manager is instantiated
-    // eslint-disable-next-line prefer-const
+    // biome-ignore lint/style/useConst: <explanation>
     let discv5: Discv5Worker | undefined;
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
@@ -200,8 +200,9 @@ export class NetworkCore implements INetworkCore {
 
     const peerManager = await PeerManager.init(
       {
+        privateKey,
         libp2p,
-        gossip: gossip,
+        gossip,
         reqResp,
         attnetsService,
         syncnetsService,
@@ -223,6 +224,7 @@ export class NetworkCore implements INetworkCore {
     reqResp.registerProtocolsAtFork(forkCurrentSlot);
 
     // Bind discv5's ENR to local metadata
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     discv5 = peerManager["discovery"]?.discv5;
 
     // Initialize ENR with clock's fork
@@ -276,6 +278,7 @@ export class NetworkCore implements INetworkCore {
   async scrapeMetrics(): Promise<string> {
     return [
       (await this.metrics?.register.metrics()) ?? "",
+      // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
       (await this.peerManager["discovery"]?.discv5.scrapeMetrics()) ?? "",
     ]
       .filter((str) => str.length > 0)
@@ -343,6 +346,7 @@ export class NetworkCore implements INetworkCore {
   // REST API queries
 
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     const enr = await this.peerManager["discovery"]?.discv5.enr();
     const discoveryAddresses = [
       enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
@@ -359,7 +363,11 @@ export class NetworkCore implements INetworkCore {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    return getConnectionsMap(this.libp2p);
+    const m = new Map<string, Connection[]>();
+    for (const [k, v] of getConnectionsMap(this.libp2p).entries()) {
+      m.set(k, v.value);
+    }
+    return m;
   }
 
   async getConnectedPeers(): Promise<PeerIdStr[]> {
@@ -405,6 +413,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   async dumpDiscv5KadValues(): Promise<string[]> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return (await this.peerManager["discovery"]?.discv5?.kadValues())?.map((enr) => enr.encodeTxt()) ?? [];
   }
 
@@ -421,6 +430,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return this.peerManager["discovery"]?.discv5.writeProfile(durationMs, dirpath) ?? "no discv5";
   }
 
@@ -429,6 +439,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return this.peerManager["discovery"]?.discv5.writeHeapSnapshot(prefix, dirpath) ?? Promise.resolve("no discv5");
   }
 

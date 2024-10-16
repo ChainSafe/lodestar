@@ -126,11 +126,10 @@ export class Eth1MergeBlockTracker {
         td: this.latestEth1Block.totalDifficulty,
         timestamp: this.latestEth1Block.timestamp,
       };
-    } else {
-      return {
-        ttdHit: true,
-      };
     }
+    return {
+      ttdHit: true,
+    };
   }
 
   /**
@@ -167,7 +166,6 @@ export class Eth1MergeBlockTracker {
 
     this.status = {code: StatusCode.SEARCHING};
     this.logger.info("Starting search for terminal POW block", {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       TERMINAL_TOTAL_DIFFICULTY: this.config.TERMINAL_TOTAL_DIFFICULTY,
     });
 
@@ -194,7 +192,7 @@ export class Eth1MergeBlockTracker {
           // Persist found merge block here to affect both caller paths:
           // - internal searcher
           // - external caller if STOPPED
-          if (mergeBlock && this.status.code != StatusCode.FOUND) {
+          if (mergeBlock && this.status.code !== StatusCode.FOUND) {
             if (this.status.code === StatusCode.SEARCHING) {
               this.close();
             }
@@ -243,61 +241,56 @@ export class Eth1MergeBlockTracker {
       const block = await this.getPowBlock(terminalBlockHash);
       if (block) {
         return block;
-      } else {
-        // if a TERMINAL_BLOCK_HASH other than ZERO_HASH is configured and we can't find it, return NONE
-        return null;
       }
+      // if a TERMINAL_BLOCK_HASH other than ZERO_HASH is configured and we can't find it, return NONE
+      return null;
     }
 
     // Search merge block by TTD
-    else {
-      const latestBlockRaw = await this.eth1Provider.getBlockByNumber("latest");
-      if (!latestBlockRaw) {
-        throw Error("getBlockByNumber('latest') returned null");
+    const latestBlockRaw = await this.eth1Provider.getBlockByNumber("latest");
+    if (!latestBlockRaw) {
+      throw Error("getBlockByNumber('latest') returned null");
+    }
+
+    let block = toPowBlock(latestBlockRaw);
+    this.latestEth1Block = {...block, timestamp: quantityToNum(latestBlockRaw.timestamp)};
+    this.cacheBlock(block);
+
+    // This code path to look backwards for the merge block is only necessary if:
+    // - The network has not yet found the merge block
+    // - There are descendants of the merge block in the eth1 chain
+    // For the search below to require more than a few hops, multiple block proposers in a row must fail to detect
+    // an existing merge block. Such situation is extremely unlikely, so this search is left un-optimized. Since
+    // this class can start eagerly looking for the merge block when not necessary, startPollingMergeBlock() should
+    // only be called when there is certainty that a mergeBlock search is necessary.
+
+    while (true) {
+      if (block.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
+        // TTD not reached yet
+        return null;
       }
 
-      let block = toPowBlock(latestBlockRaw);
-      this.latestEth1Block = {...block, timestamp: quantityToNum(latestBlockRaw.timestamp)};
-      this.cacheBlock(block);
+      // else block.totalDifficulty >= this.config.TERMINAL_TOTAL_DIFFICULTY
+      // Potential mergeBlock! Must find the first block that passes TTD
 
-      // This code path to look backwards for the merge block is only necessary if:
-      // - The network has not yet found the merge block
-      // - There are descendants of the merge block in the eth1 chain
-      // For the search below to require more than a few hops, multiple block proposers in a row must fail to detect
-      // an existing merge block. Such situation is extremely unlikely, so this search is left un-optimized. Since
-      // this class can start eagerly looking for the merge block when not necessary, startPollingMergeBlock() should
-      // only be called when there is certainty that a mergeBlock search is necessary.
-
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        if (block.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
-          // TTD not reached yet
-          return null;
-        }
-
-        // else block.totalDifficulty >= this.config.TERMINAL_TOTAL_DIFFICULTY
-        // Potential mergeBlock! Must find the first block that passes TTD
-
-        // Allow genesis block to reach TTD https://github.com/ethereum/consensus-specs/pull/2719
-        if (block.parentHash === ZERO_HASH_HEX) {
-          return block;
-        }
-
-        const parent = await this.getPowBlock(block.parentHash);
-        if (!parent) {
-          throw Error(`Unknown parent of block with TD>TTD ${block.parentHash}`);
-        }
-
-        this.metrics?.eth1.eth1ParentBlocksFetched.inc();
-
-        // block.td > TTD && parent.td < TTD => block is mergeBlock
-        if (parent.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
-          // Is terminal total difficulty block AND has verified block -> parent relationship
-          return block;
-        } else {
-          block = parent;
-        }
+      // Allow genesis block to reach TTD https://github.com/ethereum/consensus-specs/pull/2719
+      if (block.parentHash === ZERO_HASH_HEX) {
+        return block;
       }
+
+      const parent = await this.getPowBlock(block.parentHash);
+      if (!parent) {
+        throw Error(`Unknown parent of block with TD>TTD ${block.parentHash}`);
+      }
+
+      this.metrics?.eth1.eth1ParentBlocksFetched.inc();
+
+      // block.td > TTD && parent.td < TTD => block is mergeBlock
+      if (parent.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
+        // Is terminal total difficulty block AND has verified block -> parent relationship
+        return block;
+      }
+      block = parent;
     }
   }
 

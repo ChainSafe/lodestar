@@ -51,9 +51,8 @@ export async function downloadGenericSpecTests<TestNames extends string>(
 
   if (existingVersion === specVersion) {
     return log(`version ${specVersion} already downloaded`);
-  } else {
-    log(`Downloading new version ${specVersion}`);
   }
+  log(`Downloading new version ${specVersion}`);
 
   if (fs.existsSync(outputDir)) {
     log(`Cleaning existing version ${existingVersion} at ${outputDir}`);

@@ -1,0 +1,294 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.3/schema.json",
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  },
+  "files": {
+    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts"]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "useEditorconfig": true,
+    "lineWidth": 120,
+    "attributePosition": "auto",
+    "bracketSpacing": false,
+    "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
+  },
+  "organizeImports": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedVariables": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "suggestedExtensions": {
+              "ts": {
+                "module": "js",
+                "component": "jsx"
+              }
+            }
+          }
+        },
+        "useArrayLiterals": "error",
+        "noUndeclaredVariables": "error"
+      },
+      "performance": {
+        // This rule should be enabled but with considerations and careful review
+        "noDelete": "off"
+      },
+      "style": {
+        // The code usage looks suspicious so it should be enabled in a separate PR
+        "noCommaOperator": "off",
+        // There are a lot of places we mutate params, should be fixed in an independent PR.
+        "noParameterAssign": "off",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": ["fetch"]
+          }
+        },
+        // We prefer to use `Math.pow` over `**` operator
+        "useExponentiationOperator": "off",
+        // In some cases the enums are initialized with values of other enums
+        "useLiteralEnumMembers": "off",
+        // We prefer to have multiple declarations lines
+        "useSingleVarDeclarator": "off",
+        // We use `+` operator for string concatenation a lot
+        "useTemplate": "off",
+        // We use to export types and object without differentiating
+        "useExportType": "off",
+        // We use to import types and object without differentiating
+        "useImportType": "off",
+        // It's nice to use `Number` namespace but should be done in a separate PR
+        "useNumberNamespace": "off",
+        // We prefer to auto-initialize enums
+        "useEnumInitializers": "off",
+        // Namespaces are deprecated way to organize modules in TS
+        "noNamespace": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": false,
+            "requireAscii": true,
+            "conventions": [
+              // Skip __dirname and any variable starting with _, for rest check next convention
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "match": "(?:__dirname)|(?:_.*)|(.*)"
+              },
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "formats": ["camelCase", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeLike"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "enum"
+                },
+                "formats": ["PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralMethod"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              // Skip any property starting with _ and then check for next convention
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "match": "(?:_.*)|(.*)"
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeMethod"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "enumMember"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "indexParameter"
+                },
+                "formats": ["camelCase", "PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "function"
+                },
+                "formats": ["camelCase", "PascalCase"]
+              }
+            ]
+          }
+        }
+      },
+      "suspicious": {
+        // `void` as type is useful in our case when used as generic constraint e.g. K extends number | void
+        "noConfusingVoidType": "off",
+        // There is a lot of empty code blocks, should be enabled and clean up separately.
+        "noEmptyBlockStatements": "off",
+        "noConsoleLog": "error"
+      },
+      "nursery": {
+        "useConsistentMemberAccessibility": {
+          "level": "error",
+          "options": {
+            "accessibility": "noPublic"
+          }
+        },
+        "noCommonJs": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "child_process": "Please use node:child_process instead.",
+              "crypto": "Please use node:crypto instead.",
+              "fs": "Please use node:fs instead.",
+              "http": "Please use node:https instead.",
+              "net": "Please use node:net instead.",
+              "os": "Please use node:os instead.",
+              "path": "Please use node:path instead.",
+              "stream": "Please use node:stream instead.",
+              "util": "Please use node:util instead.",
+              "url": "Please use node:url instead.",
+              "worker_threads": "Please use node:worker_threads instead."
+            }
+          }
+        },
+        "noDuplicateElseIf": "error",
+        "noUselessEscapeInRegex": "error",
+        "noIrregularWhitespace": "error",
+        "noOctalEscape": "error",
+        // Need to enable this rule with exception to anonymous functions
+        "useExplicitFunctionReturnType": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "es5",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSpacing": false,
+      "bracketSameLine": false,
+      "quoteStyle": "double",
+      "attributePosition": "auto",
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    },
+    "globals": ["BigInt"]
+  },
+  "overrides": [
+    // Code using console output
+    {
+      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    // All test files
+    {
+      "include": ["**/test/**/*.ts", "packages/spec-test-util/src"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            // During tests we often need to use private/protected attributes, which is only possible with literal keys
+            "useLiteralKeys": "off"
+          },
+          "suspicious": {
+            // During tests it's quicker to define variables with `let` without specifying types
+            "noImplicitAnyLet": "off",
+            // During testing we use `any` type for quick assignments
+            "noExplicitAny": "off",
+            // Console logging is often used in tests
+            "noConsoleLog": "off"
+          }
+        }
+      }
+    },
+    // Dependencies still using mocha
+    {
+      "include": ["packages/**/test/perf/**/*.test.ts", "packages/state-transition/test/utils/beforeValueMocha.ts"],
+      "javascript": {
+        // These are used by mocha
+        "globals": ["describe", "it", "before", "after"]
+      }
+    },
+    {
+      "include": [
+        // These files are using mix cases e.g. `engine_newPayloadV4`
+        // It's a mix of snake_case and camelCase, which can't validated by biome
+        "packages/beacon-node/src/db/buckets.ts",
+        "packages/beacon-node/src/execution/engine/mock.ts",
+        "packages/beacon-node/src/execution/engine/types.ts",
+        "packages/beacon-node/src/eth1/provider/eth1Provider.ts",
+        "packages/validator/src/buckets.ts",
+        "packages/prover/src/types.ts",
+        "prover/src/utils/process.ts",
+        "prover/src/verified_requests/**/*.ts",
+        "packages/types/src/utils/**/*.ts",
+        // This file is using snake_case function names
+        "packages/beacon-node/test/spec/bls/bls.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "off",
+              "options": {}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

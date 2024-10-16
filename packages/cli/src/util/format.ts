@@ -36,8 +36,8 @@ export function parseRange(range: string): number[] {
 
   const [from, to] = range.split("..").map((n) => parseInt(n));
 
-  if (isNaN(from)) throw Error(`Invalid range from isNaN '${range}'`);
-  if (isNaN(to)) throw Error(`Invalid range to isNaN '${range}'`);
+  if (Number.isNaN(from)) throw Error(`Invalid range from isNaN '${range}'`);
+  if (Number.isNaN(to)) throw Error(`Invalid range to isNaN '${range}'`);
   if (from > to) throw Error(`Invalid range from > to '${range}'`);
 
   const arr: number[] = [];

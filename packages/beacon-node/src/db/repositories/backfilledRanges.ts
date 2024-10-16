@@ -23,8 +23,7 @@ export class BackfilledRanges extends Repository<Slot, Slot> {
     return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getId(value: Slot): number {
+  getId(_value: Slot): number {
     throw new Error("Cannot get the db key from slot");
   }
 }

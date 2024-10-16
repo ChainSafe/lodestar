@@ -9,16 +9,11 @@ import {
   getRandaoMix,
 } from "@lodestar/state-transition";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import {getValidatorStatus} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
-import {
-  filterStateValidatorsByStatus,
-  getStateValidatorIndex,
-  getValidatorStatus,
-  getStateResponse,
-  toValidatorResponse,
-} from "./utils.js";
+import {filterStateValidatorsByStatus, getStateValidatorIndex, getStateResponse, toValidatorResponse} from "./utils.js";
 
 export function getBeaconStateApi({
   chain,
@@ -108,7 +103,9 @@ export function getBeaconStateApi({
           data: validatorResponses,
           meta: {executionOptimistic, finalized},
         };
-      } else if (statuses.length) {
+      }
+
+      if (statuses.length) {
         const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,

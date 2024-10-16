@@ -162,7 +162,9 @@ export async function initBeaconState(
       db,
       logger
     );
-  } else if (args.checkpointSyncUrl) {
+  }
+
+  if (args.checkpointSyncUrl) {
     return fetchWSStateFromBeaconApi(
       lastDbStateWithBytes,
       lastDbValidatorsBytes,
@@ -175,24 +177,24 @@ export async function initBeaconState(
       db,
       logger
     );
-  } else {
-    const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
-    if (genesisStateFile && !args.forceGenesis) {
-      const stateBytes = await downloadOrLoadFile(genesisStateFile);
-      const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
-      const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
-      const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
-      await checkAndPersistAnchorState(config, db, logger, anchorState, stateBytes, {
-        isWithinWeakSubjectivityPeriod: wssCheck,
-        isCheckpointState: true,
-      });
-      return {anchorState};
-    } else {
-      // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
-      const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
-      return {anchorState};
-    }
   }
+
+  const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
+  if (genesisStateFile && !args.forceGenesis) {
+    const stateBytes = await downloadOrLoadFile(genesisStateFile);
+    const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+    const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
+    const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
+    await checkAndPersistAnchorState(config, db, logger, anchorState, stateBytes, {
+      isWithinWeakSubjectivityPeriod: wssCheck,
+      isCheckpointState: true,
+    });
+    return {anchorState};
+  }
+
+  // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
+  const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
+  return {anchorState};
 }
 
 async function readWSState(

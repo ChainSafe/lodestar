@@ -3,8 +3,6 @@ import {ForkDigestContext} from "@lodestar/config";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 import {rateLimitQuotas} from "./rateLimit.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export const Goodbye = toProtocol({
   method: ReqRespMethod.Goodbye,
   version: Version.V1,

@@ -13,8 +13,6 @@ import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 const deltasType = new VectorCompositeType(ssz.phase0.Balances, 2);
 
 const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
@@ -57,7 +55,7 @@ const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
           ...(testCase.inclusion_delay_deltas ? [testCase.inclusion_delay_deltas] : []),
           testCase.inactivity_penalty_deltas,
         ]),
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expect(actual).toEqual(expected);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

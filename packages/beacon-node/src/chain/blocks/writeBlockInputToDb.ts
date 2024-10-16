@@ -31,7 +31,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
 
     if (blockInput.type === BlockInputType.availableData || blockInput.type === BlockInputType.dataPromise) {
       const blobSidecars =
-        blockInput.type == BlockInputType.availableData
+        blockInput.type === BlockInputType.availableData
           ? blockInput.blockData.blobs
           : // At this point of import blobs are available and can be safely awaited
             (await blockInput.cachedData.availabilityPromise).blobs;

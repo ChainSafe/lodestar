@@ -96,17 +96,19 @@ export function upgradeLightClientHeader(
   const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork] + 1];
 
   switch (startUpgradeFromFork) {
+    // biome-ignore lint/suspicious/useDefaultSwitchClauseLast: We want default to evaluate at first to throw error early
     default:
       throw Error(
         `Invalid startUpgradeFromFork=${startUpgradeFromFork} for headerFork=${headerFork} in upgradeLightClientHeader to targetFork=${targetFork}`
       );
 
     case ForkName.altair:
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.bellatrix:
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.bellatrix) break;
 
-    // eslint-disable-next-line no-fallthrough
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.capella:
       (upgradedHeader as LightClientHeader<ForkName.capella>).execution =
         ssz.capella.LightClientHeader.fields.execution.defaultValue();
@@ -116,7 +118,7 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.capella) break;
 
-    // eslint-disable-next-line no-fallthrough
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.deneb:
       (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.blobGasUsed =
         ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
@@ -126,7 +128,6 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.electra:
       // No changes to LightClientHeader in Electra
 

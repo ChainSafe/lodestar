@@ -123,6 +123,7 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   // Commit new added fields ViewDU to the root node
   stateElectra.commit();
   // Clear cache to ensure the cache of deneb fields is not used by new ELECTRA fields
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateElectra["clearCache"]();
 
   return stateElectra;

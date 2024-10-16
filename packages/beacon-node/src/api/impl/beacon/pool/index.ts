@@ -94,7 +94,6 @@ export function getBeaconPoolApi({
         signedAttestations.map(async (attestation, i) => {
           try {
             const fork = chain.config.getForkName(chain.clock.currentSlot);
-            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
             const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node

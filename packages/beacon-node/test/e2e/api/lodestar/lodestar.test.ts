@@ -10,17 +10,16 @@ import {waitForEvent} from "../../../utils/events/resolver.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {BeaconNode} from "../../../../src/index.js";
 
-describe("api / impl / validator", function () {
+describe("api / impl / validator", () => {
   vi.setConfig({testTimeout: 60_000});
 
-  describe("getLiveness endpoint", function () {
+  describe("getLiveness endpoint", () => {
     let bn: BeaconNode | undefined;
     const SECONDS_PER_SLOT = 2;
     const ALTAIR_FORK_EPOCH = 0;
     const validatorCount = 8;
     const restPort = 9596;
     const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
-      /* eslint-disable @typescript-eslint/naming-convention */
       SECONDS_PER_SLOT: SECONDS_PER_SLOT,
       ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
     };
@@ -31,7 +30,7 @@ describe("api / impl / validator", function () {
       if (bn) await bn.close();
     });
 
-    it("Should return validator indices that are live", async function () {
+    it("Should return validator indices that are live", async () => {
       const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
@@ -72,7 +71,7 @@ describe("api / impl / validator", function () {
       ]);
     });
 
-    it("Should return only for previous, current and next epoch", async function () {
+    it("Should return only for previous, current and next epoch", async () => {
       const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);

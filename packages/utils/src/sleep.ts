@@ -10,7 +10,7 @@ export async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   }
 
   return new Promise((resolve, reject) => {
-    if (signal && signal.aborted) return reject(new ErrorAborted());
+    if (signal?.aborted) return reject(new ErrorAborted());
 
     let onDone: () => void = () => {};
 

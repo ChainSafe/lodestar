@@ -5,7 +5,6 @@ import {ssz} from "@lodestar/types";
 import {SeenGossipBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {BlockInputType, GossipedInputType, BlockInput} from "../../../../src/chain/blocks/types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 describe("SeenGossipBlockInput", () => {
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,

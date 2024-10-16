@@ -45,7 +45,6 @@ describe("sync", () => {
     const targetSlot = firstHeadSlot + slotsIntoPeriod;
 
     // Genesis data such that targetSlot is at the current clock slot
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
     const genesisTime = Math.floor(Date.now() / 1000) - chainConfig.SECONDS_PER_SLOT * targetSlot;
     const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);

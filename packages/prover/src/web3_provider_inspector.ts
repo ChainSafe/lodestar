@@ -68,7 +68,7 @@ export class Web3ProviderInspector {
       return;
     }
 
-    const index = this.providerTypes.findIndex((p) => p.name == indexOrName);
+    const index = this.providerTypes.findIndex((p) => p.name === indexOrName);
     if (index < 0) {
       throw Error(`Provider type '${indexOrName}' is not registered.`);
     }

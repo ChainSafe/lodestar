@@ -6,7 +6,6 @@ import assert from "node:assert";
 
 // 1. Import from @lodestar/params/setPreset only
 import {setActivePreset, PresetName} from "../../src/setPreset.js";
-// eslint-disable-next-line @typescript-eslint/naming-convention
 setActivePreset(PresetName.minimal, {SLOTS_PER_EPOCH: 2});
 
 // 2. Import from any other @lodestar/params paths

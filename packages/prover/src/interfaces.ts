@@ -27,7 +27,7 @@ export type ELRequestHandler<Params = unknown[], Response = unknown> = (
   payload: JsonRpcRequestOrBatch<Params>
 ) => Promise<JsonRpcResponseOrBatch<Response> | undefined>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ELRequestHandlerAny = ELRequestHandler<any, any>;
 
 /**

@@ -1,8 +1,8 @@
-import EventEmitter from "events";
-import {PeerId, Secp256k1PeerId} from "@libp2p/interface";
+import EventEmitter from "node:events";
+import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
+import {PrivateKey} from "@libp2p/interface";
 import {StrictEventEmitter} from "strict-event-emitter-types";
-import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR} from "@chainsafe/enr";
+import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
@@ -10,7 +10,7 @@ import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
 export type Discv5Opts = {
-  peerId: PeerId;
+  privateKey: PrivateKey;
   discv5: LodestarDiscv5Opts;
   logger: LoggerNode;
   config: BeaconConfig;
@@ -25,7 +25,6 @@ export type Discv5Events = {
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
-  private readonly keypair;
   private readonly subscription: {unsubscribe: () => void};
   private closed = false;
 
@@ -35,14 +34,13 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   ) {
     super();
 
-    this.keypair = createPrivateKeyFromPeerId(this.opts.peerId);
     this.subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
   }
 
   static async init(opts: Discv5Opts): Promise<Discv5Worker> {
     const workerData: Discv5WorkerData = {
       enr: opts.discv5.enr,
-      peerIdProto: exportToProtobuf(opts.peerId as Secp256k1PeerId),
+      privateKeyProto: privateKeyToProtobuf(opts.privateKey),
       bindAddrs: opts.discv5.bindAddrs,
       config: opts.discv5.config ?? {},
       bootEnrs: opts.discv5.bootEnrs,
@@ -80,7 +78,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   async enr(): Promise<SignableENR> {
     const obj = await this.workerApi.enr();
-    return new SignableENR(obj.kvs, obj.seq, this.keypair.privateKey);
+    return new SignableENR(obj.kvs, obj.seq, this.opts.privateKey.raw);
   }
 
   setEnrValue(key: string, value: Uint8Array): Promise<void> {

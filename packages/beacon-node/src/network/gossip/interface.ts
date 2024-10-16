@@ -36,6 +36,9 @@ export enum GossipType {
   bls_to_execution_change = "bls_to_execution_change",
 }
 
+export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
+export type BatchGossipType = GossipType.beacon_attestation;
+
 export enum GossipEncoding {
   ssz_snappy = "ssz_snappy",
 }
@@ -181,26 +184,26 @@ export type GossipHandlerParamGeneric<T extends GossipType> = {
 };
 
 export type GossipHandlers = {
-  [K in GossipType]: DefaultGossipHandler<K> | BatchGossipHandler<K>;
+  [K in GossipType]: SequentialGossipHandler<K> | BatchGossipHandler<K>;
 };
 
-export type DefaultGossipHandler<K extends GossipType> = (
+export type SequentialGossipHandler<K extends GossipType> = (
   gossipHandlerParam: GossipHandlerParamGeneric<K>
 ) => Promise<void>;
 
-export type DefaultGossipHandlers = {
-  [K in GossipType]: DefaultGossipHandler<K>;
+export type SequentialGossipHandlers = {
+  [K in SequentialGossipType]: SequentialGossipHandler<K>;
+};
+
+export type BatchGossipHandlers = {
+  [K in BatchGossipType]: BatchGossipHandler<K>;
 };
 
 export type BatchGossipHandler<K extends GossipType> = (
   gossipHandlerParams: GossipHandlerParamGeneric<K>[]
 ) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
-export type BatchGossipHandlers = {
-  [K in GossipType]?: BatchGossipHandler<K>;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
   ? T
   : never;

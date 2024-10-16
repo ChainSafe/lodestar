@@ -7,7 +7,7 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {spawnCliCommand, execCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
-describe("voluntaryExit cmd", function () {
+describe("voluntaryExit cmd", () => {
   vi.setConfig({testTimeout: 60_000});
 
   it("Perform a voluntary exit", async () => {
@@ -78,10 +78,8 @@ describe("voluntaryExit cmd", function () {
           const validator = (await client.beacon.getStateValidator({stateId: "head", validatorId: pubkey})).value();
           if (validator.status !== "active_exiting") {
             throw Error("Validator not exiting");
-          } else {
-            // eslint-disable-next-line no-console
-            console.log(`Confirmed validator ${pubkey} = ${validator.status}`);
           }
+          console.log(`Confirmed validator ${pubkey} = ${validator.status}`);
         },
         {retryDelay: 1000, retries: 20}
       );

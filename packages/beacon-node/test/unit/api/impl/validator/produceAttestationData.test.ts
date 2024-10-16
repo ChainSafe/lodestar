@@ -5,16 +5,16 @@ import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 
-describe("api - validator - produceAttestationData", function () {
+describe("api - validator - produceAttestationData", () => {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getValidatorApi>;
 
-  beforeEach(function () {
+  beforeEach(() => {
     modules = getApiTestModules();
     api = getValidatorApi(defaultApiOptions, modules);
   });
 
-  it("Should throw when node is not synced", async function () {
+  it("Should throw when node is not synced", async () => {
     // Set the node's state to way back from current slot
     const currentSlot = 100000;
     const headSlot = 0;
@@ -25,7 +25,7 @@ describe("api - validator - produceAttestationData", function () {
     await expect(api.produceAttestationData({committeeIndex: 0, slot: 0})).rejects.toThrow("Node is syncing");
   });
 
-  it("Should throw error when node is stopped", async function () {
+  it("Should throw error when node is stopped", async () => {
     const currentSlot = 100000;
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Stalled);

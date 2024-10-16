@@ -68,9 +68,9 @@ export class ReqRespRateLimiter {
     if ((byPeer && !byPeer.allows(peerIdStr, requestCount)) || (total && !total.allows(null, requestCount))) {
       this.opts?.onRateLimit?.(peerId, protocolID);
       return false;
-    } else {
-      return true;
     }
+
+    return true;
   }
 
   prune(peerId: PeerId): void {

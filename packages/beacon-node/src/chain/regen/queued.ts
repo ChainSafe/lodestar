@@ -336,7 +336,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
       entrypoint: regenRequest.key as RegenFnName,
     };
-    let timer;
+    let timer: (() => number) | undefined;
     try {
       timer = this.metrics?.regenFnCallDuration.startTimer(metricsLabels);
       switch (regenRequest.key) {

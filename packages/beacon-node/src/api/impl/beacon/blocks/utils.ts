@@ -50,7 +50,7 @@ export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.B
 
   // block id must be slot
   const blockSlot = parseInt(blockId, 10);
-  if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+  if (Number.isNaN(blockSlot) && Number.isNaN(blockSlot - 0)) {
     throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
   }
   return blockSlot;

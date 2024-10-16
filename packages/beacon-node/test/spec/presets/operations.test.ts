@@ -20,10 +20,8 @@ import {BaseSpecTest, RunnerType, shouldVerify, TestRunnerFn} from "../utils/typ
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // Define above to re-use in sync_aggregate and sync_aggregate_random
-const sync_aggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
+const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
   state,
   testCase: {sync_aggregate: altair.SyncAggregate}
 ) => {
@@ -62,8 +60,8 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processProposerSlashing(fork, state, testCase.proposer_slashing);
   },
 
-  sync_aggregate,
-  sync_aggregate_random: sync_aggregate,
+  sync_aggregate: syncAggregate,
+  sync_aggregate_random: syncAggregate,
 
   voluntary_exit: (state, testCase: {voluntary_exit: phase0.SignedVoluntaryExit}) => {
     const fork = state.config.getForkSeq(state.slot);
@@ -156,7 +154,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

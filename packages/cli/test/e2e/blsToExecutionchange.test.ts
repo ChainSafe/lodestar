@@ -8,7 +8,7 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
-describe("bLSToExecutionChange cmd", function () {
+describe("bLSToExecutionChange cmd", () => {
   vi.setConfig({testTimeout: 60_000});
 
   it("Perform bLSToExecutionChange", async () => {

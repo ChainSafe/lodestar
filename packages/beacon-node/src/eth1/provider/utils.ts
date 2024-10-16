@@ -53,7 +53,7 @@ export function numToQuantity(num: number | bigint): QUANTITY {
  */
 export function quantityToNum(hex: QUANTITY, id = ""): number {
   const num = parseInt(hex, 16);
-  if (isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
+  if (Number.isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
   return num;
 }
 

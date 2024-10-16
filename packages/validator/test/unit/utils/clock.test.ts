@@ -5,7 +5,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {Clock, getCurrentSlotAround} from "../../../src/util/clock.js";
 import {testLogger} from "../../utils/logger.js";
 
-describe("util / Clock", function () {
+describe("util / Clock", () => {
   const logger = testLogger();
   let controller: AbortController;
 
@@ -80,8 +80,7 @@ describe("util / Clock", function () {
     expect(onEpoch).toHaveBeenNthCalledWith(2, 1, expect.any(AbortSignal));
   });
 
-  describe("getCurrentSlot", function () {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+  describe("getCurrentSlot", () => {
     const testConfig = {SECONDS_PER_SLOT: 12} as BeaconConfig;
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
 
@@ -97,7 +96,7 @@ describe("util / Clock", function () {
       {name: "should return next slot after 12.5s", delta: 12.5},
     ];
 
-    it.each(testCase)("$name", async function ({delta}) {
+    it.each(testCase)("$name", async ({delta}) => {
       const currentSlot = getCurrentSlotAround(testConfig, genesisTime);
       vi.advanceTimersByTime(delta * 1000);
       expect(getCurrentSlotAround(testConfig, genesisTime)).toBe(currentSlot + 1);

@@ -90,16 +90,16 @@ export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>
 const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version) => {
   if (version === Version.V1) {
     return ssz.phase0.SignedBeaconBlock;
-  } else {
-    return ssz[fork].SignedBeaconBlock;
   }
+
+  return ssz[fork].SignedBeaconBlock;
 };
 
 export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
   [ReqRespMethod.Status]: () => ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
-  [ReqRespMethod.Metadata]: (_, version) => (version == Version.V1 ? ssz.phase0.Metadata : ssz.altair.Metadata),
+  [ReqRespMethod.Metadata]: (_, version) => (version === Version.V1 ? ssz.phase0.Metadata : ssz.altair.Metadata),
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
@@ -114,9 +114,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
 function onlyLightclientFork(fork: ForkName): ForkLightClient {
   if (isForkLightClient(fork)) {
     return fork;
-  } else {
-    throw Error(`Not a lightclient fork ${fork}`);
   }
+  throw Error(`Not a lightclient fork ${fork}`);
 }
 
 export type RequestTypedContainer = {

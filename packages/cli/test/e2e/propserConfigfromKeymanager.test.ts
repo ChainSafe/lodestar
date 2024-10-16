@@ -9,7 +9,7 @@ import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {startValidatorWithKeyManager} from "../utils/validator.js";
 
-describe("import keystores from api, test DefaultProposerConfig", function () {
+describe("import keystores from api, test DefaultProposerConfig", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "proposer-config-test");
@@ -39,7 +39,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
 
   const genesisValidatorsRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
   const slashingProtection: Interchange = {
-    /* eslint-disable @typescript-eslint/naming-convention */
     metadata: {
       interchange_format_version: "5",
       genesis_validators_root: genesisValidatorsRoot,

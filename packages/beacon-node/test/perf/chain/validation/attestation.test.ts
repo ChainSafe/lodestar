@@ -1,9 +1,8 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {ssz} from "@lodestar/types";
-// eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
-import {validateAttestation, validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
+import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes.js";
 
@@ -29,25 +28,7 @@ describe("validate gossip attestation", () => {
   });
 
   const attSlot = attestation0.data.slot;
-  const serializedData = ssz.phase0.Attestation.serialize(attestation0);
   const fork = chain.config.getForkName(stateSlot);
-  itBench({
-    id: `validate gossip attestation - vc ${vc}`,
-    beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
-    fn: async () => {
-      await validateAttestation(
-        fork,
-        chain,
-        {
-          attestation: null,
-          serializedData,
-          attSlot,
-          attDataBase64: getAttDataFromAttestationSerialized(serializedData),
-        },
-        subnet0
-      );
-    },
-  });
 
   for (const chunkSize of [32, 64, 128, 256]) {
     const attestations = [attestation0];
@@ -67,7 +48,7 @@ describe("validate gossip attestation", () => {
         attestation: null,
         serializedData,
         attSlot,
-        attDataBase64: getAttDataFromAttestationSerialized(serializedData),
+        attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
       };
     });
 

@@ -15,7 +15,7 @@ import {generateCachedElectraState} from "../../../utils/state.js";
 // ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      1444.173 ops/s    692.4380 us/op        -       1057 runs   6.03 s
 // ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     189.5965 ops/s    5.274358 ms/op        -         57 runs   1.15 s
 // ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    12.90495 ops/s    77.48967 ms/op        -         13 runs   1.62 s
-describe("updateUnfinalizedPubkeys perf tests", function () {
+describe("updateUnfinalizedPubkeys perf tests", () => {
   setBenchOpts({noThreshold: true});
 
   const numPubkeysToBeFinalizedCases = [10, 100, 1000];

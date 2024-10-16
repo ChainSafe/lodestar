@@ -1,3 +1,4 @@
+import {AbortOptions} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
 import {LevelDatastore} from "datastore-level";
 import {Key, KeyQuery, Query, Pair} from "interface-datastore";
@@ -57,7 +58,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return this._dbDatastore.close();
   }
 
-  async put(key: Key, val: Uint8Array): Promise<Key> {
+  async put(key: Key, val: Uint8Array, _options?: AbortOptions): Promise<Key> {
     return this._put(key, val, false);
   }
 
@@ -147,8 +148,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     if (this._dirtyItems.size >= this._threshold) {
       try {
         await this._commitData();
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (_e) {}
     }
   }
 

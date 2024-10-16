@@ -3,10 +3,10 @@ import path from "node:path";
 import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import {ensureDir, writeIfNotExist} from "../../../src/util/file.js";
 
-describe("file util", function () {
+describe("file util", () => {
   const dirPath = path.join(".", "keys/toml/test_config.toml");
 
-  describe("ensureDir", function () {
+  describe("ensureDir", () => {
     it("create dir if not exists", async () => {
       // ${dirPath} should not exist
       expect(fs.existsSync(dirPath)).toBe(false);
@@ -17,7 +17,7 @@ describe("file util", function () {
     });
   });
 
-  describe("writeIfNotExist", function () {
+  describe("writeIfNotExist", () => {
     const filePath = path.join(dirPath, "test.txt");
     const data = new Uint8Array([0, 1, 2]);
     beforeAll(async () => {

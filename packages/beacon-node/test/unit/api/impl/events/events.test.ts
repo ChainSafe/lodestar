@@ -11,7 +11,6 @@ vi.mock("../../../../../src/chain/index.js", async (importActual) => {
 
   return {
     ...mod,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(() => {
       return {
         emitter: new ChainEventEmitter(),
@@ -23,22 +22,20 @@ vi.mock("../../../../../src/chain/index.js", async (importActual) => {
   };
 });
 
-describe("Events api impl", function () {
-  describe("beacon event stream", function () {
+describe("Events api impl", () => {
+  describe("beacon event stream", () => {
     let chainStub: MockedObject<BeaconChain>;
     let chainEventEmmitter: ChainEventEmitter;
     let api: ReturnType<typeof getEventsApi>;
+    let controller: AbortController;
 
-    beforeEach(function () {
+    beforeEach(() => {
       chainStub = vi.mocked(new BeaconChain({} as any, {} as any), {partial: true, deep: false});
       chainEventEmmitter = chainStub.emitter;
       api = getEventsApi({config, chain: chainStub});
-    });
-
-    let controller: AbortController;
-    beforeEach(() => {
       controller = new AbortController();
     });
+
     afterEach(() => controller.abort());
 
     function getEvents(topics: routes.events.EventType[]): routes.events.BeaconEvent[] {
@@ -63,7 +60,7 @@ describe("Events api impl", function () {
       executionOptimistic: false,
     };
 
-    it("should ignore not sent topics", async function () {
+    it("should ignore not sent topics", async () => {
       const events = getEvents([routes.events.EventType.head]);
 
       chainEventEmmitter.emit(routes.events.EventType.attestation, ssz.phase0.Attestation.defaultValue());

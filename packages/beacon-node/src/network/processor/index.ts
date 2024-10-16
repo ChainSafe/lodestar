@@ -172,7 +172,7 @@ export class NetworkProcessor {
     this.metrics = metrics;
     this.logger = logger;
     this.events = events;
-    this.gossipQueues = createGossipQueues(this.opts.beaconAttestationBatchValidation);
+    this.gossipQueues = createGossipQueues();
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
@@ -396,7 +396,9 @@ export class NetworkProcessor {
         if (item) {
           this.gossipTopicConcurrency[topic] += numMessages;
           this.processPendingGossipsubMessage(item)
-            .finally(() => (this.gossipTopicConcurrency[topic] -= numMessages))
+            .finally(() => {
+              this.gossipTopicConcurrency[topic] -= numMessages;
+            })
             .catch((e) => this.logger.error("processGossipAttestations must not throw", {}, e));
 
           jobsSubmitted += numMessages;
