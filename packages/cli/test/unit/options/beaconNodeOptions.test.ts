@@ -39,6 +39,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveBlobEpochs": 10000,
+      archiveMode: "full",
       "chain.nHistoricalStates": true,
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
