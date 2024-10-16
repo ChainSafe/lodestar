@@ -145,7 +145,7 @@
     "multiformats": "^11.0.1",
     "prom-client": "^15.1.0",
     "qs": "^6.11.1",
-    "snappyjs": "^0.7.0",
+    "@chainsafe/snappy-wasm": "^0.5.0",
     "strict-event-emitter-types": "^2.0.0",
     "systeminformation": "^5.22.9",
     "uint8arraylist": "^2.4.7",
