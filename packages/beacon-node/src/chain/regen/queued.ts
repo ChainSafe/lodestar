@@ -159,6 +159,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     blockRootHex: RootHex,
     postState: CachedBeaconStateAllForks
   ): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
+    this.blockStateCache.add(postState);
     let prunedStates: Map<Epoch, CachedBeaconStateAllForks[]> | null = null;
     try {
       prunedStates = await this.checkpointStateCache.processState(blockRootHex, postState);
