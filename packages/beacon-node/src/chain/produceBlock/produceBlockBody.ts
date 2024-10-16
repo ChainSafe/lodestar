@@ -293,7 +293,6 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            // validate blindedBlobsBundle
             if (this.opts.sanityCheckExecutionEngineBlobs) {
               validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
