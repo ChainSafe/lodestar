@@ -68,7 +68,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
           headers: opts.userAgent ? {"User-Agent": opts.userAgent} : undefined,
         },
       },
-      {config, metrics: metrics?.builderHttpClient}
+      {config, metrics: metrics?.builderHttpClient, logger}
     );
     logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
     this.config = config;
