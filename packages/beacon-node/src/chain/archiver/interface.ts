@@ -4,7 +4,8 @@ import {RootHex} from "@lodestar/types";
 
 export enum ArchiveMode {
   Full = "full",
-  Differential = "diff",
+  // Specify only existing strategy
+  // Differential = "diff",
 }
 
 export interface StatesArchiverOpts {
