@@ -179,8 +179,8 @@ async function startELProcess(args: {
   return tearDownCallBack;
 }
 
-async function waitForELOffline(ENGINE_PORT: string): Promise<void> {
-  const port = parseInt(ENGINE_PORT);
+async function waitForELOffline(enginePort: string): Promise<void> {
+  const port = parseInt(enginePort);
 
   for (let i = 0; i < 60; i++) {
     console.log("Waiting for EL offline...");

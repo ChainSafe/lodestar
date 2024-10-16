@@ -19,8 +19,11 @@ export type EmptyRequest = Record<never, never>;
 export type EmptyResponseData = void;
 export type EmptyMeta = void;
 
+// biome-ignore lint/suspicious/noExplicitAny: We can not use `unknown` type here
 export type AnyEndpoint = Endpoint<any, any, any, any, any>;
+// biome-ignore lint/suspicious/noExplicitAny: We can not use `unknown` type here
 export type EmptyRequestEndpoint = Endpoint<any, EmptyArgs, EmptyRequest, any, any>;
+// biome-ignore lint/suspicious/noExplicitAny: We can not use `unknown` type here
 export type EmptyResponseEndpoint = Endpoint<any, any, any, EmptyResponseData, EmptyMeta>;
 
 /** Shortcut for routes that have no params, query */
