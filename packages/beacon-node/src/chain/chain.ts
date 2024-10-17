@@ -886,7 +886,7 @@ export class BeaconChain implements IBeaconChain {
   async pruneOnFinalized(finalizedEpoch: Epoch): Promise<void> {
     const prunedStates = await this.regen.pruneOnFinalized(finalizedEpoch);
     // if the node is syncing or unfinality time, we don't want to reuse balances tree
-    if (this.clock.currentEpoch - finalizedEpoch <= SAFE_FINALIZED_EPOCH_TO_CURRENT_EPOCH_DIFF && prunedStates) {
+    if (this.opts.reuseBalancesTree && this.clock.currentEpoch - finalizedEpoch <= SAFE_FINALIZED_EPOCH_TO_CURRENT_EPOCH_DIFF && prunedStates) {
       // cp states on the same epoch shares the same balances seed tree so only need one of them
       for (const states of prunedStates.values()) {
         this.balancesTreeCache.processUnusedState(states[0], BalancesTreeSource.PRUNE_ON_FINALIZED);
