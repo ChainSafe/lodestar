@@ -59,9 +59,9 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
     return this.getLatest(rootHex, maxEpoch, opts);
   }
 
-  async processState(): Promise<number> {
+  async processState(): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
     // do nothing, this class does not support prunning
-    return 0;
+    return null;
   }
 
   get(cp: CheckpointHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
@@ -122,12 +122,17 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
     return previousHits;
   }
 
-  pruneFinalized(finalizedEpoch: Epoch): void {
+  async pruneFinalized(finalizedEpoch: Epoch): Promise<Map<Epoch, CachedBeaconStateAllForks[]>> {
+    const result = new Map<Epoch, CachedBeaconStateAllForks[]>();
+
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
-        this.deleteAllEpochItems(epoch);
+        const deletedStates = this.deleteAllEpochItems(epoch);
+        result.set(epoch, deletedStates);
       }
     }
+
+    return result;
   }
 
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void {
@@ -153,11 +158,19 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
     }
   }
 
-  deleteAllEpochItems(epoch: Epoch): void {
+  deleteAllEpochItems(epoch: Epoch): CachedBeaconStateAllForks[] {
+    const states = [];
     for (const rootHex of this.epochIndex.get(epoch) || []) {
-      this.cache.delete(toCheckpointKey({rootHex, epoch}));
+      const key = toCheckpointKey({rootHex, epoch});
+      const state = this.cache.get(key);
+      if (state) {
+        states.push(state);
+      }
+      this.cache.delete(key);
     }
     this.epochIndex.delete(epoch);
+
+    return states;
   }
 
   clear(): void {

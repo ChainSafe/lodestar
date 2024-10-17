@@ -17,7 +17,7 @@ import {
   FLAG_PREV_TARGET_ATTESTER_UNSLASHED,
   hasMarkers,
 } from "../util/attesterStatus.js";
-import {isInInactivityLeak, newZeroedArray} from "../util/index.js";
+import {isInInactivityLeak} from "../util/index.js";
 
 type RewardPenaltyItem = {
   baseReward: number;
@@ -28,6 +28,11 @@ type RewardPenaltyItem = {
   timelyHeadReward: number;
 };
 
+/**
+ * This data is reused and never gc.
+ */
+const rewards = new Array<number>();
+const penalties = new Array<number>();
 /**
  * An aggregate of getFlagIndexDeltas and getInactivityPenaltyDeltas that loop through process.flags 1 time instead of 4.
  *
@@ -48,8 +53,10 @@ export function getRewardsAndPenaltiesAltair(
   // TODO: Is there a cheaper way to measure length that going to `state.validators`?
   const validatorCount = state.validators.length;
   const activeIncrements = cache.totalActiveStakeByIncrement;
-  const rewards = newZeroedArray(validatorCount);
-  const penalties = newZeroedArray(validatorCount);
+  rewards.length = validatorCount;
+  rewards.fill(0);
+  penalties.length = validatorCount;
+  penalties.fill(0);
 
   const isInInactivityLeakBn = isInInactivityLeak(state);
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE

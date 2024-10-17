@@ -43,6 +43,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
+      "chain.reuseBalancesTree": true,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -151,6 +152,7 @@ describe("options / beaconNodeOptions", () => {
         nHistoricalStatesFileDataStore: true,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
+        reuseBalancesTree: true,
       },
       eth1: {
         enabled: true,

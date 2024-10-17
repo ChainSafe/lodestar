@@ -23,6 +23,7 @@ import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
+import {BalancesTreeSource} from "../balancesTreeCache.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -96,7 +97,21 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  this.regen.processState(blockRootHex, postState);
+  this.regen
+    .processState(blockRootHex, postState)
+    .then((prunedStates) => {
+      // if the node is syncing, we don't want to reuse balances tree
+      const isCurrentSlot = this.clock.currentSlot === blockSlot;
+      if (this.opts.reuseBalancesTree && isCurrentSlot && prunedStates) {
+        for (const states of prunedStates.values()) {
+          // cp states on the same epoch shares the same balances seed tree so only need one of them
+          this.balancesTreeCache.processUnusedState(states[0], BalancesTreeSource.IMPORT_BLOCK);
+        }
+      }
+    })
+    .catch((e) => {
+      this.logger.error("Regen error to process state for block", {slot: blockSlot, root: blockRootHex}, e as Error);
+    });
 
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});

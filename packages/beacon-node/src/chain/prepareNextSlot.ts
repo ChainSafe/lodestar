@@ -19,12 +19,18 @@ import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBloc
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
 
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
+
+/**
+ * The same HashComputationGroup to be used for all epoch transition.
+ */
+const epochHCGroup = new HashComputationGroup();
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -232,7 +238,12 @@ export class PrepareNextSlotScheduler {
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
       source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
-    state.hashTreeRoot();
+    if (isEpochTransition) {
+      state.batchHashTreeRoot(epochHCGroup);
+    } else {
+      // normal slot, not worth to batch hash
+      state.node.rootHashObject;
+    }
     hashTreeRootTimer?.();
   }
 }

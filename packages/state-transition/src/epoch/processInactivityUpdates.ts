@@ -4,6 +4,11 @@ import * as attesterStatusUtil from "../util/attesterStatus.js";
 import {isInInactivityLeak} from "../util/index.js";
 
 /**
+ * This data is reused and never gc.
+ */
+const inactivityScoresArr = new Array<number>();
+
+/**
  * Mutates `inactivityScores` from pre-calculated validator flags.
  *
  * PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
@@ -30,7 +35,8 @@ export function processInactivityUpdates(state: CachedBeaconStateAltair, cache: 
   // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
   const {FLAG_PREV_TARGET_ATTESTER_UNSLASHED, FLAG_ELIGIBLE_ATTESTER, hasMarkers} = attesterStatusUtil;
 
-  const inactivityScoresArr = inactivityScores.getAll();
+  inactivityScoresArr.length = state.validators.length;
+  inactivityScores.getAll(inactivityScoresArr);
 
   for (let i = 0; i < flags.length; i++) {
     const flag = flags[i];

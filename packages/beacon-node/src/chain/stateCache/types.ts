@@ -72,8 +72,11 @@ export interface CheckpointStateCache {
   ): Promise<CachedBeaconStateAllForks | null>;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
-  pruneFinalized(finalizedEpoch: Epoch): void;
-  processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number>;
+  pruneFinalized(finalizedEpoch: Epoch): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null>;
+  processState(
+    blockRootHex: RootHex,
+    state: CachedBeaconStateAllForks
+  ): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null>;
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
   /** Expose beacon states stored in cache. Use with caution */
