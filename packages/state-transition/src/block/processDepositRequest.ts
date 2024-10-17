@@ -3,11 +3,7 @@ import {ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 
 import {CachedBeaconStateElectra} from "../types.js";
 
-export function processDepositRequest(
-  fork: ForkSeq,
-  state: CachedBeaconStateElectra,
-  depositRequest: electra.DepositRequest
-): void {
+export function processDepositRequest(state: CachedBeaconStateElectra, depositRequest: electra.DepositRequest): void {
   if (state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     state.depositRequestsStartIndex = BigInt(depositRequest.index);
   }
