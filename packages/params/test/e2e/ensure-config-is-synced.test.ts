@@ -33,10 +33,13 @@ describe("Ensure config is synced", () => {
 function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPreset): void {
   const filteredLocalPreset: Partial<BeaconPreset> = Object.keys(localPreset)
     .filter((key) => !ignoredLocalPresetFields.includes(key as keyof BeaconPreset))
-    .reduce((acc, key) => {
-      acc[key as keyof BeaconPreset] = localPreset[key as keyof BeaconPreset];
-      return acc;
-    }, {} as Partial<BeaconPreset>);
+    .reduce(
+      (acc, key) => {
+        acc[key as keyof BeaconPreset] = localPreset[key as keyof BeaconPreset];
+        return acc;
+      },
+      {} as Partial<BeaconPreset>
+    );
 
   // Check each key for better debuggability
   for (const key of Object.keys(remotePreset) as (keyof BeaconPreset)[]) {
