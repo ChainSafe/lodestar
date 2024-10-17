@@ -9,6 +9,7 @@ export class ListValidatorType extends ListCompositeType<ValidatorNodeStructType
   }
 
   getViewDU(node: Node, cache?: unknown): ListCompositeTreeViewDU<ValidatorNodeStructType> {
+    // biome-ignore lint/suspicious/noExplicitAny: ssz api
     return new ListValidatorTreeViewDU(this, node, cache as any);
   }
 }

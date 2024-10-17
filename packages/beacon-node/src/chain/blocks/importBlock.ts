@@ -96,16 +96,19 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  this.regen.processState(blockRootHex, postState).then((prunedStates) => {
-    if (prunedStates) {
-      for (const states of prunedStates.values()) {
-        // cp states on the same epoch shares the same balances seed tree so only need one of them
-        this.balancesTreeCache.processUnusedState(states[0]);
+  this.regen
+    .processState(blockRootHex, postState)
+    .then((prunedStates) => {
+      if (prunedStates) {
+        for (const states of prunedStates.values()) {
+          // cp states on the same epoch shares the same balances seed tree so only need one of them
+          this.balancesTreeCache.processUnusedState(states[0]);
+        }
       }
-    }
-  }).catch((e) => {
-    this.logger.error("Regen error to process state for block", {slot: blockSlot, root: blockRootHex}, e as Error);
-  });
+    })
+    .catch((e) => {
+      this.logger.error("Regen error to process state for block", {slot: blockSlot, root: blockRootHex}, e as Error);
+    });
 
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});

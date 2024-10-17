@@ -60,7 +60,8 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
   commit(hcOffset = 0, hcByLevel: HashComputationLevel[] | null = null): void {
     if (hcByLevel === null) {
       // this is not from batchHashTreeRoot() call, go with regular flow
-      return super.commit();
+      super.commit();
+      return;
     }
 
     const isOldRootHashed = this._rootNode.h0 !== null;
@@ -125,7 +126,10 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
   }
 }
 
-function doBatchHashTreeRootValidators(indices: ValidatorIndex[], validators: Map<ValidatorIndex, ContainerNodeStructTreeViewDU<typeof ValidatorType>>): void {
+function doBatchHashTreeRootValidators(
+  indices: ValidatorIndex[],
+  validators: Map<ValidatorIndex, ContainerNodeStructTreeViewDU<typeof ValidatorType>>
+): void {
   const endBatch = indices.length - (indices.length % PARALLEL_FACTOR);
 
   // commit every 16 validators in batch

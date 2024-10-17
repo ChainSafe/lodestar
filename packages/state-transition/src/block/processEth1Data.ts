@@ -48,6 +48,7 @@ export function becomesNewEth1Data(
   // Then isEqualEth1DataView compares cached roots (HashObject as of Jan 2022) which is much cheaper
   // than doing structural equality, which requires tree -> value conversions
   let sameVotesCount = 0;
+  // biome-ignore lint/complexity/noForEach: ssz api
   state.eth1DataVotes.forEach((eth1DataVote) => {
     if (isEqualEth1DataView(eth1DataVote, newEth1Data)) {
       sameVotesCount++;

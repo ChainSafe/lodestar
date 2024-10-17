@@ -418,7 +418,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         try {
           const prunedStates = await this.deleteAllEpochItems(epoch);
           result.set(epoch, prunedStates);
-        } catch(e) {
+        } catch (e) {
           this.logger.debug("Error prune finalized epoch", {epoch, finalizedEpoch}, e as Error);
         }
       }
@@ -484,7 +484,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     blockRootHex: RootHex,
     state: CachedBeaconStateAllForks
   ): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
-    let persistCount = 0;
     // it's important to sort the epochs in ascending order, in case of big reorg we always want to keep the most recent checkpoint states
     const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
     if (sortedEpochs.length <= this.maxEpochsInMemory) {
@@ -516,14 +515,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       result.set(lowestEpoch, prunedStates);
     }
 
-    if (persistCount > 0) {
-      this.logger.verbose("Persisted checkpoint states", {
-        slot: blockSlot,
-        root: blockRootHex,
-        persistCount,
-        persistEpochs: persistEpochs.length,
-      });
-    }
     return result;
   }
 
