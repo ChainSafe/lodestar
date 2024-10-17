@@ -213,11 +213,10 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.archiveMode": {
-    hidden: false,
+    hidden: true,
     choices: Object.values(ArchiveMode),
     description: "Strategy to manage archive states",
     default: defaultOptions.chain.archiveMode,
-    defaultDescription: String(defaultOptions.chain.archiveMode),
     type: "string",
     group: "chain",
   },
