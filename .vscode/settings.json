@@ -1,6 +1,7 @@
 {
   "window.title": "${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}[${activeRepositoryBranchName}]",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "openInGitHub.defaultBranch": "unstable",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit",
