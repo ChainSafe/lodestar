@@ -99,7 +99,9 @@ export async function importBlock(
   this.regen
     .processState(blockRootHex, postState)
     .then((prunedStates) => {
-      if (prunedStates) {
+      // if the node is syncing, we don't want to reuse balances tree
+      const isCurrentSlot = this.clock.currentSlot === blockSlot;
+      if (isCurrentSlot && prunedStates) {
         for (const states of prunedStates.values()) {
           // cp states on the same epoch shares the same balances seed tree so only need one of them
           this.balancesTreeCache.processUnusedState(states[0]);
