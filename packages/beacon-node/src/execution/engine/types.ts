@@ -116,7 +116,7 @@ type ExecutionPayloadRpcWithValue = {
   // even though CL tracks this as executionPayloadValue, EL returns this as blockValue
   blockValue: QUANTITY;
   blobsBundle?: BlobsBundleRpc;
-  requests?: ExecutionRequestsRpc;
+  executionRequests?: ExecutionRequestsRpc;
   shouldOverrideBuilder?: boolean;
 };
 type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithValue;
@@ -266,7 +266,9 @@ export function parseExecutionPayload(
     executionPayloadValue = quantityToBigint(response.blockValue);
     data = response.executionPayload;
     blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
-    executionRequests = response.requests ? deserializeExecutionRequests(response.requests) : undefined;
+    executionRequests = response.executionRequests
+      ? deserializeExecutionRequests(response.executionRequests)
+      : undefined;
     shouldOverrideBuilder = response.shouldOverrideBuilder ?? false;
   } else {
     data = response;
