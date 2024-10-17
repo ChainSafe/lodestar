@@ -149,6 +149,7 @@ describe("options / beaconNodeOptions", () => {
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveBlobEpochs: 10000,
+        archiveMode: ArchiveMode.Full,
         nHistoricalStates: true,
         nHistoricalStatesFileDataStore: true,
         maxBlockStates: 100,
