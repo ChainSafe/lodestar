@@ -101,7 +101,7 @@ import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BalancesTreeCache} from "./balancesTreeCache.js";
+import {BalancesTreeCache, BalancesTreeSource} from "./balancesTreeCache.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -889,7 +889,7 @@ export class BeaconChain implements IBeaconChain {
     if (this.clock.currentEpoch - finalizedEpoch <= SAFE_FINALIZED_EPOCH_TO_CURRENT_EPOCH_DIFF && prunedStates) {
       // cp states on the same epoch shares the same balances seed tree so only need one of them
       for (const states of prunedStates.values()) {
-        this.balancesTreeCache.processUnusedState(states[0]);
+        this.balancesTreeCache.processUnusedState(states[0], BalancesTreeSource.PRUNE_ON_FINALIZED);
       }
     }
   }

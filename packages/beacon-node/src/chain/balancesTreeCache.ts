@@ -5,6 +5,11 @@ import {Epoch} from "@lodestar/types";
 
 const MAX_ITEMS = 2;
 
+export enum BalancesTreeSource {
+  PRUNE_ON_FINALIZED = "pruned_on_finalized",
+  IMPORT_BLOCK = "import_block",
+};
+
 /**
  * A cached of unused balances tree
  * States in the same epoch share the same balances tree so we only want to cache max once per epoch
@@ -20,7 +25,7 @@ export class BalancesTreeCache implements IBalancesTreeCache {
     }
   }
 
-  processUnusedState(state: CachedBeaconStateAllForks | undefined): void {
+  processUnusedState(state: CachedBeaconStateAllForks | undefined, source: BalancesTreeSource): void {
     if (state === undefined) {
       return;
     }
@@ -28,6 +33,8 @@ export class BalancesTreeCache implements IBalancesTreeCache {
     if (this.unusedBalancesTrees.has(stateEpoch)) {
       return;
     }
+
+    this.metrics?.balancesTreeCache.total.inc({source});
 
     this.unusedBalancesTrees.set(stateEpoch, state.balances);
     while (this.unusedBalancesTrees.size > MAX_ITEMS) {
