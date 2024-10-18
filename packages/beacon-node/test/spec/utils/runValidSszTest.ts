@@ -81,14 +81,11 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
   // 0x0000000000000000000000000000000000000000000000000000000000000000
   if (process.env.RENDER_ROOTS) {
     if (type.isBasic) {
-      console.log("ROOTS Basic", toHexString(type.serialize(testDataValue)));
+      console.log("Chunk Basic", toHexString(type.serialize(testDataValue)));
     } else {
       // biome-ignore lint/complexity/useLiteralKeys: The `getRoots` is a protected attribute
-      const roots = (type as CompositeType<unknown, unknown, unknown>)["getRoots"](testDataValue);
-      console.log(
-        "ROOTS Composite",
-        roots.map((root) => toHexString(root))
-      );
+      const chunkBytes = (type as CompositeType<unknown, unknown, unknown>)["getChunkBytes"](testDataValue);
+      console.log("Chunk Bytes Composite", toHexString(chunkBytes));
     }
   }
 
