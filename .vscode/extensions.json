@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "biomejs.biome",
-    "esbenp.prettier-vscode",
-    "sysoev.vscode-open-in-github"
+    "esbenp.prettier-vscode"
   ]
 }
