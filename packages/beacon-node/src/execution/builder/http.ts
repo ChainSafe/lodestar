@@ -8,6 +8,7 @@ import {
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
   ExecutionPayloadHeader,
+  electra,
 } from "@lodestar/types";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
@@ -120,6 +121,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionRequests?: electra.ExecutionRequests;
   }> {
     const signedBuilderBid = (
       await this.api.getHeader({slot, parentHash, proposerPubkey}, {timeoutMs: BUILDER_PROPOSAL_DELAY_TOLERANCE})
@@ -131,7 +133,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
 
     const {header, value: executionPayloadValue} = signedBuilderBid.message;
     const {blobKzgCommitments} = signedBuilderBid.message as deneb.BuilderBid;
-    return {header, executionPayloadValue, blobKzgCommitments};
+    const {executionRequests} = signedBuilderBid.message as electra.BuilderBid;
+    return {header, executionPayloadValue, blobKzgCommitments, executionRequests};
   }
 
   async submitBlindedBlock(signedBlindedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents> {

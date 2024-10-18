@@ -8,6 +8,7 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   ForkSeq,
+  GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@lodestar/params";
 
@@ -15,14 +16,7 @@ import {DepositData} from "@lodestar/types/lib/phase0/types.js";
 import {DepositRequest} from "@lodestar/types/lib/electra/types.js";
 import {BeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../constants/index.js";
-import {
-  computeDomain,
-  computeSigningRoot,
-  hasCompoundingWithdrawalCredential,
-  hasEth1WithdrawalCredential,
-  increaseBalance,
-  switchToCompoundingValidator,
-} from "../util/index.js";
+import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
 
 /**
@@ -61,38 +55,43 @@ export function applyDeposit(
   state: CachedBeaconStateAllForks,
   deposit: DepositData | DepositRequest
 ): void {
-  const {config, validators, epochCtx} = state;
-  const {pubkey, withdrawalCredentials, amount} = deposit;
+  const {config, epochCtx, validators} = state;
+  const {pubkey, withdrawalCredentials, amount, signature} = deposit;
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
-  if (cachedIndex === null || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
-    if (isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)) {
-      addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
-    }
-  } else {
-    if (fork < ForkSeq.electra) {
+  const isNewValidator = cachedIndex === null || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length;
+
+  if (fork < ForkSeq.electra) {
+    if (isNewValidator) {
+      if (isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, signature)) {
+        addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
+      }
+    } else {
       // increase balance by deposit amount right away pre-electra
       increaseBalance(state, cachedIndex, amount);
-    } else if (fork >= ForkSeq.electra) {
-      const stateElectra = state as CachedBeaconStateElectra;
-      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
-        index: cachedIndex,
-        amount: BigInt(amount),
-      });
-      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+    }
+  } else {
+    const stateElectra = state as CachedBeaconStateElectra;
+    const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
+      pubkey,
+      withdrawalCredentials,
+      amount,
+      signature,
+      slot: GENESIS_SLOT, // Use GENESIS_SLOT to distinguish from a pending deposit request
+    });
 
-      if (
-        hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
-        hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials) &&
-        isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
-      ) {
-        switchToCompoundingValidator(stateElectra, cachedIndex);
+    if (isNewValidator) {
+      if (isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)) {
+        addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, 0);
+        stateElectra.pendingDeposits.push(pendingDeposit);
       }
+    } else {
+      stateElectra.pendingDeposits.push(pendingDeposit);
     }
   }
 }
 
-function addValidatorToRegistry(
+export function addValidatorToRegistry(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   pubkey: BLSPubkey,
@@ -101,8 +100,10 @@ function addValidatorToRegistry(
 ): void {
   const {validators, epochCtx} = state;
   // add validator and balance entries
-  const effectiveBalance =
-    fork < ForkSeq.electra ? Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE) : 0;
+  const effectiveBalance = Math.min(
+    amount - (amount % EFFECTIVE_BALANCE_INCREMENT),
+    fork < ForkSeq.electra ? MAX_EFFECTIVE_BALANCE : getMaxEffectiveBalance(withdrawalCredentials)
+  );
   validators.push(
     ssz.phase0.Validator.toViewDU({
       pubkey,
@@ -138,20 +139,10 @@ function addValidatorToRegistry(
     stateAltair.currentEpochParticipation.push(0);
   }
 
-  if (fork < ForkSeq.electra) {
-    state.balances.push(amount);
-  } else if (fork >= ForkSeq.electra) {
-    state.balances.push(0);
-    const stateElectra = state as CachedBeaconStateElectra;
-    const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
-      index: validatorIndex,
-      amount: BigInt(amount),
-    });
-    stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
-  }
+  state.balances.push(amount);
 }
 
-function isValidDepositSignature(
+export function isValidDepositSignature(
   config: BeaconConfig,
   pubkey: Uint8Array,
   withdrawalCredentials: Uint8Array,

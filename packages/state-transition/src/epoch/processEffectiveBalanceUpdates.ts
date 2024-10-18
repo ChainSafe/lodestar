@@ -5,12 +5,10 @@ import {
   HYSTERESIS_QUOTIENT,
   HYSTERESIS_UPWARD_MULTIPLIER,
   MAX_EFFECTIVE_BALANCE,
-  MAX_EFFECTIVE_BALANCE_ELECTRA,
-  MIN_ACTIVATION_BALANCE,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
 import {EpochTransitionCache, CachedBeaconStateAllForks, BeaconStateAltair} from "../types.js";
-import {hasCompoundingWithdrawalCredential} from "../util/electra.js";
+import {getMaxEffectiveBalance} from "../util/validator.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -42,11 +40,10 @@ export function processEffectiveBalanceUpdates(
   // update effective balances with hysteresis
 
   // epochTransitionCache.balances is initialized in processRewardsAndPenalties()
-  // and updated in processPendingBalanceDeposits() and processPendingConsolidations()
+  // and updated in processPendingDeposits() and processPendingConsolidations()
   // so it's recycled here for performance.
   const balances = cache.balances ?? state.balances.getAll();
   const currentEpochValidators = cache.validators;
-  const newCompoundingValidators = cache.newCompoundingValidators ?? new Set();
 
   let numUpdate = 0;
   for (let i = 0, len = balances.length; i < len; i++) {
@@ -61,10 +58,7 @@ export function processEffectiveBalanceUpdates(
       effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
     } else {
       // from electra, effectiveBalanceLimit is per validator
-      const isCompoundingValidator =
-        hasCompoundingWithdrawalCredential(currentEpochValidators[i].withdrawalCredentials) ||
-        newCompoundingValidators.has(i);
-      effectiveBalanceLimit = isCompoundingValidator ? MAX_EFFECTIVE_BALANCE_ELECTRA : MIN_ACTIVATION_BALANCE;
+      effectiveBalanceLimit = getMaxEffectiveBalance(currentEpochValidators[i].withdrawalCredentials);
     }
 
     if (
