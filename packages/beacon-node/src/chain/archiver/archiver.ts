@@ -5,7 +5,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {FullStateArchiveStrategy} from "./strategies/fullStateArchiveStrategy.js";
+import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
@@ -30,8 +30,8 @@ export class Archiver {
     opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
-    if (opts.archiveMode === ArchiveMode.Full) {
-      this.statesArchiverStrategy = new FullStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
+    if (opts.archiveMode === ArchiveMode.Frequency) {
+      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
     } else {
       throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
     }

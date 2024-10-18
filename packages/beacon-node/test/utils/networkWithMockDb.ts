@@ -55,7 +55,7 @@ export async function getNetworkForTest(
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
       minSameMessageSignatureSetsToBatch: 32,
-      archiveMode: ArchiveMode.Full,
+      archiveMode: ArchiveMode.Frequency,
     },
     {
       config: beaconConfig,

@@ -36,7 +36,7 @@ describe("produceBlockBody", () => {
         skipCreateStateCacheIfAvailable: true,
         archiveStateEpochFrequency: 1024,
         minSameMessageSignatureSetsToBatch: 32,
-        archiveMode: ArchiveMode.Full,
+        archiveMode: ArchiveMode.Frequency,
       },
       {
         config: state.config,

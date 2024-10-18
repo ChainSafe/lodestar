@@ -17,7 +17,7 @@ import {PERSIST_TEMP_STATE_EVERY_EPOCHS} from "../constants.js";
  *
  * Only the new finalized state is stored to disk
  */
-export class FullStateArchiveStrategy implements StateArchiveStrategy {
+export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   constructor(
     private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,

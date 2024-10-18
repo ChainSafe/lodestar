@@ -3,7 +3,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {RootHex} from "@lodestar/types";
 
 export enum ArchiveMode {
-  Full = "full",
+  Frequency = "frequency",
   // Specify only existing strategy
   // Differential = "diff",
 }
