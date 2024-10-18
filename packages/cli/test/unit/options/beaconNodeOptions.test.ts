@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {describe, it, expect} from "vitest";
-import {IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {StateArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
@@ -43,6 +43,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
+      "chain.stateArchiveMode": StateArchiveMode.Frequency,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -147,6 +148,7 @@ describe("options / beaconNodeOptions", () => {
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveBlobEpochs: 10000,
+        stateArchiveMode: StateArchiveMode.Frequency,
         nHistoricalStates: true,
         nHistoricalStatesFileDataStore: true,
         maxBlockStates: 100,

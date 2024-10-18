@@ -77,7 +77,7 @@ import {
   OpPool,
 } from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
-import {Archiver} from "./archiver/index.js";
+import {Archiver} from "./archiver/archiver.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";

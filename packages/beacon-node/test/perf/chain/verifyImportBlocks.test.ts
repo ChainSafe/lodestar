@@ -12,7 +12,7 @@ import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";
-import {BeaconDb} from "../../../src/index.js";
+import {StateArchiveMode, BeaconDb} from "../../../src/index.js";
 import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
@@ -85,6 +85,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           skipCreateStateCacheIfAvailable: true,
           archiveStateEpochFrequency: 1024,
           minSameMessageSignatureSetsToBatch: 32,
+          stateArchiveMode: StateArchiveMode.Frequency,
         },
         {
           config: state.config,
