@@ -27,7 +27,7 @@ validators
 .tmp
 .npmrc
 .vscode/launch.json
-!.vscode/settings.json
+.vscode/settings.json
 .vscode/tasks.json
 
 # Tests artifacts
