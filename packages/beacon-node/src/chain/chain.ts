@@ -101,7 +101,6 @@ import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BalancesTreeCache, BalancesTreeSource} from "./balancesTreeCache.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -109,11 +108,6 @@ import {BalancesTreeCache, BalancesTreeSource} from "./balancesTreeCache.js";
  * allow some margin if the node overloads.
  */
 const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
-
-/**
- * The distance between the finalized epoch and the current epoch to consider safe.
- */
-const SAFE_FINALIZED_EPOCH_TO_CURRENT_EPOCH_DIFF = 3;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -164,7 +158,6 @@ export class BeaconChain implements IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
-  readonly balancesTreeCache: BalancesTreeCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 
@@ -253,7 +246,6 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
-    this.balancesTreeCache = new BalancesTreeCache(metrics);
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -267,7 +259,6 @@ export class BeaconChain implements IBeaconChain {
             config,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
-            balancesTreeCache: this.balancesTreeCache,
           });
 
     this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
@@ -880,21 +871,6 @@ export class BeaconChain implements IBeaconChain {
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
-    }
-  }
-
-  async pruneOnFinalized(finalizedEpoch: Epoch): Promise<void> {
-    const prunedStates = await this.regen.pruneOnFinalized(finalizedEpoch);
-    const head = this.forkChoice.getHead();
-    // if the node is syncing or unfinality time, we don't want to reuse balances tree
-    if (this.opts.reuseBalancesTree &&
-      this.clock.currentEpoch - finalizedEpoch <= SAFE_FINALIZED_EPOCH_TO_CURRENT_EPOCH_DIFF &&
-      head.slot === this.clock.currentSlot &&
-      prunedStates) {
-      // cp states on the same epoch shares the same balances seed tree so only need one of them
-      for (const states of prunedStates.values()) {
-        this.balancesTreeCache.processUnusedState(states[0], BalancesTreeSource.PRUNE_ON_FINALIZED);
-      }
     }
   }
 

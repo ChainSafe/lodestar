@@ -19,7 +19,6 @@ import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {AllocSource} from "../../util/bufferPool.js";
-import {BalancesTreeSource} from "../../chain/balancesTreeCache.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -1330,26 +1329,6 @@ export function createLodestarMetrics(
         help: "Run time of shuffling calculation",
         buckets: [0.5, 0.75, 1, 1.25, 1.5],
         labelNames: ["source"],
-      }),
-    },
-
-    balancesTreeCache: {
-      size: register.gauge({
-        name: "lodestar_balances_tree_cache_size",
-        help: "Balances tree cache size",
-      }),
-      total: register.gauge<{source: BalancesTreeSource}>({
-        name: "lodestar_balances_tree_cache_total",
-        help: "Total number of balances tree cache",
-        labelNames: ["source"],
-      }),
-      hit: register.gauge({
-        name: "lodestar_balances_tree_cache_hit_total",
-        help: "Total number of balances tree cache hits",
-      }),
-      miss: register.gauge({
-        name: "lodestar_balances_tree_cache_miss_total",
-        help: "Total number of balances tree cache misses",
       }),
     },
 

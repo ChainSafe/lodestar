@@ -242,8 +242,6 @@ export interface IBeaconChain {
     blockRef: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards>;
-
-  pruneOnFinalized(finalizedEpoch: Epoch): Promise<void>;
 }
 
 export type SSZObjectType =

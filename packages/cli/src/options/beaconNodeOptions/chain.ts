@@ -32,7 +32,6 @@ export type ChainArgs = {
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
-  "chain.reuseBalancesTree"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -67,7 +66,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
-    reuseBalancesTree: args["chain.reuseBalancesTree"] ?? defaultOptions.chain.reuseBalancesTree,
   };
 }
 
@@ -273,14 +271,6 @@ Will double processing times. Use only for debugging purposes.",
     description: "Max epochs to cache checkpoint states in memory, used for PersistentCheckpointStateCache",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsInMemory,
-    group: "chain",
-  },
-
-  "chain.reuseBalancesTree": {
-    hidden: true,
-    description: "Reuse balances tree or not",
-    type: "boolean",
-    default: defaultOptions.chain.reuseBalancesTree,
     group: "chain",
   },
 };

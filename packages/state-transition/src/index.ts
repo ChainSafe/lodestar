@@ -43,7 +43,6 @@ export {
 } from "./cache/epochCache.js";
 export {toMemoryEfficientHexStr} from "./cache/pubkeyCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
-export type {IBalancesTreeCache} from "./cache/balancesTreeCache.js";
 
 // Aux data-structures
 export {

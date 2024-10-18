@@ -410,23 +410,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Prune all checkpoint states before the provided finalized epoch.
    */
-  async pruneFinalized(finalizedEpoch: Epoch): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
-    const result = new Map<Epoch, CachedBeaconStateAllForks[]>();
-
+  pruneFinalized(finalizedEpoch: Epoch): void {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
-        try {
-          const prunedStates = await this.deleteAllEpochItems(epoch);
-          result.set(epoch, prunedStates);
-        } catch (e) {
-          this.logger.debug("Error prune finalized epoch", {epoch, finalizedEpoch}, e as Error);
-        }
+        this.deleteAllEpochItems(epoch).catch((e) =>
+          this.logger.debug("Error delete all epoch items", {epoch, finalizedEpoch}, e as Error)
+        );
       }
     }
-
-    // we may persist states even before they are finalized
-    // in that case this return null
-    return result;
   }
 
   /**
@@ -478,16 +469,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - 2 then we'll persist {root: b2, epoch n-2} checkpoint state to disk, there are also 2 checkpoint states in memory at epoch n, same to the above (maxEpochsInMemory=1)
    *
    * As of Mar 2024, it takes <=350ms to persist a holesky state on fast server
-   * This function returns a map of pruned states for each epoch
    */
-  async processState(
-    blockRootHex: RootHex,
-    state: CachedBeaconStateAllForks
-  ): Promise<Map<Epoch, CachedBeaconStateAllForks[]> | null> {
+  async processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number> {
+    let persistCount = 0;
     // it's important to sort the epochs in ascending order, in case of big reorg we always want to keep the most recent checkpoint states
     const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
     if (sortedEpochs.length <= this.maxEpochsInMemory) {
-      return null;
+      return 0;
     }
 
     const blockSlot = state.slot;
@@ -503,19 +491,24 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       // normally the block persist happens at 2/3 of slot 0 of epoch, if it's already late then just skip to allow other tasks to run
       // there are plenty of chances in the same epoch to persist checkpoint states, also if block is late it could be reorged
       this.logger.verbose("Skip persist checkpoint states", {blockSlot, root: blockRootHex});
-      return null;
+      return 0;
     }
 
     const persistEpochs = sortedEpochs.slice(0, sortedEpochs.length - this.maxEpochsInMemory);
-
-    const result = new Map<Epoch, CachedBeaconStateAllForks[]>();
     for (const lowestEpoch of persistEpochs) {
       // usually there is only 0 or 1 epoch to persist in this loop
-      const prunedStates = await this.processPastEpoch(blockRootHex, state, lowestEpoch);
-      result.set(lowestEpoch, prunedStates);
+      persistCount += await this.processPastEpoch(blockRootHex, state, lowestEpoch);
     }
 
-    return result;
+    if (persistCount > 0) {
+      this.logger.verbose("Persisted checkpoint states", {
+        slot: blockSlot,
+        root: blockRootHex,
+        persistCount,
+        persistEpochs: persistEpochs.length,
+      });
+    }
+    return persistCount;
   }
 
   /**
@@ -641,7 +634,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *   - PRCS is the checkpoint state that could be justified/finalized later based on the view of the state
    *   - unknown root checkpoint state is persisted to handle the reorg back to that branch later
    *
-   * This returns pruned states in the epoch
    * Performance note:
    *   - In normal condition, we persist 1 checkpoint state per epoch.
    *   - In reorged condition, we may persist multiple (most likely 2) checkpoint states per epoch.
@@ -650,9 +642,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     blockRootHex: RootHex,
     state: CachedBeaconStateAllForks,
     epoch: Epoch
-  ): Promise<CachedBeaconStateAllForks[]> {
+  ): Promise<number> {
     let persistCount = 0;
-    const prunedStates: CachedBeaconStateAllForks[] = [];
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
       epochBoundarySlot === state.slot ? fromHex(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
@@ -740,41 +731,24 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           this.metrics?.cpStateCache.statePruneFromMemoryCount.inc();
           this.logger.verbose("Pruned checkpoint state from memory", logMeta);
         }
-
-        prunedStates.push(state);
       }
     }
 
-    if (persistCount > 0) {
-      this.logger.verbose("Persisted checkpoint states", {
-        stateSlot: state.slot,
-        blockRoot: blockRootHex,
-        persistCount,
-      });
-    }
-
-    return prunedStates;
+    return persistCount;
   }
 
   /**
    * Delete all items of an epoch from disk and memory
    */
-  private async deleteAllEpochItems(epoch: Epoch): Promise<CachedBeaconStateAllForks[]> {
+  private async deleteAllEpochItems(epoch: Epoch): Promise<void> {
     let persistCount = 0;
     const rootHexes = this.epochIndex.get(epoch) || [];
-    const prunedStates: CachedBeaconStateAllForks[] = [];
     for (const rootHex of rootHexes) {
       const key = toCacheKey({rootHex, epoch});
       const cacheItem = this.cache.get(key);
 
       if (cacheItem) {
-        let persistedKey: Uint8Array | undefined = undefined;
-        if (isPersistedCacheItem(cacheItem)) {
-          persistedKey = cacheItem.value;
-        } else {
-          persistedKey = cacheItem.persistedKey;
-          prunedStates.push(cacheItem.state);
-        }
+        const persistedKey = isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey;
         if (persistedKey) {
           await this.datastore.remove(persistedKey);
           persistCount++;
@@ -789,8 +763,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       persistCount,
       rootHexes: Array.from(rootHexes).join(","),
     });
-
-    return prunedStates;
   }
 
   /**
