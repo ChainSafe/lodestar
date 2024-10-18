@@ -1,4 +1,4 @@
-import {ArchiveMode} from "./interface.js";
+import {StateArchiveMode} from "./interface.js";
 
 /**
  * Minimum number of epochs between single temp archived states
@@ -8,4 +8,4 @@ export const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
 
 export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
-export const DEFAULT_ARCHIVE_MODE = ArchiveMode.Frequency;
+export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;

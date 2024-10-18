@@ -10,7 +10,7 @@ import {BeaconChain} from "../../../../src/chain/index.js";
 import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
-import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
+import {StateArchiveMode, BeaconDb} from "../../../../src/index.js";
 import {testLogger} from "../../../utils/logger.js";
 
 const logger = testLogger();
@@ -36,7 +36,7 @@ describe("produceBlockBody", () => {
         skipCreateStateCacheIfAvailable: true,
         archiveStateEpochFrequency: 1024,
         minSameMessageSignatureSetsToBatch: 32,
-        archiveMode: ArchiveMode.Frequency,
+        stateArchiveMode: StateArchiveMode.Frequency,
       },
       {
         config: state.config,

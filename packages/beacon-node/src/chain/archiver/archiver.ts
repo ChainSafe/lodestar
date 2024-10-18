@@ -7,7 +7,7 @@ import {ChainEvent} from "../emitter.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./archiveBlocks.js";
-import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
+import {StateArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 
 /**
@@ -15,7 +15,7 @@ import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
  * periodically.
  */
 export class Archiver {
-  private archiveMode: ArchiveMode;
+  private stateArchiveMode: StateArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private prevFinalized: CheckpointWithHex;
@@ -30,13 +30,13 @@ export class Archiver {
     opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
-    if (opts.archiveMode === ArchiveMode.Frequency) {
+    if (opts.stateArchiveMode === StateArchiveMode.Frequency) {
       this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
     } else {
-      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
+      throw new Error(`State archive strategy "${opts.stateArchiveMode}" currently not supported.`);
     }
 
-    this.archiveMode = opts.archiveMode;
+    this.stateArchiveMode = opts.stateArchiveMode;
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -77,7 +77,7 @@ export class Archiver {
     );
 
     this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
+      this.logger.error("Error during state archive", {stateArchiveMode: this.stateArchiveMode}, err);
     });
   };
 

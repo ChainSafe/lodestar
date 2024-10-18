@@ -7,8 +7,8 @@ import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
-import {DEFAULT_ARCHIVE_MODE} from "./archiver/constants.js";
-export {ArchiveMode} from "./archiver/interface.js";
+import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/constants.js";
+export {StateArchiveMode} from "./archiver/interface.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
@@ -104,7 +104,7 @@ export const defaultChainOptions: IChainOptions = {
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
-  archiveMode: DEFAULT_ARCHIVE_MODE,
+  stateArchiveMode: DEFAULT_STATE_ARCHIVE_MODE,
   emitPayloadAttributes: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time

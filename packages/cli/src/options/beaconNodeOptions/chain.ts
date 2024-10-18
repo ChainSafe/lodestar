@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import {ArchiveMode, defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {StateArchiveMode, defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {
@@ -28,7 +28,7 @@ export type ChainArgs = {
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveBlobEpochs"?: number;
-  "chain.archiveMode": ArchiveMode;
+  "chain.stateArchiveMode": StateArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
@@ -62,7 +62,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveBlobEpochs: args["chain.archiveBlobEpochs"],
-    archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
+    stateArchiveMode: args["chain.stateArchiveMode"] ?? defaultOptions.chain.stateArchiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
@@ -212,11 +212,11 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.archiveMode": {
+  "chain.stateArchiveMode": {
     hidden: true,
-    choices: Object.values(ArchiveMode),
+    choices: Object.values(StateArchiveMode),
     description: "Strategy to manage archive states",
-    default: defaultOptions.chain.archiveMode,
+    default: defaultOptions.chain.stateArchiveMode,
     type: "string",
     group: "chain",
   },
