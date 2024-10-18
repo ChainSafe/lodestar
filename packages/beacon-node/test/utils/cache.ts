@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 
 export function memoOnce<R>(fn: () => R): () => R {
   let value: R | null = null;
-  return function () {
+  return () => {
     if (value === null) {
       value = fn();
     }

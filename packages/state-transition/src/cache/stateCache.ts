@@ -254,9 +254,11 @@ export function isCachedBeaconState<T extends BeaconStateAllForks>(
 // This cache is populated during epoch transition, and should be preserved for performance.
 // If the cache is missing too often, means that our clone strategy is not working well.
 export function isStateValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   return state.validators["nodesPopulated"] === true;
 }
 
 export function isStateBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   return state.balances["nodesPopulated"] === true;
 }

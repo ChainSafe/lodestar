@@ -93,13 +93,13 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
         }
       });
 
-      it(`${operationId}_route`, function () {
+      it(`${operationId}_route`, () => {
         expect(routeDef.method.toLowerCase()).toBe(routeSpec.method.toLowerCase());
         expect(routeDef.url).toBe(routeSpec.url);
       });
 
       if (requestSchema != null) {
-        it(`${operationId}_request`, function () {
+        it(`${operationId}_request`, () => {
           const reqJson = isRequestWithoutBody(routeDef)
             ? routeDef.req.writeReq(testData.args)
             : (routeDef.req as RequestWithBodyCodec<Es[string]>).writeReqJson(testData.args);
@@ -127,7 +127,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
 
               expect(reqSsz.body).toBeInstanceOf(Uint8Array);
               expect(reqCodec.onlySupport).not.toBe(WireFormat.json);
-            } catch {
+            } catch (_e) {
               throw Error("Must support ssz request body");
             }
           }
@@ -135,7 +135,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
       }
 
       if (responseOkSchema) {
-        it(`${operationId}_response`, function () {
+        it(`${operationId}_response`, () => {
           const data = routeDef.resp.data.toJson(testData.res?.data, testData.res?.meta);
           const metaJson = routeDef.resp.meta.toJson(testData.res?.meta);
           const headers = parseHeaders(routeDef.resp.meta.toHeadersObject(testData.res?.meta));
@@ -167,7 +167,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
 
               expect(sszBytes).toBeInstanceOf(Uint8Array);
               expect(routeDef.resp.onlySupport).not.toBe(WireFormat.json);
-            } catch {
+            } catch (_e) {
               throw Error("Must support ssz response body");
             }
           }
@@ -183,7 +183,6 @@ function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown
   try {
     validate = ajv.compile(schema);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(JSON.stringify(schema, null, 2));
     (e as Error).message = `${id} schema - ${(e as Error).message}`;
     throw e;
@@ -219,7 +218,9 @@ type StringifiedProperty = string | StringifiedProperty[];
 function stringifyProperty(value: unknown): StringifiedProperty {
   if (typeof value === "number") {
     return value.toString(10);
-  } else if (Array.isArray(value)) {
+  }
+
+  if (Array.isArray(value)) {
     return value.map(stringifyProperty);
   }
   return String(value);

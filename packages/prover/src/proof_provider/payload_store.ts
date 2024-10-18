@@ -39,7 +39,7 @@ export class PayloadStore {
     const maxBlockNumberForFinalized = this.finalizedRoots.max;
 
     if (maxBlockNumberForFinalized === undefined) {
-      return;
+      return undefined;
     }
 
     const finalizedMaxRoot = this.finalizedRoots.get(maxBlockNumberForFinalized);

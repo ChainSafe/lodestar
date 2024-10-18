@@ -25,8 +25,4 @@ type InvalidBlockErrorType =
       minSlot: Slot;
     };
 
-export class InvalidBlockError extends LodestarError<InvalidBlockErrorType> {
-  constructor(type: InvalidBlockErrorType) {
-    super(type);
-  }
-}
+export class InvalidBlockError extends LodestarError<InvalidBlockErrorType> {}

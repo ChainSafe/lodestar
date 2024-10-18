@@ -4,7 +4,7 @@ import {ssz, phase0} from "@lodestar/types";
 import {generateCachedState} from "../../../utils/state.js";
 import {InMemoryCheckpointStateCache, toCheckpointHex} from "../../../../src/chain/stateCache/index.js";
 
-describe("InMemoryCheckpointStateCache perf tests", function () {
+describe("InMemoryCheckpointStateCache perf tests", () => {
   setBenchOpts({noThreshold: true});
 
   let state: CachedBeaconStateAllForks;

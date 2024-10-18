@@ -39,7 +39,7 @@ export function timeUntilNextEpoch(config: Pick<ChainConfig, "SECONDS_PER_SLOT">
   const msFromGenesis = Date.now() - genesisTime * 1000;
   if (msFromGenesis >= 0) {
     return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
-  } else {
-    return Math.abs(msFromGenesis % milliSecondsPerEpoch);
   }
+
+  return Math.abs(msFromGenesis % milliSecondsPerEpoch);
 }

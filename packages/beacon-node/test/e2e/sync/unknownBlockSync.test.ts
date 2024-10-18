@@ -17,12 +17,11 @@ import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 
-describe("sync / unknown block sync", function () {
+describe("sync / unknown block sync", () => {
   vi.setConfig({testTimeout: 40_000});
 
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 
@@ -46,7 +45,7 @@ describe("sync / unknown block sync", function () {
   ];
 
   for (const {id, event} of testCases) {
-    it(id, async function () {
+    it(id, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 4;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;

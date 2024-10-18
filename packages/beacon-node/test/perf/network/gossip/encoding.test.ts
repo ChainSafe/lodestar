@@ -8,7 +8,7 @@ import {toHex} from "@lodestar/utils";
     ✔ Buffer.from                                                          6696982 ops/s    149.3210 ns/op        -       2023 runs  0.454 s
     ✔ shared Buffer                                                    1.013911e+7 ops/s    98.62800 ns/op        -       3083 runs  0.404 s
  */
-describe("encoding", function () {
+describe("encoding", () => {
   const msgId = Uint8Array.from(Array.from({length: 20}, (_, i) => i));
 
   const runsFactor = 1000;

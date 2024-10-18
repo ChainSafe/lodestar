@@ -34,7 +34,7 @@ const validSignature = fromHexString(
   "0xb2afb700f6c561ce5e1b4fedaec9d7c06b822d38c720cf588adfda748860a940adf51634b6788f298c552de40183b5a203b2bbe8b7dd147f0bb5bc97080a12efbb631c8888cb31a99cc4706eb3711865b8ea818c10126e4d818b542e9dbf9ae8"
 );
 
-describe("AggregatedAttestationPool", function () {
+describe("AggregatedAttestationPool", () => {
   let pool: AggregatedAttestationPool;
   const fork = ForkName.altair;
   const config = createChainForkConfig({
@@ -116,7 +116,7 @@ describe("AggregatedAttestationPool", function () {
   ];
 
   for (const {name, attestingBits, isReturned} of testCases) {
-    it(name, function () {
+    it(name, () => {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), committeeLength);
       pool.add(
         {...attestation, aggregationBits},
@@ -136,7 +136,7 @@ describe("AggregatedAttestationPool", function () {
     });
   }
 
-  it("incorrect source", function () {
+  it("incorrect source", () => {
     altairState.currentJustifiedCheckpoint.epoch = 1000;
     // all attesters are not seen
     const attestingIndices = [2, 3];
@@ -146,7 +146,7 @@ describe("AggregatedAttestationPool", function () {
     expect(forkchoiceStub.iterateAncestorBlocks).not.toHaveBeenCalledTimes(1);
   });
 
-  it("incompatible shuffling - incorrect pivot block root", function () {
+  it("incompatible shuffling - incorrect pivot block root", () => {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
@@ -305,7 +305,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   }
 });
 
-describe("MatchingDataAttestationGroup aggregateInto", function () {
+describe("MatchingDataAttestationGroup aggregateInto", () => {
   const attestationSeed = ssz.phase0.Attestation.defaultValue();
   const attestation1 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([false, true])}};
   const attestation2 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([true, false])}};
@@ -334,7 +334,7 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   });
 });
 
-describe("aggregateConsolidation", function () {
+describe("aggregateConsolidation", () => {
   const sk0 = SecretKey.fromBytes(Buffer.alloc(32, 1));
   const sk1 = SecretKey.fromBytes(Buffer.alloc(32, 2));
   const sk2 = SecretKey.fromBytes(Buffer.alloc(32, 3));

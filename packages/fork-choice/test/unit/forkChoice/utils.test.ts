@@ -3,12 +3,11 @@ import {createChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {assertValidTerminalPowBlock, ExecutionStatus} from "../../../src/index.js";
 
-describe("assertValidTerminalPowBlock", function () {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+describe("assertValidTerminalPowBlock", () => {
   const config = createChainForkConfig({TERMINAL_TOTAL_DIFFICULTY: BigInt(10)});
   const block = ssz.bellatrix.BeaconBlock.defaultValue();
   const executionStatus = ExecutionStatus.Valid;
-  it("should accept ttd >= genesis block as terminal without powBlockParent", function () {
+  it("should accept ttd >= genesis block as terminal without powBlockParent", () => {
     const powBlock = {
       blockHash: "0x" + "ab".repeat(32),
       // genesis powBlock will have zero parent hash
@@ -20,7 +19,7 @@ describe("assertValidTerminalPowBlock", function () {
     ).not.toThrow();
   });
 
-  it("should require powBlockParent if powBlock not genesis", function () {
+  it("should require powBlockParent if powBlock not genesis", () => {
     const powBlock = {
       blockHash: "0x" + "ab".repeat(32),
       // genesis powBlock will have non zero parent hash
@@ -32,7 +31,7 @@ describe("assertValidTerminalPowBlock", function () {
     ).toThrow();
   });
 
-  it("should require powBlock >= ttd", function () {
+  it("should require powBlock >= ttd", () => {
     const powBlock = {
       blockHash: "0x" + "ab".repeat(32),
       // genesis powBlock will have non zero parent hash
@@ -44,7 +43,7 @@ describe("assertValidTerminalPowBlock", function () {
     ).toThrow();
   });
 
-  it("should require powBlockParent < ttd", function () {
+  it("should require powBlockParent < ttd", () => {
     const powBlock = {
       blockHash: "0x" + "ab".repeat(32),
       // genesis powBlock will have non zero parent hash
@@ -56,7 +55,7 @@ describe("assertValidTerminalPowBlock", function () {
     ).toThrow();
   });
 
-  it("should accept powBlockParent < ttd and powBlock >= ttd", function () {
+  it("should accept powBlockParent < ttd and powBlock >= ttd", () => {
     const powBlock = {
       blockHash: "0x" + "ab".repeat(32),
       // genesis powBlock will have non zero parent hash

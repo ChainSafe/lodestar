@@ -85,7 +85,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     });
 
     this.handlers = {
-      /* eslint-disable @typescript-eslint/naming-convention */
       engine_newPayloadV1: this.notifyNewPayload.bind(this),
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
@@ -150,7 +149,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     const predefinedResponse = this.predefinedPayloadStatuses.get(blockHash);
     if (predefinedResponse) {
       return predefinedResponse;
-    } else if (this.opts.onlyPredefinedResponses) {
+    }
+
+    if (this.opts.onlyPredefinedResponses) {
       throw Error(`No predefined response for blockHash ${blockHash}`);
     }
 
@@ -213,7 +214,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         payloadStatus: predefinedResponse,
         payloadId: null,
       };
-    } else if (this.opts.onlyPredefinedResponses) {
+    }
+
+    if (this.opts.onlyPredefinedResponses) {
       throw Error(`No predefined response for headBlockHash ${headBlockHash}`);
     }
 
@@ -345,14 +348,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     }
 
     // Don't start build process
-    else {
-      // IF the payload is deemed VALID and a build process hasn't been started
-      // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
-      return {
-        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
-        payloadId: null,
-      };
-    }
+    // IF the payload is deemed VALID and a build process hasn't been started
+    // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
+    return {
+      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+      payloadId: null,
+    };
   }
 
   /**

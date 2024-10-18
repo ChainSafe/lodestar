@@ -1,6 +1,7 @@
 import {ByteViews, ContainerNodeStructType, ValueOfFields} from "@chainsafe/ssz";
 import * as primitiveSsz from "../primitive/sszTypes.js";
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Boolean` name to be imported
 const {Boolean, Bytes32, UintNum64, BLSPubkey, EpochInf} = primitiveSsz;
 
 // this is to work with uint32, see https://github.com/ChainSafe/ssz/blob/ssz-v0.15.1/packages/ssz/src/type/uint.ts
@@ -33,6 +34,7 @@ export class ValidatorNodeStructType extends ContainerNodeStructType<typeof Vali
     super(ValidatorType, {typeName: "Validator", jsonCase: "eth2"});
   }
 
+  // biome-ignore lint/style/useNamingConvention: Keep the naming consistent with ssz pattern
   value_serializeToBytes(
     {uint8Array: output, dataView}: ByteViews,
     offset: number,

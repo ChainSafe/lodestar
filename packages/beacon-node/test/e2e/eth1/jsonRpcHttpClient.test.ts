@@ -7,7 +7,7 @@ import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {RpcPayload} from "../../../src/eth1/interface.js";
 
-describe("eth1 / jsonRpcHttpClient", function () {
+describe("eth1 / jsonRpcHttpClient", () => {
   vi.setConfig({testTimeout: 10_000});
 
   const port = 36421;
@@ -41,13 +41,13 @@ describe("eth1 / jsonRpcHttpClient", function () {
     {
       id: "Bad port",
       url: `http://localhost:${port + 1}`,
-      requestListener: (req, res) => res.end(),
+      requestListener: (_req, res) => res.end(),
       error: "",
       errorCode: "ECONNREFUSED",
     },
     {
       id: "Not a JSON RPC endpoint",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "text/html");
         res.end("<html></html>");
       },
@@ -55,7 +55,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     },
     {
       id: "Endpoint returns HTTP error",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.statusCode = 404;
         res.end();
       },
@@ -63,7 +63,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     },
     {
       id: "RPC payload with error",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: noMethodError}));
       },
@@ -71,7 +71,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     },
     {
       id: "RPC payload with non-spec error: error has no message",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: {code: noMethodError.code}}));
       },
@@ -79,7 +79,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     },
     {
       id: "RPC payload with non-spec error: error is a string",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: notInSpecError}));
       },
@@ -87,7 +87,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     },
     {
       id: "RPC payload with no result",
-      requestListener: (req, res) => {
+      requestListener: (_req, res) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83}));
       },
@@ -113,7 +113,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
 
   const afterHooks: (() => Promise<void>)[] = [];
 
-  afterEach(async function () {
+  afterEach(async () => {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
       if (afterHook) await afterHook();
@@ -124,7 +124,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     const {id, requestListener, abort, timeout} = testCase;
     let {url, payload} = testCase;
 
-    it(id, async function () {
+    it(id, async () => {
       if (requestListener) {
         if (!url) url = `http://localhost:${port}`;
 
@@ -162,25 +162,24 @@ describe("eth1 / jsonRpcHttpClient", function () {
   }
 });
 
-describe("eth1 / jsonRpcHttpClient - with retries", function () {
+describe("eth1 / jsonRpcHttpClient - with retries", () => {
   vi.setConfig({testTimeout: 10_000});
 
   const port = 36421;
   const noMethodError = {code: -32601, message: "Method not found"};
   const afterHooks: (() => Promise<void>)[] = [];
 
-  afterEach(async function () {
+  afterEach(async () => {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
       if (afterHook)
         await afterHook().catch((e: Error) => {
-          // eslint-disable-next-line no-console
           console.error("Error in afterEach hook", e);
         });
     }
   });
 
-  it("should retry ENOTFOUND", async function () {
+  it("should retry ENOTFOUND", async () => {
     let retryCount = 0;
 
     const url = "https://goerli.fake-website.io";
@@ -202,7 +201,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(retryCount).toBeWithMessage(retries, "ENOTFOUND should be retried before failing");
   });
 
-  it("should retry ECONNREFUSED", async function () {
+  it("should retry ECONNREFUSED", async () => {
     let retryCount = 0;
 
     const url = `http://localhost:${port + 1}`;
@@ -224,10 +223,10 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(retryCount).toBeWithMessage(retries, "code ECONNREFUSED should be retried before failing");
   });
 
-  it("should retry 404", async function () {
+  it("should retry 404", async () => {
     let requestCount = 0;
 
-    const server = http.createServer((req, res) => {
+    const server = http.createServer((_req, res) => {
       requestCount++;
       res.statusCode = 404;
       res.end();
@@ -254,7 +253,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(requestCount).toBeWithMessage(retries + 1, "404 responses should be retried before failing");
   });
 
-  it("should retry timeout", async function () {
+  it("should retry timeout", async () => {
     let requestCount = 0;
 
     const server = http.createServer(async () => {
@@ -285,7 +284,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(requestCount).toBeWithMessage(retries + 1, "Timeout request should be retried before failing");
   });
 
-  it("should not retry aborted", async function () {
+  it("should not retry aborted", async () => {
     let requestCount = 0;
     const server = http.createServer(() => {
       requestCount++;
@@ -315,10 +314,10 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(requestCount).toBeWithMessage(1, "Aborted request should not be retried");
   });
 
-  it("should not retry payload error", async function () {
+  it("should not retry payload error", async () => {
     let requestCount = 0;
 
-    const server = http.createServer((req, res) => {
+    const server = http.createServer((_req, res) => {
       requestCount++;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: noMethodError}));

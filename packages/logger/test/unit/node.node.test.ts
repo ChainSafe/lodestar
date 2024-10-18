@@ -6,7 +6,7 @@ import {formatsTestCases} from "../fixtures/loggerFormats.js";
 
 // Node.js maps `process.stdout` to `console._stdout`.
 // spy does not work on `process.stdout` directly.
-// eslint-disable-next-line @typescript-eslint/naming-convention
+// biome-ignore lint/style/useNamingConvention: Need property name _stdout for testing
 type TestConsole = typeof console & {_stdout: {write: Mock}};
 
 describe("node logger", () => {

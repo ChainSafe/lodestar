@@ -109,7 +109,6 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   api.lighthouse = {
     async getPeers() {
       const res = await got(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       return {body: JSON.parse(res.body), status: res.statusCode};
     },
   };

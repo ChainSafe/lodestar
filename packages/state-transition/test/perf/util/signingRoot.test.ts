@@ -15,7 +15,7 @@ import {computeSigningRoot} from "../../../src/util/signingRoot.js";
     ✔ toHexString serialized data                                         727592.3 ops/s    1.374396 us/op        -       6916 runs   10.0 s
     ✔ Buffer.toString(base64)                                              2570800 ops/s    388.9840 ns/op        -      24628 runs   10.1 s
  */
-describe("computeSigningRoot", function () {
+describe("computeSigningRoot", () => {
   setBenchOpts({
     minMs: 10_000,
   });

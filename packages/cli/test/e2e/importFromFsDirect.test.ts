@@ -7,24 +7,17 @@ import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 
-describe("import from fs same cmd as validate", function () {
+describe("import from fs same cmd as validate", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-and-validate-test");
   const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
   const passphraseFilepath = path.join(importFromDir, "password.text");
 
-  beforeAll(() => {
+  beforeAll(async () => {
     rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
-  });
 
-  const passphrase = "AAAAAAAA0000000000";
-  const keyCount = 2;
-  const pubkeys = cachedPubkeysHex.slice(0, keyCount);
-  const secretKeys = cachedSeckeysHex.slice(0, keyCount);
-
-  beforeAll(async () => {
     // Produce and encrypt keystores
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
 
@@ -34,6 +27,11 @@ describe("import from fs same cmd as validate", function () {
       fs.writeFileSync(path.join(importFromDir, `keystore_${i}.json`), keystoresStr[i]);
     }
   });
+
+  const passphrase = "AAAAAAAA0000000000";
+  const keyCount = 2;
+  const pubkeys = cachedPubkeysHex.slice(0, keyCount);
+  const secretKeys = cachedSeckeysHex.slice(0, keyCount);
 
   // Check that there are not keys loaded without adding extra args `--importKeystores`
   it("run 'validator' there are no keys loaded", async () => {

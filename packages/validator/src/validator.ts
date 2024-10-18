@@ -264,7 +264,7 @@ export class Validator {
       }
     );
 
-    return new this({
+    return new Validator({
       opts,
       genesis,
       validatorStore,

@@ -50,7 +50,7 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
       timeout: 10000,
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(forkNext, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

@@ -1,7 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
-import {PeerId} from "@libp2p/interface";
+import {PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -49,7 +49,7 @@ export type BeaconNodeInitModules = {
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -146,7 +146,7 @@ export class BeaconNode {
     db,
     logger,
     processShutdownCallback,
-    peerId,
+    privateKey,
     peerStoreDir,
     anchorState,
     wsCheckpoint,
@@ -243,7 +243,7 @@ export class BeaconNode {
       metrics,
       chain,
       db,
-      peerId,
+      privateKey,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
     });
@@ -305,7 +305,7 @@ export class BeaconNode {
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
-    return new this({
+    return new BeaconNode({
       opts,
       config,
       db,

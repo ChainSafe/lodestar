@@ -7,7 +7,7 @@ import {BlockStateCacheImpl} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 
-describe("BlockStateCacheImpl", function () {
+describe("BlockStateCacheImpl", () => {
   let cache: BlockStateCacheImpl;
   let key1: Root, key2: Root;
   const shuffling: EpochShuffling = {
@@ -18,7 +18,7 @@ describe("BlockStateCacheImpl", function () {
     committeesPerSlot: 1,
   };
 
-  beforeEach(function () {
+  beforeEach(() => {
     // max 2 items
     cache = new BlockStateCacheImpl({maxStates: 2});
     const state1 = generateCachedState({slot: 0});
@@ -31,7 +31,7 @@ describe("BlockStateCacheImpl", function () {
     cache.add(state2);
   });
 
-  it("should prune", function () {
+  it("should prune", () => {
     expect(cache.size).toBe(2);
     const state3 = generateCachedState({slot: 2 * SLOTS_PER_EPOCH});
     state3.epochCtx.currentShuffling = {...shuffling, epoch: 2};
@@ -46,7 +46,7 @@ describe("BlockStateCacheImpl", function () {
     expect(cache.get(toHexString(key2))).toBeDefined();
   });
 
-  it("should deleteAllBeforeEpoch", function () {
+  it("should deleteAllBeforeEpoch", () => {
     cache.deleteAllBeforeEpoch(2);
     expect(cache.size).toBe(0);
   });

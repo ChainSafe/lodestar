@@ -7,7 +7,6 @@ import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {shell} from "../sim/shell.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable no-console */
 let txRpcId = 1;
 
@@ -84,7 +83,7 @@ async function waitForELOnline(url: string, signal: AbortSignal): Promise<void> 
       console.log("Waiting for few seconds for EL to fully setup, for e.g. unlock the account...");
       await sleep(5000, signal);
       return; // Done
-    } catch (e) {
+    } catch (_e) {
       await sleep(1000, signal);
     }
   }
@@ -180,8 +179,8 @@ async function startELProcess(args: {
   return tearDownCallBack;
 }
 
-async function waitForELOffline(ENGINE_PORT: string): Promise<void> {
-  const port = parseInt(ENGINE_PORT);
+async function waitForELOffline(enginePort: string): Promise<void> {
+  const port = parseInt(enginePort);
 
   for (let i = 0; i < 60; i++) {
     console.log("Waiting for EL offline...");
@@ -197,7 +196,7 @@ async function waitForELOffline(ENGINE_PORT: string): Promise<void> {
 async function isPortInUse(port: number): Promise<boolean> {
   return new Promise<boolean>((resolve, reject) => {
     const server = net.createServer();
-    server.once("error", function (err) {
+    server.once("error", (err) => {
       if ((err as unknown as {code: string}).code === "EADDRINUSE") {
         resolve(true);
       } else {
@@ -205,7 +204,7 @@ async function isPortInUse(port: number): Promise<boolean> {
       }
     });
 
-    server.once("listening", function () {
+    server.once("listening", () => {
       // close the server if listening doesn't fail
       server.close(() => {
         resolve(false);

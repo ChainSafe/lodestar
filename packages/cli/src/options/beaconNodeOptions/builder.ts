@@ -18,7 +18,7 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
   }
 
   return {
-    enabled: args["builder"],
+    enabled: args.builder,
     url: args["builder.url"] ?? defaultExecutionBuilderHttpOpts.url,
     timeout: args["builder.timeout"],
     faultInspectionWindow: args["builder.faultInspectionWindow"],

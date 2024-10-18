@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-extraneous-dependencies, @typescript-eslint/no-unused-vars
 import * as vitest from "vitest";
 
 interface CustomMatchers<R = unknown> {
@@ -42,7 +41,6 @@ interface CustomAsymmetricMatchers<R = unknown> extends CustomMatchers<R> {
 }
 
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  interface Assertion<T = any> extends CustomMatchers<T> {}
+    interface Assertion<T = any> extends CustomMatchers<T> {}
   interface AsymmetricMatchersContaining extends CustomAsymmetricMatchers {}
 }

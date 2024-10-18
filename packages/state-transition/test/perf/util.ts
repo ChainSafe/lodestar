@@ -61,7 +61,6 @@ const secretKeyByModIndex = new Map<number, SecretKey>();
 const epoch = 23638;
 export const perfStateEpoch = epoch;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getPubkeys(vc = numValidators) {
   const pubkeysMod = interopPubkeysCached(keypairsMod);
   const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.fromBytes(pk));
@@ -85,7 +84,6 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
   return sk;
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function getPubkeyCaches({pubkeysMod, pubkeysModObj}: ReturnType<typeof getPubkeys>) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkey2index = new PubkeyIndexMap();
@@ -196,7 +194,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     ) as CachedBeaconStatePhase0;
     phase0CachedState23638.slot += 1;
   }
-  const resultingState = opts && opts.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
+  const resultingState = opts?.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
 
   return resultingState.clone();
 }
@@ -223,7 +221,6 @@ export function generatePerfTestCachedStateAltair(opts?: {
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
   const {pubkey2index, index2pubkey} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);
@@ -244,7 +241,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
     ) as CachedBeaconStateAltair;
     altairCachedState23638.slot += 1;
   }
-  const resultingState = opts && opts.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
+  const resultingState = opts?.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
 
   return resultingState.clone();
 }

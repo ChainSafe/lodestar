@@ -35,7 +35,6 @@ export class SnappyFramesUncompress {
       }
 
       if (type === ChunkType.IDENTIFIER) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         if (!Buffer.prototype.equals.call(data, IDENTIFIER)) {
           throw "malformed input: bad identifier";
         }
@@ -52,9 +51,8 @@ export class SnappyFramesUncompress {
     }
     if (result.length === 0) {
       return null;
-    } else {
-      return result;
     }
+    return result;
   }
 
   reset(): void {

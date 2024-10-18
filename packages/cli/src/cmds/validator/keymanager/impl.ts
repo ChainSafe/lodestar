@@ -378,7 +378,6 @@ export class KeymanagerApi implements Api {
 function ensureJSON<T>(strOrJson: string | T): T {
   if (typeof strOrJson === "string") {
     return JSON.parse(strOrJson) as T;
-  } else {
-    return strOrJson;
   }
+  return strOrJson;
 }

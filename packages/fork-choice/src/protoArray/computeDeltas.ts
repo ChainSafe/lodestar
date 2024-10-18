@@ -3,6 +3,9 @@ import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {VoteTracker} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 
+// reuse arrays to avoid memory reallocation and gc
+const deltas = new Array<number>();
+
 /**
  * Returns a list of `deltas`, where there is one delta for each of the indices in `indices`
  *
@@ -19,14 +22,12 @@ export function computeDeltas(
   newBalances: EffectiveBalanceIncrements,
   equivocatingIndices: Set<ValidatorIndex>
 ): number[] {
-  const deltas = new Array<number>(numProtoNodes);
-  for (let i = 0; i < numProtoNodes; i++) {
-    deltas[i] = 0;
-  }
+  deltas.length = numProtoNodes;
+  deltas.fill(0);
 
   // avoid creating new variables in the loop to potentially reduce GC pressure
-  let oldBalance, newBalance: number;
-  let currentIndex, nextIndex: number | null;
+  let oldBalance: number, newBalance: number;
+  let currentIndex: number | null, nextIndex: number | null;
 
   for (let vIndex = 0; vIndex < votes.length; vIndex++) {
     const vote = votes[vIndex];
@@ -47,7 +48,7 @@ export function computeDeltas(
     // It is possible that there was a vote for an unknown validator if we change our justified
     // state to a new state with a higher epoch that is on a different fork because that fork may have
     // on-boarded fewer validators than the prior fork.
-    newBalance = newBalances[vIndex] ?? 0;
+    newBalance = newBalances === oldBalances ? oldBalance : (newBalances[vIndex] ?? 0);
 
     if (equivocatingIndices.size > 0 && equivocatingIndices.has(vIndex)) {
       // this function could be called multiple times but we only want to process slashing validator for 1 time

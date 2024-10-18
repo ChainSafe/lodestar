@@ -8,7 +8,7 @@ import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 
-describe("import from fs then validate", function () {
+describe("import from fs then validate", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-then-validate-test");
@@ -47,7 +47,7 @@ describe("import from fs then validate", function () {
     }
   });
 
-  it("run 'validator list' and check pubkeys are imported", async function () {
+  it("run 'validator list' and check pubkeys are imported", async () => {
     fs.mkdirSync(path.join(dataDir, "keystores"), {recursive: true});
     fs.mkdirSync(path.join(dataDir, "secrets"), {recursive: true});
 
@@ -58,7 +58,7 @@ describe("import from fs then validate", function () {
     }
   });
 
-  it("run 'validator' check keys are loaded", async function () {
+  it("run 'validator' check keys are loaded", async () => {
     const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();

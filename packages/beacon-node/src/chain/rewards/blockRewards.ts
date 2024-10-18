@@ -90,9 +90,9 @@ function computeSyncAggregateReward(block: altair.BeaconBlock, preState: CachedB
     const {syncProposerReward} = preState.epochCtx;
 
     return syncCommitteeBits.getTrueBitIndexes().length * Math.floor(syncProposerReward); // syncProposerReward should already be integer
-  } else {
-    return 0; // phase0 block does not have syncAggregate
   }
+
+  return 0; // phase0 block does not have syncAggregate
 }
 
 /**

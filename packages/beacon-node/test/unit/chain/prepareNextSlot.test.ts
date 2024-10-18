@@ -98,7 +98,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledWith();
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 

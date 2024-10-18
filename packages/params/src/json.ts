@@ -50,7 +50,7 @@ function deserializePresetValue(valueStr: unknown, keyName: string): number {
 
   const value = parseInt(valueStr, 10);
 
-  if (isNaN(value)) {
+  if (Number.isNaN(value)) {
     throw Error(`Invalid ${keyName} value ${valueStr} expected number`);
   }
 

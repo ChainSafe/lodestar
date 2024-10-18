@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+// biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Map` name to be imported
 import {Map} from "immutable";
 import {ValidatorIndex} from "@lodestar/types";
 import {toMemoryEfficientHexStr} from "@lodestar/state-transition/src/cache/pubkeyCache.js";
@@ -48,7 +49,6 @@ function testRunnerMemoryBpi(testCases: {getInstance: (bytes: number) => unknown
       sampleEvery: 5,
     });
 
-    // eslint-disable-next-line no-console
     console.log(`${id.padEnd(longestId)} - ${bpi.toFixed(1)} bytes / instance`);
   }
 }

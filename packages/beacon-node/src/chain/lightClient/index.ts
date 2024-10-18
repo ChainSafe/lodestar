@@ -225,7 +225,7 @@ export class LightClientServer {
     this.zero = {
       // Assign the hightest fork's default value because it can always be typecasted down to correct fork
       finalizedHeader: sszTypesFor(highestFork(forkLightClient)).LightClientHeader.defaultValue(),
-      finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
+      finalityBranch: ssz.altair.LightClientUpdate.fields.finalityBranch.defaultValue(),
     };
 
     if (metrics) {
@@ -630,12 +630,12 @@ export class LightClientServer {
       ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root)
       : null;
 
-    let isFinalized, finalityBranch, finalizedHeader;
+    let isFinalized: boolean, finalityBranch: Uint8Array[], finalizedHeader: LightClientHeader;
 
     if (
       attestedData.isFinalized &&
       finalizedHeaderAttested &&
-      computeSyncPeriodAtSlot(finalizedHeaderAttested.beacon.slot) == syncPeriod
+      computeSyncPeriodAtSlot(finalizedHeaderAttested.beacon.slot) === syncPeriod
     ) {
       isFinalized = true;
       finalityBranch = attestedData.finalityBranch;
@@ -741,7 +741,7 @@ export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<Fork
       execution,
       executionBranch: getBlockBodyExecutionHeaderProof(fork as ForkExecution, blockBody),
     } as LightClientHeader;
-  } else {
-    return {beacon};
   }
+
+  return {beacon};
 }

@@ -19,12 +19,11 @@ import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";
  * This includes several tests which make >6 min to pass in CI, so let's only run 1 of them and leave remaining ones
  * for local investigation.
  */
-describe("regen/reload states with n-historical states configuration", function () {
+describe("regen/reload states with n-historical states configuration", () => {
   vi.setConfig({testTimeout: 96_000});
 
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 
@@ -267,7 +266,7 @@ describe("regen/reload states with n-historical states configuration", function 
     skip,
   } of testCases) {
     const wrappedIt = skip ? it.skip : it;
-    wrappedIt(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async function () {
+    wrappedIt(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 7;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;

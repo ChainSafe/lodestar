@@ -34,9 +34,9 @@ export function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The received finality_update matches the locally computed one exactly
-  const sszType = config.getLightClientForkTypes(gossipedFinalityUpdate.attestedHeader.beacon.slot)[
-    "LightClientFinalityUpdate"
-  ];
+  const sszType = config.getLightClientForkTypes(
+    gossipedFinalityUpdate.attestedHeader.beacon.slot
+  ).LightClientFinalityUpdate;
   if (localFinalityUpdate === null || !sszType.equals(gossipedFinalityUpdate, localFinalityUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,

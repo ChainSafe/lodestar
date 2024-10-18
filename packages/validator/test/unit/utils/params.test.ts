@@ -12,8 +12,6 @@ const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] 
   {name: "nimbus", items: [networksChainConfig.holesky, nimbusHoleskyConfig]},
 ];
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("utils / params / assertEqualParams", () => {
   it("default == default", () => {
     const chainConfigJson = chainConfigToJson(chainConfig);

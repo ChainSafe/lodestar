@@ -1,6 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, phase0} from "@lodestar/types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
@@ -10,9 +11,10 @@ import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 describe("prioritizePeers", () => {
   const seedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[] = [];
 
-  before(async function () {
+  before(async () => {
     for (let i = 0; i < defaultNetworkOptions.maxPeers; i++) {
-      const peer = await createSecp256k1PeerId();
+      const pk = await generateKeyPair("secp256k1");
+      const peer = peerIdFromPrivateKey(pk);
       peer.toString = () => `peer-${i}`;
       seedPeers.push({
         id: peer,

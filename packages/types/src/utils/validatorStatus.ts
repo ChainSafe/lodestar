@@ -1,8 +1,10 @@
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {Epoch, phase0} from "../types.js";
 
+/**
+ * [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
+ */
 export type ValidatorStatus =
-  | "active"
   | "pending_initialized"
   | "pending_queued"
   | "active_ongoing"
@@ -22,7 +24,9 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
   if (validator.activationEpoch > currentEpoch) {
     if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
       return "pending_initialized";
-    } else if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
+    }
+
+    if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
       return "pending_queued";
     }
   }
@@ -30,7 +34,9 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
   if (validator.activationEpoch <= currentEpoch && currentEpoch < validator.exitEpoch) {
     if (validator.exitEpoch === FAR_FUTURE_EPOCH) {
       return "active_ongoing";
-    } else if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
+    }
+
+    if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
       return validator.slashed ? "active_slashed" : "active_exiting";
     }
   }

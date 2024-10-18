@@ -203,17 +203,19 @@ export function getDiffs(val1: Diffable, val2: Diffable, objectPath: string): Di
  */
 export function diff(val1: unknown, val2: unknown, outputValues = false, filename?: string): void {
   if (!isDiffable(val1)) {
+    // biome-ignore lint/suspicious/noConsoleLog: <explanation>
     console.log("val1 is not Diffable");
     return;
   }
   if (!isDiffable(val2)) {
+    // biome-ignore lint/suspicious/noConsoleLog: <explanation>
     console.log("val2 is not Diffable");
     return;
   }
   const diffs = getDiffs(val1, val2, "");
   let output = "";
   if (diffs.length) {
-    diffs.forEach((diff) => {
+    for (const diff of diffs) {
       let diffOutput = `value${diff.objectPath}`;
       if (diff.errorMessage) {
         diffOutput += `\n  ${diff.errorMessage}`;
@@ -222,10 +224,11 @@ export function diff(val1: unknown, val2: unknown, outputValues = false, filenam
         diffOutput += `\n  - ${diff.val1.toString()}\n  - ${diff.val2.toString()}\n`;
       }
       output += `${diffOutput}\n`;
-    });
+    }
     if (filename) {
       fs.writeFileSync(filename, output);
     } else {
+      // biome-ignore lint/suspicious/noConsoleLog: <explanation>
       console.log(output);
     }
   }

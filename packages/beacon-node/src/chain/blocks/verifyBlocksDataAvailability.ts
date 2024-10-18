@@ -78,12 +78,12 @@ async function maybeValidateBlobs(
     case BlockInputType.outOfRangeData:
       return {dataAvailabilityStatus: DataAvailabilityStatus.OutOfRange, availableBlockInput: blockInput};
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case BlockInputType.availableData:
       if (opts.validBlobSidecars === BlobSidecarValidation.Full) {
         return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: blockInput};
       }
 
-    // eslint-disable-next-line no-fallthrough
     case BlockInputType.dataPromise: {
       // run full validation
       const {block} = blockInput;
@@ -136,7 +136,7 @@ async function raceWithCutoff<T>(
 
   try {
     await Promise.race([availabilityPromise, cutoffTimeout]);
-  } catch (e) {
+  } catch (_e) {
     // throw unavailable so that the unknownblock/blobs can be triggered to pull the block
     throw new BlockError(block, {code: BlockErrorCode.DATA_UNAVAILABLE});
   }

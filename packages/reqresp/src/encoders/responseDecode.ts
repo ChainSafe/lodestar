@@ -110,7 +110,7 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
  */
 export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {
   // Read at least 256 or wait for the stream to end
-  let length;
+  let length: number | undefined;
   for await (const buffer of bufferedSource) {
     // Wait for next chunk with bytes or for the stream to end
     // Note: The entire <error_message> is expected to be in the same chunk
@@ -121,13 +121,13 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
     length = buffer.length;
   }
 
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   const bytes = bufferedSource["buffer"].slice(0, length);
 
   try {
     return decodeErrorMessage(bytes);
-  } catch {
+  } catch (_e) {
     // Error message is optional and may not be included in the response stream
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     return Buffer.prototype.toString.call(bytes, "hex");
   }
 }

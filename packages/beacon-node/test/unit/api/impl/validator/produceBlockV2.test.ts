@@ -16,7 +16,7 @@ import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 
-describe("api/validator - produceBlockV2", function () {
+describe("api/validator - produceBlockV2", () => {
   let api: ReturnType<typeof getValidatorApi>;
   let modules: ApiTestModules;
   let state: CachedBeaconStateBellatrix;
@@ -32,7 +32,7 @@ describe("api/validator - produceBlockV2", function () {
     vi.clearAllMocks();
   });
 
-  it("correctly pass feeRecipient to produceBlock", async function () {
+  it("correctly pass feeRecipient to produceBlock", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
     const consensusBlockValue = ssz.Wei.defaultValue();
