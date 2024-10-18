@@ -35,20 +35,29 @@ export function msgIdToStrFn(msgId: Uint8Array): string {
   return `0x${sharedMsgIdBuf.toString("hex")}`;
 }
 
+// Shared buffer to store the concatenated data for hashing
+// increase length if needed
+var sharedDigestBuf = new Uint8Array(0);
+
 /**
  * Only valid msgId. Messages that fail to snappy_decompress() are not tracked
  */
 export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8Array {
   const topic = gossipTopicCache.getTopic(msg.topic);
 
-  let vec: Uint8Array[];
-
+  let digestLength = 0;
   if (topic.fork === ForkName.phase0) {
     // message id for phase0.
     // ```
     // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]
     // ```
-    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
+    // vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
+    digestLength = MESSAGE_DOMAIN_VALID_SNAPPY.length + msg.data.length;
+    if (sharedDigestBuf.length < digestLength) {
+      sharedDigestBuf = new Uint8Array(digestLength);
+    }
+    sharedDigestBuf.set(MESSAGE_DOMAIN_VALID_SNAPPY, 0);
+    sharedDigestBuf.set(msg.data, MESSAGE_DOMAIN_VALID_SNAPPY.length);
   } else {
     // message id for altair and subsequent future forks.
     // ```
@@ -60,10 +69,23 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     // )[:20]
     // ```
     // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
-    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
+
+    const topicBuf = Buffer.from(msg.topic);
+    digestLength = MESSAGE_DOMAIN_VALID_SNAPPY.length + 8 + topicBuf.length + msg.data.length;
+    if (sharedDigestBuf.length < digestLength) {
+      sharedDigestBuf = new Uint8Array(digestLength);
+    }
+    let offset = 0;
+    sharedDigestBuf.set(MESSAGE_DOMAIN_VALID_SNAPPY, offset);
+    offset += MESSAGE_DOMAIN_VALID_SNAPPY.length;
+    sharedDigestBuf.set(intToBytes(msg.topic.length, 8), offset);
+    offset += 8;
+    sharedDigestBuf.set(topicBuf, offset);
+    offset += topicBuf.length;
+    sharedDigestBuf.set(msg.data, offset);
   }
 
-  return digest(Buffer.concat(vec)).subarray(0, 20);
+  return digest(sharedDigestBuf.subarray(0, digestLength)).subarray(0, 20);
 }
 
 export class DataTransformSnappy implements DataTransform {
