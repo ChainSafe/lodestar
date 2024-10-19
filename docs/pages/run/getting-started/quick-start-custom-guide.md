@@ -1,4 +1,4 @@
-# Quickstart Custom Setup Guide
+# Quick Start Custom Setup Guide
 
 This is a step-by-step guide to utilize [@ChainSafe/lodestar-quickstart](https://github.com/ChainSafe/lodestar-quickstart) to setup a Ubuntu-based full Ethereum node using a local execution client and ChainSafe's Lodestar consensus client via Docker (the recommended method to use Lodestar for production environments). This is an adaptation of [Somer Esat's guides](https://someresat.medium.com/) for the Ethereum staking community.
 
@@ -168,10 +168,9 @@ Replace the 64 characters after `0x` with your token.
 If you are not running validators, press `CTRL` + `x` then `y` then `Enter` to save and exit. Proceed to Configuring your Network.
 
 ### Configure feeRecipient
-
-Optional: If you are running validators, you **must** set this to receive rewards. If you are not running validators, you can skip this section.
-
+:::warning
 If you are running validators, Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees and MEV rewards when proposing blocks. If you do not set this address, your rewards will be sent to the [burn address by default](https://etherscan.io/address/0x0000000000000000000000000000000000000000).
+:::
 
 Configure your validator client's feeRecipient address by changing the `FEE_RECIPIENT` line. Ensure you specify an Ethereum address you control.
 
@@ -183,7 +182,7 @@ FEE_RECIPIENT="0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d"
 
 If you would like to run [MEV-Boost](https://boost.flashbots.net) with your validators, proceed to the next section.
 
-If you do not want to run MEV-Boost, press `CTRL` + `x` then `y` then `Enter` to save and exit. Proceed to Configuring your Network.
+If you do not want to run MEV-Boost, press `CTRL` + `x` then `y` then `Enter` to save and exit. Proceed to [Configuring your Network](#configuring-your-network).
 
 ### Set minimum bid for MEV-Boost validators
 
@@ -191,7 +190,7 @@ If you do not want to run MEV-Boost, press `CTRL` + `x` then `y` then `Enter` to
 (Optional): If you are running validators and would like to use MEV-Boost, follow this section. Otherwise, skip this section.
 :::
 
-Validators running MEV-Boost maximize their staking reward by selling blockspace to an open market of builders. MEV-Boost v1.4+ allows you to set a minimum bid threshold to only use an externally built block if it meets or exceeds this parameter. For more information, see
+Validators running MEV-Boost maximize their staking reward by selling blockspace to an open market of builders. MEV-Boost v1.4+ allows you to set a minimum bid threshold to only use an externally built block if it meets or exceeds this parameter.
 
 The `min-bid` parameter is denominated in ETH. For example, if you want to set your threshold to 0.03 ETH, set your configuration to `MIN_BUILDERBID=0.03`
 
@@ -248,8 +247,8 @@ You may also choose to use a specific version release of Lodestar. To select a s
 
 ### Modify your weak subjectivity (checkpoint sync) provider
 
-:::info
-(Optional): We use ChainSafe's Lodestar checkpoints by default. You may choose to point your trusted checkpoint at another source or verify the checkpoints with other providers. If you would rather sync from genesis, you can skip this step.
+:::note
+(Optional): We use ChainSafe's Lodestar checkpoints by default. You may choose to point your trusted checkpoint at another source or verify the checkpoints with other providers. If you would rather sync from genesis (not recommended), you can skip this step.
 :::
 
 Weak subjectivity (checkpoint sync) allows your beacon node to sync within minutes by utilizing a trusted checkpoint from a trusted provider.
@@ -367,7 +366,7 @@ sudo rm deposit_data-1552658472.json
 
 :::
 
-Continue to the [**Startup Quickstart Script**](#Startup-Quickstart-Script) section.
+Continue to the [**Startup Quickstart Script**](#startup-quickstart-script) section.
 
 ### Option 2: Setup multiple validator sets with keystores encrypted under different passwords
 
@@ -395,7 +394,7 @@ Navigate into the directory.
 cd validatorset1
 ```
 
-### Create validator keystore password
+#### Create validator keystore password
 
 Create the `pass.txt` file containing your validator's decryption password for use.
 
@@ -411,7 +410,7 @@ Once the validator container is running, you can delete this file from your serv
 
 Once complete, press `CTRL` + `x` then `y` then `Enter` to save and exit.
 
-### Copy/Move keystores to `lodestar-quickstart/validatorset1/keystores` directory
+#### Copy/Move keystores to `lodestar-quickstart/validatorset1/keystores` directory
 
 Your `keystore.json` file(s) generated from the [`staking-deposit-cli`](https://github.com/ethereum/staking-deposit-cli) or similar generator for validator keys will be placed in the `lodestar-quickstart/validatorset1/keystores` directory using the `sudo cp` command to copy or `sudo mv` command to move the files.
 
@@ -452,12 +451,12 @@ sudo rm deposit_data-1552658472.json
 
 Repeat the same steps above for `validatorset2` and any subsequent sets of validators you require. When complete you should have a similar looking directory tree such as the one below:
 
-Then, continue to the [**Startup Quickstart Script**](#Startup-Quickstart-Script) section. Pay particular attention to startup script example five (5) and (6).
+Then, continue to the [**Startup Quickstart Script**](#startup-quickstart-script) section. Pay particular attention to startup script example five (5) and (6).
 
 ### Option 3: Setup validators with mnemonic
 
 :::warning
-:warning: **TESTNET USE ONLY:** Do not use this method unless you're validating on a testnet. Your mnemonic will be stored in plaintext on your server.
+**TESTNET USE ONLY:** Do not use this method unless you're validating on a testnet. Your mnemonic will be stored in plaintext on your server, which is unsafe.
 :::
 
 Optional: If you want to setup validators with your mnemonic. Otherwise, skip this step.
@@ -484,7 +483,7 @@ Therefore, if you generated one key, it is likely in index 0, so you would use `
 
 Once complete, press `CTRL` + `x` then `y` then `Enter` to save and exit.
 
-Continue to the [**Startup Quickstart Script**](#Startup-Quickstart-Script) section.
+Continue to the [**Startup Quickstart Script**](#startup-quickstart-script) section.
 
 ---
 
@@ -529,7 +528,7 @@ The following are **_example commands_** as a template for initiating the quicks
 ```
 
 :::warning
-**NOTE:** You can only start up one set of validator keystores per validator client on the same command. Use the below command (#6) to startup another validator client for another set of validator keys.
+You can only start up one set of validator keystores per validator client on the same command. Use the below command (#6) to startup another validator client for another set of validator keys.
 :::
 
 6. Startup validator client only with validator client set two (using keystores) and execution client Geth detached from containers:
@@ -539,14 +538,12 @@ The following are **_example commands_** as a template for initiating the quicks
 ```
 
 :::info
-**NOTE:** You may wish to start only the execution node first for syncing to reduce Lodestar's execution client (eth1) requests for data that doesn't exist yet and reduce warnings/errors. Be sure to use our flags below such as `--justEL` to start the execution client standalone.
-
-**NOTE:** The script will standardize naming your containers so running the `setup.sh` twice, will not create two instances of the same containers. The script will standardize naming your containers so running the `./setup.sh <args>` a second time, will not create two instances of the same containers.  
+The script will standardize naming your containers so running the `setup.sh` twice, will not create two instances of the same containers. The script will standardize naming your containers so running the `./setup.sh <args>` a second time, will not create two instances of the same containers.  
 :::
 
 Configure the above commands with what you intend to run using the Quickstart Script Help table below.
 
-# Quickstart Script Help
+## Quickstart Script Help
 
 | Command                   | Required/Optional | Description                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -564,13 +561,12 @@ Configure the above commands with what you intend to run using the Quickstart Sc
 | `--justVC`                | Optional          | Launch only the Lodestar validator.                                                                                                                                                                                                                                                                                                                                                                                        |
 | `--skipImagePull`         | Optional          | Launch with only the local Docker images. Do not update them on this run.                                                                                                                                                                                                                                                                                                                                                  |
 
-:::info
-**NOTE:**
+:::note
 `*` : Only one of the two options should be provided.
 `**` : Only one of the two options should be provided.
 :::
 
-## Check Containers
+### Check Containers
 
 You can check the status and get the name of your containers by using the `docker ps` command:
 
@@ -580,7 +576,7 @@ sudo docker ps
 
 The containers should not constantly restart. If they restart, likely a misconfiguration occurred.
 
-## Check Container Logs
+### Check Container Logs
 
 You can check the status of what your container is logging to diagnose a problem or follow along the status of your container output.
 
@@ -607,15 +603,28 @@ sudo docker logs -n 10 <CONTAINER NAME>
 Your beacon node should initialize and you should see something similar to:
 
 ```
-Jul-12 00:13:35.912[]                 info: Lodestar network=goerli, version=v0.40.0-dev.2b16141fc6, commit=2b16141fc6d73e570d338da5d3448c67373405cb
-Jul-12 00:13:35.935[]                 info: Connected to LevelDB database name=/data/lodestar/peerstore
-Jul-12 00:13:35.948[DB]               info: Connected to LevelDB database name=/data/lodestar/chain-db
-Jul-12 00:13:40.076[]                 info: Initializing beacon state from anchor state slot=0, epoch=0, stateRoot=0x75b3f63942f47f1b17a1ca4a61bf5ca37ffb5e2a9ef9129f9c80cc13d6c67f03
-Jul-12 00:13:40.382[ETH1]             info: Starting search for terminal POW block TERMINAL_TOTAL_DIFFICULTY=50000000000000000
-Jul-12 00:13:43.499[METRICS]          info: Starting metrics HTTP server port=8008, address=127.0.0.1
-Jul-12 00:13:43.588[API]              info: Started REST api server address=http://0.0.0.0:9596
-Jul-12 00:14:18.001[]                 info: Syncing - 4.3 days left - 0.822 slots/s - slot: 305171 (skipped 305140) - head: 31 0x00f3…8e6b - finalized: 0x0000…0000:0 - peers: 1
-Jul-12 00:14:30.000[]                 info: Syncing - 14 hours left - 5.91 slots/s - slot: 305172 (skipped 304847) - head: 325 0x3ae7…8752 - finalized: 0x1044…8852:8 - peers: 1
+Jul-31 13:35:27.967[]                 info: Lodestar network=mainnet, version=v1.21.0/ff35faa, commit=ff35faae4ad1697b86d708a0367a95a71648ab6e
+Jul-31 13:35:28.344[]                 info: Connected to LevelDB database path=/data/lodestar/chain-db
+Jul-31 13:35:49.828[]                 info: Initializing beacon from a valid db state slot=9633504, epoch=301047, stateRoot=0xfa2845a6877b98555906a1654941c97d9c05bdd41e61cc0870a967dc9030b156, isWithinWeakSubjectivityPeriod=true
+Jul-31 13:35:51.955[chain]            info: Historical state worker started
+Jul-31 13:35:51.969[eth1]             info: Eth1 provider urls=http://localhost:8551
+Jul-31 13:35:51.975[execution]        info: Execution client urls=http://localhost:8551
+Jul-31 13:35:51.977[]                 info: External builder url=http://localhost:8661
+Jul-31 13:36:21.128[network]          info: running libp2p instance in worker thread
+Jul-31 13:36:21.727[network]          info: libp2p worker started peer=15Uiu2HAmACcmCEXcgt3zCtJL2rqJZ2Mvdjh6U6fe26HgD2FoNRwW
+Jul-31 13:36:27.677[network]          info: discv5 worker started peerId=16Uiu2HAmACcmCEXcgt3zCtJL2rqJZ2Mvdjh6U6fe26HgD2FoNRwW, initialENR=enr:-IO4QHGTUd1Zg8LAhUAioOz_ySTKoJLIOa6zltSP_AvvhTFVYw6M6YB35IxsiKxQG7nUgCpUB5SIsNxMntCNlTK9sMEBgmlkgnY0iXNlY3AyNTZrMaEC24cdmzuGnWqSwF-8Hw2gbkAZDzMWW3LsHJfp_kDhy-GDdGNwgiMog3VkcIIeWH, bindAddr4=/ip4/0.0.0.0/udp/9000
+Jul-31 13:36:28.134[network]          info: PeerId 16Uiu2HAmACcmCEXcgt3zCtJL2rqJZ2Mvdjh6U6fe26HgD2FoNRwW, Multiaddrs /ip4/0.0.0.0/tcp/9000
+Jul-31 13:36:28.137[metrics]          info: Started metrics HTTP server address=http://127.0.0.1:8008
+Jul-31 13:36:28.256[rest]             info: Started REST API server address=http://0.0.0.0:9596
+Jul-31 13:36:28.257[]                 info: Searching peers - peers: 0 - slot: 9634080 - head: (slot -576) 0x9d88…d02a - exec-block: syncing(20426302 0xcec4…) - finalized: 0x7feb…c130:301045
+Jul-31 13:36:36.461[execution]        info: Execution client is synced oldState=ONLINE, newState=SYNCED
+Jul-31 13:36:53.019[]                 info: Syncing - 3.7 minutes left - 2.32 slots/s - slot: 9634082 - head: (slot -515) 0x792f…f8aa - exec-block: valid(20426365 0x58b1…) - finalized: 0x9d88…d02a:301047 - peers: 11
+Jul-31 13:38:53.168[]                 info: Syncing - 11 seconds left - 4.01 slots/s - slot: 9634092 - head: (slot -44) 0x7491…f63e - exec-block: valid(20426841 0xd4b2…) - finalized: 0x1e00…6e6b:301062 - peers: 59
+Jul-31 13:38:58.051[network]          info: Subscribed gossip core topics
+Jul-31 13:38:58.132[sync]             info: Subscribed gossip core topics
+Jul-31 13:39:05.001[]                 info: Synced - slot: 9634093 - head: 0x35de…1f0e - exec-block: valid(20426886 0x10ff…) - finalized: 0x88f8…5375:301063 - peers: 70
+Jul-31 13:39:17.000[]                 info: Synced - slot: 9634094 - head: 0x7844…3b3e - exec-block: valid(20426887 0x67d1…) - finalized: 0x88f8…5375:301063 - peers: 69
+Jul-31 13:39:29.000[]                 info: Synced - slot: 9634095 - head: 0x5516…ba12 - exec-block: valid(20426888 0x4ceb…) - finalized: 0x88f8…5375:301063 - peers: 74
 ```
 
 ### Check validators are detected and decrypted
@@ -631,21 +640,26 @@ sudo docker logs goerli-validator
 You should see something similar to:
 
 ```
-Jul-06 21:28:00.571[]                 info: Lodestar network=goerli, version=v0.40.0-dev.e5dabac124, commit=e5dabac124933bcadc650d19d6b128dcbfcb6c43
-Jul-06 21:28:10.308[]                 info: 3 local keystores
-Jul-06 21:28:10.309[]                 info: 0xa30147006edd615ffc5a5d9351e0fbdcc6318cc2c432e22b7134d7ace9cb90a4b276468560afdcc0be07810190f3eaed
-Jul-06 21:28:10.309[]                 info: 0xa27db12f5645a61dc9c17300c2b8c53750f3a6940d944122e0da18a4ddedd42d590938340e9a011873168db4f028cf6e
-Jul-06 21:28:10.309[]                 info: 0x9135a6e4b67beff56ae89ddd1168ebf3f1287f23350f77815020aa5f87857d6b2957aa9703a57417922268715ba4367d
-Jul-06 21:28:10.332[]                 info: Genesis available
-Jul-06 21:28:10.345[]                 info: Verified node and validator have same config
-Jul-06 21:28:10.347[]                 info: Persisted genesisValidatorRoot 0x44f1e56283ca88b35c789f7f449e52339bc1fefe3a45913a43a6d16edcd33cf1
-Jul-06 21:28:10.347[]                 info: Persisted genesisTime 1653922800
-Jul-06 21:28:10.347[]                 info: Verified node and validator have same genesisValidatorRoot
-Jul-06 21:28:10.358[]                 info: Discovered new validators count=0
+Mar-01 03:06:35.048[]                 info: Lodestar network=holesky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
+Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-holesky
+Mar-01 03:06:35.697[]                 info: 100% of keystores imported. current=2 total=2 rate=1318.68keys/m
+Mar-01 03:06:35.698[]                 info: 2 local keystores
+Mar-01 03:06:35.698[]                 info: 0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
+Mar-01 03:06:35.698[]                 info: 0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
+Mar-01 03:06:35.732[]                 info: Beacon node urls=http://127.0.0.1:9596
+Mar-01 03:09:23.813[]                 info: Genesis fetched from the beacon node
+Mar-01 03:09:23.816[]                 info: Verified connected beacon node and validator have same the config
+Mar-01 03:09:23.818[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
+Mar-01 03:09:23.818[]                 info: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=gossip, defaultBuilderSelection=executiononly, suggestedFeeRecipient=0xeeef273281fB83F56182eE960aA4bAfe7fE075DE, strictFeeRecipientCheck=false
+Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234567, pubKey=0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
+Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234568, pubKey=0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
+Mar-01 03:09:23.830[]                 info: Validator statuses active=2, total=2
+Mar-01 03:15:50.191[]                 info: Published attestations slot=1113379, count=1
+Mar-01 03:16:02.728[]                 info: Published attestations slot=1113380, count=1
 ```
 
 :::info
-**NOTE:** It is normal to see `Error on getProposerDuties` in your validator logs as your beacon node and execution node sync up. Give it time.
+It is normal to see `Error on getProposerDuties` in your validator logs as your beacon node and execution node sync up. Give it time.
 :::
 
 ## Stop Containers
@@ -704,7 +718,7 @@ Remove the containers by using the `docker rm` command.
 sudo docker rm <CONTAINER NAME 1> <CONTAINER NAME 2> <CONTAINER NAME 3>
 ```
 
-Restart your containers using your [Startup Quickstart Script](#Startup-Quickstart-Script) command.
+Restart your containers using your [Startup Quickstart Script](#startup-quickstart-script) command.
 
 ---
 

@@ -1,8 +1,6 @@
 ---
-title: Quick Start
+title: Lodestar Quick Start Scripts
 ---
-
-## Lodestar Quickstart Scripts
 
 In order to make things easier and quicker for all types of users to bootstrap the Lodestar consensus client with a variety of execution clients, we have come up with [Lodestar Quickstart](https://github.com/ChainSafe/lodestar-quickstart) Docker scripts!
 

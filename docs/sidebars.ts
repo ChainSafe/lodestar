@@ -10,12 +10,12 @@ const sidebars: SidebarsConfig = {
       label: "Run A Node",
       collapsed: false,
       items: [
-        "run/getting-started/quick-start",
+        "run/getting-started/installation",
         {
           type: "category",
-          label: "Installation",
+          label: "Quick Start",
           items: [
-            "run/getting-started/installation",
+            "run/getting-started/quick-start",
             "run/getting-started/quick-start-custom-guide",
           ],
         },
