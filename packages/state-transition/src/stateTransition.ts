@@ -114,15 +114,9 @@ export function stateTransition(
   // Note: time only on success. This does not include hashTreeRoot() time
   processBlockTimer?.();
 
-  // TODO - batch: remove processBlockCommitTime?
-  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-    source: StateHashTreeRootSource.stateTransition,
-  });
-  // commit() is done inside batchHashTreeRoot()
-  // with batchHashTreeRoot(), we're not able to measure commit() time separately
-  // note that at commit() phase, we batch hash validators via ListValidatorTreeViewDU so this metric is a little bit confusing
-  const stateRoot = postState.batchHashTreeRoot(hcGroup);
-  hashTreeRootTimer?.();
+  const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
+  postState.commit();
+  processBlockCommitTimer?.();
 
   if (metrics) {
     onPostStateMetrics(postState, metrics);
@@ -130,6 +124,14 @@ export function stateTransition(
 
   // Verify state root
   if (verifyStateRoot) {
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+      source: StateHashTreeRootSource.stateTransition,
+    });
+    // commit() is done inside batchHashTreeRoot()
+    // with batchHashTreeRoot(), we're not able to measure commit() time separately
+    // note that at commit() phase, we batch hash validators via ListValidatorTreeViewDU so this metric is a little bit confusing
+    const stateRoot = postState.batchHashTreeRoot(hcGroup);
+    hashTreeRootTimer?.();
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
         `Invalid state root at slot ${block.slot}, expected=${toRootHex(block.stateRoot)}, actual=${toRootHex(
