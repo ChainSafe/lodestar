@@ -97,29 +97,23 @@ const config: Config = {
       style: "dark",
       links: [
         {
-          title: "Docs",
-          items: [
-            {
-              label: "Introduction",
-              to: "/introduction",
-            },
-          ],
+          label: 'Lodestar Website',
+          href: 'https://lodestar.chainsafe.io',
         },
         {
-          title: "Community",
-          items: [
-            {
-              label: "Discord",
-              href: "https://discord.com/invite/yjyvFRP",
-            },
-            {
-              label: "Twitter",
-              href: "https://twitter.com/lodestar_eth",
-            },
-          ],
+          label: 'Discord',
+          href: 'https://discord.com/invite/yjyvFRP',
+        },
+        {
+          label: 'Twitter/X',
+          href: 'https://x.com/lodestar_eth',
+        },
+        {
+          label: 'Github',
+          href: 'https://github.com/ChainSafe/lodestar',
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} ChainSafe, Inc.`,
+      copyright: `Copyright © ${new Date().getFullYear()} ChainSafe. Built with Docusaurus.` ,
     },
     colorMode: {
       respectPrefersColorScheme: false,

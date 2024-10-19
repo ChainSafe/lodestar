@@ -1,8 +1,12 @@
-# Prometheus and Grafana
+# Prometheus and Grafana Setup
 
 Prometheus is an open-source monitoring system with efficient time series database and a modern alerting approach. Together with Grafana it's the recommended way to make sure that your node and validator(s) are performing correctly.
 
-## Prometheus
+## Localized Docker Metrics Script
+
+The Lodestar team has setup a script which will copy the latest dashboards compiled by our team for development purposes. By utilizing the script localed in `/docker/docker-compose.local_dev.sh`, you can instantly setup the latest dockerized metrics alongside your local beacon node.
+
+## Prometheus Setup
 
 To start, download Prometheus from https://prometheus.io/download/.
 Unzip the downloaded .zip file and run Prometheus from its installed location with the lodestar `prometheus.yml` passed in as the configuration file
@@ -23,7 +27,7 @@ lodestar --metrics=true --metrics.port=8008
 
 Navigate to http://localhost:9090/ in your browser to verify that Prometheus is monitoring Lodestar
 
-## Grafana
+## Grafana Setup
 
 Download and install Grafana from its official repository https://grafana.com/docs/grafana/latest/installation/debian/
 

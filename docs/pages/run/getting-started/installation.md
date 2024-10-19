@@ -1,8 +1,8 @@
-# Installation
+# Install Options
 
 ## Binaries
 
-Binaries can be downloaded from [the release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
+Binaries can be downloaded from the Lodestar [release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
 
 ## Docker Installation
 
@@ -100,5 +100,5 @@ pip3 install setuptools --force-reinstall --user
 ## Install from NPM [not recommended]
 
 :::danger
-For mainnet (production) usage, we only recommend installing with docker due to [NPM supply chain attacks](https://hackaday.com/2021/10/22/supply-chain-attack-npm-library-used-by-facebook-and-others-was-compromised/). Until a [safer installation method has been found](https://github.com/ChainSafe/lodestar/issues/3596), do not use this install method except for experimental purposes only.
+For mainnet (production) usage, we only recommend installing with Docker, using binaries or building from source due to [NPM supply chain attacks](https://hackaday.com/2021/10/22/supply-chain-attack-npm-library-used-by-facebook-and-others-was-compromised/). Until a [safer installation method has been found](https://github.com/ChainSafe/lodestar/issues/3596), do not use this install method except for experimental purposes only.
 :::
