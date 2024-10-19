@@ -220,6 +220,14 @@ export async function produceBlockBody<T extends BlockType>(
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
       }
+
+      if (ForkSeq[fork] >= ForkSeq.electra) {
+        const {executionRequests} = builderRes;
+        if (executionRequests === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
+        }
+        (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
+      }
     }
 
     // blockType === BlockType.Full
@@ -285,7 +293,6 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            // validate blindedBlobsBundle
             if (this.opts.sanityCheckExecutionEngineBlobs) {
               validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
@@ -455,6 +462,7 @@ async function prepareExecutionPayloadHeader(
   header: ExecutionPayloadHeader;
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
+  executionRequests?: electra.ExecutionRequests;
 }> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");

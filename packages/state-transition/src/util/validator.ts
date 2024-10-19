@@ -82,14 +82,6 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
   return MIN_ACTIVATION_BALANCE;
 }
 
-export function getActiveBalance(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
-  const validatorMaxEffectiveBalance = getMaxEffectiveBalance(
-    state.validators.getReadonly(validatorIndex).withdrawalCredentials
-  );
-
-  return Math.min(state.balances.get(validatorIndex), validatorMaxEffectiveBalance);
-}
-
 export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
   return state.pendingPartialWithdrawals
     .getAllReadonly()

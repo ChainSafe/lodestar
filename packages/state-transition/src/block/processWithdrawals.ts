@@ -99,6 +99,8 @@ export function getExpectedWithdrawals(
 
   const withdrawals: capella.Withdrawal[] = [];
   const isPostElectra = fork >= ForkSeq.electra;
+  // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
+  let partialWithdrawalsCount = 0;
 
   if (isPostElectra) {
     const stateElectra = state as CachedBeaconStateElectra;
@@ -138,11 +140,10 @@ export function getExpectedWithdrawals(
         });
         withdrawalIndex++;
       }
+      partialWithdrawalsCount++;
     }
   }
 
-  // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
-  const partialWithdrawalsCount = withdrawals.length;
   const bound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
   let n = 0;
   // Just run a bounded loop max iterating over all withdrawals
