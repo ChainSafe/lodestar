@@ -168,6 +168,7 @@ Replace the 64 characters after `0x` with your token.
 If you are not running validators, press `CTRL` + `x` then `y` then `Enter` to save and exit. Proceed to Configuring your Network.
 
 ### Configure feeRecipient
+
 :::warning
 If you are running validators, Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees and MEV rewards when proposing blocks. If you do not set this address, your rewards will be sent to the [burn address by default](https://etherscan.io/address/0x0000000000000000000000000000000000000000).
 :::
