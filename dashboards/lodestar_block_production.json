@@ -746,7 +746,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_api_rest_errors_total{operationId=~\"produceBlockV2|produceBlindedBlock|publishBlock|publishBlindedBlock\"}[$rate_interval])",
+          "expr": "rate(lodestar_api_rest_errors_total{operationId=~\"produceBlockV3|publishBlockV2|publishBlindedBlockV2\"}[$rate_interval])",
           "legendFormat": "{{operationId}}",
           "range": true,
           "refId": "A"

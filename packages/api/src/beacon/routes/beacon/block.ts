@@ -499,7 +499,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
             body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
-
             headers: {
               [MetaHeader.Version]: fork,
             },
