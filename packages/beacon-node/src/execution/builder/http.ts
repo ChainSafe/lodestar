@@ -56,8 +56,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
 
   /**
    * Determine if SSZ is supported by requesting an SSZ encoded response in the `getHeader` request.
-   * If the builder responds with a SSZ serialized `SignedBuilderBid` it indicates support for submitting
-   * the `SignedBlindedBeaconBlock` as SSZ serialized bytes instead of JSON via `submitBlindedBlock`.
+   * The builder responding with a SSZ serialized `SignedBuilderBid` indicates support to handle the
+   * `SignedBlindedBeaconBlock` as SSZ serialized bytes instead of JSON when calling `submitBlindedBlock`.
    */
   private sszSupported = false;
 
