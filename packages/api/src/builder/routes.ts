@@ -78,9 +78,6 @@ export type Endpoints = {
   >;
 };
 
-// NOTE: Builder API does not support SSZ as per spec, need to keep routes as JSON-only for now
-// See https://github.com/ethereum/builder-specs/issues/53 for more details
-
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     status: {
@@ -125,7 +122,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     submitBlindedBlock: {
       url: "/eth/v1/builder/blinded_blocks",
       method: "POST",
-      req: JsonOnlyReq({
+      req: {
         writeReqJson: ({signedBlindedBlock}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
@@ -141,11 +138,26 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
           };
         },
+        writeReqSsz: ({signedBlindedBlock}) => {
+          const fork = config.getForkName(signedBlindedBlock.message.slot);
+          return {
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body),
+          };
+        },
         schema: {
           body: Schema.Object,
           headers: {[MetaHeader.Version]: Schema.String},
         },
-      }),
+      },
       resp: {
         data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
           return isForkBlobs(fork)

@@ -18,6 +18,7 @@ import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
+import {WireFormat} from "@lodestar/api";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
@@ -52,6 +53,13 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   status = false;
   faultInspectionWindow: number;
   allowedFaults: number;
+
+  /**
+   * Determine if SSZ is supported by requesting an SSZ encoded response in the `getHeader` request.
+   * If the builder responds with a SSZ serialized `SignedBuilderBid` it indicates support for submitting
+   * the `SignedBlindedBeaconBlock` as SSZ serialized bytes instead of JSON via `submitBlindedBlock`.
+   */
+  private sszSupported = false;
 
   constructor(
     opts: ExecutionBuilderHttpOpts,
@@ -123,13 +131,17 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     blobKzgCommitments?: deneb.BlobKzgCommitments;
     executionRequests?: electra.ExecutionRequests;
   }> {
-    const signedBuilderBid = (
-      await this.api.getHeader({slot, parentHash, proposerPubkey}, {timeoutMs: BUILDER_PROPOSAL_DELAY_TOLERANCE})
-    ).value();
+    const res = await this.api.getHeader(
+      {slot, parentHash, proposerPubkey},
+      {timeoutMs: BUILDER_PROPOSAL_DELAY_TOLERANCE}
+    );
+    const signedBuilderBid = res.value();
 
     if (!signedBuilderBid) {
       throw Error("No bid received");
     }
+
+    this.sszSupported = res.wireFormat() === WireFormat.ssz;
 
     const {header, value: executionPayloadValue} = signedBuilderBid.message;
     const {blobKzgCommitments} = signedBuilderBid.message as deneb.BuilderBid;
@@ -138,9 +150,12 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async submitBlindedBlock(signedBlindedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents> {
-    const data = (await this.api.submitBlindedBlock({signedBlindedBlock}, {retries: 2})).value();
+    const res = await this.api.submitBlindedBlock(
+      {signedBlindedBlock},
+      {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+    );
 
-    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);
+    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(res.value());
 
     // for the sake of timely proposals we can skip matching the payload with payloadHeader
     // if the roots (transactions, withdrawals) don't match, this will likely lead to a block with
