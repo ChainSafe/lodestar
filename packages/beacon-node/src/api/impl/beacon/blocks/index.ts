@@ -269,7 +269,7 @@ export function getBeaconBlockApi({
     const source = ProducedBlockSource.builder;
     chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
-    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
+    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock, context?.sszBytes);
 
     // the full block is published by relay and it's possible that the block is already known to us
     // by gossip
@@ -507,13 +507,14 @@ export function getBeaconBlockApi({
 
 async function reconstructBuilderBlockOrContents(
   chain: ApiModules["chain"],
-  signedBlindedBlock: SignedBlindedBeaconBlock
+  signedBlindedBlock: SignedBlindedBeaconBlock,
+  blockBytes?: Uint8Array | null
 ): Promise<SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
     throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
   }
 
-  const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+  const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlock, blockBytes);
   return signedBlockOrContents;
 }

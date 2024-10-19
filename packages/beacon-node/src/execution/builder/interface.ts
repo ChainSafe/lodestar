@@ -39,5 +39,8 @@ export interface IExecutionBuilder {
     blobKzgCommitments?: deneb.BlobKzgCommitments;
     executionRequests?: electra.ExecutionRequests;
   }>;
-  submitBlindedBlock(signedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents>;
+  submitBlindedBlock(
+    signedBlindedBlock: SignedBlindedBeaconBlock,
+    blockBytes?: Uint8Array | null
+  ): Promise<SignedBeaconBlockOrContents>;
 }

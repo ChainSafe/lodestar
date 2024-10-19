@@ -71,7 +71,7 @@ export type Endpoints = {
 
   submitBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: SignedBlindedBeaconBlock},
+    {signedBlindedBlock: SignedBlindedBeaconBlock; blockBytes?: Uint8Array | null},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta
@@ -138,10 +138,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
           };
         },
-        writeReqSsz: ({signedBlindedBlock}) => {
+        writeReqSsz: ({signedBlindedBlock, blockBytes}) => {
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
+            body: blockBytes ?? getExecutionForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
             headers: {
               [MetaHeader.Version]: fork,
             },

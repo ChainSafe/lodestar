@@ -149,9 +149,12 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     return {header, executionPayloadValue, blobKzgCommitments, executionRequests};
   }
 
-  async submitBlindedBlock(signedBlindedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents> {
+  async submitBlindedBlock(
+    signedBlindedBlock: SignedBlindedBeaconBlock,
+    blockBytes?: Uint8Array | null
+  ): Promise<SignedBeaconBlockOrContents> {
     const res = await this.api.submitBlindedBlock(
-      {signedBlindedBlock},
+      {signedBlindedBlock, blockBytes},
       {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
     );
 
