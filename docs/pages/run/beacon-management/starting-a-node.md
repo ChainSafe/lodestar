@@ -126,7 +126,7 @@ If possible, validate your `wssCheckpoint` state from multiple places (e.g. diff
 #### Still Taking Long to Sync?
 
 After your node has been offline for a while, it might be the case that it takes a long time to sync even though a `--checkpointSyncUrl` is specified.
-This is due to the fact that the last databse state is still within the weak subjectivity period (~15 days on mainnet) which causes the node
+This is due to the fact that the last database state is still within the weak subjectivity period (~15 days on mainnet) which causes the node
 to sync from the database state instead of the checkpoint state.
 
 It is possible to force syncing from a checkpoint state by supplying the `--forceCheckpointSync` flag. This option is only recommended if it is absolutely
@@ -134,7 +134,7 @@ necessary for the node to be synced right away to fulfill its duties as there is
 
 ### Sync Log Guide
 
-The Lodestar beacon syncronization log aims to provide information of utmost importance about the state of your node and be succinct at the same time. You may see the sync logs in the following format:
+The Lodestar beacon sync log aims to provide information of utmost importance about the state of your node and be succinct at the same time. You may see the sync logs in the following format:
 
 `[Sync status] - [ Slot info ] - [Head info] - [Execution block info] - [Finalized info] - [Peers info]`
 
