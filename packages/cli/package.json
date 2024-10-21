@@ -57,7 +57,7 @@
     "@chainsafe/discv5": "^10.0.1",
     "@chainsafe/enr": "^4.0.1",
     "@chainsafe/persistent-merkle-tree": "^0.8.0",
-    "@chainsafe/ssz": "^0.17.1",
+    "@chainsafe/ssz": "^0.18.0",
     "@chainsafe/threads": "^1.11.1",
     "@libp2p/crypto": "^5.0.4",
     "@libp2p/interface": "^2.1.2",

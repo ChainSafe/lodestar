@@ -76,7 +76,7 @@
     "@chainsafe/bls": "7.1.3",
     "@chainsafe/blst": "^0.2.0",
     "@chainsafe/persistent-merkle-tree": "^0.8.0",
-    "@chainsafe/ssz": "^0.17.1",
+    "@chainsafe/ssz": "^0.18.0",
     "@lodestar/api": "^1.22.0",
     "@lodestar/config": "^1.22.0",
     "@lodestar/params": "^1.22.0",
