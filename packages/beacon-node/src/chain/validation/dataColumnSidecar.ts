@@ -72,6 +72,8 @@ export function validateDataColumnsSidecars(
     if (
       columnBlockHeader.slot !== blockSlot ||
       !byteArrayEquals(columnBlockRoot, blockRoot) ||
+      kzgCommitments.length === 0 ||
+      blockKzgCommitments.length === 0 ||
       blockKzgCommitments.length !== kzgCommitments.length ||
       blockKzgCommitments
         .map((commitment, i) => byteArrayEquals(commitment, kzgCommitments[i]))
