@@ -25,7 +25,7 @@ export function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The finality_update is received after the block at signature_slot was given enough time to propagate
-  // through the network -- i.e. validate that one-third of finality_update.signature_slot has transpired
+  // through the network -- i.e. validate that first interval (1 / INTERVALS_PER_SLOT) of finality_update.signature_slot has transpired
   // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   if (updateReceivedTooEarly(config, chain.genesisTime, gossipedFinalityUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {

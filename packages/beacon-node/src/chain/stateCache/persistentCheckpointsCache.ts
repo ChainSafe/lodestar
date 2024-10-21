@@ -1,9 +1,13 @@
 import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  ONE_INTERVAL_OF_SLOT,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+} from "@lodestar/state-transition";
 import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
-import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
@@ -479,14 +483,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
 
     const blockSlot = state.slot;
-    const twoThirdsSlot = (2 * state.config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
+    const twoIntervalsFromSlot = 2 * ONE_INTERVAL_OF_SLOT * state.config.SECONDS_PER_SLOT;
     // we always have clock in production, fallback value is only for test
-    const secFromSlot = this.clock?.secFromSlot(blockSlot) ?? twoThirdsSlot;
-    const secToTwoThirdsSlot = twoThirdsSlot - secFromSlot;
-    if (secToTwoThirdsSlot > 0) {
+    const secFromSlot = this.clock?.secFromSlot(blockSlot) ?? twoIntervalsFromSlot;
+    const secToTwoIntervalsFromSlot = twoIntervalsFromSlot - secFromSlot;
+    if (secToTwoIntervalsFromSlot > 0) {
       // 2/3 of slot is the most free time of every slot, take that chance to persist checkpoint states
       // normally it should only persist checkpoint states at 2/3 of slot 0 of epoch
-      await sleep(secToTwoThirdsSlot * 1000, this.signal);
+      await sleep(secToTwoIntervalsFromSlot * 1000, this.signal);
     } else if (!this.processLateBlock) {
       // normally the block persist happens at 2/3 of slot 0 of epoch, if it's already late then just skip to allow other tasks to run
       // there are plenty of chances in the same epoch to persist checkpoint states, also if block is late it could be reorged
