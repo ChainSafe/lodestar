@@ -9,6 +9,7 @@ import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpo
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/archiver.js";
 export {StateArchiveMode} from "./archiver/interface.js";
+export {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/archiver.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
