@@ -4,11 +4,11 @@ title: Home
 
 ![lodestar logo](../../assets/lodestar_icon_text_black_stroke.png)
 
-## Welcome to the Lodestar documentation
+## Welcome to the Lodestar Documentation
 
 > **Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems**
 
-### Getting started
+### Getting Started
 
 - Follow the instructions for [build from source](./run/getting-started/installation#build-from-source), [binaries](./run/getting-started/installation#binaries), or [Docker](./run/getting-started/installation#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
 - Use [Lodestar libraries](./supporting-libraries/index.md) in your next Ethereum Typescript project.
@@ -26,14 +26,18 @@ Hardware specifications minimum / recommended, to run the Lodestar client.
 |           | Minimum                                | Recommended                            |
 | --------- | -------------------------------------- | -------------------------------------- |
 | Processor | Intel Core i3–9100 or AMD Ryzen 5 3450 | Intel Core i7–9700 or AMD Ryzen 7 4700 |
-| Memory    | 16GB RAM                               | 32GB RAM                               |
-| Storage   | 100GB available space SSD              | 1TB available space SSD                |
-| Internet  | Broadband connection                   | Broadband connection                   |
+| Memory    | 8 GB RAM                               | 16 GB RAM                              |
+| Storage   | 130 GB available space SSD             | 200 GB available space SSD             |
+| Internet  | Reliable broadband with 10mbps upload  | Reliable broadband with >10mbps upload |
 
-## About these docs
+### Execution Client
 
-This documentation is open source, contribute at [Github Lodestar repository /docs](https://github.com/ChainSafe/lodestar/tree/unstable/docs).
+If you run the [execution client](https://ethereum.org/en/developers/docs/nodes-and-clients/#execution-clients) on the same host, you will need to check their requirements and add them to the above requirements.
 
-## Need assistance?
+## About These Docs
+
+This documentation is open source, contribute on our [Github Lodestar repository /docs](https://github.com/ChainSafe/lodestar/tree/unstable/docs).
+
+## Need Assistance?
 
 If you have questions about this documentation, feel free to talk to us on our [ChainSafe Discord](https://discord.gg/yjyvFRP) or [open an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) and a member of the team or our community will be happy to assist you.
