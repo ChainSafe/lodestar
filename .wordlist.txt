@@ -135,6 +135,7 @@ dApp
 dApps
 ddos
 decrypt
+decrypted
 derypted
 deserialization
 dev
@@ -156,6 +157,7 @@ flamegraphs
 floodsub
 fsSL
 getNetworkIdentity
+Golang
 gnosis
 gpg
 heapdump
@@ -170,6 +172,7 @@ keystores
 libp
 lightclient
 linter
+liveness
 lldb
 llnode
 lockfile
@@ -179,6 +182,7 @@ mbps
 mdns
 merkle
 merkleization
+MevBoost
 misconfiguration
 mmeshsub
 monorepo
@@ -187,6 +191,7 @@ multifork
 namespace
 namespaced
 namespaces
+Nim
 nodemodule
 orchestrator
 osx
