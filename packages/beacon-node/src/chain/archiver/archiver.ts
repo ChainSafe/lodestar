@@ -8,7 +8,10 @@ import {Metrics} from "../../metrics/metrics.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 import {StateArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
-import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
+
+export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
+
+export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -61,7 +64,7 @@ export class Archiver {
 
   /** Archive latest finalized state */
   async persistToDisk(): Promise<void> {
-    await this.statesArchiverStrategy.maybeArchiveState(this.chain.forkChoice.getFinalizedCheckpoint());
+    return this.statesArchiverStrategy.maybeArchiveState(this.chain.forkChoice.getFinalizedCheckpoint());
   }
 
   private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {

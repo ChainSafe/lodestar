@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import {StateArchiveMode, defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {StateArchiveMode, defaultOptions, IBeaconNodeOptions, DEFAULT_STATE_ARCHIVE_MODE} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {
@@ -215,7 +215,7 @@ Will double processing times. Use only for debugging purposes.",
   "chain.stateArchiveMode": {
     hidden: true,
     choices: Object.values(StateArchiveMode),
-    description: "Strategy to manage archive states",
+    description: `Strategy to manage archive states, only support ${DEFAULT_STATE_ARCHIVE_MODE} at this time`,
     default: defaultOptions.chain.stateArchiveMode,
     type: "string",
     group: "chain",

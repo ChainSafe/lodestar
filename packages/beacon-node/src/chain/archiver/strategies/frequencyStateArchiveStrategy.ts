@@ -10,7 +10,12 @@ import {serializeState} from "../../serializeState.js";
 import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {StateArchiveStrategy, StatesArchiverOpts} from "../interface.js";
-import {PERSIST_TEMP_STATE_EVERY_EPOCHS} from "../constants.js";
+
+/**
+ * Minimum number of epochs between single temp archived states
+ * These states will be pruned once a new state is persisted
+ */
+export const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
 
 /**
  * Archives finalized states from active bucket to archive bucket.

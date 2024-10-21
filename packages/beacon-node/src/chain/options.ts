@@ -7,7 +7,7 @@ import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
-import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/constants.js";
+import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/archiver.js";
 export {StateArchiveMode} from "./archiver/interface.js";
 
 export type IChainOptions = BlockProcessOpts &

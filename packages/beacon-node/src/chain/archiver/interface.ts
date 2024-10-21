@@ -4,7 +4,8 @@ import {RootHex} from "@lodestar/types";
 
 export enum StateArchiveMode {
   Frequency = "frequency",
-  // Specify only existing strategy
+  // New strategy to be implemented
+  // WIP: https://github.com/ChainSafe/lodestar/pull/7005
   // Differential = "diff",
 }
 
