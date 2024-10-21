@@ -43,6 +43,7 @@ GPG
 Geth
 Github
 Goerli
+Golang
 Gossipsub
 Grafana
 Grandine
@@ -70,11 +71,13 @@ Lerna
 MEV
 MacOS
 Metamask
+MevBoost
 ModuleNotFoundError
 Monorepo
 NPM
 NVM
 Nethermind
+Nim
 NodeJS
 NodeSource
 OSI
@@ -157,7 +160,6 @@ flamegraphs
 floodsub
 fsSL
 getNetworkIdentity
-Golang
 gnosis
 gpg
 heapdump
@@ -182,7 +184,6 @@ mbps
 mdns
 merkle
 merkleization
-MevBoost
 misconfiguration
 mmeshsub
 monorepo
@@ -191,7 +192,6 @@ multifork
 namespace
 namespaced
 namespaces
-Nim
 nodemodule
 orchestrator
 osx
