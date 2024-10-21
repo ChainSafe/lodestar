@@ -649,10 +649,10 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/ssz@^0.17.1":
-  version "0.17.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.17.1.tgz#7986afbcad5e6971006d596fdb7dfa34bc195131"
-  integrity sha512-1ay46QqYcVTBvUnDXTPTi5WTiENu7tIxpZGMDpUWps1/nYBmh/We/UoCF/jO+o/fkcDD3p8xQPlHbcCfy+jyjA==
+"@chainsafe/ssz@^0.18.0":
+  version "0.18.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.18.0.tgz#773d40df9dff3b6a2a4c6685d9797abceb9d36f7"
+  integrity sha512-1ikTjk3JK6+fsGWiT5IvQU0AP6gF3fDzGmPfkKthbcbgTUR8fjB83Ywp9ko/ZoiDGfrSFkATgT4hvRzclu0IAA==
   dependencies:
     "@chainsafe/as-sha256" "0.5.0"
     "@chainsafe/persistent-merkle-tree" "0.8.0"

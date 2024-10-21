@@ -62,7 +62,7 @@
     "@chainsafe/blst": "^2.0.3",
     "@chainsafe/persistent-merkle-tree": "^0.8.0",
     "@chainsafe/persistent-ts": "^0.19.1",
-    "@chainsafe/ssz": "^0.17.1",
+    "@chainsafe/ssz": "^0.18.0",
     "@chainsafe/swap-or-not-shuffle": "^0.0.2",
     "@lodestar/config": "^1.22.0",
     "@lodestar/params": "^1.22.0",

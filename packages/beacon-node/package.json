@@ -102,7 +102,7 @@
     "@chainsafe/libp2p-noise": "^16.0.0",
     "@chainsafe/persistent-merkle-tree": "^0.8.0",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
-    "@chainsafe/ssz": "^0.17.1",
+    "@chainsafe/ssz": "^0.18.0",
     "@chainsafe/threads": "^1.11.1",
     "@chainsafe/pubkey-index-map": "2.0.0",
     "@ethersproject/abi": "^5.7.0",
