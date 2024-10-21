@@ -71,7 +71,11 @@ export type Endpoints = {
 
   submitBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: SignedBlindedBeaconBlock; blockBytes?: Uint8Array | null},
+    {
+      signedBlindedBlock: SignedBlindedBeaconBlock;
+      /** SSZ serialized `signedBlindedBlock` bytes */
+      blockBytes?: Uint8Array | null;
+    },
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta
