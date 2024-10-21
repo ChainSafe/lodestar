@@ -12,6 +12,7 @@ import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 import {ClockStatic} from "./clock.js";
 import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
+import {StateArchiveMode} from "../../src/index.js";
 
 export type NetworkForTestOpts = {
   startSlot?: number;
@@ -54,6 +55,7 @@ export async function getNetworkForTest(
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
       minSameMessageSignatureSetsToBatch: 32,
+      stateArchiveMode: StateArchiveMode.Frequency,
     },
     {
       config: beaconConfig,
