@@ -5,7 +5,7 @@ This is a step-by-step guide to utilize [@ChainSafe/lodestar-quickstart](https:/
 This guide will provide instructions which include running a local execution node. This guide uses Lodestar's `stable` release branch and supports **Holesky** testnet setups and **Mainnet**.
 
 :::info
-This guide specifically focuses on using Lodestar's Quickstart scripts which allows for near instantanious setup with the following technologies:
+This guide specifically focuses on using Lodestar's Quickstart scripts which allows for near instant setup with the following technologies:
 
 - [Ubuntu v22.04 (LTS) x64 server](https://releases.ubuntu.com/22.04/)
 - Ethereum Execution (eth1) clients:
@@ -68,7 +68,7 @@ Check your available disk space. Even you have a large SSD there are cases where
 
 We must install Docker Engine to run the images on your local machine.
 
-#### Add Docker's GPG Keyrings
+#### Add Docker's GPG keyrings
 
 Run each line one at a time.
 
@@ -556,7 +556,7 @@ Configure the above commands with what you intend to run using the Quickstart Sc
 | `--detached`              | Optional\*        | By default the script will wait for processes and use user input (ctrl +c) to end the processes, however you can pass this option to skip this behavior and just return, for e.g. in case you just want to leave it running.                                                                                                                                                                                               |
 | `--withValidatorKeystore` | Optional\*\*      | Launch a validator client using `LODESTAR_VALIDATOR_MNEMONIC_ARGS` (`--withValidatorMnemonic`) or using a folder (`--withValidatorKeystore <abs path to folder`) having `keystores` and `pass.txt` (which advance users may modify in `LODESTAR_VALIDATOR_KEYSTORE_ARGS` as per their setup). Users can spin up multiple validators using `--withValidatorMnemonic <folder path> --justVC` connecting to same beacon node. |
 | `--withValidatorMnemonic` | Optional\*\*      | Launch a validator client using mnemonic method.(`LODESTAR_VALIDATOR_MNEMONIC_ARGS`) as set in the network vars file.                                                                                                                                                                                                                                                                                                      |
-| `--withMevBoost`          | Optional          | Launch a MEV-Boost container to interface with multiple relays picked for the corresponding network vars file. When paired with `--justCL` or `--justVC` this only activates the builder args in the beacon/validator and use the builder url set in MEVBOOST_URL variable in fixed.vars                                                                                                                                   |
+| `--withMevBoost`          | Optional          | Launch a MEV-Boost container to interface with multiple relays picked for the corresponding network vars file. When paired with `--justCL` or `--justVC` this only activates the builder arguments in the beacon/validator and use the builder url set in MEVBOOST_URL variable in fixed.vars                                                                                                                                   |
 | `--justEL`                | Optional          | Launch only the Execution Layer client.                                                                                                                                                                                                                                                                                                                                                                                    |
 | `--justCL`                | Optional          | Launch only the Lodestar beacon node.                                                                                                                                                                                                                                                                                                                                                                                      |
 | `--justVC`                | Optional          | Launch only the Lodestar validator.                                                                                                                                                                                                                                                                                                                                                                                        |

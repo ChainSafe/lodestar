@@ -4,7 +4,7 @@ Prometheus is an open-source monitoring system with efficient time series databa
 
 ## Localized Docker Metrics Script
 
-The Lodestar team has setup a script which will copy the latest dashboards compiled by our team for development purposes. By utilizing the script localed in `/docker/docker-compose.local_dev.sh`, you can instantly setup the latest dockerized metrics alongside your local beacon node.
+The Lodestar team has setup a script which will copy the latest dashboards compiled by our team for development purposes. By utilizing the script located in `/docker/docker-compose.local_dev.sh`, you can instantly setup the latest dockerized metrics alongside your local beacon node.
 
 ## Prometheus Setup
 
