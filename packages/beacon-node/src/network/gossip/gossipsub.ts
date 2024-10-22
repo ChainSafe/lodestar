@@ -4,7 +4,7 @@ import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
+import {Logger, Map2d, Map2dArr, MapDef, pruneSetToMax} from "@lodestar/utils";
 
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -25,6 +25,8 @@ import {
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
 } from "./scoringParameters.js";
+import {RootHex, Slot} from "@lodestar/types";
+import {createExtractBlockSlotRootFns} from "../processor/extractSlotRootFns.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
@@ -58,6 +60,9 @@ export type Eth2GossipsubOpts = {
   disableLightClientServer?: boolean;
 };
 
+// TODO: dedup
+const DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE = 32;
+
 /**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
  * - Eth2 message id
@@ -80,6 +85,10 @@ export class Eth2Gossipsub extends GossipSub {
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private readonly validatedBlocks: Map<Slot, RootHex>;
+  private readonly awaitingEventsByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<GossipsubEvents["gossipsub:message"]>>>;
+  private readonly extractBlockSlotRootFns = createExtractBlockSlotRootFns();
+  private unknownBlockGossipsubEventsCount = 0;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -161,6 +170,11 @@ export class Eth2Gossipsub extends GossipSub {
     if (!opts.skipParamsLog) {
       this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
     }
+
+    this.awaitingEventsByRootBySlot = new MapDef(
+      () => new MapDef<RootHex, Set<GossipsubEvents["gossipsub:message"]>>(() => new Set())
+    );
+    this.validatedBlocks = new Map();
   }
 
   /**
@@ -283,9 +297,49 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Register full score too
     metrics.gossipPeer.score.set(gossipScores);
+
+    metrics.queuedEvents.countPerSlot.set(this.unknownBlockGossipsubEventsCount);
   }
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
+    const {msg} = event.detail;
+    const topic = this.gossipTopicCache.getTopic(msg.topic);
+    const topicType = topic.type;
+    const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
+
+    // this event does not depend on a validated block, no need to queue
+    if (extractBlockSlotRootFn == null) {
+      this.sendToMainThread(event);
+      return;
+
+    }
+    // check block root of Attestation and SignedAggregateAndProof messages
+    const slotRoot = extractBlockSlotRootFn(msg.data);
+    if (slotRoot) {
+      const {slot, root: rootHex} = slotRoot;
+      if (rootHex == null) {
+        // this event does not depend on a validated block, no need to queue
+        this.sendToMainThread(event);
+        return;
+      }
+
+      if (this.validatedBlocks.get(slot) === rootHex) {
+        // dependent block is validated, no need to queue
+        this.sendToMainThread(event);
+      } else {
+        // this is most likely a message that depends current slot block that is not yet validated
+        // we queue it until the block is validated
+        // no need to care about messages that are too old
+        // they will be pruned once we have a validated block
+        const awaitingEventsByRoot = this.awaitingEventsByRootBySlot.getOrDefault(slot);
+        const events = awaitingEventsByRoot.getOrDefault(rootHex);
+        // TODO: bound max size
+        events.add(event);
+      }
+    }
+  }
+
+  private sendToMainThread(event: GossipsubEvents["gossipsub:message"]): void {
     const {propagationSource, msgId, msg} = event.detail;
 
     // Also validates that the topicStr is known
@@ -320,8 +374,31 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   private onBlockProcessed(data: NetworkEventData[NetworkEvent.blockProcessed]): void {
-  }
+    const {rootHex, slot} = data;
+    this.validatedBlocks.set(slot, rootHex);
+    pruneSetToMax(this.validatedBlocks, DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE);
+    const events = this.awaitingEventsByRootBySlot.get(slot)?.get(rootHex);
+    if (events) {
+      for (const event of events) {
+        this.sendToMainThread(event);
+      }
+    }
 
+    const eventsInCurrentSlot = this.awaitingEventsByRootBySlot.get(slot);
+    this.unknownBlockGossipsubEventsCount = 0;
+    if (eventsInCurrentSlot) {
+      for (const events of eventsInCurrentSlot.values()) {
+        this.unknownBlockGossipsubEventsCount += events.size;
+      }
+    }
+
+    for (const cachedSlot of this.awaitingEventsByRootBySlot.keys()) {
+      // TODO: more metrics, bound max size
+      if (cachedSlot <= slot) {
+        this.awaitingEventsByRootBySlot.delete(cachedSlot);
+      }
+    }
+  }
 }
 
 /**

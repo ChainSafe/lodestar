@@ -1,6 +1,6 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
-import {phase0, RootHex} from "@lodestar/types";
+import {phase0, RootHex, Slot} from "@lodestar/types";
 import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {PeerIdStr} from "../util/peerId.js";
@@ -40,7 +40,7 @@ export type NetworkEventData = {
     propagationSource: PeerIdStr;
     acceptance: TopicValidatorResult;
   };
-  [NetworkEvent.blockProcessed]: {rootHex: RootHex};
+  [NetworkEvent.blockProcessed]: {slot: Slot; rootHex: RootHex};
 };
 
 export const networkEventDirection: Record<NetworkEvent, EventDirection> = {

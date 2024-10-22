@@ -50,5 +50,6 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
       }
       return {slot};
     },
+    // TODO: sync committee messages
   };
 }

@@ -56,5 +56,12 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
         labelNames: ["subnet", "fork"],
       }),
     },
+    queuedEvents: {
+      countPerSlot: register.gauge({
+        name: "lodestar_gossip_queued_messages_per_slot_total",
+        help: "Total number of gossip messages waiting to be sent to main thread pet slot",
+      }),
+      // TODO: more metrics, for example messages that's too old
+    }
   };
 }
