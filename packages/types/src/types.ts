@@ -32,6 +32,12 @@ export enum ProducedBlockSource {
   engine = "engine",
 }
 
+export type WithOptionalBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes?: Uint8Array | null;
+};
+
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
 

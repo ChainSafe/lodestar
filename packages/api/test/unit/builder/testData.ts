@@ -23,7 +23,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: ssz.bellatrix.SignedBuilderBid.defaultValue(), meta: {version: ForkName.bellatrix}},
   },
   submitBlindedBlock: {
-    args: {signedBlindedBlock: ssz.deneb.SignedBlindedBeaconBlock.defaultValue()},
+    args: {signedBlindedBlock: {data: ssz.deneb.SignedBlindedBeaconBlock.defaultValue()}},
     res: {data: ssz.bellatrix.ExecutionPayload.defaultValue(), meta: {version: ForkName.bellatrix}},
   },
 };

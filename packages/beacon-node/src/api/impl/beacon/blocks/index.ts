@@ -15,6 +15,7 @@ import {
   SignedBeaconBlock,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  WithOptionalBytes,
 } from "@lodestar/types";
 import {
   BlockSource,
@@ -269,7 +270,10 @@ export function getBeaconBlockApi({
     const source = ProducedBlockSource.builder;
     chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
-    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
+    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+      data: signedBlindedBlock,
+      bytes: context?.sszBytes,
+    });
 
     // the full block is published by relay and it's possible that the block is already known to us
     // by gossip
@@ -507,7 +511,7 @@ export function getBeaconBlockApi({
 
 async function reconstructBuilderBlockOrContents(
   chain: ApiModules["chain"],
-  signedBlindedBlock: SignedBlindedBeaconBlock
+  signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
 ): Promise<SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
