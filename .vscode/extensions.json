@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "biomejs.biome",
-    "esbenp.prettier-vscode",
-    "KalimahApps.tabaqa"
+    "esbenp.prettier-vscode"
   ]
 }
