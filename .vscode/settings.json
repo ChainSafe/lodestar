@@ -1,8 +1,8 @@
 {
   "window.title": "${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}[${activeRepositoryBranchName}]",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  // If you are using `sysoev.vscode-open-in-github` extension, make sure to enable this setting
-  // "openInGitHub.defaultBranch": "unstable",
+  // To use this settings please install `sysoev.vscode-open-in-github` extension
+  "openInGitHub.defaultBranch": "unstable",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit",
