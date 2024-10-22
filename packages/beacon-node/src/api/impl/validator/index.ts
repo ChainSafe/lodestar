@@ -70,6 +70,7 @@ import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossi
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {ApiOptions} from "../../options.js";
+import {NoBidReceived} from "../../../execution/builder/http.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
@@ -661,14 +662,21 @@ export function getValidatorApi(
     }
 
     if (builder.status === "rejected" && isBuilderEnabled) {
-      logger.warn(
-        "Builder failed to produce the block",
-        {
+      if (builder.reason instanceof NoBidReceived) {
+        logger.info("Builder did not provide a bid", {
           ...loggerContext,
           durationMs: builder.durationMs,
-        },
-        builder.reason
-      );
+        });
+      } else {
+        logger.warn(
+          "Builder failed to produce the block",
+          {
+            ...loggerContext,
+            durationMs: builder.durationMs,
+          },
+          builder.reason
+        );
+      }
     }
 
     if (builder.status === "rejected" && engine.status === "rejected") {
