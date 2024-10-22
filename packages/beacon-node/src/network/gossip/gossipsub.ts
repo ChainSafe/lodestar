@@ -154,6 +154,7 @@ export class Eth2Gossipsub extends GossipSub {
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
+    this.events.on(NetworkEvent.blockProcessed, this.onBlockProcessed.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
@@ -317,6 +318,10 @@ export class Eth2Gossipsub extends GossipSub {
       this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
     });
   }
+
+  private onBlockProcessed(data: NetworkEventData[NetworkEvent.blockProcessed]): void {
+  }
+
 }
 
 /**

@@ -318,6 +318,7 @@ export class NetworkProcessor {
     block: string;
     executionOptimistic: boolean;
   }): Promise<void> {
+    this.events.emit(NetworkEvent.blockProcessed, {rootHex});
     this.isProcessingCurrentSlotBlock = false;
     const byRootGossipsubMessages = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
     const waitingGossipsubMessages = byRootGossipsubMessages.getOrDefault(rootHex);

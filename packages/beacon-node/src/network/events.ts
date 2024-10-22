@@ -24,6 +24,7 @@ export enum NetworkEvent {
   pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
   /** (App -> Network) A gossip message has been validated */
   gossipMessageValidationResult = "gossip.messageValidationResult",
+  blockProcessed = "blockProcessed",
 }
 
 export type NetworkEventData = {
@@ -39,6 +40,7 @@ export type NetworkEventData = {
     propagationSource: PeerIdStr;
     acceptance: TopicValidatorResult;
   };
+  [NetworkEvent.blockProcessed]: {rootHex: RootHex};
 };
 
 export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
@@ -50,6 +52,7 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.unknownBlockInput]: EventDirection.workerToMain,
   [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
   [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
+  [NetworkEvent.blockProcessed]: EventDirection.mainToWorker,
 };
 
 export type INetworkEventBus = StrictEventEmitterSingleArg<NetworkEventData>;
