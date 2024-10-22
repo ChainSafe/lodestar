@@ -1,6 +1,11 @@
 import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
+import {
+  SlotInterval,
+  computeEpochAtSlot,
+  endOfInterval,
+  isAggregatorFromCommitteeLength,
+} from "@lodestar/state-transition";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
@@ -89,9 +94,14 @@ export class AttestationService {
 
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
-    // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
-    await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
+    // (b) one interval of the slot has transpired (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of slot) -- whichever comes first.
+    await Promise.race([
+      sleep(this.clock.msToSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION), signal),
+      this.emitter.waitForBlockSlot(slot),
+    ]);
+    this.metrics?.attesterStepCallProduceAttestation.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION)
+    );
 
     if (this.opts?.disableAttestationGrouping) {
       // Attestation service grouping optimization must be disabled in a distributed validator cluster as
@@ -133,9 +143,11 @@ export class AttestationService {
     await this.signAndPublishAttestations(slot, attestation, dutiesSameCommittee);
 
     // Step 2. after all attestations are submitted, make an aggregate.
-    // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
-    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+    // First, wait until the beginning of SlotInterval.AGGREGATION_PROPAGATION
+    await sleep(this.clock.msToSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION)
+    );
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
@@ -154,9 +166,11 @@ export class AttestationService {
     await this.signAndPublishAttestations(slot, attestationNoCommittee, dutiesAll);
 
     // Step 2. after all attestations are submitted, make an aggregate.
-    // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
-    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+    // First, wait until the beginning of SlotInterval.AGGREGATION_PROPAGATION
+    await sleep(this.clock.msToSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.AGGREGATION_PROPAGATION)
+    );
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
     const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
@@ -214,20 +228,22 @@ export class AttestationService {
       })
     );
 
-    // signAndPublishAttestations() may be called before the 1/3 cutoff time if the block was received early.
+    // signAndPublishAttestations() may be called before the SlotInterval.ATTESTATION_PROPAGATION cutoff time if the block was received early.
     // If we produced the block or we got the block sooner than our peers, our attestations can be dropped because
     // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
-    // never beyond the 1/3 cutoff time.
+    // never beyond the SlotInterval.ATTESTATION_PROPAGATION cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
-    const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
+    const msToAttestationInterval = this.clock.msToSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION);
     // submitting attestations asap to avoid busy time at around 1/3 of slot
     const afterBlockDelayMs =
       1000 *
       this.clock.secondsPerSlot *
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
-    await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
+    await sleep(Math.min(msToAttestationInterval, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
+    this.metrics?.attesterStepCallPublishAttestation.observe(
+      this.clock.secFromSlotInterval(slot, SlotInterval.ATTESTATION_PROPAGATION)
+    );
 
     // Step 2. Publish all `Attestations` in one go
     const logCtx = {
@@ -311,7 +327,9 @@ export class AttestationService {
       })
     );
 
-    this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromSlot(attestation.slot + 2 / 3));
+    this.metrics?.attesterStepCallPublishAggregate.observe(
+      this.clock.secFromSlotInterval(attestation.slot, SlotInterval.AGGREGATION_PROPAGATION)
+    );
 
     if (signedAggregateAndProofs.length > 0) {
       try {
@@ -359,12 +377,12 @@ export class AttestationService {
 
     const res = await Promise.race([
       this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections}),
-      // Exit attestation aggregation flow if there is no response after 1/3 of slot as
+      // Exit attestation aggregation flow if there is no response after SlotInterval.BEACON_COMMITTEE_SELECTION of slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot + 1 / 3), signal),
+      sleep(this.clock.msToSlotInterval(slot, endOfInterval(SlotInterval.BEACON_COMMITTEE_SELECTION)), signal),
     ]);
 
     if (!res) {

@@ -2,6 +2,7 @@ import {ChainConfig} from "@lodestar/config";
 import {GENESIS_SLOT, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Slot, Epoch, TimeSeconds} from "@lodestar/types";
 import {computeStartSlotAtEpoch, computeEpochAtSlot} from "./epoch.js";
+import {SlotInterval, calculateSlotWithInterval} from "./slotInterval.js";
 
 export function getSlotsSinceGenesis(config: ChainConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
@@ -19,6 +20,16 @@ export function computeSlotsSinceEpochStart(slot: Slot, epoch?: Epoch): Slot {
 
 export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: TimeSeconds): TimeSeconds {
   return genesisTime + slot * config.SECONDS_PER_SLOT;
+}
+
+/** Compute time in seconds of the beginnng of interval of slot */
+export function computeTimeAtSlotInterval(
+  config: ChainConfig,
+  slot: Slot,
+  interval: SlotInterval,
+  genesisTime: TimeSeconds
+): TimeSeconds {
+  return genesisTime + calculateSlotWithInterval(slot, interval) * config.SECONDS_PER_SLOT;
 }
 
 export function getCurrentInterval(config: ChainConfig, secondsIntoSlot: number): number {

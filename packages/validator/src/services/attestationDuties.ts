@@ -1,6 +1,12 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {
+  SlotInterval,
+  computeEpochAtSlot,
+  endOfInterval,
+  isAggregatorFromCommitteeLength,
+  isStartSlotOfEpoch,
+} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
 import {batchItems, IClock, LoggerVc} from "../util/index.js";
@@ -134,8 +140,8 @@ export class AttestationDutiesService {
       return;
     }
 
-    // during the 1 / 3 of epoch, last block of epoch may come
-    await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
+    // during the first interval of slot, last block of epoch may come
+    await sleep(this.clock.msToSlotInterval(slot, endOfInterval(SlotInterval.BLOCK_PROPAGATION)), signal);
 
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;

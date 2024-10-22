@@ -73,7 +73,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     syncCommitteeStepCallProduceMessage: register.histogram({
       name: "vc_sync_committee_step_call_produce_message_seconds",
       help: "Time between 1/3 of slot and call produce message",
-      // Max wait time is 1 / 3 of slot
+      // Max wait time is 1 / INTERVALS_PER_SLOT of slot
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishMessage: register.histogram({
@@ -85,7 +85,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     syncCommitteeStepCallProduceAggregate: register.histogram({
       name: "vc_sync_committee_step_call_produce_aggregate_seconds",
       help: "Time between 2/3 of slot and call produce aggregate",
-      // Min wait time is 2 / 3 of slot
+      // Min wait time is 2 / INTERVAL_PER_SLOTS of slot
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishAggregate: register.histogram({
