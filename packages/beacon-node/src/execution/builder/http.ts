@@ -39,6 +39,12 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   timeout: 12000,
 };
 
+export class NoBidReceived extends Error {
+  constructor() {
+    super("No bid received");
+  }
+}
+
 /**
  * Duration given to the builder to provide a `SignedBuilderBid` before the deadline
  * is reached, aborting the external builder flow in favor of the local build process.
@@ -138,7 +144,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     const signedBuilderBid = res.value();
 
     if (!signedBuilderBid) {
-      throw Error("No bid received");
+      throw new NoBidReceived();
     }
 
     this.sszSupported = res.wireFormat() === WireFormat.ssz;
