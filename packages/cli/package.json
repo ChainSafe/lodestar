@@ -53,7 +53,7 @@
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/bls-keystore": "^3.1.0",
-    "@chainsafe/blst": "file:../../temp-deps/blst-ts",
+    "@chainsafe/blst": "^2.1.0",
     "@chainsafe/discv5": "^10.0.1",
     "@chainsafe/enr": "^4.0.1",
     "@chainsafe/persistent-merkle-tree": "^0.8.0",
