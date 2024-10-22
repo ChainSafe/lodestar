@@ -2,6 +2,7 @@ import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
   altair,
+  isELectraLightClientFinalityUpdate,
   isElectraLightClientUpdate,
   LightClientFinalityUpdate,
   LightClientUpdate,
@@ -19,6 +20,7 @@ import {
   NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
   FINALIZED_ROOT_DEPTH_ELECTRA,
   NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
+  FINALIZED_ROOT_INDEX_ELECTRA,
 } from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
@@ -80,12 +82,19 @@ export function assertValidLightClientUpdate(
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
 export function assertValidFinalityProof(update: LightClientFinalityUpdate): void {
+  const finalizedRootDepth = isELectraLightClientFinalityUpdate(update)
+    ? FINALIZED_ROOT_DEPTH_ELECTRA
+    : FINALIZED_ROOT_DEPTH;
+  const finalizedRootIndex = isELectraLightClientFinalityUpdate(update)
+    ? FINALIZED_ROOT_INDEX_ELECTRA
+    : FINALIZED_ROOT_INDEX;
+
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon),
       update.finalityBranch,
-      FINALIZED_ROOT_DEPTH,
-      FINALIZED_ROOT_INDEX,
+      finalizedRootDepth,
+      finalizedRootIndex,
       update.attestedHeader.beacon.stateRoot
     )
   ) {

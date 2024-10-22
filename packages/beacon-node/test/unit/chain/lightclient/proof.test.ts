@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeAll} from "vitest";
 import {BeaconStateAltair} from "@lodestar/state-transition";
-import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
 import {verifyMerkleBranch, hash} from "@lodestar/utils";
 import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
@@ -25,7 +25,7 @@ describe("chain / lightclient / proof", () => {
   });
 
   it("SyncCommittees proof", () => {
-    const syncCommitteesWitness = getSyncCommitteesWitness(state);
+    const syncCommitteesWitness = getSyncCommitteesWitness(ForkName.altair, state);
     const syncCommitteesLeaf = hash(
       syncCommitteesWitness.currentSyncCommitteeRoot,
       syncCommitteesWitness.nextSyncCommitteeRoot
@@ -42,7 +42,7 @@ describe("chain / lightclient / proof", () => {
   });
 
   it("currentSyncCommittee proof", () => {
-    const syncCommitteesWitness = getSyncCommitteesWitness(state);
+    const syncCommitteesWitness = getSyncCommitteesWitness(ForkName.altair, state);
     const currentSyncCommitteeBranch = [syncCommitteesWitness.nextSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 
     expect(
@@ -56,7 +56,7 @@ describe("chain / lightclient / proof", () => {
   });
 
   it("nextSyncCommittee proof", () => {
-    const syncCommitteesWitness = getSyncCommitteesWitness(state);
+    const syncCommitteesWitness = getSyncCommitteesWitness(ForkName.altair, state);
     const nextSyncCommitteeBranch = getNextSyncCommitteeBranch(syncCommitteesWitness);
 
     expect(

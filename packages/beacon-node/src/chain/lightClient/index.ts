@@ -388,12 +388,13 @@ export class LightClientServer {
     parentBlockSlot: Slot
   ): Promise<void> {
     const blockSlot = block.slot;
-    const header = blockToLightClientHeader(this.config.getForkName(blockSlot), block);
+    const fork = this.config.getForkName(blockSlot);
+    const header = blockToLightClientHeader(fork, block);
 
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.beacon);
     const blockRootHex = toRootHex(blockRoot);
 
-    const syncCommitteeWitness = getSyncCommitteesWitness(postState);
+    const syncCommitteeWitness = getSyncCommitteesWitness(fork, postState);
 
     // Only store current sync committee once per run
     if (!this.storedCurrentSyncCommittee) {
