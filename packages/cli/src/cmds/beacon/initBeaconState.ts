@@ -14,6 +14,8 @@ import {
   checkAndPersistAnchorState,
   initStateFromEth1,
   getStateTypeFromBytes,
+  HierarchicalLayers,
+  getLastStoredState,
 } from "@lodestar/beacon-node";
 import {Checkpoint} from "@lodestar/types/phase0";
 
@@ -103,8 +105,13 @@ export async function initBeaconState(
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
   //   i)  used directly as the anchor state
   //   ii) used to load and verify a weak subjectivity state,
-  const lastDbSlot = await db.stateArchive.lastKey();
-  const stateBytes = lastDbSlot !== null ? await db.stateArchive.getBinary(lastDbSlot) : null;
+  //   ii) used during verification of a weak subjectivity state,
+  const {stateBytes, slot: lastDbSlot} = await getLastStoredState({
+    db,
+    hierarchicalLayers: HierarchicalLayers.fromString(),
+    logger,
+    archiveMode: options.chain.stateArchiveMode,
+  });
   let lastDbState: BeaconStateAllForks | null = null;
   let lastDbValidatorsBytes: Uint8Array | null = null;
   let lastDbStateWithBytes: StateWithBytes | null = null;

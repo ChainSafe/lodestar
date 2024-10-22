@@ -7,7 +7,7 @@ import {getStateTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
 
-export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks> {
+export class StateArchiveRepository extends Repository<Slot, Uint8Array> {
   constructor(config: ChainForkConfig, db: Db) {
     // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -18,22 +18,22 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
 
   // Overrides for multi-fork
 
-  encodeValue(value: BeaconStateAllForks): Uint8Array {
-    return value.serialize();
+  encodeValue(_value: Uint8Array): Uint8Array {
+    throw new Error("Non supported");
   }
 
-  decodeValue(data: Uint8Array): BeaconStateAllForks {
-    return getStateTypeFromBytes(this.config, data).deserializeToViewDU(data);
+  decodeValue(_data: Uint8Array): Uint8Array {
+    throw new Error("Non supported");
   }
 
   // Handle key as slot
 
-  async put(key: Slot, value: BeaconStateAllForks): Promise<void> {
-    await Promise.all([super.put(key, value), storeRootIndex(this.db, key, value.hashTreeRoot())]);
+  async put(_key: Slot, _value: Uint8Array): Promise<void> {
+    throw new Error("Non supported");
   }
 
-  getId(state: BeaconStateAllForks): Epoch {
-    return state.slot;
+  getId(_state: Uint8Array): Epoch {
+    throw new Error("Non supported");
   }
 
   decodeKey(data: Uint8Array): number {
@@ -42,7 +42,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
 
   // Index Root -> Slot
 
-  async getByRoot(stateRoot: Root): Promise<BeaconStateAllForks | null> {
+  async getByRoot(stateRoot: Root): Promise<Uint8Array | null> {
     const slot = await this.getSlotByRoot(stateRoot);
     if (slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
@@ -61,7 +61,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
     }));
   }
 
-  private async getSlotByRoot(root: Root): Promise<Slot | null> {
+  async getSlotByRoot(root: Root): Promise<Slot | null> {
     const value = await this.db.get(getRootIndexKey(root));
     return value && bytesToInt(value, "be");
   }

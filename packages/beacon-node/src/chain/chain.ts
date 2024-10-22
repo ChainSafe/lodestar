@@ -89,7 +89,7 @@ import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produ
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {HistoricalStateRegen} from "./historicalState/index.js";
+import {IHistoricalStateRegen} from "./historicalState/index.js";
 import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
@@ -130,7 +130,7 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly historicalStateRegen?: HistoricalStateRegen;
+  readonly historicalStateRegen?: IHistoricalStateRegen;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -201,7 +201,7 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
-      historicalStateRegen?: HistoricalStateRegen;
+      historicalStateRegen?: IHistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -532,8 +532,14 @@ export class BeaconChain implements IBeaconChain {
       };
     }
 
-    const data = await this.db.stateArchive.getByRoot(fromHex(stateRoot));
-    return data && {state: data, executionOptimistic: false, finalized: true};
+    const slot = await this.db.stateArchive.getSlotByRoot(fromHex(stateRoot));
+    if (!slot) return null;
+
+    const stateBytes = await this.historicalStateRegen?.getHistoricalState(slot);
+    if (!stateBytes) return null;
+
+    const state = this.config.getForkTypes(slot).BeaconState.deserialize(stateBytes);
+    return {state: state as unknown as BeaconStateAllForks, executionOptimistic: false, finalized: true};
   }
 
   getStateByCheckpoint(

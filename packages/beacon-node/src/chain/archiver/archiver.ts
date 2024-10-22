@@ -8,6 +8,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 import {StateArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
+import {DifferentialStateArchiveStrategy} from "./strategies/diffStateArchiveStrategy.js";
 
 export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
 
@@ -33,10 +34,28 @@ export class Archiver {
     opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
-    if (opts.stateArchiveMode === StateArchiveMode.Frequency) {
-      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
-    } else {
-      throw new Error(`State archive strategy "${opts.stateArchiveMode}" currently not supported.`);
+    switch (opts.stateArchiveMode) {
+      case StateArchiveMode.Frequency:
+        this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(
+          chain.regen,
+          db,
+          logger,
+          opts,
+          chain.bufferPool
+        );
+        break;
+      case StateArchiveMode.Differential:
+        this.statesArchiverStrategy = new DifferentialStateArchiveStrategy(
+          chain.historicalStateRegen,
+          chain.regen,
+          db,
+          logger,
+          opts,
+          chain.bufferPool
+        );
+        break;
+      default:
+        throw new Error(`State archive strategy "${opts.stateArchiveMode}" currently not supported.`);
     }
 
     this.stateArchiveMode = opts.stateArchiveMode;

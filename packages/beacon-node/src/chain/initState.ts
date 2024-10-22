@@ -21,7 +21,7 @@ export async function persistGenesisResult(
   genesisBlock: SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
-    db.stateArchive.add(genesisResult.state),
+    db.stateArchive.add(genesisResult.state.serialize()),
     db.blockArchive.add(genesisBlock),
     db.depositDataRoot.putList(genesisResult.depositTree.getAllReadonlyValues()),
     db.eth1Data.put(genesisResult.block.timestamp, {
@@ -126,28 +126,6 @@ export async function initStateFromEth1({
     }
     throw e;
   }
-}
-
-/**
- * Restore the latest beacon state from db
- */
-export async function initStateFromDb(
-  _config: ChainForkConfig,
-  db: IBeaconDb,
-  logger: Logger
-): Promise<BeaconStateAllForks> {
-  const state = await db.stateArchive.lastValue();
-  if (!state) {
-    throw new Error("No state exists in database");
-  }
-
-  logger.info("Initializing beacon state from db", {
-    slot: state.slot,
-    epoch: computeEpochAtSlot(state.slot),
-    stateRoot: toRootHex(state.hashTreeRoot()),
-  });
-
-  return state;
 }
 
 /**
