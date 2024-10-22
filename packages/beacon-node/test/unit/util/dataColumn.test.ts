@@ -103,4 +103,41 @@ describe("data column sidecars", () => {
 
     expect(validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars)).toBeUndefined();
   });
+
+  it("fail for no blob commitments in validateDataColumnsSidecars", () => {
+    const chainConfig = createChainForkConfig({
+      ...defaultChainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    });
+    const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+    const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+    const chain = getMockedBeaconChain({config});
+    afterEachCallbacks.push(() => chain.close());
+
+    const slot = 0;
+    const blobs = [generateRandomBlob(), generateRandomBlob()];
+    const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+
+    const signedBeaconBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+
+    for (const kzgCommitment of kzgCommitments) {
+      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
+      signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
+    }
+    const blockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
+    const columnSidecars = computeDataColumnSidecars(config, signedBeaconBlock, {
+      blobs,
+    });
+
+    expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
+    expect(columnSidecars[0].column.length).toEqual(blobs.length);
+
+    expect(() => validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars)).toThrow(
+      `Invalid data column sidecar slot=${slot}`
+    );
+  });
 });
