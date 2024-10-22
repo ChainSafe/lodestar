@@ -39,6 +39,11 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   timeout: 12000,
 };
 
+/**
+ * Expected error if builder does not provide a bid. Most of the time, this
+ * is due to `min-bid` setting on the mev-boost side but in rare cases could
+ * also happen if there are no bids from any of the connected relayers.
+ */
 export class NoBidReceived extends Error {
   constructor() {
     super("No bid received");
