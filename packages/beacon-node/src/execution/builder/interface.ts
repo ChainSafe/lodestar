@@ -9,6 +9,7 @@ import {
   ExecutionPayloadHeader,
   SignedBlindedBeaconBlock,
   electra,
+  WithOptionalBytes,
 } from "@lodestar/types";
 import {ForkExecution} from "@lodestar/params";
 
@@ -40,7 +41,6 @@ export interface IExecutionBuilder {
     executionRequests?: electra.ExecutionRequests;
   }>;
   submitBlindedBlock(
-    signedBlindedBlock: SignedBlindedBeaconBlock,
-    blockBytes?: Uint8Array | null
+    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
   ): Promise<SignedBeaconBlockOrContents>;
 }

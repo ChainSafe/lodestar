@@ -9,6 +9,7 @@ import {
   SignedBlindedBeaconBlock,
   ExecutionPayloadHeader,
   electra,
+  WithOptionalBytes,
 } from "@lodestar/types";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
@@ -150,11 +151,10 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async submitBlindedBlock(
-    signedBlindedBlock: SignedBlindedBeaconBlock,
-    blockBytes?: Uint8Array | null
+    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
   ): Promise<SignedBeaconBlockOrContents> {
     const res = await this.api.submitBlindedBlock(
-      {signedBlindedBlock, blockBytes},
+      {signedBlindedBlock},
       {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
     );
 
@@ -166,6 +166,6 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     // probably need diagonis if this block turns out to be invalid because of some bug
     //
     const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
-    return reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
+    return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
   }
 }
