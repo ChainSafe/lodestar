@@ -668,7 +668,7 @@
             "indexByName": {},
             "renameByName": {
               "broadcastValidation": "Broadcast validation",
-              "builderSelection": "Builder selection strategy"
+              "builderSelection": "Builder selection"
             }
           }
         }
