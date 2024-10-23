@@ -1,35 +1,25 @@
-import {ByteListType, ContainerType, ListUintNum64Type, BooleanType, ValueOf, UintNumberType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {VALIDATOR_REGISTRY_LIMIT} from "@lodestar/params";
-import {BeaconState, Slot} from "@lodestar/types";
+import {BeaconState, ssz} from "@lodestar/types";
 import {IStateDiffCodec} from "../types.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {IBeaconDb} from "../../../db/interface.js";
-
-export const BalancesSSZType = new ListUintNum64Type(VALIDATOR_REGISTRY_LIMIT);
-
-export type Balances = ValueOf<typeof BalancesSSZType>;
-
-export const StateArchiveSSZType = new ContainerType({
-  snapshot: new BooleanType(),
-  slot: new UintNumberType(8),
-  partialState: new ByteListType(99_999_9000),
-  balances: new ByteListType(99_999_9000),
-});
-
-export type StateArchive = ValueOf<typeof StateArchiveSSZType>;
+import {StateArchive} from "../../../db/repositories/stateArchive.js";
 
 export function stateToStateArchive(state: BeaconState, forkConfig: ChainForkConfig): StateArchive {
-  const partialState = forkConfig.getForkTypes(state.slot).BeaconState.clone(state);
+  const slot = state.slot;
+  const {BeaconState, Balances} = forkConfig.getForkTypes(slot);
 
-  const balances = BalancesSSZType.clone(partialState.balances);
+  const stateRoot = BeaconState.hashTreeRoot(state);
+  const partialState = BeaconState.clone(state);
+  const balances = Balances.clone(partialState.balances);
   partialState.balances = [];
 
   return {
     snapshot: true,
-    slot: state.slot,
-    partialState: forkConfig.getForkTypes(state.slot).BeaconState.serialize(partialState),
-    balances: BalancesSSZType.serialize(balances),
+    slot,
+    stateRoot,
+    partialState: BeaconState.serialize(partialState),
+    balances: Balances.serialize(balances),
   };
 }
 
@@ -40,9 +30,10 @@ export function stateBytesToStateArchive(stateBytes: Uint8Array, forkConfig: Cha
 
 export function stateArchiveToState(stateArchive: StateArchive, forkConfig: ChainForkConfig): BeaconState {
   if (!stateArchive.snapshot) throw new Error("Can not convert a diff state archive to full state");
+  const {BeaconState, Balances} = forkConfig.getForkTypes(stateArchive.slot);
 
-  const partialState = forkConfig.getForkTypes(stateArchive.slot).BeaconState.deserialize(stateArchive.partialState);
-  const balances = BalancesSSZType.deserialize(stateArchive.balances);
+  const partialState = BeaconState.deserialize(stateArchive.partialState);
+  const balances = Balances.deserialize(stateArchive.balances);
   partialState.balances = [...balances];
 
   return partialState;
@@ -64,6 +55,7 @@ export function computeDiffArchive(base: StateArchive, updated: StateArchive, co
   return {
     snapshot: false,
     slot: updated.slot,
+    stateRoot: updated.stateRoot,
     partialState: stateDiff,
     balances: balancesDiff,
   };
@@ -84,6 +76,7 @@ export function applyDiffArchive(base: StateArchive, updated: StateArchive, code
   return {
     snapshot: true,
     slot: updated.slot,
+    stateRoot: updated.stateRoot,
     partialState,
     balances,
   };
@@ -102,8 +95,7 @@ export async function getLastStoredStateArchive({
 
   if (!lastStoredSlot) return null;
 
-  for await (const archiveBytes of db.stateArchive.valuesStream({lte: lastStoredSlot})) {
-    const stateArchive = StateArchiveSSZType.deserialize(archiveBytes);
+  for await (const stateArchive of db.stateArchive.valuesStream({lte: lastStoredSlot})) {
     if (stateArchive.snapshot === snapshot) return stateArchive;
 
     if (tries === maxFallbackCount) return null;

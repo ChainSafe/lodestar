@@ -14,14 +14,24 @@ import {Metrics} from "../metrics/index.js";
 import {Eth1Options} from "../eth1/options.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
 import {GenesisResult} from "./genesis/interface.js";
+import {storeGenesisState} from "./historicalState/historicalState.js";
+import {StateArchiveMode} from "./options.js";
 
-export async function persistGenesisResult(
-  db: IBeaconDb,
-  genesisResult: GenesisResult,
-  genesisBlock: SignedBeaconBlock
-): Promise<void> {
+export async function persistGenesisResult({
+  db,
+  genesisBlock,
+  genesisResult,
+  forkConfig,
+  archiveMode,
+}: {
+  db: IBeaconDb;
+  genesisResult: GenesisResult;
+  genesisBlock: SignedBeaconBlock;
+  forkConfig: ChainForkConfig;
+  archiveMode: StateArchiveMode;
+}): Promise<void> {
   await Promise.all([
-    db.stateArchive.add(genesisResult.state.serialize()),
+    storeGenesisState(genesisResult.state.toValue(), {db, forkConfig, archiveMode}),
     db.blockArchive.add(genesisBlock),
     db.depositDataRoot.putList(genesisResult.depositTree.getAllReadonlyValues()),
     db.eth1Data.put(genesisResult.block.timestamp, {
@@ -71,7 +81,7 @@ export async function initStateFromEth1({
   config: ChainForkConfig;
   db: IBeaconDb;
   logger: Logger;
-  opts: Eth1Options;
+  opts: Eth1Options & {archiveMode: StateArchiveMode};
   signal: AbortSignal;
 }): Promise<CachedBeaconStateAllForks> {
   logger.info("Listening to eth1 for genesis state");
@@ -106,7 +116,7 @@ export async function initStateFromEth1({
       validatorCount: genesisResult.state.validators.length,
     });
 
-    await persistGenesisResult(db, genesisResult, genesisBlock);
+    await persistGenesisResult({db, genesisResult, genesisBlock, forkConfig: config, archiveMode: opts.archiveMode});
 
     logger.verbose("Clearing pending genesis state if any");
     await db.preGenesisState.delete();

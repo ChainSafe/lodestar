@@ -206,7 +206,13 @@ export async function initBeaconState(
   }
 
   // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
-  const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
+  const anchorState = await initStateFromEth1({
+    config: chainForkConfig,
+    db,
+    logger,
+    opts: {...options.eth1, archiveMode: options.chain.stateArchiveMode},
+    signal,
+  });
   return {anchorState};
 }
 

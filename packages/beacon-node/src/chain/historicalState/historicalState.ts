@@ -1,5 +1,5 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {Slot} from "@lodestar/types";
+import {BeaconState, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/logger";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -14,10 +14,11 @@ import {StateArchiveMode} from "../archiver/interface.js";
 import {
   computeDiffArchive,
   getLastStoredStateArchive,
-  StateArchiveSSZType,
   stateArchiveToStateBytes,
   stateBytesToStateArchive,
+  stateToStateArchive,
 } from "./utils/stateArchive.js";
+import {StateArchiveSSZType} from "../../db/repositories/stateArchive.js";
 
 export const codec: IStateDiffCodec = new XDelta3Codec();
 
@@ -50,6 +51,7 @@ export async function getHistoricalState(
   switch (slotType) {
     case HistoricalStateStorageType.Full: {
       const loadStateTimer = metrics?.loadSnapshotStateTime.startTimer();
+      // It's a legacy format we use raw state as full object
       const state = await db.stateArchive.getBinary(slot);
       loadStateTimer?.();
       regenTimer?.({strategy: HistoricalStateStorageType.Full});
@@ -58,11 +60,9 @@ export async function getHistoricalState(
 
     case HistoricalStateStorageType.Snapshot: {
       const loadStateTimer = metrics?.loadSnapshotStateTime.startTimer();
-      const stateArchive = await db.stateArchive.getBinary(slot);
+      const stateArchive = await db.stateArchive.get(slot);
 
-      const state = stateArchive
-        ? stateArchiveToStateBytes(StateArchiveSSZType.deserialize(stateArchive), config)
-        : null;
+      const state = stateArchive ? stateArchiveToStateBytes(stateArchive, config) : null;
 
       loadStateTimer?.();
       regenTimer?.({strategy: HistoricalStateStorageType.Snapshot});
@@ -126,8 +126,9 @@ export async function putHistoricalState(
     }
 
     case HistoricalStateStorageType.Snapshot: {
-      const stateArchiveBytes = StateArchiveSSZType.serialize(stateBytesToStateArchive(stateBytes, config));
-      await db.stateArchive.putBinary(slot, stateArchiveBytes);
+      const stateArchive = stateBytesToStateArchive(stateBytes, config);
+      const stateArchiveBytes = StateArchiveSSZType.serialize(stateArchive);
+      await db.stateArchive.put(slot, stateArchive);
 
       metrics?.stateSnapshotSize.set(stateBytes.byteLength);
       logger.verbose("State stored as snapshot", {
@@ -145,10 +146,10 @@ export async function putHistoricalState(
 
       if (!diffStateArchive) return;
 
-      const diffArchiveBytes = StateArchiveSSZType.serialize(
-        computeDiffArchive(diffStateArchive, stateBytesToStateArchive(stateBytes, config), codec)
-      );
-      await db.stateArchive.putBinary(slot, diffArchiveBytes);
+      const diffArchive = computeDiffArchive(diffStateArchive, stateBytesToStateArchive(stateBytes, config), codec);
+
+      const diffArchiveBytes = StateArchiveSSZType.serialize(diffArchive);
+      await db.stateArchive.put(slot, diffArchive);
 
       metrics?.stateDiffSize.set(diffArchiveBytes.byteLength);
       logger.verbose("State stored as diff", {
@@ -166,6 +167,25 @@ export async function putHistoricalState(
 
       break;
     }
+  }
+}
+
+export async function storeGenesisState(
+  state: BeaconState,
+  {
+    db,
+    archiveMode,
+    forkConfig,
+  }: {
+    db: IBeaconDb;
+    forkConfig: ChainForkConfig;
+    archiveMode: StateArchiveMode;
+  }
+) {
+  if (archiveMode === StateArchiveMode.Frequency) {
+    await db.stateArchive.putBinary(state.slot, forkConfig.getForkTypes(state.slot).BeaconState.serialize(state));
+  } else {
+    await db.stateArchive.put(state.slot, stateToStateArchive(state, forkConfig));
   }
 }
 

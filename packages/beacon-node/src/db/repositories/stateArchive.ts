@@ -1,39 +1,41 @@
-import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {bytesToInt, toHex} from "@lodestar/utils";
 import {Db, Repository} from "@lodestar/db";
-import {getStateTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
+import {BooleanType, ByteListType, ContainerType, ListUintNum64Type, UintNumberType, ValueOf} from "@chainsafe/ssz";
+import {VALIDATOR_REGISTRY_LIMIT} from "@lodestar/params";
 
-export class StateArchiveRepository extends Repository<Slot, Uint8Array> {
+export const StateArchiveSSZType = new ContainerType({
+  snapshot: new BooleanType(),
+  slot: new UintNumberType(8),
+  stateRoot: ssz.Root,
+  partialState: new ByteListType(1_073_741_824),
+  balances: new ByteListType(1_073_741_824),
+});
+
+export type StateArchive = ValueOf<typeof StateArchiveSSZType>;
+
+/**
+ * We will use `stateArchive` to store legacy state full dump or new archive structure
+ */
+export class StateArchiveRepository extends Repository<Slot, StateArchive> {
   constructor(config: ChainForkConfig, db: Db) {
     // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    const type = ssz.phase0.BeaconState as any;
+    const type = StateArchiveSSZType as any;
     const bucket = Bucket.allForks_stateArchive;
     super(config, db, bucket, type, getBucketNameByValue(bucket));
   }
 
-  // Overrides for multi-fork
-
-  encodeValue(_value: Uint8Array): Uint8Array {
-    throw new Error("Non supported");
-  }
-
-  decodeValue(_data: Uint8Array): Uint8Array {
-    throw new Error("Non supported");
-  }
-
   // Handle key as slot
-
-  async put(_key: Slot, _value: Uint8Array): Promise<void> {
-    throw new Error("Non supported");
+  async put(key: Slot, value: StateArchive): Promise<void> {
+    await Promise.all([super.put(key, value), storeRootIndex(this.db, key, value.stateRoot)]);
   }
 
-  getId(_state: Uint8Array): Epoch {
-    throw new Error("Non supported");
+  getId(value: StateArchive): Epoch {
+    return value.slot;
   }
 
   decodeKey(data: Uint8Array): number {
@@ -42,7 +44,7 @@ export class StateArchiveRepository extends Repository<Slot, Uint8Array> {
 
   // Index Root -> Slot
 
-  async getByRoot(stateRoot: Root): Promise<Uint8Array | null> {
+  async getByRoot(stateRoot: Root): Promise<StateArchive | null> {
     const slot = await this.getSlotByRoot(stateRoot);
     if (slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
@@ -55,6 +57,7 @@ export class StateArchiveRepository extends Repository<Slot, Uint8Array> {
       lte: getRootIndexKey(Buffer.alloc(32, 0xff)),
       gte: getRootIndexKey(Buffer.alloc(32, 0x00)),
     });
+
     return entries.map((entry) => ({
       root: toHex(entry.key),
       slot: bytesToInt(entry.value, "be"),
