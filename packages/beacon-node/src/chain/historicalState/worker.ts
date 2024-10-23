@@ -32,9 +32,7 @@ const abortController = new AbortController();
 
 // Set up metrics, nodejs, state transition, queue
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
-const historicalStateRegenMetrics: HistoricalStateRegenMetrics | undefined = metricsRegister
-  ? getMetrics(metricsRegister)
-  : undefined;
+const metrics: HistoricalStateRegenMetrics | undefined = metricsRegister ? getMetrics(metricsRegister) : undefined;
 let queueMetrics: QueueMetrics | undefined;
 if (metricsRegister) {
   const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
@@ -85,7 +83,7 @@ const api: HistoricalStateWorkerApi = {
     return metricsRegister?.metrics() ?? "";
   },
   async getHistoricalState(slot, stateArchiveMode) {
-    historicalStateRegenMetrics?.regenRequestCount.inc();
+    metrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array | null>(() =>
       getHistoricalState(slot, {
@@ -95,14 +93,14 @@ const api: HistoricalStateWorkerApi = {
         pubkey2index,
         logger,
         hierarchicalLayers,
-        metrics: historicalStateRegenMetrics,
+        metrics: metrics,
       })
     );
 
     if (stateBytes) {
       const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 
-      historicalStateRegenMetrics?.regenSuccessCount.inc();
+      metrics?.regenSuccessCount.inc();
       return result;
     }
 
@@ -115,7 +113,7 @@ const api: HistoricalStateWorkerApi = {
       logger,
       stateArchiveMode,
       hierarchicalLayers,
-      metrics: historicalStateRegenMetrics,
+      metrics,
     });
   },
 };
