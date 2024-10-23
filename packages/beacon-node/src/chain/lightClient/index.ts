@@ -3,6 +3,7 @@ import {
   altair,
   BeaconBlock,
   BeaconBlockBody,
+  electra,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientHeader,
@@ -42,6 +43,7 @@ import {
   ForkLightClient,
   highestFork,
   forkLightClient,
+  isForkPostElectra,
 } from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
@@ -57,6 +59,7 @@ import {
   getCurrentSyncCommitteeBranch,
   getBlockBodyExecutionHeaderProof,
 } from "./proofs.js";
+import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;
@@ -208,7 +211,9 @@ export class LightClientServer {
   private checkpointHeaders = new Map<BlockRooHex, LightClientHeader>();
   private latestHeadUpdate: LightClientOptimisticUpdate | null = null;
 
-  private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
+  private readonly zero:
+    | Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">
+    | Pick<electra.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: LightClientFinalityUpdate | null = null;
 
   constructor(
@@ -225,7 +230,9 @@ export class LightClientServer {
     this.zero = {
       // Assign the hightest fork's default value because it can always be typecasted down to correct fork
       finalizedHeader: sszTypesFor(highestFork(forkLightClient)).LightClientHeader.defaultValue(),
-      finalityBranch: ssz.altair.LightClientUpdate.fields.finalityBranch.defaultValue(),
+      // Electra finalityBranch has fixed length of 5 whereas altair has 4. The fifth element will be ignored
+      // when serializing as altair LightClientUpdate
+      finalityBranch: ssz.electra.LightClientUpdate.fields.finalityBranch.defaultValue(),
     };
 
     if (metrics) {
