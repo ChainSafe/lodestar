@@ -3,8 +3,11 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 import {BeaconStateTransitionMetrics} from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
+import {Logger} from "@lodestar/logger";
 import {Metrics} from "../../metrics/index.js";
 import {StateArchiveMode} from "../archiver/interface.js";
+import {IBeaconDb} from "../../db/interface.js";
+import {HierarchicalLayers} from "./utils/hierarchicalLayers.js";
 
 export type HistoricalStateRegenInitModules = {
   opts: {
@@ -82,3 +85,12 @@ export enum HistoricalStateStorageType {
   // Refer to the slots with skipped backups during differential backup
   BlockReplay = "blockReplay",
 }
+
+export type HierarchicalStateOperationOptions = {
+  db: IBeaconDb;
+  config: BeaconConfig;
+  logger: Logger;
+  hierarchicalLayers: HierarchicalLayers;
+  metrics?: HistoricalStateRegenMetrics;
+  stateArchiveMode: StateArchiveMode;
+};

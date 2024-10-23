@@ -14,8 +14,8 @@ import {Metrics} from "../metrics/index.js";
 import {Eth1Options} from "../eth1/options.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
 import {GenesisResult} from "./genesis/interface.js";
-import {storeGenesisState} from "./historicalState/historicalState.js";
 import {StateArchiveMode} from "./options.js";
+import {storeGenesisState} from "./historicalState/operations/storeGenesisState.js";
 
 export async function persistGenesisResult({
   db,

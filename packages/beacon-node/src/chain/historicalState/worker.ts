@@ -9,9 +9,10 @@ import {JobFnQueue} from "../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../util/queue/options.js";
 import {BeaconDb} from "../../db/index.js";
 import {HistoricalStateRegenMetrics, HistoricalStateWorkerApi, HistoricalStateWorkerData} from "./types.js";
-import {getHistoricalState, putHistoricalState} from "./historicalState.js";
 import {getMetrics} from "./metrics.js";
 import {HierarchicalLayers} from "./utils/hierarchicalLayers.js";
+import {getHistoricalState} from "./operations/getHistoricalState.js";
+import {putHistoricalState} from "./operations/putHistoricalState.js";
 
 // most of this setup copied from networkCoreWorker.ts
 
