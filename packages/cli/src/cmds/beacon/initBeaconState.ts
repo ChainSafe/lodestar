@@ -17,6 +17,7 @@ import {
   HierarchicalLayers,
   getLastStoredState,
   migrateStateArchive,
+  StateArchiveMode,
 } from "@lodestar/beacon-node";
 import {Checkpoint} from "@lodestar/types/phase0";
 
@@ -39,7 +40,7 @@ async function initAndVerifyWeakSubjectivityState(
   dbStateBytes: StateWithBytes,
   wsStateBytes: StateWithBytes,
   wsCheckpoint: Checkpoint,
-  opts: {ignoreWeakSubjectivityCheck?: boolean} = {}
+  opts: {ignoreWeakSubjectivityCheck?: boolean; archiveMode: StateArchiveMode}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   const dbState = dbStateBytes.state;
   const wsState = wsStateBytes.state;
@@ -74,9 +75,10 @@ async function initAndVerifyWeakSubjectivityState(
     throw wssCheck.err;
   }
 
-  await checkAndPersistAnchorState(config, db, logger, anchorState.state, anchorState.stateBytes, {
+  await checkAndPersistAnchorState(config, db, logger, anchorState.state, {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
+    archiveMode: opts.archiveMode,
   });
 
   // Return the latest anchorState but still return original wsCheckpoint to validate in backfill
@@ -152,9 +154,10 @@ export async function initBeaconState(
           // this never happens
           throw Error(`There is no stateBytes for the lastDbState at slot ${lastDbState.slot}`);
         }
-        await checkAndPersistAnchorState(config, db, logger, lastDbState, stateBytes, {
+        await checkAndPersistAnchorState(config, db, logger, lastDbState, {
           isWithinWeakSubjectivityPeriod: wssCheck,
           isCheckpointState: false,
+          archiveMode: options.chain.stateArchiveMode,
         });
         return {anchorState: lastDbState};
       }
@@ -173,7 +176,8 @@ export async function initBeaconState(
       },
       chainForkConfig,
       db,
-      logger
+      logger,
+      {archiveMode: options.chain.stateArchiveMode}
     );
   }
 
@@ -188,7 +192,8 @@ export async function initBeaconState(
       },
       chainForkConfig,
       db,
-      logger
+      logger,
+      {archiveMode: options.chain.stateArchiveMode}
     );
   }
 
@@ -198,9 +203,10 @@ export async function initBeaconState(
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
-    await checkAndPersistAnchorState(config, db, logger, anchorState, stateBytes, {
+    await checkAndPersistAnchorState(config, db, logger, anchorState, {
       isWithinWeakSubjectivityPeriod: wssCheck,
       isCheckpointState: true,
+      archiveMode: options.chain.stateArchiveMode,
     });
     return {anchorState};
   }
@@ -222,7 +228,8 @@ async function readWSState(
   wssOpts: {checkpointState: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger
+  logger: Logger,
+  opts: {archiveMode: StateArchiveMode}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a provided state file:
   // if a weak subjectivity checkpoint has been provided, it is used for additional verification
@@ -244,6 +251,7 @@ async function readWSState(
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
   return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateBytes, checkpoint, {
     ignoreWeakSubjectivityCheck,
+    archiveMode: opts.archiveMode,
   });
 }
 
@@ -253,7 +261,8 @@ async function fetchWSStateFromBeaconApi(
   wssOpts: {checkpointSyncUrl: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger
+  logger: Logger,
+  opts: {archiveMode: StateArchiveMode}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a state that needs to be fetched:
   // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
@@ -280,5 +289,6 @@ async function fetchWSStateFromBeaconApi(
   const store = lastDbStateBytes ?? wsStateWithBytes;
   return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateWithBytes, wsCheckpoint, {
     ignoreWeakSubjectivityCheck: wssOpts.ignoreWeakSubjectivityCheck,
+    archiveMode: opts.archiveMode,
   });
 }

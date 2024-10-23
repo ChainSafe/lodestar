@@ -42,21 +42,26 @@ export async function persistGenesisResult({
   ]);
 }
 
-export async function persistAnchorState(
-  config: ChainForkConfig,
-  db: IBeaconDb,
-  anchorState: BeaconStateAllForks,
-  anchorStateBytes: Uint8Array
-): Promise<void> {
+export async function persistAnchorState({
+  config,
+  db,
+  anchorState,
+  archiveMode,
+}: {
+  config: ChainForkConfig;
+  db: IBeaconDb;
+  anchorState: BeaconStateAllForks;
+  archiveMode: StateArchiveMode;
+}): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),
-      db.stateArchive.putBinary(anchorState.slot, anchorStateBytes),
+      storeGenesisState(anchorState.toValue(), {db, forkConfig: config, archiveMode}),
     ]);
   } else {
-    await db.stateArchive.putBinary(anchorState.slot, anchorStateBytes);
+    await storeGenesisState(anchorState.toValue(), {db, forkConfig: config, archiveMode});
   }
 }
 
@@ -146,11 +151,11 @@ export async function checkAndPersistAnchorState(
   db: IBeaconDb,
   logger: Logger,
   anchorState: BeaconStateAllForks,
-  anchorStateBytes: Uint8Array,
   {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
-  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
+    archiveMode,
+  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean; archiveMode: StateArchiveMode}
 ): Promise<void> {
   const expectedFork = config.getForkInfo(computeStartSlotAtEpoch(anchorState.fork.epoch));
   const expectedForkVersion = toHex(expectedFork.version);
@@ -180,7 +185,7 @@ export async function checkAndPersistAnchorState(
   }
 
   if (isCheckpointState || anchorState.slot === GENESIS_SLOT) {
-    await persistAnchorState(config, db, anchorState, anchorStateBytes);
+    await persistAnchorState({config, db, anchorState, archiveMode});
   }
 }
 
