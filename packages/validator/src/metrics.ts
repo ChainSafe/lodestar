@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {MetricsRegisterExtra} from "@lodestar/utils";
 
 export enum MessageSource {
@@ -38,6 +39,15 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     .set(gitData, 1);
 
   return {
+    defaultConfiguration: register.gauge<{
+      builderSelection: routes.validator.BuilderSelection;
+      broadcastValidation: routes.beacon.BroadcastValidation;
+    }>({
+      name: "vc_default_configuration",
+      help: "Default validator configuration",
+      labelNames: ["builderSelection", "broadcastValidation"],
+    }),
+
     // Attestation journey:
     // - Wait for block or 1/3, call prepare attestation
     // - Get attestation, sign, call publish
