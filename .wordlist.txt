@@ -167,6 +167,7 @@ heaptrack
 holesky
 interop
 js
+keymanager
 keypair
 keyrings
 keystore
