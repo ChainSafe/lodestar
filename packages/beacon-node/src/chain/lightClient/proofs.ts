@@ -34,7 +34,7 @@ export function getSyncCommitteesWitness(fork: ForkName, state: BeaconStateAllFo
       n21.left.root, // 42
       n10.left.root, // 20
       n5.right.root, // 11
-      n2.right.root, // 4
+      n2.left.root, // 4
       n1.right.root, // 3
     ];
   } else {
