@@ -39,7 +39,7 @@ export class LightclientSpec {
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
       nextSyncCommitteeBranch: getZeroSyncCommitteeBranch(this.config.getForkName(finalityUpdate.signatureSlot)),
       finalizedHeader: finalityUpdate.finalizedHeader,
-      finalityBranch: getZeroFinalityBranch(this.config.getForkName(finalityUpdate.signatureSlot)),
+      finalityBranch: finalityUpdate.finalityBranch,
       syncAggregate: finalityUpdate.syncAggregate,
       signatureSlot: finalityUpdate.signatureSlot,
     });
