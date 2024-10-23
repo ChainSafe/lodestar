@@ -33,7 +33,6 @@ export const ZERO_HASH = new Uint8Array(32);
 export const ZERO_PUBKEY = new Uint8Array(48);
 export const ZERO_SYNC_COMMITTEE = ssz.altair.SyncCommittee.defaultValue();
 export const ZERO_HEADER = ssz.phase0.BeaconBlockHeader.defaultValue();
-export const ZERO_FINALITY_BRANCH = Array.from({length: FINALIZED_ROOT_DEPTH}, () => ZERO_HASH);
 /** From https://notes.ethereum.org/@vbuterin/extended_light_client_protocol#Optimistic-head-determining-function */
 const SAFETY_THRESHOLD_FACTOR = 2;
 
@@ -53,6 +52,12 @@ export function getZeroSyncCommitteeBranch(fork: ForkName): Uint8Array[] {
   return Array.from({length: nextSyncCommitteeDepth}, () => ZERO_HASH);
 }
 
+export function getZeroFinalityBranch(fork: ForkName): Uint8Array[] {
+  const finalizedRootDepth = isForkPostElectra(fork) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH;
+
+  return Array.from({length: finalizedRootDepth}, () => ZERO_HASH);
+}
+
 export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
@@ -65,7 +70,8 @@ export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
 export function isFinalityUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
-    update.finalityBranch !== ZERO_FINALITY_BRANCH &&
+    update.finalityBranch !==
+      getZeroFinalityBranch(isElectraLightClientUpdate(update) ? ForkName.electra : ForkName.altair) &&
     update.finalityBranch.some((branch) => !byteArrayEquals(branch, ZERO_HASH))
   );
 }
