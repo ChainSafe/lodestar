@@ -17,11 +17,15 @@ proposer_config:
     builder:
       enabled: true
       gas_limit: "30000000"
+      selection: "executionalways"
+      boost_factor: "0"
   "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d":
     fee_recipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     builder:
       enabled: "true"
-      gas_limit: "35000000"
+      gas_limit: "3000000"
+      selection: "maxprofit"
+      boost_factor: "100"
 default_config:
   graffiti: "default graffiti"
   strict_fee_recipient_check: true
@@ -29,6 +33,8 @@ default_config:
   builder:
     enabled: true
     gas_limit: "30000000"
+    selection: "default"
+    boost_factor: "90"
 ```
 
 ### Enable Proposer Configuration
