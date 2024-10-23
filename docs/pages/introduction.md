@@ -1,6 +1,6 @@
 # Introduction
 
-Ethereum is one of the most profoundly important inventions in recent history. It is a decentralized, open-source blockchain featuring smart contract functionality. It is the second-largest cryptocurrency by market capitalization, after Bitcoin, and is the second largest blockchain by market capitalization. Ethereum was proposed in 2013 by programmer Vitalik Buterin. Development was crowdfunded in 2014, and the network went live on 30 July 2015, with 72 million coins premined. ChainSafe was founded not too long afterwards in 2017 and has been actively working in the Ethereum ecosystem ever since. We are proud to develop Lodestar, the only Typescript based consensus client, and to present this documentation as a resource for the Ethereum community.
+Ethereum is one of the most profoundly important inventions in recent history. It is a decentralized, open-source blockchain featuring smart contract functionality. It is the second-largest cryptocurrency by market capitalization, after Bitcoin, and is the second largest blockchain by market capitalization. Ethereum was proposed in 2013 by programmer Vitalik Buterin. Development was crowdfunded in 2014, and the network went live on 30 July 2015, with 72 million coins premined. ChainSafe was founded not too long afterwards in 2017 and has been actively working in the Ethereum ecosystem ever since. We are proud to develop Lodestar, the only TypeScript based consensus client, and to present this documentation as a resource for the Ethereum community.
 
 ## Proof of Stake
 
@@ -12,7 +12,7 @@ In an effort to promote client diversity there are several consensus beacon node
 
 - [Grandine (Rust)](https://grandine.io)
 - [Lighthouse (Rust)](https://lighthouse.sigmaprime.io/)
-- [Lodestar (Typescript)](https://lodestar.chainsafe.io/)
+- [Lodestar (TypeScript)](https://lodestar.chainsafe.io/)
 - [Nimbus (Nim)](https://nimbus.team/)
 - [Prysm (Golang)](https://prysmaticlabs.com/)
 - [Teku (Java)](https://consensys.net/knowledge-base/ethereum-2/teku/)

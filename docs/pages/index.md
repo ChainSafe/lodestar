@@ -6,12 +6,12 @@ title: Home
 
 ## Welcome to the Lodestar Documentation
 
-> **Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems**
+> **Lodestar is an open-source Ethereum Consensus client and TypeScript ecosystem, maintained by ChainSafe Systems**
 
 ### Getting Started
 
 - Follow the instructions for [build from source](./run/getting-started/installation#build-from-source), [binaries](./run/getting-started/installation#binaries), or [Docker](./run/getting-started/installation#docker-installation) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
-- Use [Lodestar libraries](./supporting-libraries/index.md) in your next Ethereum Typescript project.
+- Use [Lodestar libraries](./supporting-libraries/index.md) in your next Ethereum TypeScript project.
 - Run a beacon node on [mainnet or a public testnet](./run/beacon-management/starting-a-node.md).
 - Utilize the whole stack by [starting a local testnet](./contribution/advanced-topics/setting-up-a-testnet.md).
 - View the Lodestar Beacon [CLI commands and options](./run/beacon-management/beacon-cli.md)
@@ -32,7 +32,7 @@ Hardware specifications minimum / recommended, to run the Lodestar client.
 
 ### Execution Client
 
-If you run the [execution client](https://ethereum.org/en/developers/docs/nodes-and-clients/#execution-clients) on the same host, you will need to check their requirements and add them to the above requirements.
+If you run the [execution client](https://ethereum.org/en/developers/docs/nodes-and-clients/#execution-clients) on the same host, you will need to check their requirements and add them to the above requirements. Broadly, to run both an execution and a consensus client on the same machine, we recommend a 4 TB SSD and 32 GB RAM.
 
 ## About These Docs
 
