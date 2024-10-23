@@ -4,8 +4,8 @@ import {Logger} from "@lodestar/logger";
 import {IBeaconDb} from "../../../../../src/index.js";
 import {getMockedBeaconDb} from "../../../../mocks/mockedBeaconDb.js";
 import {getMockedLogger} from "../../../../mocks/loggerMock.js";
-import {getDiffState} from "../../../../../src/chain/historicalState/utils/diff.js";
-import {IBinaryDiffCodec} from "../../../../../src/chain/historicalState/types.js";
+import {getDiffStateArchive} from "../../../../../src/chain/historicalState/utils/diff.js";
+import {IStateDiffCodec} from "../../../../../src/chain/historicalState/types.js";
 import {HierarchicalLayers} from "../../../../../src/chain/historicalState/utils/hierarchicalLayers.js";
 import {XDelta3Codec} from "../../../../../src/chain/historicalState/utils/xdelta3.js";
 
@@ -13,7 +13,7 @@ describe("historicalState/util", () => {
   let db: IBeaconDb;
   let logger: Logger;
   let hierarchicalLayers: HierarchicalLayers;
-  let codec: IBinaryDiffCodec;
+  let codec: IStateDiffCodec;
 
   beforeEach(async () => {
     db = getMockedBeaconDb();
@@ -23,8 +23,6 @@ describe("historicalState/util", () => {
 
     vi.spyOn(codec, "apply");
     vi.spyOn(codec, "compute");
-
-    await codec.init();
   });
 
   afterEach(() => {
@@ -37,7 +35,7 @@ describe("historicalState/util", () => {
       const skipSlotDiff = false;
 
       await expect(
-        getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec})
+        getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec})
       ).resolves.toEqual({
         diffStateBytes: null,
         diffSlots: [0],
@@ -48,7 +46,7 @@ describe("historicalState/util", () => {
       const slot = 0;
       const skipSlotDiff = false;
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(codec.compute).not.toBeCalled();
     });
@@ -61,7 +59,7 @@ describe("historicalState/util", () => {
       when(db.stateArchive.getBinary).calledWith(0).thenResolve(null);
 
       await expect(
-        getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec})
+        getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec})
       ).resolves.toEqual({
         diffStateBytes: null,
         diffSlots: [0, 10, 20, 30, 40],
@@ -75,7 +73,7 @@ describe("historicalState/util", () => {
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
       when(db.stateArchive.getBinary).calledWith(0).thenResolve(null);
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(db.stateArchive.lastKey).toBeCalledTimes(1);
     });
@@ -92,7 +90,7 @@ describe("historicalState/util", () => {
       when(db.stateArchive.getBinary).calledWith(30).thenResolve(null);
       when(db.stateArchive.getBinary).calledWith(40).thenResolve(null);
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(db.stateArchive.lastKey).not.toBeCalled();
     });
@@ -106,7 +104,7 @@ describe("historicalState/util", () => {
       when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
       vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(db.stateArchive.getBinary).toHaveBeenCalledTimes(4);
       expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(1, 10);
@@ -124,7 +122,7 @@ describe("historicalState/util", () => {
       when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
       vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(db.stateArchive.getBinary).toHaveBeenCalledTimes(3);
       expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(1, 10);
@@ -141,7 +139,7 @@ describe("historicalState/util", () => {
       when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
       vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(db.stateArchive.getBinary).toHaveBeenCalledTimes(4);
       expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(1, 10);
@@ -159,7 +157,7 @@ describe("historicalState/util", () => {
       when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
       vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(codec.apply).not.toBeCalled();
     });
@@ -184,7 +182,7 @@ describe("historicalState/util", () => {
       when(db.stateArchive.getBinary).calledWith(30).thenResolve(diff3);
       when(db.stateArchive.getBinary).calledWith(40).thenResolve(diff4);
 
-      await getDiffState({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
+      await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
       expect(codec.apply).toBeCalledTimes(4);
       expect(codec.apply).toHaveBeenNthCalledWith(1, snapshotState, diff1);

@@ -1,6 +1,6 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {HistoricalStateRegenMetrics, RegenErrorType, HistoricalStateSlotType} from "./types.js";
+import {HistoricalStateRegenMetrics, RegenErrorType, HistoricalStateStorageType} from "./types.js";
 
 export function getMetrics(metricsRegister: RegistryMetricCreator): HistoricalStateRegenMetrics {
   return {
@@ -88,7 +88,7 @@ export function getMetrics(metricsRegister: RegistryMetricCreator): HistoricalSt
     registerValidatorStatuses: () => {},
 
     // historical state regen metrics
-    regenTime: metricsRegister.histogram<{strategy: HistoricalStateSlotType}>({
+    regenTime: metricsRegister.histogram<{strategy: HistoricalStateStorageType}>({
       name: "lodestar_historical_state_regen_time_seconds",
       help: "Time to regenerate a historical state in seconds",
       // Historical state regen can take up to 3h as of Aug 2024

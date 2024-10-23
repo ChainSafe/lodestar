@@ -27,8 +27,8 @@ export interface IHistoricalStateRegen {
 export type HistoricalStateWorkerApi = {
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
-  getHistoricalState(slot: number, archiveMode: StateArchiveMode): Promise<Uint8Array | null>;
-  storeHistoricalState(slot: number, archiveMode: StateArchiveMode, stateBytes: Uint8Array): Promise<void>;
+  getHistoricalState(slot: number, stateArchiveMode: StateArchiveMode): Promise<Uint8Array | null>;
+  storeHistoricalState(slot: number, stateBytes: Uint8Array, stateArchiveMode: StateArchiveMode): Promise<void>;
 };
 
 export type HistoricalStateRegenModules = HistoricalStateRegenInitModules & {
@@ -54,7 +54,7 @@ export enum RegenErrorType {
 }
 
 export type HistoricalStateRegenMetrics = BeaconStateTransitionMetrics & {
-  regenTime: Histogram<{strategy: HistoricalStateSlotType}>;
+  regenTime: Histogram<{strategy: HistoricalStateStorageType}>;
   loadSnapshotStateTime: Histogram;
   loadDiffStateTime: Histogram;
   stateTransitionTime: Histogram;
@@ -67,14 +67,12 @@ export type HistoricalStateRegenMetrics = BeaconStateTransitionMetrics & {
   stateSnapshotSize: Gauge;
 };
 
-export interface IBinaryDiffCodec {
-  init(): Promise<void>;
-  initialized: boolean;
+export interface IStateDiffCodec {
   compute(base: Uint8Array, changed: Uint8Array): Uint8Array;
   apply(base: Uint8Array, delta: Uint8Array): Uint8Array;
 }
 
-export enum HistoricalStateSlotType {
+export enum HistoricalStateStorageType {
   // Used to refer to full archive in `StateArchiveMode.Frequency`
   Full = "full",
   // Refer to the snapshot for differential backup

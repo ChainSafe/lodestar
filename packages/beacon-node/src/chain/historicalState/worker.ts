@@ -83,14 +83,19 @@ const api: HistoricalStateWorkerApi = {
   async scrapeMetrics() {
     return metricsRegister?.metrics() ?? "";
   },
-  async getHistoricalState(slot, archiveMode) {
+  async getHistoricalState(slot, stateArchiveMode) {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array | null>(() =>
-      getHistoricalState(
-        {slot, archiveMode},
-        {config, db, pubkey2index, logger, hierarchicalLayers: hierarchicalLayers, metrics: historicalStateRegenMetrics}
-      )
+      getHistoricalState(slot, {
+        config,
+        stateArchiveMode,
+        db,
+        pubkey2index,
+        logger,
+        hierarchicalLayers,
+        metrics: historicalStateRegenMetrics,
+      })
     );
 
     if (stateBytes) {
@@ -102,11 +107,15 @@ const api: HistoricalStateWorkerApi = {
 
     return null;
   },
-  async storeHistoricalState(slot, archiveMode, stateBytes) {
-    return putHistoricalState(
-      {slot, archiveMode, stateBytes},
-      {db, logger, hierarchicalLayers: hierarchicalLayers, metrics: historicalStateRegenMetrics}
-    );
+  async storeHistoricalState(slot, stateBytes, stateArchiveMode) {
+    return putHistoricalState(slot, stateBytes, {
+      db,
+      config,
+      logger,
+      stateArchiveMode,
+      hierarchicalLayers,
+      metrics: historicalStateRegenMetrics,
+    });
   },
 };
 

@@ -16,6 +16,7 @@ import {
   getStateTypeFromBytes,
   HierarchicalLayers,
   getLastStoredState,
+  migrateStateArchive,
 } from "@lodestar/beacon-node";
 import {Checkpoint} from "@lodestar/types/phase0";
 
@@ -102,11 +103,16 @@ export async function initBeaconState(
   if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl)) {
     throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
   }
+
+  // Migrate state archive structure if necessary
+  await migrateStateArchive({db, archiveMode: options.chain.stateArchiveMode, logger});
+
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
   //   i)  used directly as the anchor state
   //   ii) used to load and verify a weak subjectivity state,
   //   ii) used during verification of a weak subjectivity state,
   const {stateBytes, slot: lastDbSlot} = await getLastStoredState({
+    forkConfig: chainForkConfig,
     db,
     hierarchicalLayers: HierarchicalLayers.fromString(),
     logger,

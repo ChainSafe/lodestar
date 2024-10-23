@@ -74,6 +74,6 @@ export class HistoricalStateRegen implements IHistoricalStateRegen {
   }
 
   async storeHistoricalState(slot: number, stateBytes: Uint8Array): Promise<void> {
-    return this.api.storeHistoricalState(slot, this.stateArchiveMode, stateBytes);
+    return this.api.storeHistoricalState(slot, stateBytes, this.stateArchiveMode);
   }
 }

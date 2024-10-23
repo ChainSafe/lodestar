@@ -6,7 +6,7 @@ import {fromHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {XDelta3Codec} from "../../../../../src/chain/historicalState/utils/xdelta3.js";
 import {generateState} from "../../../../utils/state.js";
-import {IBinaryDiffCodec} from "../../../../../src/chain/historicalState/types.js";
+import {IStateDiffCodec} from "../../../../../src/chain/historicalState/types.js";
 
 const testsCases: {title: string; base: () => Uint8Array; changed: () => Uint8Array}[] = [
   {
@@ -65,12 +65,11 @@ const testsCases: {title: string; base: () => Uint8Array; changed: () => Uint8Ar
 const binaryValue = (s: string): Uint8Array => Uint8Array.from(Buffer.from(s, "utf8"));
 
 describe("BinaryDiffCodec", () => {
-  let codec: IBinaryDiffCodec;
+  let codec: IStateDiffCodec;
   let multiDiffData: Record<string, {value: Uint8Array; diff: Uint8Array}>;
 
   beforeAll(async () => {
     codec = new XDelta3Codec();
-    await codec.init();
 
     multiDiffData = {
       snapshot: {

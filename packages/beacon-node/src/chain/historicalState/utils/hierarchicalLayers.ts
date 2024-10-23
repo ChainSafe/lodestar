@@ -1,6 +1,6 @@
 import {Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {HistoricalStateSlotType} from "../types.js";
+import {HistoricalStateStorageType} from "../types.js";
 import {StateArchiveMode} from "../../archiver/interface.js";
 
 /*
@@ -64,17 +64,17 @@ export class HierarchicalLayers {
     return this.diffEverySlot.length + 1;
   }
 
-  getSlotType(slot: Slot, archiveMode: StateArchiveMode): HistoricalStateSlotType {
-    if (archiveMode === StateArchiveMode.Frequency) return HistoricalStateSlotType.Full;
+  getStorageType(slot: Slot, stateArchiveMode: StateArchiveMode): HistoricalStateStorageType {
+    if (stateArchiveMode === StateArchiveMode.Frequency) return HistoricalStateStorageType.Full;
 
     if (slot === 0) {
-      return HistoricalStateSlotType.Snapshot;
+      return HistoricalStateStorageType.Snapshot;
     }
 
-    if (slot % this.snapshotEverySlot === 0) return HistoricalStateSlotType.Full;
-    if (this.diffEverySlot.some((s) => slot % s === 0)) return HistoricalStateSlotType.Diff;
+    if (slot % this.snapshotEverySlot === 0) return HistoricalStateStorageType.Snapshot;
+    if (this.diffEverySlot.some((s) => slot % s === 0)) return HistoricalStateStorageType.Diff;
 
-    return HistoricalStateSlotType.BlockReplay;
+    return HistoricalStateStorageType.BlockReplay;
   }
 
   getArchiveLayers(slot: Slot): Slot[] {

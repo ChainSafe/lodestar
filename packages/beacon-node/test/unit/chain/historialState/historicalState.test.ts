@@ -1,7 +1,7 @@
 import {describe, it, expect, beforeEach} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {HierarchicalLayers} from "../../../../src/chain/historicalState/utils/hierarchicalLayers.js";
-import {HistoricalStateSlotType} from "../../../../src/chain/historicalState/types.js";
+import {HistoricalStateStorageType} from "../../../../src/chain/historicalState/types.js";
 import {StateArchiveMode} from "../../../../src/chain/archiver/index.js";
 
 const layer0 = 5;
@@ -23,16 +23,16 @@ describe("HierarchicalLayers", () => {
 
   describe("getArchiveStrategy", () => {
     it("should return snapshot strategy for slot 0", () => {
-      expect(hierarchicalLayers.getSlotType(0, StateArchiveMode.Differential)).toEqual(
-        HistoricalStateSlotType.Snapshot
+      expect(hierarchicalLayers.getStorageType(0, StateArchiveMode.Differential)).toEqual(
+        HistoricalStateStorageType.Snapshot
       );
     });
 
     it.each([0, layer0 * SLOTS_PER_EPOCH, layer0 * SLOTS_PER_EPOCH * 2, layer0 * SLOTS_PER_EPOCH * 3])(
       "should return snapshot strategy for slot %i",
       (slot) => {
-        expect(hierarchicalLayers.getSlotType(slot, StateArchiveMode.Frequency)).toEqual(
-          HistoricalStateSlotType.Snapshot
+        expect(hierarchicalLayers.getStorageType(slot, StateArchiveMode.Frequency)).toEqual(
+          HistoricalStateStorageType.Snapshot
         );
       }
     );
@@ -47,7 +47,9 @@ describe("HierarchicalLayers", () => {
         [layer3 * SLOTS_PER_EPOCH, layer3 * SLOTS_PER_EPOCH * 3],
       ].flat()
     )("should return diff strategy for slot %i", (slot) => {
-      expect(hierarchicalLayers.getSlotType(slot, StateArchiveMode.Differential)).toEqual(HistoricalStateSlotType.Diff);
+      expect(hierarchicalLayers.getStorageType(slot, StateArchiveMode.Differential)).toEqual(
+        HistoricalStateStorageType.Diff
+      );
     });
 
     it.each(
@@ -60,8 +62,8 @@ describe("HierarchicalLayers", () => {
         [layer3 * SLOTS_PER_EPOCH + 1, layer3 * SLOTS_PER_EPOCH * 3 + 3],
       ].flat()
     )("should return block replay strategy for slot %i", (slot) => {
-      expect(hierarchicalLayers.getSlotType(slot, StateArchiveMode.Differential)).toEqual(
-        HistoricalStateSlotType.BlockReplay
+      expect(hierarchicalLayers.getStorageType(slot, StateArchiveMode.Differential)).toEqual(
+        HistoricalStateStorageType.BlockReplay
       );
     });
   });
