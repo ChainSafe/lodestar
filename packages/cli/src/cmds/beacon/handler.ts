@@ -62,6 +62,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
+  logger.info("Initializing state processing", {stateArchiveMode: options.chain.stateArchiveMode});
 
   // BeaconNode setup
   try {

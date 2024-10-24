@@ -17,6 +17,7 @@ import {
   BlobSidecarsRepository,
   BlobSidecarsArchiveRepository,
   BLSToExecutionChangeRepository,
+  HierarchicalStateArchiveRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
@@ -37,6 +38,8 @@ export interface IBeaconDb {
 
   // finalized states
   stateArchive: StateArchiveRepository;
+  // Used to store hierarchical state diff
+  hierarchicalStateArchiveRepository: HierarchicalStateArchiveRepository;
   // checkpoint states
   checkpointState: CheckpointStateRepository;
 

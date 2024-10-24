@@ -14,6 +14,9 @@ import {
   checkAndPersistAnchorState,
   initStateFromEth1,
   getStateTypeFromBytes,
+  HierarchicalLayers,
+  getLastStoredState,
+  StateArchiveMode,
 } from "@lodestar/beacon-node";
 import {Checkpoint} from "@lodestar/types/phase0";
 
@@ -36,7 +39,7 @@ async function initAndVerifyWeakSubjectivityState(
   dbStateBytes: StateWithBytes,
   wsStateBytes: StateWithBytes,
   wsCheckpoint: Checkpoint,
-  opts: {ignoreWeakSubjectivityCheck?: boolean} = {}
+  opts: {ignoreWeakSubjectivityCheck?: boolean; archiveMode: StateArchiveMode}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   const dbState = dbStateBytes.state;
   const wsState = wsStateBytes.state;
@@ -71,9 +74,10 @@ async function initAndVerifyWeakSubjectivityState(
     throw wssCheck.err;
   }
 
-  await checkAndPersistAnchorState(config, db, logger, anchorState.state, anchorState.stateBytes, {
+  await checkAndPersistAnchorState(config, db, logger, anchorState.state, {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
+    archiveMode: opts.archiveMode,
   });
 
   // Return the latest anchorState but still return original wsCheckpoint to validate in backfill
@@ -100,11 +104,18 @@ export async function initBeaconState(
   if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl)) {
     throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
   }
+
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
   //   i)  used directly as the anchor state
   //   ii) used to load and verify a weak subjectivity state,
-  const lastDbSlot = await db.stateArchive.lastKey();
-  const stateBytes = lastDbSlot !== null ? await db.stateArchive.getBinary(lastDbSlot) : null;
+  //   ii) used during verification of a weak subjectivity state,
+  const {stateBytes, slot: lastDbSlot} = await getLastStoredState({
+    forkConfig: chainForkConfig,
+    db,
+    hierarchicalLayers: HierarchicalLayers.fromString(),
+    logger,
+    archiveMode: options.chain.stateArchiveMode,
+  });
   let lastDbState: BeaconStateAllForks | null = null;
   let lastDbValidatorsBytes: Uint8Array | null = null;
   let lastDbStateWithBytes: StateWithBytes | null = null;
@@ -139,9 +150,10 @@ export async function initBeaconState(
           // this never happens
           throw Error(`There is no stateBytes for the lastDbState at slot ${lastDbState.slot}`);
         }
-        await checkAndPersistAnchorState(config, db, logger, lastDbState, stateBytes, {
+        await checkAndPersistAnchorState(config, db, logger, lastDbState, {
           isWithinWeakSubjectivityPeriod: wssCheck,
           isCheckpointState: false,
+          archiveMode: options.chain.stateArchiveMode,
         });
         return {anchorState: lastDbState};
       }
@@ -160,7 +172,8 @@ export async function initBeaconState(
       },
       chainForkConfig,
       db,
-      logger
+      logger,
+      {archiveMode: options.chain.stateArchiveMode}
     );
   }
 
@@ -175,7 +188,8 @@ export async function initBeaconState(
       },
       chainForkConfig,
       db,
-      logger
+      logger,
+      {archiveMode: options.chain.stateArchiveMode}
     );
   }
 
@@ -185,15 +199,22 @@ export async function initBeaconState(
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
-    await checkAndPersistAnchorState(config, db, logger, anchorState, stateBytes, {
+    await checkAndPersistAnchorState(config, db, logger, anchorState, {
       isWithinWeakSubjectivityPeriod: wssCheck,
       isCheckpointState: true,
+      archiveMode: options.chain.stateArchiveMode,
     });
     return {anchorState};
   }
 
   // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
-  const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
+  const anchorState = await initStateFromEth1({
+    config: chainForkConfig,
+    db,
+    logger,
+    opts: {...options.eth1, archiveMode: options.chain.stateArchiveMode},
+    signal,
+  });
   return {anchorState};
 }
 
@@ -203,7 +224,8 @@ async function readWSState(
   wssOpts: {checkpointState: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger
+  logger: Logger,
+  opts: {archiveMode: StateArchiveMode}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a provided state file:
   // if a weak subjectivity checkpoint has been provided, it is used for additional verification
@@ -225,6 +247,7 @@ async function readWSState(
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
   return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateBytes, checkpoint, {
     ignoreWeakSubjectivityCheck,
+    archiveMode: opts.archiveMode,
   });
 }
 
@@ -234,7 +257,8 @@ async function fetchWSStateFromBeaconApi(
   wssOpts: {checkpointSyncUrl: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger
+  logger: Logger,
+  opts: {archiveMode: StateArchiveMode}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a state that needs to be fetched:
   // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
@@ -261,5 +285,6 @@ async function fetchWSStateFromBeaconApi(
   const store = lastDbStateBytes ?? wsStateWithBytes;
   return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateWithBytes, wsCheckpoint, {
     ignoreWeakSubjectivityCheck: wssOpts.ignoreWeakSubjectivityCheck,
+    archiveMode: opts.archiveMode,
   });
 }

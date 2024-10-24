@@ -723,6 +723,54 @@
   optionalDependencies:
     tiny-worker ">= 2"
 
+"@chainsafe/xdelta3-node-darwin-arm64@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node-darwin-arm64/-/xdelta3-node-darwin-arm64-1.0.2.tgz#fa1891f29e7e44d0e4149f4b8f5731b333345db1"
+  integrity sha512-sgfhUZg87b/7JpBWLIPKv2tXzamLZNzEZnRDyCIR48r/VLZbslHSNz8m4qNWcsbflt81X9G4QxTz/gqdpSNxHA==
+
+"@chainsafe/xdelta3-node-darwin-x64@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node-darwin-x64/-/xdelta3-node-darwin-x64-1.0.2.tgz#bda8f2eed2544ffa90cb06e90f767b96f8f4ea64"
+  integrity sha512-mOwZTgMqujBTl7gkYX+yoVL4eiM1NvS8cvb9fpLv4kvc9e9T0yMYP1QieDHuLEc2xk27ddZYAzYIXO9c8iDbDQ==
+
+"@chainsafe/xdelta3-node-linux-arm64-gnu@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node-linux-arm64-gnu/-/xdelta3-node-linux-arm64-gnu-1.0.2.tgz#0c27c53eb110a27323a59a93d143453c9dc5f445"
+  integrity sha512-/K5oZoMmf1WvcKQAL4lozU7kVxQ+NFtjBOsWQNm61weHRkiv4hBx7Fo7fQ71LIESu7Kyvs44zogrViR9bHn31A==
+
+"@chainsafe/xdelta3-node-linux-arm64-musl@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node-linux-arm64-musl/-/xdelta3-node-linux-arm64-musl-1.0.2.tgz#c2bb58531a8b57c00f8929952b391dd445b10cc7"
+  integrity sha512-GuAgRIUXZFGmAUz/bDAOEuFIexU4EcObIuoqijJWWGmdJYuLQsFkyEtr3YpANQJ0RT6EKYgK6AVHczzuG917AQ==
+
+"@chainsafe/xdelta3-node-linux-x64-gnu@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node-linux-x64-gnu/-/xdelta3-node-linux-x64-gnu-1.0.2.tgz#570184846e0a0ab4216458b73ee54aae3f26bc53"
+  integrity sha512-sL/UjocpJHLI1W+rqUxaOmlP4+nUUjQQCJuaReV1nDErgeQuUfPhYU8wQYRbwA+uCVR2eP2D64V5yehpFyNtcA==
+
+"@chainsafe/xdelta3-node-linux-x64-musl@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node-linux-x64-musl/-/xdelta3-node-linux-x64-musl-1.0.2.tgz#8d2dffdc44b1b733a6e67a80a54cc9eb73007d35"
+  integrity sha512-iwl17R2731jCVNfNJFLd3dXw7g4B0wR4AQYf/hUtG6xfxcF3fF75zuTfDbgXq3rH6x0vJv7Bn5Vtm+7w1PQtWg==
+
+"@chainsafe/xdelta3-node-win32-x64-msvc@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node-win32-x64-msvc/-/xdelta3-node-win32-x64-msvc-1.0.2.tgz#f86cc56b0c18dbeb713ecc7b29032a0f5b4d1e4e"
+  integrity sha512-aRsLH7Pxq+hVvhCXwYWmlvtTa07f1btKSejK64yOlptIVrL0PEqlI0ocIYFyHPd1oDsfgBW6645/572ASlYOTw==
+
+"@chainsafe/xdelta3-node@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/xdelta3-node/-/xdelta3-node-1.0.2.tgz#e0892e1e8a6f1ef72a4dac1c76abdecfead56277"
+  integrity sha512-zVuznkGTJ2tq1BJktRtc54zyPBZIHKoAf0cQWyoXs0dCju8PimKS5T8I7uwSRV36OkejxCIzFzYOqAlrnNnKGg==
+  optionalDependencies:
+    "@chainsafe/xdelta3-node-darwin-arm64" "1.0.2"
+    "@chainsafe/xdelta3-node-darwin-x64" "1.0.2"
+    "@chainsafe/xdelta3-node-linux-arm64-gnu" "1.0.2"
+    "@chainsafe/xdelta3-node-linux-arm64-musl" "1.0.2"
+    "@chainsafe/xdelta3-node-linux-x64-gnu" "1.0.2"
+    "@chainsafe/xdelta3-node-linux-x64-musl" "1.0.2"
+    "@chainsafe/xdelta3-node-win32-x64-msvc" "1.0.2"
+
 "@colors/colors@1.5.0":
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"

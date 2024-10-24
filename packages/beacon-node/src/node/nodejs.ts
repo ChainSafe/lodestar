@@ -204,6 +204,7 @@ export class BeaconNode {
       metrics,
       logger: logger.child({module: LoggerModule.chain}),
       signal,
+      stateArchiveMode: opts.chain.stateArchiveMode,
     });
 
     const chain = new BeaconChain(opts.chain, {

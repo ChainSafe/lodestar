@@ -14,6 +14,7 @@ import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {ApiModules} from "../types.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
+import {StateArchiveMode} from "../../../chain/options.js";
 
 export function getLodestarApi({
   chain,
@@ -185,7 +186,14 @@ export function getLodestarApi({
     },
 
     async dumpDbStateIndex() {
-      return {data: await db.stateArchive.dumpRootIndexEntries()};
+      switch (chain.opts.stateArchiveMode) {
+        case StateArchiveMode.Frequency: {
+          return {data: await db.stateArchive.dumpRootIndexEntries()};
+        }
+        case StateArchiveMode.Differential: {
+          return {data: await db.hierarchicalStateArchiveRepository.dumpRootIndexEntries()};
+        }
+      }
     },
   };
 }
