@@ -16,7 +16,7 @@ export async function putHistoricalState(
 ): Promise<void> {
   const epoch = computeEpochAtSlot(slot);
   const storageType = hierarchicalLayers.getStorageType(slot, stateArchiveMode);
-  logger.info("Archiving historical state", {epoch, slot, slotType: storageType});
+  logger.info("Archiving historical state", {epoch, slot, storageType});
 
   switch (storageType) {
     case HistoricalStateStorageType.Full: {
