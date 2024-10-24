@@ -56,7 +56,7 @@ describe("historicalState/util", () => {
       const skipSlotDiff = false;
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(null);
 
       await expect(
         getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec})
@@ -71,11 +71,11 @@ describe("historicalState/util", () => {
       const skipSlotDiff = false;
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(null);
 
       await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
-      expect(db.stateArchive.lastKey).toBeCalledTimes(1);
+      expect(db.hierarchicalStateArchiveRepository.lastKey).toBeCalledTimes(1);
     });
 
     it("should not fallback to last snapshot if given snapshot is available", async () => {
@@ -84,15 +84,15 @@ describe("historicalState/util", () => {
       const snapshotState = Buffer.from("abcdec", "utf8");
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
-      when(db.stateArchive.getBinary).calledWith(10).thenResolve(null);
-      when(db.stateArchive.getBinary).calledWith(20).thenResolve(null);
-      when(db.stateArchive.getBinary).calledWith(30).thenResolve(null);
-      when(db.stateArchive.getBinary).calledWith(40).thenResolve(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(snapshotState);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(10).thenResolve(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(20).thenResolve(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(30).thenResolve(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(40).thenResolve(null);
 
       await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
-      expect(db.stateArchive.lastKey).not.toBeCalled();
+      expect(db.hierarchicalStateArchiveRepository.lastKey).not.toBeCalled();
     });
 
     it("should load all diffs when skipSlotDiff=false", async () => {
@@ -101,16 +101,16 @@ describe("historicalState/util", () => {
       const snapshotState = Buffer.from("abcdec", "utf8");
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
-      vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(snapshotState);
+      vi.mocked(db.hierarchicalStateArchiveRepository.getBinary).mockResolvedValue(null);
 
       await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
-      expect(db.stateArchive.getBinary).toHaveBeenCalledTimes(4);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(1, 10);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(2, 20);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(3, 30);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(4, 40);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenCalledTimes(4);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(1, 10);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(2, 20);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(3, 30);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(4, 40);
     });
 
     it("should skip last diffs when skipSlotDiff=true and diff layer last slot is same", async () => {
@@ -119,15 +119,15 @@ describe("historicalState/util", () => {
       const snapshotState = Buffer.from("abcdec", "utf8");
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
-      vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(snapshotState);
+      vi.mocked(db.hierarchicalStateArchiveRepository.getBinary).mockResolvedValue(null);
 
       await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
-      expect(db.stateArchive.getBinary).toHaveBeenCalledTimes(3);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(1, 10);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(2, 20);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(3, 30);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenCalledTimes(3);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(1, 10);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(2, 20);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(3, 30);
     });
 
     it("should not skip last diffs when skipSlotDiff=true but diff layer last slot is not the same", async () => {
@@ -136,16 +136,16 @@ describe("historicalState/util", () => {
       const snapshotState = Buffer.from("abcdec", "utf8");
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
-      vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(snapshotState);
+      vi.mocked(db.hierarchicalStateArchiveRepository.getBinary).mockResolvedValue(null);
 
       await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
-      expect(db.stateArchive.getBinary).toHaveBeenCalledTimes(4);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(1, 10);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(2, 20);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(3, 30);
-      expect(db.stateArchive.getBinary).toHaveBeenNthCalledWith(4, 40);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenCalledTimes(4);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(1, 10);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(2, 20);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(3, 30);
+      expect(db.hierarchicalStateArchiveRepository.getBinary).toHaveBeenNthCalledWith(4, 40);
     });
 
     it("should not apply any diff if empty", async () => {
@@ -154,8 +154,8 @@ describe("historicalState/util", () => {
       const snapshotState = Buffer.from("abcdec", "utf8");
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
-      vi.mocked(db.stateArchive.getBinary).mockResolvedValue(null);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(snapshotState);
+      vi.mocked(db.hierarchicalStateArchiveRepository.getBinary).mockResolvedValue(null);
 
       await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 
@@ -176,11 +176,11 @@ describe("historicalState/util", () => {
       const diff4 = codec.compute(state3, state4);
 
       vi.spyOn(hierarchicalLayers, "getArchiveLayers").mockReturnValue([0, 10, 20, 30, 40]);
-      when(db.stateArchive.getBinary).calledWith(0).thenResolve(snapshotState);
-      when(db.stateArchive.getBinary).calledWith(10).thenResolve(diff1);
-      when(db.stateArchive.getBinary).calledWith(20).thenResolve(diff2);
-      when(db.stateArchive.getBinary).calledWith(30).thenResolve(diff3);
-      when(db.stateArchive.getBinary).calledWith(40).thenResolve(diff4);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(0).thenResolve(snapshotState);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(10).thenResolve(diff1);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(20).thenResolve(diff2);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(30).thenResolve(diff3);
+      when(db.hierarchicalStateArchiveRepository.getBinary).calledWith(40).thenResolve(diff4);
 
       await getDiffStateArchive({slot, skipSlotDiff}, {db, logger, hierarchicalLayers: hierarchicalLayers, codec});
 

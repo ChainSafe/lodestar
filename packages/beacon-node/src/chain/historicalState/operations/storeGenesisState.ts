@@ -19,6 +19,6 @@ export async function storeGenesisState(
   if (archiveMode === StateArchiveMode.Frequency) {
     await db.stateArchive.putBinary(state.slot, forkConfig.getForkTypes(state.slot).BeaconState.serialize(state));
   } else {
-    await db.stateArchive.put(state.slot, stateToStateArchive(state, forkConfig));
+    await db.hierarchicalStateArchiveRepository.put(state.slot, stateToStateArchive(state, forkConfig));
   }
 }

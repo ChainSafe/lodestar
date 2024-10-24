@@ -58,7 +58,7 @@ import {
   CommonBlockBody,
   FindHeadFnName,
 } from "./interface.js";
-import {IChainOptions} from "./options.js";
+import {IChainOptions, StateArchiveMode} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
@@ -532,14 +532,22 @@ export class BeaconChain implements IBeaconChain {
       };
     }
 
-    const slot = await this.db.stateArchive.getSlotByRoot(fromHex(stateRoot));
-    if (!slot) return null;
+    switch (this.opts.stateArchiveMode) {
+      case StateArchiveMode.Frequency: {
+        const data = await this.db.stateArchive.getByRoot(fromHex(stateRoot));
+        return data && {state: data, executionOptimistic: false, finalized: true};
+      }
+      case StateArchiveMode.Differential: {
+        const slot = await this.db.hierarchicalStateArchiveRepository.getSlotByRoot(fromHex(stateRoot));
+        if (!slot) return null;
 
-    const stateBytes = await this.historicalStateRegen?.getHistoricalState(slot);
-    if (!stateBytes) return null;
+        const stateBytes = await this.historicalStateRegen?.getHistoricalState(slot);
+        if (!stateBytes) return null;
 
-    const state = this.config.getForkTypes(slot).BeaconState.deserialize(stateBytes);
-    return {state: state as unknown as BeaconStateAllForks, executionOptimistic: false, finalized: true};
+        const state = this.config.getForkTypes(slot).BeaconState.deserialize(stateBytes);
+        return {state: state as unknown as BeaconStateAllForks, executionOptimistic: false, finalized: true};
+      }
+    }
   }
 
   getStateByCheckpoint(

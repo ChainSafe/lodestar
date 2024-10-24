@@ -10,6 +10,7 @@ import {
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
+  HierarchicalStateArchiveRepository,
   VoluntaryExitRepository,
   BestLightClientUpdateRepository,
   CheckpointHeaderRepository,
@@ -36,6 +37,7 @@ export class BeaconDb implements IBeaconDb {
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
 
   stateArchive: StateArchiveRepository;
+  hierarchicalStateArchiveRepository: HierarchicalStateArchiveRepository;
   checkpointState: CheckpointStateRepository;
 
   voluntaryExit: VoluntaryExitRepository;
@@ -69,6 +71,7 @@ export class BeaconDb implements IBeaconDb {
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
+    this.hierarchicalStateArchiveRepository = new HierarchicalStateArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);

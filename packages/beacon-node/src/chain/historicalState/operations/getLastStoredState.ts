@@ -8,7 +8,6 @@ import {XDelta3Codec} from "../utils/xdelta3.js";
 import {getDiffStateArchive} from "../utils/diff.js";
 import {StateArchiveMode} from "../../archiver/interface.js";
 import {getLastStoredStateArchive, stateArchiveToStateBytes} from "../utils/stateArchive.js";
-import {StateArchiveSSZType} from "../../../db/repositories/stateArchive.js";
 
 export const codec: IStateDiffCodec = new XDelta3Codec();
 
@@ -60,19 +59,22 @@ export async function getLastStoredState({
       return {stateBytes: await db.stateArchive.getBinary(lastStoredSlot), slot: lastStoredSlot};
     }
     case HistoricalStateStorageType.Snapshot: {
-      const stateArchive = await db.stateArchive.getBinary(lastStoredSlot);
+      const stateArchive = await db.hierarchicalStateArchiveRepository.get(lastStoredSlot);
 
       return {
-        stateBytes: stateArchive
-          ? stateArchiveToStateBytes(StateArchiveSSZType.deserialize(stateArchive), forkConfig)
-          : null,
+        stateBytes: stateArchive ? stateArchiveToStateBytes(stateArchive, forkConfig) : null,
         slot: lastStoredSlot,
       };
     }
     case HistoricalStateStorageType.Diff: {
       if (lastStoredSlot === lastStoredSnapshotArchive.slot) {
         logger?.warn("Last archived snapshot is not at expected epoch boundary, possibly because of checkpoint sync.");
-        return {stateBytes: await db.stateArchive.getBinary(lastStoredSlot), slot: lastStoredSlot};
+        const stateArchive = await db.hierarchicalStateArchiveRepository.get(lastStoredSlot);
+
+        return {
+          stateBytes: stateArchive ? stateArchiveToStateBytes(stateArchive, forkConfig) : null,
+          slot: lastStoredSlot,
+        };
       }
 
       const diffStateArchive = await getDiffStateArchive(

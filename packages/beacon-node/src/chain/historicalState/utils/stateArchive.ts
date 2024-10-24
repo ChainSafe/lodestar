@@ -3,7 +3,7 @@ import {BeaconState, ssz} from "@lodestar/types";
 import {IStateDiffCodec} from "../types.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {IBeaconDb} from "../../../db/interface.js";
-import {StateArchive} from "../../../db/repositories/stateArchive.js";
+import {StateArchive} from "../../../db/repositories/hierarchicalStateArchive.js";
 
 export function stateToStateArchive(state: BeaconState, forkConfig: ChainForkConfig): StateArchive {
   const slot = state.slot;
@@ -89,13 +89,13 @@ export async function getLastStoredStateArchive({
   maxFallback,
   snapshot,
 }: {db: IBeaconDb; maxFallback?: number; snapshot: boolean}): Promise<StateArchive | null> {
-  const lastStoredSlot = await db.stateArchive.lastKey();
+  const lastStoredSlot = await db.hierarchicalStateArchiveRepository.lastKey();
   const maxFallbackCount = maxFallback ?? DEFAULT_MAX_SEARCH_FALLBACK;
   let tries = 0;
 
   if (!lastStoredSlot) return null;
 
-  for await (const stateArchive of db.stateArchive.valuesStream({lte: lastStoredSlot})) {
+  for await (const stateArchive of db.hierarchicalStateArchiveRepository.valuesStream({lte: lastStoredSlot})) {
     if (stateArchive.snapshot === snapshot) return stateArchive;
 
     if (tries === maxFallbackCount) return null;

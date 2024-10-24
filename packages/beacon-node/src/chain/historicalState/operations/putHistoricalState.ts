@@ -5,7 +5,7 @@ import {IStateDiffCodec, HistoricalStateStorageType, HierarchicalStateOperationO
 import {XDelta3Codec} from "../utils/xdelta3.js";
 import {getDiffStateArchive} from "../utils/diff.js";
 import {computeDiffArchive, stateBytesToStateArchive} from "../utils/stateArchive.js";
-import {StateArchiveSSZType} from "../../../db/repositories/stateArchive.js";
+import {StateArchiveSSZType} from "../../../db/repositories/hierarchicalStateArchive.js";
 
 export const codec: IStateDiffCodec = new XDelta3Codec();
 
@@ -33,7 +33,7 @@ export async function putHistoricalState(
     case HistoricalStateStorageType.Snapshot: {
       const stateArchive = stateBytesToStateArchive(stateBytes, config);
       const stateArchiveBytes = StateArchiveSSZType.serialize(stateArchive);
-      await db.stateArchive.put(slot, stateArchive);
+      await db.hierarchicalStateArchiveRepository.put(slot, stateArchive);
 
       metrics?.stateSnapshotSize.set(stateBytes.byteLength);
       logger.verbose("State stored as snapshot", {
@@ -54,7 +54,7 @@ export async function putHistoricalState(
       const diffArchive = computeDiffArchive(diffStateArchive, stateBytesToStateArchive(stateBytes, config), codec);
 
       const diffArchiveBytes = StateArchiveSSZType.serialize(diffArchive);
-      await db.stateArchive.put(slot, diffArchive);
+      await db.hierarchicalStateArchiveRepository.put(slot, diffArchive);
 
       metrics?.stateDiffSize.set(diffArchiveBytes.byteLength);
       logger.verbose("State stored as diff", {

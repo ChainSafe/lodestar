@@ -38,7 +38,7 @@ export async function getHistoricalState(
 
     case HistoricalStateStorageType.Snapshot: {
       const loadStateTimer = metrics?.loadSnapshotStateTime.startTimer();
-      const stateArchive = await db.stateArchive.get(slot);
+      const stateArchive = await db.hierarchicalStateArchiveRepository.get(slot);
 
       const state = stateArchive ? stateArchiveToStateBytes(stateArchive, config) : null;
 

@@ -7,7 +7,7 @@ import {IBeaconDb} from "../../../db/interface.js";
 import {HierarchicalLayers} from "./hierarchicalLayers.js";
 import {getSnapshotStateArchiveWithFallback} from "./snapshot.js";
 import {applyDiffArchive} from "./stateArchive.js";
-import {StateArchive, StateArchiveSSZType} from "../../../db/repositories/stateArchive.js";
+import {StateArchive, StateArchiveSSZType} from "../../../db/repositories/hierarchicalStateArchive.js";
 
 export async function replayStateDiffs(
   {diffArchives, snapshotArchive}: {diffArchives: StateArchive[]; snapshotArchive: StateArchive},
@@ -85,7 +85,7 @@ export async function getDiffStateArchive(
   const diffArchives = await Promise.all(
     processableDiffs.map((s) => {
       const loadStateTimer = metrics?.loadDiffStateTime.startTimer();
-      return db.stateArchive.get(s).then((diff) => {
+      return db.hierarchicalStateArchiveRepository.get(s).then((diff) => {
         loadStateTimer?.();
         return diff;
       });

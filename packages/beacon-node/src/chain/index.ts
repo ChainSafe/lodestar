@@ -7,5 +7,4 @@ export * from "./stateCache/index.js";
 
 // To initialize the state from outside beacon-node package
 export {getLastStoredState} from "./historicalState/operations/getLastStoredState.js";
-export {migrateStateArchive} from "./historicalState/operations/migrateStateArchive.js";
 export {HierarchicalLayers} from "./historicalState/utils/hierarchicalLayers.js";
