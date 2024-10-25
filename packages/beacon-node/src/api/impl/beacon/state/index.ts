@@ -18,8 +18,7 @@ import {filterStateValidatorsByStatus, getStateValidatorIndex, getStateResponse,
 export function getBeaconStateApi({
   chain,
   config,
-  logger,
-}: Pick<ApiModules, "chain" | "config" | "logger">): ApplicationMethods<routes.beacon.state.Endpoints> {
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
@@ -95,8 +94,6 @@ export function getBeaconStateApi({
               currentEpoch
             );
             validatorResponses.push(validatorResponse);
-          } else {
-            logger.warn(resp.reason, {id});
           }
         }
         return {
@@ -145,8 +142,6 @@ export function getBeaconStateApi({
             const index = resp.validatorIndex;
             const {pubkey, activationEpoch} = state.validators.getReadonly(index);
             validatorIdentities.push({index, pubkey, activationEpoch});
-          } else {
-            logger.warn(resp.reason, {id});
           }
         }
       } else {
