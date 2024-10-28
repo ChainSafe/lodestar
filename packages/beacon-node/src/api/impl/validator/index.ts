@@ -719,7 +719,7 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(engine.value),
       });
 
-      metrics?.blockProductionSelection.inc({
+      metrics?.blockProductionSelections.inc({
         source: ProducedBlockSource.engine,
         reason: EngineBlockSelectionReason.BuilderCensorship,
       });
@@ -734,7 +734,7 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(builder.value),
       });
 
-      metrics?.blockProductionSelection.inc({
+      metrics?.blockProductionSelections.inc({
         source: ProducedBlockSource.builder,
         reason:
           isEngineEnabled === false
@@ -754,7 +754,7 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(engine.value),
       });
 
-      metrics?.blockProductionSelection.inc({
+      metrics?.blockProductionSelections.inc({
         source: ProducedBlockSource.engine,
         reason:
           isBuilderEnabled === false

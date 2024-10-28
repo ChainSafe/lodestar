@@ -63,7 +63,7 @@ export function selectBlockProductionSource(
   switch (builderSelection) {
     case routes.validator.BuilderSelection.ExecutionAlways:
     case routes.validator.BuilderSelection.ExecutionOnly: {
-      metrics?.blockProductionSelection.inc({
+      metrics?.blockProductionSelections.inc({
         source: ProducedBlockSource.engine,
         reason: EngineBlockSelectionReason.EnginePreferred,
       });
@@ -73,7 +73,7 @@ export function selectBlockProductionSource(
     case routes.validator.BuilderSelection.Default:
     case routes.validator.BuilderSelection.MaxProfit: {
       if (builderBoostFactor === MAX_BUILDER_BOOST_FACTOR) {
-        metrics?.blockProductionSelection.inc({
+        metrics?.blockProductionSelections.inc({
           source: ProducedBlockSource.builder,
           reason: BuilderBlockSelectionReason.BuilderPreferred,
         });
@@ -81,7 +81,7 @@ export function selectBlockProductionSource(
       }
 
       if (builderBoostFactor === BigInt(0)) {
-        metrics?.blockProductionSelection.inc({
+        metrics?.blockProductionSelections.inc({
           source: ProducedBlockSource.engine,
           reason: EngineBlockSelectionReason.EnginePreferred,
         });
@@ -89,14 +89,14 @@ export function selectBlockProductionSource(
       }
 
       if (engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100)) {
-        metrics?.blockProductionSelection.inc({
+        metrics?.blockProductionSelections.inc({
           source: ProducedBlockSource.engine,
           reason: EngineBlockSelectionReason.BlockValue,
         });
         return ProducedBlockSource.engine;
       }
 
-      metrics?.blockProductionSelection.inc({
+      metrics?.blockProductionSelections.inc({
         source: ProducedBlockSource.builder,
         reason: BuilderBlockSelectionReason.BlockValue,
       });
@@ -105,7 +105,7 @@ export function selectBlockProductionSource(
 
     case routes.validator.BuilderSelection.BuilderAlways:
     case routes.validator.BuilderSelection.BuilderOnly: {
-      metrics?.blockProductionSelection.inc({
+      metrics?.blockProductionSelections.inc({
         source: ProducedBlockSource.builder,
         reason: BuilderBlockSelectionReason.BuilderPreferred,
       });

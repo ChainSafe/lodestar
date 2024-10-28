@@ -161,11 +161,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Count of blocks successfully produced",
       labelNames: ["source"],
     }),
-    blockProductionSelection: register.gauge<
+    blockProductionSelections: register.gauge<
       | {source: ProducedBlockSource.engine; reason: EngineBlockSelectionReason}
       | {source: ProducedBlockSource.builder; reason: BuilderBlockSelectionReason}
     >({
-      name: "beacon_block_production_selection_total",
+      name: "beacon_block_production_selections_total",
       help: "Count of all block production selections by source and reason",
       labelNames: ["source", "reason"],
     }),
