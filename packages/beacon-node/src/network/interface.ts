@@ -28,6 +28,7 @@ import {
   deneb,
   phase0,
   SignedAggregateAndProof,
+  WithBytes,
 } from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
@@ -35,8 +36,6 @@ import {INetworkCorePublic} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {PeerAction} from "./peers/index.js";
-
-export type WithBytes<T> = {data: T; bytes: Uint8Array};
 
 /**
  * The architecture of the network looks like so:

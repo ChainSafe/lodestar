@@ -19,6 +19,7 @@ import {
   LightClientOptimisticUpdate,
   LightClientUpdate,
   SignedAggregateAndProof,
+  WithBytes,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
@@ -29,7 +30,7 @@ import {IBeaconDb} from "../db/interface.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {IClock} from "../util/clock.js";
 import {NetworkOptions} from "./options.js";
-import {WithBytes, INetwork} from "./interface.js";
+import {INetwork} from "./interface.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";

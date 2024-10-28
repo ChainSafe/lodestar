@@ -4,9 +4,8 @@ import {fileURLToPath} from "node:url";
 import {describe, it, expect} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {phase0, ssz} from "@lodestar/types";
+import {phase0, ssz, WithBytes} from "@lodestar/types";
 import {verifyBlockSequence} from "../../../../src/sync/backfill/verify.js";
-import {WithBytes} from "../../../../src/network/interface.js";
 import {ZERO_HASH} from "../../../../src/constants/constants.js";
 import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors.js";
 
