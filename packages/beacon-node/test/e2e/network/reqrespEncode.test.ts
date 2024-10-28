@@ -40,7 +40,7 @@ describe("reqresp encoder", () => {
     const libp2p = await createLibp2p({
       transports: [tcp()],
       streamMuxers: [mplex()],
-      connectionEncrypters: [noise()],
+      connectionEncryption: [noise()],
       addresses: {
         listen: [listen],
       },

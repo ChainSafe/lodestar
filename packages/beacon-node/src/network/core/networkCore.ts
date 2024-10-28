@@ -1,4 +1,4 @@
-import {Connection, PrivateKey} from "@libp2p/interface";
+import {Connection, PeerId} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
@@ -55,7 +55,7 @@ type Mods = {
 export type BaseNetworkInit = {
   opts: NetworkOptions;
   config: BeaconConfig;
-  privateKey: PrivateKey;
+  peerId: PeerId;
   peerStoreDir: string | undefined;
   logger: LoggerNode;
   metricsRegistry: RegistryMetricCreator | null;
@@ -126,7 +126,7 @@ export class NetworkCore implements INetworkCore {
   static async init({
     opts,
     config,
-    privateKey,
+    peerId,
     peerStoreDir,
     logger,
     metricsRegistry,
@@ -136,7 +136,7 @@ export class NetworkCore implements INetworkCore {
     activeValidatorCount,
     initialStatus,
   }: BaseNetworkInit): Promise<NetworkCore> {
-    const libp2p = await createNodeJsLibp2p(privateKey, opts, {
+    const libp2p = await createNodeJsLibp2p(peerId, opts, {
       peerStoreDir,
       metrics: Boolean(metricsRegistry),
       metricsRegistry: metricsRegistry ?? undefined,
@@ -200,9 +200,8 @@ export class NetworkCore implements INetworkCore {
 
     const peerManager = await PeerManager.init(
       {
-        privateKey,
         libp2p,
-        gossip,
+        gossip: gossip,
         reqResp,
         attnetsService,
         syncnetsService,
@@ -363,11 +362,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    const m = new Map<string, Connection[]>();
-    for (const [k, v] of getConnectionsMap(this.libp2p).entries()) {
-      m.set(k, v.value);
-    }
-    return m;
+    return getConnectionsMap(this.libp2p);
   }
 
   async getConnectedPeers(): Promise<PeerIdStr[]> {
