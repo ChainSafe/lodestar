@@ -124,7 +124,7 @@ export enum EngineBlockSelectionReason {
   BuilderTimeout = "builder_timeout",
   BuilderPending = "builder_pending",
   BuilderNoBid = "builder_no_bid",
-  OverrideBuilder = "override_builder",
+  BuilderCensorship = "builder_censorship",
   BlockValue = "block_value",
   EnginePreferred = "engine_preferred",
 }
@@ -721,7 +721,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSelection.inc({
         source: ProducedBlockSource.engine,
-        reason: EngineBlockSelectionReason.OverrideBuilder,
+        reason: EngineBlockSelectionReason.BuilderCensorship,
       });
 
       return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
