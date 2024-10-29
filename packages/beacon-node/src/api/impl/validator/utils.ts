@@ -63,12 +63,12 @@ export function selectBlockProductionSource({
 
     case routes.validator.BuilderSelection.Default:
     case routes.validator.BuilderSelection.MaxProfit: {
-      if (builderBoostFactor === MAX_BUILDER_BOOST_FACTOR) {
-        return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
-      }
-
       if (builderBoostFactor === BigInt(0)) {
         return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
+      }
+
+      if (builderBoostFactor === MAX_BUILDER_BOOST_FACTOR) {
+        return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
       }
 
       if (engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100)) {
