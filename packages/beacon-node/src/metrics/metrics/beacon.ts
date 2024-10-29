@@ -3,7 +3,7 @@ import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.j
 import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
-import {BuilderBlockSelectionReason, EngineBlockSelectionReason} from "../../api/index.js";
+import {BuilderBlockSelectionReason, EngineBlockSelectionReason} from "../../api/impl/validator/index.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
 
@@ -177,7 +177,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_execution_payload_value",
-      help: "Execution payload value denominated in ETH of produced block",
+      help: "Execution payload value denominated in ETH of produced blocks",
       buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 1],
       labelNames: ["source"],
     }),
