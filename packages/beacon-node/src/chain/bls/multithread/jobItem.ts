@@ -1,4 +1,4 @@
-import {PublicKey, aggregateWithRandomness} from "@chainsafe/blst";
+import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
@@ -48,7 +48,7 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsWorkReq {
+export async function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): Promise<BlsWorkReq> {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
@@ -70,7 +70,7 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
       // and not a problem in the near future
       // this is monitored on v1.21.0 https://github.com/ChainSafe/lodestar/pull/6894/files#r1687359225
       const timer = metrics?.blsThreadPool.aggregateWithRandomnessMainThreadDuration.startTimer();
-      const {pk, sig} = aggregateWithRandomness(job.sets.map((set) => ({pk: set.publicKey, sig: set.signature})));
+      const {pk, sig} = await asyncAggregateWithRandomness(job.sets.map((set) => ({pk: set.publicKey, sig: set.signature})));
       timer?.();
 
       return {
