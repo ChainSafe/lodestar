@@ -166,7 +166,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       | {source: ProducedBlockSource.builder; reason: BuilderBlockSelectionReason}
     >({
       name: "beacon_block_production_selections_total",
-      help: "Count of all block production selections by source and reason",
+      help: "Count of all block production selection results",
       labelNames: ["source", "reason"],
     }),
     blockProductionNumAggregated: register.histogram<{source: ProducedBlockSource}>({
@@ -177,7 +177,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_execution_payload_value",
-      help: "Execution payload value of produced block by engine and builder",
+      help: "Execution payload value denominated in ETH of produced block",
       buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 1],
       labelNames: ["source"],
     }),
