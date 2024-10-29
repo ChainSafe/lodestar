@@ -1,4 +1,4 @@
-import {PublicKey, aggregateWithRandomness} from "@chainsafe/blst";
+import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/metrics.js";
 import {LinkedList} from "../../../util/array.js";
@@ -48,7 +48,7 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsWorkReq {
+export async function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): Promise<BlsWorkReq> {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
@@ -61,17 +61,9 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
         })),
       };
     case JobQueueItemType.sameMessage: {
-      // This is slow code on main thread (mainly signature deserialization + group check).
-      // Ideally it can be taken off-thread, but in the mean time, keep track of total time spent here.
-      // As of July 2024, for a node subscribing to all subnets, with 1 signature per validator per epoch,
-      // it takes around 2.02 min to perform this operation for a single epoch.
-      // cpu profile on main thread has 250s idle so this only works until we reach 3M validators
-      // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
-      // and not a problem in the near future
-      // this is monitored on v1.21.0 https://github.com/ChainSafe/lodestar/pull/6894/files#r1687359225
-      const timer = metrics?.blsThreadPool.aggregateWithRandomnessMainThreadDuration.startTimer();
-      const {pk, sig} = aggregateWithRandomness(job.sets.map((set) => ({pk: set.publicKey, sig: set.signature})));
-      timer?.();
+      const {pk, sig} = await asyncAggregateWithRandomness(
+        job.sets.map((set) => ({pk: set.publicKey, sig: set.signature}))
+      );
 
       return {
         opts: job.opts,
