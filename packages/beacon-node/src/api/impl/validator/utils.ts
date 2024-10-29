@@ -3,8 +3,7 @@ import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, ValidatorIndex} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
-import {Metrics} from "../../../metrics/index.js";
-import {BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
+import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
 
 export function computeSubnetForCommitteesAtSlot(
   slot: Slot,
@@ -46,70 +45,41 @@ export function getPubkeysForIndices(
   return pubkeys;
 }
 
-export function selectBlockProductionSource(
-  {
-    builderSelection,
-    engineBlockValue,
-    builderBlockValue,
-    builderBoostFactor,
-  }: {
-    builderSelection: routes.validator.BuilderSelection;
-    engineBlockValue: bigint;
-    builderBlockValue: bigint;
-    builderBoostFactor: bigint;
-  },
-  metrics: Metrics | null
-): ProducedBlockSource {
+export function selectBlockProductionSource({
+  builderSelection,
+  engineBlockValue,
+  builderBlockValue,
+  builderBoostFactor,
+}: {
+  builderSelection: routes.validator.BuilderSelection;
+  engineBlockValue: bigint;
+  builderBlockValue: bigint;
+  builderBoostFactor: bigint;
+}): BlockSelectionResult {
   switch (builderSelection) {
     case routes.validator.BuilderSelection.ExecutionAlways:
-    case routes.validator.BuilderSelection.ExecutionOnly: {
-      metrics?.blockProductionSelectionResults.inc({
-        source: ProducedBlockSource.engine,
-        reason: EngineBlockSelectionReason.EnginePreferred,
-      });
-      return ProducedBlockSource.engine;
-    }
+    case routes.validator.BuilderSelection.ExecutionOnly:
+      return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
 
     case routes.validator.BuilderSelection.Default:
     case routes.validator.BuilderSelection.MaxProfit: {
       if (builderBoostFactor === MAX_BUILDER_BOOST_FACTOR) {
-        metrics?.blockProductionSelectionResults.inc({
-          source: ProducedBlockSource.builder,
-          reason: BuilderBlockSelectionReason.BuilderPreferred,
-        });
-        return ProducedBlockSource.builder;
+        return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
       }
 
       if (builderBoostFactor === BigInt(0)) {
-        metrics?.blockProductionSelectionResults.inc({
-          source: ProducedBlockSource.engine,
-          reason: EngineBlockSelectionReason.EnginePreferred,
-        });
-        return ProducedBlockSource.engine;
+        return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
       }
 
       if (engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100)) {
-        metrics?.blockProductionSelectionResults.inc({
-          source: ProducedBlockSource.engine,
-          reason: EngineBlockSelectionReason.BlockValue,
-        });
-        return ProducedBlockSource.engine;
+        return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.BlockValue};
       }
 
-      metrics?.blockProductionSelectionResults.inc({
-        source: ProducedBlockSource.builder,
-        reason: BuilderBlockSelectionReason.BlockValue,
-      });
-      return ProducedBlockSource.builder;
+      return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BlockValue};
     }
 
     case routes.validator.BuilderSelection.BuilderAlways:
-    case routes.validator.BuilderSelection.BuilderOnly: {
-      metrics?.blockProductionSelectionResults.inc({
-        source: ProducedBlockSource.builder,
-        reason: BuilderBlockSelectionReason.BuilderPreferred,
-      });
-      return ProducedBlockSource.builder;
-    }
+    case routes.validator.BuilderSelection.BuilderOnly:
+      return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
   }
 }

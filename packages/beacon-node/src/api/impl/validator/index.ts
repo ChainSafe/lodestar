@@ -148,6 +148,16 @@ export enum BuilderBlockSelectionReason {
   BuilderPreferred = "builder_preferred",
 }
 
+export type BlockSelectionResult =
+  | {
+      source: ProducedBlockSource.engine;
+      reason: EngineBlockSelectionReason;
+    }
+  | {
+      source: ProducedBlockSource.builder;
+      reason: BuilderBlockSelectionReason;
+    };
+
 /**
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
@@ -782,15 +792,15 @@ export function getValidatorApi(
     }
 
     if (engine.status === "fulfilled" && builder.status === "fulfilled") {
-      const executionPayloadSource = selectBlockProductionSource(
-        {
-          builderBlockValue: builder.value.executionPayloadValue + builder.value.consensusBlockValue,
-          engineBlockValue: engine.value.executionPayloadValue + engine.value.consensusBlockValue,
-          builderBoostFactor,
-          builderSelection,
-        },
-        metrics
-      );
+      const result = selectBlockProductionSource({
+        builderBlockValue: builder.value.executionPayloadValue + builder.value.consensusBlockValue,
+        engineBlockValue: engine.value.executionPayloadValue + engine.value.consensusBlockValue,
+        builderBoostFactor,
+        builderSelection,
+      });
+      const executionPayloadSource = result.source;
+
+      metrics?.blockProductionSelectionResults.inc(result);
 
       logger.info(`Selected ${executionPayloadSource} block`, {
         ...loggerContext,
