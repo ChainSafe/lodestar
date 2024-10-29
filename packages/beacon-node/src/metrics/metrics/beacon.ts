@@ -175,6 +175,12 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [32, 64, 96, 128],
       labelNames: ["source"],
     }),
+    blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
+      name: "beacon_block_production_execution_payload_value",
+      help: "Execution payload value of produced block by engine and builder",
+      buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 1],
+      labelNames: ["source"],
+    }),
 
     blockProductionCaches: {
       producedBlockRoot: register.gauge({
