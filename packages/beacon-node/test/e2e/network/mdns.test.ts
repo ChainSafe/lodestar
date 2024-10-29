@@ -1,8 +1,8 @@
 import {describe, it, afterEach, beforeEach, expect, vi} from "vitest";
-import {PrivateKey} from "@libp2p/interface";
+import {PeerId} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {SignableENR} from "@chainsafe/enr";
-import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -35,9 +35,9 @@ describe.skip("mdns", () => {
     controller.abort();
   });
 
-  async function getOpts(privateKey: PrivateKey): Promise<NetworkOptions> {
+  async function getOpts(peerId: PeerId): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
-    const enr = SignableENR.createFromPrivateKey(privateKey);
+    const enr = SignableENR.createFromPeerId(peerId);
     enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
 
     return {
@@ -81,12 +81,12 @@ describe.skip("mdns", () => {
     const db = getMockedBeaconDb();
     const gossipHandlers = {} as GossipHandlers;
 
-    const privateKey = await generateKeyPair("secp256k1");
+    const peerId = await createSecp256k1PeerId();
     const logger = testLogger(nodeName);
 
-    const opts = await getOpts(privateKey);
+    const opts = await getOpts(peerId);
 
-    const modules: Omit<NetworkInitModules, "opts" | "privateKey" | "logger"> = {
+    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config,
       chain,
       db,
@@ -97,7 +97,7 @@ describe.skip("mdns", () => {
 
     const network = await Network.init({
       ...modules,
-      ...(await createNetworkModules(mu, privateKey, {...opts, mdns: true})),
+      ...(await createNetworkModules(mu, peerId, {...opts, mdns: true})),
       logger,
     });
 

@@ -329,6 +329,8 @@ export class Validator {
       strictFeeRecipientCheck,
     });
 
+    metrics?.defaultConfiguration.set({builderSelection: defaultBuilderSelection, broadcastValidation}, 1);
+
     // Instantiates block and attestation services and runs them once the chain has been started.
     return Validator.init(opts, genesis, metrics);
   }

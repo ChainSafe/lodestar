@@ -32,6 +32,12 @@ export enum ProducedBlockSource {
   engine = "engine",
 }
 
+export type WithBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes: Uint8Array;
+};
+
 export type WithOptionalBytes<T> = {
   data: T;
   /** SSZ serialized `data` bytes */
