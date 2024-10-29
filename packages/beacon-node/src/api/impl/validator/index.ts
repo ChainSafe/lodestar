@@ -47,7 +47,15 @@ import {
   getValidatorStatus,
 } from "@lodestar/types";
 import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth, toRootHex, TimeoutError} from "@lodestar/utils";
+import {
+  fromHex,
+  toHex,
+  resolveOrRacePromises,
+  prettyWeiToEth,
+  toRootHex,
+  TimeoutError,
+  formatWeiToEth,
+} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -442,7 +450,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(prettyWeiToEth(executionPayloadValue)));
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
@@ -517,7 +525,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(prettyWeiToEth(executionPayloadValue)));
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced execution block", {
         slot,
         executionPayloadValue,

@@ -46,13 +46,16 @@ const MAX_DECIMAL_FACTOR = BigInt("100000");
 
 /**
  * Format wei as ETH, with up to 5 decimals
- *
- * By default, append ' ETH', can be omitted by setting `suffix` to `false`
  */
-export function prettyWeiToEth(wei: bigint, suffix = true): string {
-  let eth = formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
-  if (suffix) eth += " ETH";
-  return eth;
+export function formatWeiToEth(wei: bigint): string {
+  return formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
+}
+
+/**
+ * Format wei as ETH, with up to 5 decimals and append ' ETH'
+ */
+export function prettyWeiToEth(wei: bigint): string {
+  return `${formatWeiToEth(wei)} ETH`;
 }
 
 /**
