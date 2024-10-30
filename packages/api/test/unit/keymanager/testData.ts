@@ -116,13 +116,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {pubkey: pubkeyRand},
     res: {
       data: {
-        graffiti: "graffiti",
+        graffiti: graffitiRandUtf8,
         strictFeeRecipientCheck: false,
-        feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        feeRecipient: ethaddressRand,
         builder: {
-          gasLimit: 30000000,
+          gasLimit: gasLimitRand,
           selection: "maxprofit",
-          boostFactor: "50",
+          boostFactor: builderBoostFactorRand.toString(),
         },
       },
     },
