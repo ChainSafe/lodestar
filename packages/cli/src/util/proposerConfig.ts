@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import {ValidatorProposerConfig} from "@lodestar/validator";
+import {isEmptyObject} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 
 import {parseFeeRecipient} from "./feeRecipient.js";
 
 import {readFile} from "./file.js";
-import {isEmptyObject} from "@lodestar/utils";
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
