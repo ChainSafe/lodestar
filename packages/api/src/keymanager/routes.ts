@@ -1,8 +1,7 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
-import {RecursivePartial} from "@lodestar/utils";
-import {Schema, Endpoint, RouteDefinitions, ResponseDataCodec} from "../utils/index.js";
+import {Schema, Endpoint, RouteDefinitions} from "../utils/index.js";
 import {WireFormat} from "../utils/wireFormat.js";
 import {
   EmptyArgs,
@@ -91,28 +90,11 @@ export const BuilderBoostFactorDataType = new ContainerType(
   },
   {jsonCase: "eth2"}
 );
-export const ProposerConfigType = new ContainerType(
-  {
-    graffiti: stringType,
-    strictFeeRecipientCheck: ssz.Boolean,
-    feeRecipient: stringType,
-    builder: new ContainerType(
-      {
-        gasLimit: ssz.UintNum64,
-        selection: stringType,
-        boostFactor: ssz.UintBn64,
-      },
-      {jsonCase: "eth2"}
-    ),
-  },
-  {jsonCase: "eth2"}
-);
 
 export type FeeRecipientData = ValueOf<typeof FeeRecipientDataType>;
 export type GraffitiData = ValueOf<typeof GraffitiDataType>;
 export type GasLimitData = ValueOf<typeof GasLimitDataType>;
 export type BuilderBoostFactorData = ValueOf<typeof BuilderBoostFactorDataType>;
-export type ProposerConfig = RecursivePartial<ValueOf<typeof ProposerConfigType>>;
 
 export type SignerDefinition = {
   pubkey: PubkeyHex;
@@ -126,6 +108,17 @@ export type SignerDefinition = {
 };
 
 export type RemoteSignerDefinition = Pick<SignerDefinition, "pubkey" | "url">;
+
+export type ProposerConfig = {
+  graffiti?: string;
+  strictFeeRecipientCheck?: boolean;
+  feeRecipient?: string;
+  builder?: {
+    gasLimit?: number;
+    selection?: string;
+    boostFactor?: bigint;
+  };
+};
 
 /**
  * JSON serialized representation of a single keystore in EIP-2335: BLS12-381 Keystore format.
@@ -672,11 +665,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           params: {pubkey: Schema.StringRequired},
         },
       },
-      resp: {
-        onlySupport: WireFormat.json,
-        data: ProposerConfigType as ResponseDataCodec<ProposerConfig, EmptyMeta>,
-        meta: EmptyMetaCodec,
-      },
+      resp: JsonOnlyResponseCodec,
     },
 
     signVoluntaryExit: {
