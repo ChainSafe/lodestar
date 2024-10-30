@@ -109,6 +109,17 @@ export type SignerDefinition = {
 
 export type RemoteSignerDefinition = Pick<SignerDefinition, "pubkey" | "url">;
 
+export type ProposerConfig = {
+  graffiti?: string;
+  strictFeeRecipientCheck?: boolean;
+  feeRecipient?: string;
+  builder?: {
+    gasLimit?: number;
+    selection?: string;
+    boostFactor?: bigint;
+  };
+};
+
 /**
  * JSON serialized representation of a single keystore in EIP-2335: BLS12-381 Keystore format.
  * ```
@@ -353,6 +364,15 @@ export type Endpoints = {
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
     EmptyResponseData,
+    EmptyMeta
+  >;
+
+  getProposerConfig: Endpoint<
+    // ⏎
+    "GET",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    ProposerConfig,
     EmptyMeta
   >;
 
@@ -633,6 +653,19 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       },
       resp: EmptyResponseCodec,
+    },
+
+    getProposerConfig: {
+      url: "/eth/v0/validator/{pubkey}/proposer_config",
+      method: "GET",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: JsonOnlyResponseCodec,
     },
 
     signVoluntaryExit: {

@@ -364,6 +364,10 @@ export class KeymanagerApi implements Api {
     return {status: 204};
   }
 
+  async getProposerConfig({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getProposerConfig"]> {
+    return {data: this.validator.validatorStore.getProposerConfig(pubkey) ?? {}};
+  }
+
   async signVoluntaryExit({pubkey, epoch}: {pubkey: PubkeyHex; epoch?: Epoch}): ReturnType<Api["signVoluntaryExit"]> {
     if (!isValidatePubkeyHex(pubkey)) {
       throw new ApiError(400, `Invalid pubkey ${pubkey}`);

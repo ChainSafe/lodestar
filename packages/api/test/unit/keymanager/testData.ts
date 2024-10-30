@@ -112,4 +112,19 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {pubkey: pubkeyRand},
     res: undefined,
   },
+  getProposerConfig: {
+    args: {pubkey: pubkeyRand},
+    res: {
+      data: {
+        graffiti: "graffiti",
+        strictFeeRecipientCheck: false,
+        feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        builder: {
+          gasLimit: 30000000,
+          selection: "maxprofit",
+          boostFactor: BigInt(50),
+        },
+      },
+    },
+  },
 };
