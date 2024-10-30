@@ -6,6 +6,7 @@ import {routes} from "@lodestar/api";
 import {parseFeeRecipient} from "./feeRecipient.js";
 
 import {readFile} from "./file.js";
+import {isEmptyObject} from "@lodestar/utils";
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
@@ -88,11 +89,13 @@ function parseProposerConfigSection(
       overrideConfig?.strictFeeRecipientCheck ??
       (strict_fee_recipient_check ? stringtoBool(strict_fee_recipient_check) : undefined),
     feeRecipient: overrideConfig?.feeRecipient ?? (fee_recipient ? parseFeeRecipient(fee_recipient) : undefined),
-    builder: {
-      gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
-      selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
-      boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
-    },
+    builder: !isEmptyObject(overrideConfig?.builder)
+      ? {
+          gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
+          selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
+          boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
+        }
+      : undefined,
   };
 }
 
