@@ -26,8 +26,7 @@ const testValue = {
       builder: {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.BuilderAlways,
-        // biome-ignore lint/correctness/noPrecisionLoss: <explanation>
-        boostFactor: BigInt(18446744073709551616),
+        boostFactor: 18446744073709551616n,
       },
     },
   },
