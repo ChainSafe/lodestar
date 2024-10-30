@@ -42,7 +42,7 @@ import {
   SignedAggregateAndProof,
 } from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {fromHex, isEmptyObject, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
