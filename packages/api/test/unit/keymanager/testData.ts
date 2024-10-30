@@ -122,7 +122,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         builder: {
           gasLimit: 30000000,
           selection: "maxprofit",
-          boostFactor: BigInt(50),
+          boostFactor: "50",
         },
       },
     },

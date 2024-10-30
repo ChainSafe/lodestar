@@ -109,14 +109,14 @@ export type SignerDefinition = {
 
 export type RemoteSignerDefinition = Pick<SignerDefinition, "pubkey" | "url">;
 
-export type ProposerConfig = {
+export type ProposerConfigResponse = {
   graffiti?: string;
   strictFeeRecipientCheck?: boolean;
   feeRecipient?: string;
   builder?: {
     gasLimit?: number;
     selection?: string;
-    boostFactor?: bigint;
+    boostFactor?: string;
   };
 };
 
@@ -372,7 +372,7 @@ export type Endpoints = {
     "GET",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
-    ProposerConfig,
+    ProposerConfigResponse,
     EmptyMeta
   >;
 

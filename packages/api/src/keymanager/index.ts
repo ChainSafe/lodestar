@@ -18,6 +18,7 @@ export type {
   GraffitiData,
   GasLimitData,
   BuilderBoostFactorData,
+  ProposerConfigResponse,
 } from "./routes.js";
 
 export type {ApiClient};
