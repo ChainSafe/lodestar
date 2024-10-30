@@ -1,8 +1,8 @@
 import {PublicKey} from "@chainsafe/blst";
-import {DOMAIN_SELECTION_PROOF} from "@lodestar/params";
-import {phase0, Slot, ssz} from "@lodestar/types";
-import {computeSigningRoot, createSingleSignatureSetFromComponents, ISignatureSet} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
+import {DOMAIN_SELECTION_PROOF} from "@lodestar/params";
+import {ISignatureSet, computeSigningRoot, createSingleSignatureSetFromComponents} from "@lodestar/state-transition";
+import {Slot, phase0, ssz} from "@lodestar/types";
 
 export function getSelectionProofSigningRoot(config: BeaconConfig, slot: Slot): Uint8Array {
   // previously, we call `const selectionProofDomain = config.getDomain(state.slot, DOMAIN_SELECTION_PROOF, slot)`

@@ -1,16 +1,16 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
-import {SyncState} from "../../../../../src/sync/interface.js";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
-import {CommonBlockBody} from "../../../../../src/chain/interface.js";
-import {zeroProtoBlock} from "../../../../utils/state.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {CommonBlockBody} from "../../../../../src/chain/interface.js";
+import {SyncState} from "../../../../../src/sync/interface.js";
+import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
+import {zeroProtoBlock} from "../../../../utils/state.js";
 
 describe("api/validator - produceBlockV3", () => {
   let modules: ApiTestModules;

@@ -1,6 +1,14 @@
-import path from "node:path";
 import {setMaxListeners} from "node:events";
+import path from "node:path";
+import {WireFormat, routes} from "@lodestar/api";
+import {
+  MonitoringService,
+  RegistryMetricCreator,
+  collectNodeJSMetrics,
+  getHttpMetricsServer,
+} from "@lodestar/beacon-node";
 import {LevelDbController} from "@lodestar/db";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {
   ProcessShutdownCallback,
   SlashingProtection,
@@ -8,29 +16,21 @@ import {
   ValidatorProposerConfig,
   defaultOptions,
 } from "@lodestar/validator";
-import {WireFormat, routes} from "@lodestar/api";
 import {getMetrics} from "@lodestar/validator";
-import {
-  RegistryMetricCreator,
-  collectNodeJSMetrics,
-  getHttpMetricsServer,
-  MonitoringService,
-} from "@lodestar/beacon-node";
-import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {YargsError, cleanOldLogFiles, mkdir, parseLoggerArgs} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
+import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
-import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/proposerConfig.js";
-import {getAccountPaths, getValidatorPaths} from "./paths.js";
+import {KeymanagerApi} from "./keymanager/impl.js";
+import {IPersistedKeysBackend} from "./keymanager/interface.js";
+import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
+import {KeymanagerRestApiServer} from "./keymanager/server.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
+import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {getSignersFromArgs} from "./signers/index.js";
 import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
-import {KeymanagerApi} from "./keymanager/impl.js";
-import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
-import {IPersistedKeysBackend} from "./keymanager/interface.js";
-import {KeymanagerRestApiServer} from "./keymanager/server.js";
 
 /**
  * Runs a validator client.

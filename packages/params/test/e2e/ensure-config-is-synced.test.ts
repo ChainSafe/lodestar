@@ -1,8 +1,8 @@
-import {describe, it, expect, vi} from "vitest";
 import axios from "axios";
+import {describe, expect, it, vi} from "vitest";
+import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
-import {ForkName, BeaconPreset} from "../../src/index.js";
 import {loadConfigYaml} from "../yaml.js";
 
 // Not e2e, but slow. Run with e2e tests

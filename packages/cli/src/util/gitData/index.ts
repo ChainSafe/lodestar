@@ -2,7 +2,7 @@ import {execSync} from "node:child_process";
 
 // This file is created in the build step and is distributed through NPM
 // MUST be in sync with `-/gitDataPath.ts` and `package.json` files.
-import {readGitDataFile, GitData} from "./gitDataPath.js";
+import {GitData, readGitDataFile} from "./gitDataPath.js";
 
 /** Reads git data from a persisted file or local git data at build time. */
 export function readAndGetGitData(): GitData {

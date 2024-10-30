@@ -1,6 +1,6 @@
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
-import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,
@@ -8,36 +8,36 @@ import {
   JsonRpcHttpClientEvent,
   ReqOpts,
 } from "../../eth1/provider/jsonRpcHttpClient.js";
-import {Metrics} from "../../metrics/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
-import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {Metrics} from "../../metrics/index.js";
+import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 import {
-  ExecutionPayloadStatus,
-  ExecutePayloadResponse,
-  IExecutionEngine,
-  PayloadId,
-  PayloadAttributes,
   BlobsBundle,
-  VersionedHashes,
-  ExecutionEngineState,
-  ClientVersion,
   ClientCode,
+  ClientVersion,
+  ExecutePayloadResponse,
+  ExecutionEngineState,
+  ExecutionPayloadStatus,
+  IExecutionEngine,
+  PayloadAttributes,
+  PayloadId,
+  VersionedHashes,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  parseExecutionPayload,
-  serializeExecutionPayload,
-  serializeVersionedHashes,
-  serializePayloadAttributes,
-  serializeBeaconBlockRoot,
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
+  parseExecutionPayload,
+  serializeBeaconBlockRoot,
+  serializeExecutionPayload,
   serializeExecutionRequests,
+  serializePayloadAttributes,
+  serializeVersionedHashes,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 

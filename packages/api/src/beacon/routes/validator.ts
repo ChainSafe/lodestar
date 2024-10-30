@@ -2,27 +2,24 @@ import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkBlobs, isForkPostElectra} from "@lodestar/params";
 import {
-  altair,
+  Attestation,
   BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  phase0,
-  Root,
-  Slot,
-  ssz,
-  UintBn64,
-  ValidatorIndex,
-  ProducedBlockSource,
-  stringType,
   BeaconBlockOrContents,
   BlindedBeaconBlock,
-  Attestation,
+  CommitteeIndex,
+  Epoch,
+  ProducedBlockSource,
+  Root,
+  Slot,
+  UintBn64,
+  ValidatorIndex,
+  altair,
+  phase0,
+  ssz,
   sszTypesFor,
+  stringType,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
-import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
 import {
   ArrayOf,
   EmptyMeta,
@@ -33,6 +30,9 @@ import {
   WithMeta,
   WithVersion,
 } from "../../utils/codecs.js";
+import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
+import {fromHeaders} from "../../utils/headers.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ExecutionOptimisticAndDependentRootCodec,
   ExecutionOptimisticAndDependentRootMeta,
@@ -43,7 +43,7 @@ import {
   VersionMeta,
   VersionType,
 } from "../../utils/metadata.js";
-import {fromHeaders} from "../../utils/headers.js";
+import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

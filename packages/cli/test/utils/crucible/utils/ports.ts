@@ -1,10 +1,10 @@
 import {
   BN_P2P_BASE_PORT,
   BN_REST_BASE_PORT,
-  KEY_MANAGER_BASE_PORT,
-  EL_P2P_BASE_PORT,
-  EL_ETH_BASE_PORT,
   EL_ENGINE_BASE_PORT,
+  EL_ETH_BASE_PORT,
+  EL_P2P_BASE_PORT,
+  KEY_MANAGER_BASE_PORT,
 } from "../constants.js";
 
 export const getNodePorts = (

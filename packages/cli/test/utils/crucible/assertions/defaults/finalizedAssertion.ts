@@ -1,5 +1,5 @@
 import {Slot} from "@lodestar/types";
-import {AssertionResult, Assertion} from "../../interfaces.js";
+import {Assertion, AssertionResult} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
 export const finalizedAssertion: Assertion<"finalized", Slot> = {

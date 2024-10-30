@@ -1,6 +1,6 @@
-import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
-import {deneb, RootHex} from "@lodestar/types";
+import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {RootHex, deneb} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";

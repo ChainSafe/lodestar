@@ -1,16 +1,16 @@
 import {TopicValidatorResult} from "@libp2p/interface";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
+import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {
-  GossipValidatorFn,
-  GossipHandlers,
-  GossipHandlerFn,
-  GossipValidatorBatchFn,
   BatchGossipHandlerFn,
+  GossipHandlerFn,
+  GossipHandlers,
   GossipMessageInfo,
+  GossipValidatorBatchFn,
+  GossipValidatorFn,
 } from "../gossip/interface.js";
-import {GossipActionError, GossipAction, AttestationError} from "../../chain/errors/index.js";
 
 export type ValidatorFnModules = {
   config: ChainForkConfig;

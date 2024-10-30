@@ -1,16 +1,16 @@
 import path from "node:path";
-import {describe, it, beforeAll, beforeEach, afterAll, expect} from "vitest";
-import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
 import {ZERO_HASH} from "@lodestar/state-transition";
+import {rimraf} from "rimraf";
+import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {
-  SlashingProtection,
   InterchangeError,
   InvalidAttestationError,
   InvalidBlockError,
-  SlashingProtectionBlock,
+  SlashingProtection,
   SlashingProtectionAttestation,
+  SlashingProtectionBlock,
 } from "../../src/slashingProtection/index.js";
 import {testLogger} from "../utils/logger.js";
 import {loadTestCases} from "../utils/spec.js";

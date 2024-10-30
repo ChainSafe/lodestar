@@ -1,7 +1,7 @@
 import {ApiClient} from "@lodestar/api";
-import {Logger} from "@lodestar/utils";
-import {ExecutionPayload, LightClientHeader} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {ExecutionPayload, LightClientHeader} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {fetchBlock, getExecutionPayloadForBlockNumber} from "../utils/consensus.js";
 import {bufferToHex, hexToNumber} from "../utils/conversion.js";

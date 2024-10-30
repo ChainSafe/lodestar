@@ -1,14 +1,14 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {ssz, capella} from "@lodestar/types";
 import {
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
-  ForkSeq,
-  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
   FAR_FUTURE_EPOCH,
-  MIN_ACTIVATION_BALANCE,
+  ForkSeq,
   MAX_EFFECTIVE_BALANCE,
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
+import {capella, ssz} from "@lodestar/types";
 
 import {toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";

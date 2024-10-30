@@ -1,24 +1,21 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import path from "node:path";
-import {spawn, Worker} from "@chainsafe/threads";
+import {Worker, spawn} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
 // @ts-ignore
 // biome-ignore lint/suspicious/noGlobalAssign: <explanation>
 self = undefined;
 import {PublicKey} from "@chainsafe/blst";
-import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
-import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
+import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../../metrics/index.js";
-import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
-import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {LinkedList} from "../../../util/array.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
-import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode, WorkResultError} from "./types.js";
-import {chunkifyMaximizeChunkSize} from "./utils.js";
-import {defaultPoolSize} from "./poolSize.js";
+import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
+import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
+import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {
   JobQueueItem,
   JobQueueItemSameMessage,
@@ -27,6 +24,9 @@ import {
   jobItemSigSets,
   jobItemWorkReq,
 } from "./jobItem.js";
+import {defaultPoolSize} from "./poolSize.js";
+import {BlsWorkReq, BlsWorkResult, WorkResultCode, WorkResultError, WorkerData} from "./types.js";
+import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 // Worker constructor consider the path relative to the current working directory
 const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";

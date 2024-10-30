@@ -1,17 +1,17 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
-import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
+import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
+import {SyncState} from "../../../../../../src/sync/interface.js";
+import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
+import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
 import {generateState, zeroProtoBlock} from "../../../../../utils/state.js";
 import {generateValidators} from "../../../../../utils/validator.js";
-import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
-import {SyncState} from "../../../../../../src/sync/interface.js";
-import {defaultApiOptions} from "../../../../../../src/api/options.js";
 
 describe("get proposers api impl", () => {
   const currentEpoch = 2;

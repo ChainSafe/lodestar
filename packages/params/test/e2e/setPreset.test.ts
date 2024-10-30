@@ -1,8 +1,8 @@
-import path from "node:path";
-import util from "node:util";
 import child from "node:child_process";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, expect, vi} from "vitest";
+import util from "node:util";
+import {describe, expect, it, vi} from "vitest";
 
 const scriptNames = {
   ok: "setPresetOk.ts",

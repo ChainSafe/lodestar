@@ -1,5 +1,5 @@
 import {isNullish} from "../../../../utils.js";
-import {Match, AssertionResult, Assertion} from "../../interfaces.js";
+import {Assertion, AssertionResult, Match} from "../../interfaces.js";
 import {arrayEquals} from "../../utils/index.js";
 import {headAssertion} from "./headAssertion.js";
 

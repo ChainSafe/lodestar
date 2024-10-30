@@ -1,40 +1,40 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
+import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   reconstructFullBlockOrContents,
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
-import {sleep, fromHex, toRootHex} from "@lodestar/utils";
 import {
-  deneb,
-  isSignedBlockContents,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
   WithOptionalBytes,
+  deneb,
+  isSignedBlockContents,
 } from "@lodestar/types";
+import {fromHex, sleep, toRootHex} from "@lodestar/utils";
 import {
-  BlockSource,
-  getBlockInput,
-  ImportBlockOpts,
-  BlockInput,
   BlobsSource,
+  BlockInput,
   BlockInputDataBlobs,
+  BlockSource,
+  ImportBlockOpts,
+  getBlockInput,
 } from "../../../../chain/blocks/types.js";
-import {promiseAllMaybeAsync} from "../../../../util/promises.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
-import {computeBlobSidecars} from "../../../../util/blobs.js";
-import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
-import {OpSource} from "../../../../metrics/validatorMonitor.js";
-import {NetworkEvent} from "../../../../network/index.js";
-import {ApiModules} from "../../types.js";
-import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
+import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
+import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {OpSource} from "../../../../metrics/validatorMonitor.js";
+import {NetworkEvent} from "../../../../network/index.js";
+import {computeBlobSidecars} from "../../../../util/blobs.js";
+import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {promiseAllMaybeAsync} from "../../../../util/promises.js";
+import {ApiModules} from "../../types.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;

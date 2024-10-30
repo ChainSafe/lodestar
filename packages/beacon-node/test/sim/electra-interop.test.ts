@@ -1,29 +1,29 @@
-import fs from "node:fs";
 import assert from "node:assert";
-import {describe, it, vi, afterAll, afterEach} from "vitest";
+import fs from "node:fs";
+import {afterAll, afterEach, describe, it, vi} from "vitest";
 
-import {LogLevel, sleep} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {electra, Epoch, Slot} from "@lodestar/types";
+import {Epoch, Slot, electra} from "@lodestar/types";
+import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {CachedBeaconStateElectra} from "@lodestar/state-transition";
-import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
+import {initializeExecutionEngine} from "../../src/execution/index.js";
 
-import {testLogger, TestLoggerOpts} from "../utils/logger.js";
-import {runEL, ELStartMode, ELClient, sendRawTransactionBig} from "../utils/runEl.js";
-import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
-import {getDevBeaconNode} from "../utils/node/beacon.js";
+import {bytesToData} from "../../lib/eth1/provider/utils.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
+import {dataToBytes} from "../../src/eth1/provider/utils.js";
+import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
+import {BeaconNode} from "../../src/index.js";
+import {ClockEvent} from "../../src/util/clock.js";
+import {TestLoggerOpts, testLogger} from "../utils/logger.js";
+import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
-import {ClockEvent} from "../../src/util/clock.js";
-import {dataToBytes} from "../../src/eth1/provider/utils.js";
-import {bytesToData} from "../../lib/eth1/provider/utils.js";
-import {BeaconNode} from "../../src/index.js";
+import {ELClient, ELStartMode, runEL, sendRawTransactionBig} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 

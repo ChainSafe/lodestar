@@ -1,8 +1,8 @@
-import {describe, it, expect} from "vitest";
-import {Uint8ArrayList} from "uint8arraylist";
 import {pipe} from "it-pipe";
-import {SnappyFramesUncompress} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
+import {Uint8ArrayList} from "uint8arraylist";
+import {describe, expect, it} from "vitest";
 import {encodeSnappy} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/compress.js";
+import {SnappyFramesUncompress} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
   it("should work with short input", () =>

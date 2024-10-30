@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {IJson, RpcPayload} from "../interface.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
 

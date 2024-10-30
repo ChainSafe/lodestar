@@ -1,9 +1,9 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType, ValidatorStatus} from "@lodestar/types";
-import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
+import {CommitteeIndex, Epoch, RootHex, Slot, StringType, ValidatorStatus, phase0, ssz} from "@lodestar/types";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
+import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
 import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";

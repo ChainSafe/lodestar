@@ -1,17 +1,17 @@
 import {
-  GENESIS_EPOCH,
-  ForkName,
-  SLOTS_PER_EPOCH,
-  ForkSeq,
-  isForkLightClient,
-  isForkExecution,
-  isForkBlobs,
-  ForkExecution,
   ForkAll,
-  ForkLightClient,
   ForkBlobs,
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkSeq,
+  GENESIS_EPOCH,
+  SLOTS_PER_EPOCH,
+  isForkBlobs,
+  isForkExecution,
+  isForkLightClient,
 } from "@lodestar/params";
-import {Slot, Version, SSZTypesFor, sszTypesFor, Epoch} from "@lodestar/types";
+import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 

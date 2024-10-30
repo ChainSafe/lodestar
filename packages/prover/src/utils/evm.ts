@@ -1,19 +1,19 @@
-import {Blockchain} from "@ethereumjs/blockchain";
-import {Account, Address} from "@ethereumjs/util";
-import {VM, RunTxResult} from "@ethereumjs/vm";
-import {TransactionFactory} from "@ethereumjs/tx";
 import {Block, BlockHeader} from "@ethereumjs/block";
+import {Blockchain} from "@ethereumjs/blockchain";
+import {TransactionFactory} from "@ethereumjs/tx";
+import {Account, Address} from "@ethereumjs/util";
+import {RunTxResult, VM} from "@ethereumjs/vm";
 import {NetworkName} from "@lodestar/config/networks";
-import {Logger} from "@lodestar/utils";
 import {ExecutionPayload} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, ELTransaction, JsonRpcVersion} from "../types.js";
 import {bufferToHex, chunkIntoN, cleanObject, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
 import {getChainCommon, getTxType} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
-import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
 import {ELRpcProvider} from "./rpc_provider.js";
+import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
 
 export async function createVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
   const common = getChainCommon(proofProvider.config.PRESET_BASE as string);

@@ -1,15 +1,15 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, afterEach, beforeEach, beforeAll, afterAll, vi, Mock} from "vitest";
-import {altair, Epoch, Slot} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, Slot, altair} from "@lodestar/types";
+import {Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
+import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
+import {ZERO_HASH} from "../../../../src/constants/constants.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedAltairState} from "../../../utils/state.js";
-import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
-import {ZERO_HASH} from "../../../../src/constants/constants.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", () => {

@@ -1,5 +1,5 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconState, Epoch, Slot, SyncPeriod, Gwei} from "@lodestar/types";
+import {BeaconState, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
 import {CachedBeaconStateElectra} from "../types.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "./validator.js";
 

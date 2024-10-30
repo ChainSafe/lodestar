@@ -2,12 +2,12 @@ import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompos
 import {ForkName} from "@lodestar/params";
 import {objectToExpectedCase} from "@lodestar/utils";
 import {
-  RequestWithoutBodyCodec,
+  Endpoint,
   RequestWithBodyCodec,
+  RequestWithoutBodyCodec,
   ResponseCodec,
   ResponseDataCodec,
   ResponseMetadataCodec,
-  Endpoint,
   SszRequestMethods,
 } from "./types.js";
 import {WireFormat} from "./wireFormat.js";

@@ -1,10 +1,10 @@
 import {ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {beforeProcessEpoch} from "../cache/epochTransitionCache.js";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {
-  weighJustificationAndFinalization,
   processJustificationAndFinalization,
+  weighJustificationAndFinalization,
 } from "./processJustificationAndFinalization.js";
 
 /**

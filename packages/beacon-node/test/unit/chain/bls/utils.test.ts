@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {chunkifyMaximizeChunkSize} from "../../../../src/chain/bls/multithread/utils.js";
 import {linspace} from "../../../../src/util/numpy.js";
 

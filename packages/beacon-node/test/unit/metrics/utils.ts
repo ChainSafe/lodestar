@@ -1,6 +1,6 @@
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {createMetrics, Metrics} from "../../../src/metrics/index.js";
+import {Metrics, createMetrics} from "../../../src/metrics/index.js";
 import {testLogger} from "../../utils/logger.js";
 
 export function createMetricsTest(): Metrics {

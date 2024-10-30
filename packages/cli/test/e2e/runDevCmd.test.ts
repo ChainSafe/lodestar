@@ -1,8 +1,8 @@
-import {describe, it, vi, onTestFinished} from "vitest";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {retry} from "@lodestar/utils";
 import {spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
+import {retry} from "@lodestar/utils";
+import {describe, it, onTestFinished, vi} from "vitest";
 
 describe("Run dev command", () => {
   vi.setConfig({testTimeout: 30_000});

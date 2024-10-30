@@ -1,7 +1,7 @@
-import {gnosisChainConfig} from "@lodestar/config/networks";
-import {minimalChainConfig, mainnetChainConfig} from "@lodestar/config/configs";
-import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
+import {mainnetChainConfig, minimalChainConfig} from "@lodestar/config/configs";
+import {gnosisChainConfig} from "@lodestar/config/networks";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 
 let chainConfig: ChainConfig;
 switch (ACTIVE_PRESET) {

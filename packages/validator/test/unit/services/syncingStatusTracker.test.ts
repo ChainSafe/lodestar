@@ -1,8 +1,8 @@
-import {describe, it, expect, vi, beforeEach, afterEach, MockedFunction} from "vitest";
-import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {getMockedLogger} from "../../utils/logger.js";
-import {ClockMock} from "../../utils/clock.js";
+import {MockedFunction, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SyncingStatus, SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
+import {ClockMock} from "../../utils/clock.js";
+import {getMockedLogger} from "../../utils/logger.js";
 
 describe("SyncingStatusTracker", () => {
   const api = getApiClientStub();

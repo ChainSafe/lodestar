@@ -1,11 +1,11 @@
 import EventEmitter from "node:events";
+import {ENR, ENRData, SignableENR, createPrivateKeyFromPeerId} from "@chainsafe/enr";
+import {Thread, Worker, spawn} from "@chainsafe/threads";
 import {PeerId, Secp256k1PeerId} from "@libp2p/interface";
-import {StrictEventEmitter} from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR} from "@chainsafe/enr";
-import {spawn, Thread, Worker} from "@chainsafe/threads";
-import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, chainConfigFromJson, chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 

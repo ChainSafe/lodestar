@@ -1,7 +1,7 @@
 import {readFile, writeFile} from "node:fs/promises";
 import path from "node:path";
-import yaml from "js-yaml";
 import {Keystore} from "@chainsafe/bls-keystore";
+import yaml from "js-yaml";
 import {SHARED_VALIDATOR_PASSWORD} from "../constants.js";
 import {ValidatorClientKeys, ValidatorPaths} from "../interfaces.js";
 

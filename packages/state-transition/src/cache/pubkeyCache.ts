@@ -1,7 +1,7 @@
 import {PublicKey} from "@chainsafe/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import * as immutable from "immutable";
 import {ValidatorIndex, phase0} from "@lodestar/types";
+import * as immutable from "immutable";
 
 export type Index2PubkeyCache = PublicKey[];
 /**

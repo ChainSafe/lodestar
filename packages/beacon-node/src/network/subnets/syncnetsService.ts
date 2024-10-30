@@ -1,14 +1,14 @@
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {getActiveForks} from "../forks.js";
 import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
-import {NetworkCoreMetrics} from "../core/metrics.js";
 import {CommitteeSubscription, GossipSubscriber, SubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;

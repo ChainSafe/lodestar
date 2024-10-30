@@ -1,14 +1,14 @@
 import fs from "node:fs";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
+import {SignableENR, createPrivateKeyFromPeerId} from "@chainsafe/enr";
 import type {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {Multiaddr} from "@multiformats/multiaddr";
-import {createPrivateKeyFromPeerId, SignableENR} from "@chainsafe/enr";
 import {Logger} from "@lodestar/utils";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {exportToJSON, readPeerId} from "../../config/index.js";
-import {writeFile600Perm} from "../../util/file.js";
 import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
+import {writeFile600Perm} from "../../util/file.js";
 import {BeaconArgs} from "./options.js";
 
 /**

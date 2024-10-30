@@ -1,20 +1,20 @@
 import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkBlobs, ForkExecution, ForkPostElectra} from "@lodestar/params";
 import {
-  BlockContents,
-  SignedBeaconBlock,
-  ExecutionPayload,
-  ExecutionPayloadAndBlobsBundle,
+  Attestation,
+  BeaconBlock,
   BeaconBlockBody,
   BeaconBlockOrContents,
-  SignedBeaconBlockOrContents,
-  ExecutionPayloadHeader,
   BlindedBeaconBlock,
-  SignedBlindedBeaconBlock,
   BlindedBeaconBlockBody,
-  SignedBlockContents,
-  BeaconBlock,
-  Attestation,
+  BlockContents,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
+  ExecutionPayloadHeader,
   LightClientUpdate,
+  SignedBeaconBlock,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  SignedBlockContents,
 } from "../types.js";
 
 export function isExecutionPayload<F extends ForkExecution>(

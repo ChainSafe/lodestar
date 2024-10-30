@@ -1,25 +1,25 @@
-import {
-  bellatrix,
-  Slot,
-  Root,
-  BLSPubkey,
-  deneb,
-  Wei,
-  SignedBeaconBlockOrContents,
-  SignedBlindedBeaconBlock,
-  ExecutionPayloadHeader,
-  electra,
-  WithOptionalBytes,
-} from "@lodestar/types";
-import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {WireFormat} from "@lodestar/api";
+import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
-import {getClient, ApiClient as BuilderApi} from "@lodestar/api/builder";
-import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
+import {ForkExecution, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {
+  BLSPubkey,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
 import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
-import {WireFormat} from "@lodestar/api";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;

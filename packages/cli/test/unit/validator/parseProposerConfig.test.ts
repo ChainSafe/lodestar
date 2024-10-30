@@ -1,7 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, expect} from "vitest";
 import {routes} from "@lodestar/api";
+import {describe, expect, it} from "vitest";
 
 import {parseProposerConfig} from "../../../src/util/index.js";
 

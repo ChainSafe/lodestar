@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
+import {Metrics} from "../../metrics/index.js";
 import {PayloadAttributesRpc} from "./types.js";
 
 // Idealy this only need to be set to the max head reorgs number

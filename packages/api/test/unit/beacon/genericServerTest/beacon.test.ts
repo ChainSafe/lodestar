@@ -1,7 +1,7 @@
-import {describe} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {Endpoints} from "../../../../src/beacon/routes/beacon/index.js";
+import {describe} from "vitest";
 import {getClient} from "../../../../src/beacon/client/beacon.js";
+import {Endpoints} from "../../../../src/beacon/routes/beacon/index.js";
 import {getRoutes} from "../../../../src/beacon/server/beacon.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/beacon.js";

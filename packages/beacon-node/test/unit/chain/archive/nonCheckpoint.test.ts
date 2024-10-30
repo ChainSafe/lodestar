@@ -1,6 +1,6 @@
-import {describe, it, expect, beforeAll} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
+import {beforeAll, describe, expect, it} from "vitest";
 import {getNonCheckpointBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
 
 describe("chain / archive / getNonCheckpointBlocks", () => {

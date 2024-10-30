@@ -1,6 +1,6 @@
-import {describe, beforeAll, afterAll, it, expect, vi} from "vitest";
-import {createBeaconConfig} from "@lodestar/config";
 import {ApiClient, WireFormat, getClient} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
@@ -8,11 +8,11 @@ import {
   isExecutionPayload,
   isExecutionPayloadHeader,
 } from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
-import {LogLevel, testLogger} from "../../../../../utils/logger.js";
-import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
+import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {getConfig} from "../../../../../utils/config.js";
+import {LogLevel, testLogger} from "../../../../../utils/logger.js";
+import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 
 describe("beacon block api", () => {
   vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});

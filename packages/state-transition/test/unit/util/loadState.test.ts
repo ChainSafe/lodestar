@@ -1,8 +1,8 @@
-import {describe, it, expect} from "vitest";
-import {ssz} from "@lodestar/types";
-import {mainnetChainConfig} from "@lodestar/config/networks";
 import {createChainForkConfig} from "@lodestar/config";
+import {mainnetChainConfig} from "@lodestar/config/networks";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {loadStateAndValidators} from "../../../src/util/loadState/loadState.js";
 
 describe("loadStateAndValidators", () => {

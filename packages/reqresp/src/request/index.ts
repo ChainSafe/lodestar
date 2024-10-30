@@ -1,14 +1,14 @@
-import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface";
+import {ErrorAborted, Logger, TimeoutError, withTimeout} from "@lodestar/utils";
+import {pipe} from "it-pipe";
 import type {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
-import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
-import {MixedProtocol, ResponseIncoming} from "../types.js";
-import {prettyPrintPeerId, abortableSource} from "../utils/index.js";
-import {Metrics} from "../metrics.js";
-import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
+import {Metrics} from "../metrics.js";
+import {ResponseError} from "../response/index.js";
+import {MixedProtocol, ResponseIncoming} from "../types.js";
+import {abortableSource, prettyPrintPeerId} from "../utils/index.js";
 import {RequestError, RequestErrorCode, responseStatusErrorToRequestError} from "./errors.js";
 
 export {RequestError, RequestErrorCode};

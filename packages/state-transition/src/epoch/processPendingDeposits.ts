@@ -1,10 +1,10 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
 import {PendingDeposit} from "@lodestar/types/lib/electra/types.js";
+import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
-import {getActivationExitChurnLimit} from "../util/validator.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
-import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
+import {getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
  * Starting from Electra:

@@ -1,9 +1,9 @@
-import path from "node:path";
 import {writeFile} from "node:fs/promises";
-import got, {RequestError} from "got";
-import yaml from "js-yaml";
+import path from "node:path";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
+import got, {RequestError} from "got";
+import yaml from "js-yaml";
 import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../../interfaces.js";
 import {updateKeystoresPath} from "../../utils/keys.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";

@@ -1,30 +1,30 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
 
+import {ChainForkConfig} from "@lodestar/config";
 import {
-  FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  ForkSeq,
-  ForkName,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
+  FINALIZED_ROOT_DEPTH,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  ForkName,
+  ForkSeq,
+  NEXT_SYNC_COMMITTEE_DEPTH,
   NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
   isForkPostElectra,
-  FINALIZED_ROOT_DEPTH_ELECTRA,
 } from "@lodestar/params";
 import {
-  ssz,
-  Slot,
+  BeaconBlockHeader,
   LightClientFinalityUpdate,
   LightClientHeader,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  BeaconBlockHeader,
+  Slot,
   SyncCommittee,
   isElectraLightClientUpdate,
+  ssz,
 } from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
 
-import {isValidMerkleBranch, computeEpochAtSlot, computeSyncPeriodAtSlot} from "../utils/index.js";
+import {computeEpochAtSlot, computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
 import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
 import {LightClientStore} from "./store.js";
 

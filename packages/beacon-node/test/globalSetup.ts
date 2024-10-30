@@ -1,4 +1,4 @@
-import {setActivePreset, PresetName} from "@lodestar/params/setPreset";
+import {PresetName, setActivePreset} from "@lodestar/params/setPreset";
 
 export async function setup(): Promise<void> {
   process.env.NODE_ENV = "test";

@@ -3,9 +3,9 @@ import {getBrowserLogger} from "@lodestar/logger/browser";
 import {Logger} from "@lodestar/utils";
 import {AnyWeb3Provider, ELRequestHandler, VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
+import {processAndVerifyRequest} from "./utils/process.js";
 import {ELRpcProvider} from "./utils/rpc_provider.js";
 import {Web3ProviderInspector} from "./web3_provider_inspector.js";
-import {processAndVerifyRequest} from "./utils/process.js";
 
 export type Web3ProviderTypeHandler<T extends AnyWeb3Provider> = (
   provider: T,

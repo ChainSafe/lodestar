@@ -1,17 +1,17 @@
-import {describe, it, expect} from "vitest";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   DataAvailableStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "@lodestar/state-transition";
-import {
-  generatePerfTestCachedStateAltair,
-  cachedStateAltairPopulateCaches,
-} from "../../../../../state-transition/test/perf/util.js";
+import {ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {BlockAltairOpts, getBlockAltair} from "../../../../../state-transition/test/perf/block/util.js";
+import {
+  cachedStateAltairPopulateCaches,
+  generatePerfTestCachedStateAltair,
+} from "../../../../../state-transition/test/perf/util.js";
 import {computeBlockRewards} from "../../../../src/chain/rewards/blockRewards.js";
 
 describe("chain / rewards / blockRewards", () => {

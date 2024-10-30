@@ -1,9 +1,9 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
-  compileRouteUrlFormatter,
-  toColonNotationPath,
   Token,
   TokenType,
+  compileRouteUrlFormatter,
+  toColonNotationPath,
   urlToTokens,
 } from "../../../src/utils/urlFormat.js";
 

@@ -1,10 +1,10 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {verifyAccount} from "../utils/verification.js";
 import {
-  getResponseForRequest,
   getErrorResponseForRequestWithFailedVerification,
+  getResponseForRequest,
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
+import {verifyAccount} from "../utils/verification.js";
 
 export const eth_getTransactionCount: ELVerifiedRequestHandler<
   [address: string, block?: number | string],

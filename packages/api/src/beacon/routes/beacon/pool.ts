@@ -1,22 +1,22 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostElectra} from "@lodestar/params";
-import {phase0, capella, CommitteeIndex, Slot, ssz, electra, AttesterSlashing} from "@lodestar/types";
-import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
+import {AttesterSlashing, CommitteeIndex, Slot, capella, electra, phase0, ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   WithVersion,
 } from "../../../utils/codecs.js";
-import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
 import {toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
+import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

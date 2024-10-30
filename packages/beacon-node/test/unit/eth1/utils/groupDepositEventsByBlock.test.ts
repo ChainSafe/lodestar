@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import {phase0} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {groupDepositEventsByBlock} from "../../../../src/eth1/utils/groupDepositEventsByBlock.js";
 
 describe("eth1 / util / groupDepositEventsByBlock", () => {

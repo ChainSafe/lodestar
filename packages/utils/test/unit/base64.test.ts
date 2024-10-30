@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {toBase64, fromBase64} from "../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {fromBase64, toBase64} from "../../src/index.js";
 
 describe("toBase64", () => {
   it("should encode UTF-8 string as base64 string", () => {

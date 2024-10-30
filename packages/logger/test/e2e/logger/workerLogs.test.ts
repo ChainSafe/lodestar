@@ -1,8 +1,8 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
 import {sleep} from "@lodestar/utils";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {LoggerWorker, getLoggerWorker} from "./workerLoggerHandler.js";
 
 // Global variable __dirname no longer available in ES6 modules.

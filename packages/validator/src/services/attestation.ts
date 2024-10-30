@@ -1,18 +1,18 @@
-import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
-import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {IClock, LoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
+import {ForkSeq} from "@lodestar/params";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
+import {Attestation, BLSSignature, SignedAggregateAndProof, Slot, phase0, ssz} from "@lodestar/types";
+import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
-import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
-import {groupAttDutiesByCommitteeIndex} from "./utils.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc} from "../util/index.js";
+import {AttDutyAndProof, AttestationDutiesService} from "./attestationDuties.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
-import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
+import {groupAttDutiesByCommitteeIndex} from "./utils.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 export type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;

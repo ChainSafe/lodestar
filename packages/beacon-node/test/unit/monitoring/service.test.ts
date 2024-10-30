@@ -1,12 +1,12 @@
-import {describe, it, expect, beforeEach, beforeAll, afterAll, vi, afterEach, MockInstance} from "vitest";
-import {Histogram} from "prom-client";
 import {ErrorAborted, TimeoutError} from "@lodestar/utils";
+import {Histogram} from "prom-client";
+import {MockInstance, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {RegistryMetricCreator} from "../../../src/index.js";
-import {MonitoringService} from "../../../src/monitoring/service.js";
 import {MonitoringOptions} from "../../../src/monitoring/options.js";
-import {sleep} from "../../utils/sleep.js";
+import {MonitoringService} from "../../../src/monitoring/service.js";
 import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
-import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./remoteService.js";
+import {sleep} from "../../utils/sleep.js";
+import {remoteServiceError, remoteServiceRoutes, startRemoteService} from "./remoteService.js";
 
 describe("monitoring / service", () => {
   const endpoint = "https://test.example.com/api/v1/client/metrics";

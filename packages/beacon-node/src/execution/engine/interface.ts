@@ -1,9 +1,9 @@
 import {ForkName} from "@lodestar/params";
-import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {Root, RootHex, capella, Wei, ExecutionPayload, ExecutionRequests} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {Blob, KZGCommitment, KZGProof} from "@lodestar/types/deneb";
 
 import {DATA} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
+import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};

@@ -1,4 +1,4 @@
-import {ValueOf, ContainerType} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {ssz} from "@lodestar/types";

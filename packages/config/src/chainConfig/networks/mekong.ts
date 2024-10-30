@@ -1,6 +1,6 @@
 import {fromHex as b} from "@lodestar/utils";
-import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Mekong beacon chain config:
 // https://github.com/ethpandaops/mekong-devnets/blob/master/network-configs/devnet-0/metadata/config.yaml

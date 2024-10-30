@@ -4,8 +4,8 @@ import {
   ContainerType,
   ListBasicType,
   ListCompositeType,
-  VectorBasicType,
   ListUintNum64Type,
+  VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {

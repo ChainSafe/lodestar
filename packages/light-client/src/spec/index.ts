@@ -8,7 +8,7 @@ import {
   Slot,
 } from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
-import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
+import {ProcessUpdateOpts, getSyncCommitteeAtPeriod, processLightClientUpdate} from "./processLightClientUpdate.js";
 import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";
 import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_SYNC_COMMITTEE, getZeroSyncCommitteeBranch} from "./utils.js";
 

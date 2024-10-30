@@ -1,27 +1,27 @@
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
 import {
+  BuilderBoostFactorData,
   DeleteRemoteKeyStatus,
   DeletionStatus,
-  ImportStatus,
-  ResponseStatus,
-  KeystoreStr,
-  PubkeyHex,
-  SlashingProtectionData,
-  SignerDefinition,
-  RemoteSignerDefinition,
-  ImportRemoteKeyStatus,
   FeeRecipientData,
-  GraffitiData,
   GasLimitData,
-  BuilderBoostFactorData,
+  GraffitiData,
+  ImportRemoteKeyStatus,
+  ImportStatus,
+  KeystoreStr,
   ProposerConfigResponse,
+  PubkeyHex,
+  RemoteSignerDefinition,
+  ResponseStatus,
+  SignerDefinition,
+  SlashingProtectionData,
 } from "@lodestar/api/keymanager";
 import {KeymanagerApiMethods as Api} from "@lodestar/api/keymanager/server";
-import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api/server";
 import {Epoch} from "@lodestar/types";
 import {fromHex, isValidHttpUrl} from "@lodestar/utils";
+import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";

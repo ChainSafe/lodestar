@@ -1,5 +1,5 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
 
 // As of Sep 2023

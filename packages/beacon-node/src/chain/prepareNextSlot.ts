@@ -1,24 +1,24 @@
+import {routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  computeEpochAtSlot,
-  isExecutionStateType,
-  computeTimeAtSlot,
+  CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
-  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeTimeAtSlot,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
+import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
-import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
-import {IBeaconChain} from "./interface.js";
-import {RegenCaller} from "./regen/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {IBeaconChain} from "./interface.js";
+import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {RegenCaller} from "./regen/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;

@@ -1,8 +1,8 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ssz, phase0} from "@lodestar/types";
-import {generateCachedState} from "../../../utils/state.js";
+import {phase0, ssz} from "@lodestar/types";
 import {InMemoryCheckpointStateCache, toCheckpointHex} from "../../../../src/chain/stateCache/index.js";
+import {generateCachedState} from "../../../utils/state.js";
 
 describe("InMemoryCheckpointStateCache perf tests", () => {
   setBenchOpts({noThreshold: true});

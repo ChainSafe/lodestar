@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {Metrics} from "../../metrics/metrics.js";
 import {RootHex} from "@lodestar/types";
+import {Metrics} from "../../metrics/metrics.js";
 
 export enum StateArchiveMode {
   Frequency = "frequency",

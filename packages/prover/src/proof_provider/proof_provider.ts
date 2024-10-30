@@ -4,8 +4,8 @@ import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {ForkName, isForkWithdrawals} from "@lodestar/params";
-import {Logger} from "@lodestar/utils";
 import {ExecutionPayload, LightClientHeader} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {LCTransport, RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
 import {

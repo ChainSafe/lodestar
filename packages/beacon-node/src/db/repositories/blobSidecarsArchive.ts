@@ -3,7 +3,7 @@ import {Db, Repository} from "@lodestar/db";
 import {Slot} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
-import {blobSidecarsWrapperSsz, BlobSidecarsWrapper} from "./blobSidecars.js";
+import {BlobSidecarsWrapper, blobSidecarsWrapperSsz} from "./blobSidecars.js";
 
 /**
  * blobSidecarsWrapper by slot

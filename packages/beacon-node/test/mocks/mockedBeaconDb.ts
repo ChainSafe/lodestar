@@ -1,20 +1,20 @@
-import {vi, Mocked} from "vitest";
 import {config as minimalConfig} from "@lodestar/config/default";
+import {Mocked, vi} from "vitest";
+import {BeaconDb} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
+  BLSToExecutionChangeRepository,
+  BlobSidecarsArchiveRepository,
+  BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositEventRepository,
   DepositDataRootRepository,
+  DepositEventRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  BLSToExecutionChangeRepository,
-  BlobSidecarsRepository,
-  BlobSidecarsArchiveRepository,
 } from "../../src/db/repositories/index.js";
-import {BeaconDb} from "../../src/db/index.js";
 
 export type MockedBeaconDb = Mocked<BeaconDb> & {
   block: Mocked<BlockRepository>;

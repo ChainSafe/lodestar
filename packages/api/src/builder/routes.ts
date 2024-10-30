@@ -1,27 +1,25 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, isForkBlobs} from "@lodestar/params";
 import {
-  ssz,
-  bellatrix,
-  Slot,
-  Root,
   BLSPubkey,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
+  Root,
   SignedBlindedBeaconBlock,
   SignedBuilderBid,
+  Slot,
   WithOptionalBytes,
+  bellatrix,
+  ssz,
 } from "@lodestar/types";
-import {ForkName, isForkBlobs} from "@lodestar/params";
-import {ChainForkConfig} from "@lodestar/config";
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 
-import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
-import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyReq,
@@ -29,6 +27,8 @@ import {
 } from "../utils/codecs.js";
 import {getBlobsForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
+import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
+import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

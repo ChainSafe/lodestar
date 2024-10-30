@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {ValidatorProposerConfig} from "@lodestar/validator";
 import {routes} from "@lodestar/api";
+import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {parseFeeRecipient} from "./feeRecipient.js";
 

@@ -1,21 +1,21 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, deneb, SignedBeaconBlock} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
+import {SignedBeaconBlock, deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {
+  BlobsSource,
   BlockInput,
+  BlockInputDataBlobs,
   BlockInputType,
   BlockSource,
-  getBlockInputBlobs,
-  getBlockInput,
   NullBlockInput,
-  BlobsSource,
-  BlockInputDataBlobs,
+  getBlockInput,
+  getBlockInputBlobs,
 } from "../../chain/blocks/types.js";
-import {PeerIdStr} from "../../util/peerId.js";
-import {INetwork} from "../interface.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
+import {PeerIdStr} from "../../util/peerId.js";
+import {INetwork} from "../interface.js";
 import {matchBlockWithBlobs} from "./beaconBlocksMaybeBlobsByRange.js";
 
 export async function beaconBlocksMaybeBlobsByRoot(

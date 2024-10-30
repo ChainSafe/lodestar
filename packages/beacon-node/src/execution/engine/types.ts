@@ -1,22 +1,22 @@
-import {capella, deneb, electra, Wei, bellatrix, Root, ExecutionPayload, ExecutionRequests, ssz} from "@lodestar/types";
 import {
+  BYTES_PER_FIELD_ELEMENT,
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
-  BYTES_PER_FIELD_ELEMENT,
   ForkName,
   ForkSeq,
 } from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, Root, Wei, bellatrix, capella, deneb, electra, ssz} from "@lodestar/types";
 
 import {
-  bytesToData,
-  numToQuantity,
-  dataToBytes,
-  quantityToNum,
   DATA,
   QUANTITY,
+  bytesToData,
+  dataToBytes,
+  numToQuantity,
   quantityToBigint,
+  quantityToNum,
 } from "../../eth1/provider/utils.js";
-import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
+import {BlobsBundle, ExecutionPayloadStatus, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 export type EngineApiRpcParamTypes = {

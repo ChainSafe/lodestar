@@ -1,15 +1,15 @@
-import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap, computeEpochAtSlot} from "@lodestar/state-transition";
+import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
-import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
-import {IStateRegenerator, IStateRegeneratorInternal, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";
-import {StateRegenerator, RegenModules} from "./regen.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
+import {IStateRegenerator, IStateRegeneratorInternal, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";
+import {RegenModules, StateRegenerator} from "./regen.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 // TODO: Should this constant be lower than above? 256 feels high

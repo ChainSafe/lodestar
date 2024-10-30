@@ -1,12 +1,12 @@
-import {ssz} from "@lodestar/types";
 import {ProtocolHandler} from "@lodestar/reqresp";
+import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
+import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";

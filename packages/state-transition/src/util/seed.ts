@@ -1,6 +1,4 @@
 import {digest} from "@chainsafe/as-sha256";
-import {Epoch, Bytes32, DomainType, ValidatorIndex} from "@lodestar/types";
-import {assert, bytesToBigInt, intToBytes} from "@lodestar/utils";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -13,8 +11,10 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {BeaconStateAllForks} from "../types.js";
+import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
+import {assert, bytesToBigInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {BeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
 

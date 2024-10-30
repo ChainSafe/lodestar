@@ -1,4 +1,4 @@
-import {Root, Slot, RootHex} from "@lodestar/types";
+import {Root, RootHex, Slot} from "@lodestar/types";
 
 export enum RegenErrorCode {
   BLOCK_NOT_IN_FORKCHOICE = "REGEN_ERROR_BLOCK_NOT_IN_FORKCHOICE",

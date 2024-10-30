@@ -1,20 +1,20 @@
 import {asyncUnshuffleList, unshuffleList} from "@chainsafe/swap-or-not-shuffle";
-import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
-import {GaugeExtra, intDiv, Logger, NoLabels, toRootHex} from "@lodestar/utils";
+import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_BEACON_ATTESTER,
   GENESIS_SLOT,
   MAX_COMMITTEES_PER_SLOT,
+  SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
-  SHUFFLE_ROUND_COUNT,
 } from "@lodestar/params";
-import {BeaconConfig} from "@lodestar/config";
+import {Epoch, RootHex, ValidatorIndex, ssz} from "@lodestar/types";
+import {GaugeExtra, Logger, NoLabels, intDiv, toRootHex} from "@lodestar/utils";
 import {BeaconStateAllForks} from "../types.js";
-import {getSeed} from "./seed.js";
-import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
+import {computeStartSlotAtEpoch} from "./epoch.js";
+import {getSeed} from "./seed.js";
 
 export interface ShufflingBuildProps {
   state: BeaconStateAllForks;

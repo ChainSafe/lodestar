@@ -1,12 +1,12 @@
-import {describe, beforeAll, afterAll, it, expect} from "vitest";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ApiClient, getClient} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {ApiClient, getClient} from "@lodestar/api";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
-import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 
 describe("beacon state api", () => {
   const restPort = 9596;

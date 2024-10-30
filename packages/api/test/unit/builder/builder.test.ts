@@ -1,7 +1,7 @@
-import {describe} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {Endpoints} from "../../../src/builder/routes.js";
+import {describe} from "vitest";
 import {getClient} from "../../../src/builder/client.js";
+import {Endpoints} from "../../../src/builder/routes.js";
 import {getRoutes} from "../../../src/builder/server/index.js";
 import {runGenericServerTest} from "../../utils/genericServerTest.js";
 import {testData} from "./testData.js";

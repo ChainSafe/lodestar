@@ -1,13 +1,13 @@
-import {ProducedBlockSource} from "@lodestar/types";
-import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
 import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
-import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
+import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {ProducedBlockSource} from "@lodestar/types";
 import {
   BlockSelectionResult,
   BuilderBlockSelectionReason,
   EngineBlockSelectionReason,
 } from "../../api/impl/validator/index.js";
+import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
 

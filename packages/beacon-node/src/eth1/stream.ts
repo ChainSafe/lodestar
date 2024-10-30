@@ -1,9 +1,9 @@
-import {sleep} from "@lodestar/utils";
 import {phase0} from "@lodestar/types";
-import {Eth1Block, BatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface.js";
+import {sleep} from "@lodestar/utils";
+import {BatchDepositEvents, Eth1Block, IEth1Provider, IEth1StreamParams} from "./interface.js";
+import {parseEth1Block} from "./provider/eth1Provider.js";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock.js";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis.js";
-import {parseEth1Block} from "./provider/eth1Provider.js";
 
 /**
  * Phase 1 of genesis building.

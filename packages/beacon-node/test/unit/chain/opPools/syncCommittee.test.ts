@@ -1,7 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, beforeAll, afterEach, vi, MockedObject} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
 import {altair} from "@lodestar/types";
+import {MockedObject, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 

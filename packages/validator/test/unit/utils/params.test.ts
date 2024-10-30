@@ -1,9 +1,9 @@
-import {describe, it, expect} from "vitest";
-import {chainConfigToJson, ChainConfig} from "@lodestar/config";
+import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
-import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params.js";
-import {lighthouseHoleskyConfig, prysmHoleskyConfig, tekuHoleskyConfig, nimbusHoleskyConfig} from "./interopConfigs.js";
+import {describe, expect, it} from "vitest";
+import {NotEqualParamsError, assertEqualParams} from "../../../src/util/params.js";
+import {lighthouseHoleskyConfig, nimbusHoleskyConfig, prysmHoleskyConfig, tekuHoleskyConfig} from "./interopConfigs.js";
 
 const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
   {name: "lighthouse", items: [networksChainConfig.holesky, lighthouseHoleskyConfig]},

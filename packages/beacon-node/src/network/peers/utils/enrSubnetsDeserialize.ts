@@ -1,6 +1,6 @@
 import {getUint8ByteToBitBooleanArray} from "@chainsafe/ssz";
-import {newFilledArray} from "@lodestar/state-transition";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {newFilledArray} from "@lodestar/state-transition";
 
 export const zeroAttnets = newFilledArray(ATTESTATION_SUBNET_COUNT, false);
 export const zeroSyncnets = newFilledArray(SYNC_COMMITTEE_SUBNET_COUNT, false);

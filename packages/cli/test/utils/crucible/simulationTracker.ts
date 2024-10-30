@@ -1,25 +1,25 @@
 import EventEmitter from "node:events";
-import path from "node:path";
 import fs from "node:fs/promises";
-import createDebug from "debug";
+import path from "node:path";
 import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Slot} from "@lodestar/types";
 import {LoggerNode} from "@lodestar/logger/node";
+import {Epoch, Slot} from "@lodestar/types";
+import createDebug from "debug";
 import {isNullish} from "../../utils.js";
+import {defaultAssertions} from "./assertions/defaults/index.js";
 import {EpochClock} from "./epochClock.js";
 import {
-  Match,
-  AtLeast,
-  NodeId,
-  NodePair,
   Assertion,
   AssertionError,
+  AtLeast,
+  Match,
+  NodeId,
+  NodePair,
   SimulationReporter,
   StoreType,
   StoreTypes,
 } from "./interfaces.js";
-import {defaultAssertions} from "./assertions/defaults/index.js";
 import {TableReporter} from "./tableReporter.js";
 import {fetchBlock} from "./utils/network.js";
 

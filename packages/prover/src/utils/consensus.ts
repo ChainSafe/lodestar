@@ -1,6 +1,6 @@
 import {ApiClient} from "@lodestar/api/beacon";
-import {Bytes32, ExecutionPayload, capella} from "@lodestar/types";
 import {GenesisData, Lightclient} from "@lodestar/light-client";
+import {Bytes32, ExecutionPayload, capella} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {hexToBuffer} from "./conversion.js";

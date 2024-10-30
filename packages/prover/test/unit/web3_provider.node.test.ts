@@ -1,11 +1,11 @@
-import {describe, it, expect, afterEach, vi} from "vitest";
-import {Web3} from "web3";
 import {ethers} from "ethers";
-import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {ELRpcProvider} from "../../src/utils/rpc_provider.js";
-import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {Web3} from "web3";
 import {LCTransport, Web3ProviderType} from "../../src/interfaces.js";
+import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
 import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponse} from "../../src/types.js";
+import {ELRpcProvider} from "../../src/utils/rpc_provider.js";
+import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 
 describe("web3_provider", () => {
   afterEach(() => {

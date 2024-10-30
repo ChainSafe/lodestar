@@ -1,9 +1,9 @@
-import {describe, it, expect, beforeAll, vi} from "vitest";
-import {Web3} from "web3";
 import {ethers} from "ethers";
+import {beforeAll, describe, expect, it, vi} from "vitest";
+import {Web3} from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {waitForCapellaFork, minCapellaTimeMs, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
+import {beaconUrl, config, minCapellaTimeMs, rpcUrl, waitForCapellaFork} from "../utils/e2e_env.js";
 
 describe("web3_provider", () => {
   vi.setConfig({hookTimeout: minCapellaTimeMs});

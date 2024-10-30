@@ -2,10 +2,10 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, ssz} from "@lodestar/types";
 
-import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
-import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
+import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {BlockArgs} from "./block.js";
 import {ValidatorId} from "./state.js";
 

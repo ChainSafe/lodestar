@@ -1,5 +1,5 @@
+import {SYNC_COMMITTEE_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";

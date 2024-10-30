@@ -1,20 +1,20 @@
-import {deneb, RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
+import {BLOBSIDECAR_FIXED_SIZE, ForkName, isForkBlobs} from "@lodestar/params";
+import {RootHex, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {pruneSetToMax, toRootHex} from "@lodestar/utils";
-import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName} from "@lodestar/params";
 
+import {Metrics} from "../../metrics/index.js";
 import {
+  BlobsSource,
   BlockInput,
-  NullBlockInput,
-  getBlockInput,
-  BlockSource,
   BlockInputDataBlobs,
+  BlockSource,
   CachedData,
   GossipedInputType,
+  NullBlockInput,
+  getBlockInput,
   getBlockInputBlobs,
-  BlobsSource,
 } from "../blocks/types.js";
-import {Metrics} from "../../metrics/index.js";
 
 export enum BlockInputAvailabilitySource {
   GOSSIP = "gossip",

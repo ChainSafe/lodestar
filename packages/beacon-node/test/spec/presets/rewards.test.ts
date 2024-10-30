@@ -1,17 +1,17 @@
 import path from "node:path";
-import {expect} from "vitest";
 import {VectorCompositeType} from "@chainsafe/ssz";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transition";
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {ACTIVE_PRESET} from "@lodestar/params";
+import {expect} from "vitest";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const deltasType = new VectorCompositeType(ssz.phase0.Balances, 2);
 

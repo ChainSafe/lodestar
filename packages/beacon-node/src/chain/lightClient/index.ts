@@ -1,23 +1,22 @@
 import {BitArray, CompositeViewDU} from "@chainsafe/ssz";
-import {
-  altair,
-  BeaconBlock,
-  BeaconBlockBody,
-  LightClientBootstrap,
-  LightClientFinalityUpdate,
-  LightClientHeader,
-  LightClientOptimisticUpdate,
-  LightClientUpdate,
-  phase0,
-  Root,
-  RootHex,
-  Slot,
-  ssz,
-  sszTypesFor,
-  SSZTypesFor,
-  SyncPeriod,
-} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {
+  LightClientUpdateSummary,
+  isBetterUpdate,
+  toLightClientUpdateSummary,
+  upgradeLightClientHeader,
+} from "@lodestar/light-client/spec";
+import {
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkSeq,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  SYNC_COMMITTEE_SIZE,
+  forkLightClient,
+  highestFork,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
@@ -26,36 +25,37 @@ import {
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
 import {
-  isBetterUpdate,
-  toLightClientUpdateSummary,
-  LightClientUpdateSummary,
-  upgradeLightClientHeader,
-} from "@lodestar/light-client/spec";
+  BeaconBlock,
+  BeaconBlockBody,
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientHeader,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  Root,
+  RootHex,
+  SSZTypesFor,
+  Slot,
+  SyncPeriod,
+  altair,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
-import {
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
-  SYNC_COMMITTEE_SIZE,
-  ForkName,
-  ForkSeq,
-  ForkExecution,
-  ForkLightClient,
-  highestFork,
-  forkLightClient,
-} from "@lodestar/params";
 
+import {ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
-import {ZERO_HASH} from "../../constants/index.js";
+import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
+  getBlockBodyExecutionHeaderProof,
+  getCurrentSyncCommitteeBranch,
+  getFinalizedRootProof,
   getNextSyncCommitteeBranch,
   getSyncCommitteesWitness,
-  getFinalizedRootProof,
-  getCurrentSyncCommitteeBranch,
-  getBlockBodyExecutionHeaderProof,
 } from "./proofs.js";
 
 export type LightClientServerOpts = {

@@ -1,13 +1,13 @@
-import {Logger} from "@lodestar/utils";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
-import {IBeaconChain} from "../interface.js";
-import {ChainEvent} from "../emitter.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
+import {JobItemQueue} from "../../util/queue/index.js";
+import {ChainEvent} from "../emitter.js";
+import {IBeaconChain} from "../interface.js";
 import {archiveBlocks} from "./archiveBlocks.js";
-import {StateArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
+import {ArchiverOpts, StateArchiveMode, StateArchiveStrategy} from "./interface.js";
+import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 
 export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
 

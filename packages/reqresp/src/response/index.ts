@@ -1,15 +1,15 @@
-import {pipe} from "it-pipe";
 import {PeerId, Stream} from "@libp2p/interface";
-import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
-import {prettyPrintPeerId} from "../utils/index.js";
-import {Protocol, ReqRespRequest} from "../types.js";
+import {pipe} from "it-pipe";
+import {Uint8ArrayList} from "uint8arraylist";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
-import {RequestError, RequestErrorCode} from "../request/errors.js";
-import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {Metrics} from "../metrics.js";
+import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
+import {RequestError, RequestErrorCode} from "../request/errors.js";
+import {Protocol, ReqRespRequest} from "../types.js";
+import {prettyPrintPeerId} from "../utils/index.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};

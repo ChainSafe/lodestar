@@ -1,7 +1,7 @@
-import {BitArray} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
+import {Root, Slot, SubcommitteeIndex, altair} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";

@@ -1,20 +1,20 @@
-import worker from "node:worker_threads";
-import path from "node:path";
 import fs from "node:fs";
-import {createFromProtobuf} from "@libp2p/peer-id-factory";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {expose} from "@chainsafe/threads/worker";
-import {Observable, Subject} from "@chainsafe/threads/observable";
+import path from "node:path";
+import worker from "node:worker_threads";
 import {Discv5} from "@chainsafe/discv5";
-import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
+import {ENR, ENRData, SignableENR, SignableENRData, createPrivateKeyFromPeerId} from "@chainsafe/enr";
+import {Observable, Subject} from "@chainsafe/threads/observable";
+import {expose} from "@chainsafe/threads/worker";
+import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {Gauge} from "@lodestar/utils";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
-import {enrRelevance, ENRRelevance} from "./utils.js";
+import {ENRRelevance, enrRelevance} from "./utils.js";
 
 // This discv5 worker will start discv5 on initialization (there is no `start` function to call)
 // A consumer _should_ call `close` before terminating the worker to cleanly exit discv5 before destroying the thread

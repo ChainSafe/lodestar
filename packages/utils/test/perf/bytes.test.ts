@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {toHex, toRootHex} from "../../src/bytes/nodejs.js";
-import {toHex as browserToHex, toRootHex as browserToRootHex} from "../../src/bytes/browser.js";
 import {toHexString} from "../../src/bytes.js";
+import {toHex as browserToHex, toRootHex as browserToRootHex} from "../../src/bytes/browser.js";
+import {toHex, toRootHex} from "../../src/bytes/nodejs.js";
 
 describe("bytes utils", () => {
   const runsFactor = 1000;

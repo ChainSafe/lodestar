@@ -1,8 +1,8 @@
-import {describe, it, expect, beforeAll} from "vitest";
-import {BeaconStateAltair} from "@lodestar/state-transition";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
-import {verifyMerkleBranch, hash} from "@lodestar/utils";
+import {hash, verifyMerkleBranch} from "@lodestar/utils";
+import {beforeAll, describe, expect, it} from "vitest";
 import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
 
 const currentSyncCommitteeGindex = 54;

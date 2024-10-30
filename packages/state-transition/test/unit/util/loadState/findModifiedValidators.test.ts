@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {describe, expect, it} from "vitest";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
