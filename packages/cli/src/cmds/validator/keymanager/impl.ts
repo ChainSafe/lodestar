@@ -101,12 +101,15 @@ export class KeymanagerApi implements Api {
   }
 
   async listKeys(): ReturnType<Api["listKeys"]> {
-    const pubkeys = this.validator.validatorStore.votingPubkeys();
+    const localKeys = this.validator.validatorStore
+      .votingPubkeys()
+      .filter((pubkey) => this.validator.validatorStore.getSigner(pubkey)?.type === SignerType.Local);
+
     return {
-      data: pubkeys.map((pubkey) => ({
+      data: localKeys.map((pubkey) => ({
         validatingPubkey: pubkey,
         derivationPath: "",
-        readonly: this.validator.validatorStore.getSigner(pubkey)?.type !== SignerType.Local,
+        readonly: false,
       })),
     };
   }
