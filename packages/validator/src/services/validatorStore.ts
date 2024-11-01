@@ -251,7 +251,11 @@ export class ValidatorStore {
   }
 
   getGraffiti(pubkeyHex: PubkeyHex): string | undefined {
-    return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData.graffiti ?? this.defaultProposerConfig.graffiti;
   }
 
   setGraffiti(pubkeyHex: PubkeyHex, graffiti: string): void {
