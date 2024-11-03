@@ -220,6 +220,121 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    blockInputFetchStats: {
+      // of already available blocks which didn't have to go through blobs pull
+      totalDataAvailableBlockInputs: register.gauge({
+        name: "beacon_blockinputs_already_available_total",
+        help: "Total number of block inputs whose blobs were already available",
+      }),
+      totalDataAvailableBlockInputBlobs: register.gauge({
+        name: "beacon_blockinput_blobs_already_available_total",
+        help: "Total number of block input blobs that of already available blocks",
+      }),
+
+      // of those which need to be fetched
+      dataPromiseBlobsAlreadyAvailable: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_already_available_total",
+        help: "Count of blocks that were already available in blockinput cache via gossip",
+      }),
+      dataPromiseBlobsDelayedGossipAvailable: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_delayed_gossip_available_total",
+        help: "Count of blobs that became available delayed via gossip post block arrival",
+      }),
+      dataPromiseBlobsDeplayedGossipAvailableSavedGetBlobsCompute: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_delayed_gossip_saved_computation_total",
+        help: "Count of late available blobs that saved blob sidecar computation from getblobs",
+      }),
+      dataPromiseBlobsFoundInGetBlobsCacheNotNull: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_found_nonnull_in_getblobs_cache_total",
+        help: "Count of blobs that were found not null in getblobs cache",
+      }),
+      dataPromiseBlobsFoundInGetBlobsCacheNull: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_found_null_in_getblobs_cache_total",
+        help: "Count of blobs that were found null in the getblobs cache",
+      }),
+      dataPromiseBlobsNotAvailableInGetBlobsCache: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_notfound_in_getblobs_cache_total",
+        help: "Count of blobs that were newly seen and hence in not getblobs cache",
+      }),
+      dataPromiseBlobsEngineGetBlobsApiRequests: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_queried_in_getblobs_api_total",
+        help: "Total number of blobs requested to the getblobs api",
+      }),
+      dataPromiseBlobsEngineGetBlobsApiNotNull: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_responded_nonnull_in_getblobs_api_total",
+        help: "Count of successful engine API responses that were not null",
+      }),
+      dataPromiseBlobsEngineGetBlobsApiNull: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_responded_null_in_getblobs_api_total",
+        help: "Count of engine API responses that were null",
+      }),
+      dataPromiseBlobsEngineApiGetBlobsErroredNull: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_errored_as_null_in_getblobs_api_total",
+        help: "Number of responses marked null due to errors in getblobs api",
+      }),
+      dataPromiseBlobsEngineApiGetBlobsUseful: register.gauge({
+        name: "beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total",
+        help: "Count of successful non null engine API responses that were found useful",
+      }),
+      dataPromiseBlobsFinallyQueriedFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_finally_queried_from_network_total",
+        help: "Number of blob requests finally sent to the network",
+      }),
+      dataPromiseBlobsFinallyAvailableFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total",
+        help: "Number of blobs successfully fetched from the network",
+      }),
+
+      totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
+        help: "Count of block inputs that became available using non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsTried: register.gauge({
+        name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
+        help: "Total number of block inputs that were tried to resolve",
+      }),
+      totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
+        help: "Total number of block inputs that were successfully resolved as available on blobs pull",
+      }),
+
+      // retry counts
+      totalDataPromiseBlockInputsReTried: register.gauge({
+        name: "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
+        help: "Total number of block inputs that were retried for blobs pull from network",
+      }),
+      dataPromiseBlobsRetriedFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_retried_from_network_total",
+        help: "Number of blob requests required from the network on retries",
+      }),
+      dataPromiseBlobsRetriedAvailableFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total",
+        help: "Number of blobs successfully fetched from the network on retries",
+      }),
+      totalDataPromiseBlockInputsRetriedAvailableFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinputs_retried_and_resolved_from_network_total",
+        help: "Number of blockinputs successfully resolved from the network on retries",
+      }),
+
+      // some caches stats
+      getBlobsCacheSize: register.gauge({
+        name: "getblob_cache_size",
+        help: "getBlobs cache size",
+      }),
+      getBlobsCachePruned: register.gauge({
+        name: "getblob_cache_pruned_total",
+        help: "getblobs cache pruned count",
+      }),
+      dataPromiseBlockInputRetryTrackerCacheSize: register.gauge({
+        name: "beacon_datapromise_blockinput_retry_tracker_cache_size",
+        help: "datapromise retry tracker cache size",
+      }),
+      dataPromiseBlockInputRetryTrackerCachePruned: register.gauge({
+        name: "beacon_datapromise_blockinput_retry_tracker_cache_pruned",
+        help: "datapromise retry tracker cache pruned count",
+      }),
+    },
+
     // Non-spec'ed
     clockSlot: register.gauge({
       name: "beacon_clock_slot",

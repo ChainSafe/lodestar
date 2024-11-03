@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Root, RootHex, deneb} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
 import {BlockInput, BlockInputType, NullBlockInput} from "../chain/blocks/types.js";
@@ -33,6 +34,9 @@ export class UnknownBlockSync {
   private readonly proposerBoostSecWindow: number;
   private readonly maxPendingBlocks;
   private subscribedToNetworkEvents = false;
+
+  private engineGetBlobsCache = new Map<RootHex, BlobAndProof | null>();
+  private blockInputsRetryTrackerCache = new Set<RootHex>();
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -532,13 +536,12 @@ export class UnknownBlockSync {
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       try {
-        const blockInput = await unavailableBeaconBlobsByRoot(
-          this.config,
-          this.network,
-          peer,
-          unavailableBlockInput,
-          this.metrics
-        );
+        const blockInput = await unavailableBeaconBlobsByRoot(this.config, this.network, peer, unavailableBlockInput, {
+          metrics: this.metrics,
+          executionEngine: this.chain.executionEngine,
+          engineGetBlobsCache: this.engineGetBlobsCache,
+          blockInputsRetryTrackerCache: this.blockInputsRetryTrackerCache,
+        });
 
         // Peer does not have the block, try with next peer
         if (blockInput === undefined) {

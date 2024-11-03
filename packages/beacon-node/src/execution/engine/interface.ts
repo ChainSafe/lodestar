@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
-import {Blob, KZGCommitment, KZGProof} from "@lodestar/types/deneb";
+import {Blob, BlobAndProof, KZGCommitment, KZGProof} from "@lodestar/types/deneb";
 
 import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
@@ -179,4 +179,6 @@ export interface IExecutionEngine {
   getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
+
+  getBlobs(fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
 }

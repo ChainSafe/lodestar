@@ -372,7 +372,7 @@ export class HttpRpcError extends Error {
 /**
  * JSON RPC spec errors https://www.jsonrpc.org/specification#response_object
  */
-function parseJsonRpcErrorCode(code: number): string {
+export function parseJsonRpcErrorCode(code: number): string {
   if (code === -32700) return "Parse request error";
   if (code === -32600) return "Invalid request object";
   if (code === -32601) return "Method not found";

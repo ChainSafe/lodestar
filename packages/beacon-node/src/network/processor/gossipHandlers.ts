@@ -253,6 +253,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // if blobs are not yet fully available start an aggressive blob pull
     if (blockInput.type === BlockInputType.dataPromise) {
       events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+    } else if (blockInput.type === BlockInputType.availableData) {
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blockInput.blockData.blobs.length);
     }
 
     chain

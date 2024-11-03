@@ -215,12 +215,12 @@ export function getBeaconBlockApi({
       // specification is very clear that this is the desired behaviour.
       //
       // i) Publish blobs and block before importing so that network can see them asap
-      // ii) publish blobs first because
-      //     a) by the times nodes see block, they might decide to pull blobs
-      //     b) they might require more hops to reach recipients in peerDAS kind of setup where
-      //        blobs might need to hop between nodes because of partial subnet subscription
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
+      // ii) publish block first because
+      //     a) as soon as node sees block they can start processing it while blobs arrive
+      //     b) getting block first allows nodes to use getBlobs from local ELs and save
+      //        import latency and hopefully bandwidth
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
+      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
