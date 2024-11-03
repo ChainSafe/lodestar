@@ -20,8 +20,13 @@ export const nodeAssertion: Assertion<"node", {health: number; keyManagerKeys: s
     if (node.validator.client === ValidatorClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
       keyManagerKeys = [];
     } else {
-      const keys = (await node.validator.keyManager.listKeys()).value();
-      keyManagerKeys = keys.map((k) => k.validatingPubkey);
+      if (node.validator.keys.type === "local") {
+        const keys = (await node.validator.keyManager.listKeys()).value();
+        keyManagerKeys = keys.map((k) => k.validatingPubkey);
+      } else {
+        const keys = (await node.validator.keyManager.listRemoteKeys()).value();
+        keyManagerKeys = keys.map((k) => k.pubkey);
+      }
     }
 
     return {health, keyManagerKeys};
