@@ -467,7 +467,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   async getBlobs(_fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
     // retry only after a day may be
-    const GETBLOBS_RETRY_TIMEOUT = 256 * 12;
+    const GETBLOBS_RETRY_TIMEOUT = 256 * 32 * 12;
     const timeNow = Date.now() / 1000;
     const timeSinceLastFail = timeNow - this.lastGetBlobsErrorTime;
     if (timeSinceLastFail < GETBLOBS_RETRY_TIMEOUT) {
