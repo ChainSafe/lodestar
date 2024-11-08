@@ -84,7 +84,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
    * Archives finalized states from active bucket to archive bucket.
    * Only the new finalized state is stored to disk
    */
-  private async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
+  async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalized);
     const {rootHex} = finalized;

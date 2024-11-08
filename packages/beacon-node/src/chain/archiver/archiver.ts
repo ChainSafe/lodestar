@@ -64,7 +64,7 @@ export class Archiver {
 
   /** Archive latest finalized state */
   async persistToDisk(): Promise<void> {
-    return this.statesArchiverStrategy.maybeArchiveState(this.chain.forkChoice.getFinalizedCheckpoint());
+    return this.statesArchiverStrategy.archiveState(this.chain.forkChoice.getFinalizedCheckpoint());
   }
 
   private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {

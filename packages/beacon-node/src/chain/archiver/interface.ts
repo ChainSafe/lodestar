@@ -44,4 +44,5 @@ export interface StateArchiveStrategy {
   onCheckpoint(stateRoot: RootHex, metrics?: Metrics | null): Promise<void>;
   onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
   maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
+  archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
 }
