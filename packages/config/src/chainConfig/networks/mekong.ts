@@ -13,21 +13,21 @@ export const mekongChainConfig: ChainConfig = {
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 100000,
-  MIN_GENESIS_TIME: 1730372340,
-  GENESIS_FORK_VERSION: b("0x10000000"),
+  MIN_GENESIS_TIME: 1730822340, // 2024-Nov-05 03:59:00 PM UTC
+  GENESIS_FORK_VERSION: b("0x10637624"),
   GENESIS_DELAY: 60,
 
   // Forking
   // ---------------------------------------------------------------
   // # Altair
-  ALTAIR_FORK_VERSION: b("0x20000000"),
+  ALTAIR_FORK_VERSION: b("0x20637624"),
   ALTAIR_FORK_EPOCH: 0,
   // # Merge
-  BELLATRIX_FORK_VERSION: b("0x30000000"),
+  BELLATRIX_FORK_VERSION: b("0x30637624"),
   BELLATRIX_FORK_EPOCH: 0,
   TERMINAL_TOTAL_DIFFICULTY: BigInt("0"),
   // Capella
-  CAPELLA_FORK_VERSION: b("0x40000000"),
+  CAPELLA_FORK_VERSION: b("0x40637624"),
   CAPELLA_FORK_EPOCH: 0,
   // Deneb
   DENEB_FORK_VERSION: b("0x50637624"),
@@ -35,6 +35,15 @@ export const mekongChainConfig: ChainConfig = {
   // Electra
   ELECTRA_FORK_VERSION: b("0x60637624"),
   ELECTRA_FORK_EPOCH: 256,
+
+  // Time parameters
+  // ---------------------------------------------------------------
+  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 2,
+
+  // Validator cycle
+  // ---------------------------------------------------------------
+  EJECTION_BALANCE: 30000000000,
+  CHURN_LIMIT_QUOTIENT: 128,
 
   // Deposit contract
   // ---------------------------------------------------------------
