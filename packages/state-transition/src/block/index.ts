@@ -1,15 +1,15 @@
 import {ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
+import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
-import {processExecutionPayload} from "./processExecutionPayload.js";
-import {processSyncAggregate} from "./processSyncCommittee.js";
+import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
+import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
+import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
-import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
-import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
+import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 import {ProcessBlockOpts} from "./types.js";
 

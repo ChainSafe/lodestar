@@ -1,8 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {ApiOptions} from "../../options.js";
 
 export function getNodeApi(
   opts: ApiOptions,

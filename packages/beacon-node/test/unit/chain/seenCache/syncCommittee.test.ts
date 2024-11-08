@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
 import {ssz} from "@lodestar/types";
-import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
+import {describe, expect, it} from "vitest";
+import {SeenContributionAndProof, SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 
 const NUM_SLOTS_IN_CACHE = 3;
 

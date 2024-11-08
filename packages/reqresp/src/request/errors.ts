@@ -1,6 +1,6 @@
 import {LodestarError, LodestarErrorObject} from "@lodestar/utils";
-import {ResponseError} from "../response/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
+import {ResponseError} from "../response/index.js";
 
 export enum RequestErrorCode {
   // Declaring specific values of RpcResponseStatusError for error clarity downstream

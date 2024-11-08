@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {ClientStats} from "../../../src/monitoring/types.js";
+import {describe, expect, it} from "vitest";
 import {createClientStats} from "../../../src/monitoring/clientStats.js";
+import {ClientStats} from "../../../src/monitoring/types.js";
 import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDATOR_STATS_SCHEMA} from "./schemas.js";
 
 describe("monitoring / clientStats", () => {

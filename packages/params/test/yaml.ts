@@ -1,4 +1,4 @@
-import {load, FAILSAFE_SCHEMA, Type} from "js-yaml";
+import {FAILSAFE_SCHEMA, Type, load} from "js-yaml";
 
 export function loadConfigYaml(configYaml: string): Record<string, unknown> {
   return load(configYaml, {schema}) as Record<string, unknown>;

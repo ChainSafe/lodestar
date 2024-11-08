@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
+import {toMemoryEfficientHexStr} from "@lodestar/state-transition/src/cache/pubkeyCache.js";
+import {ValidatorIndex} from "@lodestar/types";
 // biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Map` name to be imported
 import {Map} from "immutable";
-import {ValidatorIndex} from "@lodestar/types";
-import {toMemoryEfficientHexStr} from "@lodestar/state-transition/src/cache/pubkeyCache.js";
 import {testRunnerMemory} from "./testRunnerMemory.js";
 
 // Results in MacOS Nov 2023

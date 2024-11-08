@@ -1,14 +1,14 @@
-import {Logger} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot, Epoch, RootHex} from "@lodestar/types";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {IStateRegenerator} from "../../regen/interface.js";
-import {getStateSlotFromBytes} from "../../../util/multifork.js";
-import {serializeState} from "../../serializeState.js";
-import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
 import {Metrics} from "../../../metrics/metrics.js";
+import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {IStateRegenerator} from "../../regen/interface.js";
+import {serializeState} from "../../serializeState.js";
 import {StateArchiveStrategy, StatesArchiverOpts} from "../interface.js";
 
 /**

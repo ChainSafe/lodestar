@@ -1,4 +1,4 @@
-import {setActivePreset, PresetName} from "@lodestar/params/setPreset";
+import {PresetName, setActivePreset} from "@lodestar/params/setPreset";
 // Set minimal
 if (process.env.LODESTAR_PRESET === undefined) {
   process.env.LODESTAR_PRESET = "minimal";

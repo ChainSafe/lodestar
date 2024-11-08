@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
+import {describe, it} from "vitest";
 import {RunnerType, TestRunner} from "./types.js";
 
 const ARTIFACT_FILENAMES = new Set([

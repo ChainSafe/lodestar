@@ -1,7 +1,7 @@
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
-import {beaconNodeOptions, paramsOptions, BeaconNodeArgs} from "../../options/index.js";
+import {BeaconNodeArgs, beaconNodeOptions, paramsOptions} from "../../options/index.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {defaultBeaconPaths, BeaconPaths} from "./paths.js";
+import {BeaconPaths, defaultBeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
   forceGenesis?: boolean;

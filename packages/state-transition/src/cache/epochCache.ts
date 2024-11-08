@@ -1,20 +1,6 @@
 import {PublicKey} from "@chainsafe/blst";
-import * as immutable from "immutable";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {
-  BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  Slot,
-  ValidatorIndex,
-  phase0,
-  RootHex,
-  SyncPeriod,
-  Attestation,
-  IndexedAttestation,
-  electra,
-} from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
+import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
@@ -26,47 +12,61 @@ import {
   SLOTS_PER_EPOCH,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
+import {
+  Attestation,
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  IndexedAttestation,
+  RootHex,
+  Slot,
+  SyncPeriod,
+  ValidatorIndex,
+  electra,
+  phase0,
+} from "@lodestar/types";
 import {LodestarError, fromHex} from "@lodestar/utils";
+import * as immutable from "immutable";
+import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
+import {EpochCacheMetrics} from "../metrics.js";
+import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
+import {
+  EpochShuffling,
+  IShufflingCache,
+  calculateShufflingDecisionRoot,
+  computeEpochShuffling,
+} from "../util/epochShuffling.js";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
+  computeProposers,
   computeStartSlotAtEpoch,
+  computeSyncPeriodAtEpoch,
+  getActivationChurnLimit,
   getChurnLimit,
+  getSeed,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
-  computeSyncPeriodAtEpoch,
-  getSeed,
-  computeProposers,
-  getActivationChurnLimit,
 } from "../util/index.js";
-import {
-  computeEpochShuffling,
-  EpochShuffling,
-  calculateShufflingDecisionRoot,
-  IShufflingCache,
-} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
-import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
-import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
-import {EpochCacheMetrics} from "../metrics.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   Index2PubkeyCache,
+  PubkeyHex,
   UnfinalizedPubkeyIndexMap,
+  newUnfinalizedPubkeyIndexMap,
   syncPubkeys,
   toMemoryEfficientHexStr,
-  PubkeyHex,
-  newUnfinalizedPubkeyIndexMap,
 } from "./pubkeyCache.js";
+import {CachedBeaconStateAllForks} from "./stateCache.js";
 import {
-  computeSyncCommitteeCache,
-  getSyncCommitteeCache,
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
+  computeSyncCommitteeCache,
+  getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
-import {CachedBeaconStateAllForks} from "./stateCache.js";
+import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);

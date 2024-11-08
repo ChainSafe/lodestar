@@ -1,5 +1,5 @@
-import {CommitteeIndex, Slot, ValidatorIndex} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {CommitteeIndex, Slot, ValidatorIndex} from "@lodestar/types";
 import {EpochShuffling} from "./epochShuffling.js";
 
 // Copied from lodestar-api package to avoid depending on the package

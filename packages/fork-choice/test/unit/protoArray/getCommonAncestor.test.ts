@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {ProtoArray, ExecutionStatus, DataAvailabilityStatus} from "../../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {DataAvailabilityStatus, ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [

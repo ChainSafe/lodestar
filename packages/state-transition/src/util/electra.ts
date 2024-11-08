@@ -1,7 +1,7 @@
 import {COMPOUNDING_WITHDRAWAL_PREFIX, GENESIS_SLOT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
-import {CachedBeaconStateElectra} from "../types.js";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
+import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {

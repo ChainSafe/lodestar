@@ -1,5 +1,5 @@
 import {EL_GENESIS_ACCOUNT} from "../constants.js";
-import {Match, AssertionResult, NodePair, Assertion} from "../interfaces.js";
+import {Assertion, AssertionResult, Match, NodePair} from "../interfaces.js";
 
 const transactionAmount = BigInt(2441406250);
 

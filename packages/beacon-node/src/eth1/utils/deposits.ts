@@ -1,11 +1,11 @@
-import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0, ssz} from "@lodestar/types";
+import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
 import {FilterOptions} from "@lodestar/db";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {getEth1DepositCount} from "@lodestar/state-transition";
-import {Eth1Error, Eth1ErrorCode} from "../errors.js";
+import {phase0, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 
 export type DepositGetter<T> = (indexRange: FilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 

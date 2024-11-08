@@ -1,12 +1,12 @@
-import {deneb, Root, Slot, ssz} from "@lodestar/types";
-import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
-import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {KZG_COMMITMENT_INCLUSION_PROOF_DEPTH, KZG_COMMITMENT_SUBTREE_INDEX0} from "@lodestar/params";
+import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {Root, Slot, deneb, ssz} from "@lodestar/types";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
-import {BlobSidecarGossipError, BlobSidecarErrorCode} from "../errors/blobSidecarError.js";
-import {GossipAction} from "../errors/gossipValidation.js";
-import {ckzg} from "../../util/kzg.js";
 import {byteArrayEquals} from "../../util/bytes.js";
+import {ckzg} from "../../util/kzg.js";
+import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
+import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 

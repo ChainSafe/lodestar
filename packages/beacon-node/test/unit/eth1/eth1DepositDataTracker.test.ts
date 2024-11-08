@@ -1,12 +1,12 @@
-import {describe, it, expect, beforeEach, afterEach, vi, MockInstance} from "vitest";
 import {config} from "@lodestar/config/default";
 import {TimeoutError} from "@lodestar/utils";
-import {Eth1DepositDataTracker} from "../../../src/eth1/eth1DepositDataTracker.js";
-import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
-import {testLogger} from "../../utils/logger.js";
-import {defaultEth1Options} from "../../../src/eth1/options.js";
+import {MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconDb} from "../../../src/db/beacon.js";
+import {Eth1DepositDataTracker} from "../../../src/eth1/eth1DepositDataTracker.js";
+import {defaultEth1Options} from "../../../src/eth1/options.js";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {testLogger} from "../../utils/logger.js";
 
 describe("Eth1DepositDataTracker", () => {
   const controller = new AbortController();

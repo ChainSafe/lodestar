@@ -7,12 +7,12 @@ import {
   ForkPostElectra,
   ForkPreBlobs,
 } from "@lodestar/params";
-import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
+import {ts as phase0} from "./phase0/index.js";
 import {Slot} from "./primitive/types.js";
 
 export * from "./primitive/types.js";
@@ -31,6 +31,18 @@ export enum ProducedBlockSource {
   builder = "builder",
   engine = "engine",
 }
+
+export type WithBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes: Uint8Array;
+};
+
+export type WithOptionalBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes?: Uint8Array | null;
+};
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};

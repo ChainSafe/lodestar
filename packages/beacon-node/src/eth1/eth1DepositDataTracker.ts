@@ -1,4 +1,3 @@
-import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
@@ -6,19 +5,20 @@ import {
   CachedBeaconStateElectra,
   becomesNewEth1Data,
 } from "@lodestar/state-transition";
-import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
+import {phase0, ssz} from "@lodestar/types";
+import {ErrorAborted, Logger, TimeoutError, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
-import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
-import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
-import {getDeposits} from "./utils/deposits.js";
+import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataAndDeposits, EthJsonRpcBlockRaw, IEth1Provider} from "./interface.js";
 import {Eth1Options} from "./options.js";
-import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
+import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError} from "./provider/utils.js";
+import {getDeposits} from "./utils/deposits.js";
+import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MIN_BLOCKS_PER_BLOCK_QUERY = 10;

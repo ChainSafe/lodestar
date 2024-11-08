@@ -45,7 +45,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/blst": "^2.0.3",
+    "@chainsafe/blst": "^2.1.0",
     "@chainsafe/ssz": "^0.18.0",
     "@lodestar/api": "^1.22.0",
     "@lodestar/config": "^1.22.0",

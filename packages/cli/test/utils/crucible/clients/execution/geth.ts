@@ -9,10 +9,10 @@ import {
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
 } from "../../constants.js";
-import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
+import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 
 export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (opts, runner) => {
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {

@@ -1,16 +1,16 @@
 import path from "node:path";
-import {InterchangeFormatVersion} from "@lodestar/validator";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {CliCommand, toPubkeyHex} from "@lodestar/utils";
-import {YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
-import {parseLoggerArgs} from "../../../util/logger.js";
+import {InterchangeFormatVersion} from "@lodestar/validator";
+import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
+import {YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
+import {parseLoggerArgs} from "../../../util/logger.js";
 import {AccountValidatorArgs} from "../options.js";
-import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {getValidatorPaths} from "../paths.js";
-import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
+import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 
 type ExportArgs = {
   file: string;

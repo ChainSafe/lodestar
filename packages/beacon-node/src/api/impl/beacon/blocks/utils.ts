@@ -1,12 +1,12 @@
 import {routes} from "@lodestar/api";
-import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "../../../../constants/index.js";
-import {ApiError, ValidationError} from "../../errors.js";
+import {blockToHeader} from "@lodestar/state-transition";
+import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {IBeaconChain} from "../../../../chain/interface.js";
+import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {rootHexRegex} from "../../../../eth1/provider/utils.js";
+import {ApiError, ValidationError} from "../../errors.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,

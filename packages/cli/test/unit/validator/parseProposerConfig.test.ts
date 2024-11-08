@@ -1,7 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, expect} from "vitest";
 import {routes} from "@lodestar/api";
+import {describe, expect, it} from "vitest";
 
 import {parseProposerConfig} from "../../../src/util/index.js";
 
@@ -26,8 +26,7 @@ const testValue = {
       builder: {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.BuilderAlways,
-        // biome-ignore lint/correctness/noPrecisionLoss: <explanation>
-        boostFactor: BigInt(18446744073709551616),
+        boostFactor: 18446744073709551616n,
       },
     },
   },

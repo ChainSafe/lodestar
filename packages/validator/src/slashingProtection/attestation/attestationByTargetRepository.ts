@@ -1,11 +1,11 @@
 import {ContainerType, Type} from "@chainsafe/ssz";
-import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
-import {intToBytes, bytesToInt} from "@lodestar/utils";
 import {DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
+import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
+import {bytesToInt, intToBytes} from "@lodestar/utils";
+import {Bucket, getBucketNameByValue} from "../../buckets.js";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {SlashingProtectionAttestation} from "../types.js";
 import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
-import {Bucket, getBucketNameByValue} from "../../buckets.js";
 
 /**
  * Manages validator db storage of attestations.

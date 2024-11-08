@@ -1,27 +1,27 @@
+import {ApiClient, ApiRequestInit, defaultInit, getClient, routes} from "@lodestar/api";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
-import {getClient, ApiClient, routes, ApiRequestInit, defaultInit} from "@lodestar/api";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
-import {Clock, IClock} from "./util/clock.js";
 import {waitForGenesis} from "./genesis.js";
-import {BlockProposingService} from "./services/block.js";
-import {AttestationService} from "./services/attestation.js";
-import {IndicesService} from "./services/indices.js";
-import {SyncCommitteeService} from "./services/syncCommittee.js";
-import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepareBeaconProposer.js";
-import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
-import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
-import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
-import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
-import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
-import {ValidatorEventEmitter} from "./services/emitter.js";
-import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
-import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
+import {AttestationService} from "./services/attestation.js";
+import {BlockProposingService} from "./services/block.js";
+import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
+import {ValidatorEventEmitter} from "./services/emitter.js";
+import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
+import {IndicesService} from "./services/indices.js";
+import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
+import {SyncCommitteeService} from "./services/syncCommittee.js";
+import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
+import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
+import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
+import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
+import {Clock, IClock} from "./util/clock.js";
+import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
   opts: ValidatorOptions;
@@ -328,6 +328,8 @@ export class Validator {
       suggestedFeeRecipient,
       strictFeeRecipientCheck,
     });
+
+    metrics?.defaultConfiguration.set({builderSelection: defaultBuilderSelection, broadcastValidation}, 1);
 
     // Instantiates block and attestation services and runs them once the chain has been started.
     return Validator.init(opts, genesis, metrics);

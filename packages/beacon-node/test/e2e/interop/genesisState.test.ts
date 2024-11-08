@@ -1,9 +1,9 @@
-import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {initDevState} from "../../../src/node/utils/state.js";
+import {describe, expect, it} from "vitest";
 import {interopDeposits} from "../../../src/node/utils/interop/deposits.js";
+import {initDevState} from "../../../src/node/utils/state.js";
 
 describe("interop / initDevState", () => {
   it("Create interop deposits", () => {

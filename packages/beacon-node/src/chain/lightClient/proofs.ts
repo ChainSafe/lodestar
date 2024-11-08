@@ -1,13 +1,13 @@
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {
-  FINALIZED_ROOT_GINDEX,
   BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
-  ForkExecution,
+  FINALIZED_ROOT_GINDEX,
   FINALIZED_ROOT_GINDEX_ELECTRA,
+  ForkExecution,
   ForkName,
   isForkPostElectra,
 } from "@lodestar/params";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
 
 import {SyncCommitteeWitness} from "./types.js";

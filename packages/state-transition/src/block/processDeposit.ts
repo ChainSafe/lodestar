@@ -12,12 +12,12 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@lodestar/params";
 
-import {DepositData} from "@lodestar/types/lib/phase0/types.js";
-import {DepositRequest} from "@lodestar/types/lib/electra/types.js";
 import {BeaconConfig} from "@lodestar/config";
+import {DepositRequest} from "@lodestar/types/lib/electra/types.js";
+import {DepositData} from "@lodestar/types/lib/phase0/types.js";
 import {ZERO_HASH} from "../constants/index.js";
-import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
+import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances

@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {AttestationDataCacheEntry, SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
 

@@ -1,8 +1,8 @@
 import {BLSPubkey} from "@lodestar/types";
-import {isEqualNonZeroRoot} from "../utils.js";
 import {SlashingProtectionBlock} from "../types.js";
-import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";
+import {isEqualNonZeroRoot} from "../utils.js";
 import {BlockBySlotRepository} from "./blockBySlotRepository.js";
+import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";
 export {BlockBySlotRepository, InvalidBlockError, InvalidBlockErrorCode};
 
 enum SafeStatus {

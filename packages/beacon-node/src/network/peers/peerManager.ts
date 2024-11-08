@@ -1,33 +1,33 @@
-import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {Connection, PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
+import {LoggerNode} from "@lodestar/logger/node";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Metadata, altair, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
-import {LoggerNode} from "@lodestar/logger/node";
-import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
+import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
-import {NetworkEvent, INetworkEventBus, NetworkEventData} from "../events.js";
-import {Libp2p} from "../interface.js";
-import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
-import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
-import {SubnetsService} from "../subnets/index.js";
-import {SubnetType} from "../metadata.js";
-import {Eth2Gossipsub} from "../gossip/gossipsub.js";
-import {StatusCache} from "../statusCache.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
+import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
+import {Eth2Gossipsub} from "../gossip/gossipsub.js";
+import {Libp2p} from "../interface.js";
+import {SubnetType} from "../metadata.js";
+import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
+import {StatusCache} from "../statusCache.js";
+import {SubnetsService} from "../subnets/index.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
-import {PeersData, PeerData} from "./peersData.js";
-import {getKnownClientFromAgentVersion, ClientKind} from "./client.js";
+import {PeerData, PeersData} from "./peersData.js";
+import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 import {
+  assertPeerRelevance,
   getConnectedPeerIds,
   hasSomeConnectedPeer,
-  assertPeerRelevance,
   prioritizePeers,
   renderIrrelevantPeerType,
 } from "./utils/index.js";
-import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -94,7 +94,6 @@ export interface IReqRespBeaconNodePeerManager {
 }
 
 export type PeerManagerModules = {
-  privateKey: PrivateKey;
   libp2p: Libp2p;
   logger: LoggerNode;
   metrics: NetworkCoreMetrics | null;
@@ -689,7 +688,7 @@ export class PeerManager {
     }
 
     for (const connections of getConnectionsMap(this.libp2p).values()) {
-      const openCnx = connections.value.find((cnx) => cnx.status === "open");
+      const openCnx = connections.find((cnx) => cnx.status === "open");
       if (openCnx) {
         const direction = openCnx.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));

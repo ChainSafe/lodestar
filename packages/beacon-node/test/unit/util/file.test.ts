@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, expect, beforeAll, afterAll} from "vitest";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {ensureDir, writeIfNotExist} from "../../../src/util/file.js";
 
 describe("file util", () => {

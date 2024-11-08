@@ -1,21 +1,21 @@
 import path from "node:path";
+import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  CachedBeaconStateBellatrix,
   CachedBeaconStateAltair,
-  CachedBeaconStatePhase0,
+  CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
+  CachedBeaconStatePhase0,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
   const config = createChainForkConfig({});

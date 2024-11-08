@@ -1,18 +1,18 @@
-import {describe, it, afterEach, expect, vi} from "vitest";
-import {Gauge, Histogram} from "prom-client";
+import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
-import {Slot, phase0} from "@lodestar/types";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {routes} from "@lodestar/api";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../../utils/logger.js";
-import {getDevBeaconNode} from "../../../utils/node/beacon.js";
-import {getAndInitDevValidators} from "../../../utils/node/validator.js";
-import {waitForEvent} from "../../../utils/events/resolver.js";
+import {Slot, phase0} from "@lodestar/types";
+import {Gauge, Histogram} from "prom-client";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
-import {connect, onPeerConnect} from "../../../utils/network.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
 import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";
+import {waitForEvent} from "../../../utils/events/resolver.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../../utils/logger.js";
+import {connect, onPeerConnect} from "../../../utils/network.js";
+import {getDevBeaconNode} from "../../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../../utils/node/validator.js";
 
 /**
  * Test different reorg scenarios to make sure the StateCache implementations are correct.

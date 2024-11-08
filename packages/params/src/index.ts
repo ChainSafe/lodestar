@@ -1,9 +1,9 @@
 import {PresetName} from "./presetName.js";
+import {presetStatus} from "./presetStatus.js";
+import {gnosisPreset} from "./presets/gnosis.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
-import {gnosisPreset} from "./presets/gnosis.js";
-import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset, userOverrides} from "./setPreset.js";
+import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
 export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";

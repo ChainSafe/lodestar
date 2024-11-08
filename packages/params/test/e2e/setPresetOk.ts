@@ -3,7 +3,7 @@
 // It demostrates how to properly change the Lodestar preset safely
 
 // 1. Import from @lodestar/params/setPreset only
-import {setActivePreset, PresetName} from "../../src/setPreset.js";
+import {PresetName, setActivePreset} from "../../src/setPreset.js";
 setActivePreset(PresetName.minimal);
 
 // 2. Import from any other @lodestar/params paths

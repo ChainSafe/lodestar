@@ -1,5 +1,4 @@
 import {itBench} from "@dapplion/benchmark";
-import {ssz} from "@lodestar/types";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -10,14 +9,15 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAltair,
   DataAvailableStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "../../../src/index.js";
-import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {StateBlock} from "../types.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 // As of Jun 12 2021

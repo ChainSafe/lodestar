@@ -1,17 +1,17 @@
-import {electra, phase0, ssz} from "@lodestar/types";
 import {
   FAR_FUTURE_EPOCH,
-  MIN_ACTIVATION_BALANCE,
-  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   FULL_EXIT_REQUEST_AMOUNT,
   ForkSeq,
+  MIN_ACTIVATION_BALANCE,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
 } from "@lodestar/params";
+import {electra, phase0, ssz} from "@lodestar/types";
 
 import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
-import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
+import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
 export function processWithdrawalRequest(

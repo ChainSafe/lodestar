@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {DOMAIN_APPLICATION_MASK, DOMAIN_APPLICATION_BUILDER} from "../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {DOMAIN_APPLICATION_BUILDER, DOMAIN_APPLICATION_MASK} from "../../src/index.js";
 
 describe("validate application domains", () => {
   [{name: "builder domain", domain: DOMAIN_APPLICATION_BUILDER}].map(({name, domain}) => {

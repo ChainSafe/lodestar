@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 
 import {Slot} from "@lodestar/types";
 import {computeSlotsSinceEpochStart} from "../../../src/util/index.js";

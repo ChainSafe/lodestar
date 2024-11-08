@@ -1,16 +1,16 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {describe, it} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
+import {describe, it} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
-import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
+import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {memoOnce} from "../../../utils/cache.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {
-  getAggregateAndProofValidData,
   AggregateAndProofValidDataOpts,
+  getAggregateAndProofValidData,
 } from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("chain / validation / aggregateAndProof", () => {

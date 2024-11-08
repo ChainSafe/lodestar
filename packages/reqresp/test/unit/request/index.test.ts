@@ -1,19 +1,19 @@
-import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
 import {PeerId} from "@libp2p/interface";
+import {getEmptyLogger} from "@lodestar/logger/empty";
+import {LodestarError, sleep} from "@lodestar/utils";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {Libp2p} from "libp2p";
-import {getEmptyLogger} from "@lodestar/logger/empty";
-import {LodestarError, sleep} from "@lodestar/utils";
-import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
-import {Protocol, MixedProtocol, ResponseIncoming} from "../../../src/types.js";
-import {getEmptyHandler, sszSnappyPing} from "../../fixtures/messages.js";
-import {getValidPeerId} from "../../utils/peer.js";
-import {MockLibP2pStream} from "../../utils/index.js";
-import {responseEncode} from "../../utils/response.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {RespStatus} from "../../../src/interface.js";
-import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "../../../src/request/index.js";
+import {MixedProtocol, Protocol, ResponseIncoming} from "../../../src/types.js";
+import {getEmptyHandler, sszSnappyPing} from "../../fixtures/messages.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
+import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {MockLibP2pStream} from "../../utils/index.js";
+import {getValidPeerId} from "../../utils/peer.js";
+import {responseEncode} from "../../utils/response.js";
 
 describe("request / sendRequest", () => {
   const logger = getEmptyLogger();

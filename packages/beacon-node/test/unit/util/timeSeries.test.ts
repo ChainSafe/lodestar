@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {TimeSeries} from "../../../src/util/timeSeries.js";
 
 // Even with rounding to 3 decimals, the test still breaks sometimes...

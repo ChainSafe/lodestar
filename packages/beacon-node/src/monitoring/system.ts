@@ -2,9 +2,9 @@
 /* eslint-disable import/no-named-as-default-member */
 import os from "node:os";
 import path from "node:path";
+import {Logger} from "@lodestar/utils";
 // We want to keep `system` export as it's more readable and easier to understand
 import system from "systeminformation";
-import {Logger} from "@lodestar/utils";
 
 type MiscOs = "lin" | "win" | "mac" | "unk";
 

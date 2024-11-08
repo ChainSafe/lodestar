@@ -1,11 +1,11 @@
 import path from "node:path";
-import {describe, it, vi, expect, onTestFinished} from "vitest";
 import {getClient} from "@lodestar/api";
 import {getClient as getKeymanagerClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {retry} from "@lodestar/utils";
+import {describe, expect, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntary exit from api", () => {

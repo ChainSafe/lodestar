@@ -1,5 +1,5 @@
-import {vi, Mocked} from "vitest";
-import {Network, INetwork} from "../../src/network/index.js";
+import {Mocked, vi} from "vitest";
+import {INetwork, Network} from "../../src/network/index.js";
 
 vi.mock("../../src/network/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/network/index.js")>();

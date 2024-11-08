@@ -1,5 +1,5 @@
+import {LeafNode, Tree, toGindex, zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {LeafNode, toGindex, Tree, zeroNode} from "@chainsafe/persistent-merkle-tree";
 
 // Understand the cost of each array-ish data structure to:
 // - Get one element

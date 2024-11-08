@@ -1,12 +1,12 @@
-import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
-import {deneb, UintNum64} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {DataAvailabilityStatus} from "@lodestar/fork-choice";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {UintNum64, deneb} from "@lodestar/types";
+import {ErrorAborted, Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {validateBlobSidecars} from "../validation/blobSidecar.js";
-import {Metrics} from "../../metrics/metrics.js";
-import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation, getBlockInput} from "./types.js";
+import {BlobSidecarValidation, BlockInput, BlockInputType, ImportBlockOpts, getBlockInput} from "./types.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block
@@ -27,6 +27,7 @@ const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 export async function verifyBlocksDataAvailability(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger; metrics: Metrics | null},
   blocks: BlockInput[],
+  signal: AbortSignal,
   opts: ImportBlockOpts
 ): Promise<{
   dataAvailabilityStatuses: DataAvailabilityStatus[];
@@ -43,9 +44,12 @@ export async function verifyBlocksDataAvailability(
   const availableBlockInputs: BlockInput[] = [];
 
   for (const blockInput of blocks) {
+    if (signal.aborted) {
+      throw new ErrorAborted("verifyBlocksDataAvailability");
+    }
     // Validate status of only not yet finalized blocks, we don't need yet to propogate the status
     // as it is not used upstream anywhere
-    const {dataAvailabilityStatus, availableBlockInput} = await maybeValidateBlobs(chain, blockInput, opts);
+    const {dataAvailabilityStatus, availableBlockInput} = await maybeValidateBlobs(chain, blockInput, signal, opts);
     dataAvailabilityStatuses.push(dataAvailabilityStatus);
     availableBlockInputs.push(availableBlockInput);
   }
@@ -69,6 +73,7 @@ export async function verifyBlocksDataAvailability(
 async function maybeValidateBlobs(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
+  signal: AbortSignal,
   opts: ImportBlockOpts
 ): Promise<{dataAvailabilityStatus: DataAvailabilityStatus; availableBlockInput: BlockInput}> {
   switch (blockInput.type) {
@@ -92,7 +97,7 @@ async function maybeValidateBlobs(
       const blobsData =
         blockInput.type === BlockInputType.availableData
           ? blockInput.blockData
-          : await raceWithCutoff(chain, blockInput, blockInput.cachedData.availabilityPromise);
+          : await raceWithCutoff(chain, blockInput, blockInput.cachedData.availabilityPromise, signal);
       const {blobs} = blobsData;
 
       const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
@@ -122,16 +127,21 @@ async function maybeValidateBlobs(
 async function raceWithCutoff<T>(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
-  availabilityPromise: Promise<T>
+  availabilityPromise: Promise<T>,
+  signal: AbortSignal
 ): Promise<T> {
   const {block} = blockInput;
   const blockSlot = block.message.slot;
 
-  const cutoffTime = Math.max(
-    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + BLOB_AVAILABILITY_TIMEOUT - Date.now(),
-    0
-  );
-  const cutoffTimeout = new Promise((_resolve, reject) => setTimeout(reject, cutoffTime));
+  const cutoffTime =
+    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + BLOB_AVAILABILITY_TIMEOUT - Date.now();
+  const cutoffTimeout =
+    cutoffTime > 0
+      ? new Promise((_resolve, reject) => {
+          setTimeout(() => reject(new Error("Timeout exceeded")), cutoffTime);
+          signal.addEventListener("abort", () => reject(signal.reason));
+        })
+      : Promise.reject(new Error("Cutoff time must be greater than 0"));
   chain.logger.debug("Racing for blob availabilityPromise", {blockSlot, cutoffTime});
 
   try {

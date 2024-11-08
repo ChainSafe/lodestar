@@ -1,5 +1,5 @@
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
+import {Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.

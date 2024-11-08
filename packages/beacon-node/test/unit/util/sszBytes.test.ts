@@ -1,22 +1,22 @@
-import {describe, it, expect} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {deneb, electra, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {Epoch, RootHex, Slot, deneb, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 import {
-  getAttDataFromAttestationSerialized,
-  getAttDataFromSignedAggregateAndProofPhase0,
   getAggregationBitsFromAttestationSerialized,
+  getAttDataFromAttestationSerialized,
+  getAttDataFromSignedAggregateAndProofElectra,
+  getAttDataFromSignedAggregateAndProofPhase0,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
-  getSlotFromAttestationSerialized,
-  getSlotFromSignedAggregateAndProofSerialized,
-  getSignatureFromAttestationSerialized,
-  getSlotFromSignedBeaconBlockSerialized,
-  getSlotFromBlobSidecarSerialized,
   getCommitteeBitsFromAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
-  getAttDataFromSignedAggregateAndProofElectra,
+  getSignatureFromAttestationSerialized,
+  getSlotFromAttestationSerialized,
+  getSlotFromBlobSidecarSerialized,
+  getSlotFromSignedAggregateAndProofSerialized,
+  getSlotFromSignedBeaconBlockSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {

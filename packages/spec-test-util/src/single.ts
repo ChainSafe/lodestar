@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, vi, expect} from "vitest";
-import {uncompress} from "snappyjs";
 import {loadYaml} from "@lodestar/utils";
+import {uncompress} from "snappyjs";
+import {describe, expect, it, vi} from "vitest";
 
 /* eslint-disable
   @typescript-eslint/no-unsafe-assignment,

@@ -1,18 +1,18 @@
-import {Multiaddr} from "@multiformats/multiaddr";
-import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
+import type {PeerId, PeerInfo} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {pruneSetToMax, sleep} from "@lodestar/utils";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {LoggerNode} from "@lodestar/logger/node";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {pruneSetToMax, sleep} from "@lodestar/utils";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {Discv5Worker} from "../discv5/index.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
-import {Discv5Worker} from "../discv5/index.js";
-import {LodestarDiscv5Opts} from "../discv5/types.js";
-import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
+import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -27,7 +27,6 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
-  privateKey: PrivateKey;
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
@@ -159,7 +158,7 @@ export class PeerDiscovery {
   static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {
     const discv5 = await Discv5Worker.init({
       discv5: opts.discv5,
-      privateKey: modules.privateKey,
+      peerId: modules.libp2p.peerId,
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
       config: modules.config,
@@ -323,7 +322,8 @@ export class PeerDiscovery {
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
       this.randomNodeQuery.count++;
     }
-    const peerId = enr.peerId;
+    // async due to some crypto that's no longer necessary
+    const peerId = await enr.peerId();
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {
@@ -472,7 +472,7 @@ export class PeerDiscovery {
   /** Check if there is 1+ open connection with this peer */
   private isPeerConnected(peerIdStr: PeerIdStr): boolean {
     const connections = getConnectionsMap(this.libp2p).get(peerIdStr);
-    return Boolean(connections?.value.some((connection) => connection.status === "open"));
+    return Boolean(connections?.some((connection) => connection.status === "open"));
   }
 }
 

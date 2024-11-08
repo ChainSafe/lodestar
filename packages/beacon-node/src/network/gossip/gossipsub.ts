@@ -1,29 +1,29 @@
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
-import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
-import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
+import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
+import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
-import {RegistryMetricCreator} from "../../metrics/index.js";
-import {PeersData} from "../peers/peersData.js";
-import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
-import {Libp2p} from "../interface.js";
-import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {GossipTopic, GossipType} from "./interface.js";
-import {GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
+import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {Libp2p} from "../interface.js";
+import {ClientKind} from "../peers/client.js";
+import {PeersData} from "../peers/peersData.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
-import {createEth2GossipsubMetrics, Eth2GossipsubMetrics} from "./metrics.js";
+import {GossipTopic, GossipType} from "./interface.js";
+import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
+import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
 import {
-  computeGossipPeerScoreParams,
-  gossipScoreThresholds,
   GOSSIP_D,
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
+  computeGossipPeerScoreParams,
+  gossipScoreThresholds,
 } from "./scoringParameters.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
@@ -135,10 +135,6 @@ export class Eth2Gossipsub extends GossipSub {
       // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
       // publish to some more topic peers to make sure we always publish to at least GOSSIP_D peers
       floodPublish: !opts?.disableFloodPublish,
-      // Only send IDONTWANT messages if the message size is larger than this
-      // This should be large enough to not send IDONTWANT for "small" messages
-      // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
-      idontwantMinDataSize: 16829,
     });
     this.scoreParams = scoreParams;
     this.config = config;

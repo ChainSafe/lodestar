@@ -1,9 +1,9 @@
 import Ajv, {ErrorObject} from "ajv";
-import {expect, describe, beforeAll, it} from "vitest";
-import {WireFormat} from "../../src/utils/wireFormat.js";
+import {beforeAll, describe, expect, it} from "vitest";
 import {Endpoint, RequestWithBodyCodec, RouteDefinitions, isRequestWithoutBody} from "../../src/utils/types.js";
-import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
+import {WireFormat} from "../../src/utils/wireFormat.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
+import {JsonSchema, OpenApiJson, applyRecursively, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 
 const ajv = new Ajv({
   strict: true,

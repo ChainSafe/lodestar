@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {IJson, RpcPayload} from "../interface.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
 
@@ -372,7 +372,7 @@ export class HttpRpcError extends Error {
 /**
  * JSON RPC spec errors https://www.jsonrpc.org/specification#response_object
  */
-function parseJsonRpcErrorCode(code: number): string {
+export function parseJsonRpcErrorCode(code: number): string {
   if (code === -32700) return "Parse request error";
   if (code === -32600) return "Invalid request object";
   if (code === -32601) return "Method not found";

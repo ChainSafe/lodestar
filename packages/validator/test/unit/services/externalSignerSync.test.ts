@@ -1,14 +1,14 @@
-import {MockedFunction, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {toBufferBE} from "bigint-buffer";
 import {SecretKey} from "@chainsafe/blst";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {toBufferBE} from "bigint-buffer";
+import {MockedFunction, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "../../../src/services/externalSignerSync.js";
 import {SignerRemote, SignerType, ValidatorStore} from "../../../src/services/validatorStore.js";
 import {externalSignerGetKeys} from "../../../src/util/externalSignerClient.js";
-import {initValidatorStore} from "../../utils/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
+import {initValidatorStore} from "../../utils/validatorStore.js";
 
 vi.mock("../../../src/util/externalSignerClient.js");
 

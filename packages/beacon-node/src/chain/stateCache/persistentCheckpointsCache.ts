@@ -1,18 +1,18 @@
-import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
-import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
+import {loadCachedBeaconState} from "@lodestar/state-transition";
+import {Epoch, RootHex, phase0} from "@lodestar/types";
+import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {IClock} from "../../util/clock.js";
-import {ShufflingCache} from "../shufflingCache.js";
 import {AllocSource, BufferPool, BufferWithKey} from "../../util/bufferPool.js";
+import {IClock} from "../../util/clock.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {serializeState} from "../serializeState.js";
-import {MapTracker} from "./mapMetrics.js";
+import {ShufflingCache} from "../shufflingCache.js";
 import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
-import {CheckpointHex, CacheItemType, CheckpointStateCache, BlockStateCache} from "./types.js";
+import {MapTracker} from "./mapMetrics.js";
+import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
   /** Keep max n states in memory, persist the rest to disk */

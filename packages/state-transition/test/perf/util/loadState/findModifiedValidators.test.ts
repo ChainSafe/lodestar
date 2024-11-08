@@ -1,12 +1,12 @@
-import {expect} from "chai";
-import {itBench} from "@dapplion/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
+import {expect} from "chai";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {VALIDATOR_BYTES_SIZE} from "../../../../src/util/sszBytes.js";
-import {generateValidators} from "../../../utils/validator.js";
 import {generateState} from "../../../utils/state.js";
+import {generateValidators} from "../../../utils/validator.js";
 
 /**
  *  find modified validators by different ways. This proves that findModifiedValidators() leveraging Buffer.compare() is the fastest way.

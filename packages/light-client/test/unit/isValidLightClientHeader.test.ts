@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
-import {LightClientHeader, ssz} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {LightClientHeader, ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
 
 describe("isValidLightClientHeader", () => {

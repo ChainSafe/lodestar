@@ -445,12 +445,12 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "builder | engine",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -458,6 +458,9 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -473,19 +476,22 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "fieldMinMax": false,
+          "mappings": [],
+          "noValue": "0",
+          "unit": "none"
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "total"
+              "options": "engine success"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "yellow",
+                  "fixedColor": "dark-green",
                   "mode": "fixed"
                 }
               }
@@ -494,13 +500,13 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "successes"
+              "options": "builder success"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "green",
+                  "fixedColor": "dark-green",
                   "mode": "fixed"
                 }
               }
@@ -509,13 +515,13 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "success"
+              "options": "engine errors"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "green",
+                  "fixedColor": "dark-red",
                   "mode": "fixed"
                 }
               }
@@ -524,13 +530,13 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "errors"
+              "options": "builder errors"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "red",
+                  "fixedColor": "dark-red",
                   "mode": "fixed"
                 }
               }
@@ -565,10 +571,11 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(beacon_block_production_successes_total[$rate_interval])",
+          "expr": "rate(beacon_block_production_successes_total{source=\"engine\"}[$rate_interval])",
+          "format": "time_series",
           "hide": false,
           "interval": "",
-          "legendFormat": "success",
+          "legendFormat": "engine success",
           "range": true,
           "refId": "B"
         },
@@ -579,11 +586,37 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(beacon_block_production_requests_total[$rate_interval])\n-\nrate(beacon_block_production_successes_total[$rate_interval])",
+          "expr": "rate(beacon_block_production_requests_total{source=\"engine\"}[$rate_interval])\n-\nrate(beacon_block_production_successes_total{source=\"engine\"}[$rate_interval])",
           "interval": "",
-          "legendFormat": "errors",
+          "legendFormat": "engine errors",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "-1 * rate(beacon_block_production_successes_total{source=\"builder\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "builder success",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "-1 *\n(\n    rate(beacon_block_production_requests_total{source=\"builder\"}[$rate_interval])\n    -\n    rate(beacon_block_production_successes_total{source=\"builder\"}[$rate_interval])\n)",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "builder errors",
+          "range": true,
+          "refId": "D"
         }
       ],
       "title": "Success + Error rates",

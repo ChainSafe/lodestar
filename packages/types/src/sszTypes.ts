@@ -1,11 +1,11 @@
 import {CompositeType, CompositeView, CompositeViewDU, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {ssz as phase0} from "./phase0/index.js";
 import {ssz as altair} from "./altair/index.js";
 import {ssz as bellatrix} from "./bellatrix/index.js";
 import {ssz as capella} from "./capella/index.js";
 import {ssz as deneb} from "./deneb/index.js";
 import {ssz as electra} from "./electra/index.js";
+import {ssz as phase0} from "./phase0/index.js";
 
 export * from "./primitive/sszTypes.js";
 export {phase0, altair, bellatrix, capella, deneb, electra};

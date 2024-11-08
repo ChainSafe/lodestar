@@ -1,13 +1,13 @@
-import {describe, it, expect, beforeAll} from "vitest";
-import {ssz, deneb} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
+import {deneb, ssz} from "@lodestar/types";
+import {beforeAll, describe, expect, it} from "vitest";
 
-import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
-import {BlockSource, BlobsSource, getBlockInput} from "../../../src/chain/blocks/types.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
-import {INetwork} from "../../../src/network/interface.js";
+import {BlobsSource, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
+import {INetwork} from "../../../src/network/interface.js";
+import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
+import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
   beforeAll(async () => {

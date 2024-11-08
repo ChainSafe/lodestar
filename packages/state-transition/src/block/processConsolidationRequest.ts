@@ -1,11 +1,11 @@
-import {electra, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
+import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
-import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
+import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {hasExecutionWithdrawalCredential, switchToCompoundingValidator} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
-import {hasEth1WithdrawalCredential} from "../util/capella.js";
+import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
 
 // TODO Electra: Clean up necessary as there is a lot of overlap with isValidSwitchToCompoundRequest
 export function processConsolidationRequest(

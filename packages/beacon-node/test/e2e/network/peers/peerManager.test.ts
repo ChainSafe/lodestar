@@ -1,24 +1,24 @@
-import {describe, it, afterEach, expect, vi} from "vitest";
-import {Connection} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
-import {generateKeyPair} from "@libp2p/crypto/keys";
+import {Connection} from "@libp2p/interface";
+import {CustomEvent} from "@libp2p/interface";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {createBeaconConfig} from "@lodestar/config";
-import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
-import {PeerRpcScoreStore, PeerManager, IReqRespBeaconNodePeerManager} from "../../../../src/network/peers/index.js";
-import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
+import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../../../../src/network/peers/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
-import {createNode} from "../../../utils/network.js";
-import {getAttnets, getSyncnets} from "../../../utils/network.js";
-import {generateState} from "../../../utils/state.js";
-import {waitForEvent} from "../../../utils/events/resolver.js";
-import {testLogger} from "../../../utils/logger.js";
-import {getValidPeerId} from "../../../utils/peer.js";
+import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
+import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 import {IAttnetsService} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
-import {LocalStatusCache} from "../../../../src/network/statusCache.js";
+import {waitForEvent} from "../../../utils/events/resolver.js";
+import {testLogger} from "../../../utils/logger.js";
+import {createNode} from "../../../utils/network.js";
+import {getAttnets, getSyncnets} from "../../../utils/network.js";
+import {getValidPeerId} from "../../../utils/peer.js";
+import {generateState} from "../../../utils/state.js";
 
 const logger = testLogger("peerManager");
 
@@ -47,8 +47,7 @@ describe("network / peers / PeerManager", () => {
     const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});
     const status = ssz.phase0.Status.defaultValue();
     const statusCache = new LocalStatusCache(status);
-    const privateKey = await generateKeyPair("secp256k1");
-    const libp2p = await createNode("/ip4/127.0.0.1/tcp/0", privateKey);
+    const libp2p = await createNode("/ip4/127.0.0.1/tcp/0");
 
     afterEachCallbacks.push(async () => {
       controller.abort();
@@ -69,7 +68,6 @@ describe("network / peers / PeerManager", () => {
 
     const peerManager = new PeerManager(
       {
-        privateKey,
         libp2p,
         reqResp,
         logger,
@@ -160,7 +158,7 @@ describe("network / peers / PeerManager", () => {
     const {statusCache, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
+    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
@@ -179,7 +177,7 @@ describe("network / peers / PeerManager", () => {
     const {statusCache, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
+    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
@@ -192,7 +190,7 @@ describe("network / peers / PeerManager", () => {
     reqResp.sendMetadata.mockResolvedValue(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
+    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
     libp2p.services.components.events.dispatchEvent(
       new CustomEvent("connection:open", {detail: libp2pConnectionOutboud})
     );

@@ -1,9 +1,9 @@
-import all from "it-all";
 import {ContainerType} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, vi, afterEach, MockedObject} from "vitest";
-import {Bytes32, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {Db, LevelDbController, Repository} from "@lodestar/db";
+import {Bytes32, ssz} from "@lodestar/types";
+import all from "it-all";
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Bucket} from "../../../../src/db/buckets.js";
 
 vi.mock("@lodestar/db", async (importOriginal) => {

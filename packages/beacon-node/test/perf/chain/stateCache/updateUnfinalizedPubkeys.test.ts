@@ -1,13 +1,13 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {Map as ImmutableMap} from "immutable";
-import {toBufferBE} from "bigint-buffer";
 import {digest} from "@chainsafe/as-sha256";
 import {SecretKey} from "@chainsafe/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {ValidatorIndex, ssz} from "@lodestar/types";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {type CachedBeaconStateAllForks, toMemoryEfficientHexStr} from "@lodestar/state-transition";
+import {ValidatorIndex, ssz} from "@lodestar/types";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
-import {InMemoryCheckpointStateCache, BlockStateCacheImpl} from "../../../../src/chain/stateCache/index.js";
+import {toBufferBE} from "bigint-buffer";
+import {Map as ImmutableMap} from "immutable";
+import {BlockStateCacheImpl, InMemoryCheckpointStateCache} from "../../../../src/chain/stateCache/index.js";
 import {BlockStateCache} from "../../../../src/chain/stateCache/types.js";
 import {generateCachedElectraState} from "../../../utils/state.js";
 

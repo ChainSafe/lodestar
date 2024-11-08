@@ -1,23 +1,23 @@
 import fs from "node:fs";
-import {describe, it, afterAll, afterEach, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {LogLevel, sleep} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
+import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ChainConfig} from "@lodestar/config";
 import {Epoch, SignedBeaconBlock, bellatrix} from "@lodestar/types";
+import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
-import {routes} from "@lodestar/api";
+import {afterAll, afterEach, describe, it, vi} from "vitest";
 
-import {ClockEvent} from "../../src/util/clock.js";
-import {testLogger, TestLoggerOpts} from "../utils/logger.js";
-import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
+import {ZERO_HASH} from "../../src/constants/index.js";
+import {Eth1Provider} from "../../src/index.js";
+import {ClockEvent} from "../../src/util/clock.js";
+import {TestLoggerOpts, testLogger} from "../utils/logger.js";
+import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
-import {Eth1Provider} from "../../src/index.js";
-import {ZERO_HASH} from "../../src/constants/index.js";
-import {runEL, ELStartMode, ELClient} from "../utils/runEl.js";
+import {ELClient, ELStartMode, runEL} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 

@@ -1,18 +1,18 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isExecutionBlockBodyType,
-  isExecutionStateType,
-  isExecutionEnabled,
   getBlockProposerSignatureSet,
+  isExecutionBlockBodyType,
+  isExecutionEnabled,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
-import {sleep, toRootHex} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock} from "@lodestar/types";
+import {sleep, toRootHex} from "@lodestar/utils";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
-import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlock(

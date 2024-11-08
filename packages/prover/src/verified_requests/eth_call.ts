@@ -3,8 +3,8 @@ import {ELApiParams, ELApiReturn} from "../types.js";
 import {bufferToHex} from "../utils/conversion.js";
 import {createVM, executeVMCall, getVMWithState} from "../utils/evm.js";
 import {
-  getResponseForRequest,
   getErrorResponseForRequestWithFailedVerification,
+  getResponseForRequest,
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
 

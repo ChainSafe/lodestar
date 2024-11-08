@@ -1,6 +1,6 @@
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
-import {Match, AssertionResult, Assertion} from "../../interfaces.js";
-import {inclusionDelayAssertion, expectedMaxInclusionDelay} from "./inclusionDelayAssertion.js";
+import {Assertion, AssertionResult, Match} from "../../interfaces.js";
+import {expectedMaxInclusionDelay, inclusionDelayAssertion} from "./inclusionDelayAssertion.js";
 
 export const expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
 

@@ -1,24 +1,25 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
-import {Root, RootHex, deneb} from "@lodestar/types";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
+import {Root, RootHex, deneb} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/deneb";
+import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
-import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
-import {PeerIdStr} from "../util/peerId.js";
-import {IBeaconChain} from "../chain/index.js";
 import {BlockInput, BlockInputType, NullBlockInput} from "../chain/blocks/types.js";
-import {Metrics} from "../metrics/index.js";
-import {shuffle} from "../util/shuffle.js";
-import {byteArrayEquals} from "../util/bytes.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
+import {IBeaconChain} from "../chain/index.js";
+import {Metrics} from "../metrics/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {
   beaconBlocksMaybeBlobsByRoot,
   unavailableBeaconBlobsByRoot,
 } from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
+import {byteArrayEquals} from "../util/bytes.js";
+import {PeerIdStr} from "../util/peerId.js";
+import {shuffle} from "../util/shuffle.js";
 import {Result, wrapError} from "../util/wrapError.js";
 import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface.js";
-import {getDescendantBlocks, getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {SyncOptions} from "./options.js";
+import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -33,6 +34,9 @@ export class UnknownBlockSync {
   private readonly proposerBoostSecWindow: number;
   private readonly maxPendingBlocks;
   private subscribedToNetworkEvents = false;
+
+  private engineGetBlobsCache = new Map<RootHex, BlobAndProof | null>();
+  private blockInputsRetryTrackerCache = new Set<RootHex>();
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -532,13 +536,12 @@ export class UnknownBlockSync {
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       try {
-        const blockInput = await unavailableBeaconBlobsByRoot(
-          this.config,
-          this.network,
-          peer,
-          unavailableBlockInput,
-          this.metrics
-        );
+        const blockInput = await unavailableBeaconBlobsByRoot(this.config, this.network, peer, unavailableBlockInput, {
+          metrics: this.metrics,
+          executionEngine: this.chain.executionEngine,
+          engineGetBlobsCache: this.engineGetBlobsCache,
+          blockInputsRetryTrackerCache: this.blockInputsRetryTrackerCache,
+        });
 
         // Peer does not have the block, try with next peer
         if (blockInput === undefined) {

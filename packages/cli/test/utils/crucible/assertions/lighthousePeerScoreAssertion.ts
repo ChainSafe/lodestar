@@ -1,4 +1,4 @@
-import {AssertionResult, BeaconClient, LighthouseAPI, NodePair, Assertion} from "../interfaces.js";
+import {Assertion, AssertionResult, BeaconClient, LighthouseAPI, NodePair} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
 const MIN_GOSSIPSUB_SCORE = 10;

@@ -1,14 +1,14 @@
-import {describe, it, afterEach, expect, vi} from "vitest";
-import {createBeaconConfig, ChainConfig} from "@lodestar/config";
-import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {phase0} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getClient} from "@lodestar/api";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
-import {getDevBeaconNode} from "../../../utils/node/beacon.js";
-import {waitForEvent} from "../../../utils/events/resolver.js";
-import {ClockEvent} from "../../../../src/util/clock.js";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {phase0} from "@lodestar/types";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {BeaconNode} from "../../../../src/index.js";
+import {ClockEvent} from "../../../../src/util/clock.js";
+import {waitForEvent} from "../../../utils/events/resolver.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../../utils/logger.js";
+import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 
 describe("api / impl / validator", () => {
   vi.setConfig({testTimeout: 60_000});

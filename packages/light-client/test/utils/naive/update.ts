@@ -1,10 +1,10 @@
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {altair, Slot} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Slot, altair} from "@lodestar/types";
 import {LightClientSnapshotFast, LightClientStoreFast} from "../../../src/types.js";
-import {assertValidLightClientUpdate} from "../../../src/validation.js";
-import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../../../src/utils/utils.js";
 import {computeSyncPeriodAtSlot} from "../../../src/utils/clock.js";
+import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../../../src/utils/utils.js";
+import {assertValidLightClientUpdate} from "../../../src/validation.js";
 
 //
 // A lightclient has two types of syncing:

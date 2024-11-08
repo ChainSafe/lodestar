@@ -1,8 +1,8 @@
 import {Epoch} from "@lodestar/types";
 import {Gauge, Histogram} from "@lodestar/utils";
-import {CachedBeaconStateAllForks} from "./types.js";
-import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {EpochTransitionStep} from "./epoch/index.js";
+import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
+import {CachedBeaconStateAllForks} from "./types.js";
 
 export type BeaconStateTransitionMetrics = {
   epochTransitionTime: Histogram;

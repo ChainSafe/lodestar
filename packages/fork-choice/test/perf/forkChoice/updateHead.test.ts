@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ForkChoice, ProtoBlock} from "../../../src/index.js";
-import {initializeForkChoice, Opts} from "./util.js";
+import {Opts, initializeForkChoice} from "./util.js";
 
 describe("forkchoice updateHead", () => {
   for (const initialValidatorCount of [100_000, 600_000, 1_000_000]) {

@@ -1,14 +1,14 @@
-import {describe, it, expect} from "vitest";
+import {ApiClient} from "@lodestar/api";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ApiClient} from "@lodestar/api";
+import {describe, expect, it} from "vitest";
 import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
 import {IndicesService} from "../../../src/services/indices.js";
-import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
 import {mockApiResponse} from "../../utils/apiStub.js";
-import {testLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
+import {testLogger} from "../../utils/logger.js";
+import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
 
 // At genesis start validating immediately
 

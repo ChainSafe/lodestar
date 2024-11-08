@@ -5,15 +5,15 @@ import {
   MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateCapella,
   CachedBeaconStateAltair,
+  CachedBeaconStateCapella,
+  CachedBeaconStateElectra,
   CachedBeaconStatePhase0,
   EpochTransitionCache,
-  CachedBeaconStateElectra,
 } from "../types.js";
-import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -22,14 +22,14 @@ import {processInactivityUpdates} from "./processInactivityUpdates.js";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization.js";
 import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates.js";
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates.js";
+import {processPendingConsolidations} from "./processPendingConsolidations.js";
+import {processPendingDeposits} from "./processPendingDeposits.js";
 import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
 import {processRegistryUpdates} from "./processRegistryUpdates.js";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
-import {processPendingDeposits} from "./processPendingDeposits.js";
-import {processPendingConsolidations} from "./processPendingConsolidations.js";
 
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";

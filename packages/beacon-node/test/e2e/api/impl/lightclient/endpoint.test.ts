@@ -1,17 +1,17 @@
-import {describe, it, beforeEach, afterEach, expect} from "vitest";
 import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
-import {createBeaconConfig, ChainConfig} from "@lodestar/config";
+import {HttpHeader, getClient, routes} from "@lodestar/api";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {getClient, HttpHeader, routes} from "@lodestar/api";
-import {sleep} from "@lodestar/utils";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {Validator} from "@lodestar/validator";
 import {phase0, ssz} from "@lodestar/types";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../../../utils/logger.js";
-import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
-import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
+import {sleep} from "@lodestar/utils";
+import {Validator} from "@lodestar/validator";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../../../utils/logger.js";
+import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
 describe("lightclient api", () => {
   const SECONDS_PER_SLOT = 1;

@@ -1,54 +1,54 @@
 import {BitArray} from "@chainsafe/ssz";
-import {
-  phase0,
-  Epoch,
-  Root,
-  Slot,
-  RootHex,
-  ssz,
-  electra,
-  isElectraAttestation,
-  CommitteeIndex,
-  Attestation,
-  IndexedAttestation,
-} from "@lodestar/types";
+import {BeaconConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {
   ATTESTATION_SUBNET_COUNT,
-  SLOTS_PER_EPOCH,
+  DOMAIN_BEACON_ATTESTER,
   ForkName,
   ForkSeq,
-  DOMAIN_BEACON_ATTESTER,
+  SLOTS_PER_EPOCH,
   isForkPostElectra,
 } from "@lodestar/params";
 import {
-  computeEpochAtSlot,
-  createSingleSignatureSetFromComponents,
-  SingleSignatureSet,
   EpochCacheError,
   EpochCacheErrorCode,
   EpochShuffling,
-  computeStartSlotAtEpoch,
+  SingleSignatureSet,
+  computeEpochAtSlot,
   computeSigningRoot,
+  computeStartSlotAtEpoch,
+  createSingleSignatureSetFromComponents,
 } from "@lodestar/state-transition";
-import {BeaconConfig} from "@lodestar/config";
+import {
+  Attestation,
+  CommitteeIndex,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  electra,
+  isElectraAttestation,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
-import {RegenCaller} from "../regen/index.js";
+import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {
   getAggregationBitsFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofElectra,
+  getAttDataFromSignedAggregateAndProofPhase0,
   getCommitteeBitsFromAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
-  getAttDataFromSignedAggregateAndProofPhase0,
   getSignatureFromAttestationSerialized,
 } from "../../util/sszBytes.js";
-import {AttestationDataCacheEntry, SeenAttDataKey} from "../seenCache/seenAttestationData.js";
-import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 import {Result, wrapError} from "../../util/wrapError.js";
+import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
-import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {RegenCaller} from "../regen/index.js";
+import {AttestationDataCacheEntry, SeenAttDataKey} from "../seenCache/seenAttestationData.js";
 
 export type BatchResult = {
   results: Result<AttestationValidationResult>[];

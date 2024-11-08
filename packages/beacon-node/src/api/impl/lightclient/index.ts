@@ -1,9 +1,9 @@
-import {fromHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
-import {ApiModules} from "../types.js";
+import {MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {fromHex} from "@lodestar/utils";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
+import {ApiModules} from "../types.js";
 // TODO: Import from lightclient/server package
 
 export function getLightclientApi({

@@ -1,6 +1,6 @@
-import path from "node:path";
 import fs from "node:fs";
 import {mkdir} from "node:fs/promises";
+import path from "node:path";
 import {
   BeaconClient,
   BeaconPaths,

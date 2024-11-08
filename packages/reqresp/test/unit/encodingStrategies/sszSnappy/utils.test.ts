@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {maxEncodedLen} from "../../../../src/encodingStrategies/sszSnappy/utils.js";
 
 describe("encodingStrategies / sszSnappy / utils", () => {

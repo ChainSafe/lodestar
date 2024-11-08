@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -6,16 +7,15 @@ import {
 } from "@lodestar/params";
 import {Epoch, Slot, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
-import {BeaconConfig} from "@lodestar/config";
 import {ClockEvent, IClock} from "../../util/clock.js";
-import {GossipType} from "../gossip/index.js";
-import {MetadataController} from "../metadata.js";
-import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
-import {getActiveForks} from "../forks.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {stringifyGossipTopic} from "../gossip/topic.js";
+import {getActiveForks} from "../forks.js";
+import {GossipType} from "../gossip/index.js";
 import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";
-import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, GossipSubscriber, NodeId} from "./interface.js";
+import {stringifyGossipTopic} from "../gossip/topic.js";
+import {MetadataController} from "../metadata.js";
+import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
+import {CommitteeSubscription, GossipSubscriber, IAttnetsService, NodeId, SubnetsServiceOpts} from "./interface.js";
 import {computeSubscribedSubnet} from "./util.js";
 
 const gossipType = GossipType.beacon_attestation;

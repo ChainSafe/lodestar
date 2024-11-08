@@ -1,11 +1,11 @@
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
+  computeStartSlotAtEpoch,
   getBlockRootAtSlot,
   getEffectiveBalanceIncrementsZeroInactive,
 } from "@lodestar/state-transition";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 

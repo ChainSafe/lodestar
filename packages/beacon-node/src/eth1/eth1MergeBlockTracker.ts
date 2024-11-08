@@ -1,11 +1,11 @@
 import {ChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
 import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
+import {Metrics} from "../metrics/index.js";
 import {enumToIndexMap} from "../util/enum.js";
-import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock, PowMergeBlockTimestamp, TDProgress} from "./interface.js";
-import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils.js";
+import {EthJsonRpcBlockRaw, IEth1Provider, PowMergeBlock, PowMergeBlockTimestamp, TDProgress} from "./interface.js";
+import {dataToRootHex, quantityToBigint, quantityToNum} from "./provider/utils.js";
 
 export enum StatusCode {
   STOPPED = "STOPPED",

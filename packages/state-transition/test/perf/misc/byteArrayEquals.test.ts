@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import {itBench} from "@dapplion/benchmark";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {itBench} from "@dapplion/benchmark";
 import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 

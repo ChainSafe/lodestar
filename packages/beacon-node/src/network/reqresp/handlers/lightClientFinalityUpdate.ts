@@ -1,7 +1,7 @@
-import {ResponseOutgoing, RespStatus, ResponseError} from "@lodestar/reqresp";
+import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
+import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 export async function* onLightClientFinalityUpdate(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
   assertLightClientServer(chain.lightClientServer);

@@ -1,14 +1,14 @@
-import {describe, it, expect} from "vitest";
-import {ErrorAborted} from "@lodestar/utils";
 import {FetchError} from "@lodestar/api";
-import {ExecutionPayloadStatus, ExecutionEngineState} from "../../../../src/execution/index.js";
+import {ErrorAborted} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
+import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {
   HTTP_CONNECTION_ERROR_CODES,
   HTTP_FATAL_ERROR_CODES,
   getExecutionEngineState,
 } from "../../../../src/execution/engine/utils.js";
+import {ExecutionEngineState, ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {QueueError, QueueErrorCode} from "../../../../src/util/queue/errors.js";
-import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/jsonRpcHttpClient.js";
 
 describe("execution / engine / utils", () => {
   describe("getExecutionEngineState", () => {

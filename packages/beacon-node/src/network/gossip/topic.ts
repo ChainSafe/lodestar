@@ -1,17 +1,17 @@
-import {ssz, Attestation, sszTypesFor} from "@lodestar/types";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
+  MAX_BLOBS_PER_BLOCK,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkLightClient,
-  MAX_BLOBS_PER_BLOCK,
 } from "@lodestar/params";
+import {Attestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
-import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap, SSZTypeOfGossipTopic} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
+import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
 export interface IGossipTopicCache {
   getTopic(topicStr: string): GossipTopic;

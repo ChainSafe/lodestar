@@ -1,8 +1,8 @@
 import {ChainConfig, chainConfigFromJson} from "@lodestar/config";
 import {readFile} from "../../../utils/file.js";
-import {createVerifiedExecutionProxy, VerifiedProxyOptions} from "../../../web3_proxy.js";
+import {VerifiedProxyOptions, createVerifiedExecutionProxy} from "../../../web3_proxy.js";
 import {GlobalArgs, parseGlobalArgs} from "../../options.js";
-import {parseStartArgs, StartArgs} from "./options.js";
+import {StartArgs, parseStartArgs} from "./options.js";
 
 /**
  * Runs a beacon node.

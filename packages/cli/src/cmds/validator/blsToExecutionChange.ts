@@ -1,13 +1,13 @@
 import {SecretKey} from "@chainsafe/blst";
-import {computeSigningRoot} from "@lodestar/state-transition";
-import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
-import {createBeaconConfig} from "@lodestar/config";
-import {ssz, capella} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
+import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
+import {computeSigningRoot} from "@lodestar/state-transition";
+import {capella, ssz} from "@lodestar/types";
 import {CliCommand, fromHex} from "@lodestar/utils";
 
-import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {IValidatorCliArgs} from "./options.js";
 
 /* eslint-disable no-console */

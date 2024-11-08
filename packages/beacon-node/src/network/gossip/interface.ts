@@ -1,25 +1,25 @@
-import {Libp2p} from "libp2p";
-import {Message, TopicValidatorResult} from "@libp2p/interface";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
+import {Message, TopicValidatorResult} from "@libp2p/interface";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {
+  Attestation,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  SignedAggregateAndProof,
+  SignedBeaconBlock,
+  Slot,
   altair,
   capella,
   deneb,
-  LightClientFinalityUpdate,
-  LightClientOptimisticUpdate,
   phase0,
-  SignedBeaconBlock,
-  Slot,
-  Attestation,
-  SignedAggregateAndProof,
 } from "@lodestar/types";
-import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {IBeaconChain} from "../../chain/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {Libp2p} from "libp2p";
 import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
+import {IBeaconChain} from "../../chain/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",

@@ -1,29 +1,29 @@
 import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
-import {PrivateKey} from "@libp2p/interface";
+import {PeerId} from "@libp2p/interface";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
+import type {LoggerNode} from "@lodestar/logger/node";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import type {LoggerNode} from "@lodestar/logger/node";
-import {BeaconApiMethods} from "@lodestar/api/beacon/server";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
-import {IBeaconDb} from "../db/index.js";
-import {Network, getReqRespHandlers} from "../network/index.js";
-import {BeaconSync, IBeaconSync} from "../sync/index.js";
-import {BackfillSync} from "../sync/backfill/index.js";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, Metrics, HttpMetricsServer, getHttpMetricsServer} from "../metrics/index.js";
-import {MonitoringService} from "../monitoring/index.js";
-import {getApi, BeaconRestApiServer} from "../api/index.js";
-import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
-import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
+import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {HistoricalStateRegen} from "../chain/historicalState/index.js";
-import {IBeaconNodeOptions} from "./options.js";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {IBeaconDb} from "../db/index.js";
+import {initializeEth1ForBlockProduction} from "../eth1/index.js";
+import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
+import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
+import {MonitoringService} from "../monitoring/index.js";
+import {Network, getReqRespHandlers} from "../network/index.js";
+import {BackfillSync} from "../sync/backfill/index.js";
+import {BeaconSync, IBeaconSync} from "../sync/index.js";
+import {TrustedFileMode, initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {runNodeNotifier} from "./notifier.js";
+import {IBeaconNodeOptions} from "./options.js";
 
 export * from "./options.js";
 
@@ -49,7 +49,7 @@ export type BeaconNodeInitModules = {
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
-  privateKey: PrivateKey;
+  peerId: PeerId;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -146,7 +146,7 @@ export class BeaconNode {
     db,
     logger,
     processShutdownCallback,
-    privateKey,
+    peerId,
     peerStoreDir,
     anchorState,
     wsCheckpoint,
@@ -243,7 +243,7 @@ export class BeaconNode {
       metrics,
       chain,
       db,
-      privateKey,
+      peerId,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
     });

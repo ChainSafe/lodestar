@@ -1,7 +1,7 @@
+import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0, Slot, RootHex, ValidatorIndex} from "@lodestar/types";
-import {CheckpointHexWithTotalBalance, CheckpointHexWithBalance} from "./interface.js";
+import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:

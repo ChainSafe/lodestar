@@ -1,21 +1,21 @@
-import {describe, it, beforeEach, beforeAll, vi, afterEach} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  computeEpochAtSlot,
   computeDomain,
+  computeEpochAtSlot,
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {createBeaconConfig} from "@lodestar/config";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
-import {generateState} from "../../../utils/state.js";
-import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
+import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateState} from "../../../utils/state.js";
 
 describe("validate voluntary exit", () => {
   let chainStub: MockedBeaconChain;
