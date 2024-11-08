@@ -211,9 +211,10 @@ export class LightClientServer {
   private checkpointHeaders = new Map<BlockRooHex, LightClientHeader>();
   private latestHeadUpdate: LightClientOptimisticUpdate | null = null;
 
-  private readonly zero:
-    | Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">
-    | Pick<electra.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
+  private readonly zero: Pick<
+    altair.LightClientUpdate | electra.LightClientUpdate,
+    "finalityBranch" | "finalizedHeader"
+  >;
   private finalized: LightClientFinalityUpdate | null = null;
 
   constructor(
