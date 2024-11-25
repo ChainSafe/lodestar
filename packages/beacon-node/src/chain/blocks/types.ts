@@ -59,11 +59,11 @@ interface BlobsData {
   blobsBytes: (Uint8Array | null)[];
   blobsSource: BlobsSource;
 }
-export interface BlockInputDataBlobs extends ForkBlobsInfo, BlobsData {
+export interface BlockInputBlobs extends ForkBlobsInfo, BlobsData {
   blobsSource: BlobsSource;
 }
 export type BlobsCacheMap = Map<number, BlobData>;
-interface CachedBlobs extends Availability<BlockInputDataBlobs> {
+interface CachedBlobs extends Availability<BlockInputBlobs> {
   blobsCache: BlobsCacheMap;
 }
 type CachedBlobsItem = CachedDataItem & ForkBlobsInfo & CachedBlobs;
@@ -87,13 +87,13 @@ interface DataColumnData {
   dataColumnBytes: Uint8Array | null;
 }
 export type DataColumnsCacheMap = Map<number, DataColumnData>;
-export interface BlockInputDataDataColumns extends ForkDataColumnsInfo {
+export interface BlockInputDataColumns extends ForkDataColumnsInfo {
   // marker of that columns are to be custodied
   dataColumns: peerdas.DataColumnSidecars;
   dataColumnsBytes: (Uint8Array | null)[];
   dataColumnsSource: DataColumnsSource;
 }
-interface CachedDataColumns extends Availability<BlockInputDataDataColumns> {
+interface CachedDataColumns extends Availability<BlockInputDataColumns> {
   dataColumnsCache: DataColumnsCacheMap;
 }
 type CachedDataColumnsItem = CachedDataItem & ForkDataColumnsInfo & CachedDataColumns;
@@ -103,7 +103,7 @@ type CachedDataColumnsItem = CachedDataItem & ForkDataColumnsInfo & CachedDataCo
  * Cross-Fork Data Types
  *
  */
-export type BlockInputData = BlockInputDataBlobs | BlockInputDataDataColumns;
+export type BlockInputData = BlockInputBlobs | BlockInputDataColumns;
 export type CachedData = CachedBlobsItem | CachedDataColumnsItem;
 
 export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
@@ -223,7 +223,7 @@ export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlobsData, "
 export function getBlockInputDataColumns(
   dataColumnsCache: DataColumnsCacheMap,
   columnIndexes: ColumnIndex[]
-): Omit<BlockInputDataDataColumns, "fork" | "dataColumnsSource"> {
+): Omit<BlockInputDataColumns, "fork" | "dataColumnsSource"> {
   const dataColumns = [];
   const dataColumnsBytes = [];
 

@@ -23,8 +23,8 @@ import {
   ImportBlockOpts,
   BlockInput,
   BlobsSource,
-  BlockInputDataBlobs,
-  BlockInputDataDataColumns,
+  BlockInputBlobs,
+  BlockInputDataColumns,
   DataColumnsSource,
   BlockInputData,
 } from "../../../../chain/blocks/types.js";
@@ -88,7 +88,7 @@ export function getBeaconBlockApi({
           dataColumns: dataColumnSidecars,
           dataColumnsBytes: dataColumnSidecars.map(() => null),
           dataColumnsSource: DataColumnsSource.api,
-        } as BlockInputDataDataColumns;
+        } as BlockInputDataColumns;
         blobSidecars = [];
       } else if (fork === ForkName.deneb) {
         blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
@@ -97,7 +97,7 @@ export function getBeaconBlockApi({
           blobs: blobSidecars,
           blobsSource: BlobsSource.api,
           blobsBytes: blobSidecars.map(() => null),
-        } as BlockInputDataBlobs;
+        } as BlockInputBlobs;
         dataColumnSidecars = [];
       } else {
         throw Error(`Invalid data fork=${fork} for publish`);

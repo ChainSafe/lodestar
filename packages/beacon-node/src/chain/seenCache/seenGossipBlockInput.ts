@@ -9,14 +9,14 @@ import {
   NullBlockInput,
   getBlockInput,
   BlockSource,
-  BlockInputDataBlobs,
+  BlockInputBlobs,
   CachedData,
   GossipedInputType,
   getBlockInputBlobs,
   BlobsSource,
   DataColumnsSource,
   getBlockInputDataColumns,
-  BlockInputDataDataColumns,
+  BlockInputDataColumns,
 } from "../blocks/types.js";
 import {Metrics} from "../../metrics/index.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -369,8 +369,8 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: numb
   }
 
   if (fork === ForkName.deneb) {
-    let resolveAvailability: ((blobs: BlockInputDataBlobs) => void) | null = null;
-    const availabilityPromise = new Promise<BlockInputDataBlobs>((resolveCB) => {
+    let resolveAvailability: ((blobs: BlockInputBlobs) => void) | null = null;
+    const availabilityPromise = new Promise<BlockInputBlobs>((resolveCB) => {
       resolveAvailability = resolveCB;
     });
 
@@ -388,8 +388,8 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: numb
     };
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
   } else if (fork === ForkName.peerdas) {
-    let resolveAvailability: ((blobs: BlockInputDataDataColumns) => void) | null = null;
-    const availabilityPromise = new Promise<BlockInputDataDataColumns>((resolveCB) => {
+    let resolveAvailability: ((blobs: BlockInputDataColumns) => void) | null = null;
+    const availabilityPromise = new Promise<BlockInputDataColumns>((resolveCB) => {
       resolveAvailability = resolveCB;
     });
 

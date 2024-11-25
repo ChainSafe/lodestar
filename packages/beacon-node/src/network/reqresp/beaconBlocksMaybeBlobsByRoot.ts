@@ -11,9 +11,9 @@ import {
   getBlockInput,
   NullBlockInput,
   BlobsSource,
-  BlockInputDataBlobs,
+  BlockInputBlobs,
   DataColumnsSource,
-  BlockInputDataDataColumns,
+  BlockInputDataColumns,
 } from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
@@ -228,7 +228,7 @@ export async function unavailableBeaconBlobsByRoot(
     if (blobs.length !== blobKzgCommitmentsLen) {
       throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
     }
-    const blockData = {fork: cachedData.fork, ...allBlobs, blobsSource: BlobsSource.byRoot} as BlockInputDataBlobs;
+    const blockData = {fork: cachedData.fork, ...allBlobs, blobsSource: BlobsSource.byRoot} as BlockInputBlobs;
     resolveAvailability(blockData);
     metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
     availableBlockInput = getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
@@ -247,7 +247,7 @@ export async function unavailableBeaconBlobsByRoot(
         dataColumns: [],
         dataColumnsBytes: [],
         dataColumnsSource: DataColumnsSource.gossip,
-      } as BlockInputDataDataColumns;
+      } as BlockInputDataColumns;
 
       resolveAvailability(blockData);
       metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});

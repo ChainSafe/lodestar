@@ -10,8 +10,8 @@ import {
   BlockInput,
   BlockSource,
   getBlockInput,
-  BlockInputDataBlobs,
-  BlockInputDataDataColumns,
+  BlockInputBlobs,
+  BlockInputDataColumns,
   DataColumnsSource,
   BlockInputType,
   getBlockInputDataColumns,
@@ -198,7 +198,7 @@ export function matchBlockWithBlobs(
         blobs: blobSidecars,
         blobsSource,
         blobsBytes: Array.from({length: blobKzgCommitmentsLen}, () => null),
-      } as BlockInputDataBlobs;
+      } as BlockInputBlobs;
 
       // TODO DENEB: instead of null, pass payload in bytes
       blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, block.bytes, blockData));
@@ -293,7 +293,7 @@ export function matchBlockWithDataColumns(
           dataColumns: [],
           dataColumnsBytes: [],
           dataColumnsSource,
-        } as BlockInputDataDataColumns;
+        } as BlockInputDataColumns;
         blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, null, blockData));
       } else {
         // Quick inspect how many blobSidecars was expected
@@ -357,7 +357,7 @@ export function matchBlockWithDataColumns(
             dataColumns,
             dataColumnsBytes,
             dataColumnsSource,
-          } as BlockInputDataDataColumns;
+          } as BlockInputDataColumns;
 
           // TODO DENEB: instead of null, pass payload in bytes
           blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, block.bytes, blockData));
