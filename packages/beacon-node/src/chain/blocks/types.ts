@@ -27,6 +27,9 @@ export enum GossipedInputType {
   dataColumn = "dataColumn",
 }
 
+interface CachedDataItem {
+  cacheId: number;
+}
 interface Availability<T> {
   availabilityPromise: Promise<T>;
   resolveAvailability: (data: T) => void;
@@ -63,6 +66,7 @@ export type BlobsCacheMap = Map<number, BlobData>;
 interface CachedBlobs extends Availability<BlockInputDataBlobs> {
   blobsCache: BlobsCacheMap;
 }
+type CachedBlobsItem = CachedDataItem & ForkBlobsInfo & CachedBlobs;
 
 /**
  *
@@ -82,12 +86,6 @@ interface DataColumnData {
   dataColumn: peerdas.DataColumnSidecar;
   dataColumnBytes: Uint8Array | null;
 }
-interface DataColumnsData {
-  // marker of that columns are to be custodied
-  dataColumns: peerdas.DataColumnSidecars;
-  dataColumnsBytes: (Uint8Array | null)[];
-  dataColumnsSource: DataColumnsSource;
-}
 export type DataColumnsCacheMap = Map<number, DataColumnData>;
 export interface BlockInputDataDataColumns extends ForkDataColumnsInfo {
   // marker of that columns are to be custodied
@@ -98,6 +96,7 @@ export interface BlockInputDataDataColumns extends ForkDataColumnsInfo {
 interface CachedDataColumns extends Availability<BlockInputDataDataColumns> {
   dataColumnsCache: DataColumnsCacheMap;
 }
+type CachedDataColumnsItem = CachedDataItem & ForkDataColumnsInfo & CachedDataColumns;
 
 /**
  *
@@ -105,10 +104,7 @@ interface CachedDataColumns extends Availability<BlockInputDataDataColumns> {
  *
  */
 export type BlockInputData = BlockInputDataBlobs | BlockInputDataDataColumns;
-export type CachedData = {cacheId: number} & (
-  | (ForkBlobsInfo & CachedBlobs)
-  | (ForkDataColumnsInfo & CachedDataColumns)
-);
+export type CachedData = CachedBlobsItem | CachedDataColumnsItem;
 
 export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preData | BlockInputType.outOfRangeData}
@@ -227,7 +223,7 @@ export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlobsData, "
 export function getBlockInputDataColumns(
   dataColumnsCache: DataColumnsCacheMap,
   columnIndexes: ColumnIndex[]
-): Omit<DataColumnsData, "dataColumnsLen" | "dataColumnsIndex" | "dataColumnsSource"> {
+): Omit<BlockInputDataDataColumns, "fork" | "dataColumnsSource"> {
   const dataColumns = [];
   const dataColumnsBytes = [];
 
