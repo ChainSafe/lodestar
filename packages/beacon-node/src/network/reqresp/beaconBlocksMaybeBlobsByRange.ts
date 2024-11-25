@@ -346,7 +346,7 @@ export function matchBlockWithDataColumns(
         }
 
         for (const dataColumnSidecar of dataColumnSidecars) {
-          cachedData.dataColumnsCache.set(dataColumnSidecar.index, {dataColumnSidecar, dataColumnBytes: null});
+          cachedData.dataColumnsCache.set(dataColumnSidecar.index, {dataColumn: dataColumnSidecar, dataColumnBytes: null});
         }
 
         if (shouldHaveAllData) {

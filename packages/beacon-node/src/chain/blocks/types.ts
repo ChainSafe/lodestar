@@ -21,6 +21,22 @@ export enum BlockSource {
   byRoot = "req_resp_by_root",
 }
 
+export enum GossipedInputType {
+  block = "block",
+  blob = "blob",
+  dataColumn = "dataColumn",
+}
+
+interface Availability<T> {
+  availabilityPromise: Promise<T>;
+  resolveAvailability: (data: T) => void;
+}
+
+/**
+ *
+ * Deneb Blob Format Types
+ *
+ */
 /** Enum to represent where blobs come from */
 export enum BlobsSource {
   gossip = "gossip",
@@ -28,43 +44,67 @@ export enum BlobsSource {
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
 }
+interface ForkBlobsInfo {
+  fork: ForkName.deneb;
+}
+interface BlobData {
+  blobSidecar: deneb.BlobSidecar;
+  blobBytes: Uint8Array | null;
+}
+interface BlobsData {
+  blobs: deneb.BlobSidecars;
+  blobsBytes: (Uint8Array | null)[];
+  blobsSource: BlobsSource;
+}
+export interface BlockInputDataBlobs extends ForkBlobsInfo, BlobsData {
+  blobsSource: BlobsSource;
+}
+export type BlobsCacheMap = Map<number, BlobData>;
+interface CachedBlobs extends Availability<BlockInputDataBlobs> {
+  blobsCache: BlobsCacheMap;
+}
 
+/**
+ *
+ * PeerDAS Column Format Types
+ *
+ */
 export enum DataColumnsSource {
   gossip = "gossip",
   api = "api",
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
 }
-
-export enum GossipedInputType {
-  block = "block",
-  blob = "blob",
-  dataColumn = "dataColumn",
+interface ForkDataColumnsInfo {
+  fork: ForkName.peerdas;
 }
-
-export type BlobsCacheMap = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
-export type DataColumnsCacheMap = Map<
-  number,
-  {dataColumnSidecar: peerdas.DataColumnSidecar; dataColumnBytes: Uint8Array | null}
->;
-
-type ForkBlobsInfo = {fork: ForkName.deneb};
-type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
-export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
-
-type ForkDataColumnsInfo = {fork: ForkName.peerdas};
-type DataColumnsData = {
+interface DataColumnData {
+  dataColumn: peerdas.DataColumnSidecar;
+  dataColumnBytes: Uint8Array | null;
+}
+interface DataColumnsData {
   // marker of that columns are to be custodied
   dataColumns: peerdas.DataColumnSidecars;
   dataColumnsBytes: (Uint8Array | null)[];
   dataColumnsSource: DataColumnsSource;
-};
-export type BlockInputDataDataColumns = ForkDataColumnsInfo & DataColumnsData;
-export type BlockInputData = BlockInputDataBlobs | BlockInputDataDataColumns;
+}
+export type DataColumnsCacheMap = Map<number, DataColumnData>;
+export interface BlockInputDataDataColumns extends ForkDataColumnsInfo {
+  // marker of that columns are to be custodied
+  dataColumns: peerdas.DataColumnSidecars;
+  dataColumnsBytes: (Uint8Array | null)[];
+  dataColumnsSource: DataColumnsSource;
+}
+interface CachedDataColumns extends Availability<BlockInputDataDataColumns> {
+  dataColumnsCache: DataColumnsCacheMap;
+}
 
-type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (data: T) => void};
-type CachedBlobs = {blobsCache: BlobsCacheMap} & Availability<BlockInputDataBlobs>;
-type CachedDataColumns = {dataColumnsCache: DataColumnsCacheMap} & Availability<BlockInputDataDataColumns>;
+/**
+ *
+ * Cross-Fork Data Types
+ *
+ */
+export type BlockInputData = BlockInputDataBlobs | BlockInputDataDataColumns;
 export type CachedData = {cacheId: number} & (
   | (ForkBlobsInfo & CachedBlobs)
   | (ForkDataColumnsInfo & CachedDataColumns)
@@ -197,7 +237,7 @@ export function getBlockInputDataColumns(
       // check if the index is correct as per the custody columns
       throw Error(`Missing dataColumnCache at index=${index}`);
     }
-    const {dataColumnSidecar, dataColumnBytes} = dataColumnCache;
+    const {dataColumn: dataColumnSidecar, dataColumnBytes} = dataColumnCache;
     dataColumns.push(dataColumnSidecar);
     dataColumnsBytes.push(dataColumnBytes);
   }

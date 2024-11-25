@@ -134,7 +134,7 @@ export class SeenGossipBlockInput {
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
       blockCache.cachedData?.dataColumnsCache.set(dataColumnSidecar.index, {
-        dataColumnSidecar,
+        dataColumn: dataColumnSidecar,
         // easily splice out the unsigned message as blob is a fixed length type
         dataColumnBytes: dataColumnBytes?.slice(0, dataColumnBytes.length) ?? null,
       });
