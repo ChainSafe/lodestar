@@ -55,7 +55,7 @@ import {
   BlobSidecarValidation,
   BlockInputType,
   NullBlockInput,
-  BlockInputData,
+  BlockInputAvailableData,
 } from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
@@ -407,7 +407,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       raceWithCutoff(
         chain,
         blockSlot,
-        blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+        blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
         BLOCK_AVAILABILITY_CUTOFF_MS
       ).catch((_e) => {
         chain.logger.debug("Block under processing not yet available, racing with cutoff to add to unknownBlockInput", {
@@ -469,7 +469,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
           await raceWithCutoff(
             chain,
             blobSlot,
-            blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+            blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
             BLOCK_AVAILABILITY_CUTOFF_MS
           ).catch((_e) => {
             chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
@@ -506,7 +506,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             await raceWithCutoff(
               chain,
               blobSlot,
-              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
               BLOCK_AVAILABILITY_CUTOFF_MS
             ).catch((_e) => {
               chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
@@ -557,7 +557,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
           await raceWithCutoff(
             chain,
             blobSlot,
-            blockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+            blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
             BLOCK_AVAILABILITY_CUTOFF_MS
           ).catch((_e) => {
             chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
@@ -587,7 +587,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             await raceWithCutoff(
               chain,
               blobSlot,
-              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputData>,
+              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
               BLOCK_AVAILABILITY_CUTOFF_MS
             ).catch((_e) => {
               chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {

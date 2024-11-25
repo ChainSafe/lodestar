@@ -26,7 +26,7 @@ import {
   BlockInputBlobs,
   BlockInputDataColumns,
   DataColumnsSource,
-  BlockInputData,
+  BlockInputAvailableData,
 } from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -77,7 +77,7 @@ export function getBeaconBlockApi({
     if (isSignedBlockContents(signedBlockOrContents)) {
       ({signedBlock} = signedBlockOrContents);
       const fork = config.getForkName(signedBlock.message.slot);
-      let blockData: BlockInputData;
+      let blockData: BlockInputAvailableData;
       if (fork === ForkName.peerdas) {
         dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, signedBlockOrContents);
         blockData = {

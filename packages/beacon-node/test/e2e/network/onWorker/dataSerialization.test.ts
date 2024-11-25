@@ -20,7 +20,7 @@ import {
   BlockSource,
   BlockInput,
   BlockInputBlobs,
-  CachedData,
+  BlockInputCachedData,
 } from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {IteratorEventType} from "../../../../src/util/asyncIterableToEvents.js";
@@ -261,7 +261,7 @@ function getEmptyBlockInput(): BlockInput {
   }
   const blobsCache = new Map();
 
-  const cachedData = {fork: ForkName.deneb, blobsCache, availabilityPromise, resolveAvailability} as CachedData;
+  const cachedData = {fork: ForkName.deneb, blobsCache, availabilityPromise, resolveAvailability} as BlockInputCachedData;
   return {
     type: BlockInputType.dataPromise,
     block: ssz.deneb.SignedBeaconBlock.defaultValue(),

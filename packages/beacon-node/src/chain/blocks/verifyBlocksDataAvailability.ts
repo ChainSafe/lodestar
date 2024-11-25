@@ -14,7 +14,7 @@ import {
   ImportBlockOpts,
   BlobSidecarValidation,
   getBlockInput,
-  BlockInputData,
+  BlockInputAvailableData,
 } from "./types.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
@@ -105,7 +105,7 @@ async function maybeValidateBlobs(
           : await raceWithCutoff(
               chain,
               blockInput,
-              blockInput.cachedData.availabilityPromise as Promise<BlockInputData>
+              blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>
             );
 
       if (blockData.fork === ForkName.deneb) {

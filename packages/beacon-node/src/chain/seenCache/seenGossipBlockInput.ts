@@ -10,7 +10,7 @@ import {
   getBlockInput,
   BlockSource,
   BlockInputBlobs,
-  CachedData,
+  BlockInputCachedData,
   GossipedInputType,
   getBlockInputBlobs,
   BlobsSource,
@@ -39,7 +39,7 @@ type BlockInputCacheType = {
   fork: ForkName;
   block?: SignedBeaconBlock;
   blockBytes?: Uint8Array | null;
-  cachedData?: CachedData;
+  cachedData?: BlockInputCachedData;
   // block promise and its callback cached for delayed resolution
   blockInputPromise: Promise<BlockInput>;
   resolveBlockInput: (blockInput: BlockInput) => void;
@@ -379,7 +379,7 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: numb
     }
 
     const blobsCache = new Map();
-    const cachedData: CachedData = {
+    const cachedData: BlockInputCachedData = {
       fork,
       blobsCache,
       availabilityPromise,
@@ -398,7 +398,7 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: numb
     }
 
     const dataColumnsCache = new Map();
-    const cachedData: CachedData = {
+    const cachedData: BlockInputCachedData = {
       fork,
       dataColumnsCache,
       availabilityPromise,
