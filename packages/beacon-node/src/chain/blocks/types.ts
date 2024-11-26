@@ -60,10 +60,9 @@ export interface BlockInputBlobs extends ForkBlobsInfo {
   blobsSource: BlobsSource;
 }
 export type BlobsCacheMap = Map<number, BlobData>;
-interface CachedBlobs extends Availability<BlockInputBlobs> {
+interface CachedBlobs extends CachedDataItem, ForkBlobsInfo, Availability<BlockInputBlobs> {
   blobsCache: BlobsCacheMap;
 }
-type CachedBlobsItem = CachedDataItem & ForkBlobsInfo & CachedBlobs;
 
 /**
  *
@@ -90,10 +89,9 @@ export interface BlockInputDataColumns extends ForkDataColumnsInfo {
   dataColumnsBytes: (Uint8Array | null)[];
   dataColumnsSource: DataColumnsSource;
 }
-interface CachedDataColumns extends Availability<BlockInputDataColumns> {
+interface CachedDataColumns extends CachedDataItem, ForkDataColumnsInfo, Availability<BlockInputDataColumns> {
   dataColumnsCache: DataColumnsCacheMap;
 }
-type CachedDataColumnsItem = CachedDataItem & ForkDataColumnsInfo & CachedDataColumns;
 
 /**
  *
@@ -101,7 +99,7 @@ type CachedDataColumnsItem = CachedDataItem & ForkDataColumnsInfo & CachedDataCo
  *
  */
 export type BlockInputAvailableData = BlockInputBlobs | BlockInputDataColumns;
-export type BlockInputCachedData = CachedBlobsItem | CachedDataColumnsItem;
+export type BlockInputCachedData = CachedBlobs | CachedDataColumns;
 
 export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preData | BlockInputType.outOfRangeData}
