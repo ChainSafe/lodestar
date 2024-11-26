@@ -293,7 +293,6 @@ export class BeaconChain implements IBeaconChain {
             metrics,
             logger,
             clock,
-            shufflingCache: this.shufflingCache,
             blockStateCache,
             bufferPool: this.bufferPool,
             datastore: fileDataStore
