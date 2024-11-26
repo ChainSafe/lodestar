@@ -54,12 +54,9 @@ interface BlobData {
   blobSidecar: deneb.BlobSidecar;
   blobBytes: Uint8Array | null;
 }
-interface BlobsData {
+export interface BlockInputBlobs extends ForkBlobsInfo {
   blobs: deneb.BlobSidecars;
   blobsBytes: (Uint8Array | null)[];
-  blobsSource: BlobsSource;
-}
-export interface BlockInputBlobs extends ForkBlobsInfo, BlobsData {
   blobsSource: BlobsSource;
 }
 export type BlobsCacheMap = Map<number, BlobData>;
@@ -204,7 +201,7 @@ export const getBlockInput = {
   },
 };
 
-export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlobsData, "blobsSource"> {
+export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlockInputBlobs, "fork" | "blobsSource"> {
   const blobs = [];
   const blobsBytes = [];
 
