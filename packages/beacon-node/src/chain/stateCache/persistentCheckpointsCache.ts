@@ -103,15 +103,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly bufferPool?: BufferPool | null;
 
   constructor(
-    {
-      metrics,
-      logger,
-      clock,
-      signal,
-      datastore,
-      blockStateCache,
-      bufferPool,
-    }: PersistentCheckpointStateCacheModules,
+    {metrics, logger, clock, signal, datastore, blockStateCache, bufferPool}: PersistentCheckpointStateCacheModules,
     opts: PersistentCheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
