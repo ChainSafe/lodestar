@@ -90,7 +90,6 @@ describe("PersistentCheckpointStateCache", () => {
       {
         datastore,
         logger: testLogger(),
-        shufflingCache: new ShufflingCache(),
         blockStateCache: new FIFOBlockStateCache({}, {}),
       },
       {maxCPStateEpochsInMemory: 2}
@@ -165,7 +164,6 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
         {maxCPStateEpochsInMemory: 2}
@@ -242,7 +240,6 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
         {maxCPStateEpochsInMemory: 2}
@@ -548,7 +545,6 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
         {maxCPStateEpochsInMemory: 1}
@@ -820,7 +816,6 @@ describe("PersistentCheckpointStateCache", () => {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
           {maxCPStateEpochsInMemory: 0}
@@ -911,7 +906,6 @@ describe("PersistentCheckpointStateCache", () => {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
           {maxCPStateEpochsInMemory: 0}
