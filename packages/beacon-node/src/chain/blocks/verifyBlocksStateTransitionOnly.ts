@@ -56,6 +56,8 @@ export async function verifyBlocksStateTransitionOnly(
         // if block is trusted don't verify proposer or op signature
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
+        // do no queue shuffling calculation, run it sync for epoch transitions
+        asyncShufflingCalculation: false
       },
       metrics
     );

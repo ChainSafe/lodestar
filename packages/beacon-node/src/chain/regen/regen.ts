@@ -261,6 +261,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,
+            // If regen state is necessary do not run shuffling async.  If an epoch boundary is crossed then the
+            // shuffling will be calculated JIT
+            asyncShufflingCalculation: false,
           },
           this.modules.metrics
         );
