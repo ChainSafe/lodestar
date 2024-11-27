@@ -39,7 +39,7 @@ default_config:
 After you have configured your proposer configuration YAML file, you can start Lodestar with an additional CLI flag option pointing to the file: `--proposerSettingsFile /path/to/proposer_config.yaml`.
 
 :::info
-The proposer configuration can also be retrived via the keymanager API endpoint:
+The proposer configuration can also be retrieved via the keymanager API endpoint:
 
 ```
 GET /eth/v0/validator/{pubkey}/proposer_config
