@@ -15,14 +15,12 @@ proposer_config:
     strict_fee_recipient_check: false
     fee_recipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     builder:
-      enabled: true
       gas_limit: "30000000"
       selection: "executionalways"
       boost_factor: "0"
   "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d":
     fee_recipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     builder:
-      enabled: "true"
       gas_limit: "3000000"
       selection: "maxprofit"
       boost_factor: "100"
@@ -31,7 +29,6 @@ default_config:
   strict_fee_recipient_check: true
   fee_recipient: "0xcccccccccccccccccccccccccccccccccccccccc"
   builder:
-    enabled: true
     gas_limit: "30000000"
     selection: "default"
     boost_factor: "90"
@@ -40,3 +37,12 @@ default_config:
 ### Enable Proposer Configuration
 
 After you have configured your proposer configuration YAML file, you can start Lodestar with an additional CLI flag option pointing to the file: `--proposerSettingsFile /path/to/proposer_config.yaml`.
+
+:::info
+The proposer configuration can also be retrived via the keymanager API endpoint:
+
+```
+GET /eth/v0/validator/{pubkey}/proposer_config
+```
+
+:::
