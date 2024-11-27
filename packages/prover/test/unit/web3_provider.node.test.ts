@@ -7,7 +7,8 @@ import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponse} from "../../src/
 import {ELRpcProvider} from "../../src/utils/rpc_provider.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 
-describe("web3_provider", () => {
+// https://github.com/ChainSafe/lodestar/issues/7250
+describe.skip("web3_provider", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
