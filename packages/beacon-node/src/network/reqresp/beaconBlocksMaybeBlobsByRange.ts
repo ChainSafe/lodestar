@@ -45,10 +45,11 @@ export async function beaconBlocksMaybeBlobsByRange(
     ]);
 
     return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, endSlot, BlockSource.byRange, BlobsSource.byRange);
-  } else {
-    const blocks = await network.sendBeaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange, block.bytes));
   }
+
+  // Data is out of range, only request blocks
+  const blocks = await network.sendBeaconBlocksByRange(peerId, request);
+  return blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange, block.bytes));
 }
 
 // Assumes that the blobs are in the same sequence as blocks, doesn't require block to be sorted
