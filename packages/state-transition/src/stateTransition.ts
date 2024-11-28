@@ -36,7 +36,6 @@ export type StateTransitionOpts = BlockExternalData &
     verifyProposer?: boolean;
     verifySignatures?: boolean;
     dontTransferCache?: boolean;
-    asyncShufflingCalculation?: boolean;
   };
 
 /**
@@ -69,7 +68,6 @@ export function stateTransition(
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
     dataAvailableStatus: DataAvailableStatus.available,
-    asyncShufflingCalculation: false,
   },
   metrics?: BeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {

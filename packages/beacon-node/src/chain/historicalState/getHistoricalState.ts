@@ -87,8 +87,6 @@ export async function getHistoricalState(
           verifyStateRoot: false,
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
-          // do no queue shuffling calculation, run it sync for epoch transitions
-          asyncShufflingCalculation: false,
         },
         metrics
       );

@@ -38,8 +38,6 @@ export function computeNewStateRoot(
       verifySignatures: false,
       // Preserve cache in source state, since the resulting state is not added to the state cache
       dontTransferCache: true,
-      // This is called for produceBlockWrapper. Shuffling should be available so can run sync
-      asyncShufflingCalculation: false,
     },
     metrics
   );
