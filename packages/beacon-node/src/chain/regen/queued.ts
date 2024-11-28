@@ -76,19 +76,17 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * This is not for block processing so don't transfer cache
    */
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null {
-    return this.blockStateCache.get(stateRoot, {dontTransferCache: true, asyncShufflingCalculation: false});
+    return this.blockStateCache.get(stateRoot, {dontTransferCache: true});
   }
 
   /**
    * Get state for block processing.
    * By default, do not transfer cache except for the block at clock slot
    * which is usually the gossip block.
-   *
-   * For sync operations also run shuffling calculation sync if more than one epoch is crossed
    */
   getPreStateSync(
     block: BeaconBlock,
-    opts: StateCloneOpts = {dontTransferCache: true, asyncShufflingCalculation: false}
+    opts: StateCloneOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
     const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = this.forkChoice.getBlockHex(parentRoot);
@@ -131,14 +129,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Get checkpoint state from cache, this function is not for block processing so don't transfer cache
    */
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null {
-    return this.checkpointStateCache.get(cp, {dontTransferCache: true, asyncShufflingCalculation: false});
+    return this.checkpointStateCache.get(cp, {dontTransferCache: true});
   }
 
   /**
    * Get state closest to head, this function is not for block processing so don't transfer cache
    */
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
-    const opts: StateCloneOpts = {dontTransferCache: true, asyncShufflingCalculation: false};
+    const opts = {dontTransferCache: true};
     return (
       this.checkpointStateCache.getLatest(head.blockRoot, Infinity, opts) ||
       this.blockStateCache.get(head.stateRoot, opts)
@@ -180,8 +178,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       newHeadStateRoot === maybeHeadStateRoot
         ? maybeHeadState
         : // maybeHeadState was already in block state cache so we don't transfer the cache
-          // run shuffling async if epoch transition is crossed. This will only happen once and will be cached
-          this.blockStateCache.get(newHeadStateRoot, {dontTransferCache: true, asyncShufflingCalculation: true});
+          this.blockStateCache.get(newHeadStateRoot, {dontTransferCache: true});
 
     if (headState) {
       this.blockStateCache.setHeadState(headState);
@@ -197,8 +194,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       // for the new FIFOBlockStateCache, it's important to reload state to regen head state here if needed
       const allowDiskReload = true;
       // transfer cache here because we want to regen state asap
-      // run shuffling async as there will likely only be one epoch transition and it will get cached
-      const cloneOpts: StateCloneOpts = {dontTransferCache: false, asyncShufflingCalculation: true};
+      const cloneOpts = {dontTransferCache: false};
       this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, cloneOpts, allowDiskReload).then(
         (headStateRegen) => this.blockStateCache.setHeadState(headStateRegen),
         (e) => this.logger.error("Error on head state regen", logCtx, e)
@@ -272,8 +268,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   async getState(
     stateRoot: RootHex,
     rCaller: RegenCaller,
-    // default to non-async shuffling here. we are currently updating slot/epoch via getBlockSlotState
-    opts: StateCloneOpts = {dontTransferCache: true, asyncShufflingCalculation: false}
+    opts: StateCloneOpts = {dontTransferCache: true}
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 

@@ -140,7 +140,7 @@ export class PrepareNextSlotScheduler {
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
-              {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: isEpochTransition},
+              {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
             )) as CachedBeaconStateExecutions;
             updatedHeadRoot = proposerHeadRoot;

@@ -31,7 +31,7 @@ export type EpochTransitionCacheOpts = {
   /**
    * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch
    */
-  asyncShufflingCalculation: boolean;
+  asyncShufflingCalculation?: boolean;
 };
 
 /**

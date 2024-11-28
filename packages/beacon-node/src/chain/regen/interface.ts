@@ -33,7 +33,7 @@ export type StateCloneOpts = {
   /**
    * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch
    */
-  asyncShufflingCalculation: boolean;
+  asyncShufflingCalculation?: boolean;
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
