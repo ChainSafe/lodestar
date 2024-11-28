@@ -109,6 +109,9 @@ function applyPendingDeposit(
       addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
       const newValidatorIndex = state.validators.length - 1;
       cache.isCompoundingValidatorArr[newValidatorIndex] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
+      if (cachedBalances) {
+        cachedBalances[newValidatorIndex] = amount;
+      }
     }
   } else {
     // Increase balance
