@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {CommitteeIndex, RootHex, Slot, phase0} from "@lodestar/types";
+import {CommitteeIndex, RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {InsertOutcome} from "../opPools/types.js";
@@ -11,8 +11,8 @@ type AttDataBase64 = string;
 export type AttestationDataCacheEntry = {
   // part of shuffling data, so this does not take memory
   committeeValidatorIndices: Uint32Array;
-  // TODO: remove this? this is available in SingleAttestation
   committeeIndex: CommitteeIndex;
+  attesterIndex: ValidatorIndex;
   // IndexedAttestationData signing root, 32 bytes
   signingRoot: Uint8Array;
   // to be consumed by forkchoice and oppool

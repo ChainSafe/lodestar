@@ -407,10 +407,16 @@ async function validateAttestationNoSignatureCheck(
   if (!isForkPostElectra(fork)) {
     // The validity of aggregation bits are already checked above
     assert.notNull(aggregationBits);
-    const bitIndex = aggregationBits.getSingleTrueBit();
-    assert.notNull(bitIndex);
 
-    validatorIndex = committeeValidatorIndices[bitIndex];
+    if (attestationOrCache.attestation) {
+      const bitIndex = aggregationBits.getSingleTrueBit();
+      assert.notNull(bitIndex);
+
+      validatorIndex = committeeValidatorIndices[bitIndex];
+    } else {
+      validatorIndex = attestationOrCache.cache.attesterIndex;
+    }
+
     // [REJECT] The number of aggregation bits matches the committee size
     // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
     // > TODO: Is this necessary? Lighthouse does not do this check.
@@ -420,7 +426,10 @@ async function validateAttestationNoSignatureCheck(
       });
     }
   } else {
-    validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
+    validatorIndex = attestationOrCache.attestation
+      ? (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex
+      : attestationOrCache.cache.attesterIndex;
+
     // [REJECT] The attester is a member of the committee -- i.e.
     // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
     // If `aggregationBitsElectra` exists, that means we have already cached it. No need to check again
@@ -498,6 +507,7 @@ async function validateAttestationNoSignatureCheck(
       chain.seenAttestationDatas.add(attSlot, committeeIndex, attDataKey, {
         committeeValidatorIndices,
         committeeIndex,
+        attesterIndex: validatorIndex,
         signingRoot: signatureSet.signingRoot,
         subnet: expectedSubnet,
         // precompute this to be used in forkchoice
