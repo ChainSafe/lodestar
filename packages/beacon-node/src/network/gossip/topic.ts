@@ -89,7 +89,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.beacon_aggregate_and_proof:
       return sszTypesFor(topic.fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return sszTypesFor(topic.fork).Attestation;
+      return isForkPostElectra(topic.fork) ? ssz.electra.SingleAttestation : ssz.phase0.Attestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
