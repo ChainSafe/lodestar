@@ -510,27 +510,31 @@ async function validateAttestationNoSignatureCheck(
   }
 
   // no signature check, leave that for step1
-  const indexedAttestationContent = {
+  const indexedAttestation: IndexedAttestation = {
     attestingIndices,
     data: attData,
     signature,
   };
-  const indexedAttestation =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? (indexedAttestationContent as electra.IndexedAttestation)
-      : (indexedAttestationContent as phase0.IndexedAttestation);
 
-  const attestationContent = attestationOrCache.attestation ?? {
-    aggregationBits,
-    data: attData,
-    committeeIndex,
-    signature,
-  };
-
-  const attestation =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? (attestationContent as SingleAttestation<ForkPostElectra>)
-      : (attestationContent as SingleAttestation<ForkPreElectra>);
+  let attestation: SingleAttestation;
+  if (attestationOrCache.attestation) {
+    attestation = attestationOrCache.attestation;
+  } else {
+    if (!isForkPostElectra(fork)) {
+      attestation = {
+        aggregationBits,
+        data: attData,
+        signature,
+      } as SingleAttestation<ForkPreElectra>;
+    } else {
+      attestation = {
+        committeeIndex,
+        attesterIndex: validatorIndex,
+        data: attData,
+        signature,
+      } as SingleAttestation<ForkPostElectra>;
+    }
+  }
 
   return {
     attestation,
