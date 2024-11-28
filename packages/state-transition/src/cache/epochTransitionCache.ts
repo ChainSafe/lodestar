@@ -380,7 +380,10 @@ export function beforeProcessEpoch(
   for (let i = 0; i < nextEpochShufflingActiveIndicesLength; i++) {
     nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
   }
-  state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
+
+  if (opts?.asyncShufflingCalculation) {
+    state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
+  }
 
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
