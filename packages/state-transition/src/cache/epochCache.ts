@@ -667,10 +667,10 @@ export class EpochCache {
       this.shufflingCache
         .get(epochAfterUpcoming, this.nextDecisionRoot)
         .then((shuffling) => {
-          if (!shuffling) {
-            throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
-          }
-          this.nextShuffling = shuffling;
+          this.nextShuffling = shuffling
+            ? shuffling
+            : // in some spec tests the BeaconChain class is used and it creates a ShufflingCache
+              computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
         })
         .catch((err) => {
           this.shufflingCache?.logger?.error(
