@@ -151,12 +151,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       await this.datastore.init();
     }
     const persistedKeys = await this.datastore.readKeys();
-    for (const persistedKey of persistedKeys) {
-      const cp = datastoreKeyToCheckpoint(persistedKey);
-      this.cache.set(toCacheKey(cp), {type: CacheItemType.persisted, value: persistedKey});
-      this.epochIndex.getOrDefault(cp.epoch).add(toRootHex(cp.root));
-    }
-    this.logger.info("Loaded persisted checkpoint states from the last run", {
+    // all checkpoint states from the last run are not trusted, remove them
+    // otherwise if we have a bad checkpoint state from the last run, the node get stucked
+    // this was found during mekong devnet, see https://github.com/ChainSafe/lodestar/pull/7255
+    await Promise.all(persistedKeys.map((key) => this.datastore.remove(key)));
+    this.logger.info("Removed persisted checkpoint states from the last run", {
       count: persistedKeys.length,
       maxEpochsInMemory: this.maxEpochsInMemory,
     });
