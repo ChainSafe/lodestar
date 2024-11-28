@@ -28,6 +28,10 @@ export type EpochTransitionCacheOpts = {
    * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
+  /**
+   * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch
+   */
+  asyncShufflingCalculation: boolean;
 };
 
 /**

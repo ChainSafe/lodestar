@@ -247,7 +247,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    */
   async getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
     // don't have to transfer cache for this specific api
-    const stateOrLoadedState = await this.getStateOrLoadDb(cp, {dontTransferCache: true});
+    // shuffling not touched here. just need to satisfy interface
+    const stateOrLoadedState = await this.getStateOrLoadDb(cp, {
+      dontTransferCache: true,
+      asyncShufflingCalculation: false,
+    });
     if (stateOrLoadedState === null || isCachedBeaconState(stateOrLoadedState)) {
       return stateOrLoadedState;
     }

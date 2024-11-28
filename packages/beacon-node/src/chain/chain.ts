@@ -435,7 +435,12 @@ export class BeaconChain implements IBeaconChain {
     // only use regen queue if necessary, it'll cache in checkpointStateCache if regen gets through epoch transition
     const head = this.forkChoice.getHead();
     const startSlot = computeStartSlotAtEpoch(epoch);
-    return this.regen.getBlockSlotState(head.blockRoot, startSlot, {dontTransferCache: true}, regenCaller);
+    return this.regen.getBlockSlotState(
+      head.blockRoot,
+      startSlot,
+      {dontTransferCache: true, asyncShufflingCalculation: false},
+      regenCaller
+    );
   }
 
   async getStateBySlot(
@@ -456,7 +461,7 @@ export class BeaconChain implements IBeaconChain {
       const state = await this.regen.getBlockSlotState(
         block.blockRoot,
         slot,
-        {dontTransferCache: true},
+        {dontTransferCache: true, asyncShufflingCalculation: false},
         RegenCaller.restApi
       );
       return {
@@ -615,7 +620,7 @@ export class BeaconChain implements IBeaconChain {
     const state = await this.regen.getBlockSlotState(
       toRootHex(parentBlockRoot),
       slot,
-      {dontTransferCache: true},
+      {dontTransferCache: true, asyncShufflingCalculation: false},
       RegenCaller.produceBlock
     );
 
@@ -664,7 +669,7 @@ export class BeaconChain implements IBeaconChain {
     const state = await this.regen.getBlockSlotState(
       toRootHex(parentBlockRoot),
       slot,
-      {dontTransferCache: true},
+      {dontTransferCache: true, asyncShufflingCalculation: false},
       RegenCaller.produceBlock
     );
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
@@ -899,7 +904,7 @@ export class BeaconChain implements IBeaconChain {
       state = await this.regen.getBlockSlotState(
         attHeadBlock.blockRoot,
         targetSlot,
-        {dontTransferCache: true},
+        {dontTransferCache: true, asyncShufflingCalculation: false},
         regenCaller
       );
     } else if (blockEpoch > attEpoch) {

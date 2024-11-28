@@ -36,7 +36,6 @@ export type StateTransitionOpts = BlockExternalData &
     verifyProposer?: boolean;
     verifySignatures?: boolean;
     dontTransferCache?: boolean;
-    asyncShufflingCalculation: boolean;
   };
 
 /**

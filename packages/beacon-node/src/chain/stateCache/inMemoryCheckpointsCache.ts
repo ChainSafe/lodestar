@@ -48,7 +48,8 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
 
   async getStateOrBytes(cp: CheckpointHex): Promise<Uint8Array | CachedBeaconStateAllForks | null> {
     // no need to transfer cache for this api
-    return this.get(cp, {dontTransferCache: true});
+    // shuffling not touched here. just need to satisfy interface
+    return this.get(cp, {dontTransferCache: true, asyncShufflingCalculation: false});
   }
 
   async getOrReloadLatest(

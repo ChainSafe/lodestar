@@ -66,7 +66,11 @@ export async function verifyBlocksInEpoch(
   // Retrieve preState from cache (regen)
   const preState0 = await this.regen
     // transfer cache to process faster, postState will be in block state cache
-    .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
+    .getPreState(
+      block0.message,
+      {dontTransferCache: false, asyncShufflingCalculation: false},
+      RegenCaller.processBlocksInEpoch
+    )
     .catch((e) => {
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
