@@ -109,6 +109,9 @@ function applyPendingDeposit(
       addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
       const newValidatorIndex = state.validators.length - 1;
       cache.isCompoundingValidatorArr[newValidatorIndex] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
+      // set balance, so that the next deposit of same pubkey will increase the balance correctly
+      // this is to fix the double deposit issue found in mekong
+      // see https://github.com/ChainSafe/lodestar/pull/7255
       if (cachedBalances) {
         cachedBalances[newValidatorIndex] = amount;
       }
