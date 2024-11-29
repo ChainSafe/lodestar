@@ -669,7 +669,11 @@ export class EpochCache {
         .then((shuffling) => {
           this.nextShuffling = shuffling
             ? shuffling
-            : this.shufflingCache.build(epochAfterUpcoming, this.nextDecisionRoot, state, this.nextActiveIndices);
+            : // biome-ignore lint/style/noNonNullAssertion: object must be defined to be in this branch of the conditional
+              this.shufflingCache!.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
+                state,
+                activeIndices: this.nextActiveIndices,
+              });
         })
         .catch((err) => {
           this.shufflingCache?.logger?.error(
