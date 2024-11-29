@@ -69,7 +69,7 @@ export type AttestationValidationResult = {
   subnet: number;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
-  aggregationBits: BitArray | null; // Field populated post-electra only
+  aggregationBits: BitArray;
 };
 
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
@@ -344,11 +344,6 @@ async function validateAttestationNoSignatureCheck(
         code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
       });
     }
-  } else {
-    // Populate aggregationBits if cached post-electra, else we populate later
-    if (attestationOrCache.cache && attestationOrCache.cache.aggregationBits !== null) {
-      aggregationBits = attestationOrCache.cache.aggregationBits;
-    }
   }
 
   let committeeValidatorIndices: Uint32Array;
@@ -423,18 +418,15 @@ async function validateAttestationNoSignatureCheck(
     validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
     // [REJECT] The attester is a member of the committee -- i.e.
     // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
-    // If `aggregationBitsElectra` exists, that means we have already cached it. No need to check again
-    if (aggregationBits === null) {
-      // Position of the validator in its committee
-      const committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
-      if (committeeValidatorIndex === -1) {
-        throw new AttestationError(GossipAction.REJECT, {
-          code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
-        });
-      }
-
-      aggregationBits = BitArray.fromSingleBit(committeeValidatorIndices.length, committeeValidatorIndex);
+    // Position of the validator in its committee
+    const committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
+    if (committeeValidatorIndex === -1) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
+      });
     }
+
+    aggregationBits = BitArray.fromSingleBit(committeeValidatorIndices.length, committeeValidatorIndex);
   }
 
   // LH > verify_middle_checks
@@ -504,7 +496,6 @@ async function validateAttestationNoSignatureCheck(
         // root of AttestationData was already cached during getIndexedAttestationSignatureSet
         attDataRootHex,
         attestationData: attData,
-        aggregationBits: isForkPostElectra(fork) ? aggregationBits : null,
       });
     }
   }
@@ -540,7 +531,7 @@ async function validateAttestationNoSignatureCheck(
     signatureSet,
     validatorIndex,
     committeeIndex,
-    aggregationBits: isForkPostElectra(fork) ? aggregationBits : null,
+    aggregationBits,
   };
 }
 
