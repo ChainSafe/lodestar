@@ -47,6 +47,7 @@ import {
   getCommitteeBitsFromSignedAggregateAndProofElectra,
   getCommitteeIndexFromSingleAttestationSerialized,
   getSignatureFromAttestationSerialized,
+  getSignatureFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -470,7 +471,9 @@ async function validateAttestationNoSignatureCheck(
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
-    : getSignatureFromAttestationSerialized(attestationOrCache.serializedData);
+    : !isForkPostElectra(fork)
+      ? getSignatureFromAttestationSerialized(attestationOrCache.serializedData)
+      : getSignatureFromSingleAttestationSerialized(attestationOrCache.serializedData);
   if (signature === null) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
