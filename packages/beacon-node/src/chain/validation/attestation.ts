@@ -515,25 +515,20 @@ async function validateAttestationNoSignatureCheck(
     signature,
   };
 
-  let attestation: SingleAttestation;
-  if (attestationOrCache.attestation) {
-    attestation = attestationOrCache.attestation;
-  } else {
-    if (!isForkPostElectra(fork)) {
-      attestation = {
-        aggregationBits,
-        data: attData,
-        signature,
-      };
-    } else {
-      attestation = {
-        committeeIndex,
-        attesterIndex: validatorIndex,
-        data: attData,
-        signature,
-      };
-    }
-  }
+  const attestation: SingleAttestation = attestationOrCache.attestation
+    ? attestationOrCache.attestation
+    : !isForkPostElectra(fork)
+      ? {
+          aggregationBits,
+          data: attData,
+          signature,
+        }
+      : {
+          committeeIndex,
+          attesterIndex: validatorIndex,
+          data: attData,
+          signature,
+        };
 
   return {
     attestation,
