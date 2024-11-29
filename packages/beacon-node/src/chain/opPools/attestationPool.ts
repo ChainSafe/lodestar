@@ -109,7 +109,7 @@ export class AttestationPool {
     committeeIndex: CommitteeIndex,
     attestation: SingleAttestation,
     attDataRootHex: RootHex,
-    aggregationBits: BitArray
+    aggregationBits: BitArray | null
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const fork = this.config.getForkName(slot);
@@ -224,7 +224,7 @@ export class AttestationPool {
 function aggregateAttestationInto(
   aggregate: AggregateFast,
   attestation: SingleAttestation,
-  aggregationBits: BitArray
+  aggregationBits: BitArray | null
 ): InsertOutcome {
   let bitIndex: number | null;
 
@@ -250,7 +250,7 @@ function aggregateAttestationInto(
 /**
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
-function attestationToAggregate(attestation: SingleAttestation, aggregationBits: BitArray): AggregateFast {
+function attestationToAggregate(attestation: SingleAttestation, aggregationBits: BitArray | null): AggregateFast {
   if (isElectraSingleAttestation(attestation)) {
     assert.notNull(aggregationBits, "aggregationBits missing post-electra to generate aggregate");
     return {
