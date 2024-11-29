@@ -43,8 +43,7 @@ import {
   getAggregationBitsFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofElectra,
   getAttDataFromSignedAggregateAndProofPhase0,
-  getBeaconAttestationGossipIndex,
-  getCommitteeBitsFromSignedAggregateAndProofElectra,
+  getAttesterIndexFromSingleAttestationSerialized,
   getCommitteeIndexFromSingleAttestationSerialized,
   getSignatureFromAttestationSerialized,
 } from "../../util/sszBytes.js";
@@ -420,7 +419,18 @@ async function validateAttestationNoSignatureCheck(
       });
     }
   } else {
-    validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
+    if (attestationOrCache.attestation) {
+      validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
+    } else {
+      const attesterIndex = getAttesterIndexFromSingleAttestationSerialized(attestationOrCache.serializedData);
+      if (attesterIndex === null) {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
+        });
+      }
+      validatorIndex = attesterIndex;
+    }
+
     // [REJECT] The attester is a member of the committee -- i.e.
     // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
     // If `aggregationBitsElectra` exists, that means we have already cached it. No need to check again

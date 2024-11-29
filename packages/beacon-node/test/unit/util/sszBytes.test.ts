@@ -6,6 +6,7 @@ import {
   RootHex,
   SingleAttestation,
   Slot,
+  ValidatorIndex,
   deneb,
   electra,
   isElectraSingleAttestation,
@@ -21,6 +22,7 @@ import {
   getAttDataFromSignedAggregateAndProofElectra,
   getAttDataFromSignedAggregateAndProofPhase0,
   getAttDataFromSingleAttestationSerialized,
+  getAttesterIndexFromSingleAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getBlockRootFromSingleAttestationSerialized,
@@ -49,6 +51,7 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
       ...electraSingleAttestationFromValues(
         4_000_000,
         127,
+        1,
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         200_00,
         "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
@@ -68,6 +71,7 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
         expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(
           attestation.committeeIndex
         );
+        expect(getAttesterIndexFromSingleAttestationSerialized(bytes)).toEqual(attestation.attesterIndex);
         expect(getBlockRootFromSingleAttestationSerialized(bytes)).toEqual(toRootHex(attestation.data.beaconBlockRoot));
         // base64, not hex
         expect(getAttDataFromSingleAttestationSerialized(bytes)).toEqual(
@@ -332,6 +336,7 @@ function phase0SingleAttestationFromValues(
 function electraSingleAttestationFromValues(
   slot: Slot,
   committeeIndex: CommitteeIndex,
+  attesterIndex: ValidatorIndex,
   blockRoot: RootHex,
   targetEpoch: Epoch,
   targetRoot: RootHex
@@ -342,6 +347,7 @@ function electraSingleAttestationFromValues(
   attestation.data.target.epoch = targetEpoch;
   attestation.data.target.root = fromHex(targetRoot);
   attestation.committeeIndex = committeeIndex;
+  attestation.attesterIndex = attesterIndex;
   return attestation;
 }
 
