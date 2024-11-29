@@ -1,6 +1,6 @@
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {QueueErrorCode} from "../../util/queue/index.js";
 import {GossipActionError} from "./gossipValidation.js";

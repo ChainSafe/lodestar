@@ -1,12 +1,12 @@
-import {describe, it, expect} from "vitest";
 import {TopicScoreParams} from "@chainsafe/libp2p-gossipsub/score";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/configs";
+import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {describe, expect, it} from "vitest";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters.js";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 import {GossipType} from "../../../../src/network/index.js";
-import {ZERO_HASH} from "../../../../src/constants/index.js";
 
 /**
  * Refer to Teku tests at

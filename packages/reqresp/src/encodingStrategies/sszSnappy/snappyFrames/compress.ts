@@ -1,5 +1,5 @@
-import snappy from "snappy";
 import crc32c from "@chainsafe/fast-crc32c";
+import snappy from "snappy";
 import {ChunkType, IDENTIFIER_FRAME} from "./common.js";
 
 // The logic in this file is largely copied (in simplified form) from https://github.com/ChainSafe/node-snappy-stream/

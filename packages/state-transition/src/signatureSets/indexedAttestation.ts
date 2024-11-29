@@ -1,12 +1,12 @@
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {
+  ISignatureSet,
   computeSigningRoot,
   computeStartSlotAtEpoch,
   createAggregateSignatureSetFromComponents,
-  ISignatureSet,
 } from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 
 export function getAttestationDataSigningRoot(
   state: CachedBeaconStateAllForks,

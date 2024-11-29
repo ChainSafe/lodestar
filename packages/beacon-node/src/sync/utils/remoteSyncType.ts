@@ -1,6 +1,6 @@
 import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {phase0, Slot} from "@lodestar/types";
+import {Slot, phase0} from "@lodestar/types";
 import {ChainTarget} from "../range/utils/index.js";
 
 /** The type of peer relative to our current state */

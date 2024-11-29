@@ -1,6 +1,6 @@
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {InterchangeLodestar} from "../types.js";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
+import {InterchangeLodestar} from "../types.js";
 
 /**
  * A complete record of all blocks and attestations signed by a set of validators

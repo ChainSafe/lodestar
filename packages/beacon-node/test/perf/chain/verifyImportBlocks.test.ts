@@ -1,19 +1,19 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {config} from "@lodestar/config/default";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {LevelDbController} from "@lodestar/db";
+import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
-import {getNetworkCachedState, getNetworkCachedBlock} from "../../../../state-transition/test/utils/testFileCache.js";
 import {beforeValue} from "../../../../state-transition/test/utils/beforeValueMocha.js";
+import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
+import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {testLogger} from "../../utils/logger.js";
+import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
+import {BeaconDb, StateArchiveMode} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
-import {BeaconDb} from "../../../src/index.js";
-import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
+import {testLogger} from "../../utils/logger.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -85,6 +85,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           skipCreateStateCacheIfAvailable: true,
           archiveStateEpochFrequency: 1024,
           minSameMessageSignatureSetsToBatch: 32,
+          stateArchiveMode: StateArchiveMode.Frequency,
         },
         {
           config: state.config,

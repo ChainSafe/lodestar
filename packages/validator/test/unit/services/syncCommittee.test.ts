@@ -1,20 +1,20 @@
-import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {routes} from "@lodestar/api";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 import {SyncCommitteeService, SyncCommitteeServiceOpts} from "../../../src/services/syncCommittee.js";
 import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
-import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH} from "../../utils/types.js";
-import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 
 vi.mock("../../../src/services/validatorStore.js");
 vi.mock("../../../src/services/emitter.js");

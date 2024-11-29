@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import {RootHex} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 
-import {ProtoArray, ExecutionStatus, DataAvailabilityStatus} from "../../../src/index.js";
+import {DataAvailabilityStatus, ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {

@@ -1,13 +1,13 @@
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
+import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {phase0} from "@lodestar/types";
-import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {NetworkOptions} from "../options.js";
-import {CommitteeSubscription} from "../subnets/interface.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {OutgoingRequestArgs} from "../reqresp/types.js";
+import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
 export type PeerIdStr = string;
@@ -78,7 +78,7 @@ export type NetworkWorkerData = {
   genesisTime: number;
   activeValidatorCount: number;
   initialStatus: phase0.Status;
-  privateKeyProto: Uint8Array;
+  peerIdProto: Uint8Array;
   localMultiaddrs: string[];
   metricsEnabled: boolean;
   peerStoreDir?: string;

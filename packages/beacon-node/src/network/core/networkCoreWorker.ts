@@ -3,8 +3,7 @@ import path from "node:path";
 import worker from "node:worker_threads";
 import type {ModuleThread} from "@chainsafe/threads";
 import {expose} from "@chainsafe/threads/worker";
-import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
-import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
@@ -12,11 +11,8 @@ import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/
 import {Clock} from "../../util/clock.js";
 import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
-import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
-import {getNetworkCoreWorkerMetrics} from "./metrics.js";
-import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
-import {NetworkCore} from "./networkCore.js";
+import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
@@ -25,6 +21,9 @@ import {
   getReqRespBridgeRespEvents,
   reqRespBridgeEventDirection,
 } from "./events.js";
+import {getNetworkCoreWorkerMetrics} from "./metrics.js";
+import {NetworkCore} from "./networkCore.js";
+import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 
 // Cloned data from instantiation
 const workerData = worker.workerData as NetworkWorkerData;
@@ -33,8 +32,7 @@ if (!workerData) throw Error("workerData must be defined");
 if (!parentPort) throw Error("parentPort must be defined");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
-const privateKey = privateKeyFromProtobuf(workerData.privateKeyProto);
-const peerId = peerIdFromPrivateKey(privateKey);
+const peerId = await createFromProtobuf(workerData.peerIdProto);
 
 // TODO: Pass options from main thread for logging
 // TODO: Logging won't be visible in file loggers
@@ -94,7 +92,7 @@ if (networkCoreWorkerMetrics) {
 const core = await NetworkCore.init({
   opts: workerData.opts,
   config,
-  privateKey,
+  peerId,
   peerStoreDir: workerData.peerStoreDir,
   logger,
   metricsRegistry: metricsRegister,

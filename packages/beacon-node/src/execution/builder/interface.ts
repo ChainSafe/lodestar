@@ -1,15 +1,17 @@
-import {
-  bellatrix,
-  Root,
-  Slot,
-  BLSPubkey,
-  deneb,
-  Wei,
-  SignedBeaconBlockOrContents,
-  ExecutionPayloadHeader,
-  SignedBlindedBeaconBlock,
-} from "@lodestar/types";
 import {ForkExecution} from "@lodestar/params";
+import {
+  BLSPubkey,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
 
 export interface IExecutionBuilder {
   /**
@@ -36,6 +38,9 @@ export interface IExecutionBuilder {
     header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionRequests?: electra.ExecutionRequests;
   }>;
-  submitBlindedBlock(signedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents>;
+  submitBlindedBlock(
+    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
+  ): Promise<SignedBeaconBlockOrContents>;
 }

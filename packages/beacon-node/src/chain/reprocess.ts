@@ -1,4 +1,4 @@
-import {Slot, RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../metrics/index.js";
 

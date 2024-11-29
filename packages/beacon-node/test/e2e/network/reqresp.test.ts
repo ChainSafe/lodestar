@@ -1,17 +1,17 @@
-import {describe, it, expect, afterEach, beforeEach, vi} from "vitest";
-import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
-import {altair, phase0, Root, SignedBeaconBlock, ssz} from "@lodestar/types";
+import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
+import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
+import {PeerIdStr} from "../../../src/util/peerId.js";
+import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {connect, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
-import {arrToSource} from "../../unit/network/reqresp/utils.js";
-import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
-import {PeerIdStr} from "../../../src/util/peerId.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 

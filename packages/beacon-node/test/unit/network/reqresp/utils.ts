@@ -1,9 +1,9 @@
-import {expect} from "vitest";
+import {toHexString} from "@chainsafe/ssz";
 import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
 import {logger} from "@libp2p/logger";
-import {Uint8ArrayList} from "uint8arraylist";
-import {toHexString} from "@chainsafe/ssz";
 import {Root} from "@lodestar/types";
+import {Uint8ArrayList} from "uint8arraylist";
+import {expect} from "vitest";
 
 export function generateRoots(count: number, offset = 0): Root[] {
   const roots: Root[] = [];

@@ -1,10 +1,10 @@
-import path from "node:path";
 import assert from "node:assert";
+import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
-import {routes, fetch} from "@lodestar/api";
+import {fetch, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
-import {Simulation} from "../utils/crucible/simulation.js";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
+import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {waitForSlot} from "../utils/crucible/utils/network.js";
 

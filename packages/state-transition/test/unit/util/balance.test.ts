@@ -1,14 +1,14 @@
-import {describe, it, expect} from "vitest";
 import {config as minimalConfig} from "@lodestar/config/default";
+import {describe, expect, it} from "vitest";
 
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {ValidatorIndex} from "@lodestar/types";
 
-import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} from "../../../src/util/index.js";
-import {getEffectiveBalanceIncrementsZeroed, getEffectiveBalanceIncrementsZeroInactive} from "../../../src/index.js";
+import {getEffectiveBalanceIncrementsZeroInactive, getEffectiveBalanceIncrementsZeroed} from "../../../src/index.js";
+import {decreaseBalance, getTotalBalance, increaseBalance, isActiveValidator} from "../../../src/util/index.js";
 
-import {generateValidators} from "../../utils/validator.js";
 import {generateCachedState, generateState} from "../../utils/state.js";
+import {generateValidators} from "../../utils/validator.js";
 
 describe("getTotalBalance", () => {
   it("should return correct balances - 500 validators", () => {

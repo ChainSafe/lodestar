@@ -1,9 +1,9 @@
 import {PresetName} from "./presetName.js";
+import {presetStatus} from "./presetStatus.js";
+import {gnosisPreset} from "./presets/gnosis.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
-import {gnosisPreset} from "./presets/gnosis.js";
-import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset, userOverrides} from "./setPreset.js";
+import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
 export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";
@@ -96,7 +96,7 @@ export const {
 
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
-  PENDING_BALANCE_DEPOSITS_LIMIT,
+  PENDING_DEPOSITS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PENDING_CONSOLIDATIONS_LIMIT,
   MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
@@ -107,6 +107,7 @@ export const {
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+  MAX_PENDING_DEPOSITS_PER_EPOCH,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
 } = activePreset;
 

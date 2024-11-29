@@ -1,53 +1,61 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
 import {
-  CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
-  calculateCommitteeAssignments,
-  proposerShufflingDecisionRoot,
-  attesterShufflingDecisionRoot,
-  getBlockRootAtSlot,
-  computeEpochAtSlot,
-  getCurrentSlot,
-  beaconBlockToBlinded,
-  createCachedBeaconState,
-  loadState,
-} from "@lodestar/state-transition";
-import {
+  ForkBlobs,
+  ForkExecution,
+  ForkPreBlobs,
+  ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkBlobs,
   isForkExecution,
-  ForkSeq,
-  ForkPreBlobs,
-  ForkBlobs,
-  ForkExecution,
   isForkPostElectra,
 } from "@lodestar/params";
-import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
+  CachedBeaconStateAllForks,
+  attesterShufflingDecisionRoot,
+  beaconBlockToBlinded,
+  calculateCommitteeAssignments,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  createCachedBeaconState,
+  getBlockRootAtSlot,
+  getCurrentSlot,
+  loadState,
+  proposerShufflingDecisionRoot,
+} from "@lodestar/state-transition";
+import {
+  BLSSignature,
+  BeaconBlock,
+  BlindedBeaconBlock,
+  BlockContents,
+  Epoch,
+  ProducedBlockSource,
   Root,
   Slot,
   ValidatorIndex,
-  ssz,
-  Epoch,
-  ProducedBlockSource,
+  Wei,
   bellatrix,
-  BLSSignature,
+  getValidatorStatus,
   isBlindedBeaconBlock,
   isBlockContents,
   phase0,
-  Wei,
-  BeaconBlock,
-  BlockContents,
-  BlindedBeaconBlock,
-  getValidatorStatus,
+  ssz,
 } from "@lodestar/types";
-import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {fromHex, toHex, resolveOrRacePromises, prettyWeiToEth, toRootHex} from "@lodestar/utils";
+import {
+  TimeoutError,
+  formatWeiToEth,
+  fromHex,
+  prettyWeiToEth,
+  resolveOrRacePromises,
+  toHex,
+  toRootHex,
+} from "@lodestar/utils";
+import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -55,22 +63,23 @@ import {
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
+import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
+import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
+import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
+import {NoBidReceived} from "../../../execution/builder/http.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
+import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBuffer} from "../../../util/graffiti.js";
-import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
-import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {ApiModules} from "../types.js";
-import {RegenCaller} from "../../../chain/regen/index.js";
-import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
-import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
-import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
-import {ApiOptions} from "../../options.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
+import {ApiOptions} from "../../options.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
+import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
@@ -113,6 +122,41 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
   | (ProduceBlockOrContentsRes & {executionPayloadBlinded: false})
   | (ProduceBlindedBlockRes & {executionPayloadBlinded: true})
 );
+
+/**
+ * Engine block selection reasons tracked in metrics
+ */
+export enum EngineBlockSelectionReason {
+  BuilderDisabled = "builder_disabled",
+  BuilderError = "builder_error",
+  BuilderTimeout = "builder_timeout",
+  BuilderPending = "builder_pending",
+  BuilderNoBid = "builder_no_bid",
+  BuilderCensorship = "builder_censorship",
+  BlockValue = "block_value",
+  EnginePreferred = "engine_preferred",
+}
+
+/**
+ * Builder block selection reasons tracked in metrics
+ */
+export enum BuilderBlockSelectionReason {
+  EngineDisabled = "engine_disabled",
+  EngineError = "engine_error",
+  EnginePending = "engine_pending",
+  BlockValue = "block_value",
+  BuilderPreferred = "builder_preferred",
+}
+
+export type BlockSelectionResult =
+  | {
+      source: ProducedBlockSource.engine;
+      reason: EngineBlockSelectionReason;
+    }
+  | {
+      source: ProducedBlockSource.builder;
+      reason: BuilderBlockSelectionReason;
+    };
 
 /**
  * Server implementation for handling validator duties.
@@ -416,6 +460,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
@@ -490,6 +535,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced execution block", {
         slot,
         executionPayloadValue,
@@ -661,14 +707,21 @@ export function getValidatorApi(
     }
 
     if (builder.status === "rejected" && isBuilderEnabled) {
-      logger.warn(
-        "Builder failed to produce the block",
-        {
+      if (builder.reason instanceof NoBidReceived) {
+        logger.info("Builder did not provide a bid", {
           ...loggerContext,
           durationMs: builder.durationMs,
-        },
-        builder.reason
-      );
+        });
+      } else {
+        logger.warn(
+          "Builder failed to produce the block",
+          {
+            ...loggerContext,
+            durationMs: builder.durationMs,
+          },
+          builder.reason
+        );
+      }
     }
 
     if (builder.status === "rejected" && engine.status === "rejected") {
@@ -686,6 +739,11 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(engine.value),
       });
 
+      metrics?.blockProductionSelectionResults.inc({
+        source: ProducedBlockSource.engine,
+        reason: EngineBlockSelectionReason.BuilderCensorship,
+      });
+
       return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
     }
 
@@ -694,6 +752,16 @@ export function getValidatorApi(
         ...loggerContext,
         durationMs: builder.durationMs,
         ...getBlockValueLogInfo(builder.value),
+      });
+
+      metrics?.blockProductionSelectionResults.inc({
+        source: ProducedBlockSource.builder,
+        reason:
+          isEngineEnabled === false
+            ? BuilderBlockSelectionReason.EngineDisabled
+            : engine.status === "pending"
+              ? BuilderBlockSelectionReason.EnginePending
+              : BuilderBlockSelectionReason.EngineError,
       });
 
       return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
@@ -706,16 +774,33 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(engine.value),
       });
 
+      metrics?.blockProductionSelectionResults.inc({
+        source: ProducedBlockSource.engine,
+        reason:
+          isBuilderEnabled === false
+            ? EngineBlockSelectionReason.BuilderDisabled
+            : builder.status === "pending"
+              ? EngineBlockSelectionReason.BuilderPending
+              : builder.reason instanceof NoBidReceived
+                ? EngineBlockSelectionReason.BuilderNoBid
+                : builder.reason instanceof TimeoutError
+                  ? EngineBlockSelectionReason.BuilderTimeout
+                  : EngineBlockSelectionReason.BuilderError,
+      });
+
       return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
     }
 
     if (engine.status === "fulfilled" && builder.status === "fulfilled") {
-      const executionPayloadSource = selectBlockProductionSource({
+      const result = selectBlockProductionSource({
         builderBlockValue: builder.value.executionPayloadValue + builder.value.consensusBlockValue,
         engineBlockValue: engine.value.executionPayloadValue + engine.value.consensusBlockValue,
         builderBoostFactor,
         builderSelection,
       });
+      const executionPayloadSource = result.source;
+
+      metrics?.blockProductionSelectionResults.inc(result);
 
       logger.info(`Selected ${executionPayloadSource} block`, {
         ...loggerContext,

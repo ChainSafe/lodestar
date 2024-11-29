@@ -1,10 +1,10 @@
+import {toHexString} from "@chainsafe/ssz";
 import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
 import {logger} from "@libp2p/logger";
-import {expect} from "vitest";
-import {Uint8ArrayList} from "uint8arraylist";
-import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
-import {ResponseIncoming, RespStatus} from "../../src/index.js";
+import {Uint8ArrayList} from "uint8arraylist";
+import {expect} from "vitest";
+import {RespStatus, ResponseIncoming} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
 
 /**

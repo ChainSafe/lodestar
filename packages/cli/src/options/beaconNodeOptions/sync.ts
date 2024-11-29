@@ -1,4 +1,4 @@
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type SyncArgs = {

@@ -1,7 +1,7 @@
 import path from "node:path";
-import {RunnerType} from "../utils/types.js";
-import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType} from "../utils/types.js";
 import {blsTestRunner} from "./bls.js";
 import {sszGeneric} from "./ssz_generic.js";
 

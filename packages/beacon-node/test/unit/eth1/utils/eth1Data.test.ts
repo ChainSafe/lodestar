@@ -1,16 +1,16 @@
-import {describe, it, expect} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {iteratorFromArray} from "../../../utils/interator.js";
-import {
-  getEth1DataForBlocks,
-  getDepositsByBlockNumber,
-  getDepositRootByDepositCount,
-} from "../../../../src/eth1/utils/eth1Data.js";
-import {Eth1Block} from "../../../../src/eth1/interface.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {describe, expect, it} from "vitest";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {Eth1Block} from "../../../../src/eth1/interface.js";
+import {
+  getDepositRootByDepositCount,
+  getDepositsByBlockNumber,
+  getEth1DataForBlocks,
+} from "../../../../src/eth1/utils/eth1Data.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {iteratorFromArray} from "../../../utils/interator.js";
 
 describe("eth1 / util / getEth1DataForBlocks", () => {
   type TestCase = {

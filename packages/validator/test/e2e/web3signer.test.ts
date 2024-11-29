@@ -1,14 +1,14 @@
-import {expect, describe, it, vi, beforeAll, afterAll} from "vitest";
-import {fromHex, toHex} from "@lodestar/utils";
-import {config} from "@lodestar/config/default";
-import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
-import {createBeaconConfig} from "@lodestar/config";
-import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
-import {ssz, sszTypesFor} from "@lodestar/types";
+import {createBeaconConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
+import {genesisData} from "@lodestar/config/networks";
 import {ForkSeq} from "@lodestar/params";
-import {getKeystoresStr, StartedExternalSigner, startExternalSigner} from "@lodestar/test-utils";
-import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
+import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
+import {StartedExternalSigner, getKeystoresStr, startExternalSigner} from "@lodestar/test-utils";
+import {ssz, sszTypesFor} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
+import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
+import {ISlashingProtection, Interchange, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 

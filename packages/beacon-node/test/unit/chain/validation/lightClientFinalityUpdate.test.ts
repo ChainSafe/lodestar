@@ -1,11 +1,11 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {altair, ssz} from "@lodestar/types";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {altair, ssz} from "@lodestar/types";
 import {RequiredSelective} from "@lodestar/utils";
-import {validateLightClientFinalityUpdate} from "../../../../src/chain/validation/lightClientFinalityUpdate.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
+import {validateLightClientFinalityUpdate} from "../../../../src/chain/validation/lightClientFinalityUpdate.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
 describe("Light Client Finality Update validation", () => {

@@ -45,10 +45,17 @@ export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDeci
 const MAX_DECIMAL_FACTOR = BigInt("100000");
 
 /**
+ * Format wei as ETH, with up to 5 decimals
+ */
+export function formatWeiToEth(wei: bigint): string {
+  return formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
+}
+
+/**
  * Format wei as ETH, with up to 5 decimals and append ' ETH'
  */
 export function prettyWeiToEth(wei: bigint): string {
-  return `${formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`;
+  return `${formatWeiToEth(wei)} ETH`;
 }
 
 /**

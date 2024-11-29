@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
-import {waitFor, createElapsedTimeTracker} from "../../src/waitFor.js";
+import {describe, expect, it} from "vitest";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
 import {sleep} from "../../src/sleep.js";
+import {createElapsedTimeTracker, waitFor} from "../../src/waitFor.js";
 
 describe("waitFor", () => {
   const interval = 10;

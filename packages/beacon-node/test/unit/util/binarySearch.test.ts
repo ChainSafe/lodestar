@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {binarySearchLte, ErrorNoValues, ErrorNoValueMinValue} from "../../../src/util/binarySearch.js";
+import {describe, expect, it} from "vitest";
+import {ErrorNoValueMinValue, ErrorNoValues, binarySearchLte} from "../../../src/util/binarySearch.js";
 
 describe("util / binarySearch", () => {
   describe("binarySearchLte", () => {

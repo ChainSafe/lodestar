@@ -1,4 +1,6 @@
 import path from "node:path";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -9,16 +11,14 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {ssz, phase0, altair, bellatrix, capella, electra, sszTypesFor} from "@lodestar/types";
-import {InputType} from "@lodestar/spec-test-util";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {altair, bellatrix, capella, electra, phase0, ssz, sszTypesFor} from "@lodestar/types";
 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
-import {BaseSpecTest, RunnerType, shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {BaseSpecTest, RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
 // Define above to re-use in sync_aggregate and sync_aggregate_random
 const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
@@ -92,8 +92,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   deposit_request: (state, testCase: {deposit_request: electra.DepositRequest}) => {
-    const fork = state.config.getForkSeq(state.slot);
-    blockFns.processDepositRequest(fork, state as CachedBeaconStateElectra, testCase.deposit_request);
+    blockFns.processDepositRequest(state as CachedBeaconStateElectra, testCase.deposit_request);
   },
 
   consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {

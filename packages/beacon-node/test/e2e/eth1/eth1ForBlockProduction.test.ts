@@ -1,18 +1,18 @@
-import {describe, it, beforeAll, afterAll, expect} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {sleep} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
+import {sleep} from "@lodestar/utils";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 
 import {ssz} from "@lodestar/types";
+import {BeaconDb} from "../../../src/db/index.js";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
-import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
-import {testLogger} from "../../utils/logger.js";
-import {BeaconDb} from "../../../src/db/index.js";
-import {generateState} from "../../utils/state.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {testLogger} from "../../utils/logger.js";
+import {generateState} from "../../utils/state.js";
+import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
 
 const dbLocation = "./.__testdb";
 

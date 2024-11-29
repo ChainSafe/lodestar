@@ -2,18 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {Repository} from "@lodestar/db";
-import {toHex, toRootHex} from "@lodestar/utils";
-import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
+import {Repository} from "@lodestar/db";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
-import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
-import {ApiModules} from "../types.js";
+import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
+import {ApiModules} from "../types.js";
 
 export function getLodestarApi({
   chain,

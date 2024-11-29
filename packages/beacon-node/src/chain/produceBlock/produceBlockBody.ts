@@ -1,44 +1,44 @@
-import {
-  Bytes32,
-  Root,
-  RootHex,
-  Slot,
-  ssz,
-  ValidatorIndex,
-  BLSPubkey,
-  BLSSignature,
-  capella,
-  deneb,
-  Wei,
-  SSEPayloadAttributes,
-  BeaconBlock,
-  BeaconBlockBody,
-  ExecutionPayloadHeader,
-  BlindedBeaconBlockBody,
-  BlindedBeaconBlock,
-  sszTypesFor,
-  electra,
-} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkExecution, ForkSeq, isForkExecution} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateCapella,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
   computeEpochAtSlot,
   computeTimeAtSlot,
-  getRandaoMix,
   getCurrentEpoch,
-  isMergeTransitionComplete,
   getExpectedWithdrawals,
+  getRandaoMix,
+  isMergeTransitionComplete,
 } from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep, Logger, toRootHex} from "@lodestar/utils";
-import type {BeaconChain} from "../chain.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
+import {
+  BLSPubkey,
+  BLSSignature,
+  BeaconBlock,
+  BeaconBlockBody,
+  BlindedBeaconBlock,
+  BlindedBeaconBlockBody,
+  Bytes32,
+  ExecutionPayloadHeader,
+  Root,
+  RootHex,
+  SSEPayloadAttributes,
+  Slot,
+  ValidatorIndex,
+  Wei,
+  capella,
+  deneb,
+  electra,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
+import {Logger, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
@@ -220,6 +220,14 @@ export async function produceBlockBody<T extends BlockType>(
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
       }
+
+      if (ForkSeq[fork] >= ForkSeq.electra) {
+        const {executionRequests} = builderRes;
+        if (executionRequests === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
+        }
+        (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
+      }
     }
 
     // blockType === BlockType.Full
@@ -285,7 +293,6 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            // validate blindedBlobsBundle
             if (this.opts.sanityCheckExecutionEngineBlobs) {
               validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
@@ -455,6 +462,7 @@ async function prepareExecutionPayloadHeader(
   header: ExecutionPayloadHeader;
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
+  executionRequests?: electra.ExecutionRequests;
 }> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");

@@ -1,9 +1,10 @@
-import {generateKeyPair} from "@libp2p/crypto/keys";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
+import {StateArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
@@ -54,6 +55,7 @@ export async function getNetworkForTest(
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
       minSameMessageSignatureSetsToBatch: 32,
+      stateArchiveMode: StateArchiveMode.Frequency,
     },
     {
       config: beaconConfig,
@@ -70,7 +72,7 @@ export async function getNetworkForTest(
     }
   );
 
-  const modules: Omit<NetworkInitModules, "opts" | "privateKey" | "logger"> = {
+  const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
     config: beaconConfig,
     chain,
     db,
@@ -81,7 +83,7 @@ export async function getNetworkForTest(
 
   const network = await Network.init({
     ...modules,
-    privateKey: await generateKeyPair("secp256k1"),
+    peerId: await createSecp256k1PeerId(),
     opts: {
       ...defaultNetworkOptions,
       maxPeers: 1,

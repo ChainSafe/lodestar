@@ -1,43 +1,46 @@
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
-import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/deneb";
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,
   IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
   ReqOpts,
+  parseJsonRpcErrorCode,
 } from "../../eth1/provider/jsonRpcHttpClient.js";
+import {bytesToData, numToQuantity} from "../../eth1/provider/utils.js";
 import {Metrics} from "../../metrics/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 import {
-  ExecutionPayloadStatus,
-  ExecutePayloadResponse,
-  IExecutionEngine,
-  PayloadId,
-  PayloadAttributes,
   BlobsBundle,
-  VersionedHashes,
-  ExecutionEngineState,
-  ClientVersion,
   ClientCode,
+  ClientVersion,
+  ExecutePayloadResponse,
+  ExecutionEngineState,
+  ExecutionPayloadStatus,
+  IExecutionEngine,
+  PayloadAttributes,
+  PayloadId,
+  VersionedHashes,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  parseExecutionPayload,
-  serializeExecutionPayload,
-  serializeVersionedHashes,
-  serializePayloadAttributes,
-  serializeBeaconBlockRoot,
   ExecutionPayloadBody,
   assertReqSizeLimit,
+  deserializeBlobAndProofs,
   deserializeExecutionPayloadBody,
+  parseExecutionPayload,
+  serializeBeaconBlockRoot,
+  serializeExecutionPayload,
   serializeExecutionRequests,
+  serializePayloadAttributes,
+  serializeVersionedHashes,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -111,6 +114,7 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
+  private lastGetBlobsErrorTime = 0;
 
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
@@ -459,6 +463,57 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});
     return response.map(deserializeExecutionPayloadBody);
+  }
+
+  async getBlobs(_fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
+    // retry only after a day may be
+    const GETBLOBS_RETRY_TIMEOUT = 256 * 32 * 12;
+    const timeNow = Date.now() / 1000;
+    const timeSinceLastFail = timeNow - this.lastGetBlobsErrorTime;
+    if (timeSinceLastFail < GETBLOBS_RETRY_TIMEOUT) {
+      // do not try getblobs since it might not be available
+      this.logger.debug(
+        `disabled engine_getBlobsV1 api call since last failed < GETBLOBS_RETRY_TIMEOUT=${GETBLOBS_RETRY_TIMEOUT}`,
+        timeSinceLastFail
+      );
+      throw Error(
+        `engine_getBlobsV1 call recently failed timeSinceLastFail=${timeSinceLastFail} < GETBLOBS_RETRY_TIMEOUT=${GETBLOBS_RETRY_TIMEOUT}`
+      );
+    }
+
+    const method = "engine_getBlobsV1";
+    assertReqSizeLimit(versionedHashes.length, 128);
+    const versionedHashesHex = versionedHashes.map(bytesToData);
+    let response = await this.rpc
+      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+        method,
+        params: [versionedHashesHex],
+      })
+      .catch((e) => {
+        if (e instanceof ErrorJsonRpcResponse && parseJsonRpcErrorCode(e.response.error.code) === "Method not found") {
+          this.lastGetBlobsErrorTime = timeNow;
+          this.logger.debug("disabling engine_getBlobsV1 api call since engine responded with method not availeble", {
+            retryTimeout: GETBLOBS_RETRY_TIMEOUT,
+          });
+        }
+        throw e;
+      });
+
+    // handle nethermind buggy response
+    // see: https://discord.com/channels/595666850260713488/1293605631785304088/1298956894274060301
+    if (
+      (response as unknown as {blobsAndProofs: EngineApiRpcReturnTypes[typeof method]}).blobsAndProofs !== undefined
+    ) {
+      response = (response as unknown as {blobsAndProofs: EngineApiRpcReturnTypes[typeof method]}).blobsAndProofs;
+    }
+
+    if (response.length !== versionedHashes.length) {
+      const error = `Invalid engine_getBlobsV1 response length=${response.length} versionedHashes=${versionedHashes.length}`;
+      this.logger.error(error);
+      throw Error(error);
+    }
+
+    return response.map(deserializeBlobAndProofs);
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

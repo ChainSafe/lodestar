@@ -1,12 +1,12 @@
 import {ChildProcess} from "node:child_process";
-import {Web3} from "web3";
 import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
-import {Slot, Epoch, SignedBeaconBlock} from "@lodestar/types";
 import {LogLevel, Logger} from "@lodestar/logger";
+import {ForkName} from "@lodestar/params";
+import {Epoch, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {Web3} from "web3";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";

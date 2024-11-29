@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import {YargsError} from "./util/errors.js";
 import {getCli, yarg} from "./cli.js";
+import {YargsError} from "./util/errors.js";
 import "source-map-support/register.js";
 
 const flare = getCli();

@@ -3,8 +3,8 @@ import {
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
-  getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromBlobSidecarSerialized,
+  getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
 } from "../../util/sszBytes.js";
 import {GossipType} from "../gossip/index.js";

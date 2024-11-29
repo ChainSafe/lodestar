@@ -1,13 +1,13 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
-  intToBytes,
   bytesToInt,
-  toHex,
-  fromHex,
-  toHexString,
-  toRootHex,
-  toPubkeyHex,
   formatBytes,
+  fromHex,
+  intToBytes,
+  toHex,
+  toHexString,
+  toPubkeyHex,
+  toRootHex,
 } from "../../src/index.js";
 
 describe("intToBytes", () => {

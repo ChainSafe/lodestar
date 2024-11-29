@@ -1,11 +1,11 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ELBlock} from "../types.js";
-import {verifyBlock} from "../utils/verification.js";
 import {
   getErrorResponseForRequestWithFailedVerification,
   getResponseForRequest,
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
+import {verifyBlock} from "../utils/verification.js";
 
 export const eth_getBlockByHash: ELVerifiedRequestHandler<[block: string, hydrated: boolean], ELBlock> = async ({
   rpc,

@@ -1,5 +1,5 @@
-import {Gauge} from "prom-client";
 import {CollectFn, Gauge as IGauge, LabelKeys, LabelsGeneric} from "@lodestar/utils";
+import {Gauge} from "prom-client";
 
 /**
  * Extends the prom-client Gauge to be able to add multiple collect functions after instantiation

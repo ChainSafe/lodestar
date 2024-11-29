@@ -1,12 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {BeaconState} from "@lodestar/types";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {ApiModules} from "../types.js";
+import {BeaconState} from "@lodestar/types";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiModules} from "../types.js";
 
 export function getDebugApi({
   chain,

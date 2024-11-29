@@ -1,7 +1,7 @@
-import {ValidatorIndex} from "@lodestar/types";
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {VoteTracker} from "./interface.js";
+import {ValidatorIndex} from "@lodestar/types";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
+import {VoteTracker} from "./interface.js";
 
 // reuse arrays to avoid memory reallocation and gc
 const deltas = new Array<number>();

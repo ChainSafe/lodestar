@@ -1,6 +1,6 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {Epoch, RootHex, SSZTypesFor} from "@lodestar/types";
 import {ForkAll, ForkExecution, ForkName} from "@lodestar/params";
+import {Epoch, RootHex, SSZTypesFor} from "@lodestar/types";
 import {EpochShuffling} from "../util/epochShuffling.js";
 
 export type BeaconStatePhase0 = CompositeViewDU<SSZTypesFor<ForkName.phase0, "BeaconState">>;

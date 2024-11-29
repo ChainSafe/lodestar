@@ -1,11 +1,11 @@
-import {Registry} from "prom-client";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, Histogram, Logger, TimeoutError} from "@lodestar/utils";
+import {Registry} from "prom-client";
 import {RegistryMetricCreator} from "../metrics/index.js";
-import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
-import {ClientStats} from "./types.js";
+import {MonitoringOptions, defaultMonitoringOptions} from "./options.js";
 import system from "./system.js";
+import {ClientStats} from "./types.js";
 
 type MonitoringData = Record<string, string | number | boolean>;
 

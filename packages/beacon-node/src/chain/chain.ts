@@ -1,106 +1,106 @@
 import path from "node:path";
-import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  EffectiveBalanceIncrements,
+  EpochShuffling,
+  Index2PubkeyCache,
+  computeAnchorCheckpoint,
+  computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
-  Index2PubkeyCache,
-  EpochShuffling,
-  computeEndSlotAtEpoch,
-  computeAnchorCheckpoint,
 } from "@lodestar/state-transition";
-import {BeaconConfig} from "@lodestar/config";
 import {
-  UintNum64,
-  Root,
-  phase0,
-  Slot,
-  RootHex,
-  Epoch,
-  ValidatorIndex,
-  deneb,
-  Wei,
-  bellatrix,
-  isBlindedBeaconBlock,
   BeaconBlock,
-  SignedBeaconBlock,
-  ExecutionPayload,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  Epoch,
+  ExecutionPayload,
+  Root,
+  RootHex,
+  SignedBeaconBlock,
+  Slot,
+  UintNum64,
+  ValidatorIndex,
+  Wei,
+  bellatrix,
+  deneb,
+  isBlindedBeaconBlock,
+  phase0,
 } from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {Metrics} from "../metrics/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
+import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {Metrics} from "../metrics/index.js";
+import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {BufferPool} from "../util/bufferPool.js";
+import {Archiver} from "./archiver/archiver.js";
+import {CheckpointBalancesCache} from "./balancesCache.js";
+import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {ChainEventEmitter, ChainEvent} from "./emitter.js";
+import {BlockInput} from "./blocks/types.js";
+import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {ChainEvent, ChainEventEmitter} from "./emitter.js";
+import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
+import {HistoricalStateRegen} from "./historicalState/index.js";
 import {
-  IBeaconChain,
-  ProposerPreparationData,
   BlockHash,
-  StateGetOpts,
   CommonBlockBody,
   FindHeadFnName,
+  IBeaconChain,
+  ProposerPreparationData,
+  StateGetOpts,
 } from "./interface.js";
-import {IChainOptions} from "./options.js";
-import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
-import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
-import {
-  SeenAttesters,
-  SeenAggregators,
-  SeenBlockProposers,
-  SeenSyncCommitteeMessages,
-  SeenContributionAndProof,
-} from "./seenCache/index.js";
+import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
+  OpPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
-  OpPool,
 } from "./opPools/index.js";
-import {LightClientServer} from "./lightClient/index.js";
-import {Archiver} from "./archiver/index.js";
+import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {ReprocessController} from "./reprocess.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {BeaconProposerCache} from "./beaconProposerCache.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
+import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
-import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {BlockInput} from "./blocks/types.js";
-import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {HistoricalStateRegen} from "./historicalState/index.js";
+import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
+import {ReprocessController} from "./reprocess.js";
+import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
 import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
+import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenBlockProposers,
+  SeenContributionAndProof,
+  SeenSyncCommitteeMessages,
+} from "./seenCache/index.js";
+import {SeenGossipBlockInput} from "./seenCache/index.js";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
-import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
-import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
-import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
+import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
+import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
+import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -293,7 +293,6 @@ export class BeaconChain implements IBeaconChain {
             metrics,
             logger,
             clock,
-            shufflingCache: this.shufflingCache,
             blockStateCache,
             bufferPool: this.bufferPool,
             datastore: fileDataStore
@@ -1047,9 +1046,6 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
-
-    const headState = this.getHeadState();
-    metrics.headState.unfinalizedPubkeyCacheSize.set(headState.epochCtx.unfinalizedPubkey2index.size);
   }
 
   private onClockSlot(slot: Slot): void {
@@ -1139,27 +1135,8 @@ export class BeaconChain implements IBeaconChain {
       this.opPool.pruneAll(headBlock, headState);
     }
 
-    const cpEpoch = cp.epoch;
-
     if (headState === null) {
       this.logger.verbose("Head state is null");
-    } else if (cpEpoch >= this.config.ELECTRA_FORK_EPOCH) {
-      // Get the validator.length from the state at cpEpoch
-      // We are confident the last element in the list is from headEpoch
-      // Thus we query from the end of the list. (cpEpoch - headEpoch - 1) is negative number
-      const pivotValidatorIndex = headState.epochCtx.getValidatorCountAtEpoch(cpEpoch);
-
-      if (pivotValidatorIndex !== undefined) {
-        // Note EIP-6914 will break this logic
-        const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
-          (index, _pubkey) => index < pivotValidatorIndex
-        );
-
-        // Populate finalized pubkey cache and remove unfinalized pubkey cache
-        if (!newFinalizedValidators.isEmpty()) {
-          this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
-        }
-      }
     }
 
     // TODO-Electra: Deprecating eth1Data poll requires a check on a finalized checkpoint state.

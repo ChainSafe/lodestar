@@ -1,9 +1,9 @@
 import path from "node:path";
-import {describe, it, beforeAll, vi, onTestFinished} from "vitest";
-import {rimraf} from "rimraf";
 import {ImportStatus} from "@lodestar/api/keymanager";
-import {Interchange} from "@lodestar/validator";
 import {getKeystoresStr} from "@lodestar/test-utils";
+import {Interchange} from "@lodestar/validator";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";

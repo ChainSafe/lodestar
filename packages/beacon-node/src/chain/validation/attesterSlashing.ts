@@ -1,11 +1,11 @@
-import {phase0} from "@lodestar/types";
 import {
-  getAttesterSlashableIndices,
   assertValidAttesterSlashing,
+  getAttesterSlashableIndices,
   getAttesterSlashingSignatureSets,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "../index.js";
+import {phase0} from "@lodestar/types";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
 
 export async function validateApiAttesterSlashing(
   chain: IBeaconChain,

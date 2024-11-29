@@ -1,17 +1,17 @@
-import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {sleep} from "@lodestar/utils";
-import {ssz, ProducedBlockSource} from "@lodestar/types";
-import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
+import {ProducedBlockSource, ssz} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");

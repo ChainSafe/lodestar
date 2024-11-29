@@ -1,27 +1,27 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {
-  Epoch,
-  phase0,
-  capella,
-  Slot,
-  ssz,
-  StringType,
-  RootHex,
-  altair,
-  UintNum64,
-  LightClientOptimisticUpdate,
-  LightClientFinalityUpdate,
-  SSEPayloadAttributes,
   Attestation,
   AttesterSlashing,
+  Epoch,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  RootHex,
+  SSEPayloadAttributes,
+  Slot,
+  StringType,
+  UintNum64,
+  altair,
+  capella,
+  phase0,
+  ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
 
-import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getExecutionForkTypes, getLightClientForkTypes} from "../../utils/fork.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes

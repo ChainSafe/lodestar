@@ -1,14 +1,20 @@
-import {describe, it, expect, vi} from "vitest";
 import axios from "axios";
+import {describe, expect, it, vi} from "vitest";
+import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
-import {ForkName, BeaconPreset} from "../../src/index.js";
 import {loadConfigYaml} from "../yaml.js";
 
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.5.0-alpha.3";
+const specConfigCommit = "v1.5.0-alpha.8";
+/**
+ * Fields that we filter from local config when doing comparison.
+ * Ideally this should be empty as it is not spec compliant
+ * For `MAX_BLOBS_PER_BLOCK`, see https://github.com/ChainSafe/lodestar/issues/7172
+ */
+const ignoredLocalPresetFields: (keyof BeaconPreset)[] = ["MAX_BLOBS_PER_BLOCK"];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
@@ -25,12 +31,22 @@ describe("Ensure config is synced", () => {
 });
 
 function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPreset): void {
+  const filteredLocalPreset: Partial<BeaconPreset> = Object.keys(localPreset)
+    .filter((key) => !ignoredLocalPresetFields.includes(key as keyof BeaconPreset))
+    .reduce(
+      (acc, key) => {
+        acc[key as keyof BeaconPreset] = localPreset[key as keyof BeaconPreset];
+        return acc;
+      },
+      {} as Partial<BeaconPreset>
+    );
+
   // Check each key for better debuggability
   for (const key of Object.keys(remotePreset) as (keyof BeaconPreset)[]) {
-    expect(localPreset[key]).toBe(remotePreset[key]);
+    expect(filteredLocalPreset[key]).toBe(remotePreset[key]);
   }
 
-  expect(localPreset).toEqual(remotePreset);
+  expect(filteredLocalPreset).toEqual(remotePreset);
 }
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {

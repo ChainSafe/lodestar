@@ -1,8 +1,8 @@
 import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
-import {Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
+import {Db, KeyValue, Repository} from "@lodestar/db";
+import {Root, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-import {Db, Repository, KeyValue} from "@lodestar/db";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 // TODO: Review where is best to put this type

@@ -1,11 +1,11 @@
-import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
-import {Logger, fromHex, sleep, truncBytes} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {Logger, fromHex, sleep, truncBytes} from "@lodestar/utils";
+import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
 import {IClock} from "../util/index.js";
-import {Metrics} from "../metrics.js";
 import {IndicesService} from "./indices.js";
 
 // The number of epochs that must be checked before we assume that there are

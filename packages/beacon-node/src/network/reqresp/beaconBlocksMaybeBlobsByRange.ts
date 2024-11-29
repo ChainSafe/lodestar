@@ -1,11 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {deneb, Epoch, phase0, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Epoch, SignedBeaconBlock, Slot, WithBytes, deneb, phase0} from "@lodestar/types";
 
-import {BlobsSource, BlockInput, BlockSource, getBlockInput, BlockInputDataBlobs} from "../../chain/blocks/types.js";
+import {BlobsSource, BlockInput, BlockInputDataBlobs, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {INetwork, WithBytes} from "../interface.js";
+import {INetwork} from "../interface.js";
 
 export async function beaconBlocksMaybeBlobsByRange(
   config: ChainForkConfig,
@@ -36,8 +36,9 @@ export async function beaconBlocksMaybeBlobsByRange(
     return blocks.map((block) => getBlockInput.preData(config, block.data, BlockSource.byRange, block.bytes));
   }
 
+  // From Deneb
   // Only request blobs if they are recent enough
-  if (computeEpochAtSlot(startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
+  if (startEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
     const [allBlocks, allBlobSidecars] = await Promise.all([
       network.sendBeaconBlocksByRange(peerId, request),
       network.sendBlobSidecarsByRange(peerId, request),
@@ -46,8 +47,9 @@ export async function beaconBlocksMaybeBlobsByRange(
     return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, endSlot, BlockSource.byRange, BlobsSource.byRange);
   }
 
-  // Post Deneb but old blobs
-  throw Error("Cannot sync blobs outside of blobs prune window");
+  // Data is out of range, only request blocks
+  const blocks = await network.sendBeaconBlocksByRange(peerId, request);
+  return blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange, block.bytes));
 }
 
 // Assumes that the blobs are in the same sequence as blocks, doesn't require block to be sorted

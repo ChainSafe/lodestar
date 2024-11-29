@@ -1,9 +1,8 @@
-import {CachedBeaconStateAllForks, ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
-import {Root, ssz, Slot, SignedBeaconBlock} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
+import {CachedBeaconStateAllForks, ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
+import {Root, SignedBeaconBlock, Slot, WithBytes, ssz} from "@lodestar/types";
 import {IBlsVerifier} from "../../chain/bls/index.js";
-import {WithBytes} from "../../network/interface.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 
 export type BackfillBlockHeader = {

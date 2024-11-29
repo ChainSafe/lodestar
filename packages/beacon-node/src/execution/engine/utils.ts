@@ -2,14 +2,14 @@ import {isFetchError} from "@lodestar/api";
 import {isErrorAborted} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
 import {
-  IJsonRpcHttpClient,
   ErrorJsonRpcResponse,
   HttpRpcError,
-  JsonRpcHttpClientEventEmitter,
+  IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
+  JsonRpcHttpClientEventEmitter,
 } from "../../eth1/provider/jsonRpcHttpClient.js";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
-import {ExecutionPayloadStatus, ExecutionEngineState} from "./interface.js";
+import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
 
 export type JsonRpcBackend = {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>

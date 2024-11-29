@@ -1,8 +1,9 @@
-import {BeaconStateAllForks, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
-import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {routes} from "@lodestar/api";
+import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import {BeaconStateAllForks, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
 import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, ValidatorIndex} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
+import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
 
 export function computeSubnetForCommitteesAtSlot(
   slot: Slot,
@@ -54,21 +55,31 @@ export function selectBlockProductionSource({
   engineBlockValue: bigint;
   builderBlockValue: bigint;
   builderBoostFactor: bigint;
-}): ProducedBlockSource {
+}): BlockSelectionResult {
   switch (builderSelection) {
     case routes.validator.BuilderSelection.ExecutionAlways:
     case routes.validator.BuilderSelection.ExecutionOnly:
-      return ProducedBlockSource.engine;
+      return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
 
     case routes.validator.BuilderSelection.Default:
-    case routes.validator.BuilderSelection.MaxProfit:
-      return builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
-        (builderBoostFactor === BigInt(0) || engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100))
-        ? ProducedBlockSource.engine
-        : ProducedBlockSource.builder;
+    case routes.validator.BuilderSelection.MaxProfit: {
+      if (builderBoostFactor === BigInt(0)) {
+        return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
+      }
+
+      if (builderBoostFactor === MAX_BUILDER_BOOST_FACTOR) {
+        return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
+      }
+
+      if (engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100)) {
+        return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.BlockValue};
+      }
+
+      return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BlockValue};
+    }
 
     case routes.validator.BuilderSelection.BuilderAlways:
     case routes.validator.BuilderSelection.BuilderOnly:
-      return ProducedBlockSource.builder;
+      return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
   }
 }

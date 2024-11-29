@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {getValidatorStatus} from "../../src/utils/validatorStatus.js";
+import {describe, expect, it} from "vitest";
 import {phase0} from "../../src/types.js";
+import {getValidatorStatus} from "../../src/utils/validatorStatus.js";
 
 describe("getValidatorStatus", () => {
   it("should return PENDING_INITIALIZED", () => {

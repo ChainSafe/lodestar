@@ -1,13 +1,13 @@
 import childProcess from "node:child_process";
-import {writeFile, mkdir} from "node:fs/promises";
+import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
-import {describe, it, expect, beforeAll, afterAll} from "vitest";
-import {Web3} from "web3";
+import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {Web3} from "web3";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
-import {rpcUrl, beaconUrl, proxyPort, proxyUrl, chainId, waitForCapellaFork, config} from "../../../utils/e2e_env.js";
+import {beaconUrl, chainId, config, proxyPort, proxyUrl, rpcUrl, waitForCapellaFork} from "../../../utils/e2e_env.js";
 
 const cli = getLodestarProverCli();
 

@@ -1,7 +1,7 @@
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {PeerManagerOpts, PeerRpcScoreOpts} from "./peers/index.js";
-import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 import {NetworkProcessorOpts} from "./processor/index.js";
+import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 import {SubnetsServiceOpts} from "./subnets/interface.js";
 
 // Since Network is eventually intended to be run in a separate thread, ensure that all options are cloneable using structuredClone

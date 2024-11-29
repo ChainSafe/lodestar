@@ -1,26 +1,26 @@
-import {phase0, Slot, RootHex, BeaconBlock, SignedBeaconBlock} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
+  StateHashTreeRootSource,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  ExecutionPayloadStatus,
-  DataAvailableStatus,
   processSlots,
   stateTransition,
-  StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ChainForkConfig} from "@lodestar/config";
-import {Metrics} from "../../metrics/index.js";
 import {IBeaconDb} from "../../db/index.js";
+import {Metrics} from "../../metrics/index.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {CheckpointStateCache, BlockStateCache} from "../stateCache/types.js";
-import {nextEventLoop} from "../../util/eventLoop.js";
-import {IStateRegeneratorInternal, RegenCaller, StateCloneOpts} from "./interface.js";
+import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
+import {IStateRegeneratorInternal, RegenCaller, StateCloneOpts} from "./interface.js";
 
 export type RegenModules = {
   db: IBeaconDb;

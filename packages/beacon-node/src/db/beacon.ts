@@ -1,27 +1,27 @@
-import {Db, LevelDbControllerMetrics} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
+import {Db, LevelDbControllerMetrics} from "@lodestar/db";
 import {IBeaconDb} from "./interface.js";
+import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
+  BLSToExecutionChangeRepository,
+  BackfilledRanges,
+  BestLightClientUpdateRepository,
+  BlobSidecarsArchiveRepository,
+  BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositEventRepository,
+  CheckpointHeaderRepository,
   DepositDataRootRepository,
+  DepositEventRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
-  VoluntaryExitRepository,
-  BestLightClientUpdateRepository,
-  CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
-  BackfilledRanges,
-  BlobSidecarsRepository,
-  BlobSidecarsArchiveRepository,
-  BLSToExecutionChangeRepository,
+  VoluntaryExitRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
-import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;

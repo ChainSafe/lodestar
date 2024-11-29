@@ -1,17 +1,12 @@
-import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+import {processBlock} from "./block/index.js";
+import {ProcessBlockOpts} from "./block/types.js";
+import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
-import {beforeProcessEpoch, EpochTransitionCache, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAltair,
-  CachedBeaconStateBellatrix,
-  CachedBeaconStateCapella,
-  CachedBeaconStateDeneb,
-} from "./types.js";
-import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
 import {
   processSlot,
@@ -21,10 +16,15 @@ import {
   upgradeStateToDeneb,
   upgradeStateToElectra,
 } from "./slot/index.js";
-import {processBlock} from "./block/index.js";
-import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
-import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
-import {ProcessBlockOpts} from "./block/types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
+  CachedBeaconStatePhase0,
+} from "./types.js";
+import {computeEpochAtSlot} from "./util/index.js";
 
 // Multifork capable state transition
 

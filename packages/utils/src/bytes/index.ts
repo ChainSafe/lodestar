@@ -1,14 +1,14 @@
 import {
-  toHex as browserToHex,
-  toRootHex as browserToRootHex,
   fromHex as browserFromHex,
+  toHex as browserToHex,
   toPubkeyHex as browserToPubkeyHex,
+  toRootHex as browserToRootHex,
 } from "./browser.js";
 import {
-  toHex as nodeToHex,
-  toRootHex as nodeToRootHex,
   fromHex as nodeFromHex,
+  toHex as nodeToHex,
   toPubkeyHex as nodeToPubkeyHex,
+  toRootHex as nodeToRootHex,
 } from "./nodejs.js";
 
 let toHex = browserToHex;

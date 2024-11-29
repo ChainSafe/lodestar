@@ -1,8 +1,8 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {BeaconBlock, BlindedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {blindedOrFullBlockToHeader} from "../util/index.js";
 /**
  * Converts a Deposit record (created by the eth-execution deposit contract) into a Validator object that goes into the eth-consensus state.

@@ -1,7 +1,7 @@
-import {describe, it, expect, beforeAll} from "vitest";
 import {phase0} from "@lodestar/types";
-import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
+import {beforeAll, describe, expect, it} from "vitest";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
+import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {Mutable} from "../../../../utils/types.js";
 
 describe("beacon api implementation", () => {

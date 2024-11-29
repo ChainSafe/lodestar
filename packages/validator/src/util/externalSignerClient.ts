@@ -1,23 +1,23 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {fetch} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkPreExecution, ForkSeq} from "@lodestar/params";
+import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
 import {
-  phase0,
-  altair,
-  capella,
+  AggregateAndProof,
   BeaconBlock,
   BlindedBeaconBlock,
-  AggregateAndProof,
-  sszTypesFor,
-  ssz,
-  Slot,
   Epoch,
-  RootHex,
   Root,
+  RootHex,
+  Slot,
+  altair,
+  capella,
+  phase0,
+  ssz,
+  sszTypesFor,
 } from "@lodestar/types";
-import {ForkPreExecution, ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {BeaconConfig} from "@lodestar/config";
-import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 

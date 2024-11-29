@@ -1,34 +1,28 @@
-import {Logger} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot, Epoch} from "@lodestar/types";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {IBeaconDb} from "../../db/index.js";
-import {IStateRegenerator} from "../regen/interface.js";
-import {getStateSlotFromBytes} from "../../util/multifork.js";
-import {serializeState} from "../serializeState.js";
-import {AllocSource, BufferPool} from "../../util/bufferPool.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
+import {IBeaconDb} from "../../../db/index.js";
+import {Metrics} from "../../../metrics/metrics.js";
+import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {IStateRegenerator} from "../../regen/interface.js";
+import {serializeState} from "../../serializeState.js";
+import {StateArchiveStrategy, StatesArchiverOpts} from "../interface.js";
 
 /**
  * Minimum number of epochs between single temp archived states
  * These states will be pruned once a new state is persisted
  */
-const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
-
-export interface StatesArchiverOpts {
-  /**
-   * Minimum number of epochs between archived states
-   */
-  archiveStateEpochFrequency: number;
-}
+export const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
 
 /**
  * Archives finalized states from active bucket to archive bucket.
  *
  * Only the new finalized state is stored to disk
  */
-export class StatesArchiver {
+export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   constructor(
     private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
@@ -36,6 +30,9 @@ export class StatesArchiver {
     private readonly opts: StatesArchiverOpts,
     private readonly bufferPool?: BufferPool | null
   ) {}
+
+  async onFinalizedCheckpoint(_finalized: CheckpointWithHex, _metrics?: Metrics | null): Promise<void> {}
+  async onCheckpoint(_stateRoot: RootHex, _metrics?: Metrics | null): Promise<void> {}
 
   /**
    * Persist states every some epochs to

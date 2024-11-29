@@ -1,10 +1,10 @@
-import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {TreeViewDU, Type} from "@chainsafe/ssz";
-import {RootHex, ssz} from "@lodestar/types";
-import {InputType} from "@lodestar/spec-test-util";
 import {ForkName} from "@lodestar/params";
+import {InputType} from "@lodestar/spec-test-util";
+import {RootHex, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
+import {expect} from "vitest";
 import {TestRunnerFn} from "../../utils/types.js";
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md

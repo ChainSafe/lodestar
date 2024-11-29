@@ -1,4 +1,4 @@
-import {Slot, Epoch, RootHex} from "@lodestar/types";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 
 export enum InvalidBlockCode {

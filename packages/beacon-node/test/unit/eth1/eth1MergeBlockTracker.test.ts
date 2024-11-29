@@ -1,11 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-import {IEth1Provider} from "../../../src/index.js";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1ProviderState, EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
+import {IEth1Provider} from "../../../src/index.js";
 import {testLogger} from "../../utils/logger.js";
 
 describe("eth1 / Eth1MergeBlockTracker", () => {

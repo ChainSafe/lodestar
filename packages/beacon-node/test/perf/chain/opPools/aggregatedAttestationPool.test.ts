@@ -1,5 +1,7 @@
-import {itBench} from "@dapplion/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {itBench} from "@dapplion/benchmark";
+import {DataAvailabilityStatus, ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
+import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeAnchorCheckpoint,
@@ -8,8 +10,6 @@ import {
   getBlockRootAtSlot,
   newFilledArray,
 } from "@lodestar/state-transition";
-import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";

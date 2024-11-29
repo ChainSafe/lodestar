@@ -1,7 +1,7 @@
+import {getVoluntaryExitSignatureSet, isValidVoluntaryExit} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {isValidVoluntaryExit, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
+import {GossipAction, VoluntaryExitError, VoluntaryExitErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiVoluntaryExit(

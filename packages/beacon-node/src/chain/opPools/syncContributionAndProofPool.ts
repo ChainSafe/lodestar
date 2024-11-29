@@ -1,8 +1,8 @@
-import {BitArray} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {altair, Slot, Root, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
+import {Root, Slot, altair, ssz} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";

@@ -1,10 +1,10 @@
-import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
-import {generateCachedState} from "../../../utils/state.js";
+import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError.js";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateCachedState} from "../../../utils/state.js";
 
 describe("validate proposer slashing", () => {
   let chainStub: MockedBeaconChain;

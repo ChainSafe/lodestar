@@ -1,15 +1,14 @@
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {electra, phase0, RootHex, ssz, IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {
   computeEpochAtSlot,
-  isAggregatorFromCommitteeLength,
   createAggregateSignatureSetFromComponents,
+  isAggregatorFromCommitteeLength,
 } from "@lodestar/state-transition";
+import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {IBeaconChain} from "../index.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
-import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {
   getAttestationDataSigningRoot,
   getCommitteeIndices,
@@ -18,6 +17,7 @@ import {
   verifyHeadBlockAndTargetRoot,
   verifyPropagationSlotRange,
 } from "./attestation.js";
+import {getAggregateAndProofSignatureSet, getSelectionProofSignatureSet} from "./signatureSets/index.js";
 
 export type AggregateAndProofValidationResult = {
   indexedAttestation: IndexedAttestation;

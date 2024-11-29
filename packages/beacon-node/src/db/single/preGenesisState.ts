@@ -1,6 +1,6 @@
-import {ForkAll, GENESIS_SLOT} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db} from "@lodestar/db";
+import {ForkAll, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {SSZTypesFor} from "@lodestar/types";
 import {Bucket} from "../buckets.js";

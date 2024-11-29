@@ -1,4 +1,5 @@
-import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
@@ -10,7 +11,6 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {routes} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -23,7 +23,7 @@ import {
   hasMarkers,
   isInInactivityLeak,
 } from "@lodestar/state-transition";
-import {BeaconConfig} from "@lodestar/config";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 
 export type AttestationsRewards = routes.beacon.AttestationsRewards;

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import {itBench} from "@dapplion/benchmark";
 import {toHexString} from "@chainsafe/ssz";
+import {itBench} from "@dapplion/benchmark";
 
 // Results in Linux Dec 2021
 //

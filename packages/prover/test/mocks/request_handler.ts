@@ -1,10 +1,10 @@
-import {vi, expect} from "vitest";
-import {when} from "vitest-when";
-import deepmerge from "deepmerge";
-import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
-import {PresetName} from "@lodestar/params";
+import {NetworkName} from "@lodestar/config/networks";
 import {getEmptyLogger} from "@lodestar/logger/empty";
+import {PresetName} from "@lodestar/params";
+import deepmerge from "deepmerge";
+import {expect, vi} from "vitest";
+import {when} from "vitest-when";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
 import {
@@ -18,8 +18,8 @@ import {
   JsonRpcResponseOrBatch,
   JsonRpcVersion,
 } from "../../src/types.js";
-import {isNullish} from "../../src/utils/validation.js";
 import {isBatchRequest, mergeBatchReqResp} from "../../src/utils/json_rpc.js";
+import {isNullish} from "../../src/utils/validation.js";
 
 type Writeable<T> = {
   -readonly [K in keyof T]?: T[K] extends object ? Writeable<T[K]> : T[K];

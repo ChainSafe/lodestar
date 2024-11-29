@@ -1,16 +1,16 @@
-import {describe, it, expect} from "vitest";
-import {config} from "@lodestar/config/default";
-import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {generateState} from "../../../utils/state.js";
-import {filterBy} from "../../../utils/db.js";
+import {phase0, ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {
+  Eth1DataGetter,
   getEth1VotesToConsider,
   pickEth1Vote,
   votingPeriodStartTime,
-  Eth1DataGetter,
 } from "../../../../src/eth1/utils/eth1Vote.js";
+import {filterBy} from "../../../utils/db.js";
+import {generateState} from "../../../utils/state.js";
 
 describe("eth1 / util / eth1Vote", () => {
   function generateEth1Vote(i: number): phase0.Eth1Data {

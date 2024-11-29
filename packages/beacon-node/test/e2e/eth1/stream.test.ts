@@ -1,9 +1,9 @@
-import {describe, it, expect, beforeEach, afterEach} from "vitest";
-import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
-import {getDepositsStream, getDepositsAndBlockStreamForGenesis} from "../../../src/eth1/stream.js";
-import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
-import {getGoerliRpcUrl} from "../../testParams.js";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {Eth1Options} from "../../../src/eth1/options.js";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
+import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../../src/eth1/stream.js";
+import {getGoerliRpcUrl} from "../../testParams.js";
+import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("Eth1 streams", () => {

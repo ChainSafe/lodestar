@@ -1,12 +1,12 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
-import {phase0, RootHex} from "@lodestar/types";
+import {RootHex, phase0} from "@lodestar/types";
 import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
-import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {PeerIdStr} from "../util/peerId.js";
+import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {EventDirection} from "../util/workerEvents.js";
-import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
+import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */

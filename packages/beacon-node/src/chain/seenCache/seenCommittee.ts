@@ -1,4 +1,4 @@
-import {SubcommitteeIndex, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
+import {RootHex, Slot, SubcommitteeIndex, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
 /**

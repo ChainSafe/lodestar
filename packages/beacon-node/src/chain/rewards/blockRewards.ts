@@ -1,3 +1,5 @@
+import {routes} from "@lodestar/api";
+import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -6,8 +8,6 @@ import {
   processAttestationsAltair,
 } from "@lodestar/state-transition";
 import {BeaconBlock, altair, phase0} from "@lodestar/types";
-import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
-import {routes} from "@lodestar/api";
 
 export type BlockRewards = routes.beacon.BlockRewards;
 type SubRewardValue = number; // All reward values should be integer

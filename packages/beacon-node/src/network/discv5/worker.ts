@@ -1,21 +1,20 @@
-import worker from "node:worker_threads";
-import path from "node:path";
 import fs from "node:fs";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {expose} from "@chainsafe/threads/worker";
-import {Observable, Subject} from "@chainsafe/threads/observable";
+import path from "node:path";
+import worker from "node:worker_threads";
 import {Discv5} from "@chainsafe/discv5";
-import {ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
-import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
-import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {ENR, ENRData, SignableENR, SignableENRData, createPrivateKeyFromPeerId} from "@chainsafe/enr";
+import {Observable, Subject} from "@chainsafe/threads/observable";
+import {expose} from "@chainsafe/threads/worker";
+import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {Gauge} from "@lodestar/utils";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
-import {enrRelevance, ENRRelevance} from "./utils.js";
+import {ENRRelevance, enrRelevance} from "./utils.js";
 
 // This discv5 worker will start discv5 on initialization (there is no `start` function to call)
 // A consumer _should_ call `close` before terminating the worker to cleanly exit discv5 before destroying the thread
@@ -43,15 +42,15 @@ if (workerData.metrics) {
   });
 }
 
-const privateKey = privateKeyFromProtobuf(workerData.privateKeyProto);
-const peerId = peerIdFromPrivateKey(privateKey);
+const peerId = await createFromProtobuf(workerData.peerIdProto);
+const keypair = createPrivateKeyFromPeerId(peerId);
 
 const config = createBeaconConfig(workerData.chainConfig, workerData.genesisValidatorsRoot);
 
 // Initialize discv5
 const discv5 = Discv5.create({
-  enr: SignableENR.decodeTxt(workerData.enr, privateKey.raw),
-  privateKey,
+  enr: SignableENR.decodeTxt(workerData.enr, keypair.privateKey),
+  peerId,
   bindAddrs: {
     ip4: (workerData.bindAddrs.ip4 ? multiaddr(workerData.bindAddrs.ip4) : undefined) as Multiaddr,
     ip6: workerData.bindAddrs.ip6 ? multiaddr(workerData.bindAddrs.ip6) : undefined,

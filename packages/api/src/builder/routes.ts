@@ -1,26 +1,25 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, isForkBlobs} from "@lodestar/params";
 import {
-  ssz,
-  bellatrix,
-  Slot,
-  Root,
   BLSPubkey,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
+  Root,
   SignedBlindedBeaconBlock,
   SignedBuilderBid,
+  Slot,
+  WithOptionalBytes,
+  bellatrix,
+  ssz,
 } from "@lodestar/types";
-import {ForkName, isForkBlobs} from "@lodestar/params";
-import {ChainForkConfig} from "@lodestar/config";
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 
-import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
-import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyReq,
@@ -28,6 +27,8 @@ import {
 } from "../utils/codecs.js";
 import {getBlobsForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
+import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
+import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -71,15 +72,12 @@ export type Endpoints = {
 
   submitBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: SignedBlindedBeaconBlock},
+    {signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta
   >;
 };
-
-// NOTE: Builder API does not support SSZ as per spec, need to keep routes as JSON-only for now
-// See https://github.com/ethereum/builder-specs/issues/53 for more details
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
@@ -125,11 +123,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     submitBlindedBlock: {
       url: "/eth/v1/builder/blinded_blocks",
       method: "POST",
-      req: JsonOnlyReq({
+      req: {
         writeReqJson: ({signedBlindedBlock}) => {
-          const fork = config.getForkName(signedBlindedBlock.message.slot);
+          const fork = config.getForkName(signedBlindedBlock.data.message.slot);
           return {
-            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
+            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock.data),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -138,14 +136,31 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
+            signedBlindedBlock: {data: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body)},
+          };
+        },
+        writeReqSsz: ({signedBlindedBlock}) => {
+          const fork = config.getForkName(signedBlindedBlock.data.message.slot);
+          return {
+            body:
+              signedBlindedBlock.bytes ??
+              getExecutionForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock.data),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedBlindedBlock: {data: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body)},
           };
         },
         schema: {
           body: Schema.Object,
           headers: {[MetaHeader.Version]: Schema.String},
         },
-      }),
+      },
       resp: {
         data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
           return isForkBlobs(fork)

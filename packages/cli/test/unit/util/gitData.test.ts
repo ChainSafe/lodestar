@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, expect} from "vitest";
 import {findUpSync} from "find-up";
+import {describe, expect, it} from "vitest";
 import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath.js";
 import {getGitData} from "../../../src/util/index.js";
 

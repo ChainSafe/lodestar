@@ -1,26 +1,26 @@
+import {ApiClient, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkBlobs, ForkExecution, ForkName, ForkPreBlobs, ForkSeq} from "@lodestar/params";
 import {
   BLSPubkey,
-  Slot,
   BLSSignature,
-  ProducedBlockSource,
-  deneb,
-  isBlockContents,
   BeaconBlock,
   BeaconBlockOrContents,
-  isBlindedSignedBeaconBlock,
   BlindedBeaconBlock,
+  ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
+  Slot,
+  deneb,
+  isBlindedSignedBeaconBlock,
+  isBlockContents,
 } from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
 import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex} from "@lodestar/utils";
-import {ApiClient, routes} from "@lodestar/api";
-import {IClock, LoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc} from "../util/index.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 // The following combination of blocks and blobs can be produced
 //  i) a full block pre deneb

@@ -1,7 +1,7 @@
 import {CliCommand, CliCommandOptions} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
-import {devOptions, IDevArgs} from "./options.js";
 import {devHandler} from "./handler.js";
+import {IDevArgs, devOptions} from "./options.js";
 
 export const dev: CliCommand<IDevArgs, GlobalArgs> = {
   command: "dev",

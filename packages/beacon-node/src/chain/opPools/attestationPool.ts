@@ -1,9 +1,9 @@
-import {BitArray} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
-import {Slot, RootHex, isElectraAttestation, Attestation} from "@lodestar/types";
-import {MapDef, assert} from "@lodestar/utils";
-import {isForkPostElectra} from "@lodestar/params";
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {isForkPostElectra} from "@lodestar/params";
+import {Attestation, RootHex, Slot, isElectraAttestation} from "@lodestar/types";
+import {assert, MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {isElectraAggregate, pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";

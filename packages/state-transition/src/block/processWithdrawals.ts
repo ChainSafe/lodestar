@@ -1,14 +1,14 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {ssz, capella} from "@lodestar/types";
 import {
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
-  ForkSeq,
-  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
   FAR_FUTURE_EPOCH,
-  MIN_ACTIVATION_BALANCE,
+  ForkSeq,
   MAX_EFFECTIVE_BALANCE,
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
+import {capella, ssz} from "@lodestar/types";
 
 import {toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
@@ -99,6 +99,8 @@ export function getExpectedWithdrawals(
 
   const withdrawals: capella.Withdrawal[] = [];
   const isPostElectra = fork >= ForkSeq.electra;
+  // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
+  let partialWithdrawalsCount = 0;
 
   if (isPostElectra) {
     const stateElectra = state as CachedBeaconStateElectra;
@@ -138,11 +140,10 @@ export function getExpectedWithdrawals(
         });
         withdrawalIndex++;
       }
+      partialWithdrawalsCount++;
     }
   }
 
-  // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
-  const partialWithdrawalsCount = withdrawals.length;
   const bound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
   let n = 0;
   // Just run a bounded loop max iterating over all withdrawals

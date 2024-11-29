@@ -1,21 +1,21 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
-import type {Libp2p} from "libp2p";
 import {Logger, MetricsRegister} from "@lodestar/utils";
-import {getMetrics, Metrics} from "./metrics.js";
-import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
+import type {Libp2p} from "libp2p";
+import {Metrics, getMetrics} from "./metrics.js";
+import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
+import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {
   DialOnlyProtocol,
   Encoding,
   MixedProtocol,
-  ReqRespRateLimiterOpts,
   Protocol,
   ProtocolDescriptor,
+  ReqRespRateLimiterOpts,
   ResponseIncoming,
 } from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
-import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 
 type ProtocolID = string;
 

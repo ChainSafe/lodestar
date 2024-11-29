@@ -1,7 +1,7 @@
 import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";

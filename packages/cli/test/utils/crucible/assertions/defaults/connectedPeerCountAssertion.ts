@@ -1,4 +1,4 @@
-import {AssertionResult, Assertion} from "../../interfaces.js";
+import {Assertion, AssertionResult} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
 export const connectedPeerCountAssertion: Assertion<"connectedPeerCount", number> = {

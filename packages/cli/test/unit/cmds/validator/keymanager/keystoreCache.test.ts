@@ -1,13 +1,13 @@
-import fs from "node:fs";
 import {randomBytes} from "node:crypto";
-import {describe, it, expect, beforeEach, vi} from "vitest";
-import tmp from "tmp";
+import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SignerLocal, SignerType} from "@lodestar/validator";
-import {loadKeystoreCache, writeKeystoreCache} from "../../../../../src/cmds/validator/keymanager/keystoreCache.js";
+import tmp from "tmp";
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {LocalKeystoreDefinition} from "../../../../../src/cmds/validator/keymanager/interface.js";
+import {loadKeystoreCache, writeKeystoreCache} from "../../../../../src/cmds/validator/keymanager/keystoreCache.js";
 
 const numberOfSigners = 10;
 
