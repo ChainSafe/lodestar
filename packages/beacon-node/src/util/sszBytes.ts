@@ -7,7 +7,7 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
 } from "@lodestar/params";
-import {BLSSignature, CommitteeIndex, RootHex, Slot} from "@lodestar/types";
+import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations
@@ -54,6 +54,7 @@ const SIGNATURE_SIZE = 96;
 const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
 const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
 const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
+const SINGLE_ATTESTATION_ATTESTER_INDEX_OFFSET = 8;
 const SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8 + 8;
 const SINGLE_ATTESTATION_SIGNATURE_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE;
 const SINGLE_ATTESTATION_SIZE = SINGLE_ATTESTATION_SIGNATURE_OFFSET + SIGNATURE_SIZE;
@@ -199,6 +200,19 @@ export function getCommitteeIndexFromSingleAttestationSerialized(
   }
 
   return getSlotFromOffset(data, VARIABLE_FIELD_OFFSET + SLOT_SIZE);
+}
+
+/**
+ * Extract attester index from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract index.
+ * TODO Electra: Rename getSlotFromOffset to reflect generic usage
+ */
+export function getAttesterIndexFromSingleAttestationSerialized(data: Uint8Array): ValidatorIndex | null {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SINGLE_ATTESTATION_ATTESTER_INDEX_OFFSET);
 }
 
 /**
