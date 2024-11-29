@@ -30,7 +30,6 @@ import {
   SingleAttestation,
   Slot,
   ValidatorIndex,
-  electra,
   isElectraSingleAttestation,
   phase0,
   ssz,
