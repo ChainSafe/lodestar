@@ -69,7 +69,8 @@ export type AttestationValidationResult = {
   subnet: number;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
-  aggregationBits: BitArray;
+  committeeValidatorIndex: number;
+  committeeSize: number;
 };
 
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
@@ -398,6 +399,7 @@ async function validateAttestationNoSignatureCheck(
   }
 
   let validatorIndex: number;
+  let committeeValidatorIndex: number;
 
   if (!isForkPostElectra(fork)) {
     // The validity of aggregation bits are already checked above
@@ -406,6 +408,7 @@ async function validateAttestationNoSignatureCheck(
     assert.notNull(bitIndex);
 
     validatorIndex = committeeValidatorIndices[bitIndex];
+    committeeValidatorIndex = bitIndex;
     // [REJECT] The number of aggregation bits matches the committee size
     // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
     // > TODO: Is this necessary? Lighthouse does not do this check.
@@ -419,14 +422,12 @@ async function validateAttestationNoSignatureCheck(
     // [REJECT] The attester is a member of the committee -- i.e.
     // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
     // Position of the validator in its committee
-    const committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
+    committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
     if (committeeValidatorIndex === -1) {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
       });
     }
-
-    aggregationBits = BitArray.fromSingleBit(committeeValidatorIndices.length, committeeValidatorIndex);
   }
 
   // LH > verify_middle_checks
@@ -531,7 +532,8 @@ async function validateAttestationNoSignatureCheck(
     signatureSet,
     validatorIndex,
     committeeIndex,
-    aggregationBits,
+    committeeValidatorIndex,
+    committeeSize: committeeValidatorIndices.length,
   };
 }
 
