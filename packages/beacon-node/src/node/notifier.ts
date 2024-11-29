@@ -58,7 +58,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         if (chain.executionEngine.state === ExecutionEngineState.OFFLINE) {
           logger.warn("Execution client is offline");
         } else if (chain.executionEngine.state === ExecutionEngineState.AUTH_FAILED) {
-          logger.error("Execution client authentication failed. Verify the JWT secret matches on both clients");
+          logger.error("Execution client authentication failed. Verify if the JWT secret matches on both clients");
         }
       }
 
