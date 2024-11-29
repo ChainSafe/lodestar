@@ -519,7 +519,7 @@ async function validateAttestationNoSignatureCheck(
     ? attestationOrCache.attestation
     : !isForkPostElectra(fork)
       ? {
-          aggregationBits,
+          aggregationBits: aggregationBits as BitArray,
           data: attData,
           signature,
         }
