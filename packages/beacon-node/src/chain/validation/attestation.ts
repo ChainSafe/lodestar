@@ -525,14 +525,14 @@ async function validateAttestationNoSignatureCheck(
         aggregationBits,
         data: attData,
         signature,
-      } as SingleAttestation<ForkPreElectra>;
+      };
     } else {
       attestation = {
         committeeIndex,
         attesterIndex: validatorIndex,
         data: attData,
         signature,
-      } as SingleAttestation<ForkPostElectra>;
+      };
     }
   }
 
