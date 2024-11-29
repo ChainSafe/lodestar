@@ -669,8 +669,7 @@ export class EpochCache {
         .then((shuffling) => {
           this.nextShuffling = shuffling
             ? shuffling
-            : // in some spec tests the BeaconChain class is used and it creates a ShufflingCache
-              computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
+            : this.shufflingCache.build(epochAfterUpcoming, this.nextDecisionRoot, state, this.nextActiveIndices);
         })
         .catch((err) => {
           this.shufflingCache?.logger?.error(
