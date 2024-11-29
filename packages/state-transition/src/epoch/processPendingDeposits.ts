@@ -3,6 +3,7 @@ import {PendingDeposit} from "@lodestar/types/lib/electra/types.js";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
+import {hasCompoundingWithdrawalCredential} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
 
@@ -106,6 +107,14 @@ function applyPendingDeposit(
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
     if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
       addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
+      const newValidatorIndex = state.validators.length - 1;
+      cache.isCompoundingValidatorArr[newValidatorIndex] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
+      // set balance, so that the next deposit of same pubkey will increase the balance correctly
+      // this is to fix the double deposit issue found in mekong
+      // see https://github.com/ChainSafe/lodestar/pull/7255
+      if (cachedBalances) {
+        cachedBalances[newValidatorIndex] = amount;
+      }
     }
   } else {
     // Increase balance
