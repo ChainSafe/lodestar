@@ -42,10 +42,10 @@ import {
   getAggregationBitsFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofElectra,
   getAttDataFromSignedAggregateAndProofPhase0,
-  getBeaconAttestationGossipIndex,
-  getCommitteeBitsFromSignedAggregateAndProofElectra,
+  getAttesterIndexFromSingleAttestationSerialized,
   getCommitteeIndexFromSingleAttestationSerialized,
   getSignatureFromAttestationSerialized,
+  getSignatureFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -68,7 +68,8 @@ export type AttestationValidationResult = {
   subnet: number;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
-  aggregationBits: BitArray | null; // Field populated post-electra only
+  committeeValidatorIndex: number;
+  committeeSize: number;
 };
 
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
@@ -324,6 +325,7 @@ async function validateAttestationNoSignatureCheck(
   }
 
   let aggregationBits: BitArray | null = null;
+  let committeeValidatorIndex: number | null = null;
   if (!isForkPostElectra(fork)) {
     // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
     // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
@@ -343,11 +345,7 @@ async function validateAttestationNoSignatureCheck(
         code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
       });
     }
-  } else {
-    // Populate aggregationBits if cached post-electra, else we populate later
-    if (attestationOrCache.cache && attestationOrCache.cache.aggregationBits !== null) {
-      aggregationBits = attestationOrCache.cache.aggregationBits;
-    }
+    committeeValidatorIndex = bitIndex;
   }
 
   let committeeValidatorIndices: Uint32Array;
@@ -406,10 +404,9 @@ async function validateAttestationNoSignatureCheck(
   if (!isForkPostElectra(fork)) {
     // The validity of aggregation bits are already checked above
     assert.notNull(aggregationBits);
-    const bitIndex = aggregationBits.getSingleTrueBit();
-    assert.notNull(bitIndex);
+    assert.notNull(committeeValidatorIndex);
 
-    validatorIndex = committeeValidatorIndices[bitIndex];
+    validatorIndex = committeeValidatorIndices[committeeValidatorIndex];
     // [REJECT] The number of aggregation bits matches the committee size
     // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
     // > TODO: Is this necessary? Lighthouse does not do this check.
@@ -419,20 +416,26 @@ async function validateAttestationNoSignatureCheck(
       });
     }
   } else {
-    validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
-    // [REJECT] The attester is a member of the committee -- i.e.
-    // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
-    // If `aggregationBitsElectra` exists, that means we have already cached it. No need to check again
-    if (aggregationBits === null) {
-      // Position of the validator in its committee
-      const committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
-      if (committeeValidatorIndex === -1) {
+    if (attestationOrCache.attestation) {
+      validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
+    } else {
+      const attesterIndex = getAttesterIndexFromSingleAttestationSerialized(attestationOrCache.serializedData);
+      if (attesterIndex === null) {
         throw new AttestationError(GossipAction.REJECT, {
-          code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
+          code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
         });
       }
+      validatorIndex = attesterIndex;
+    }
 
-      aggregationBits = BitArray.fromSingleBit(committeeValidatorIndices.length, committeeValidatorIndex);
+    // [REJECT] The attester is a member of the committee -- i.e.
+    // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
+    // Position of the validator in its committee
+    committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
+    if (committeeValidatorIndex === -1) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
+      });
     }
   }
 
@@ -469,7 +472,9 @@ async function validateAttestationNoSignatureCheck(
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
-    : getSignatureFromAttestationSerialized(attestationOrCache.serializedData);
+    : !isForkPostElectra(fork)
+      ? getSignatureFromAttestationSerialized(attestationOrCache.serializedData)
+      : getSignatureFromSingleAttestationSerialized(attestationOrCache.serializedData);
   if (signature === null) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
@@ -503,7 +508,6 @@ async function validateAttestationNoSignatureCheck(
         // root of AttestationData was already cached during getIndexedAttestationSignatureSet
         attDataRootHex,
         attestationData: attData,
-        aggregationBits: isForkPostElectra(fork) ? aggregationBits : null,
       });
     }
   }
@@ -538,7 +542,8 @@ async function validateAttestationNoSignatureCheck(
     signatureSet,
     validatorIndex,
     committeeIndex,
-    aggregationBits: isForkPostElectra(fork) ? aggregationBits : null,
+    committeeValidatorIndex,
+    committeeSize: committeeValidatorIndices.length,
   };
 }
 

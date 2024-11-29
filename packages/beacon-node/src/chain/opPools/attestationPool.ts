@@ -109,7 +109,8 @@ export class AttestationPool {
     committeeIndex: CommitteeIndex,
     attestation: SingleAttestation,
     attDataRootHex: RootHex,
-    aggregationBits: BitArray | null
+    committeeValidatorIndex: number,
+    committeeSize: number
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const fork = this.config.getForkName(slot);
@@ -149,10 +150,10 @@ export class AttestationPool {
     const aggregate = aggregateByIndex.get(committeeIndex);
     if (aggregate) {
       // Aggregate mutating
-      return aggregateAttestationInto(aggregate, attestation, aggregationBits);
+      return aggregateAttestationInto(aggregate, attestation, committeeValidatorIndex);
     }
     // Create new aggregate
-    aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation, aggregationBits));
+    aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation, committeeValidatorIndex, committeeSize));
     return InsertOutcome.NewData;
   }
 
@@ -224,13 +225,12 @@ export class AttestationPool {
 function aggregateAttestationInto(
   aggregate: AggregateFast,
   attestation: SingleAttestation,
-  aggregationBits: BitArray | null
+  committeeValidatorIndex: number
 ): InsertOutcome {
   let bitIndex: number | null;
 
   if (isElectraSingleAttestation(attestation)) {
-    assert.notNull(aggregationBits, "aggregationBits missing post-electra");
-    bitIndex = aggregationBits.getSingleTrueBit();
+    bitIndex = committeeValidatorIndex;
   } else {
     bitIndex = attestation.aggregationBits.getSingleTrueBit();
   }
@@ -250,12 +250,15 @@ function aggregateAttestationInto(
 /**
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
-function attestationToAggregate(attestation: SingleAttestation, aggregationBits: BitArray | null): AggregateFast {
+function attestationToAggregate(
+  attestation: SingleAttestation,
+  committeeValidatorIndex: number,
+  committeeSize: number
+): AggregateFast {
   if (isElectraSingleAttestation(attestation)) {
-    assert.notNull(aggregationBits, "aggregationBits missing post-electra to generate aggregate");
     return {
       data: attestation.data,
-      aggregationBits,
+      aggregationBits: BitArray.fromSingleBit(committeeSize, committeeValidatorIndex),
       committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, attestation.committeeIndex),
       signature: signatureFromBytesNoCheck(attestation.signature),
     };
