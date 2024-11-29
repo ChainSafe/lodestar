@@ -11,7 +11,6 @@ type AttDataBase64 = string;
 export type AttestationDataCacheEntry = {
   // part of shuffling data, so this does not take memory
   committeeValidatorIndices: Uint32Array;
-  // TODO: remove this? this is available in SingleAttestation
   committeeIndex: CommitteeIndex;
   // IndexedAttestationData signing root, 32 bytes
   signingRoot: Uint8Array;
@@ -21,8 +20,6 @@ export type AttestationDataCacheEntry = {
   // for example in a mainnet node subscribing to all subnets, attestations are processed up to 20k per slot
   attestationData: phase0.AttestationData;
   subnet: number;
-  // aggregationBits only populates post-electra. Pre-electra can use get it directly from attestationOrBytes
-  aggregationBits: BitArray | null;
 };
 
 export enum RejectReason {

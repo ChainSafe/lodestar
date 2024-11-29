@@ -637,8 +637,14 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         results.push(null);
 
         // Handler
-        const {indexedAttestation, attDataRootHex, attestation, committeeIndex, aggregationBits} =
-          validationResult.result;
+        const {
+          indexedAttestation,
+          attDataRootHex,
+          attestation,
+          committeeIndex,
+          committeeValidatorIndex,
+          committeeSize,
+        } = validationResult.result;
         metrics?.registerGossipUnaggregatedAttestation(gossipHandlerParams[i].seenTimestampSec, indexedAttestation);
 
         try {
@@ -650,7 +656,8 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               committeeIndex,
               attestation,
               attDataRootHex,
-              aggregationBits
+              committeeValidatorIndex,
+              committeeSize
             );
             metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
           }
