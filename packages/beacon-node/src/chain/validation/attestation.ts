@@ -523,6 +523,7 @@ async function validateAttestationNoSignatureCheck(
     ? attestationOrCache.attestation
     : !isForkPostElectra(fork)
       ? {
+          // Aggregation bits are already asserted above to not be null
           aggregationBits: aggregationBits as BitArray,
           data: attData,
           signature,
