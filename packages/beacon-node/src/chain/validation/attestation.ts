@@ -30,7 +30,6 @@ import {
   SingleAttestation,
   Slot,
   ValidatorIndex,
-  electra,
   isElectraSingleAttestation,
   phase0,
   ssz,
@@ -514,27 +513,27 @@ async function validateAttestationNoSignatureCheck(
   }
 
   // no signature check, leave that for step1
-  const indexedAttestationContent = {
+  const indexedAttestation: IndexedAttestation = {
     attestingIndices,
     data: attData,
     signature,
   };
-  const indexedAttestation =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? (indexedAttestationContent as electra.IndexedAttestation)
-      : (indexedAttestationContent as phase0.IndexedAttestation);
 
-  const attestationContent = attestationOrCache.attestation ?? {
-    aggregationBits,
-    data: attData,
-    committeeIndex,
-    signature,
-  };
-
-  const attestation =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? (attestationContent as SingleAttestation<ForkPostElectra>)
-      : (attestationContent as SingleAttestation<ForkPreElectra>);
+  const attestation: SingleAttestation = attestationOrCache.attestation
+    ? attestationOrCache.attestation
+    : !isForkPostElectra(fork)
+      ? {
+          // Aggregation bits are already asserted above to not be null
+          aggregationBits: aggregationBits as BitArray,
+          data: attData,
+          signature,
+        }
+      : {
+          committeeIndex,
+          attesterIndex: validatorIndex,
+          data: attData,
+          signature,
+        };
 
   return {
     attestation,
