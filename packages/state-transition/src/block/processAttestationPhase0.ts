@@ -105,15 +105,15 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
 
     // Total number of attestation participants of every committee specified
     let committeeOffset = 0;
-    for (const committee of validatorsByCommittee) {
-      const committeeAggregationBits = aggregationBitsArray.slice(committeeOffset, committee.length);
+    for (const committeeValidators of validatorsByCommittee) {
+      const committeeAggregationBits = aggregationBitsArray.slice(committeeOffset, committeeOffset + committeeValidators.length);
 
       // Assert aggregation bits in this committee have at least one true bit
       if (committeeAggregationBits.every((bit) => !bit)) {
         throw new Error("Every committee in aggregation bits must have at least one attester");
       }
 
-      committeeOffset += committee.length;
+      committeeOffset += committeeValidators.length;
     }
 
     // Bitfield length matches total number of participants
