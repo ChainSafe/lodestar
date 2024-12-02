@@ -103,14 +103,14 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
     const validatorsByCommittee = epochCtx.getBeaconCommittees(data.slot, committeeIndices);
     const aggregationBitsArray = attestationElectra.aggregationBits.toBoolArray();
 
-    // Total number of attestation participant of every committee specified
+    // Total number of attestation participants of every committee specified
     let committeeOffset = 0;
     for (const committee of validatorsByCommittee) {
       const committeeAggregationBits = aggregationBitsArray.slice(committeeOffset, committee.length);
 
       // Assert aggregation bits in this committee have at least one true bit
       if (committeeAggregationBits.every((bit) => !bit)) {
-        throw new Error("Every committee in committee bits must have at least one attester");
+        throw new Error("Every committee in aggregation bits must have at least one attester");
       }
 
       committeeOffset += committee.length;
@@ -120,7 +120,7 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
     assert.equal(
       attestationElectra.aggregationBits.bitLen,
       committeeOffset,
-      `Attestation aggregation bits length does not match total number of committee participant aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${committeeOffset}`
+      `Attestation aggregation bits length does not match total number of committee participants aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${committeeOffset}`
     );
   } else {
     if (!(data.index < committeeCount)) {
