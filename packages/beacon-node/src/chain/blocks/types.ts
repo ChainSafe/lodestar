@@ -252,19 +252,19 @@ export function getBlockInputDataColumns(
 }
 
 export enum AttestationImportOpt {
-  Skip = 0,
-  Force = 1,
+  Skip,
+  Force,
 }
 
 export enum BlobSidecarValidation {
   /** When recieved in gossip the blobs are individually verified before import */
-  Individual = 0,
+  Individual,
   /**
    * Blobs when recieved in req/resp can be fully verified before import
    * but currently used in spec tests where blobs come without proofs and assumed
    * to be valid
    */
-  Full = 1,
+  Full,
 }
 
 export type ImportBlockOpts = {
