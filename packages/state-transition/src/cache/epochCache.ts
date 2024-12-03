@@ -49,6 +49,7 @@ import {
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
+import {EpochTransitionCache} from "./epochTransitionCache.js";
 import {Index2PubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "./stateCache.js";
 import {
@@ -58,7 +59,6 @@ import {
   getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
-import {EpochTransitionCache} from "./epochTransitionCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
