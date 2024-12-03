@@ -118,7 +118,7 @@ export class PrepareNextSlotScheduler {
         // Shuffling calculation will be done asynchronously when passing asyncShufflingCalculation=true.  Shuffling will be queued in
         // beforeProcessEpoch and should theoretically be ready immediately after the synchronous epoch transition finished and the
         // event loop is free.  In long periods of non-finality too many forks will cause the shufflingCache to throw an error for
-        // too many queued shufflings so only run async during normal epoch transition
+        // too many queued shufflings so only run async during normal epoch transition. See issue ChainSafe/lodestar#7244
         {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true},
         RegenCaller.precomputeEpoch
       );
