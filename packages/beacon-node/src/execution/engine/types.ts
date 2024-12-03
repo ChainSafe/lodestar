@@ -15,12 +15,10 @@ import {
   dataToBytes,
   numToQuantity,
   quantityToBigint,
-  numberToHex,
   quantityToNum,
 } from "../../eth1/provider/utils.js";
-import {BlobsBundle, ExecutionPayloadStatus, PayloadAttributes, VersionedHashes, RequestType} from "./interface.js";
+import {BlobsBundle, ExecutionPayloadStatus, PayloadAttributes, RequestType, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
-import {fromHexString} from "@chainsafe/ssz";
 
 export type EngineApiRpcParamTypes = {
   /**
