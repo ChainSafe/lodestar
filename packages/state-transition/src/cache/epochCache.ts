@@ -58,6 +58,7 @@ import {
   getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
+import {EpochTransitionCache} from "./epochTransitionCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -605,14 +606,7 @@ export class EpochCache {
    * Steps for afterProcessEpoch
    * 1) update previous/current/next values of cached items
    */
-  afterProcessEpoch(
-    state: CachedBeaconStateAllForks,
-    epochTransitionCache: {
-      nextShufflingDecisionRoot: RootHex;
-      nextShufflingActiveIndices: Uint32Array;
-      nextEpochTotalActiveBalanceByIncrement: number;
-    }
-  ): void {
+  afterProcessEpoch(state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache): void {
     // Because the slot was incremented before entering this function the "next epoch" is actually the "current epoch"
     // in this context but that is not actually true because the state transition happens in the last 4 seconds of the
     // epoch. For the context of this function "upcoming epoch" is used to denote the epoch that will begin after this
@@ -657,31 +651,35 @@ export class EpochCache {
     this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
     if (this.shufflingCache) {
-      this.nextShuffling = null;
-      // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
-      // the build is done on a worker thread it will be calculated immediately after the epoch transition
-      // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
-      // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
-      // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
-      // is not ready yet as the transition must not be asynchronous.
-      this.shufflingCache
-        .get(epochAfterUpcoming, this.nextDecisionRoot)
-        .then((shuffling) => {
-          this.nextShuffling = shuffling
-            ? shuffling
-            : // biome-ignore lint/style/noNonNullAssertion: object must be defined to be in this branch of the conditional
-              this.shufflingCache!.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
-                state,
-                activeIndices: this.nextActiveIndices,
-              });
-        })
-        .catch((err) => {
-          this.shufflingCache?.logger?.error(
-            "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
-            {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
-            err
-          );
+      if (!epochTransitionCache.asyncShufflingCalculation) {
+        this.nextShuffling = this.shufflingCache.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
+          state,
+          activeIndices: this.nextActiveIndices,
         });
+      } else {
+        this.nextShuffling = null;
+        // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
+        // the build is done on a worker thread it will be calculated immediately after the epoch transition
+        // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
+        // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
+        // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
+        // is not ready yet as the transition must not be asynchronous.
+        this.shufflingCache
+          .get(epochAfterUpcoming, this.nextDecisionRoot)
+          .then((shuffling) => {
+            if (!shuffling) {
+              throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
+            }
+            this.nextShuffling = shuffling;
+          })
+          .catch((err) => {
+            this.shufflingCache?.logger?.error(
+              "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
+              {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
+              err
+            );
+          });
+      }
     } else {
       // Only for testing. shufflingCache should always be available in prod
       this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
