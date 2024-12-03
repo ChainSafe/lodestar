@@ -406,12 +406,13 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
   } as capella.Withdrawal;
 }
 
+/**
+ * Prepend a single-byte requestType to requestsBytes
+ */
 function prefixRequests(requestsBytes: Uint8Array, requestType: RequestType): Uint8Array {
-  const prefix = fromHexString(numberToHex(requestType));
-
-  const prefixedRequests = new Uint8Array(prefix.length + requestsBytes.length);
-  prefixedRequests.set(prefix, 0);
-  prefixedRequests.set(requestsBytes, prefix.length);
+  const prefixedRequests = new Uint8Array(1 + requestsBytes.length);
+  prefixedRequests[0] = requestType;
+  prefixedRequests.set(requestsBytes, 1);
 
   return prefixedRequests;
 }
