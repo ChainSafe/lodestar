@@ -8,7 +8,13 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
-import {IStateRegenerator, IStateRegeneratorInternal, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";
+import {
+  IStateRegenerator,
+  IStateRegeneratorInternal,
+  RegenCaller,
+  RegenFnName,
+  StateRegenerationOpts,
+} from "./interface.js";
 import {RegenModules, StateRegenerator} from "./regen.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
@@ -86,7 +92,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   getPreStateSync(
     block: BeaconBlock,
-    opts: StateCloneOpts = {dontTransferCache: true}
+    opts: StateRegenerationOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
     const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = this.forkChoice.getBlockHex(parentRoot);
@@ -212,7 +218,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   async getPreState(
     block: BeaconBlock,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
@@ -231,7 +237,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   async getCheckpointState(
     cp: phase0.Checkpoint,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
@@ -256,7 +262,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   async getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
@@ -268,7 +274,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   async getState(
     stateRoot: RootHex,
     rCaller: RegenCaller,
-    opts: StateCloneOpts = {dontTransferCache: true}
+    opts: StateRegenerationOpts = {dontTransferCache: true}
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 
