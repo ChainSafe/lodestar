@@ -1,7 +1,7 @@
+import {registerCommandToYargs} from "@lodestar/utils";
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
-import {registerCommandToYargs} from "@lodestar/utils";
 import {cmds} from "./cmds/index.js";
 import {globalOptions, rcConfigOption} from "./options/index.js";
 import {getVersionData} from "./util/version.js";

@@ -1,10 +1,10 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, vi} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js";
+import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {getMockedClock} from "../../../mocks/clock.js";
 
 /** Valid signature of random data to prevent BLS errors */

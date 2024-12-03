@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
+import {describe, expect, it} from "vitest";
 import {Eth1Block} from "../../../../src/eth1/interface.js";
+import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
 
 describe("eth1 / utils / optimizeNextBlockDiffForGenesis", () => {
   it("should return optimized block diff to find genesis time", () => {

@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {encode as varintEncode} from "uint8-varint";
-import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {encode as varintEncode} from "uint8-varint";
 import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
 import {ResponseOutgoing, TypeSizes} from "../../src/types.js";
 import {

@@ -1,26 +1,26 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {ForkSeq} from "@lodestar/params";
+import {processEpoch} from "../../../src/epoch/index.js";
+import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
+import {processEth1DataReset} from "../../../src/epoch/processEth1DataReset.js";
+import {processHistoricalRootsUpdate} from "../../../src/epoch/processHistoricalRootsUpdate.js";
+import {processJustificationAndFinalization} from "../../../src/epoch/processJustificationAndFinalization.js";
+import {processParticipationRecordUpdates} from "../../../src/epoch/processParticipationRecordUpdates.js";
+import {processRandaoMixesReset} from "../../../src/epoch/processRandaoMixesReset.js";
+import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
+import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
+import {processSlashings} from "../../../src/epoch/processSlashings.js";
+import {processSlashingsReset} from "../../../src/epoch/processSlashingsReset.js";
 import {
-  computeStartSlotAtEpoch,
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
   beforeProcessEpoch,
+  computeStartSlotAtEpoch,
 } from "../../../src/index.js";
-import {beforeValue, LazyValue} from "../../utils/beforeValueMocha.js";
+import {LazyValue, beforeValue} from "../../utils/beforeValueMocha.js";
 import {getNetworkCachedState} from "../../utils/testFileCache.js";
-import {StateEpoch} from "../types.js";
 import {phase0State} from "../params.js";
-import {processEpoch} from "../../../src/epoch/index.js";
-import {processParticipationRecordUpdates} from "../../../src/epoch/processParticipationRecordUpdates.js";
-import {processJustificationAndFinalization} from "../../../src/epoch/processJustificationAndFinalization.js";
-import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
-import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
-import {processSlashings} from "../../../src/epoch/processSlashings.js";
-import {processEth1DataReset} from "../../../src/epoch/processEth1DataReset.js";
-import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
-import {processSlashingsReset} from "../../../src/epoch/processSlashingsReset.js";
-import {processRandaoMixesReset} from "../../../src/epoch/processRandaoMixesReset.js";
-import {processHistoricalRootsUpdate} from "../../../src/epoch/processHistoricalRootsUpdate.js";
+import {StateEpoch} from "../types.js";
 
 const slot = computeStartSlotAtEpoch(phase0State.epoch) - 1;
 const stateId = `${phase0State.network}_e${phase0State.epoch}`;

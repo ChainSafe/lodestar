@@ -1,4 +1,7 @@
 import path from "node:path";
+import {ChainConfig, createChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   DataAvailableStatus,
@@ -6,16 +9,13 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
-import {createChainForkConfig, ChainConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
-import {config} from "@lodestar/config/default";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
 
 const transition =

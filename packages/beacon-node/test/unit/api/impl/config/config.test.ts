@@ -1,6 +1,6 @@
-import {describe, it, expect, beforeEach} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
+import {beforeEach, describe, expect, it} from "vitest";
 import {getConfigApi, renderJsonSpec} from "../../../../../src/api/impl/config/index.js";
 
 describe("config api implementation", () => {

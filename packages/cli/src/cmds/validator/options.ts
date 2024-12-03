@@ -1,6 +1,6 @@
 import {WireFormat, defaultInit} from "@lodestar/api";
-import {defaultOptions} from "@lodestar/validator";
 import {CliCommandOptions} from "@lodestar/utils";
+import {defaultOptions} from "@lodestar/validator";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {ensure0xPrefix} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";

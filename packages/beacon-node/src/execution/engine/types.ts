@@ -1,23 +1,24 @@
-import {capella, deneb, electra, Wei, bellatrix, Root, ExecutionPayload, ExecutionRequests, ssz} from "@lodestar/types";
 import {
+  BYTES_PER_FIELD_ELEMENT,
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
-  BYTES_PER_FIELD_ELEMENT,
   ForkName,
   ForkSeq,
 } from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, Root, Wei, bellatrix, capella, deneb, electra, ssz} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/deneb";
 
 import {
-  bytesToData,
-  numToQuantity,
-  dataToBytes,
-  quantityToNum,
   DATA,
   QUANTITY,
+  bytesToData,
+  dataToBytes,
+  numToQuantity,
   quantityToBigint,
   numberToHex,
+  quantityToNum,
 } from "../../eth1/provider/utils.js";
-import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes, RequestType} from "./interface.js";
+import {BlobsBundle, ExecutionPayloadStatus, PayloadAttributes, VersionedHashes, RequestType} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 import {fromHexString} from "@chainsafe/ssz";
 
@@ -69,6 +70,8 @@ export type EngineApiRpcParamTypes = {
    * Object - Instance of ClientVersion
    */
   engine_getClientVersionV1: [ClientVersionRpc];
+
+  engine_getBlobsV1: [DATA[]];
 };
 
 export type PayloadStatus = {
@@ -111,6 +114,8 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
+
+  engine_getBlobsV1: (BlobAndProofRpc | null)[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -172,6 +177,11 @@ export type ExecutionRequestsRpc = (DepositRequestsRpc | WithdrawalRequestsRpc |
 export type DepositRequestsRpc = DATA;
 export type WithdrawalRequestsRpc = DATA;
 export type ConsolidationRequestsRpc = DATA;
+
+export type BlobAndProofRpc = {
+  blob: DATA;
+  proof: DATA;
+};
 
 export type VersionedHashesRpc = DATA[];
 
@@ -515,6 +525,15 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
+      }
+    : null;
+}
+
+export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndProof | null {
+  return data
+    ? {
+        blob: dataToBytes(data.blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB),
+        proof: dataToBytes(data.proof, 48),
       }
     : null;
 }

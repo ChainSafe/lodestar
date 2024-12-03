@@ -1,7 +1,7 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
+import {BeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconConfig} from "@lodestar/config";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Clock, getCurrentSlotAround} from "../../../src/util/clock.js";
 import {testLogger} from "../../utils/logger.js";
 

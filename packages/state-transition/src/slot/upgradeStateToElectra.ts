@@ -1,11 +1,11 @@
-import {Epoch, ValidatorIndex, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {CachedBeaconStateDeneb} from "../types.js";
+import {Epoch, ValidatorIndex, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
+import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
+import {CachedBeaconStateDeneb} from "../types.js";
 import {hasCompoundingWithdrawalCredential, queueExcessActiveBalance} from "../util/electra.js";
 import {computeActivationExitEpoch} from "../util/epoch.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "../util/validator.js";
-import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 
 /**
  * Upgrade a state from Deneb to Electra.

@@ -1,4 +1,4 @@
-import {AssertionResult, Assertion} from "../../interfaces.js";
+import {Assertion, AssertionResult} from "../../interfaces.js";
 import {avg} from "../../utils/index.js";
 import {everySlotMatcher} from "../matchers.js";
 

@@ -1,14 +1,14 @@
-import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedState} from "../../../utils/state.js";
 

@@ -1,21 +1,21 @@
-import {describe, it, afterEach, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
+import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
 import {ChainConfig} from "@lodestar/config";
-import {phase0} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {routes} from "@lodestar/api";
-import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
-import {getDevBeaconNode} from "../../utils/node/beacon.js";
-import {waitForEvent} from "../../utils/events/resolver.js";
-import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {phase0} from "@lodestar/types";
+import {afterEach, describe, it, vi} from "vitest";
+import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {NetworkEvent} from "../../../src/network/index.js";
+import {waitForEvent} from "../../utils/events/resolver.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
-import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
-import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
 describe("sync / unknown block sync", () => {
   vi.setConfig({testTimeout: 40_000});

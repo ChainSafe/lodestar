@@ -1,7 +1,6 @@
+import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@chainsafe/blst";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
-import {SecretKey, Signature, fastAggregateVerify, aggregateSignatures} from "@chainsafe/blst";
-import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   FAR_FUTURE_EPOCH,
   ForkName,
@@ -9,23 +8,24 @@ import {
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {ssz, phase0} from "@lodestar/types";
+import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
+import {phase0, ssz} from "@lodestar/types";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {
-  aggregateConsolidation,
   AggregatedAttestationPool,
-  aggregateInto,
   AttestationsConsolidation,
-  getNotSeenValidatorsFn,
   MatchingDataAttestationGroup,
+  aggregateConsolidation,
+  aggregateInto,
+  getNotSeenValidatorsFn,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
-import {linspace} from "../../../../src/util/numpy.js";
-import {generateCachedAltairState} from "../../../utils/state.js";
-import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
+import {linspace} from "../../../../src/util/numpy.js";
+import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
+import {renderBitArray} from "../../../utils/render.js";
+import {generateCachedAltairState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 import {generateValidators} from "../../../utils/validator.js";
 

@@ -1,6 +1,6 @@
-import {beforeAll, afterAll, describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {BeaconDb} from "../../../../../../src/db/index.js";
 import {startTmpBeaconDb} from "../../../../../utils/db.js";
 

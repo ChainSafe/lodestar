@@ -3,6 +3,6 @@
 
 // 1. Import from not only @lodestar/params/setPreset will trigger an error
 import "../../lib/index.js";
-import {setActivePreset, PresetName} from "../../lib/setPreset.js";
+import {PresetName, setActivePreset} from "../../lib/setPreset.js";
 // This line should throw
 setActivePreset(PresetName.minimal, {SLOTS_PER_EPOCH: 2});

@@ -1,7 +1,7 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
+import {CachedBeaconStateAllForks} from "../types.js";
 
 export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";

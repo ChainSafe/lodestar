@@ -1,16 +1,16 @@
 import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
-  HISTORICAL_ROOTS_LIMIT,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
+  HISTORICAL_ROOTS_LIMIT,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {
   UintNum64,

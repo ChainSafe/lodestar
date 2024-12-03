@@ -1,5 +1,5 @@
-import {RootHex} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
+import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInput} from "../../../chain/blocks/types.js";
 

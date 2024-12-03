@@ -1,13 +1,13 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Root, phase0} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {
-  getPeerSyncType,
-  getRangeSyncType,
   PeerSyncType,
   RangeSyncType,
+  getPeerSyncType,
+  getRangeSyncType,
 } from "../../../../src/sync/utils/remoteSyncType.js";
 
 describe("network / peers / remoteSyncType", () => {

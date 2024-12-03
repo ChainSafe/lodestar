@@ -1,10 +1,10 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
+import got from "got";
 import {IValidatorCliArgs} from "../../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../../constants.js";

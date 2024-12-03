@@ -1,9 +1,9 @@
 import {PublicKey, aggregateWithRandomness} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {Metrics} from "../../../metrics/metrics.js";
+import {LinkedList} from "../../../util/array.js";
 import {VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
-import {LinkedList} from "../../../util/array.js";
-import {Metrics} from "../../../metrics/metrics.js";
 import {BlsWorkReq} from "./types.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;

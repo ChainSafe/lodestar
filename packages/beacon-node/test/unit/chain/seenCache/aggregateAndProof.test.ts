@@ -1,9 +1,9 @@
 import {BitArray} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
   AggregationInfo,
-  insertDesc,
   SeenAggregatedAttestations,
+  insertDesc,
 } from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
 describe("SeenAggregatedAttestations.isKnown", () => {

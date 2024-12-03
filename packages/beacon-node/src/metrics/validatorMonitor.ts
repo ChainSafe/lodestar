@@ -1,19 +1,19 @@
-import {
-  computeEpochAtSlot,
-  parseAttesterFlags,
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
-  parseParticipationFlags,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-  ParticipationFlags,
-} from "@lodestar/state-transition";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
-import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  ParticipationFlags,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+  parseAttesterFlags,
+  parseParticipationFlags,
+} from "@lodestar/state-transition";
+import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {LodestarMetrics} from "./metrics/lodestar.js";
 

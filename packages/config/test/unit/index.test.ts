@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {config, chainConfig} from "../../src/default.js";
+import {describe, expect, it} from "vitest";
+import {chainConfig, config} from "../../src/default.js";
 import {createForkConfig} from "../../src/index.js";
 
 describe("forks", () => {

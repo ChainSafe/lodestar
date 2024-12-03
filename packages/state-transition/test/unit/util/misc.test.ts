@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 
-import {toBigIntLE} from "bigint-buffer";
 import {GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {toBigIntLE} from "bigint-buffer";
 import {getBlockRoot} from "../../../src/util/index.js";
 import {generateState} from "../../utils/state.js";
 

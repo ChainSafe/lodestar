@@ -1,5 +1,5 @@
-import {itBench} from "@dapplion/benchmark";
 import {BitArray} from "@chainsafe/ssz";
+import {itBench} from "@dapplion/benchmark";
 import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 

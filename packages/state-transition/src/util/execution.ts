@@ -1,23 +1,23 @@
+import {ForkExecution, ForkName, ForkSeq} from "@lodestar/params";
 import {
+  BeaconBlock,
+  BeaconBlockBody,
+  BlindedBeaconBlock,
+  BlindedBeaconBlockBody,
+  ExecutionPayload,
+  ExecutionPayloadHeader,
   bellatrix,
   capella,
   deneb,
   isBlindedBeaconBlockBody,
-  ssz,
-  BeaconBlock,
-  BeaconBlockBody,
-  ExecutionPayload,
   isExecutionPayload,
-  ExecutionPayloadHeader,
-  BlindedBeaconBlockBody,
-  BlindedBeaconBlock,
+  ssz,
 } from "@lodestar/types";
-import {ForkExecution, ForkName, ForkSeq} from "@lodestar/params";
 
 import {
+  BeaconStateAllForks,
   BeaconStateBellatrix,
   BeaconStateCapella,
-  BeaconStateAllForks,
   BeaconStateExecutions,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,

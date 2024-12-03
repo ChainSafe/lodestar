@@ -1,13 +1,13 @@
-import {Metric, Registry} from "prom-client";
-import {Logger} from "@lodestar/utils";
-import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {createBeaconMetrics, BeaconMetrics} from "./metrics/beacon.js";
-import {createLodestarMetrics, LodestarMetrics} from "./metrics/lodestar.js";
+import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
+import {Metric, Registry} from "prom-client";
+import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
+import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
+import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
-import {createValidatorMonitor, ValidatorMonitor} from "./validatorMonitor.js";
-import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
+import {ValidatorMonitor, createValidatorMonitor} from "./validatorMonitor.js";
 
 export type Metrics = BeaconMetrics &
   LodestarMetrics &

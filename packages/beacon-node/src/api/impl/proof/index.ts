@@ -1,10 +1,10 @@
-import {CompactMultiProof, createProof, ProofType} from "@chainsafe/persistent-merkle-tree";
+import {CompactMultiProof, ProofType, createProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ApiModules} from "../types.js";
-import {getStateResponse} from "../beacon/state/utils.js";
-import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {ApiOptions} from "../../options.js";
+import {getBlockResponse} from "../beacon/blocks/utils.js";
+import {getStateResponse} from "../beacon/state/utils.js";
+import {ApiModules} from "../types.js";
 
 export function getProofApi(
   opts: ApiOptions,

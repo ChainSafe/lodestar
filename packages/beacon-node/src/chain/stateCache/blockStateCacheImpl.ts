@@ -1,6 +1,6 @@
-import {Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {StateCloneOpts} from "../regen/interface.js";
@@ -34,7 +34,7 @@ export class BlockStateCacheImpl implements BlockStateCache {
     this.maxStates = maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
-      this.metrics = {...metrics.stateCache, ...metrics.epochCache};
+      this.metrics = metrics.stateCache;
       metrics.stateCache.size.addCollect(() => metrics.stateCache.size.set(this.cache.size));
     }
   }

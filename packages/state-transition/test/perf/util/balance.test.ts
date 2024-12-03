@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
-import {State} from "../types.js";
 import {getEffectiveBalanceIncrementsZeroInactive} from "../../../src/util/index.js";
+import {State} from "../types.js";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
 
 describe("getEffectiveBalanceIncrementsZeroInactive", () => {
   itBench<State, State>({

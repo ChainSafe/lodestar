@@ -1,10 +1,10 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
-import {isEqualNonZeroRoot, minEpoch} from "../utils.js";
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround/index.js";
 import {SlashingProtectionAttestation} from "../types.js";
-import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors.js";
+import {isEqualNonZeroRoot, minEpoch} from "../utils.js";
 import {AttestationByTargetRepository} from "./attestationByTargetRepository.js";
 import {AttestationLowerBoundRepository} from "./attestationLowerBoundRepository.js";
+import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors.js";
 export {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,

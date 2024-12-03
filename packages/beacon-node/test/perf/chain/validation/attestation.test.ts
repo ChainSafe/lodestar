@@ -1,10 +1,10 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {expect} from "chai";
 import {ssz} from "@lodestar/types";
+import {expect} from "chai";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
-import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes.js";
+import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 
 describe("validate gossip attestation", () => {
   setBenchOpts({

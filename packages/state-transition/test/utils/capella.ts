@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {
   BLS_WITHDRAWAL_PREFIX,
@@ -7,10 +6,11 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {BeaconStateCapella, CachedBeaconStateCapella} from "../../src/index.js";
-import {createCachedBeaconStateTest} from "./state.js";
-import {mulberry32} from "./rand.js";
 import {interopPubkeysCached} from "./interop.js";
+import {mulberry32} from "./rand.js";
+import {createCachedBeaconStateTest} from "./state.js";
 
 export interface WithdrawalOpts {
   excessBalance: number;

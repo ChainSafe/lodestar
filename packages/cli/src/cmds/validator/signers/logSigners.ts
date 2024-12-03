@@ -1,5 +1,5 @@
-import {Signer, SignerLocal, SignerRemote, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger, toPrintableUrl} from "@lodestar/utils";
+import {Signer, SignerLocal, SignerRemote, SignerType} from "@lodestar/validator";
 import {YargsError} from "../../../util/errors.js";
 import {IValidatorCliArgs} from "../options.js";
 

@@ -1,12 +1,12 @@
 import {itBench} from "@dapplion/benchmark";
-import {Epoch} from "@lodestar/types";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {Epoch} from "@lodestar/types";
 import {
-  computeEpochAtSlot,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
   computeEpochShuffling,
-  getNextSyncCommittee,
   computeProposers,
+  getNextSyncCommittee,
   getSeed,
 } from "../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";

@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {chainConfigFromJson, chainConfigToJson} from "../../src/index.js";
+import {describe, expect, it} from "vitest";
 import {chainConfig} from "../../src/default.js";
+import {chainConfigFromJson, chainConfigToJson} from "../../src/index.js";
 
 describe("chainConfig JSON", () => {
   it("Convert to and from JSON", () => {

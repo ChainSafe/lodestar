@@ -1,8 +1,9 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {Epoch, Attestation, phase0} from "@lodestar/types";
+import {Attestation, Epoch, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 
 import {
+  ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -13,12 +14,11 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
-  ForkSeq,
 } from "@lodestar/params";
-import {increaseBalance, verifySignatureSet} from "../util/index.js";
-import {CachedBeaconStateAltair} from "../types.js";
-import {RootCache} from "../util/rootCache.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
+import {CachedBeaconStateAltair} from "../types.js";
+import {increaseBalance, verifySignatureSet} from "../util/index.js";
+import {RootCache} from "../util/rootCache.js";
 import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;

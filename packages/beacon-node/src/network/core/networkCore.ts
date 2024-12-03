@@ -1,37 +1,37 @@
-import {Connection, PrivateKey} from "@libp2p/interface";
-import {multiaddr} from "@multiformats/multiaddr";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {ENR} from "@chainsafe/enr";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import {Connection, PeerId} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {Epoch, phase0} from "@lodestar/types";
-import {fromHex, withTimeout} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Libp2p} from "../interface.js";
-import {PeerManager} from "../peers/peerManager.js";
-import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
-import {OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
-import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
-import {SyncnetsService} from "../subnets/syncnetsService.js";
-import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
-import {NetworkOptions} from "../options.js";
-import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
-import {MetadataController} from "../metadata.js";
-import {createNodeJsLibp2p} from "../libp2p/index.js";
-import {PeersData} from "../peers/peersData.js";
-import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
-import {getConnectionsMap} from "../util.js";
-import {IClock, ClockEvent} from "../../util/clock.js";
+import {Epoch, phase0} from "@lodestar/types";
+import {fromHex, withTimeout} from "@lodestar/utils";
+import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
-import {NetworkEventBus} from "../events.js";
-import {Discv5Worker} from "../discv5/index.js";
-import {LocalStatusCache} from "../statusCache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
+import {ClockEvent, IClock} from "../../util/clock.js";
 import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
+import {Discv5Worker} from "../discv5/index.js";
+import {NetworkEventBus} from "../events.js";
+import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
+import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
+import {Libp2p} from "../interface.js";
+import {createNodeJsLibp2p} from "../libp2p/index.js";
+import {MetadataController} from "../metadata.js";
+import {NetworkOptions} from "../options.js";
+import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
+import {PeerManager} from "../peers/peerManager.js";
+import {PeersData} from "../peers/peersData.js";
+import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
+import {GetReqRespHandlerFn, OutgoingRequestArgs} from "../reqresp/types.js";
+import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
+import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
+import {SyncnetsService} from "../subnets/syncnetsService.js";
+import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 
@@ -55,7 +55,7 @@ type Mods = {
 export type BaseNetworkInit = {
   opts: NetworkOptions;
   config: BeaconConfig;
-  privateKey: PrivateKey;
+  peerId: PeerId;
   peerStoreDir: string | undefined;
   logger: LoggerNode;
   metricsRegistry: RegistryMetricCreator | null;
@@ -126,7 +126,7 @@ export class NetworkCore implements INetworkCore {
   static async init({
     opts,
     config,
-    privateKey,
+    peerId,
     peerStoreDir,
     logger,
     metricsRegistry,
@@ -136,7 +136,7 @@ export class NetworkCore implements INetworkCore {
     activeValidatorCount,
     initialStatus,
   }: BaseNetworkInit): Promise<NetworkCore> {
-    const libp2p = await createNodeJsLibp2p(privateKey, opts, {
+    const libp2p = await createNodeJsLibp2p(peerId, opts, {
       peerStoreDir,
       metrics: Boolean(metricsRegistry),
       metricsRegistry: metricsRegistry ?? undefined,
@@ -200,9 +200,8 @@ export class NetworkCore implements INetworkCore {
 
     const peerManager = await PeerManager.init(
       {
-        privateKey,
         libp2p,
-        gossip,
+        gossip: gossip,
         reqResp,
         attnetsService,
         syncnetsService,
@@ -363,11 +362,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    const m = new Map<string, Connection[]>();
-    for (const [k, v] of getConnectionsMap(this.libp2p).entries()) {
-      m.set(k, v.value);
-    }
-    return m;
+    return getConnectionsMap(this.libp2p);
   }
 
   async getConnectedPeers(): Promise<PeerIdStr[]> {

@@ -1,5 +1,5 @@
-import {electra, ssz} from "@lodestar/types";
 import {ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
 

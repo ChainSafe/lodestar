@@ -1,7 +1,7 @@
 import {ChildProcess} from "node:child_process";
 import {Logger} from "@lodestar/logger";
+import {ChildProcessResolve, SpawnChildProcessOptions, execChildProcess, spawnChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
-import {SpawnChildProcessOptions, execChildProcess, spawnChildProcess, ChildProcessResolve} from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 const dockerNetworkIpRange = "192.168.0";

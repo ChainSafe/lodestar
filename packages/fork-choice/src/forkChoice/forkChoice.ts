@@ -1,47 +1,47 @@
-import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
-import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
+import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
+  CachedBeaconStateAllForks,
+  EffectiveBalanceIncrements,
+  ZERO_HASH,
+  computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
-  computeEpochAtSlot,
-  ZERO_HASH,
-  EffectiveBalanceIncrements,
-  CachedBeaconStateAllForks,
-  isExecutionBlockBodyType,
-  isExecutionStateType,
-  isExecutionEnabled,
   getAttesterSlashableIndices,
+  isExecutionBlockBodyType,
+  isExecutionEnabled,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
-import {ChainConfig, ChainForkConfig} from "@lodestar/config";
+import {BeaconBlock, Epoch, Root, RootHex, Slot, ValidatorIndex, bellatrix, phase0, ssz} from "@lodestar/types";
+import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
+import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
-  HEX_ZERO_HASH,
-  VoteTracker,
-  ProtoBlock,
-  ExecutionStatus,
-  MaybeValidExecutionStatus,
-  LVHExecResponse,
-  ProtoNode,
   DataAvailabilityStatus,
+  ExecutionStatus,
+  HEX_ZERO_HASH,
+  LVHExecResponse,
+  MaybeValidExecutionStatus,
+  ProtoBlock,
+  ProtoNode,
+  VoteTracker,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
-import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 
-import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
+import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
-  IForkChoice,
-  LatestMessage,
-  PowBlockHex,
-  EpochDifference,
   AncestorResult,
   AncestorStatus,
+  EpochDifference,
   ForkChoiceMetrics,
+  IForkChoice,
+  LatestMessage,
   NotReorgedReason,
+  PowBlockHex,
 } from "./interface.js";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
+import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;

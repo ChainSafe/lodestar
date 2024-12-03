@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 import {OrderedSet} from "../../../src/util/set.js";
 
 describe("OrderedSet", () => {

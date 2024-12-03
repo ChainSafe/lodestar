@@ -2,8 +2,8 @@
 
 // MUST import first to apply preset from args and set ssz hasher
 import "./applyPreset.js";
-import {YargsError} from "./util/index.js";
 import {getLodestarCli, yarg} from "./cli.js";
+import {YargsError} from "./util/index.js";
 import "source-map-support/register.js";
 
 const lodestar = getLodestarCli();

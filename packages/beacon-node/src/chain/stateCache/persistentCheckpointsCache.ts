@@ -1,24 +1,21 @@
-import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
-import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
+import {loadCachedBeaconState} from "@lodestar/state-transition";
+import {Epoch, RootHex, phase0} from "@lodestar/types";
+import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {IClock} from "../../util/clock.js";
-import {ShufflingCache} from "../shufflingCache.js";
 import {AllocSource, BufferPool, BufferWithKey} from "../../util/bufferPool.js";
+import {IClock} from "../../util/clock.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {serializeState} from "../serializeState.js";
+import {CPStateDatastore, DatastoreKey} from "./datastore/index.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
-import {CheckpointHex, CacheItemType, CheckpointStateCache, BlockStateCache} from "./types.js";
+import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
   /** Keep max n states in memory, persist the rest to disk */
   maxCPStateEpochsInMemory?: number;
-  /** for testing only */
-  processLateBlock?: boolean;
 };
 
 type PersistentCheckpointStateCacheModules = {
@@ -26,7 +23,6 @@ type PersistentCheckpointStateCacheModules = {
   logger: Logger;
   clock?: IClock | null;
   signal?: AbortSignal;
-  shufflingCache: ShufflingCache;
   datastore: CPStateDatastore;
   blockStateCache: BlockStateCache;
   bufferPool?: BufferPool | null;
@@ -102,24 +98,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
-  // only for testing, default false for production
-  private readonly processLateBlock: boolean;
   private readonly datastore: CPStateDatastore;
-  private readonly shufflingCache: ShufflingCache;
   private readonly blockStateCache: BlockStateCache;
   private readonly bufferPool?: BufferPool | null;
 
   constructor(
-    {
-      metrics,
-      logger,
-      clock,
-      signal,
-      shufflingCache,
-      datastore,
-      blockStateCache,
-      bufferPool,
-    }: PersistentCheckpointStateCacheModules,
+    {metrics, logger, clock, signal, datastore, blockStateCache, bufferPool}: PersistentCheckpointStateCacheModules,
     opts: PersistentCheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
@@ -153,10 +137,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       throw new Error("maxEpochsInMemory must be >= 0");
     }
     this.maxEpochsInMemory = opts.maxCPStateEpochsInMemory ?? DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY;
-    this.processLateBlock = opts.processLateBlock ?? false;
     // Specify different datastore for testing
     this.datastore = datastore;
-    this.shufflingCache = shufflingCache;
     this.blockStateCache = blockStateCache;
     this.bufferPool = bufferPool;
   }
@@ -169,12 +151,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       await this.datastore.init();
     }
     const persistedKeys = await this.datastore.readKeys();
-    for (const persistedKey of persistedKeys) {
-      const cp = datastoreKeyToCheckpoint(persistedKey);
-      this.cache.set(toCacheKey(cp), {type: CacheItemType.persisted, value: persistedKey});
-      this.epochIndex.getOrDefault(cp.epoch).add(toRootHex(cp.root));
-    }
-    this.logger.info("Loaded persisted checkpoint states from the last run", {
+    // all checkpoint states from the last run are not trusted, remove them
+    // otherwise if we have a bad checkpoint state from the last run, the node get stucked
+    // this was found during mekong devnet, see https://github.com/ChainSafe/lodestar/pull/7255
+    await Promise.all(persistedKeys.map((key) => this.datastore.remove(key)));
+    this.logger.info("Removed persisted checkpoint states from the last run", {
       count: persistedKeys.length,
       maxEpochsInMemory: this.maxEpochsInMemory,
     });
@@ -487,12 +468,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       // 2/3 of slot is the most free time of every slot, take that chance to persist checkpoint states
       // normally it should only persist checkpoint states at 2/3 of slot 0 of epoch
       await sleep(secToTwoThirdsSlot * 1000, this.signal);
-    } else if (!this.processLateBlock) {
-      // normally the block persist happens at 2/3 of slot 0 of epoch, if it's already late then just skip to allow other tasks to run
-      // there are plenty of chances in the same epoch to persist checkpoint states, also if block is late it could be reorged
-      this.logger.verbose("Skip persist checkpoint states", {blockSlot, root: blockRootHex});
-      return 0;
     }
+    // at syncing time, it's critical to persist checkpoint states as soon as possible to avoid OOM during unfinality time
+    // if node is synced this is not a hot time because block comes late, we'll likely miss attestation already, or the block is orphaned
 
     const persistEpochs = sortedEpochs.slice(0, sortedEpochs.length - this.maxEpochsInMemory);
     for (const lowestEpoch of persistEpochs) {

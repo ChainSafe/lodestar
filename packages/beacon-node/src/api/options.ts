@@ -1,4 +1,4 @@
-import {beaconRestApiServerOpts, BeaconRestApiServerOpts} from "./rest/index.js";
+import {BeaconRestApiServerOpts, beaconRestApiServerOpts} from "./rest/index.js";
 
 export type ApiOptions = {
   maxGindicesInProof?: number;

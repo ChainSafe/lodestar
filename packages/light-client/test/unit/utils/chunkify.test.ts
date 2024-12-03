@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {chunkifyInclusiveRange} from "../../../src/utils/chunkify.js";
 
 describe("utils / chunkifyInclusiveRange", () => {

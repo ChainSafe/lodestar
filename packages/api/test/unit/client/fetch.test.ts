@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import {describe, it, expect, afterEach} from "vitest";
+import {afterEach, describe, expect, it} from "vitest";
 import {FetchError, FetchErrorType, fetch} from "../../../src/utils/client/fetch.js";
 
 describe("FetchError", () => {

@@ -3,10 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
-import {rimraf} from "rimraf";
-import axios from "axios";
-import {x as extractTar} from "tar";
 import {retry} from "@lodestar/utils";
+import axios from "axios";
+import {rimraf} from "rimraf";
+import {x as extractTar} from "tar";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 

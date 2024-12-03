@@ -10,18 +10,18 @@ import {
   MAX_EFFECTIVE_BALANCE,
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
-import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
+import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
 
-import {CachedBeaconStateAllForks, BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
-import {createCachedBeaconState} from "../cache/stateCache.js";
-import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {processDeposit} from "../block/processDeposit.js";
+import {EpochCacheImmutableData} from "../cache/epochCache.js";
+import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
-import {computeEpochAtSlot} from "./epoch.js";
-import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
-import {getTemporaryBlockHeader} from "./blockRoot.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {newFilledArray} from "./array.js";
+import {getTemporaryBlockHeader} from "./blockRoot.js";
+import {computeEpochAtSlot} from "./epoch.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
+import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;

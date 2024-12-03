@@ -1,5 +1,3 @@
-import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -7,6 +5,8 @@ import {
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
+import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
+import {intDiv} from "@lodestar/utils";
 import {BeaconStateAllForks, CachedBeaconStateElectra, EpochCache} from "../types.js";
 import {hasCompoundingWithdrawalCredential} from "./electra.js";
 

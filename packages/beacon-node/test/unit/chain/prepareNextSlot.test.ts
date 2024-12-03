@@ -1,14 +1,14 @@
-import {describe, it, expect, beforeEach, afterEach, vi, Mock, MockInstance} from "vitest";
-import {config} from "@lodestar/config/default";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
+import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
-import {generateCachedBellatrixState, zeroProtoBlock} from "../../utils/state.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
+import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {generateCachedBellatrixState, zeroProtoBlock} from "../../utils/state.js";
 
 describe("PrepareNextSlot scheduler", () => {
   const abortController = new AbortController();

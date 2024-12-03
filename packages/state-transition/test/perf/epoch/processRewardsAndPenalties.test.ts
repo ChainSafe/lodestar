@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
 import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
-import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {StateAltairEpoch} from "../types.js";
-import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
+import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {mutateInactivityScores} from "./util.js";
+import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
 
 // PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
 

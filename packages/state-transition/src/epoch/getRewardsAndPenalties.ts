@@ -1,5 +1,6 @@
 import {
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkSeq,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
   INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
   PARTICIPATION_FLAG_WEIGHTS,
@@ -7,7 +8,6 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
-  ForkSeq,
 } from "@lodestar/params";
 import {CachedBeaconStateAltair, EpochTransitionCache} from "../types.js";
 import {

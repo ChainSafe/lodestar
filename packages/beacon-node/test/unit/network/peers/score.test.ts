@@ -1,13 +1,13 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {MapDef} from "@lodestar/utils";
-import {peerIdFromString} from "../../../../src/util/peerId.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   PeerAction,
-  ScoreState,
   PeerRpcScoreStore,
-  updateGossipsubScores,
   RealScore,
+  ScoreState,
+  updateGossipsubScores,
 } from "../../../../src/network/peers/score/index.js";
+import {peerIdFromString} from "../../../../src/util/peerId.js";
 
 vi.mock("../../../../src/network/peers/score/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../../../src/network/peers/score/index.js")>();

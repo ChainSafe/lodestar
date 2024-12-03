@@ -1,5 +1,5 @@
 import {ChainConfig, chainConfigToJson} from "@lodestar/config";
-import {activePreset, BeaconPreset, presetToJson} from "@lodestar/params";
+import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
 

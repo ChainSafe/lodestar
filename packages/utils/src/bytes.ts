@@ -1,4 +1,4 @@
-import {toBufferLE, toBigIntLE, toBufferBE, toBigIntBE} from "bigint-buffer";
+import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "bigint-buffer";
 
 type Endianness = "le" | "be";
 

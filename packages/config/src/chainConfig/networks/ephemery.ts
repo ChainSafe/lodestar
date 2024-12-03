@@ -1,6 +1,6 @@
 import {fromHex as b} from "@lodestar/utils";
-import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Ephemery dynamic beacon chain config:
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml

@@ -1,4 +1,4 @@
-import mitt from "mitt";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {
   LightClientBootstrap,
@@ -6,22 +6,22 @@ import {
   LightClientHeader,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  phase0,
   RootHex,
   Slot,
   SyncPeriod,
+  phase0,
 } from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
-import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
-import {chunkifyInclusiveRange} from "./utils/chunkify.js";
+import mitt from "mitt";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
-import {getConsoleLogger, ILcLogger} from "./utils/logger.js";
-import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightclientSpec} from "./spec/index.js";
-import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
 import {ProcessUpdateOpts} from "./spec/processLightClientUpdate.js";
+import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
 import {LightClientTransport} from "./transport/interface.js";
+import {chunkifyInclusiveRange} from "./utils/chunkify.js";
+import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
+import {computeEpochAtSlot, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "./utils/clock.js";
+import {ILcLogger, getConsoleLogger} from "./utils/logger.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";
@@ -327,8 +327,8 @@ export class Lightclient {
   }
 }
 
+import * as transport from "./transport.js";
 // To export these name spaces to the bundle JS
 import * as utils from "./utils.js";
 import * as validation from "./validation.js";
-import * as transport from "./transport.js";
 export {utils, validation, transport};

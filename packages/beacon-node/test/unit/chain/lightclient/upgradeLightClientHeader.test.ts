@@ -1,8 +1,8 @@
-import {describe, it, expect, beforeEach} from "vitest";
-import {LightClientHeader, ssz} from "@lodestar/types";
-import {ForkName, ForkSeq} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {LightClientHeader, ssz} from "@lodestar/types";
+import {beforeEach, describe, expect, it} from "vitest";
 
 describe("UpgradeLightClientHeader", () => {
   let lcHeaderByFork: Record<ForkName, LightClientHeader>;

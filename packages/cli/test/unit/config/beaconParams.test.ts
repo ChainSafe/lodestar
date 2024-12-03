@@ -1,9 +1,9 @@
 import fs from "node:fs";
-import {describe, it, expect, beforeAll, afterAll} from "vitest";
-import yaml from "js-yaml";
 import {toHexString} from "@chainsafe/ssz";
-import {getTestdirPath} from "../../utils.js";
+import yaml from "js-yaml";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {getBeaconParams} from "../../../src/config/index.js";
+import {getTestdirPath} from "../../utils.js";
 
 describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_MAINNET = "0x00000000";

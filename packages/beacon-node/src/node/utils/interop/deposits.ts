@@ -1,14 +1,14 @@
 import {digest} from "@chainsafe/as-sha256";
-import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {phase0, ssz} from "@lodestar/types";
+import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
 import {ChainConfig} from "@lodestar/config";
-import {computeDomain, computeSigningRoot, interopSecretKeys, ZERO_HASH} from "@lodestar/state-transition";
 import {
   BLS_WITHDRAWAL_PREFIX,
-  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
   DOMAIN_DEPOSIT,
+  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
   MAX_EFFECTIVE_BALANCE,
 } from "@lodestar/params";
+import {ZERO_HASH, computeDomain, computeSigningRoot, interopSecretKeys} from "@lodestar/state-transition";
+import {phase0, ssz} from "@lodestar/types";
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 /**

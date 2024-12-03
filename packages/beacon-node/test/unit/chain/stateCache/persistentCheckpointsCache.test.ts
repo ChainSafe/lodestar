@@ -1,16 +1,16 @@
-import {describe, it, expect, beforeAll, beforeEach} from "vitest";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
-import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
-import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
-import {generateCachedState} from "../../../utils/state.js";
-import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
-import {testLogger} from "../../../utils/logger.js";
-import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
-import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
+import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {FIFOBlockStateCache, toCheckpointHex} from "../../../../src/chain/index.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
+import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
+import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
+import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
+import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
+import {testLogger} from "../../../utils/logger.js";
+import {generateCachedState} from "../../../utils/state.js";
 
 describe("PersistentCheckpointStateCache", () => {
   let root0a: Buffer, root0b: Buffer, root1: Buffer, root2: Buffer;
@@ -90,10 +90,9 @@ describe("PersistentCheckpointStateCache", () => {
       {
         datastore,
         logger: testLogger(),
-        shufflingCache: new ShufflingCache(),
         blockStateCache: new FIFOBlockStateCache({}, {}),
       },
-      {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+      {maxCPStateEpochsInMemory: 2}
     );
     cache.add(cp0a, states["cp0a"]);
     cache.add(cp0b, states["cp0b"]);
@@ -165,10 +164,9 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -242,10 +240,9 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -548,10 +545,9 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 1, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 1}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -820,10 +816,9 @@ describe("PersistentCheckpointStateCache", () => {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
-          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
+          {maxCPStateEpochsInMemory: 0}
         );
         cache.add(cp0a, states["cp0a"]);
         cache.add(cp0b, states["cp0b"]);
@@ -911,10 +906,9 @@ describe("PersistentCheckpointStateCache", () => {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
-          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
+          {maxCPStateEpochsInMemory: 0}
         );
 
         const root1a = Buffer.alloc(32, 100);

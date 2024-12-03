@@ -1,23 +1,23 @@
 import {BitArray, CompositeViewDU} from "@chainsafe/ssz";
-import {
-  altair,
-  BeaconBlock,
-  BeaconBlockBody,
-  LightClientBootstrap,
-  LightClientFinalityUpdate,
-  LightClientHeader,
-  LightClientOptimisticUpdate,
-  LightClientUpdate,
-  phase0,
-  Root,
-  RootHex,
-  Slot,
-  ssz,
-  sszTypesFor,
-  SSZTypesFor,
-  SyncPeriod,
-} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {
+  LightClientUpdateSummary,
+  isBetterUpdate,
+  toLightClientUpdateSummary,
+  upgradeLightClientHeader,
+} from "@lodestar/light-client/spec";
+import {
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkSeq,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  SYNC_COMMITTEE_SIZE,
+  forkLightClient,
+  highestFork,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
@@ -26,36 +26,39 @@ import {
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
 import {
-  isBetterUpdate,
-  toLightClientUpdateSummary,
-  LightClientUpdateSummary,
-  upgradeLightClientHeader,
-} from "@lodestar/light-client/spec";
+  BeaconBlock,
+  BeaconBlockBody,
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientHeader,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  Root,
+  RootHex,
+  SSZTypesFor,
+  Slot,
+  SyncPeriod,
+  altair,
+  electra,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
-import {
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
-  SYNC_COMMITTEE_SIZE,
-  ForkName,
-  ForkSeq,
-  ForkExecution,
-  ForkLightClient,
-  highestFork,
-  forkLightClient,
-} from "@lodestar/params";
 
-import {IBeaconDb} from "../../db/index.js";
-import {Metrics} from "../../metrics/index.js";
-import {ChainEventEmitter} from "../emitter.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";
+import {IBeaconDb} from "../../db/index.js";
+import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
+import {Metrics} from "../../metrics/index.js";
+import {byteArrayEquals} from "../../util/bytes.js";
+import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
+  getBlockBodyExecutionHeaderProof,
+  getCurrentSyncCommitteeBranch,
+  getFinalizedRootProof,
   getNextSyncCommitteeBranch,
   getSyncCommitteesWitness,
-  getFinalizedRootProof,
-  getCurrentSyncCommitteeBranch,
-  getBlockBodyExecutionHeaderProof,
 } from "./proofs.js";
 
 export type LightClientServerOpts = {
@@ -208,7 +211,10 @@ export class LightClientServer {
   private checkpointHeaders = new Map<BlockRooHex, LightClientHeader>();
   private latestHeadUpdate: LightClientOptimisticUpdate | null = null;
 
-  private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
+  private readonly zero: Pick<
+    altair.LightClientUpdate | electra.LightClientUpdate,
+    "finalityBranch" | "finalizedHeader"
+  >;
   private finalized: LightClientFinalityUpdate | null = null;
 
   constructor(
@@ -225,7 +231,9 @@ export class LightClientServer {
     this.zero = {
       // Assign the hightest fork's default value because it can always be typecasted down to correct fork
       finalizedHeader: sszTypesFor(highestFork(forkLightClient)).LightClientHeader.defaultValue(),
-      finalityBranch: ssz.altair.LightClientUpdate.fields.finalityBranch.defaultValue(),
+      // Electra finalityBranch has fixed length of 5 whereas altair has 4. The fifth element will be ignored
+      // when serializing as altair LightClientUpdate
+      finalityBranch: ssz.electra.LightClientUpdate.fields.finalityBranch.defaultValue(),
     };
 
     if (metrics) {
@@ -388,12 +396,13 @@ export class LightClientServer {
     parentBlockSlot: Slot
   ): Promise<void> {
     const blockSlot = block.slot;
-    const header = blockToLightClientHeader(this.config.getForkName(blockSlot), block);
+    const fork = this.config.getForkName(blockSlot);
+    const header = blockToLightClientHeader(fork, block);
 
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.beacon);
     const blockRootHex = toRootHex(blockRoot);
 
-    const syncCommitteeWitness = getSyncCommitteesWitness(postState);
+    const syncCommitteeWitness = getSyncCommitteesWitness(fork, postState);
 
     // Only store current sync committee once per run
     if (!this.storedCurrentSyncCommittee) {
@@ -621,6 +630,16 @@ export class LightClientServer {
     if (!syncCommitteeWitness) {
       throw Error(`syncCommitteeWitness not available at ${toRootHex(attestedData.blockRoot)}`);
     }
+
+    const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
+    const numWitness = syncCommitteeWitness.witness.length;
+    if (isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS_ELECTRA) {
+      throw Error(`Expected ${NUM_WITNESS_ELECTRA} witnesses in post-Electra numWitness=${numWitness}`);
+    }
+    if (!isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS) {
+      throw Error(`Expected ${NUM_WITNESS} witnesses in pre-Electra numWitness=${numWitness}`);
+    }
+
     const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
     if (!nextSyncCommittee) {
       throw Error("nextSyncCommittee not available");
@@ -641,7 +660,6 @@ export class LightClientServer {
       finalityBranch = attestedData.finalityBranch;
       finalizedHeader = finalizedHeaderAttested;
       // Fork of LightClientUpdate is based off on attested header's fork
-      const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
       if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
         finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
       }

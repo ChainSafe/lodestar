@@ -1,40 +1,40 @@
-import {aggregateSignatures, Signature} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {EpochDifference, IForkChoice} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkSeq,
-  isForkPostElectra,
   MAX_ATTESTATIONS,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_COMMITTEES_PER_SLOT,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {
-  phase0,
-  Epoch,
-  Slot,
-  ssz,
-  ValidatorIndex,
-  RootHex,
-  electra,
-  isElectraAttestation,
-  Attestation,
-} from "@lodestar/types";
-import {
   CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
-import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {MapDef, toRootHex, assert} from "@lodestar/utils";
-import {ChainForkConfig} from "@lodestar/config";
-import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
-import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import {
+  Attestation,
+  Epoch,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  electra,
+  isElectraAttestation,
+  phase0,
+  ssz,
+} from "@lodestar/types";
+import {assert, MapDef, toRootHex} from "@lodestar/utils";
+import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {InsertOutcome} from "./types.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 type DataRootHex = string;
 

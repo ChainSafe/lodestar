@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 import childProcess, {ChildProcess, ChildProcessWithoutNullStreams} from "node:child_process";
-import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
-import {prettyMsToTime, retry, sleep, Logger} from "@lodestar/utils";
+import stream from "node:stream";
+import {Logger, prettyMsToTime, retry, sleep} from "@lodestar/utils";
 
 export type ChildProcessLogOptions = {
   /**

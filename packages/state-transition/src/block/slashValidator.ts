@@ -1,4 +1,3 @@
-import {ValidatorIndex} from "@lodestar/types";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_SLASHINGS_VECTOR,
@@ -14,9 +13,10 @@ import {
   WHISTLEBLOWER_REWARD_QUOTIENT,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
 } from "@lodestar/params";
+import {ValidatorIndex} from "@lodestar/types";
 
-import {decreaseBalance, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {decreaseBalance, increaseBalance} from "../util/index.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */

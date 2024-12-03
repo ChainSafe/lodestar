@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
-import {ForkName, ForkSeq} from "@lodestar/params";
 import {BeaconConfig, ForkInfo} from "@lodestar/config";
-import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks.js";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {describe, expect, it} from "vitest";
+import {getActiveForks, getCurrentAndNextFork} from "../../../src/network/forks.js";
 
 function getForkConfig({
   phase0,

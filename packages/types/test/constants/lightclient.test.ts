@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import * as constants from "@lodestar/params";
+import {describe, expect, it} from "vitest";
 import {ssz} from "../../src/index.js";
 
 // NOTE: This test is here and not in lodestar-params, to prevent lodestar-params depending on SSZ

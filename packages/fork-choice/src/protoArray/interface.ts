@@ -1,4 +1,4 @@
-import {Epoch, Slot, RootHex, UintNum64} from "@lodestar/types";
+import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison

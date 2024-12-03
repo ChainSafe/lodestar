@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {toHex} from "@lodestar/utils";
 import {ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 import {getENRForkID} from "../../../src/network/metadata.js";
 import {config} from "../../utils/config.js";
 

@@ -1,27 +1,27 @@
-import {describe, it, expect, afterEach, vi} from "vitest";
-import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
+import {JsonPath, toHexString} from "@chainsafe/ssz";
+import {ApiClient, getClient, routes} from "@lodestar/api";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
-import {routes, getClient, ApiClient} from "@lodestar/api";
-import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {createBeaconConfig, ChainConfig} from "@lodestar/config";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
-import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/LightclientServerApiMock.js";
-import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
-import {
-  computeLightclientUpdate,
-  computeLightClientSnapshot,
-  getInteropSyncCommittee,
-  testLogger,
-  committeeUpdateToLatestHeadUpdate,
-  committeeUpdateToLatestFinalizedHeadUpdate,
-  lastInMap,
-} from "../utils/utils.js";
-import {startServer, ServerOpts} from "../utils/server.js";
-import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
 import {LightClientRestTransport} from "../../src/transport/rest.js";
+import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
+import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
+import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/LightclientServerApiMock.js";
+import {ServerOpts, startServer} from "../utils/server.js";
+import {
+  committeeUpdateToLatestFinalizedHeadUpdate,
+  committeeUpdateToLatestHeadUpdate,
+  computeLightClientSnapshot,
+  computeLightclientUpdate,
+  getInteropSyncCommittee,
+  lastInMap,
+  testLogger,
+} from "../utils/utils.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 

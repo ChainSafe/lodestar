@@ -1,7 +1,7 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {BeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {newFilledArray, BeaconStateAllForks} from "@lodestar/state-transition";
 import {fastSerializeEth1Data, pickEth1Vote} from "../../../src/eth1/utils/eth1Vote.js";
 
 describe("eth1 / pickEth1Vote", () => {

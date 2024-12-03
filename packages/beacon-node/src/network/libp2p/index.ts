@@ -1,17 +1,18 @@
-import {PrivateKey} from "@libp2p/interface";
-import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
-import {identify} from "@libp2p/identify";
+// TODO: We should use this fork until https://github.com/libp2p/js-libp2p/pull/2387
+import {identify} from "@chainsafe/libp2p-identify";
+import {noise} from "@chainsafe/libp2p-noise";
 import {bootstrap} from "@libp2p/bootstrap";
+import {PeerId} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
-import {createLibp2p} from "libp2p";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
-import {noise} from "@chainsafe/libp2p-noise";
-import {defaultNetworkOptions, NetworkOptions} from "../options.js";
-import {Eth2PeerDataStore} from "../peers/datastore.js";
+import {createLibp2p} from "libp2p";
+import {Registry} from "prom-client";
 import {Libp2p, LodestarComponents} from "../interface.js";
+import {NetworkOptions, defaultNetworkOptions} from "../options.js";
+import {Eth2PeerDataStore} from "../peers/datastore.js";
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
@@ -33,7 +34,7 @@ export async function getDiscv5Multiaddrs(bootEnrs: string[]): Promise<string[]>
 }
 
 export async function createNodeJsLibp2p(
-  privateKey: PrivateKey,
+  peerId: PeerId,
   networkOpts: Partial<NetworkOptions> = {},
   nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
 ): Promise<Libp2p> {
@@ -64,12 +65,12 @@ export async function createNodeJsLibp2p(
   }
 
   return createLibp2p({
-    privateKey,
+    peerId,
     addresses: {
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncrypters: [noise()],
+    connectionEncryption: [noise()],
     // Reject connections when the server's connection count gets high
     transports: [
       tcp({
@@ -98,13 +99,14 @@ export async function createNodeJsLibp2p(
       maxParallelDials: 100,
       maxPeerAddrsToDial: 4,
       dialTimeout: 30_000,
+
+      // Rely entirely on lodestar's peer manager to prune connections
+      //maxConnections: options.maxConnections,
+      // DOCS: There is no way to turn off autodial other than setting minConnections to 0
+      minConnections: 0,
       // the maximum number of pending connections libp2p will accept before it starts rejecting incoming connections.
       // make it the same to backlog option above
       maxIncomingPendingConnections: 5,
-    },
-    // rely on lodestar's peer manager to ping peers
-    connectionMonitor: {
-      enabled: false,
     },
     datastore,
     services: {
@@ -116,7 +118,6 @@ export async function createNodeJsLibp2p(
       // and passing it here directly causes problems downstream, not to mention is slowwww
       components: (components: LodestarComponents) => ({
         peerId: components.peerId,
-        privateKey: components.privateKey,
         nodeInfo: components.nodeInfo,
         logger: components.logger,
         events: components.events,

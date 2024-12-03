@@ -1,7 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
-import {RequestedSubnet} from "../peers/utils/index.js";
 import {GossipTopic} from "../gossip/interface.js";
+import {RequestedSubnet} from "../peers/utils/index.js";
 
 /** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
 export type CommitteeSubscription = {

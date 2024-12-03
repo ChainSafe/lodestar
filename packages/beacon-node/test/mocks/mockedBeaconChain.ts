@@ -1,22 +1,22 @@
-import {vi, Mocked, Mock} from "vitest";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {config as defaultConfig} from "@lodestar/config/default";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkChoice, ProtoBlock, EpochDifference} from "@lodestar/fork-choice";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
+import {Mock, Mocked, vi} from "vitest";
+import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
-import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
-import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
-import {OpPool, AggregatedAttestationPool} from "../../src/chain/opPools/index.js";
-import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
-import {Clock} from "../../src/util/clock.js";
+import {AggregatedAttestationPool, OpPool} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
-import {getMockedLogger} from "./loggerMock.js";
+import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
+import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
+import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
+import {Clock} from "../../src/util/clock.js";
 import {getMockedClock} from "./clock.js";
+import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;

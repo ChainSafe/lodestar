@@ -1,13 +1,13 @@
-import {expect} from "vitest";
-import {isForkLightClient} from "@lodestar/params";
-import {altair, phase0, RootHex, Slot, ssz, sszTypesFor} from "@lodestar/types";
-import {InputType} from "@lodestar/spec-test-util";
-import {createBeaconConfig, ChainConfig} from "@lodestar/config";
-import {fromHex, toHex} from "@lodestar/utils";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
+import {isForkLightClient} from "@lodestar/params";
+import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
-import {TestRunnerFn} from "../../utils/types.js";
+import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
+import {expect} from "vitest";
 import {testLogger} from "../../../utils/logger.js";
+import {TestRunnerFn} from "../../utils/types.js";
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
 type SyncTestCase = {

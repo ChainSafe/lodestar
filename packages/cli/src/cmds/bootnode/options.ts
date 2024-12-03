@@ -1,7 +1,7 @@
-import {CliOptionDefinition, CliCommandOptions} from "@lodestar/utils";
-import {LogArgs, logOptions} from "../../options/logOptions.js";
+import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {MetricsArgs, options as metricsOptions} from "../../options/beaconNodeOptions/metrics.js";
 import {defaultListenAddress, defaultP2pPort, defaultP2pPort6} from "../../options/beaconNodeOptions/network.js";
+import {LogArgs, logOptions} from "../../options/logOptions.js";
 
 type BootnodeExtraArgs = {
   listenAddress?: string;

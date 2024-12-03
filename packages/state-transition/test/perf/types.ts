@@ -1,5 +1,5 @@
 import {SignedBeaconBlock} from "@lodestar/types";
-import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../src/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../../src/index.js";
 import {EpochTransitionCache} from "../../src/types.js";
 
 // Type aliases to typesafe itBench() calls

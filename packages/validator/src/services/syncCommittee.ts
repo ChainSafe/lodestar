@@ -1,17 +1,17 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {Slot, CommitteeIndex, altair, Root, BLSSignature} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
-import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ApiClient, routes} from "@lodestar/api";
-import {IClock, LoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
+import {ChainForkConfig} from "@lodestar/config";
+import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
+import {BLSSignature, CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
-import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties.js";
-import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
+import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
+import {SubcommitteeDuty, groupSyncDutiesBySubcommitteeIndex} from "./utils.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 export type SyncCommitteeServiceOpts = {
   scAfterBlockDelaySlotFraction?: number;

@@ -1,15 +1,15 @@
 import http from "node:http";
 import https from "node:https";
 import url from "node:url";
-import httpProxy from "http-proxy";
-import {getNodeLogger} from "@lodestar/logger/node";
 import {LogLevel} from "@lodestar/logger";
+import {getNodeLogger} from "@lodestar/logger/node";
+import httpProxy from "http-proxy";
 import {ELRequestHandler, VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {JsonRpcRequestOrBatch, JsonRpcRequestPayload, JsonRpcResponseOrBatch} from "./types.js";
 import {getResponseForRequest, isBatchRequest} from "./utils/json_rpc.js";
-import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
+import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {ELRpcProvider} from "./utils/rpc_provider.js";
 
 export type VerifiedProxyOptions = Exclude<VerifiedExecutionInitOptions<false>, "mutateProvider" | "providerTypes"> & {

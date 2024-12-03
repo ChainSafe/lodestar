@@ -1,9 +1,9 @@
-import {describe, it, expect, beforeEach, vi} from "vitest";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {SyncState} from "../../../../../src/sync/interface.js";
-import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {SyncState} from "../../../../../src/sync/interface.js";
+import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 
 describe("api - validator - produceAttestationData", () => {
   let modules: ApiTestModules;

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, expect, afterEach} from "vitest";
+import {afterEach, describe, expect, it} from "vitest";
 import {importKeystoreDefinitionsFromExternalDir} from "../../../src/cmds/validator/signers/importExternalKeystores.js";
 
 describe("validator / signers / importKeystoreDefinitionsFromExternalDir", () => {

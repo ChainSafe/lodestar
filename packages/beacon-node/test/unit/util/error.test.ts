@@ -1,6 +1,6 @@
 import v8 from "node:v8";
-import {describe, it, expect} from "vitest";
 import {RequestError, RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
+import {describe, expect, it} from "vitest";
 import {fromThreadBoundaryError, toThreadBoundaryError} from "../../../src/util/error.js";
 
 function structuredClone<T>(value: T): T {

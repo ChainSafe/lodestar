@@ -1,24 +1,25 @@
-import {
-  bellatrix,
-  Slot,
-  Root,
-  BLSPubkey,
-  deneb,
-  Wei,
-  SignedBeaconBlockOrContents,
-  SignedBlindedBeaconBlock,
-  ExecutionPayloadHeader,
-  electra,
-} from "@lodestar/types";
-import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {WireFormat} from "@lodestar/api";
+import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
-import {getClient, ApiClient as BuilderApi} from "@lodestar/api/builder";
-import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
+import {ForkExecution, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {
+  BLSPubkey,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
 import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
-import {WireFormat} from "@lodestar/api";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
@@ -160,7 +161,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     return {header, executionPayloadValue, blobKzgCommitments, executionRequests};
   }
 
-  async submitBlindedBlock(signedBlindedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents> {
+  async submitBlindedBlock(
+    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
+  ): Promise<SignedBeaconBlockOrContents> {
     const res = await this.api.submitBlindedBlock(
       {signedBlindedBlock},
       {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
@@ -174,6 +177,6 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     // probably need diagonis if this block turns out to be invalid because of some bug
     //
     const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
-    return reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
+    return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
   }
 }

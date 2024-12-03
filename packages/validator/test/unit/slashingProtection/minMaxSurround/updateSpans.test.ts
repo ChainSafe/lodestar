@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {MinMaxSurroundAttestation, MinMaxSurround} from "../../../../src/slashingProtection/minMaxSurround/index.js";
-import {DistanceStoreMemory, storeToSpansPerEpoch, emptyPubkey} from "./utils.js";
+import {describe, expect, it} from "vitest";
+import {MinMaxSurround, MinMaxSurroundAttestation} from "../../../../src/slashingProtection/minMaxSurround/index.js";
+import {DistanceStoreMemory, emptyPubkey, storeToSpansPerEpoch} from "./utils.js";
 
 const updateSpansTests: {
   name: string;

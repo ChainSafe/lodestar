@@ -1,13 +1,13 @@
 import {DOMAIN_RANDAO} from "@lodestar/params";
 import {BeaconBlock, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {
-  computeEpochAtSlot,
-  computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
+  computeEpochAtSlot,
+  computeSigningRoot,
   verifySignatureSet,
 } from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 
 export function verifyRandaoSignature(state: CachedBeaconStateAllForks, block: BeaconBlock): boolean {
   return verifySignatureSet(getRandaoRevealSignatureSet(state, block));

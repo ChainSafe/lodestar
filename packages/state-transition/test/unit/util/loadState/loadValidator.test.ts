@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {loadValidator} from "../../../../src/util/loadState/loadValidator.js";
 
 describe("loadValidator", () => {

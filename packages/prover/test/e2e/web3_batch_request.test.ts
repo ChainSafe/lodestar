@@ -1,9 +1,9 @@
-import {describe, it, expect, beforeAll, vi} from "vitest";
+import {beforeAll, describe, expect, it, vi} from "vitest";
 import {Web3} from "web3";
 import {LCTransport} from "../../src/interfaces.js";
-import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {rpcUrl, beaconUrl, config, waitForCapellaFork, minCapellaTimeMs} from "../utils/e2e_env.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
+import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
+import {beaconUrl, config, minCapellaTimeMs, rpcUrl, waitForCapellaFork} from "../utils/e2e_env.js";
 
 describe("web3_batch_requests", () => {
   vi.setConfig({hookTimeout: minCapellaTimeMs});

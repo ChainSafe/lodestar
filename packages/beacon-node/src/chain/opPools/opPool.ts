@@ -1,3 +1,13 @@
+import {Id, Repository} from "@lodestar/db";
+import {
+  BLS_WITHDRAWAL_PREFIX,
+  ForkSeq,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -5,22 +15,12 @@ import {
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
 } from "@lodestar/state-transition";
-import {Repository, Id} from "@lodestar/db";
-import {
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  BLS_WITHDRAWAL_PREFIX,
-  MAX_ATTESTER_SLASHINGS,
-  ForkSeq,
-  MAX_ATTESTER_SLASHINGS_ELECTRA,
-} from "@lodestar/params";
+import {AttesterSlashing, Epoch, SignedBeaconBlock, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock, AttesterSlashing} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
-import {Metrics} from "../../metrics/metrics.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 

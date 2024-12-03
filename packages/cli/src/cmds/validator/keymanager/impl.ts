@@ -1,26 +1,27 @@
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
 import {
+  BuilderBoostFactorData,
   DeleteRemoteKeyStatus,
   DeletionStatus,
-  ImportStatus,
-  ResponseStatus,
-  KeystoreStr,
-  PubkeyHex,
-  SlashingProtectionData,
-  SignerDefinition,
-  RemoteSignerDefinition,
-  ImportRemoteKeyStatus,
   FeeRecipientData,
-  GraffitiData,
   GasLimitData,
-  BuilderBoostFactorData,
+  GraffitiData,
+  ImportRemoteKeyStatus,
+  ImportStatus,
+  KeystoreStr,
+  ProposerConfigResponse,
+  PubkeyHex,
+  RemoteSignerDefinition,
+  ResponseStatus,
+  SignerDefinition,
+  SlashingProtectionData,
 } from "@lodestar/api/keymanager";
 import {KeymanagerApiMethods as Api} from "@lodestar/api/keymanager/server";
-import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api/server";
 import {Epoch} from "@lodestar/types";
 import {fromHex, isValidHttpUrl} from "@lodestar/utils";
+import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
@@ -41,11 +42,13 @@ export class KeymanagerApi implements Api {
   }
 
   async listFeeRecipient({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["listFeeRecipient"]> {
+    this.assertValidKnownPubkey(pubkey);
     return {data: {pubkey, ethaddress: this.validator.validatorStore.getFeeRecipient(pubkey)}};
   }
 
   async setFeeRecipient({pubkey, ethaddress}: FeeRecipientData): ReturnType<Api["setFeeRecipient"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.setFeeRecipient(pubkey, parseFeeRecipient(ethaddress));
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 202};
@@ -53,12 +56,14 @@ export class KeymanagerApi implements Api {
 
   async deleteFeeRecipient({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteFeeRecipient"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.deleteFeeRecipient(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 204};
   }
 
   async getGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGraffiti"]> {
+    this.assertValidKnownPubkey(pubkey);
     const graffiti = this.validator.validatorStore.getGraffiti(pubkey);
     if (graffiti === undefined) {
       throw new ApiError(404, `No graffiti for pubkey ${pubkey}`);
@@ -68,6 +73,7 @@ export class KeymanagerApi implements Api {
 
   async setGraffiti({pubkey, graffiti}: GraffitiData): ReturnType<Api["setGraffiti"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.setGraffiti(pubkey, graffiti);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 202};
@@ -75,18 +81,21 @@ export class KeymanagerApi implements Api {
 
   async deleteGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteGraffiti"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.deleteGraffiti(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 204};
   }
 
   async getGasLimit({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGasLimit"]> {
+    this.assertValidKnownPubkey(pubkey);
     const gasLimit = this.validator.validatorStore.getGasLimit(pubkey);
     return {data: {pubkey, gasLimit}};
   }
 
   async setGasLimit({pubkey, gasLimit}: GasLimitData): ReturnType<Api["setGasLimit"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.setGasLimit(pubkey, gasLimit);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 202};
@@ -94,18 +103,22 @@ export class KeymanagerApi implements Api {
 
   async deleteGasLimit({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteGasLimit"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.deleteGasLimit(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 204};
   }
 
   async listKeys(): ReturnType<Api["listKeys"]> {
-    const pubkeys = this.validator.validatorStore.votingPubkeys();
+    const localKeys = this.validator.validatorStore
+      .votingPubkeys()
+      .filter((pubkey) => this.validator.validatorStore.getSigner(pubkey)?.type === SignerType.Local);
+
     return {
-      data: pubkeys.map((pubkey) => ({
+      data: localKeys.map((pubkey) => ({
         validatingPubkey: pubkey,
         derivationPath: "",
-        readonly: this.validator.validatorStore.getSigner(pubkey)?.type !== SignerType.Local,
+        readonly: false,
       })),
     };
   }
@@ -343,6 +356,7 @@ export class KeymanagerApi implements Api {
   }
 
   async getBuilderBoostFactor({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getBuilderBoostFactor"]> {
+    this.assertValidKnownPubkey(pubkey);
     const builderBoostFactor = this.validator.validatorStore.getBuilderBoostFactor(pubkey);
     return {data: {pubkey, builderBoostFactor}};
   }
@@ -352,6 +366,7 @@ export class KeymanagerApi implements Api {
     builderBoostFactor,
   }: BuilderBoostFactorData): ReturnType<Api["setBuilderBoostFactor"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.setBuilderBoostFactor(pubkey, builderBoostFactor);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 202};
@@ -364,11 +379,38 @@ export class KeymanagerApi implements Api {
     return {status: 204};
   }
 
+  async getProposerConfig({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getProposerConfig"]> {
+    this.assertValidKnownPubkey(pubkey);
+
+    const config = this.validator.validatorStore.getProposerConfig(pubkey);
+
+    const data: ProposerConfigResponse = {
+      ...config,
+      builder: config?.builder
+        ? {
+            ...config.builder,
+            // Default JSON serialization can't handle BigInt
+            boostFactor: config.builder.boostFactor ? config.builder.boostFactor.toString() : undefined,
+          }
+        : undefined,
+    };
+
+    return {data};
+  }
+
   async signVoluntaryExit({pubkey, epoch}: {pubkey: PubkeyHex; epoch?: Epoch}): ReturnType<Api["signVoluntaryExit"]> {
+    this.assertValidKnownPubkey(pubkey);
+    return {data: await this.validator.signVoluntaryExit(pubkey, epoch)};
+  }
+
+  private assertValidKnownPubkey(pubkey: PubkeyHex): void {
     if (!isValidatePubkeyHex(pubkey)) {
       throw new ApiError(400, `Invalid pubkey ${pubkey}`);
     }
-    return {data: await this.validator.signVoluntaryExit(pubkey, epoch)};
+
+    if (!this.validator.validatorStore.hasVotingPubkey(pubkey)) {
+      throw new ApiError(404, `Validator pubkey ${pubkey} not known`);
+    }
   }
 }
 

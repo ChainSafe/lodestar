@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import {itBench} from "@dapplion/benchmark";
 import {
   PublicKey,
   SecretKey,
@@ -9,6 +8,7 @@ import {
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/blst";
+import {itBench} from "@dapplion/benchmark";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", () => {

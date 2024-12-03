@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
-import {describe, it, expect} from "vitest";
-import {BitArray} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {phase0, capella, ValidatorIndex, BLSSignature, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {BLSSignature, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
 import {generateCachedState} from "../../utils/state.js";

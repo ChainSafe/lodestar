@@ -2,12 +2,12 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {Web3} from "web3";
-import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
+import {SHARED_JWT_SECRET} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNethermindChainSpec} from "../../utils/executionGenesis.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
-import {SHARED_JWT_SECRET} from "../../constants.js";
 import {getNodePorts} from "../../utils/ports.js";
+import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 
 export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Nethermind> = (opts, runner) => {
   if (!process.env.NETHERMIND_DOCKER_IMAGE) {

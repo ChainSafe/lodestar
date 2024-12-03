@@ -1,42 +1,40 @@
-import {Libp2p as ILibp2p} from "libp2p";
+import {Identify} from "@chainsafe/libp2p-identify";
 import {
-  Libp2pEvents,
   ComponentLogger,
-  NodeInfo,
-  ConnectionProtector,
   ConnectionGater,
+  ConnectionProtector,
   ContentRouting,
-  TypedEventTarget,
+  Libp2pEvents,
   Metrics,
+  NodeInfo,
   PeerId,
   PeerRouting,
   PeerStore,
+  TypedEventTarget,
   Upgrader,
-  PrivateKey,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
-import type {Datastore} from "interface-datastore";
-import {Identify} from "@libp2p/identify";
 import {
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
   SlotRootHex,
+  WithBytes,
   altair,
   capella,
   deneb,
   phase0,
-  SignedAggregateAndProof,
 } from "@lodestar/types";
+import type {Datastore} from "interface-datastore";
+import {Libp2p as ILibp2p} from "libp2p";
 import {PeerIdStr} from "../util/peerId.js";
-import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
+import {INetworkEventBus} from "./events.js";
 import {GossipType} from "./gossip/interface.js";
-import {PendingGossipsubMessage} from "./processor/types.js";
 import {PeerAction} from "./peers/index.js";
-
-export type WithBytes<T> = {data: T; bytes: Uint8Array};
+import {PendingGossipsubMessage} from "./processor/types.js";
 
 /**
  * The architecture of the network looks like so:
@@ -94,7 +92,6 @@ export interface INetwork extends INetworkCorePublic {
 
 export type LodestarComponents = {
   peerId: PeerId;
-  privateKey: PrivateKey;
   nodeInfo: NodeInfo;
   logger: ComponentLogger;
   events: TypedEventTarget<Libp2pEvents>;

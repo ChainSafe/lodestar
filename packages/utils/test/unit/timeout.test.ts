@@ -1,6 +1,6 @@
-import {describe, it, expect, afterEach} from "vitest";
-import {withTimeout} from "../../src/timeout.js";
+import {afterEach, describe, expect, it} from "vitest";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
+import {withTimeout} from "../../src/timeout.js";
 
 describe("withTimeout", () => {
   const data = "DATA";

@@ -2,13 +2,13 @@ import {ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@c
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
-  MAX_TRANSACTIONS_PER_PAYLOAD,
   MAX_BYTES_PER_TRANSACTION,
   MAX_EXTRA_DATA_BYTES,
+  MAX_TRANSACTIONS_PER_PAYLOAD,
 } from "@lodestar/params";
-import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as primitiveSsz} from "../primitive/index.js";
 import {stringType} from "../utils/stringType.js";
 
 const {

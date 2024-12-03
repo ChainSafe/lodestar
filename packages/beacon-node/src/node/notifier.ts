@@ -1,12 +1,12 @@
 import {BeaconConfig} from "@lodestar/config";
-import {Epoch} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
-import {ErrorAborted, Logger, sleep, prettyBytes, prettyBytesShort} from "@lodestar/utils";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {ExecutionEngineState} from "../execution/index.js";
+import {Epoch} from "@lodestar/types";
+import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
+import {ExecutionEngineState} from "../execution/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";
 import {prettyTimeDiffSec} from "../util/time.js";
@@ -54,12 +54,12 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const clockSlot = chain.clock.currentSlot;
       const clockEpoch = computeEpochAtSlot(clockSlot);
 
-      if (
-        clockEpoch >= config.BELLATRIX_FORK_EPOCH &&
-        computeStartSlotAtEpoch(clockEpoch) === clockSlot &&
-        chain.executionEngine.state === ExecutionEngineState.OFFLINE
-      ) {
-        logger.warn("Execution client is offline");
+      if (clockEpoch >= config.BELLATRIX_FORK_EPOCH && computeStartSlotAtEpoch(clockEpoch) === clockSlot) {
+        if (chain.executionEngine.state === ExecutionEngineState.OFFLINE) {
+          logger.warn("Execution client is offline");
+        } else if (chain.executionEngine.state === ExecutionEngineState.AUTH_FAILED) {
+          logger.error("Execution client authentication failed. Verify if the JWT secret matches on both clients");
+        }
       }
 
       const headInfo = chain.forkChoice.getHead();

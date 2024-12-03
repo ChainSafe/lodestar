@@ -1,6 +1,6 @@
 import {SecretKey} from "@chainsafe/blst";
-import {BLSPubkey} from "@lodestar/types";
 import {DatabaseController} from "@lodestar/db";
+import {BLSPubkey} from "@lodestar/types";
 
 export type GenesisInfo = {
   startTime: number;

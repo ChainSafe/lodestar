@@ -1,12 +1,12 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {LogFormat, TimestampFormatCode, logFormats} from "@lodestar/logger";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {LogLevel} from "@lodestar/utils";
-import {LogArgs} from "../options/logOptions.js";
 import {GlobalArgs} from "../options/globalOptions.js";
+import {LogArgs} from "../options/logOptions.js";
 
 export const LOG_FILE_DISABLE_KEYWORD = "none";
 

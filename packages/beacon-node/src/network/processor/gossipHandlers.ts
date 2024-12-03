@@ -1,59 +1,59 @@
-import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
-import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
-import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {Metrics} from "../../metrics/index.js";
-import {OpSource} from "../../metrics/validatorMonitor.js";
+import {Root, SignedBeaconBlock, Slot, UintNum64, deneb, ssz, sszTypesFor} from "@lodestar/types";
+import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
+import {
+  BlobSidecarValidation,
+  BlockInput,
+  BlockInputType,
+  GossipedInputType,
+  NullBlockInput,
+} from "../../chain/blocks/types.js";
 import {
   AttestationError,
   AttestationErrorCode,
+  BlobSidecarErrorCode,
+  BlobSidecarGossipError,
   BlockError,
   BlockErrorCode,
   BlockGossipError,
-  BlobSidecarErrorCode,
-  BlobSidecarGossipError,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
+import {IBeaconChain} from "../../chain/interface.js";
+import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
+import {
+  AggregateAndProofValidationResult,
+  GossipAttestation,
+  validateGossipAggregateAndProof,
+  validateGossipAttestationsSameAttData,
+  validateGossipAttesterSlashing,
+  validateGossipBlock,
+  validateGossipBlsToExecutionChange,
+  validateGossipProposerSlashing,
+  validateGossipSyncCommittee,
+  validateGossipVoluntaryExit,
+  validateSyncCommitteeGossipContributionAndProof,
+} from "../../chain/validation/index.js";
+import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
+import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
+import {Metrics} from "../../metrics/index.js";
+import {OpSource} from "../../metrics/validatorMonitor.js";
+import {INetworkCore} from "../core/index.js";
+import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   BatchGossipHandlers,
-  SequentialGossipHandlers,
   GossipHandlerParamGeneric,
   GossipHandlers,
   GossipType,
+  SequentialGossipHandlers,
 } from "../gossip/interface.js";
-import {
-  validateGossipAggregateAndProof,
-  validateGossipAttesterSlashing,
-  validateGossipBlock,
-  validateGossipProposerSlashing,
-  validateGossipSyncCommittee,
-  validateSyncCommitteeGossipContributionAndProof,
-  validateGossipVoluntaryExit,
-  validateGossipBlsToExecutionChange,
-  AggregateAndProofValidationResult,
-  validateGossipAttestationsSameAttData,
-  GossipAttestation,
-} from "../../chain/validation/index.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {PeerAction} from "../peers/index.js";
-import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
-import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
-import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {
-  BlockInput,
-  GossipedInputType,
-  BlobSidecarValidation,
-  BlockInputType,
-  NullBlockInput,
-} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
-import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
-import {IBeaconChain} from "../../chain/interface.js";
+import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
 /**
@@ -253,6 +253,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // if blobs are not yet fully available start an aggressive blob pull
     if (blockInput.type === BlockInputType.dataPromise) {
       events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+    } else if (blockInput.type === BlockInputType.availableData) {
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blockInput.blockData.blobs.length);
     }
 
     chain

@@ -1,5 +1,5 @@
-import {describe, it, expect, beforeEach} from "vitest";
-import {findLastIndex, LinkedList} from "../../../src/util/array.js";
+import {beforeEach, describe, expect, it} from "vitest";
+import {LinkedList, findLastIndex} from "../../../src/util/array.js";
 
 describe("findLastIndex", () => {
   it("should return the last index that matches a predicate", () => {

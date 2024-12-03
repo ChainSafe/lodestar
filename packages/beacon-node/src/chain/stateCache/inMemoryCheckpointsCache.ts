@@ -1,11 +1,11 @@
-import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {MapDef, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Epoch, RootHex, phase0} from "@lodestar/types";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CheckpointStateCache, CacheItemType} from "./types.js";
+import {CacheItemType, CheckpointStateCache} from "./types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;

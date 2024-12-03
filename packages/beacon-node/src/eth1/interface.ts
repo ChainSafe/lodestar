@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
-import {phase0, Root, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Root, RootHex, phase0} from "@lodestar/types";
 
 export type EthJsonRpcBlockRaw = {
   /** the block number. null when its pending block. `"0x1b4"` */

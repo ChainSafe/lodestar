@@ -7,28 +7,28 @@ import {
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {
-  HISTORICAL_ROOTS_LIMIT,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  SLOTS_PER_EPOCH,
-  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_VALIDATORS_PER_COMMITTEE,
-  MAX_COMMITTEES_PER_SLOT,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  HISTORICAL_ROOTS_LIMIT,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+  MAX_COMMITTEES_PER_SLOT,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_VALIDATORS_PER_COMMITTEE,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  PENDING_CONSOLIDATIONS_LIMIT,
   PENDING_DEPOSITS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
-  PENDING_CONSOLIDATIONS_LIMIT,
-  FINALIZED_ROOT_DEPTH_ELECTRA,
-  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {
   Epoch,

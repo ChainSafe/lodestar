@@ -1,7 +1,7 @@
-import {describe, beforeAll, it, expect, beforeEach} from "vitest";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {
   CheckpointHex,
   InMemoryCheckpointStateCache,

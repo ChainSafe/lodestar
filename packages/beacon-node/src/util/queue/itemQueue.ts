@@ -1,7 +1,7 @@
-import {LinkedList} from "../array.js";
 import {callInNextEventLoop, nextEventLoop} from "../../util/eventLoop.js";
+import {LinkedList} from "../array.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
-import {defaultQueueOpts, QueueMetrics, JobQueueOpts, QueueType} from "./options.js";
+import {JobQueueOpts, QueueMetrics, QueueType, defaultQueueOpts} from "./options.js";
 
 /**
  * JobQueue that stores arguments in the job array instead of closures.

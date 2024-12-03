@@ -1,7 +1,7 @@
 import path from "node:path";
-import {spawn, Pool, Worker, ModuleThread, QueuedTask} from "@chainsafe/threads";
-import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI} from "./types.js";
+import {ModuleThread, Pool, QueuedTask, Worker, spawn} from "@chainsafe/threads";
 import {maxPoolSize} from "./poolSize.js";
+import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI} from "./types.js";
 
 // Worker constructor consider the path relative to the current working directory
 const workerDir =

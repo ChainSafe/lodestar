@@ -1,7 +1,7 @@
+import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 /* eslint-disable no-console */
 import {activePreset} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {
   CLIQUE_SEALING_PERIOD,
   ETH_TTD_INCREMENT,

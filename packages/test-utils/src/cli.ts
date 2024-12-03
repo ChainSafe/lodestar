@@ -1,13 +1,13 @@
 import childProcess from "node:child_process";
 import type {Argv} from "yargs";
-import {wrapTimeout} from "./timeout.js";
-import {nodeJsBinaryPath, repoRootPath} from "./path.js";
 import {
   ExecChildProcessOptions,
   SpawnChildProcessOptions,
   execChildProcess,
   spawnChildProcess,
 } from "./childProcess.js";
+import {nodeJsBinaryPath, repoRootPath} from "./path.js";
+import {wrapTimeout} from "./timeout.js";
 
 // We need to make it easy for the user to pass the args for the CLI
 // yargs treat `["--preset minimal"] as a single arg, so we need to split it ["--preset", "minimal"]

@@ -1,7 +1,7 @@
 import path from "node:path";
-import {Simulation} from "../utils/crucible/simulation.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
-import {Match, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {BeaconClient, ExecutionClient, Match, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 

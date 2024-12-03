@@ -1,27 +1,32 @@
-import {phase0, Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv, toRootHex} from "@lodestar/utils";
 import {
   EPOCHS_PER_SLASHINGS_VECTOR,
   FAR_FUTURE_EPOCH,
   ForkSeq,
-  SLOTS_PER_HISTORICAL_ROOT,
   MIN_ACTIVATION_BALANCE,
+  SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
+import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {intDiv, toRootHex} from "@lodestar/utils";
 
+import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 import {
-  hasMarkers,
-  FLAG_UNSLASHED,
-  FLAG_ELIGIBLE_ATTESTER,
-  FLAG_PREV_SOURCE_ATTESTER,
-  FLAG_PREV_TARGET_ATTESTER,
-  FLAG_PREV_HEAD_ATTESTER,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
+  hasCompoundingWithdrawalCredential,
+} from "../index.js";
+import {computeBaseRewardPerIncrement} from "../util/altair.js";
+import {
+  FLAG_CURR_HEAD_ATTESTER,
   FLAG_CURR_SOURCE_ATTESTER,
   FLAG_CURR_TARGET_ATTESTER,
-  FLAG_CURR_HEAD_ATTESTER,
+  FLAG_ELIGIBLE_ATTESTER,
+  FLAG_PREV_HEAD_ATTESTER,
+  FLAG_PREV_SOURCE_ATTESTER,
+  FLAG_PREV_TARGET_ATTESTER,
+  FLAG_UNSLASHED,
+  hasMarkers,
 } from "../util/attesterStatus.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../index.js";
-import {computeBaseRewardPerIncrement} from "../util/altair.js";
-import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
 export type EpochTransitionCacheOpts = {
   /**
@@ -133,11 +138,7 @@ export interface EpochTransitionCache {
 
   flags: number[];
 
-  /**
-   * Validators in the current epoch, should use it for read-only value instead of accessing state.validators directly.
-   * Note that during epoch processing, validators could be updated so need to use it with care.
-   */
-  validators: phase0.Validator[];
+  isCompoundingValidatorArr: boolean[];
 
   /**
    * balances array will be populated by processRewardsAndPenalties() and consumed by processEffectiveBalanceUpdates().
@@ -209,6 +210,8 @@ const inclusionDelays = new Array<number>();
 /** WARNING: reused, never gc'd */
 const flags = new Array<number>();
 /** WARNING: reused, never gc'd */
+const isCompoundingValidatorArr = new Array<boolean>();
+/** WARNING: reused, never gc'd */
 const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 
 export function beforeProcessEpoch(
@@ -262,6 +265,10 @@ export function beforeProcessEpoch(
   // TODO: optimize by combining the two loops
   // likely will require splitting into phase0 and post-phase0 versions
 
+  if (forkSeq >= ForkSeq.electra) {
+    isCompoundingValidatorArr.length = validatorCount;
+  }
+
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();
 
@@ -297,6 +304,10 @@ export function beforeProcessEpoch(
     }
 
     flags[i] = flag;
+
+    if (forkSeq >= ForkSeq.electra) {
+      isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials);
+    }
 
     if (isActiveCurr) {
       totalActiveStakeByIncrement += effectiveBalancesByIncrements[i];
@@ -511,7 +522,7 @@ export function beforeProcessEpoch(
     proposerIndices,
     inclusionDelays,
     flags,
-    validators,
+    isCompoundingValidatorArr,
     // Will be assigned in processRewardsAndPenalties()
     balances: undefined,
   };

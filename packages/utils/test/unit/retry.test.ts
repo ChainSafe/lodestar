@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {retry, RetryOptions} from "../../src/retry.js";
+import {describe, expect, it} from "vitest";
+import {RetryOptions, retry} from "../../src/retry.js";
 
 describe("retry", () => {
   type TestCase = {
