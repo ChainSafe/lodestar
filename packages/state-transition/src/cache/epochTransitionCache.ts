@@ -5,7 +5,7 @@ import {
   MIN_ACTIVATION_BALANCE,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
-import {Epoch, RootHex, ValidatorIndex, phase0} from "@lodestar/types";
+import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {intDiv, toRootHex} from "@lodestar/utils";
 
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
