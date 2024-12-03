@@ -106,7 +106,10 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
     // Total number of attestation participants of every committee specified
     let committeeOffset = 0;
     for (const committeeValidators of validatorsByCommittee) {
-      const committeeAggregationBits = aggregationBitsArray.slice(committeeOffset, committeeOffset + committeeValidators.length);
+      const committeeAggregationBits = aggregationBitsArray.slice(
+        committeeOffset,
+        committeeOffset + committeeValidators.length
+      );
 
       // Assert aggregation bits in this committee have at least one true bit
       if (committeeAggregationBits.every((bit) => !bit)) {
