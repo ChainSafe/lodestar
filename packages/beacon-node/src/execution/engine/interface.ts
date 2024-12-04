@@ -58,6 +58,13 @@ export enum ClientCode {
   XX = "XX", // unknown
 }
 
+// Represents request type in ExecutionRequests defined in EIP-7685
+export enum RequestType {
+  DEPOSIT_REQUEST_TYPE = 0, // 0x00
+  WITHDRAWAL_REQUEST_TYPE = 1, // 0x01
+  CONSOLIDATION_REQUEST_TYPE = 2, // 0x02
+}
+
 export type ExecutePayloadResponse =
   | {
       status: ExecutionPayloadStatus.SYNCING | ExecutionPayloadStatus.ACCEPTED;

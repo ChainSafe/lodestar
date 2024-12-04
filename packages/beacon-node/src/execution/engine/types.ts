@@ -17,7 +17,7 @@ import {
   quantityToBigint,
   quantityToNum,
 } from "../../eth1/provider/utils.js";
-import {BlobsBundle, ExecutionPayloadStatus, PayloadAttributes, VersionedHashes} from "./interface.js";
+import {BlobsBundle, ExecutionPayloadStatus, PayloadAttributes, RequestType, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 export type EngineApiRpcParamTypes = {
@@ -165,12 +165,12 @@ export type WithdrawalRpc = {
 };
 
 /**
- * ExecutionRequestsRpc only holds 3 elements in the following order:
+ * ExecutionRequestsRpc only holds at most 3 elements and no repeated type:
  * - ssz'ed DepositRequests
  * - ssz'ed WithdrawalRequests
  * - ssz'ed ConsolidationRequests
  */
-export type ExecutionRequestsRpc = [DepositRequestsRpc, WithdrawalRequestsRpc, ConsolidationRequestsRpc];
+export type ExecutionRequestsRpc = (DepositRequestsRpc | WithdrawalRequestsRpc | ConsolidationRequestsRpc)[];
 
 export type DepositRequestsRpc = DATA;
 export type WithdrawalRequestsRpc = DATA;
@@ -404,8 +404,20 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
   } as capella.Withdrawal;
 }
 
+/**
+ * Prepend a single-byte requestType to requestsBytes
+ */
+function prefixRequests(requestsBytes: Uint8Array, requestType: RequestType): Uint8Array {
+  const prefixedRequests = new Uint8Array(1 + requestsBytes.length);
+  prefixedRequests[0] = requestType;
+  prefixedRequests.set(requestsBytes, 1);
+
+  return prefixedRequests;
+}
+
 function serializeDepositRequests(depositRequests: electra.DepositRequests): DepositRequestsRpc {
-  return bytesToData(ssz.electra.DepositRequests.serialize(depositRequests));
+  const requestsBytes = ssz.electra.DepositRequests.serialize(depositRequests);
+  return bytesToData(prefixRequests(requestsBytes, RequestType.DEPOSIT_REQUEST_TYPE));
 }
 
 function deserializeDepositRequests(serialized: DepositRequestsRpc): electra.DepositRequests {
@@ -413,17 +425,19 @@ function deserializeDepositRequests(serialized: DepositRequestsRpc): electra.Dep
 }
 
 function serializeWithdrawalRequests(withdrawalRequests: electra.WithdrawalRequests): WithdrawalRequestsRpc {
-  return bytesToData(ssz.electra.WithdrawalRequests.serialize(withdrawalRequests));
+  const requestsBytes = ssz.electra.WithdrawalRequests.serialize(withdrawalRequests);
+  return bytesToData(prefixRequests(requestsBytes, RequestType.WITHDRAWAL_REQUEST_TYPE));
 }
 
-function deserializeWithdrawalRequest(serialized: WithdrawalRequestsRpc): electra.WithdrawalRequests {
+function deserializeWithdrawalRequests(serialized: WithdrawalRequestsRpc): electra.WithdrawalRequests {
   return ssz.electra.WithdrawalRequests.deserialize(dataToBytes(serialized, null));
 }
 
 function serializeConsolidationRequests(
   consolidationRequests: electra.ConsolidationRequests
 ): ConsolidationRequestsRpc {
-  return bytesToData(ssz.electra.ConsolidationRequests.serialize(consolidationRequests));
+  const requestsBytes = ssz.electra.ConsolidationRequests.serialize(consolidationRequests);
+  return bytesToData(prefixRequests(requestsBytes, RequestType.CONSOLIDATION_REQUEST_TYPE));
 }
 
 function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc): electra.ConsolidationRequests {
@@ -436,22 +450,64 @@ function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc):
  */
 export function serializeExecutionRequests(executionRequests: ExecutionRequests): ExecutionRequestsRpc {
   const {deposits, withdrawals, consolidations} = executionRequests;
+  const result = [];
 
-  return [
-    serializeDepositRequests(deposits),
-    serializeWithdrawalRequests(withdrawals),
-    serializeConsolidationRequests(consolidations),
-  ];
+  if (deposits.length !== 0) {
+    result.push(serializeDepositRequests(deposits));
+  }
+
+  if (withdrawals.length !== 0) {
+    result.push(serializeWithdrawalRequests(withdrawals));
+  }
+
+  if (consolidations.length !== 0) {
+    result.push(serializeConsolidationRequests(consolidations));
+  }
+
+  return result;
 }
 
 export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): ExecutionRequests {
-  const [deposits, withdrawals, consolidations] = serialized;
-
-  return {
-    deposits: deserializeDepositRequests(deposits),
-    withdrawals: deserializeWithdrawalRequest(withdrawals),
-    consolidations: deserializeConsolidationRequests(consolidations),
+  const result: ExecutionRequests = {
+    deposits: [],
+    withdrawals: [],
+    consolidations: [],
   };
+
+  if (serialized.length === 0) {
+    return result;
+  }
+
+  let prevRequestType: RequestType | undefined;
+
+  for (const prefixedRequests of serialized) {
+    const currentRequestType = RequestType[prefixedRequests[0] as keyof typeof RequestType];
+    const requests = prefixedRequests.slice(1);
+
+    if (prevRequestType !== undefined && prevRequestType >= currentRequestType) {
+      throw Error(
+        `Current request type must be larger than previous request type prevRequestType=${prevRequestType} currentRequestType=${currentRequestType}`
+      );
+    }
+
+    switch (currentRequestType) {
+      case RequestType.DEPOSIT_REQUEST_TYPE: {
+        result.deposits = deserializeDepositRequests(requests);
+        break;
+      }
+      case RequestType.WITHDRAWAL_REQUEST_TYPE: {
+        result.withdrawals = deserializeWithdrawalRequests(requests);
+        break;
+      }
+      case RequestType.CONSOLIDATION_REQUEST_TYPE: {
+        result.consolidations = deserializeConsolidationRequests(requests);
+        break;
+      }
+    }
+    prevRequestType = currentRequestType;
+  }
+
+  return result;
 }
 
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
