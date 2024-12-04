@@ -5,7 +5,7 @@ import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {hasExecutionWithdrawalCredential, switchToCompoundingValidator} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
-import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
+import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 
 // TODO Electra: Clean up necessary as there is a lot of overlap with isValidSwitchToCompoundRequest
 export function processConsolidationRequest(
@@ -64,6 +64,16 @@ export function processConsolidationRequest(
 
   // Verify exits for source and target have not been initiated
   if (sourceValidator.exitEpoch !== FAR_FUTURE_EPOCH || targetValidator.exitEpoch !== FAR_FUTURE_EPOCH) {
+    return;
+  }
+
+  // Verify the source has been active long enough
+  if (currentEpoch < sourceValidator.activationEpoch + state.config.SHARD_COMMITTEE_PERIOD) {
+    return;
+  }
+
+  // Verify the source has no pending withdrawals in the queue
+  if (getPendingBalanceToWithdraw(state, sourceIndex) > 0) {
     return;
   }
 

@@ -25,9 +25,8 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra,
   payload: capella.FullOrBlindedExecutionPayload
 ): void {
-  // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
-  // TODO - electra: may switch to executionWithdrawalsCount
-  const {withdrawals: expectedWithdrawals, partialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
+  // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
+  const {withdrawals: expectedWithdrawals, processedPartialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
   if (isCapellaPayloadHeader(payload)) {
@@ -59,7 +58,9 @@ export function processWithdrawals(
 
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
-    stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(partialWithdrawalsCount);
+    stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(
+      processedPartialWithdrawalsCount
+    );
   }
 
   // Update the nextWithdrawalIndex
@@ -87,7 +88,7 @@ export function getExpectedWithdrawals(
 ): {
   withdrawals: capella.Withdrawal[];
   sampledValidators: number;
-  partialWithdrawalsCount: number;
+  processedPartialWithdrawalsCount: number;
 } {
   if (fork < ForkSeq.capella) {
     throw new Error(`getExpectedWithdrawals not supported at forkSeq=${fork} < ForkSeq.capella`);
@@ -100,7 +101,7 @@ export function getExpectedWithdrawals(
   const withdrawals: capella.Withdrawal[] = [];
   const isPostElectra = fork >= ForkSeq.electra;
   // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
-  let partialWithdrawalsCount = 0;
+  let processedPartialWithdrawalsCount = 0;
 
   if (isPostElectra) {
     const stateElectra = state as CachedBeaconStateElectra;
@@ -140,7 +141,7 @@ export function getExpectedWithdrawals(
         });
         withdrawalIndex++;
       }
-      partialWithdrawalsCount++;
+      processedPartialWithdrawalsCount++;
     }
   }
 
@@ -151,9 +152,14 @@ export function getExpectedWithdrawals(
   for (n = 0; n < bound; n++) {
     // Get next validator in turn
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
+    const partiallyWithdrawnBalance = withdrawals
+      .filter((withdrawal) => withdrawal.validatorIndex === validatorIndex)
+      .reduce((acc, withdrawal) => acc + Number(withdrawal.amount), 0);
 
     const validator = validators.getReadonly(validatorIndex);
-    const balance = balances.get(validatorIndex);
+    const balance = isPostElectra
+      ? balances.get(validatorIndex) - partiallyWithdrawnBalance
+      : balances.get(validatorIndex);
     const {withdrawableEpoch, withdrawalCredentials, effectiveBalance} = validator;
     const hasWithdrawableCredentials = isPostElectra
       ? hasExecutionWithdrawalCredential(withdrawalCredentials)
@@ -193,5 +199,5 @@ export function getExpectedWithdrawals(
     }
   }
 
-  return {withdrawals, sampledValidators: n, partialWithdrawalsCount};
+  return {withdrawals, sampledValidators: n, processedPartialWithdrawalsCount};
 }
