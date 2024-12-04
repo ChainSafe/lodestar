@@ -1,24 +1,24 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ProtoBlock, IForkChoice, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {phase0, Slot, ssz} from "@lodestar/types";
+import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Slot, phase0, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "../../../../state-transition/test/perf/util.js";
-import {IBeaconChain} from "../../../src/chain/index.js";
-import {IStateRegenerator} from "../../../src/chain/regen/index.js";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
-import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
-import {signCached} from "../cache.js";
-import {ClockStatic} from "../clock.js";
+import {IBeaconChain} from "../../../src/chain/index.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
+import {IStateRegenerator} from "../../../src/chain/regen/index.js";
+import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
 import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
-import {defaultChainOptions} from "../../../src/chain/options.js";
-import {testLogger} from "../logger.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
+import {signCached} from "../cache.js";
+import {ClockStatic} from "../clock.js";
+import {testLogger} from "../logger.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;

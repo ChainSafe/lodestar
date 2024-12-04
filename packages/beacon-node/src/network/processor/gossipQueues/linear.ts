@@ -1,5 +1,5 @@
 import {LinkedList} from "../../../util/array.js";
-import {LinearGossipQueueOpts, DropType, GossipQueue, QueueType} from "./types.js";
+import {DropType, GossipQueue, LinearGossipQueueOpts, QueueType} from "./types.js";
 
 // Having a drop ratio of 1 will empty the queue which is too severe
 // Worse case drop 95% of the queue

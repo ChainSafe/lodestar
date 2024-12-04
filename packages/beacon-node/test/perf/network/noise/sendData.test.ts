@@ -1,10 +1,10 @@
-import {itBench} from "@dapplion/benchmark";
-import {duplexPair} from "it-pair/duplex";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {pipe} from "it-pipe";
-import drain from "it-drain";
-import {defaultLogger} from "@libp2p/logger";
 import {noise} from "@chainsafe/libp2p-noise";
+import {itBench} from "@dapplion/benchmark";
+import {defaultLogger} from "@libp2p/logger";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import drain from "it-drain";
+import {duplexPair} from "it-pair/duplex";
+import {pipe} from "it-pipe";
 import {Uint8ArrayList} from "uint8arraylist";
 
 describe("network / noise / sendData", () => {

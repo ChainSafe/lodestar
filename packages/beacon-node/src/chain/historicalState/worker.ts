@@ -1,21 +1,21 @@
 import worker from "node:worker_threads";
-import {Transfer, expose} from "@chainsafe/threads/worker";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
+import {Transfer, expose} from "@chainsafe/threads/worker";
+import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
+import {LevelDbController} from "@lodestar/db";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
-import {LevelDbController} from "@lodestar/db";
+import {BeaconDb} from "../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {JobFnQueue} from "../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../util/queue/options.js";
-import {BeaconDb} from "../../db/index.js";
+import {getHistoricalState} from "./getHistoricalState.js";
 import {
   HistoricalStateRegenMetrics,
   HistoricalStateWorkerApi,
   HistoricalStateWorkerData,
   RegenErrorType,
 } from "./types.js";
-import {getHistoricalState} from "./getHistoricalState.js";
 
 // most of this setup copied from networkCoreWorker.ts
 

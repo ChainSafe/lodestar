@@ -1,4 +1,4 @@
-import {getClient, ApiClient, ApiRequestInit} from "@lodestar/api";
+import {ApiClient, ApiRequestInit, getClient} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 

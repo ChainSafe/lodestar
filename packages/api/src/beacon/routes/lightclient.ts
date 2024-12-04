@@ -1,27 +1,27 @@
 import {ListCompositeType, ValueOf} from "@chainsafe/ssz";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {NetworkName, genesisData} from "@lodestar/config/networks";
+import {ForkName, ZERO_HASH} from "@lodestar/params";
 import {
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  ssz,
   SyncPeriod,
+  ssz,
 } from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {ForkName, ZERO_HASH} from "@lodestar/params";
-import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {genesisData, NetworkName} from "@lodestar/config/networks";
-import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
-import {getLightClientForkTypes, toForkName} from "../../utils/fork.js";
 import {
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   WithVersion,
 } from "../../utils/codecs.js";
+import {getLightClientForkTypes, toForkName} from "../../utils/fork.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

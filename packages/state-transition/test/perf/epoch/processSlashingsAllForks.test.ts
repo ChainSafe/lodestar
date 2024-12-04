@@ -1,14 +1,14 @@
 import {itBench} from "@dapplion/benchmark";
 import {MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-import {
-  beforeProcessEpoch,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAllForks,
-  EpochTransitionCache,
-} from "../../../src/index.js";
 import {processSlashings} from "../../../src/epoch/processSlashings.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  EpochTransitionCache,
+  beforeProcessEpoch,
+} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
 // - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same

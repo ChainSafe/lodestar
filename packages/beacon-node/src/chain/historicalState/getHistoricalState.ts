@@ -1,4 +1,5 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import {BeaconConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -7,7 +8,6 @@ import {
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
-import {BeaconConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 import {HistoricalStateRegenMetrics, RegenErrorType} from "./types.js";
 

@@ -1,4 +1,4 @@
-import {defaultExecutionBuilderHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {IBeaconNodeOptions, defaultExecutionBuilderHttpOpts} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "../../util/index.js";
 

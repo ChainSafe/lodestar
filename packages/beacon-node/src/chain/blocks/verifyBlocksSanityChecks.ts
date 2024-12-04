@@ -1,6 +1,6 @@
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";

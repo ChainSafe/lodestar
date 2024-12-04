@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
 import {ForkSeq} from "@lodestar/params";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
 // - indicesEligibleForActivationQueue: Maxing deposits triggers 512 validator mutations

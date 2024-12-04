@@ -1,5 +1,5 @@
 import {fromHex, toHex} from "@lodestar/utils";
-import {ChainConfig, chainConfigTypes, SpecValue, SpecValueTypeName} from "./types.js";
+import {ChainConfig, SpecValue, SpecValueTypeName, chainConfigTypes} from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
 

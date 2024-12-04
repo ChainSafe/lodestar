@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
-import {Logger, fromHex} from "@lodestar/utils";
-import {Slot, Root, RootHex} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
+import {Root, RootHex, Slot} from "@lodestar/types";
+import {Logger, fromHex} from "@lodestar/utils";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 
 const {EventType} = routes.events;

@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
-import {computeActivationExitEpoch} from "../util/index.js";
 import {initiateValidatorExit} from "../block/index.js";
-import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
+import {computeActivationExitEpoch} from "../util/index.js";
 
 /**
  * Update validator registry for validators that activate + exit

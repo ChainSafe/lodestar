@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {expect} from "chai";
-import {SYNC_COMMITTEE_SUBNET_COUNT, ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {expect} from "chai";
 import {deserializeEnrSubnets} from "../../../../src/network/peers/utils/enrSubnetsDeserialize.js";
 
 /**

@@ -1,64 +1,64 @@
-import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {
-  UintNum64,
-  Root,
-  phase0,
-  Slot,
-  RootHex,
-  Epoch,
-  ValidatorIndex,
-  deneb,
-  Wei,
-  capella,
-  altair,
-  BeaconBlock,
-  ExecutionPayload,
-  SignedBeaconBlock,
-  BlindedBeaconBlock,
-} from "@lodestar/types";
+import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   EpochShuffling,
   Index2PubkeyCache,
 } from "@lodestar/state-transition";
-import {BeaconConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
-import {Metrics} from "../metrics/metrics.js";
-import {IClock} from "../util/clock.js";
-import {BufferPool} from "../util/bufferPool.js";
-import {ChainEventEmitter} from "./emitter.js";
-import {IStateRegenerator, RegenCaller} from "./regen/index.js";
-import {IBlsVerifier} from "./bls/index.js";
 import {
-  SeenAttesters,
-  SeenAggregators,
-  SeenBlockProposers,
-  SeenSyncCommitteeMessages,
-  SeenContributionAndProof,
-} from "./seenCache/index.js";
-import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+  BeaconBlock,
+  BlindedBeaconBlock,
+  Epoch,
+  ExecutionPayload,
+  Root,
+  RootHex,
+  SignedBeaconBlock,
+  Slot,
+  UintNum64,
+  ValidatorIndex,
+  Wei,
+  altair,
+  capella,
+  deneb,
+  phase0,
+} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
+import {IEth1ForBlockProduction} from "../eth1/index.js";
+import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {Metrics} from "../metrics/metrics.js";
+import {BufferPool} from "../util/bufferPool.js";
+import {IClock} from "../util/clock.js";
+import {CheckpointBalancesCache} from "./balancesCache.js";
+import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
+import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
+import {IBlsVerifier} from "./bls/index.js";
+import {ChainEventEmitter} from "./emitter.js";
+import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
-import {ReprocessController} from "./reprocess.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
+import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
-import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {ShufflingCache} from "./shufflingCache.js";
-import {BlockRewards} from "./rewards/blockRewards.js";
+import {IStateRegenerator, RegenCaller} from "./regen/index.js";
+import {ReprocessController} from "./reprocess.js";
 import {AttestationsRewards} from "./rewards/attestationsRewards.js";
+import {BlockRewards} from "./rewards/blockRewards.js";
 import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
-import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenBlockProposers,
+  SeenContributionAndProof,
+  SeenSyncCommitteeMessages,
+} from "./seenCache/index.js";
+import {SeenGossipBlockInput} from "./seenCache/index.js";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {ShufflingCache} from "./shufflingCache.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};

@@ -1,5 +1,5 @@
-import {ForkName} from "@lodestar/params";
 import {ChainForkConfig, ForkInfo} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 
 /**

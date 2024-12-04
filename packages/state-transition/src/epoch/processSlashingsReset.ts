@@ -1,5 +1,5 @@
 import {EFFECTIVE_BALANCE_INCREMENT, EPOCHS_PER_SLASHINGS_VECTOR} from "@lodestar/params";
-import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /**
  * Reset the next slashings balance accumulator

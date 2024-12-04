@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateAltair, CachedBeaconStateBellatrix} from "../types.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
+import {CachedBeaconStateAltair, CachedBeaconStateBellatrix} from "../types.js";
 
 /**
  * Upgrade a state from altair to bellatrix.

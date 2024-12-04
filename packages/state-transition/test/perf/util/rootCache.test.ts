@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {generatePerfTestCachedStatePhase0, perfStateId, perfStateEpoch} from "../util.js";
+import {RootCache, computeStartSlotAtEpoch, getBlockRootAtSlot} from "../../../src/util/index.js";
 import {State} from "../types.js";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot, RootCache} from "../../../src/util/index.js";
+import {generatePerfTestCachedStatePhase0, perfStateEpoch, perfStateId} from "../util.js";
 
 const slot = computeStartSlotAtEpoch(perfStateEpoch) - 1;
 

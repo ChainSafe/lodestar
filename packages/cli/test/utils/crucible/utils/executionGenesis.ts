@@ -1,5 +1,5 @@
 import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
-import {ExecutionGenesisOptions, ExecutionStartMode, Eth1GenesisBlock} from "../interfaces.js";
+import {Eth1GenesisBlock, ExecutionGenesisOptions, ExecutionStartMode} from "../interfaces.js";
 
 export const getGethGenesisBlock = (
   mode: ExecutionStartMode,

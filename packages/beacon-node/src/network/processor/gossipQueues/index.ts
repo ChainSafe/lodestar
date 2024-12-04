@@ -1,10 +1,10 @@
 import {mapValues} from "@lodestar/utils";
+import {getGossipAttestationIndex} from "../../../util/sszBytes.js";
 import {BatchGossipType, GossipType, SequentialGossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";
-import {getGossipAttestationIndex} from "../../../util/sszBytes.js";
+import {IndexedGossipQueueMinSize} from "./indexed.js";
 import {LinearGossipQueue} from "./linear.js";
 import {DropType, GossipQueue, GossipQueueOpts, QueueType, isIndexedGossipQueueMinSizeOpts} from "./types.js";
-import {IndexedGossipQueueMinSize} from "./indexed.js";
 
 /**
  * In normal condition, the higher this value the more efficient the signature verification.

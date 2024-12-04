@@ -10,11 +10,18 @@ const sidebars: SidebarsConfig = {
       label: "Run A Node",
       collapsed: false,
       items: [
-        "run/getting-started/quick-start",
         "run/getting-started/installation",
         {
           type: "category",
-          label: "Beacon node",
+          label: "Quick Start",
+          items: [
+            "run/getting-started/quick-start",
+            "run/getting-started/quick-start-custom-guide",
+          ],
+        },
+        {
+          type: "category",
+          label: "Beacon Node",
           items: [
             "run/beacon-management/starting-a-node",
             "run/beacon-management/beacon-cli",
@@ -31,17 +38,23 @@ const sidebars: SidebarsConfig = {
             "run/validator-management/vc-configuration",
             "run/validator-management/validator-cli",
             "run/validator-management/external-signer",
+            "run/validator-management/proposer-config",
           ],
         },
         {
           type: "category",
           label: "Logging and Metrics",
-          items: ["run/logging-and-metrics/prometheus-grafana", "run/logging-and-metrics/client-monitoring"],
+          items: [
+            "run/logging-and-metrics/prometheus-grafana",
+            "run/logging-and-metrics/client-monitoring",
+          ],
         },
         {
           type: "category",
           label: "Discv5 Bootnode",
-          items: ["run/bootnode/bootnode-cli"],
+          items: [
+            "run/bootnode/bootnode-cli",
+          ],
         },
       ],
     },

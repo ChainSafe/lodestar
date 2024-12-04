@@ -1,8 +1,10 @@
 import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry, toPrintableUrl} from "@lodestar/utils";
 import {mergeHeaders} from "../headers.js";
+import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
-import {HttpStatusCode} from "../httpStatusCode.js";
+import {fetch, isFetchError} from "./fetch.js";
+import {Metrics} from "./metrics.js";
 import {
   ApiRequestInit,
   ApiRequestInitRequired,
@@ -13,8 +15,6 @@ import {
   createApiRequest,
 } from "./request.js";
 import {ApiResponse} from "./response.js";
-import {Metrics} from "./metrics.js";
-import {fetch, isFetchError} from "./fetch.js";
 
 /** A higher default timeout, validator will set its own shorter timeoutMs */
 const DEFAULT_TIMEOUT_MS = 60_000;

@@ -1,6 +1,6 @@
-import {BeaconStateAllForks, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
-import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {routes} from "@lodestar/api";
+import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import {BeaconStateAllForks, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
 import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, ValidatorIndex} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";

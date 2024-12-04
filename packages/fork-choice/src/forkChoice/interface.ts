@@ -1,15 +1,15 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch, Slot, ValidatorIndex, phase0, Root, RootHex, BeaconBlock, IndexedAttestation} from "@lodestar/types";
+import {BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {
-  ProtoBlock,
-  MaybeValidExecutionStatus,
-  LVHExecResponse,
-  ProtoNode,
   DataAvailabilityStatus,
+  LVHExecResponse,
+  MaybeValidExecutionStatus,
+  ProtoBlock,
+  ProtoNode,
 } from "../protoArray/interface.js";
-import {CheckpointWithHex} from "./store.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
+import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;

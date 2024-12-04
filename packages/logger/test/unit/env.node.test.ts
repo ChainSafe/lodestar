@@ -1,9 +1,9 @@
-import {describe, it, expect} from "vitest";
-import {LogLevel} from "@lodestar/utils";
 import {stubLoggerForConsole} from "@lodestar/test-utils/doubles";
+import {LogLevel} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
+import {getEnvLogger} from "../../src/env.js";
 import {TimestampFormatCode, logFormats} from "../../src/index.js";
 import {formatsTestCases} from "../fixtures/loggerFormats.js";
-import {getEnvLogger} from "../../src/env.js";
 
 describe("env logger", () => {
   describe("format and options", () => {

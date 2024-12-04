@@ -1,6 +1,6 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {digest} from "@chainsafe/as-sha256";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {phase0, ssz} from "@lodestar/types";
 import {computeSigningRoot} from "../../../src/util/signingRoot.js";
 

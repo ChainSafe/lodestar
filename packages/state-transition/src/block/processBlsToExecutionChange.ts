@@ -1,7 +1,7 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {digest} from "@chainsafe/as-sha256";
-import {capella} from "@lodestar/types";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
+import {capella} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
 

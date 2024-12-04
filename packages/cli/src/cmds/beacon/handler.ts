@@ -1,30 +1,30 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
-import {ErrorAborted} from "@lodestar/utils";
-import {LevelDbController} from "@lodestar/db";
-import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
+import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {ProcessShutdownCallback} from "@lodestar/validator";
+import {LevelDbController} from "@lodestar/db";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {ErrorAborted} from "@lodestar/utils";
+import {ProcessShutdownCallback} from "@lodestar/validator";
 
-import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
+import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {LogArgs} from "../../options/logOptions.js";
 import {
-  onGracefulShutdown,
-  mkdir,
-  writeFile600Perm,
   cleanOldLogFiles,
+  mkdir,
+  onGracefulShutdown,
   parseLoggerArgs,
   pruneOldFilesInDir,
+  writeFile600Perm,
 } from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
-import {LogArgs} from "../../options/logOptions.js";
-import {BeaconArgs} from "./options.js";
-import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
 import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+import {BeaconArgs} from "./options.js";
+import {getBeaconPaths} from "./paths.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;

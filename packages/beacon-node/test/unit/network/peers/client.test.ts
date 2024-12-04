@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {getKnownClientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
+import {describe, expect, it} from "vitest";
+import {ClientKind, getKnownClientFromAgentVersion} from "../../../../src/network/peers/client.js";
 
 describe("clientFromAgentVersion", () => {
   const testCases: {name: string; agentVersion: string; client: ClientKind | null}[] = [

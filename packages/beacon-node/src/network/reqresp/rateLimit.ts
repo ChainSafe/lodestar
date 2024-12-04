@@ -1,8 +1,8 @@
 import {
-  MAX_REQUEST_BLOCKS,
-  MAX_REQUEST_LIGHT_CLIENT_UPDATES,
   MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOB_SIDECARS,
+  MAX_REQUEST_BLOCKS,
+  MAX_REQUEST_LIGHT_CLIENT_UPDATES,
 } from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod} from "./types.js";

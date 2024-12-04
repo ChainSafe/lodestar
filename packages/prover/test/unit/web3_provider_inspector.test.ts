@@ -1,9 +1,9 @@
-import {describe, it, beforeEach, expect} from "vitest";
-import {getEnvLogger} from "@lodestar/logger/env";
 import {LogLevel} from "@lodestar/logger";
-import {Web3ProviderInspector} from "../../src/web3_provider_inspector.js";
+import {getEnvLogger} from "@lodestar/logger/env";
+import {beforeEach, describe, expect, it} from "vitest";
 import {AnyWeb3Provider, Web3ProviderType} from "../../src/interfaces.js";
 import web3JsProviderType from "../../src/provider_types/web3_js_provider_type.js";
+import {Web3ProviderInspector} from "../../src/web3_provider_inspector.js";
 
 describe("Web3ProviderInspector", () => {
   let inspector: Web3ProviderInspector;

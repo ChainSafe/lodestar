@@ -21,7 +21,7 @@ setHasher(hasher);
 // set LODESTAR_PRESET manually every time.
 
 // IMPORTANT: only import Lodestar code here which does not import any other Lodestar libraries
-import {setActivePreset, presetFromJson, PresetName} from "@lodestar/params/setPreset";
+import {PresetName, presetFromJson, setActivePreset} from "@lodestar/params/setPreset";
 import {readFile} from "./util/file.js";
 
 const network = valueOfArg("network");

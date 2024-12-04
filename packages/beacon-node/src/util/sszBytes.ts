@@ -1,5 +1,4 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
-import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
@@ -7,6 +6,7 @@ import {
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
 } from "@lodestar/params";
+import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations

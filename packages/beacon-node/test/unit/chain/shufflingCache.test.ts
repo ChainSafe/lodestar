@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../state-transition/test/perf/util.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 

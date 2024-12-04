@@ -1,32 +1,32 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
-import {LightClientUpdate, Root, isElectraLightClientUpdate, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  FINALIZED_ROOT_INDEX,
-  FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
-  GENESIS_SLOT,
-  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
-  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
-  NEXT_SYNC_COMMITTEE_INDEX,
+  FINALIZED_ROOT_DEPTH,
   FINALIZED_ROOT_DEPTH_ELECTRA,
+  FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_INDEX_ELECTRA,
+  GENESIS_SLOT,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  NEXT_SYNC_COMMITTEE_DEPTH,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  NEXT_SYNC_COMMITTEE_INDEX,
+  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
 } from "@lodestar/params";
-import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
-import {isValidMerkleBranch} from "../utils/index.js";
+import {LightClientUpdate, Root, isElectraLightClientUpdate, ssz} from "@lodestar/types";
 import {SyncCommitteeFast} from "../types.js";
+import {isValidMerkleBranch} from "../utils/index.js";
+import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
+import {ILightClientStore} from "./store.js";
 import {
+  ZERO_HASH,
   isFinalityUpdate,
   isSyncCommitteeUpdate,
+  isValidLightClientHeader,
   isZeroedHeader,
   isZeroedSyncCommittee,
-  ZERO_HASH,
-  isValidLightClientHeader,
 } from "./utils.js";
-import {ILightClientStore} from "./store.js";
 
 export function validateLightClientUpdate(
   config: ChainForkConfig,

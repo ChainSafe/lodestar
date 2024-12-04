@@ -1,7 +1,7 @@
-import {phase0} from "@lodestar/types";
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
+import {phase0} from "@lodestar/types";
+import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import {ProposerSlashingError, ProposerSlashingErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateApiProposerSlashing(
   chain: IBeaconChain,

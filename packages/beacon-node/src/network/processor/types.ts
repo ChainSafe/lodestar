@@ -1,7 +1,7 @@
 import {Message} from "@libp2p/interface";
 import {Slot, SlotOptionalRoot} from "@lodestar/types";
-import {GossipTopic, GossipType} from "../gossip/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {GossipTopic, GossipType} from "../gossip/index.js";
 
 export type GossipAttestationsWork = {
   messages: PendingGossipsubMessage[];

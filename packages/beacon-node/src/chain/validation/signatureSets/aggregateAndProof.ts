@@ -1,14 +1,14 @@
 import {PublicKey} from "@chainsafe/blst";
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_AGGREGATE_AND_PROOF, ForkSeq} from "@lodestar/params";
-import {ssz, SignedAggregateAndProof} from "@lodestar/types";
-import {Epoch} from "@lodestar/types";
 import {
+  ISignatureSet,
   computeSigningRoot,
   computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
-  ISignatureSet,
 } from "@lodestar/state-transition";
-import {BeaconConfig} from "@lodestar/config";
+import {SignedAggregateAndProof, ssz} from "@lodestar/types";
+import {Epoch} from "@lodestar/types";
 
 export function getAggregateAndProofSigningRoot(
   config: BeaconConfig,

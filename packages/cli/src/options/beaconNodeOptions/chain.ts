@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import {StateArchiveMode, defaultOptions, IBeaconNodeOptions, DEFAULT_STATE_ARCHIVE_MODE} from "@lodestar/beacon-node";
+import {DEFAULT_STATE_ARCHIVE_MODE, IBeaconNodeOptions, StateArchiveMode, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {

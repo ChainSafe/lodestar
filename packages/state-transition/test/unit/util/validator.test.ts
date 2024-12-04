@@ -1,12 +1,12 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 
 import {phase0, ssz} from "@lodestar/types";
 
 import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util/index.js";
 
 import {randBetween} from "../../utils/misc.js";
-import {generateValidator} from "../../utils/validator.js";
 import {generateState} from "../../utils/state.js";
+import {generateValidator} from "../../utils/validator.js";
 
 describe("getActiveValidatorIndices", () => {
   it("empty list of validators should return no indices (empty list)", () => {

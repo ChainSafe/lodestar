@@ -1,8 +1,8 @@
-import {describe, it, expect, afterEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {getDiscv5Multiaddrs} from "../../../src/network/libp2p/index.js";
+import {afterEach, describe, expect, it} from "vitest";
 import {getCurrentAndNextFork} from "../../../src/network/forks.js";
+import {getDiscv5Multiaddrs} from "../../../src/network/libp2p/index.js";
 
 describe("getCurrentAndNextFork", () => {
   const altairEpoch = config.forks.altair.epoch;

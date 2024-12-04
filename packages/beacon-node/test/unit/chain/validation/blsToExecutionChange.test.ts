@@ -1,24 +1,24 @@
 import {digest} from "@chainsafe/as-sha256";
-import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
+import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {computeSigningRoot} from "@lodestar/state-transition";
-import {capella, ssz} from "@lodestar/types";
 import {
   BLS_WITHDRAWAL_PREFIX,
-  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
   DOMAIN_BLS_TO_EXECUTION_CHANGE,
+  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
   FAR_FUTURE_EPOCH,
-  SLOTS_PER_EPOCH,
   ForkName,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {createBeaconConfig} from "@lodestar/config";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
-import {generateState} from "../../../utils/state.js";
-import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
+import {computeSigningRoot} from "@lodestar/state-transition";
+import {capella, ssz} from "@lodestar/types";
+import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateState} from "../../../utils/state.js";
 
 describe("validate bls to execution change", () => {
   let chainStub: MockedBeaconChain;

@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
-import {expect, describe, it, vi, beforeAll} from "vitest";
 import {sleep} from "@lodestar/utils";
-import {Lightclient, LightclientEvent, utils, transport} from "../../dist/lightclient.min.mjs";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
+import {beforeAll, describe, expect, it, vi} from "vitest";
+import {Lightclient, LightclientEvent, transport, utils} from "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
   vi.setConfig({testTimeout: 20_000});

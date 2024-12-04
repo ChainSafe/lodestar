@@ -1,16 +1,16 @@
-import {describe, it, afterEach, expect, vi} from "vitest";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {TimestampFormatCode} from "@lodestar/logger";
-import {ChainConfig} from "@lodestar/config";
-import {RootHex, Slot} from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {ChainConfig} from "@lodestar/config";
+import {TimestampFormatCode} from "@lodestar/logger";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {ReorgEventData} from "../../../src/chain/emitter.js";
+import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
+import {waitForEvent} from "../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
-import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {waitForEvent} from "../../utils/events/resolver.js";
-import {ReorgEventData} from "../../../src/chain/emitter.js";
 
 describe("proposer boost reorg", () => {
   vi.setConfig({testTimeout: 60000});

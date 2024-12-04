@@ -1,9 +1,9 @@
 import path from "node:path";
-import {describe, it, expect, beforeAll, vi, onTestFinished} from "vitest";
-import {rimraf} from "rimraf";
-import {ApiClient, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
-import {config} from "@lodestar/config/default";
 import {HttpStatusCode} from "@lodestar/api";
+import {ApiClient, DeleteRemoteKeyStatus, ImportRemoteKeyStatus, getClient} from "@lodestar/api/keymanager";
+import {config} from "@lodestar/config/default";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";

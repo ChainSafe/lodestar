@@ -1,6 +1,6 @@
 import path from "node:path";
 import {GlobalArgs} from "../../options/index.js";
-import {getGlobalPaths, GlobalPaths} from "../../paths/global.js";
+import {GlobalPaths, getGlobalPaths} from "../../paths/global.js";
 
 export type BeaconPathsPartial = Partial<{
   beaconDir: string;

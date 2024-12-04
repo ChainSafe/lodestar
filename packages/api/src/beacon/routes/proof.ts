@@ -1,10 +1,10 @@
 import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {ByteListType, ContainerType} from "@chainsafe/ssz";
-import {fromHex, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
-import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ArrayOf} from "../../utils/codecs.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
 
 export const CompactMultiProofType = new ContainerType({

@@ -1,6 +1,6 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {BeaconState} from "@lodestar/types";
-import {BlockSource, BlobsSource} from "../../chain/blocks/types.js";
+import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
@@ -8,17 +8,17 @@ import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
+import {CacheItemType} from "../../chain/stateCache/types.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
 import {PendingBlockType} from "../../sync/index.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
+import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
-import {CacheItemType} from "../../chain/stateCache/types.js";
-import {AllocSource} from "../../util/bufferPool.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -378,17 +378,6 @@ export function createLodestarMetrics(
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
 
-    epochCache: {
-      finalizedPubkeyDuplicateInsert: register.gauge({
-        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert_total",
-        help: "Total count of duplicate insert of finalized pubkeys",
-      }),
-      newUnFinalizedPubkey: register.gauge({
-        name: "lodestar_epoch_cache_new_unfinalized_pubkey_total",
-        help: "Total count of unfinalized pubkeys added",
-      }),
-    },
-
     // BLS verifier thread pool and queue
 
     bls: {
@@ -496,6 +485,11 @@ export function createLodestarMetrics(
       batchableSigSets: register.gauge({
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
+      }),
+      aggregateWithRandomnessMainThreadDuration: register.histogram({
+        name: "lodestar_bls_thread_pool_aggregate_with_randomness_main_thread_time_seconds",
+        help: "Total time performing aggregateWithRandomness on main thread",
+        buckets: [0.001, 0.005, 0.01, 0.1],
       }),
       pubkeysAggregationMainThreadDuration: register.histogram({
         name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds",

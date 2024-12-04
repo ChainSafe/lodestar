@@ -1,8 +1,8 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
+import {ZERO_HASH} from "../../src/spec/utils.js";
+import {normalizeMerkleBranch} from "../../src/utils/normalizeMerkleBranch.js";
 import {isValidMerkleBranch} from "../../src/utils/verifyMerkleBranch.js";
 import {computeMerkleBranch} from "../utils/utils.js";
-import {normalizeMerkleBranch} from "../../src/utils/normalizeMerkleBranch.js";
-import {ZERO_HASH} from "../../src/spec/utils.js";
 
 describe("utils", () => {
   it("constructMerkleBranch", () => {

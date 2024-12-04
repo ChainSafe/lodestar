@@ -1,14 +1,14 @@
 import path from "node:path";
-import {Match, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {createAccountBalanceAssertion} from "../utils/crucible/assertions/accountBalanceAssertion.js";
+import {createExecutionHeadAssertion} from "../utils/crucible/assertions/executionHeadAssertion.js";
+import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js";
+import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
+import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
+import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
+import {BeaconClient, ExecutionClient, Match, ValidatorClient} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
-import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
-import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
-import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js";
-import {createAccountBalanceAssertion} from "../utils/crucible/assertions/accountBalanceAssertion.js";
-import {createExecutionHeadAssertion} from "../utils/crucible/assertions/executionHeadAssertion.js";
-import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
 import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
 const altairForkEpoch = 2;

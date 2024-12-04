@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import {bigIntToBytes} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 import {computeSubscribedSubnet} from "../../../../src/network/subnets/util.js";
 
 describe("computeSubscribedSubnet", () => {

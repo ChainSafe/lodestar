@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {encodeJwtToken, decodeJwtToken} from "../../../src/eth1/provider/jwt.js";
+import {describe, expect, it} from "vitest";
+import {decodeJwtToken, encodeJwtToken} from "../../../src/eth1/provider/jwt.js";
 
 describe("ExecutionEngine / jwt", () => {
   it("encode/decode correctly", () => {

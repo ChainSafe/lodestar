@@ -1,9 +1,9 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {Libp2p} from "libp2p";
-import {Logger} from "@lodestar/utils";
 import {getEmptyLogger} from "@lodestar/logger/empty";
-import {RespStatus} from "../../src/interface.js";
+import {Logger} from "@lodestar/utils";
+import {Libp2p} from "libp2p";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ReqResp} from "../../src/ReqResp.js";
+import {RespStatus} from "../../src/interface.js";
 import {getEmptyHandler, sszSnappyPing} from "../fixtures/messages.js";
 import {numberToStringProtocol, numberToStringProtocolDialOnly, pingProtocol} from "../fixtures/protocols.js";
 import {MockLibP2pStream} from "../utils/index.js";

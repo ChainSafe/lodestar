@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {expect, it} from "vitest";
-import {TestRunnerCustom} from "../utils/types.js";
-import {parseSszGenericInvalidTestcase, parseSszGenericValidTestcase} from "../utils/sszTestCaseParser.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
+import {parseSszGenericInvalidTestcase, parseSszGenericValidTestcase} from "../utils/sszTestCaseParser.js";
+import {TestRunnerCustom} from "../utils/types.js";
 import {getTestType} from "./ssz_generic_types.js";
 
 // Mapping of sszGeneric() fn arguments to the path in spec tests

@@ -1,7 +1,7 @@
-import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {ForkDigestContext} from "@lodestar/config";
-import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
+import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
+import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 
 export const Goodbye = toProtocol({
   method: ReqRespMethod.Goodbye,

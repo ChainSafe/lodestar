@@ -4,7 +4,7 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, phase0} from "@lodestar/types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
-import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
+import {RequestedSubnet, prioritizePeers} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 
 describe("prioritizePeers", () => {

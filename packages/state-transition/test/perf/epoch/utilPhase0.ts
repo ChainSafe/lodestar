@@ -1,5 +1,5 @@
 import {AttesterFlags, toAttesterFlags} from "../../../src/index.js";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochTransitionCache} from "../../../src/types.js";
+import {CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochTransitionCache} from "../../../src/types.js";
 
 /**
  * Generate an incomplete EpochTransitionCache to simulate any network condition relevant to getAttestationDeltas

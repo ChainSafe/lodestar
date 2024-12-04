@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 
 import {Endpoints} from "../../../src/builder/routes.js";
 import {GenericServerTestCases} from "../../utils/genericServerTest.js";

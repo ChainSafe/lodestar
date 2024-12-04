@@ -1,9 +1,9 @@
-import {describe, it, expect, beforeEach, afterEach, beforeAll, afterAll} from "vitest";
-import {FastifyInstance} from "fastify";
-import {sleep} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
-import {Endpoints, getDefinitions, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
+import {sleep} from "@lodestar/utils";
+import {FastifyInstance} from "fastify";
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/events.js";
+import {BeaconEvent, Endpoints, EventType, getDefinitions} from "../../../../src/beacon/routes/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";

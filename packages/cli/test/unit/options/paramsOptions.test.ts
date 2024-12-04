@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {parseBeaconParamsArgs} from "../../../src/options/paramsOptions.js";
+import {describe, expect, it} from "vitest";
 import {IBeaconParamsUnparsed} from "../../../src/config/types.js";
+import {parseBeaconParamsArgs} from "../../../src/options/paramsOptions.js";
 
 describe("options / paramsOptions", () => {
   it("Should parse BeaconParams", () => {

@@ -1,17 +1,17 @@
+import {ChainForkConfig} from "@lodestar/config";
 import {
-  computeEpochAtSlot,
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
 import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
-import {Metrics} from "../metrics/index.js";
 import {Eth1Options} from "../eth1/options.js";
+import {Metrics} from "../metrics/index.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
 import {GenesisResult} from "./genesis/interface.js";
 

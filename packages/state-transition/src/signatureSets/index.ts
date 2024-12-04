@@ -1,15 +1,15 @@
 import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, altair, capella} from "@lodestar/types";
-import {ISignatureSet} from "../util/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
-import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {ISignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
+import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
+import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
-import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 
 export * from "./attesterSlashings.js";
 export * from "./indexedAttestation.js";

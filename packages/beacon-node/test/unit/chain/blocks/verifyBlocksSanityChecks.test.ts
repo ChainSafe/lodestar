@@ -1,17 +1,17 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {toHex} from "@lodestar/utils";
-import {ChainForkConfig} from "@lodestar/config";
 import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
+import {beforeEach, describe, expect, it} from "vitest";
+import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
-import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
-import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {expectThrowsLodestarError} from "../../../utils/errors.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];

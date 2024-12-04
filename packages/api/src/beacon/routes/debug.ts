@@ -1,22 +1,22 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz, StringType, BeaconState} from "@lodestar/types";
+import {BeaconState, StringType, ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   WithVersion,
 } from "../../utils/codecs.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
 } from "../../utils/metadata.js";
+import {Schema} from "../../utils/schema.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
 import {WireFormat} from "../../utils/wireFormat.js";
-import {Schema} from "../../utils/schema.js";
 import {StateArgs} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes

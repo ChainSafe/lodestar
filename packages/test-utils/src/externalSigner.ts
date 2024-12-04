@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {dirSync as tmpDirSync} from "tmp";
-import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
 import {ForkSeq} from "@lodestar/params";
+import {GenericContainer, StartedTestContainer, Wait} from "testcontainers";
+import {dirSync as tmpDirSync} from "tmp";
 
 const web3signerVersion = "24.2.0";
 

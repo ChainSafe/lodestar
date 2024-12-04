@@ -1,6 +1,4 @@
-import {describe, it, expect, beforeEach, vi, MockedObject, afterEach} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
-import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_SUBNET_SUBSCRIPTION,
@@ -8,14 +6,16 @@ import {
   SLOTS_PER_EPOCH,
   SUBNETS_PER_NODE,
 } from "@lodestar/params";
+import {ZERO_HASH} from "@lodestar/state-transition";
 import {getCurrentSlot} from "@lodestar/state-transition";
 import {bigIntToBytes} from "@lodestar/utils";
-import {Clock, IClock} from "../../../../src/util/clock.js";
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Eth2Gossipsub} from "../../../../src/network/gossip/gossipsub.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
-import {testLogger} from "../../../utils/logger.js";
 import {AttnetsService} from "../../../../src/network/subnets/attnetsService.js";
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
+import {Clock, IClock} from "../../../../src/util/clock.js";
+import {testLogger} from "../../../utils/logger.js";
 
 vi.mock("../../../../src/network/gossip/gossipsub.js");
 

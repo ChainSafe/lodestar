@@ -1,9 +1,9 @@
-import {describe, it, expect} from "vitest";
 import {ForkSeq} from "@lodestar/params";
+import {describe, expect, it} from "vitest";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {numValidators} from "../../perf/util.js";
-import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capella.js";
 import {beforeValue} from "../../utils/beforeValue.js";
+import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";
 
 describe("getExpectedWithdrawals", () => {
   const vc = numValidators;

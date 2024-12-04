@@ -1,8 +1,8 @@
+import {LogLevel, Logger} from "@lodestar/utils";
 import winston from "winston";
 import Transport from "winston-transport";
-import {LogLevel, Logger} from "@lodestar/utils";
-import {createWinstonLogger} from "./winston.js";
 import {LEVEL, MESSAGE, TimestampFormat, WinstonLogInfo} from "./interface.js";
+import {createWinstonLogger} from "./winston.js";
 
 export type BrowserLoggerOpts = {
   /**

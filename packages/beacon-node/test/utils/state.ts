@@ -1,23 +1,23 @@
 import {SecretKey} from "@chainsafe/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
+import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  CachedBeaconStateAllForks,
-  createCachedBeaconState,
-  CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
-  CachedBeaconStateElectra,
   BeaconStateElectra,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateElectra,
+  createCachedBeaconState,
 } from "@lodestar/state-transition";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
-import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
-import {ExecutionStatus, ProtoBlock, DataAvailabilityStatus} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
-import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
+import {generateValidator, generateValidators} from "./validator.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

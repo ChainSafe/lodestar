@@ -1,7 +1,7 @@
 import {Db, encodeKey} from "@lodestar/db";
-import {Slot, Root, ssz, SignedBeaconBlock, SSZTypesFor} from "@lodestar/types";
-import {intToBytes} from "@lodestar/utils";
 import {ForkAll} from "@lodestar/params";
+import {Root, SSZTypesFor, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
 import {Bucket} from "../buckets.js";
 
 export async function storeRootIndex(db: Db, slot: Slot, blockRoot: Root): Promise<void> {

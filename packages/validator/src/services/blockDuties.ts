@@ -1,11 +1,11 @@
+import {ApiClient, routes} from "@lodestar/api";
+import {ChainConfig} from "@lodestar/config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
-import {ApiClient, routes} from "@lodestar/api";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
-import {ChainConfig} from "@lodestar/config";
-import {IClock, differenceHex, LoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc, differenceHex} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /** This polls block duties 1s before the next epoch */

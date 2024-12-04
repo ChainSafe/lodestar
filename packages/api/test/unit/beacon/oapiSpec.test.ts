@@ -1,11 +1,11 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, beforeAll, expect} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
+import {beforeAll, describe, expect, it} from "vitest";
 import {routes} from "../../../src/beacon/index.js";
 import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
+import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
 import {testData as configTestData} from "./testData/config.js";

@@ -1,17 +1,17 @@
-import {
-  bellatrix,
-  Root,
-  Slot,
-  BLSPubkey,
-  deneb,
-  Wei,
-  SignedBeaconBlockOrContents,
-  ExecutionPayloadHeader,
-  SignedBlindedBeaconBlock,
-  electra,
-  WithOptionalBytes,
-} from "@lodestar/types";
 import {ForkExecution} from "@lodestar/params";
+import {
+  BLSPubkey,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
 
 export interface IExecutionBuilder {
   /**

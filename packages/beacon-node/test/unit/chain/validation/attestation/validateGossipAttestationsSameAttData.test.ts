@@ -1,8 +1,8 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";

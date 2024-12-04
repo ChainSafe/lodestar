@@ -1,20 +1,20 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkExecution, ForkSeq} from "@lodestar/params";
 import {
-  Root,
-  isBlindedBeaconBlock,
-  isExecutionPayloadAndBlobsBundle,
   BeaconBlock,
   BeaconBlockHeader,
-  SignedBeaconBlock,
+  BlindedBeaconBlock,
+  BlobsBundle,
+  Contents,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
-  BlobsBundle,
-  SignedBeaconBlockOrContents,
-  Contents,
-  SignedBlindedBeaconBlock,
-  BlindedBeaconBlock,
   ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlock,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  isBlindedBeaconBlock,
+  isExecutionPayloadAndBlobsBundle,
 } from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";

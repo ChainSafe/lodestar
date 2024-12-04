@@ -1,29 +1,30 @@
 import fs from "node:fs";
-import got from "got";
 import {ENR} from "@chainsafe/enr";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
 import {getStateSlotFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {Checkpoint} from "@lodestar/types/phase0";
-import {Slot} from "@lodestar/types";
-import {fromHex, callFnWhenAwait, Logger, formatBytes} from "@lodestar/utils";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  getLatestBlockRoot,
   computeCheckpointEpochAtStateSlot,
+  getLatestBlockRoot,
   loadState,
 } from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
+import {Checkpoint} from "@lodestar/types/phase0";
+import {Logger, callFnWhenAwait, formatBytes, fromHex} from "@lodestar/utils";
+import got from "got";
 import {parseBootnodesFile} from "../util/format.js";
-import * as mainnet from "./mainnet.js";
-import * as dev from "./dev.js";
-import * as gnosis from "./gnosis.js";
-import * as sepolia from "./sepolia.js";
-import * as holesky from "./holesky.js";
 import * as chiado from "./chiado.js";
+import * as dev from "./dev.js";
 import * as ephemery from "./ephemery.js";
+import * as gnosis from "./gnosis.js";
+import * as holesky from "./holesky.js";
+import * as mainnet from "./mainnet.js";
+import * as mekong from "./mekong.js";
+import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery" | "mekong";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
@@ -31,6 +32,7 @@ export const networkNames: NetworkName[] = [
   "holesky",
   "chiado",
   "ephemery",
+  "mekong",
 
   // Leave always as last network. The order matters for the --help printout
   "dev",
@@ -70,6 +72,8 @@ export function getNetworkData(network: NetworkName): {
       return chiado;
     case "ephemery":
       return ephemery;
+    case "mekong":
+      return mekong;
     default:
       throw Error(`Network not supported: ${network}`);
   }

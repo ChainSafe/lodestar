@@ -1,24 +1,24 @@
-import deepmerge from "deepmerge";
-import tmp from "tmp";
 import {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {createBeaconConfig, createChainForkConfig, ChainConfig} from "@lodestar/config";
-import {RecursivePartial} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
-import {phase0, ssz} from "@lodestar/types";
+import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {phase0, ssz} from "@lodestar/types";
+import {RecursivePartial} from "@lodestar/utils";
 import {isPlainObject} from "@lodestar/utils";
-import {LoggerNode} from "@lodestar/logger/node";
+import deepmerge from "deepmerge";
+import tmp from "tmp";
+import {BeaconDb} from "../../../src/db/index.js";
 import {BeaconNode} from "../../../src/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
-import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
 import {IBeaconNodeOptions} from "../../../src/node/options.js";
 import {defaultOptions} from "../../../src/node/options.js";
-import {BeaconDb} from "../../../src/db/index.js";
-import {testLogger} from "../logger.js";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
+import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
+import {testLogger} from "../logger.js";
 
 export async function getDevBeaconNode(
   opts: {

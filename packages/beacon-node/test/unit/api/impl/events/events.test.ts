@@ -1,9 +1,9 @@
-import {describe, it, expect, beforeEach, afterEach, vi, MockedObject} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
+import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
 
 vi.mock("../../../../../src/chain/index.js", async (importActual) => {

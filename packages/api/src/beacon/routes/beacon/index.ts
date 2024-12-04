@@ -1,11 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
+import {EmptyArgs, EmptyMeta, EmptyMetaCodec, EmptyRequest, EmptyRequestCodec} from "../../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
-import {EmptyArgs, EmptyRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../../utils/codecs.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
-import * as state from "./state.js";
 import * as rewards from "./rewards.js";
+import * as state from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

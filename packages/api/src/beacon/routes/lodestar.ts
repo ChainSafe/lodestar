@@ -1,15 +1,15 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Schema, Endpoint, RouteDefinitions} from "../../utils/index.js";
 import {
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes

@@ -1,19 +1,19 @@
-import {ContainerType, ListCompositeType, ByteVectorType, VectorCompositeType} from "@chainsafe/ssz";
+import {ByteVectorType, ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
-  HISTORICAL_ROOTS_LIMIT,
-  MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  FIELD_ELEMENTS_PER_BLOB,
-  MAX_REQUEST_BLOB_SIDECARS,
   BYTES_PER_FIELD_ELEMENT,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  SLOTS_PER_EPOCH,
+  FIELD_ELEMENTS_PER_BLOB,
+  HISTORICAL_ROOTS_LIMIT,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK,
+  MAX_REQUEST_BLOB_SIDECARS,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {UintNum64, Slot, Root, BLSSignature, UintBn64, UintBn256, Bytes32, Bytes48, Bytes96, BLSPubkey, BlobIndex} =
   primitiveSsz;

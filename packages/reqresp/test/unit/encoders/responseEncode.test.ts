@@ -1,10 +1,10 @@
-import {describe, it} from "vitest";
 import all from "it-all";
 import {pipe} from "it-pipe";
+import {describe, it} from "vitest";
 import {Protocol} from "../../../src/types.js";
 import {responseEncodersTestCases} from "../../fixtures/encoders.js";
-import {responseEncode} from "../../utils/response.js";
 import {expectEqualByteChunks} from "../../utils/index.js";
+import {responseEncode} from "../../utils/response.js";
 
 describe("encoders / responseEncode", () => {
   describe("valid cases", () => {

@@ -1,8 +1,8 @@
 import {ApiClient, routes} from "@lodestar/api";
-import {Logger} from "@lodestar/utils";
 import {Slot} from "@lodestar/types";
-import {IClock} from "../util/clock.js";
+import {Logger} from "@lodestar/utils";
 import {BeaconHealth, Metrics} from "../metrics.js";
+import {IClock} from "../util/clock.js";
 
 export type SyncingStatus = routes.node.SyncingStatus;
 

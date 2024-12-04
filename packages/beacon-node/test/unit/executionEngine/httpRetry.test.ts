@@ -1,11 +1,11 @@
-import {fastify} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeAll, afterAll} from "vitest";
-import {ForkName} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
-import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {ForkName} from "@lodestar/params";
+import {fastify} from "fastify";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
-import {IExecutionEngine, initializeExecutionEngine, PayloadAttributes} from "../../../src/execution/index.js";
+import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {IExecutionEngine, PayloadAttributes, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];

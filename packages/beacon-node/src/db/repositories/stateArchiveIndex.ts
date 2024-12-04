@@ -1,4 +1,4 @@
-import {encodeKey, Db} from "@lodestar/db";
+import {Db, encodeKey} from "@lodestar/db";
 import {Root, Slot} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {Bucket} from "../buckets.js";

@@ -2,10 +2,10 @@ import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
-import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {getDefinitions} from "../../../src/builder/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
+import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {testData} from "./testData.js";
 
 // Global variable __dirname no longer available in ES6 modules.

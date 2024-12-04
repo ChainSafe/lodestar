@@ -1,4 +1,4 @@
-# Client monitoring
+# Client Monitoring
 
 Lodestar has the ability to send client stats to a remote service for collection.
 At the moment, the main service offering remote monitoring is [beaconcha.in](https://beaconcha.in/).

@@ -31,7 +31,7 @@ You can find more information about the light-client protocol in the [specificat
 
 ## Getting started
 
-- Follow the [installation guide](https://chainsafe.github.io/lodestar/getting-started/installation) or [Docker install](https://chainsafe.github.io/lodestar/getting-started/installation/#docker-installation) to install Lodestar.
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/run/getting-started/installation) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet).
 
 ## Light-Client CLI Example

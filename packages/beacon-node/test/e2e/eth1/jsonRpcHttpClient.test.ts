@@ -1,11 +1,11 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import {describe, it, expect, afterEach, vi} from "vitest";
 import {FetchError} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {RpcPayload} from "../../../src/eth1/interface.js";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
-import {RpcPayload} from "../../../src/eth1/interface.js";
 
 describe("eth1 / jsonRpcHttpClient", () => {
   vi.setConfig({testTimeout: 10_000});

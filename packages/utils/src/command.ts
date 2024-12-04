@@ -1,4 +1,4 @@
-import type {Options, Argv} from "yargs";
+import type {Argv, Options} from "yargs";
 
 export interface CliExample {
   command: string;

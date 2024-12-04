@@ -4,10 +4,10 @@ import {ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   JsonOnlyResp,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";

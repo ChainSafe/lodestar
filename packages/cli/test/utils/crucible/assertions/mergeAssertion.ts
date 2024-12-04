@@ -1,5 +1,5 @@
 import {BeaconStateAllForks, isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {AssertionResult, Assertion} from "../interfaces.js";
+import {Assertion, AssertionResult} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
 export const mergeAssertion: Assertion<"merge", string> = {

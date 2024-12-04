@@ -74,6 +74,10 @@ Configure your validator client's fee recipient address by using the [`--suggest
 
 You may choose to use the [`--strictFeeRecipientCheck`](./validator-cli.md#--strictfeerecipientcheck) flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.
 
+:::note
+If you would like to set unique proposer metadata (e.g. fee recipient address) for each validator you are running, see the [Proposer Configuration](./proposer-config.md) feature. This feature is also available via the keymanager API.
+:::
+
 ### Configure your builder selection and/or builder boost factor
 
 If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.

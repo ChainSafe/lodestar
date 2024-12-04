@@ -1,53 +1,53 @@
-import {PeerId} from "@libp2p/interface";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerId} from "@libp2p/interface";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
+import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
-  phase0,
-  deneb,
-  altair,
-  Root,
-  capella,
-  SlotRootHex,
-  SignedBeaconBlock,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   LightClientUpdate,
+  Root,
   SignedAggregateAndProof,
+  SignedBeaconBlock,
+  SlotRootHex,
   WithBytes,
+  altair,
+  capella,
+  deneb,
+  phase0,
 } from "@lodestar/types";
-import {routes} from "@lodestar/api";
-import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
-import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
+import {sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
-import {PeerIdStr, peerIdToString} from "../util/peerId.js";
+import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {NetworkOptions} from "./options.js";
-import {INetwork} from "./interface.js";
-import {ReqRespMethod} from "./reqresp/index.js";
-import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
-import {PeerAction, PeerScoreStats} from "./peers/index.js";
-import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
-import {CommitteeSubscription} from "./subnets/index.js";
-import {isPublishToZeroPeersError} from "./util.js";
-import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
+import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
+import {getActiveForks} from "./forks.js";
+import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
+import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
+import {INetwork} from "./interface.js";
+import {NetworkOptions} from "./options.js";
+import {PeerAction, PeerScoreStats} from "./peers/index.js";
+import {AggregatorTracker} from "./processor/aggregatorTracker.js";
+import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
+import {ReqRespMethod} from "./reqresp/index.js";
+import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
   collectMaxResponseTypedWithBytes,
 } from "./reqresp/utils/collect.js";
-import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
-import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
-import {AggregatorTracker} from "./processor/aggregatorTracker.js";
-import {getActiveForks} from "./forks.js";
+import {CommitteeSubscription} from "./subnets/index.js";
+import {isPublishToZeroPeersError} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;

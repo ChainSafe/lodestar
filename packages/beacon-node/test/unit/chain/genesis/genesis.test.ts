@@ -1,15 +1,15 @@
-import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
-import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {computeDomain, computeSigningRoot, interopSecretKey, ZERO_HASH} from "@lodestar/state-transition";
+import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {ZERO_HASH, computeDomain, computeSigningRoot, interopSecretKey} from "@lodestar/state-transition";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
-import {testLogger} from "../../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {Eth1ProviderState, EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
+import {testLogger} from "../../../utils/logger.js";
 
 describe("genesis builder", () => {
   const logger = testLogger();

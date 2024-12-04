@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {MediaType, SUPPORTED_MEDIA_TYPES, mergeHeaders, parseAcceptHeader} from "../../../src/utils/headers.js";
 
 describe("utils / headers", () => {

@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {CommitteeIndex, phase0, RootHex, Slot} from "@lodestar/types";
+import {CommitteeIndex, RootHex, Slot, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {InsertOutcome} from "../opPools/types.js";

@@ -1,12 +1,12 @@
-import {describe, it, expect} from "vitest";
+import {LodestarError} from "@lodestar/utils";
 import all from "it-all";
 import {pipe} from "it-pipe";
-import {LodestarError} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 import {responseDecode} from "../../../src/encoders/responseDecode.js";
+import {ResponseIncoming} from "../../../src/types.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, onlySuccessResp} from "../../utils/index.js";
-import {ResponseIncoming} from "../../../src/types.js";
 
 describe("encoders / responseDecode", () => {
   describe("valid cases", () => {

@@ -1,5 +1,5 @@
-import {Epoch} from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {Epoch} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../metrics/index.js";
 

@@ -1,12 +1,12 @@
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
   ISignatureSet,
   SignatureSetType,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
   verifySignatureSet,
 } from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 
 export function verifyVoluntaryExitSignature(
   state: CachedBeaconStateAllForks,

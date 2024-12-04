@@ -1,8 +1,8 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {LightClientBootstrap, Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {toHex} from "@lodestar/utils";
 import {isForkPostElectra} from "@lodestar/params";
+import {LightClientBootstrap, Root, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch.js";
 import {isValidLightClientHeader} from "./utils.js";
 

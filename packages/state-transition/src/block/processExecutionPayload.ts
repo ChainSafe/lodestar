@@ -1,14 +1,14 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
-import {getRandaoMix} from "../util/index.js";
 import {
-  isMergeTransitionComplete,
-  getFullOrBlindedPayloadFromBody,
   executionPayloadToPayloadHeader,
+  getFullOrBlindedPayloadFromBody,
+  isMergeTransitionComplete,
 } from "../util/execution.js";
+import {getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(

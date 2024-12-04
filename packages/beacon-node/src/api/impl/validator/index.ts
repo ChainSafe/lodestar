@@ -1,61 +1,61 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
 import {
-  CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
-  calculateCommitteeAssignments,
-  proposerShufflingDecisionRoot,
-  attesterShufflingDecisionRoot,
-  getBlockRootAtSlot,
-  computeEpochAtSlot,
-  getCurrentSlot,
-  beaconBlockToBlinded,
-  createCachedBeaconState,
-  loadState,
-} from "@lodestar/state-transition";
-import {
+  ForkBlobs,
+  ForkExecution,
+  ForkPreBlobs,
+  ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkBlobs,
   isForkExecution,
-  ForkSeq,
-  ForkPreBlobs,
-  ForkBlobs,
-  ForkExecution,
   isForkPostElectra,
 } from "@lodestar/params";
-import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
+  CachedBeaconStateAllForks,
+  attesterShufflingDecisionRoot,
+  beaconBlockToBlinded,
+  calculateCommitteeAssignments,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  createCachedBeaconState,
+  getBlockRootAtSlot,
+  getCurrentSlot,
+  loadState,
+  proposerShufflingDecisionRoot,
+} from "@lodestar/state-transition";
+import {
+  BLSSignature,
+  BeaconBlock,
+  BlindedBeaconBlock,
+  BlockContents,
+  Epoch,
+  ProducedBlockSource,
   Root,
   Slot,
   ValidatorIndex,
-  ssz,
-  Epoch,
-  ProducedBlockSource,
+  Wei,
   bellatrix,
-  BLSSignature,
+  getValidatorStatus,
   isBlindedBeaconBlock,
   isBlockContents,
   phase0,
-  Wei,
-  BeaconBlock,
-  BlockContents,
-  BlindedBeaconBlock,
-  getValidatorStatus,
+  ssz,
 } from "@lodestar/types";
-import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {
-  fromHex,
-  toHex,
-  resolveOrRacePromises,
-  prettyWeiToEth,
-  toRootHex,
   TimeoutError,
   formatWeiToEth,
+  fromHex,
+  prettyWeiToEth,
+  resolveOrRacePromises,
+  toHex,
+  toRootHex,
 } from "@lodestar/utils";
+import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -63,23 +63,23 @@ import {
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
+import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
+import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
+import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
+import {NoBidReceived} from "../../../execution/builder/http.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
+import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBuffer} from "../../../util/graffiti.js";
-import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
-import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {ApiModules} from "../types.js";
-import {RegenCaller} from "../../../chain/regen/index.js";
-import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
-import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
-import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
-import {ApiOptions} from "../../options.js";
-import {NoBidReceived} from "../../../execution/builder/http.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
+import {ApiOptions} from "../../options.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
+import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**

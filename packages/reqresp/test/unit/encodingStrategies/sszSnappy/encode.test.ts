@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {encode as varintEncode} from "uint8-varint";
+import {describe, expect, it} from "vitest";
 import {writeSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/encode.js";
 import {encodingStrategiesMainnetTestCases, encodingStrategiesTestCases} from "../../../fixtures/index.js";
 import {expectEqualByteChunks} from "../../../utils/index.js";

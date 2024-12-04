@@ -1,13 +1,13 @@
 /* eslint-disable no-console */
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, beforeAll, vi, expect, afterEach, beforeEach} from "vitest";
-import {rimraf} from "rimraf";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex} from "@lodestar/utils";
 import {runCliCommand} from "@lodestar/test-utils";
-import {testFilesDir} from "../utils.js";
+import {fromHex} from "@lodestar/utils";
+import {rimraf} from "rimraf";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {getLodestarCli} from "../../src/cli.js";
+import {testFilesDir} from "../utils.js";
 
 describe("cmds / validator", () => {
   vi.setConfig({testTimeout: 30_000});

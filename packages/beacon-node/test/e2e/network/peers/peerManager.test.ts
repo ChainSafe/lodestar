@@ -1,24 +1,24 @@
-import {describe, it, afterEach, expect, vi} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {Connection} from "@libp2p/interface";
 import {CustomEvent} from "@libp2p/interface";
-import {BitArray} from "@chainsafe/ssz";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {createBeaconConfig} from "@lodestar/config";
-import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
-import {PeerRpcScoreStore, PeerManager, IReqRespBeaconNodePeerManager} from "../../../../src/network/peers/index.js";
-import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
+import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../../../../src/network/peers/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
-import {createNode} from "../../../utils/network.js";
-import {getAttnets, getSyncnets} from "../../../utils/network.js";
-import {generateState} from "../../../utils/state.js";
-import {waitForEvent} from "../../../utils/events/resolver.js";
-import {testLogger} from "../../../utils/logger.js";
-import {getValidPeerId} from "../../../utils/peer.js";
+import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
+import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 import {IAttnetsService} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
-import {LocalStatusCache} from "../../../../src/network/statusCache.js";
+import {waitForEvent} from "../../../utils/events/resolver.js";
+import {testLogger} from "../../../utils/logger.js";
+import {createNode} from "../../../utils/network.js";
+import {getAttnets, getSyncnets} from "../../../utils/network.js";
+import {getValidPeerId} from "../../../utils/peer.js";
+import {generateState} from "../../../utils/state.js";
 
 const logger = testLogger("peerManager");
 

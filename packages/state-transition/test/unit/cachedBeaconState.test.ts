@@ -1,14 +1,14 @@
-import {fromHexString} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import {fromHexString} from "@chainsafe/ssz";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {config as defaultConfig} from "@lodestar/config/default";
-import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
-import {createCachedBeaconStateTest} from "../utils/state.js";
+import {describe, expect, it} from "vitest";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
-import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
+import {interopPubkeysCached} from "../utils/interop.js";
+import {createCachedBeaconStateTest} from "../utils/state.js";
 
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {
@@ -28,7 +28,7 @@ describe("CachedBeaconState", () => {
     expect(state2.epochCtx.epoch).toBe(0);
   });
 
-  it("Clone and mutate cache pre-Electra", () => {
+  it("Clone and mutate cache", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
 
@@ -49,40 +49,6 @@ describe("CachedBeaconState", () => {
     expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
     expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
     expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
-    expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
-  });
-
-  it("Clone and mutate cache post-Electra", () => {
-    const stateView = ssz.electra.BeaconState.defaultViewDU();
-    const state1 = createCachedBeaconStateTest(
-      stateView,
-      createChainForkConfig({
-        ALTAIR_FORK_EPOCH: 0,
-        BELLATRIX_FORK_EPOCH: 0,
-        CAPELLA_FORK_EPOCH: 0,
-        DENEB_FORK_EPOCH: 0,
-        ELECTRA_FORK_EPOCH: 0,
-      }),
-      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
-    );
-
-    const pubkey1 = fromHexString(
-      "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
-    );
-    const index1 = 123;
-    const pubkey2 = fromHexString(
-      "0xa41726266b1d83ef609d759ba7796d54cfe549154e01e4730a3378309bc81a7638140d7e184b33593c072595f23f032d"
-    );
-    const index2 = 456;
-
-    state1.epochCtx.addPubkey(index1, pubkey1);
-
-    const state2 = state1.clone();
-    state2.epochCtx.addPubkey(index2, pubkey2);
-
-    expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(null);
     expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
   });
 

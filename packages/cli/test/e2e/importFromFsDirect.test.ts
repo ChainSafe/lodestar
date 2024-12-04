@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, beforeAll, vi} from "vitest";
-import {rimraf} from "rimraf";
 import {getKeystoresStr} from "@lodestar/test-utils";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, it, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";

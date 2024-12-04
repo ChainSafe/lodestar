@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
-import {assertValidTerminalPowBlock, ExecutionStatus} from "../../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {ExecutionStatus, assertValidTerminalPowBlock} from "../../../src/index.js";
 
 describe("assertValidTerminalPowBlock", () => {
   const config = createChainForkConfig({TERMINAL_TOTAL_DIFFICULTY: BigInt(10)});

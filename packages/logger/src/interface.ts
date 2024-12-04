@@ -1,5 +1,5 @@
+import {LogData, LogHandler, LogLevel, Logger} from "@lodestar/utils";
 import {LEVEL, MESSAGE} from "triple-beam";
-import {LogLevel, Logger, LogHandler, LogData} from "@lodestar/utils";
 
 export {LogLevel, LEVEL, MESSAGE};
 export type {Logger, LogHandler, LogData};
