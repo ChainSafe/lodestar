@@ -28,8 +28,12 @@ export enum RegenFnName {
   getCheckpointState = "getCheckpointState",
 }
 
-export type StateCloneOpts = {
+export type StateRegenerationOpts = {
   dontTransferCache: boolean;
+  /**
+   * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch if not passed as `true`
+   */
+  asyncShufflingCalculation?: boolean;
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
@@ -56,7 +60,11 @@ export interface IStateRegeneratorInternal {
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
    */
-  getPreState(block: BeaconBlock, opts: StateCloneOpts, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
+  getPreState(
+    block: BeaconBlock,
+    opts: StateRegenerationOpts,
+    rCaller: RegenCaller
+  ): Promise<CachedBeaconStateAllForks>;
 
   /**
    * Return a valid checkpoint state
@@ -64,7 +72,7 @@ export interface IStateRegeneratorInternal {
    */
   getCheckpointState(
     cp: phase0.Checkpoint,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks>;
 
@@ -74,12 +82,12 @@ export interface IStateRegeneratorInternal {
   getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks>;
 
   /**
    * Return the exact state with `stateRoot`
    */
-  getState(stateRoot: RootHex, rCaller: RegenCaller, opts?: StateCloneOpts): Promise<CachedBeaconStateAllForks>;
+  getState(stateRoot: RootHex, rCaller: RegenCaller, opts?: StateRegenerationOpts): Promise<CachedBeaconStateAllForks>;
 }
