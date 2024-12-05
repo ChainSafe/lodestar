@@ -219,7 +219,7 @@ export class BeaconChain implements IBeaconChain {
       config: BeaconConfig;
       db: IBeaconDb;
       dbName: string;
-      dbType: "level" | "lmdb";
+      dbType: "level" | "lmdb" | "sqlite";
       dataDir: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;

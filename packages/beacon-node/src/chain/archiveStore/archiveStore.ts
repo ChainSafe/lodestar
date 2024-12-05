@@ -25,7 +25,7 @@ type ArchiveStoreModules = {
 
 type ArchiveStoreInitOpts = ArchiveStoreOpts & {
   dbName: string;
-  dbType: "level" | "lmdb";
+  dbType: "level" | "lmdb" | "sqlite";
   anchorState: {finalizedCheckpoint: Checkpoint};
 };
 

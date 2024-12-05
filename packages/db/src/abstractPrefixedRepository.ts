@@ -2,7 +2,7 @@ import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
 import {KeyValue} from "./controller/index.js";
-import {Db, DbReqOpts, FilterOptions} from "./controller/interface.js";
+import {ControllerFilterOptions, Db, DbReqOpts, FilterOptions} from "./controller/interface.js";
 import {encodeKey} from "./util.js";
 
 type Id = Uint8Array | string | number | bigint;
@@ -238,7 +238,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
-    const data = await this.db.keys(optsBuff);
+    const data = await this.db.keys(optsBuff as ControllerFilterOptions<Uint8Array>);
     return (data ?? []).map((data) => this.decodeKeyRaw(this.unwrapKey(data)));
   }
 }

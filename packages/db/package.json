@@ -24,12 +24,20 @@
     "./controller/lmdb": {
       "bun": "./src/controller/lmdb_bun.ts",
       "import": "./lib/controller/lmdb.js"
+    },
+    "./controller/sqlite": {
+      "bun": "./src/controller/sqlite_bun.ts",
+      "import": "./lib/controller/sqlite.js"
     }
   },
   "imports": {
     "#controller/level": {
       "bun": "./src/controller/level_bun.ts",
       "import": "./src/controller/level.js"
+    },
+    "#controller/sqlite": {
+      "bun": "./src/controller/sqlite_bun.ts",
+      "import": "./src/controller/sqlite.js"
     }
   },
   "types": "./lib/index.d.ts",

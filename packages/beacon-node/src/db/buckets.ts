@@ -78,3 +78,5 @@ export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof type
   }
   throw new Error("Missing bucket for value " + enumValue);
 }
+
+export const bucketNames = Object.keys(Bucket).filter((x) => Number.isNaN(Number.parseInt(x)));

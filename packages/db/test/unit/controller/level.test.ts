@@ -8,6 +8,7 @@ import {getEnvLogger} from "@lodestar/logger/env";
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
   let db: LevelDbController;
+  const opts = {bucketId: "unknown"};
 
   beforeAll(async () => {
     db = await LevelDbController.create({name: dbLocation}, {metrics: null, logger: getEnvLogger()});
@@ -20,30 +21,30 @@ describe("LevelDB controller", () => {
 
   it("test get not found", async () => {
     const key = Buffer.from("not-existing-key");
-    expect(await db.get(key)).toBe(null);
+    expect(await db.get(key, opts)).toBe(null);
   });
 
   it("test put/get/delete", async () => {
     const key = Buffer.from("test");
     const value = Buffer.from("some value");
-    await db.put(key, value);
-    expect(await db.get(key)).toEqual(value);
-    await db.delete(key);
-    expect(await db.get(key)).toBe(null);
+    await db.put(key, value, opts);
+    expect(await db.get(key, opts)).toEqual(value);
+    await db.delete(key, opts);
+    expect(await db.get(key, opts)).toBe(null);
   });
 
   it("test getMany", async () => {
     const key1 = Buffer.from("test 1");
     const value1 = Buffer.from("some value 1");
-    await db.put(key1, value1);
+    await db.put(key1, value1, opts);
 
     const key2 = Buffer.from("test 2");
     const value2 = Buffer.from("some value 2");
-    await db.put(key2, value2);
+    await db.put(key2, value2, opts);
 
-    await expect(db.getMany([key1, key2])).resolves.toEqual([value1, value2]);
+    await expect(db.getMany([key1, key2], opts)).resolves.toEqual([value1, value2]);
     await db.delete(key1);
-    await expect(db.getMany([key1, key2])).resolves.toEqual([undefined, value2]);
+    await expect(db.getMany([key1, key2], opts)).resolves.toEqual([undefined, value2]);
   });
 
   it("test batchPut", async () => {
@@ -59,12 +60,12 @@ describe("LevelDB controller", () => {
         value: Buffer.from("value"),
       },
     ]);
-    expect(await db.get(k1)).not.toBeNull();
-    expect(await db.get(k2)).not.toBeNull();
+    expect(await db.get(k1, opts)).not.toBeNull();
+    expect(await db.get(k2, opts)).not.toBeNull();
   });
 
   it("test batch delete", async () => {
-    await db.batchDelete(await db.keys());
+    await db.batchDelete(await db.keys(opts));
     const k1 = Buffer.from("test1");
     const k2 = Buffer.from("test2");
     await db.batchPut([
@@ -77,9 +78,9 @@ describe("LevelDB controller", () => {
         value: Buffer.from("value"),
       },
     ]);
-    expect((await db.entries()).length).toBe(2);
+    expect((await db.entries(opts)).length).toBe(2);
     await db.batchDelete([k1, k2]);
-    expect((await db.entries()).length).toBe(0);
+    expect((await db.entries(opts)).length).toBe(0);
   });
 
   it("test entries", async () => {

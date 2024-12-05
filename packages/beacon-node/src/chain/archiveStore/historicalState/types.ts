@@ -7,7 +7,7 @@ export type HistoricalStateRegenInitModules = {
   opts: {
     genesisTime: number;
     dbLocation: string;
-    dbType: "level" | "lmdb";
+    dbType: "level" | "lmdb" | "sqlite";
   };
   config: BeaconConfig;
   logger: LoggerNode;
@@ -25,7 +25,7 @@ export type HistoricalStateWorkerData = {
   maxConcurrency: number;
   maxLength: number;
   dbLocation: string;
-  dbType: "level" | "lmdb";
+  dbType: "level" | "lmdb" | "sqlite";
   metricsEnabled: boolean;
   loggerOpts: LoggerNodeOpts;
 };

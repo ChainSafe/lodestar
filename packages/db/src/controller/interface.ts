@@ -18,9 +18,20 @@ export interface FilterOptions<K> {
   bucketId?: string;
 }
 
+export interface ControllerFilterOptions<K> {
+  gt?: K;
+  gte?: K;
+  lt?: K;
+  lte?: K;
+  reverse?: boolean;
+  limit?: number;
+  /** For metrics */
+  bucketId: string;
+}
+
 export type DbReqOpts = {
   /** For metrics */
-  bucketId?: string;
+  bucketId: string;
 };
 
 export interface KeyValue<K, V> {
@@ -38,25 +49,24 @@ export interface DatabaseController<K, V> {
 
   // Core API
 
-  get(key: K, opts?: DbReqOpts): Promise<V | null>;
-  getMany(key: K[], opts?: DbReqOpts): Promise<(V | undefined)[]>;
-
-  put(key: K, value: V, opts?: DbReqOpts): Promise<void>;
-  delete(key: K, opts?: DbReqOpts): Promise<void>;
+  get(key: K, opts: DbReqOpts): Promise<V | null>;
+  getMany(key: K[], opts: DbReqOpts): Promise<(V | undefined)[]>;
+  put(key: K, value: V, opts: DbReqOpts): Promise<void>;
+  delete(key: K, opts: DbReqOpts): Promise<void>;
 
   // Batch operations
 
-  batchPut(items: KeyValue<K, V>[], opts?: DbReqOpts): Promise<void>;
-  batchDelete(keys: K[], opts?: DbReqOpts): Promise<void>;
+  batchPut(items: KeyValue<K, V>[], opts: DbReqOpts): Promise<void>;
+  batchDelete(keys: K[], opts: DbReqOpts): Promise<void>;
 
   // Iterate over entries
 
-  keysStream(opts?: FilterOptions<K>): AsyncIterable<K>;
-  keys(opts?: FilterOptions<K>): Promise<K[]>;
+  keysStream(opts: ControllerFilterOptions<K>): AsyncIterable<K>;
+  keys(opts: ControllerFilterOptions<K>): Promise<K[]>;
 
-  valuesStream(opts?: FilterOptions<K>): AsyncIterable<V>;
-  values(opts?: FilterOptions<K>): Promise<V[]>;
+  valuesStream(opts: ControllerFilterOptions<K>): AsyncIterable<V>;
+  values(opts: ControllerFilterOptions<K>): Promise<V[]>;
 
-  entriesStream(opts?: FilterOptions<K>): AsyncIterable<KeyValue<K, V>>;
-  entries(opts?: FilterOptions<K>): Promise<KeyValue<K, V>[]>;
+  entriesStream(opts: ControllerFilterOptions<K>): AsyncIterable<KeyValue<K, V>>;
+  entries(opts: ControllerFilterOptions<K>): Promise<KeyValue<K, V>[]>;
 }

@@ -2,7 +2,7 @@ import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
 import {FilterOptions, KeyValue} from "./controller/index.js";
-import {Db, DbReqOpts} from "./controller/interface.js";
+import {ControllerFilterOptions, Db, DbReqOpts} from "./controller/interface.js";
 import {encodeKey as _encodeKey} from "./util.js";
 
 export type Id = Uint8Array | string | number | bigint;
@@ -252,8 +252,8 @@ export abstract class Repository<I extends Id, T> {
   /**
    * Transforms opts from I to Uint8Array
    */
-  protected dbFilterOptions(opts?: FilterOptions<I>): FilterOptions<Uint8Array> {
-    const optsBuff: FilterOptions<Uint8Array> = {
+  protected dbFilterOptions(opts?: FilterOptions<I>): ControllerFilterOptions<Uint8Array> {
+    const optsBuff: ControllerFilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
 
