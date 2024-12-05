@@ -257,7 +257,7 @@ export function getBeaconPoolApi({
             }
 
             failures.push({index: i, message: (e as Error).message});
-            logger.debug(
+            logger.error(
               `Error on submitPoolSyncCommitteeSignatures [${i}]`,
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
               e as Error
