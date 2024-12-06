@@ -3,7 +3,7 @@ import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
-import {hasExecutionWithdrawalCredential, switchToCompoundingValidator} from "../util/electra.js";
+import {hasExecutionWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
 
@@ -13,6 +13,10 @@ export function processConsolidationRequest(
   consolidationRequest: electra.ConsolidationRequest
 ): void {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
+  if (!isPubkeyKnown(state, sourcePubkey) || !isPubkeyKnown(state, targetPubkey)) {
+    return;
+  }
+
   const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
   const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
 
@@ -95,8 +99,9 @@ function isValidSwitchToCompoundRequest(
   const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
   const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
 
+  // since we share pubkey2index, validatorIndex maybe known by other epoch transition but we don't have that validator in this state
   // Verify pubkey exists
-  if (sourceIndex === null) {
+  if (sourceIndex === null || sourceIndex >= state.validators.length) {
     return false;
   }
 

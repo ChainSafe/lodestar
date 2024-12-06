@@ -3,7 +3,7 @@ import {PendingDeposit} from "@lodestar/types/lib/electra/types.js";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
-import {hasCompoundingWithdrawalCredential} from "../util/electra.js";
+import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
 
@@ -51,7 +51,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
     let isValidatorWithdrawn = false;
 
     const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
-    if (validatorIndex !== null) {
+    if (isValidatorKnown(state, validatorIndex)) {
       const validator = state.validators.getReadonly(validatorIndex);
       isValidatorExited = validator.exitEpoch < FAR_FUTURE_EPOCH;
       isValidatorWithdrawn = validator.withdrawableEpoch < nextEpoch;
@@ -103,7 +103,7 @@ function applyPendingDeposit(
   const {pubkey, withdrawalCredentials, amount, signature} = deposit;
   const cachedBalances = cache.balances;
 
-  if (validatorIndex === null) {
+  if (!isValidatorKnown(state, validatorIndex)) {
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
     if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
       addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
