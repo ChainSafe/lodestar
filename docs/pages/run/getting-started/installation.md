@@ -4,6 +4,12 @@
 
 Binaries can be downloaded from the Lodestar [release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
 
+Run the following command to install the latest version
+
+```bash
+curl -fsSL https://chainsafe.github.io/lodestar/install | bash
+```
+
 ## Docker Installation
 
 The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is maintained actively. It contains the `lodestar` CLI preinstalled.

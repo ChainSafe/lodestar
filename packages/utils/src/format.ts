@@ -65,3 +65,10 @@ export function prettyMsToTime(timeMs: number): string {
   const date = new Date(0, 0, 0, 0, 0, 0, timeMs);
   return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds()}`;
 }
+
+/**
+ * Remove 0x prefix from a string
+ */
+export function strip0xPrefix(hex: string): string {
+  return hex.startsWith("0x") ? hex.slice(2) : hex;
+}

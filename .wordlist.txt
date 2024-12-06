@@ -110,6 +110,7 @@ Vitalik
 Vitest
 Wagyu
 api
+args
 async
 backfill
 beaconcha
@@ -244,3 +245,4 @@ xRelayPubKey
 xcode
 yaml
 yamux
+yml

@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
@@ -13,6 +14,7 @@ import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.j
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 
 export function getLodestarApi({
@@ -186,6 +188,29 @@ export function getLodestarApi({
 
     async dumpDbStateIndex() {
       return {data: await db.stateArchive.dumpRootIndexEntries()};
+    },
+
+    async getHistoricalSummaries({stateId}) {
+      const {state} = await getStateResponseWithRegen(chain, stateId);
+
+      const stateView = (
+        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state.clone()
+      ) as BeaconStateCapella;
+
+      const fork = config.getForkName(stateView.slot);
+      if (ForkSeq[fork] < ForkSeq.capella) {
+        throw new Error("Historical summaries are not supported before Capella");
+      }
+
+      const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);
+      const proof = new Tree(stateView.node).getSingleProof(gindex);
+
+      return {
+        data: {
+          historicalSummaries: stateView.historicalSummaries.toValue(),
+          proof: proof,
+        },
+      };
     },
   };
 }
