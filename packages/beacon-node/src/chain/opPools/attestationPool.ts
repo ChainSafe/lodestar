@@ -107,7 +107,7 @@ export class AttestationPool {
    */
   add(
     committeeIndex: CommitteeIndex,
-    participationIndex: number,
+    committeeValidatorIndex: number,
     attestation: Attestation,
     attDataRootHex: RootHex
   ): InsertOutcome {
@@ -149,7 +149,7 @@ export class AttestationPool {
     const aggregate = aggregateByIndex.get(committeeIndex);
     if (aggregate) {
       // Aggregate mutating
-      return aggregateAttestationInto(aggregate, attestation, participationIndex);
+      return aggregateAttestationInto(aggregate, attestation, committeeValidatorIndex);
     }
     // Create new aggregate
     aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation));

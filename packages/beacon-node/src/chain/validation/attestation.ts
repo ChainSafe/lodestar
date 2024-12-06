@@ -61,7 +61,7 @@ export type AttestationValidationResult = {
   subnet: number;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
-  participationIndex: number;
+  committeeValidatorIndex: number;
 };
 
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
@@ -506,7 +506,7 @@ async function validateAttestationNoSignatureCheck(
     signatureSet,
     validatorIndex,
     committeeIndex,
-    participationIndex: bitIndex,
+    committeeValidatorIndex: bitIndex,
   };
 }
 
