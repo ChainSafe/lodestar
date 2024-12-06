@@ -99,9 +99,9 @@ function isValidSwitchToCompoundRequest(
   const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
   const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
 
-  // since we share pubkey2index, validatorIndex maybe known by other epoch transition but we don't have that validator in this state
   // Verify pubkey exists
-  if (sourceIndex === null || sourceIndex >= state.validators.length) {
+  if (sourceIndex === null) {
+    // this check is mainly to make the compiler happy, pubkey is checked by the consumer already
     return false;
   }
 
