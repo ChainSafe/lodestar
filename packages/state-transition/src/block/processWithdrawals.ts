@@ -130,7 +130,9 @@ export function getExpectedWithdrawals(
         validator.effectiveBalance >= MIN_ACTIVATION_BALANCE &&
         balances.get(withdrawal.validatorIndex) > MIN_ACTIVATION_BALANCE
       ) {
-        const balanceOverMinActivationBalance = BigInt(balances.get(withdrawal.validatorIndex) - MIN_ACTIVATION_BALANCE);
+        const balanceOverMinActivationBalance = BigInt(
+          balances.get(withdrawal.validatorIndex) - MIN_ACTIVATION_BALANCE
+        );
         const withdrawableBalance =
           balanceOverMinActivationBalance < withdrawal.amount ? balanceOverMinActivationBalance : withdrawal.amount;
         withdrawals.push({

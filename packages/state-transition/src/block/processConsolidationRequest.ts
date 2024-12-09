@@ -3,7 +3,7 @@ import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
-import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
+import {hasCompoundingWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 
@@ -50,9 +50,7 @@ export function processConsolidationRequest(
   const currentEpoch = state.epochCtx.epoch;
 
   // Verify that target has compounding withdrawal credentials
-  if (
-    !hasCompoundingWithdrawalCredential(targetValidator.withdrawalCredentials)
-  ) {
+  if (!hasCompoundingWithdrawalCredential(targetValidator.withdrawalCredentials)) {
     return;
   }
 
@@ -90,7 +88,6 @@ export function processConsolidationRequest(
     targetIndex,
   });
   state.pendingConsolidations.push(pendingConsolidation);
-
 }
 
 /**
