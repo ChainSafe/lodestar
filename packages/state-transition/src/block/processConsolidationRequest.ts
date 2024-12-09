@@ -3,7 +3,7 @@ import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
-import {hasExecutionWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
+import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 
@@ -49,10 +49,9 @@ export function processConsolidationRequest(
   const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   const currentEpoch = state.epochCtx.epoch;
 
-  // Verify withdrawal credentials
+  // Verify that target has compounding withdrawal credentials
   if (
-    !hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials) ||
-    !hasExecutionWithdrawalCredential(targetValidator.withdrawalCredentials)
+    !hasCompoundingWithdrawalCredential(targetValidator.withdrawalCredentials)
   ) {
     return;
   }
@@ -92,10 +91,6 @@ export function processConsolidationRequest(
   });
   state.pendingConsolidations.push(pendingConsolidation);
 
-  // Churn any target excess active balance of target and raise its max
-  if (hasEth1WithdrawalCredential(targetValidator.withdrawalCredentials)) {
-    switchToCompoundingValidator(state, targetIndex);
-  }
 }
 
 /**
