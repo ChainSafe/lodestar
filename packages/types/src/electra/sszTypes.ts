@@ -280,7 +280,7 @@ export const PendingDeposits = new ListCompositeType(PendingDeposit, PENDING_DEP
 
 export const PendingPartialWithdrawal = new ContainerType(
   {
-    index: ValidatorIndex,
+    validatorIndex: ValidatorIndex,
     amount: Gwei,
     withdrawableEpoch: Epoch,
   },

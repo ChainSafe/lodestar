@@ -123,19 +123,19 @@ export function getExpectedWithdrawals(
         break;
       }
 
-      const validator = validators.getReadonly(withdrawal.index);
+      const validator = validators.getReadonly(withdrawal.validatorIndex);
 
       if (
         validator.exitEpoch === FAR_FUTURE_EPOCH &&
         validator.effectiveBalance >= MIN_ACTIVATION_BALANCE &&
-        balances.get(withdrawal.index) > MIN_ACTIVATION_BALANCE
+        balances.get(withdrawal.validatorIndex) > MIN_ACTIVATION_BALANCE
       ) {
-        const balanceOverMinActivationBalance = BigInt(balances.get(withdrawal.index) - MIN_ACTIVATION_BALANCE);
+        const balanceOverMinActivationBalance = BigInt(balances.get(withdrawal.validatorIndex) - MIN_ACTIVATION_BALANCE);
         const withdrawableBalance =
           balanceOverMinActivationBalance < withdrawal.amount ? balanceOverMinActivationBalance : withdrawal.amount;
         withdrawals.push({
           index: withdrawalIndex,
-          validatorIndex: withdrawal.index,
+          validatorIndex: withdrawal.validatorIndex,
           address: validator.withdrawalCredentials.subarray(12),
           amount: withdrawableBalance,
         });
