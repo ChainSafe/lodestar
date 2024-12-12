@@ -42,7 +42,7 @@ jobs:
           sudo apt-get install -y build-essential python3
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 22
+          node: 22.4
       - run: |
           mkdir -p dist
           yarn global add caxa@3.0.1

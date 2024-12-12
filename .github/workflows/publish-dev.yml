@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.4
           registry-url: "https://registry.npmjs.org"
           check-latest: true
           cache: yarn
