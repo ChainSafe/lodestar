@@ -8,7 +8,7 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
-import {AggregatedAttestationPool, OpPool} from "../../src/chain/opPools/index.js";
+import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
@@ -27,6 +27,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   eth1: Mocked<Eth1ForBlockProduction>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
+  syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
@@ -94,10 +95,17 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
     };
   });
 
+  const SyncContributionAndProofPool = vi.fn().mockImplementation(() => {
+    return {
+      getAggregate: vi.fn(),
+    };
+  });
+
   return {
     ...mod,
     OpPool,
     AggregatedAttestationPool,
+    SyncContributionAndProofPool,
   };
 });
 
@@ -124,6 +132,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
       aggregatedAttestationPool: new AggregatedAttestationPool(config),
+      syncContributionAndProofPool: new SyncContributionAndProofPool(),
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),

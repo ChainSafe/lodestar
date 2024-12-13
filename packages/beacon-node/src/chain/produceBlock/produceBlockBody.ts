@@ -5,7 +5,6 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
-  computeEpochAtSlot,
   computeTimeAtSlot,
   getCurrentEpoch,
   getExpectedWithdrawals,
@@ -621,7 +620,6 @@ export async function produceCommonBlockBody<T extends BlockType>(
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const blockEpoch = computeEpochAtSlot(slot);
   const fork = currentState.config.getForkName(slot);
 
   // TODO:
@@ -666,7 +664,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   }
 
   const endSyncAggregate = stepsMetrics?.startTimer();
-  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+  if (ForkSeq[fork] >= ForkSeq.altair) {
     const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(
       syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
