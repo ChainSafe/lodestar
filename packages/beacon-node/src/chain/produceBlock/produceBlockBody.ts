@@ -143,8 +143,15 @@ export async function produceBlockBody<T extends BlockType>(
     ? Object.assign({}, commonBlockBody)
     : await produceCommonBlockBody.call(this, blockType, currentState, blockAttr);
 
-  const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings, blsToExecutionChanges} =
-    blockBody;
+  const {
+    attestations,
+    deposits,
+    voluntaryExits,
+    attesterSlashings,
+    proposerSlashings,
+    syncAggregate,
+    blsToExecutionChanges,
+  } = blockBody;
 
   Object.assign(logMeta, {
     attestations: attestations.length,
@@ -153,6 +160,12 @@ export async function produceBlockBody<T extends BlockType>(
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
   });
+
+  if (ForkSeq[fork] >= ForkSeq.altair) {
+    Object.assign(logMeta, {
+      syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
+    });
+  }
 
   const endExecutionPayload = stepsMetrics?.startTimer();
   if (isForkExecution(fork)) {
