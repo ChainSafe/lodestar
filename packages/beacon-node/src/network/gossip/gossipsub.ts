@@ -329,7 +329,7 @@ function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClie
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(fork, {
+    const topics = getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });

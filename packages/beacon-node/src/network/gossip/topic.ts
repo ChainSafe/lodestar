@@ -1,9 +1,8 @@
-import {ForkDigestContext} from "@lodestar/config";
+import {ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
-  MAX_BLOBS_PER_BLOCK,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkLightClient,
 } from "@lodestar/params";
@@ -199,6 +198,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
  * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
  */
 export function getCoreTopicsAtFork(
+  config: ChainConfig,
   fork: ForkName,
   opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
@@ -213,7 +213,7 @@ export function getCoreTopicsAtFork(
 
   // After Deneb also track blob_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    for (let index = 0; index < MAX_BLOBS_PER_BLOCK; index++) {
+    for (let index = 0; index < config.MAX_BLOBS_PER_BLOCK; index++) {
       topics.push({type: GossipType.blob_sidecar, index});
     }
   }

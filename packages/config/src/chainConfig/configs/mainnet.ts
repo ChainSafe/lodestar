@@ -101,6 +101,8 @@ export const chainConfig: ChainConfig = {
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+  MAX_BLOBS_PER_BLOCK: 6,
+  MAX_REQUEST_BLOB_SIDECARS: 768,
 
   // Electra
   // 2**8 * 10**9 (= 256,000,000,000)
