@@ -54,7 +54,7 @@ export interface IGossipTopic {
 
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
-  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; index: number};
+  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: number};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};

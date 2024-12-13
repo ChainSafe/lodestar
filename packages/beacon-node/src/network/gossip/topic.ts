@@ -73,7 +73,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee:
       return `${topic.type}_${topic.subnet}`;
     case GossipType.blob_sidecar:
-      return `${topic.type}_${topic.index}`;
+      return `${topic.type}_${topic.subnet}`;
   }
 }
 
@@ -181,10 +181,10 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
     }
 
     if (gossipTypeStr.startsWith(GossipType.blob_sidecar)) {
-      const indexStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the index
-      const index = parseInt(indexStr, 10);
-      if (Number.isNaN(index)) throw Error(`index ${indexStr} is not a number`);
-      return {type: GossipType.blob_sidecar, index, fork, encoding};
+      const subnetStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
+      const subnet = parseInt(subnetStr, 10);
+      if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
+      return {type: GossipType.blob_sidecar, subnet, fork, encoding};
     }
 
     throw Error(`Unknown gossip type ${gossipTypeStr}`);
@@ -211,10 +211,10 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
-  // After Deneb also track blob_sidecar_{index}
+  // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    for (let index = 0; index < config.MAX_BLOBS_PER_BLOCK; index++) {
-      topics.push({type: GossipType.blob_sidecar, index});
+    for (let subnet = 0; subnet < config.BLOB_SIDECAR_SUBNET_COUNT; subnet++) {
+      topics.push({type: GossipType.blob_sidecar, subnet});
     }
   }
 

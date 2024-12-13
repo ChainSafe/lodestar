@@ -312,9 +312,9 @@ export class Network implements INetwork {
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
     const slot = blobSidecar.signedBlockHeader.message.slot;
     const fork = this.config.getForkName(slot);
-    const index = blobSidecar.index;
+    const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, index}, blobSidecar, {
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, subnet}, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
   }

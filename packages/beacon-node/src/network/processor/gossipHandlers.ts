@@ -179,7 +179,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   async function validateBeaconBlob(
     blobSidecar: deneb.BlobSidecar,
     blobBytes: Uint8Array,
-    gossipIndex: number,
+    subnet: number,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput | NullBlockInput> {
@@ -202,7 +202,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     );
 
     try {
-      await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
+      await validateGossipBlobSidecar(chain, blobSidecar, subnet);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -212,10 +212,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       logger.debug("Received gossip blob", {
         slot: slot,
         root: blockHex,
-        curentSlot: chain.clock.currentSlot,
+        currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
-        gossipIndex,
+        subnet,
         ...blockInputMeta,
         recvToValLatency,
         recvToValidation,
@@ -363,7 +363,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const blockInput = await validateBeaconBlob(
         blobSidecar,
         serializedData,
-        topic.index,
+        topic.subnet,
         peerIdStr,
         seenTimestampSec
       );
