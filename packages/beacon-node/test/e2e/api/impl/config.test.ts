@@ -60,7 +60,7 @@ async function downloadRemoteConstants(commit: string): Promise<string[]> {
   const constantNames: string[] = [];
 
   for (const spec of await Promise.all(downloadedSpecs)) {
-    const matches = spec.matchAll(/\|\s`*([A-Z_]+)`\s\|/g);
+    const matches = spec.matchAll(/\|\s`*([A-Z_]+)`\s+\|/g);
     for (const match of matches) {
       constantNames.push(match[1]);
     }
