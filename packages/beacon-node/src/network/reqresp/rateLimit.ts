@@ -4,9 +4,7 @@ import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod} from "./types.js";
 import {requestSszTypeByMethod} from "./types.js";
 
-export const rateLimitQuotas: (
-  config: Pick<ChainConfig, "MAX_REQUEST_BLOB_SIDECARS">
-) => Record<ReqRespMethod, InboundRateLimitQuota> = (config) => ({
+export const rateLimitQuotas: (config: ChainConfig) => Record<ReqRespMethod, InboundRateLimitQuota> = (config) => ({
   [ReqRespMethod.Status]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 5, quotaTimeMs: 15_000},
@@ -67,7 +65,7 @@ export const rateLimitQuotas: (
 
 // Helper to produce a getRequestCount function
 function getRequestCountFn<T extends ReqRespMethod>(
-  config: Pick<ChainConfig, "MAX_REQUEST_BLOB_SIDECARS">,
+  config: ChainConfig,
   method: T,
   fn: (req: RequestBodyByMethod[T]) => number
 ): (reqData: Uint8Array) => number {

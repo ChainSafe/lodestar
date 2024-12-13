@@ -14,6 +14,6 @@ export const signedBLSToExecutionChangeVersionedType = new ContainerType(
 );
 export type SignedBLSToExecutionChangeVersioned = ValueOf<typeof signedBLSToExecutionChangeVersionedType>;
 
-export const BlobSidecarsByRootRequestType = (config: Pick<ChainConfig, "MAX_REQUEST_BLOB_SIDECARS">) =>
+export const BlobSidecarsByRootRequestType = (config: ChainConfig) =>
   new ListCompositeType(ssz.deneb.BlobIdentifier, config.MAX_REQUEST_BLOB_SIDECARS);
 export type BlobSidecarsByRootRequest = ValueOf<ReturnType<typeof BlobSidecarsByRootRequestType>>;

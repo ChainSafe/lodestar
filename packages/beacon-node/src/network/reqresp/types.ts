@@ -70,7 +70,7 @@ type ResponseBodyByMethod = {
 };
 
 /** Request SSZ type for each method and ForkName */
-export const requestSszTypeByMethod: (config: Pick<ChainConfig, "MAX_REQUEST_BLOB_SIDECARS">) => {
+export const requestSszTypeByMethod: (config: ChainConfig) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
 } = (config) => ({
   [ReqRespMethod.Status]: ssz.phase0.Status,
