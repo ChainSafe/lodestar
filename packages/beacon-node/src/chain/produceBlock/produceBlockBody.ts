@@ -143,6 +143,7 @@ export async function produceBlockBody<T extends BlockType>(
     : await produceCommonBlockBody.call(this, blockType, currentState, blockAttr);
 
   const {
+    graffiti,
     attestations,
     deposits,
     voluntaryExits,
@@ -153,6 +154,7 @@ export async function produceBlockBody<T extends BlockType>(
   } = blockBody;
 
   Object.assign(logMeta, {
+    graffiti,
     attestations: attestations.length,
     deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
