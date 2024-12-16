@@ -21,13 +21,14 @@ describe("gossip block validation", () => {
   const proposerIndex = 0;
   const clockSlot = 32;
   const block = ssz.deneb.BeaconBlock.defaultValue();
-  // Fill up with kzg commitments
-  block.body.blobKzgCommitments = Array.from({ length: config.MAX_BLOBS_PER_BLOCK }, () => new Uint8Array([0]));
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
   const maxSkipSlots = 10;
 
   beforeEach(() => {
+    // Fill up with kzg commitments
+    block.body.blobKzgCommitments = Array.from({length: config.MAX_BLOBS_PER_BLOCK}, () => new Uint8Array([0]));
+
     chain = getMockedBeaconChain();
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
@@ -226,8 +227,7 @@ describe("gossip block validation", () => {
     // Force proposer shuffling cache to return correct value
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
     // Keep number of kzg commitments as is so it stays within the limit
-    
+
     await validateGossipBlock(config, chain, job, ForkName.deneb);
   });
-
 });
