@@ -116,7 +116,7 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > chain.config.MAX_BLOBS_PER_BLOCK) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
-        numCommitments: blobKzgCommitmentsLen,
+        blobKzgCommitmentsLen,
         commitmentLimit: chain.config.MAX_BLOBS_PER_BLOCK,
       });
     }

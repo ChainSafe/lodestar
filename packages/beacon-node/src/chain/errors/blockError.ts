@@ -108,7 +108,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
   | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
-  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; numCommitments: number; commitmentLimit: number};
+  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
