@@ -112,11 +112,11 @@ export async function validateGossipBlock(
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
   if (isForkBlobs(fork)) {
-    const numCommitments = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
-    if (numCommitments > chain.config.MAX_BLOBS_PER_BLOCK) {
+    const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
+    if (blobKzgCommitmentsLen > chain.config.MAX_BLOBS_PER_BLOCK) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
-        numCommitments,
+        numCommitments: blobKzgCommitmentsLen,
         commitmentLimit: chain.config.MAX_BLOBS_PER_BLOCK,
       });
     }
