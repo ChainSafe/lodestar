@@ -37,6 +37,7 @@ import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {fromGraffitiBuffer} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -154,7 +155,7 @@ export async function produceBlockBody<T extends BlockType>(
   } = blockBody;
 
   Object.assign(logMeta, {
-    graffiti,
+    graffiti: fromGraffitiBuffer(graffiti),
     attestations: attestations.length,
     deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
