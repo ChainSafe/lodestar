@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, DEPOSIT_REQUEST_TYPE, WITHDRAWAL_REQUEST_TYPE, CONSOLIDATION_REQUEST_TYPE} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
 import {Blob, BlobAndProof, KZGCommitment, KZGProof} from "@lodestar/types/deneb";
 
@@ -58,11 +58,11 @@ export enum ClientCode {
   XX = "XX", // unknown
 }
 
-// Represents request type in ExecutionRequests defined in EIP-7685
-export enum RequestType {
-  DEPOSIT_REQUEST_TYPE = 0, // 0x00
-  WITHDRAWAL_REQUEST_TYPE = 1, // 0x01
-  CONSOLIDATION_REQUEST_TYPE = 2, // 0x02
+export type RequestType = typeof DEPOSIT_REQUEST_TYPE | typeof WITHDRAWAL_REQUEST_TYPE | typeof CONSOLIDATION_REQUEST_TYPE;
+
+
+export function isRequestType(type: number): type is RequestType {
+  return type === DEPOSIT_REQUEST_TYPE || type === WITHDRAWAL_REQUEST_TYPE || type === CONSOLIDATION_REQUEST_TYPE;
 }
 
 export type ExecutePayloadResponse =
