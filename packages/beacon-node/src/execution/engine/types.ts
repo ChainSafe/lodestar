@@ -20,7 +20,14 @@ import {
   quantityToBigint,
   quantityToNum,
 } from "../../eth1/provider/utils.js";
-import {BlobsBundle, ExecutionPayloadStatus, PayloadAttributes, RequestType, VersionedHashes, isRequestType} from "./interface.js";
+import {
+  BlobsBundle,
+  ExecutionPayloadStatus,
+  PayloadAttributes,
+  RequestType,
+  VersionedHashes,
+  isRequestType,
+} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 export type EngineApiRpcParamTypes = {
