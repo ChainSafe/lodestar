@@ -155,7 +155,7 @@ export class ReprocessController {
     }
 
     // in theory there are maybe some awaiting promises waiting for a slot > clockSlot
-    // in reality this never happens so reseting awaitingPromisesCount to 0 to make it simple
+    // in reality this never happens so resetting awaitingPromisesCount to 0 to make it simple
     this.awaitingPromisesCount = 0;
   }
 }
