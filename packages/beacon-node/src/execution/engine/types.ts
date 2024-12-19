@@ -23,10 +23,10 @@ import {
 import {
   BlobsBundle,
   ExecutionPayloadStatus,
+  ExecutionRequestType,
   PayloadAttributes,
-  RequestType,
   VersionedHashes,
-  isRequestType,
+  isExecutionRequestType,
 } from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
@@ -417,7 +417,7 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
 /**
  * Prepend a single-byte requestType to requestsBytes
  */
-function prefixRequests(requestsBytes: Uint8Array, requestType: RequestType): Uint8Array {
+function prefixRequests(requestsBytes: Uint8Array, requestType: ExecutionRequestType): Uint8Array {
   const prefixedRequests = new Uint8Array(1 + requestsBytes.length);
   prefixedRequests[0] = requestType;
   prefixedRequests.set(requestsBytes, 1);
@@ -488,7 +488,7 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
     return result;
   }
 
-  let prevRequestType: RequestType | undefined;
+  let prevRequestType: ExecutionRequestType | undefined;
 
   for (let prefixedRequests of serialized) {
     // Slice out 0x so it is easier to extract request type
@@ -498,7 +498,7 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
 
     const currentRequestType = Number(prefixedRequests.substring(0, 2));
 
-    if (!isRequestType(currentRequestType)) {
+    if (!isExecutionRequestType(currentRequestType)) {
       throw Error(`Invalid request type currentRequestType=${prefixedRequests.substring(0, 2)}`);
     }
 

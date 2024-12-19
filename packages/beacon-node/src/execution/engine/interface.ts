@@ -58,12 +58,12 @@ export enum ClientCode {
   XX = "XX", // unknown
 }
 
-export type RequestType =
+export type ExecutionRequestType =
   | typeof DEPOSIT_REQUEST_TYPE
   | typeof WITHDRAWAL_REQUEST_TYPE
   | typeof CONSOLIDATION_REQUEST_TYPE;
 
-export function isRequestType(type: number): type is RequestType {
+export function isExecutionRequestType(type: number): type is ExecutionRequestType {
   return type === DEPOSIT_REQUEST_TYPE || type === WITHDRAWAL_REQUEST_TYPE || type === CONSOLIDATION_REQUEST_TYPE;
 }
 
