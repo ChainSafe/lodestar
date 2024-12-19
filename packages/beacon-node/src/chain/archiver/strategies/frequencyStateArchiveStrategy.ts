@@ -39,7 +39,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
    * - Minimize disk space, storing the least states possible
    * - Minimize the sync progress lost on unexpected crash, storing temp state every few epochs
    *
-   * At epoch `e` there will be states peristed at intervals of `PERSIST_STATE_EVERY_EPOCHS` = 32
+   * At epoch `e` there will be states persisted at intervals of `PERSIST_STATE_EVERY_EPOCHS` = 32
    * and one at `PERSIST_TEMP_STATE_EVERY_EPOCHS` = 1024
    * ```
    *        |                |             |           .
