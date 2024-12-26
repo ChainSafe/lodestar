@@ -343,7 +343,7 @@ export async function importBlock(
     // consumers should not mutate or get the transfered cache
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
 
-    // Note: in-lined code from previos handler of ChainEvent.checkpoint
+    // Note: in-lined code from previous handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
     const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
