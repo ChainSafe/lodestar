@@ -1,6 +1,6 @@
 # Lodestar Light Client
 
-Ethereum light clients provide a pathway for users to interact with the Ethereum blockchain in a trust-minimized manner, comparable to the level of trust required when engaging with a third-party provider like Infura or EtherScan. Not that those platforms are bad, but trust in any centralized provider goes against the ethos of blockchain. Light clients are a way that low-power devices, like cell phones, can do self validation of transactions and dApp state.
+Ethereum light clients provide a pathway for users to interact with the Ethereum blockchain in a trust-minimized manner, comparable to the level of trust required when engaging with a third-party provider like Infura or EtherScan. Note that those platforms are bad, but trust in any centralized provider goes against the ethos of blockchain. Light clients are a way that low-power devices, like cell phones, can do self validation of transactions and dApp state.
 
 Unlike full nodes, light clients do not download and store the entire blockchain. Instead, they download only the headers of each block and employ Merkle proofs to verify transactions. This enables a quick synchronization with the network and access the latest information without using significant system resources​. This streamlined approach to accessing Ethereum is crucial, especially in scenarios where full-scale network participation is infeasible or undesired.
 
