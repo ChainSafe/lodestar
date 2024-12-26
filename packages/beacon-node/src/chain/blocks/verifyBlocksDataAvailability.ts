@@ -47,7 +47,7 @@ export async function verifyBlocksDataAvailability(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlocksDataAvailability");
     }
-    // Validate status of only not yet finalized blocks, we don't need yet to propogate the status
+    // Validate status of only not yet finalized blocks, we don't need yet to propagate the status
     // as it is not used upstream anywhere
     const {dataAvailabilityStatus, availableBlockInput} = await maybeValidateBlobs(chain, blockInput, signal, opts);
     dataAvailabilityStatuses.push(dataAvailabilityStatus);
