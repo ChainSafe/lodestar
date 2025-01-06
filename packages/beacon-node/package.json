@@ -153,6 +153,7 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.7.3",
     "@types/datastore-level": "^3.0.0",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
