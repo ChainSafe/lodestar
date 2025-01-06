@@ -220,8 +220,6 @@ const inclusionDelays = new Array<number>();
 /** WARNING: reused, never gc'd */
 const flags = new Array<number>();
 /** WARNING: reused, never gc'd */
-const isCompoundingValidatorArr = new Array<boolean>();
-/** WARNING: reused, never gc'd */
 const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 /** WARNING: reused, never gc'd */
 const isCompoundingValidatorArr = new Array<boolean>();
