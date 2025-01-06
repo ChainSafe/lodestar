@@ -25,10 +25,8 @@ import {
   electra,
   phase0,
 } from "@lodestar/types";
-import {LodestarError, fromHex} from "@lodestar/utils";
-import * as immutable from "immutable";
+import {LodestarError} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
-import {EpochCacheMetrics} from "../metrics.js";
 import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
 import {
   EpochShuffling,
@@ -51,14 +49,8 @@ import {
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {
-  Index2PubkeyCache,
-  PubkeyHex,
-  UnfinalizedPubkeyIndexMap,
-  newUnfinalizedPubkeyIndexMap,
-  syncPubkeys,
-  toMemoryEfficientHexStr,
-} from "./pubkeyCache.js";
+import {EpochTransitionCache} from "./epochTransitionCache.js";
+import {Index2PubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -111,30 +103,20 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
 export class EpochCache {
   config: BeaconConfig;
   /**
-   * Unique globally shared finalized pubkey registry. There should only exist one for the entire application.
+   * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
    * TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
    * or handle non finalized data differently, or use an immutable.js structure for cheap copies
-   *
-   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is
-   * insert only. Validators could be 1) Active 2) In the activation queue 3) Initialized but pending queued
    *
    * $VALIDATOR_COUNT x 192 char String -> Number Map
    */
   pubkey2index: PubkeyIndexMap;
   /**
-   * Unique globally shared finalized pubkey registry. There should only exist one for the entire application.
-   *
-   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is
-   * insert only. Validators could be 1) Active 2) In the activation queue 3) Initialized but pending queued
+   * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
    */
   index2pubkey: Index2PubkeyCache;
-  /**
-   * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
-   */
-  unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
   /**
    * ShufflingCache is passed in from `beacon-node` so should be available at runtime but may not be
    * present during testing.
@@ -252,15 +234,6 @@ export class EpochCache {
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
-  /**
-   * state.validators.length of every state at epoch boundary
-   * They are saved in increasing order of epoch.
-   * The first validator length in the list corresponds to the state AFTER the latest finalized checkpoint state. ie. state.finalizedCheckpoint.epoch - 1
-   * The last validator length corresponds to the latest epoch state ie. this.epoch
-   * eg. latest epoch = 105, latest finalized cp state epoch = 102
-   * then the list will be (in terms of epoch) [103, 104, 105]
-   */
-  historicalValidatorLengths: immutable.List<number>;
 
   epoch: Epoch;
 
@@ -272,7 +245,6 @@ export class EpochCache {
     config: BeaconConfig;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
-    unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
     shufflingCache?: IShufflingCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
@@ -300,12 +272,10 @@ export class EpochCache {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
-    historialValidatorLengths: immutable.List<number>;
   }) {
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
-    this.unfinalizedPubkey2index = data.unfinalizedPubkey2index;
     this.shufflingCache = data.shufflingCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
@@ -333,12 +303,11 @@ export class EpochCache {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
-    this.historicalValidatorLengths = data.historialValidatorLengths;
   }
 
   /**
    * Create an epoch cache
-   * @param state a finalized beacon state. Passing in unfinalized state may cause unexpected behaviour eg. empty unfinalized cache
+   * @param state a finalized beacon state. Passing in unfinalized state may cause unexpected behaviour
    *
    * SLOW CODE - 🐢
    */
@@ -551,8 +520,6 @@ export class EpochCache {
       config,
       pubkey2index,
       index2pubkey,
-      // `createFromFinalizedState()` creates cache with empty unfinalizedPubkey2index. Be cautious to only pass in finalized state
-      unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap(),
       shufflingCache,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
@@ -581,7 +548,6 @@ export class EpochCache {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
-      historialValidatorLengths: immutable.List(),
     });
   }
 
@@ -597,8 +563,6 @@ export class EpochCache {
       // Common append-only structures shared with all states, no need to clone
       pubkey2index: this.pubkey2index,
       index2pubkey: this.index2pubkey,
-      // No need to clone this reference. On each mutation the `unfinalizedPubkey2index` reference is replaced, @see `addPubkey`
-      unfinalizedPubkey2index: this.unfinalizedPubkey2index,
       shufflingCache: this.shufflingCache,
       // Immutable data
       proposers: this.proposers,
@@ -630,7 +594,6 @@ export class EpochCache {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
-      historialValidatorLengths: this.historicalValidatorLengths,
     });
   }
 
@@ -643,14 +606,7 @@ export class EpochCache {
    * Steps for afterProcessEpoch
    * 1) update previous/current/next values of cached items
    */
-  afterProcessEpoch(
-    state: CachedBeaconStateAllForks,
-    epochTransitionCache: {
-      nextShufflingDecisionRoot: RootHex;
-      nextShufflingActiveIndices: Uint32Array;
-      nextEpochTotalActiveBalanceByIncrement: number;
-    }
-  ): void {
+  afterProcessEpoch(state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache): void {
     // Because the slot was incremented before entering this function the "next epoch" is actually the "current epoch"
     // in this context but that is not actually true because the state transition happens in the last 4 seconds of the
     // epoch. For the context of this function "upcoming epoch" is used to denote the epoch that will begin after this
@@ -695,28 +651,35 @@ export class EpochCache {
     this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
     if (this.shufflingCache) {
-      this.nextShuffling = null;
-      // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
-      // the build is done on a worker thread it will be calculated immediately after the epoch transition
-      // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
-      // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
-      // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
-      // is not ready yet as the transition must not be asynchronous.
-      this.shufflingCache
-        .get(epochAfterUpcoming, this.nextDecisionRoot)
-        .then((shuffling) => {
-          if (!shuffling) {
-            throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
-          }
-          this.nextShuffling = shuffling;
-        })
-        .catch((err) => {
-          this.shufflingCache?.logger?.error(
-            "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
-            {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
-            err
-          );
+      if (!epochTransitionCache.asyncShufflingCalculation) {
+        this.nextShuffling = this.shufflingCache.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
+          state,
+          activeIndices: this.nextActiveIndices,
         });
+      } else {
+        this.nextShuffling = null;
+        // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
+        // the build is done on a worker thread it will be calculated immediately after the epoch transition
+        // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
+        // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
+        // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
+        // is not ready yet as the transition must not be asynchronous.
+        this.shufflingCache
+          .get(epochAfterUpcoming, this.nextDecisionRoot)
+          .then((shuffling) => {
+            if (!shuffling) {
+              throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
+            }
+            this.nextShuffling = shuffling;
+          })
+          .catch((err) => {
+            this.shufflingCache?.logger?.error(
+              "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
+              {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
+              err
+            );
+          });
+      }
     } else {
       // Only for testing. shufflingCache should always be available in prod
       this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
@@ -773,25 +736,6 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
-    // ELECTRA Only: Add current cpState.validators.length
-    // Only keep validatorLength for epochs after finalized cpState.epoch
-    // eg. [100(epoch 1), 102(epoch 2)].push(104(epoch 3)), this.epoch = 3, finalized cp epoch = 1
-    // We keep the last (3 - 1) items = [102, 104]
-    if (upcomingEpoch >= this.config.ELECTRA_FORK_EPOCH) {
-      this.historicalValidatorLengths = this.historicalValidatorLengths.push(state.validators.length);
-
-      // If number of validatorLengths we want to keep exceeds the current list size, it implies
-      // finalized checkpoint hasn't advanced, and no need to slice
-      const hasFinalizedCpAdvanced =
-        this.epoch - state.finalizedCheckpoint.epoch < this.historicalValidatorLengths.size;
-
-      if (hasFinalizedCpAdvanced) {
-        // We use finalized cp epoch - this.epoch which is a negative number to keep the last n entries and discard the rest
-        this.historicalValidatorLengths = this.historicalValidatorLengths.slice(
-          state.finalizedCheckpoint.epoch - this.epoch
-        );
-      }
-    }
   }
 
   beforeEpochTransition(): void {
@@ -1018,75 +962,19 @@ export class EpochCache {
   }
 
   /**
-   * Return finalized pubkey given the validator index.
-   * Only finalized pubkey as we do not store unfinalized pubkey because no where in the spec has a
-   * need to make such enquiry
+   * Return pubkey given the validator index.
    */
   getPubkey(index: ValidatorIndex): PublicKey | undefined {
     return this.index2pubkey[index];
   }
 
   getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
-    if (this.isPostElectra()) {
-      return this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey)) ?? null;
-    }
     return this.pubkey2index.get(pubkey);
   }
 
-  /**
-   *
-   * Add unfinalized pubkeys
-   *
-   */
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    if (this.isPostElectra()) {
-      this.addUnFinalizedPubkey(index, pubkey);
-    } else {
-      // deposit mechanism pre ELECTRA follows a safe distance with assumption
-      // that they are already canonical
-      this.addFinalizedPubkey(index, pubkey);
-    }
-  }
-
-  addUnFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex | Uint8Array, metrics?: EpochCacheMetrics): void {
-    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
-    metrics?.newUnFinalizedPubkey.inc();
-  }
-
-  addFinalizedPubkeys(pubkeyMap: UnfinalizedPubkeyIndexMap, metrics?: EpochCacheMetrics): void {
-    pubkeyMap.forEach((index, pubkey) => this.addFinalizedPubkey(index, pubkey, metrics));
-  }
-
-  /**
-   * Add finalized validator index and pubkey into finalized cache.
-   * Since addFinalizedPubkey() primarily takes pubkeys from unfinalized cache, it can take pubkey hex string directly
-   */
-  addFinalizedPubkey(index: ValidatorIndex, pubkeyOrHex: PubkeyHex | Uint8Array, metrics?: EpochCacheMetrics): void {
-    const pubkey = typeof pubkeyOrHex === "string" ? fromHex(pubkeyOrHex) : pubkeyOrHex;
-    const existingIndex = this.pubkey2index.get(pubkey);
-
-    if (existingIndex !== null) {
-      if (existingIndex === index) {
-        // Repeated insert.
-        metrics?.finalizedPubkeyDuplicateInsert.inc();
-        return;
-      }
-      // attempt to insert the same pubkey with different index, should never happen.
-      throw Error(
-        `inserted existing pubkey into finalizedPubkey2index cache with a different index, index=${index} priorIndex=${existingIndex}`
-      );
-    }
-
     this.pubkey2index.set(pubkey, index);
-    const pubkeyBytes = pubkey instanceof Uint8Array ? pubkey : fromHex(pubkey);
-    this.index2pubkey[index] = PublicKey.fromBytes(pubkeyBytes); // Optimize for aggregation
-  }
-
-  /**
-   * Delete pubkeys from unfinalized cache
-   */
-  deleteUnfinalizedPubkeys(pubkeys: Iterable<PubkeyHex>): void {
-    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.deleteAll(pubkeys);
+    this.index2pubkey[index] = PublicKey.fromBytes(pubkey); // Optimize for aggregation
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
@@ -1219,25 +1107,6 @@ export class EpochCache {
 
   isPostElectra(): boolean {
     return this.epoch >= this.config.ELECTRA_FORK_EPOCH;
-  }
-
-  getValidatorCountAtEpoch(targetEpoch: Epoch): number | undefined {
-    const currentEpoch = this.epoch;
-
-    if (targetEpoch === currentEpoch) {
-      return this.historicalValidatorLengths.get(-1);
-    }
-
-    // Attempt to get validator count from future epoch
-    if (targetEpoch > currentEpoch) {
-      return undefined;
-    }
-
-    // targetEpoch is so far back that historicalValidatorLengths doesnt contain such info
-    if (targetEpoch < currentEpoch - this.historicalValidatorLengths.size + 1) {
-      return undefined;
-    }
-    return this.historicalValidatorLengths.get(targetEpoch - currentEpoch - 1);
   }
 }
 

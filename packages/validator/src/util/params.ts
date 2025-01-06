@@ -136,6 +136,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // Networking (non-critical as those do not affect consensus)
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    BLOB_SIDECAR_SUBNET_COUNT: false,
+    MAX_REQUEST_BLOB_SIDECARS: false,
 
     // # Phase0Preset
     /////////////////
@@ -216,9 +218,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // # DenebPreset
     /////////////////
     FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
-    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
 
     // ELECTRA
     MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,

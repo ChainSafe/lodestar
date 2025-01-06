@@ -375,17 +375,8 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
     }
-    if (epochCtx.index2pubkey.length !== 32 || epochCtx.pubkey2index.size !== 32) {
-      throw Error("Finalized cache is modified.");
-    }
-    if (epochCtx.unfinalizedPubkey2index.size !== 1) {
-      throw Error(
-        `Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`
-      );
-    }
-    // validator count at epoch 1 should be empty at this point since no epoch transition has happened.
-    if (epochCtx.getValidatorCountAtEpoch(1) !== undefined) {
-      throw Error("Historical validator lengths is modified");
+    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+      throw Error("Pubkey cache is not updated");
     }
 
     await new Promise<void>((resolve, _reject) => {
@@ -412,23 +403,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       throw Error("New validator is not reflected in the beacon state.");
     }
     if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
-      throw Error("New validator is not in finalized cache");
-    }
-    if (!epochCtx.unfinalizedPubkey2index.isEmpty()) {
-      throw Error("Unfinalized cache still contains new validator");
-    }
-    // After 4 epochs, headState's finalized cp epoch should be 2
-    // epochCtx should only have validator count for epoch 3 and 4.
-    if (epochCtx.getValidatorCountAtEpoch(4) === undefined || epochCtx.getValidatorCountAtEpoch(3) === undefined) {
-      throw Error("Missing historical validator length for epoch 3 or 4");
-    }
-
-    if (epochCtx.getValidatorCountAtEpoch(4) !== 33 || epochCtx.getValidatorCountAtEpoch(3) !== 33) {
-      throw Error("Incorrect historical validator length for epoch 3 or 4");
-    }
-
-    if (epochCtx.getValidatorCountAtEpoch(2) !== undefined || epochCtx.getValidatorCountAtEpoch(1) !== undefined) {
-      throw Error("Historical validator length for epoch 1 or 2 is not dropped properly");
+      throw Error("New validator is not in pubkey cache");
     }
 
     if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {

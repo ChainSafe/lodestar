@@ -54,12 +54,12 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const clockSlot = chain.clock.currentSlot;
       const clockEpoch = computeEpochAtSlot(clockSlot);
 
-      if (
-        clockEpoch >= config.BELLATRIX_FORK_EPOCH &&
-        computeStartSlotAtEpoch(clockEpoch) === clockSlot &&
-        chain.executionEngine.state === ExecutionEngineState.OFFLINE
-      ) {
-        logger.warn("Execution client is offline");
+      if (clockEpoch >= config.BELLATRIX_FORK_EPOCH && computeStartSlotAtEpoch(clockEpoch) === clockSlot) {
+        if (chain.executionEngine.state === ExecutionEngineState.OFFLINE) {
+          logger.warn("Execution client is offline");
+        } else if (chain.executionEngine.state === ExecutionEngineState.AUTH_FAILED) {
+          logger.error("Execution client authentication failed. Verify if the JWT secret matches on both clients");
+        }
       }
 
       const headInfo = chain.forkChoice.getHead();

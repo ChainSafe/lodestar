@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {BeaconState} from "@lodestar/types";
+import {BeaconState, ssz} from "@lodestar/types";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";

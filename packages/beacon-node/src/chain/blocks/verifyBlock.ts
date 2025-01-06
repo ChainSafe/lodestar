@@ -15,6 +15,7 @@ import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
+import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
@@ -155,6 +156,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.deneb:
             this.logger.info(DENEB_BLOWFISH_BANNER);
             this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+            break;
+
+          case ForkName.electra:
+            this.logger.info(ELECTRA_GIRAFFE_BANNER);
+            this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
             break;
 
           default:

@@ -125,6 +125,10 @@ export const HistoricalSummary = new ContainerType(
   {typeName: "HistoricalSummary", jsonCase: "eth2"}
 );
 
+export const HistoricalSummaries = new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT, {
+  typeName: "HistoricalSummaries",
+});
+
 // we don't reuse bellatrix.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(
@@ -168,7 +172,7 @@ export const BeaconState = new ContainerType(
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
     nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
     // Deep history valid from Capella onwards
-    historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
+    historicalSummaries: HistoricalSummaries, // [New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

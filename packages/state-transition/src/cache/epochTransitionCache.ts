@@ -33,6 +33,10 @@ export type EpochTransitionCacheOpts = {
    * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
+  /**
+   * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch
+   */
+  asyncShufflingCalculation?: boolean;
 };
 
 /**
@@ -177,6 +181,12 @@ export interface EpochTransitionCache {
   nextEpochTotalActiveBalanceByIncrement: number;
 
   /**
+   * Compute the shuffling sync or async.  Defaults to synchronous.  Need to pass `true` with the
+   * `EpochTransitionCacheOpts`
+   */
+  asyncShufflingCalculation: boolean;
+
+  /**
    * Track by validator index if it's active in the prev epoch.
    * Used in metrics
    */
@@ -209,6 +219,8 @@ const proposerIndices = new Array<number>();
 const inclusionDelays = new Array<number>();
 /** WARNING: reused, never gc'd */
 const flags = new Array<number>();
+/** WARNING: reused, never gc'd */
+const isCompoundingValidatorArr = new Array<boolean>();
 /** WARNING: reused, never gc'd */
 const nextEpochShufflingActiveValidatorIndices = new Array<number>();
 /** WARNING: reused, never gc'd */
@@ -265,6 +277,10 @@ export function beforeProcessEpoch(
   // TODO: optimize by combining the two loops
   // likely will require splitting into phase0 and post-phase0 versions
 
+  if (forkSeq >= ForkSeq.electra) {
+    isCompoundingValidatorArr.length = validatorCount;
+  }
+
   // Clone before being mutated in processEffectiveBalanceUpdates
   epochCtx.beforeEpochTransition();
 
@@ -303,6 +319,10 @@ export function beforeProcessEpoch(
     }
 
     flags[i] = flag;
+
+    if (forkSeq >= ForkSeq.electra) {
+      isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials);
+    }
 
     if (isActiveCurr) {
       totalActiveStakeByIncrement += effectiveBalancesByIncrements[i];
@@ -385,7 +405,11 @@ export function beforeProcessEpoch(
   for (let i = 0; i < nextEpochShufflingActiveIndicesLength; i++) {
     nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
   }
-  state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
+
+  const asyncShufflingCalculation = opts?.asyncShufflingCalculation ?? false;
+  if (asyncShufflingCalculation) {
+    state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
+  }
 
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
@@ -514,6 +538,7 @@ export function beforeProcessEpoch(
     indicesToEject,
     nextShufflingDecisionRoot,
     nextShufflingActiveIndices,
+    asyncShufflingCalculation,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

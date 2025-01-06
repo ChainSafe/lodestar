@@ -31,11 +31,6 @@ export type BeaconStateTransitionMetrics = {
   ) => void;
 };
 
-export type EpochCacheMetrics = {
-  finalizedPubkeyDuplicateInsert: Gauge;
-  newUnFinalizedPubkey: Gauge;
-};
-
 export function onStateCloneMetrics(
   state: CachedBeaconStateAllForks,
   metrics: BeaconStateTransitionMetrics,

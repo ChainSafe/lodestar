@@ -90,10 +90,9 @@ describe("PersistentCheckpointStateCache", () => {
       {
         datastore,
         logger: testLogger(),
-        shufflingCache: new ShufflingCache(),
         blockStateCache: new FIFOBlockStateCache({}, {}),
       },
-      {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+      {maxCPStateEpochsInMemory: 2}
     );
     cache.add(cp0a, states["cp0a"]);
     cache.add(cp0b, states["cp0b"]);
@@ -165,10 +164,9 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -242,10 +240,9 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -548,10 +545,9 @@ describe("PersistentCheckpointStateCache", () => {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 1, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 1}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -820,10 +816,9 @@ describe("PersistentCheckpointStateCache", () => {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
-          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
+          {maxCPStateEpochsInMemory: 0}
         );
         cache.add(cp0a, states["cp0a"]);
         cache.add(cp0b, states["cp0b"]);
@@ -911,10 +906,9 @@ describe("PersistentCheckpointStateCache", () => {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
-          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
+          {maxCPStateEpochsInMemory: 0}
         );
 
         const root1a = Buffer.alloc(32, 100);

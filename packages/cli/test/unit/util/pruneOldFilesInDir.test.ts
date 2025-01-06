@@ -55,6 +55,10 @@ describe("pruneOldFilesInDir", () => {
     expect(fs.existsSync(emptyDir)).toBe(false);
   });
 
+  it("should handle missing directories", () => {
+    expect(() => pruneOldFilesInDir(path.join(dataDir, "does-not-exist"), DAYS_TO_MS)).not.toThrowError();
+  });
+
   function createFileWithAge(path: string, ageInDays: number): void {
     // Create a new empty file
     fs.closeSync(fs.openSync(path, "w"));

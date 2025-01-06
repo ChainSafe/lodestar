@@ -116,7 +116,6 @@ export const minimalPreset: BeaconPreset = {
   ///////////
   FIELD_ELEMENTS_PER_BLOB: 4096,
   MAX_BLOB_COMMITMENTS_PER_BLOCK: 16,
-  MAX_BLOBS_PER_BLOCK: 6,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: 9,
 
   // ELECTRA

@@ -3,7 +3,7 @@ import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
-import {hasExecutionWithdrawalCredential, switchToCompoundingValidator} from "../util/electra.js";
+import {hasExecutionWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
 
@@ -13,6 +13,10 @@ export function processConsolidationRequest(
   consolidationRequest: electra.ConsolidationRequest
 ): void {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
+  if (!isPubkeyKnown(state, sourcePubkey) || !isPubkeyKnown(state, targetPubkey)) {
+    return;
+  }
+
   const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
   const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
 
@@ -97,6 +101,7 @@ function isValidSwitchToCompoundRequest(
 
   // Verify pubkey exists
   if (sourceIndex === null) {
+    // this check is mainly to make the compiler happy, pubkey is checked by the consumer already
     return false;
   }
 

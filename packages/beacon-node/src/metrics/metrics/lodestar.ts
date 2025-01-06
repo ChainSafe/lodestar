@@ -378,17 +378,6 @@ export function createLodestarMetrics(
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
 
-    epochCache: {
-      finalizedPubkeyDuplicateInsert: register.gauge({
-        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert_total",
-        help: "Total count of duplicate insert of finalized pubkeys",
-      }),
-      newUnFinalizedPubkey: register.gauge({
-        name: "lodestar_epoch_cache_new_unfinalized_pubkey_total",
-        help: "Total count of unfinalized pubkeys added",
-      }),
-    },
-
     // BLS verifier thread pool and queue
 
     bls: {

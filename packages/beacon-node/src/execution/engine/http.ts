@@ -2,6 +2,7 @@ import {Logger} from "@lodestar/logger";
 import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
+import {strip0xPrefix} from "@lodestar/utils";
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,
@@ -522,11 +523,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [clientVersion]});
+    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]});
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
-      return {code, name: cv.name, version: cv.version, commit: cv.commit};
+      return {code, name: cv.name, version: cv.version, commit: strip0xPrefix(cv.commit)};
     });
 
     if (clientVersions.length === 0) {
