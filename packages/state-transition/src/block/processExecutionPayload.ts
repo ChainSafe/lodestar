@@ -1,5 +1,4 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {getMaxBlobsPerBlock} from "@lodestar/config";
 import {ForkName, ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
@@ -50,7 +49,7 @@ export function processExecutionPayload(
   }
 
   if (isForkBlobs(forkName)) {
-    const maxBlobsPerBlock = getMaxBlobsPerBlock(forkName, state.config);
+    const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(forkName);
     const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw Error(`blobKzgCommitmentsLen exceeds limit=${maxBlobsPerBlock}`);

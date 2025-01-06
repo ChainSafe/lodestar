@@ -39,4 +39,6 @@ export type ForkConfig = {
   getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution>;
   /** Get blobs SSZ types by hard-fork*/
   getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs>;
+  /** Get max blobs per block by hard-fork */
+  getMaxBlobsPerBlock(fork: ForkName): number;
 };

@@ -1,4 +1,4 @@
-import {ChainConfig, getBlobSidecarSubnetCount, getMaxBlobsPerBlock} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {
   ForkName,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
@@ -25,7 +25,7 @@ export async function validateGossipBlobSidecar(
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
   // [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `blob_sidecar.index < MAX_BLOBS_PER_BLOCK`.
-  const maxBlobsPerBlock = getMaxBlobsPerBlock(fork, chain.config);
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(fork);
   if (blobSidecar.index >= maxBlobsPerBlock) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INDEX_TOO_LARGE,
@@ -244,5 +244,7 @@ function validateInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
 }
 
 function computeSubnetForBlobSidecar(fork: ForkName, config: ChainConfig, blobIndex: BlobIndex): number {
-  return blobIndex % getBlobSidecarSubnetCount(fork, config);
+  return (
+    blobIndex % (isForkPostElectra(fork) ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA : config.BLOB_SIDECAR_SUBNET_COUNT)
+  );
 }

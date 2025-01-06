@@ -1,4 +1,4 @@
-import {ChainConfig, ForkDigestContext, getBlobSidecarSubnetCount} from "@lodestar/config";
+import {ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -230,7 +230,9 @@ export function getCoreTopicsAtFork(
 
   // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    const subnetCount = getBlobSidecarSubnetCount(fork, config);
+    const subnetCount = isForkPostElectra(fork)
+      ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA
+      : config.BLOB_SIDECAR_SUBNET_COUNT;
 
     for (let subnet = 0; subnet < subnetCount; subnet++) {
       topics.push({type: GossipType.blob_sidecar, subnet});
