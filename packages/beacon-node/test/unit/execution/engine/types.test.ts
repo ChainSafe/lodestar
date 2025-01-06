@@ -55,6 +55,18 @@ describe("execution / engine / types", () => {
         executionRequests.consolidations
       );
     });
+
+    it("should return an empty array if all requests are empty", () => {
+      const executionRequests: ExecutionRequests = {
+        deposits: [],
+        withdrawals: [],
+        consolidations: [],
+      };
+
+      const serialized = serializeExecutionRequests(executionRequests).map(strip0xPrefix);
+
+      expect(serialized.length).toBe(0);
+    });
   });
 
   describe("deserializeExecutionRequests", () => {
