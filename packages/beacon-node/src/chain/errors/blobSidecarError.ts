@@ -2,6 +2,7 @@ import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum BlobSidecarErrorCode {
+  INDEX_TOO_LARGE = "BLOB_SIDECAR_ERROR_INDEX_TOO_LARGE",
   INVALID_INDEX = "BLOB_SIDECAR_ERROR_INVALID_INDEX",
   /** !bls.KeyValidate(block.body.blob_kzg_commitments[i]) */
   INVALID_KZG = "BLOB_SIDECAR_ERROR_INVALID_KZG",
@@ -26,6 +27,7 @@ export enum BlobSidecarErrorCode {
 }
 
 export type BlobSidecarErrorType =
+  | {code: BlobSidecarErrorCode.INDEX_TOO_LARGE; blobIdx: number; maxBlobsPerBlock: number}
   | {code: BlobSidecarErrorCode.INVALID_INDEX; blobIdx: number; subnet: number}
   | {code: BlobSidecarErrorCode.INVALID_KZG; blobIdx: number}
   | {code: BlobSidecarErrorCode.INVALID_KZG_TXS}

@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22.4]
+        node: [22]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22.4]
+        node: [22]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
@@ -71,7 +71,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22.4]
+        node: [22]
     steps:
       - uses: actions/checkout@v4
 
@@ -92,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22.4]
+        node: [22]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
@@ -131,7 +131,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22.4]
+        node: [22]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -168,7 +168,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22.4]
+        node: [22]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -176,9 +176,9 @@ jobs:
         with:
           node: ${{ matrix.node }}
       - name: Install Chrome browser
-        run: npx @puppeteer/browsers install chromedriver@latest --path /tmp
+        run: npx @puppeteer/browsers install chromedriver@stable --path /tmp
       - name: Install Firefox browser
-        run: npx @puppeteer/browsers install firefox@latest --path /tmp
+        run: npx @puppeteer/browsers install firefox@stable --path /tmp
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'
@@ -192,7 +192,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22.4]
+        node: [22]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"

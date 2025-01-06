@@ -69,7 +69,7 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 
 Once a release candidate is created, the Lodestar team begins a testing period.
 
-If there is a bug discovered during the testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed to `unstable` first, then cherrypicked into the `rc/v1.1.0` branch. Then we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
+If there is a bug discovered during the testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed to `unstable` first, then cherrypicked into the `rc/v1.1.0` branch. Then we publish and promote the new commit to `rc.x+1`. The 3-day testing period will reset.
 
 For example: After 3-5 days of testing, is performance equal to or better than latest stable?
 

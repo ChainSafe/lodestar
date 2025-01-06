@@ -64,6 +64,8 @@ export enum BlockErrorCode {
   TOO_MANY_SKIPPED_SLOTS = "TOO_MANY_SKIPPED_SLOTS",
   /** The blobs are unavailable */
   DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
+  /** Block contains too many kzg commitments */
+  TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
 }
 
 type ExecutionErrorStatus = Exclude<
@@ -105,7 +107,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
   | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
-  | {code: BlockErrorCode.DATA_UNAVAILABLE};
+  | {code: BlockErrorCode.DATA_UNAVAILABLE}
+  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
