@@ -63,7 +63,7 @@ describe("execution / engine / types", () => {
         consolidations: [],
       };
 
-      const serialized = serializeExecutionRequests(executionRequests).map(strip0xPrefix);
+      const serialized = serializeExecutionRequests(executionRequests);
 
       expect(serialized.length).toBe(0);
     });
