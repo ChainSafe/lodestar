@@ -1,37 +1,45 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 
-const suggestedFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 describe("BeaconProposerCache", () => {
+  const suggestedFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const feeRecipient1 = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const feeRecipient2 = "0xcccccccccccccccccccccccccccccccccccccccc";
+
+  const validatorIndex1 = 23;
+  const validatorIndex2 = 43;
+  const unknownValidatorIndex = 32;
+
   let cache: BeaconProposerCache;
 
   beforeEach(() => {
     // max 2 items
     cache = new BeaconProposerCache({suggestedFeeRecipient});
-    cache.add(1, {validatorIndex: 23, feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"});
-    cache.add(3, {validatorIndex: 43, feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc"});
+    cache.add(1, {validatorIndex: validatorIndex1, feeRecipient: feeRecipient1});
+    cache.add(3, {validatorIndex: validatorIndex2, feeRecipient: feeRecipient2});
   });
 
   it("get default", () => {
-    expect(cache.getOrDefault(32)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(cache.getOrDefault(unknownValidatorIndex)).toBe(suggestedFeeRecipient);
   });
 
   it("get what has been set", () => {
-    expect(cache.get(23)).toBe("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(cache.get(validatorIndex1)).toBe(feeRecipient1);
   });
 
   it("override and get latest", () => {
-    cache.add(5, {validatorIndex: 23, feeRecipient: "0xdddddddddddddddddddddddddddddddddddddddd"});
-    expect(cache.get(23)).toBe("0xdddddddddddddddddddddddddddddddddddddddd");
+    const newFeeRecipient = "0xdddddddddddddddddddddddddddddddddddddddd";
+    cache.add(5, {validatorIndex: validatorIndex1, feeRecipient: newFeeRecipient});
+    expect(cache.get(validatorIndex1)).toBe(newFeeRecipient);
   });
 
   it("prune", () => {
     cache.prune(4);
 
     // Default for what has been pruned
-    expect(cache.getOrDefault(23)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(cache.getOrDefault(validatorIndex1)).toBe(suggestedFeeRecipient);
 
     // Original for what hasn't been pruned
-    expect(cache.get(43)).toBe("0xcccccccccccccccccccccccccccccccccccccccc");
+    expect(cache.get(validatorIndex2)).toBe(feeRecipient2);
   });
 });
