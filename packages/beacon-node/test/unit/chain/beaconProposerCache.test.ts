@@ -13,7 +13,7 @@ describe("BeaconProposerCache", () => {
   });
 
   it("get default", () => {
-    expect(cache.get(32)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(cache.getOrDefault(32)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   });
 
   it("get what has been set", () => {
@@ -29,7 +29,7 @@ describe("BeaconProposerCache", () => {
     cache.prune(4);
 
     // Default for what has been pruned
-    expect(cache.get(23)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(cache.getOrDefault(23)).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
     // Original for what hasn't been pruned
     expect(cache.get(43)).toBe("0xcccccccccccccccccccccccccccccccccccccccc");
