@@ -51,7 +51,7 @@ export default defineConfig({
       screenshotFailures: false,
       providerOptions: {
         capabilities: {
-          browserVersion: "latest",
+          browserVersion: "stable",
         },
       },
     },

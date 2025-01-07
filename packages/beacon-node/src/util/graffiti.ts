@@ -8,6 +8,15 @@ export function toGraffitiBuffer(graffiti: string): Buffer {
   return Buffer.concat([Buffer.from(graffiti, "utf8"), Buffer.alloc(GRAFFITI_SIZE, 0)], GRAFFITI_SIZE);
 }
 
+/**
+ * Converts a graffiti from 32 bytes buffer back to a UTF-8 string
+ */
+export function fromGraffitiBuffer(graffiti: Uint8Array): string {
+  return Buffer.from(graffiti.buffer, graffiti.byteOffset, graffiti.byteLength)
+    .toString("utf8")
+    .replaceAll("\u0000", "");
+}
+
 export function getDefaultGraffiti(
   consensusClientVersion: ClientVersion,
   executionClientVersion: ClientVersion | null | undefined,

@@ -695,32 +695,46 @@ export function getValidatorApi(
       throw Error("Builder and engine both failed to produce the block within timeout");
     }
 
-    if (engine.status === "rejected" && isEngineEnabled) {
-      logger.warn(
-        "Engine failed to produce the block",
-        {
-          ...loggerContext,
-          durationMs: engine.durationMs,
-        },
-        engine.reason
-      );
-    }
-
-    if (builder.status === "rejected" && isBuilderEnabled) {
-      if (builder.reason instanceof NoBidReceived) {
-        logger.info("Builder did not provide a bid", {
-          ...loggerContext,
-          durationMs: builder.durationMs,
-        });
-      } else {
+    if (isEngineEnabled) {
+      if (engine.status === "rejected") {
         logger.warn(
-          "Builder failed to produce the block",
+          "Engine failed to produce the block",
           {
             ...loggerContext,
-            durationMs: builder.durationMs,
+            durationMs: engine.durationMs,
           },
-          builder.reason
+          engine.reason
         );
+      } else if (engine.status === "pending") {
+        logger.warn("Engine failed to produce the block within cutoff time", {
+          ...loggerContext,
+          cutoffMs,
+        });
+      }
+    }
+
+    if (isBuilderEnabled) {
+      if (builder.status === "rejected") {
+        if (builder.reason instanceof NoBidReceived) {
+          logger.info("Builder did not provide a bid", {
+            ...loggerContext,
+            durationMs: builder.durationMs,
+          });
+        } else {
+          logger.warn(
+            "Builder failed to produce the block",
+            {
+              ...loggerContext,
+              durationMs: builder.durationMs,
+            },
+            builder.reason
+          );
+        }
+      } else if (builder.status === "pending") {
+        logger.warn("Builder failed to produce the block within cutoff time", {
+          ...loggerContext,
+          cutoffMs,
+        });
       }
     }
 

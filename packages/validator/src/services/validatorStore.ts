@@ -131,7 +131,7 @@ type ValidatorData = ProposerConfig & {
 
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
-  defaultGasLimit: 30_000_000,
+  defaultGasLimit: 36_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
   builderBoostFactor: BigInt(100),

@@ -158,7 +158,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         256
       ),
       prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
-      gasLimit: 30000000,
+      gasLimit: 36000000,
       gasUsed: 84714,
       timestamp: 16,
       extraData: dataToBytes("0x", 0),

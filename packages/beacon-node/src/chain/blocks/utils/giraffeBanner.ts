@@ -1,4 +1,5 @@
 export const ELECTRA_GIRAFFE_BANNER = String.raw`
+
                                               2048                   
                                               :--:
                                              :-@==+-:
@@ -24,4 +25,5 @@ export const ELECTRA_GIRAFFE_BANNER = String.raw`
         *:             :-     =-
         :-             --:     =:
        ::*-:           ::::    :-:
+
 `;

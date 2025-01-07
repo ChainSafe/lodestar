@@ -18,6 +18,15 @@ export async function validateGossipBlobSidecar(
 ): Promise<void> {
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
+  // [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `blob_sidecar.index < MAX_BLOBS_PER_BLOCK`.
+  if (blobSidecar.index >= chain.config.MAX_BLOBS_PER_BLOCK) {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.INDEX_TOO_LARGE,
+      blobIdx: blobSidecar.index,
+      maxBlobsPerBlock: chain.config.MAX_BLOBS_PER_BLOCK,
+    });
+  }
+
   // [REJECT] The sidecar is for the correct subnet -- i.e. `compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id`.
   if (computeSubnetForBlobSidecar(blobSidecar.index, chain.config) !== subnet) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
