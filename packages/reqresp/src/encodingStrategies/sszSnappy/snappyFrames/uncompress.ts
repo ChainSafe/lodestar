@@ -46,12 +46,21 @@ export class SnappyFramesUncompress {
         case ChunkType.PADDING:
         case ChunkType.SKIPPABLE:
           continue;
-        case ChunkType.COMPRESSED:
-        case ChunkType.UNCOMPRESSED: {
+        case ChunkType.COMPRESSED: {
           const checksum = frame.subarray(0, 4);
           const data = frame.subarray(4);
 
-          const uncompressed = type === ChunkType.COMPRESSED ? uncompress(data, UNCOMPRESSED_CHUNK_SIZE) : data;
+          const uncompressed = uncompress(data, UNCOMPRESSED_CHUNK_SIZE);
+          if (crc(uncompressed).compare(checksum) !== 0) {
+            throw "malformed input: bad checksum";
+          }
+          result.append(uncompressed);
+          break;
+        }
+        case ChunkType.UNCOMPRESSED: {
+          const checksum = frame.subarray(0, 4);
+          const uncompressed = frame.subarray(4);
+
           if (uncompressed.length > UNCOMPRESSED_CHUNK_SIZE) {
             throw "malformed input: too large";
           }
@@ -59,6 +68,7 @@ export class SnappyFramesUncompress {
             throw "malformed input: bad checksum";
           }
           result.append(uncompressed);
+          break;
         }
       }
     }
