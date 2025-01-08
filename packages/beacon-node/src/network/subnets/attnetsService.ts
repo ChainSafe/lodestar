@@ -25,9 +25,8 @@ export enum SubnetSource {
   longLived = "long_lived",
 }
 
-type Subnet = number;
 // map of subnet to time to form stable mesh as seconds, null if not yet formed
-type AggregatorDutyInfo = Map<Subnet, number | null>;
+type AggregatorDutyInfo = Map<SubnetID, number | null>;
 
 /**
  * This value means node is not able to form stable mesh.
