@@ -252,10 +252,12 @@ export async function produceBlockBody<T extends BlockType>(
         }
 
         if (headerGasLimit !== expectedGasLimit) {
-          this.logger.warn("Header gas limit does not match the expected value", {
+          this.logger.warn("Header gas limit does not match expected value", {
             slot: blockSlot,
             headerGasLimit,
             expectedGasLimit,
+            parentGasLimit,
+            targetGasLimit,
           });
         }
       }
