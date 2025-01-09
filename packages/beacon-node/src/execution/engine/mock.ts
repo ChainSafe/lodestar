@@ -89,6 +89,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
       engine_newPayloadV4: this.notifyNewPayload.bind(this),
+      engine_newPayloadV5: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
@@ -100,6 +101,8 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
+      engine_getInclusionListV1: () => ({transactions: []}),
+      engine_updatePayloadWithInclusionListV1: () => ({payloadId: ""})
     };
   }
 

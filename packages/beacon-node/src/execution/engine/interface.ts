@@ -109,6 +109,10 @@ export type ClientVersion = {
 
 export type VersionedHashes = Uint8Array[];
 
+export type InclusionList = {
+  transactions: Uint8Array[];
+}
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -135,7 +139,8 @@ export interface IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionList?: InclusionList,
   ): Promise<ExecutePayloadResponse>;
 
   /**

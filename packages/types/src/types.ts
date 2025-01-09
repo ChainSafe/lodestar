@@ -12,6 +12,7 @@ import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
+import {ts as focil} from "./focil/index.js";
 import {ts as phase0} from "./phase0/index.js";
 import {Slot} from "./primitive/types.js";
 
@@ -22,6 +23,7 @@ export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
 export {ts as electra} from "./electra/index.js";
+export {ts as focil} from "./focil/index.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;

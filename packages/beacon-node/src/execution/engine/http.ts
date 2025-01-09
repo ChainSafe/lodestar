@@ -24,6 +24,7 @@ import {
   ExecutionEngineState,
   ExecutionPayloadStatus,
   IExecutionEngine,
+  InclusionList,
   PayloadAttributes,
   PayloadId,
   VersionedHashes,
@@ -202,10 +203,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionList?: InclusionList,  // TODO FOCIL: figure out how to get IL when process_execution_payload
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.electra
+      ForkSeq[fork] >= ForkSeq.focil
+        ? "engine_newPayloadV5"
+        : ForkSeq[fork] >= ForkSeq.electra
         ? "engine_newPayloadV4"
         : ForkSeq[fork] >= ForkSeq.deneb
           ? "engine_newPayloadV3"
@@ -215,6 +219,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
+    // TODO FOCIL: Add V5. Current code is ugly with all the nested if
     let engineRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {

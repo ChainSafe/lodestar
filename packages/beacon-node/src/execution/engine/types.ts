@@ -28,6 +28,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
+  engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc, InclusionListRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -70,6 +71,17 @@ export type EngineApiRpcParamTypes = {
   engine_getClientVersionV1: [ClientVersionRpc];
 
   engine_getBlobsV1: [DATA[]];
+
+  /**
+   * 1. DATA - 32 bytes - parent hash which returned inclusion list should be built upon
+   */
+  engine_getInclusionListV1: [DATA];
+
+  /**
+   * 1. DATA - 8 bytes - Identifier of the payload build process
+   * 2. DATA[] aka InclusionListV1
+   */
+  engine_updatePayloadWithInclusionListV1: [QUANTITY, InclusionListRpc];
 };
 
 export type PayloadStatus = {
@@ -87,6 +99,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
+  engine_newPayloadV5: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -114,6 +127,10 @@ export type EngineApiRpcReturnTypes = {
   engine_getClientVersionV1: ClientVersionRpc[];
 
   engine_getBlobsV1: (BlobAndProofRpc | null)[];
+
+  engine_getInclusionListV1: InclusionListRpc;
+
+  engine_updatePayloadWithInclusionListV1: UpdateInclusionListResponse;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -210,6 +227,16 @@ export interface BlobsBundleRpc {
   commitments: DATA[]; // each 48 bytes
   blobs: DATA[]; // each 4096 * 32 = 131072 bytes
   proofs: DATA[]; // some ELs could also provide proofs, each 48 bytes
+}
+
+type InclusionListRpc = {
+  /** Array of DATA - Array of transaction objects */
+  transactions: DATA[];
+}
+
+type UpdateInclusionListResponse = {
+  /** DATA, 8 Bytes - Identifier of the payload build process */
+  payloadId: QUANTITY;
 }
 
 export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {
