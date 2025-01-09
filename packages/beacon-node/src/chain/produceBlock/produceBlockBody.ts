@@ -238,11 +238,25 @@ export async function produceBlockBody<T extends BlockType>(
           proposerPubKey: toPubkeyHex(proposerPubKey),
         });
       } else {
+        const headerGasLimit = builderRes.header.gasLimit;
         const parentGasLimit = (currentState as CachedBeaconStateBellatrix).latestExecutionPayloadHeader.gasLimit;
         const expectedGasLimit = getExpectedGasLimit(parentGasLimit, targetGasLimit);
 
-        if (builderRes.header.gasLimit !== expectedGasLimit) {
-          throw Error(`Incorrect header gas limit ${builderRes.header.gasLimit} != ${expectedGasLimit}`);
+        const lowerBound = Math.min(parentGasLimit, expectedGasLimit);
+        const upperBound = Math.max(parentGasLimit, expectedGasLimit);
+
+        if (headerGasLimit < lowerBound || headerGasLimit > upperBound) {
+          throw Error(
+            `Header gas limit ${headerGasLimit} is outside of acceptable range [${lowerBound}, ${upperBound}]`
+          );
+        }
+
+        if (headerGasLimit !== expectedGasLimit) {
+          this.logger.warn("Header gas limit does not match the expected value", {
+            slot: blockSlot,
+            headerGasLimit,
+            expectedGasLimit,
+          });
         }
       }
 
