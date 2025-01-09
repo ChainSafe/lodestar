@@ -1,0 +1,1 @@
+// TODO FOCIL: Call duties endpoint to determine validator's IL committee duty in this epoch
