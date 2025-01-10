@@ -153,7 +153,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"proposerSlashing\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"proposerSlashing\"}[$rate_interval])/rate(beacon_block_production_execution_steps_seconds_count{step=\"proposerSlashing\"}[$rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{step}}",
@@ -961,16 +961,18 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "lodestar_oppool_aggregated_attestation_pool_size",
           "interval": "",
@@ -1194,8 +1196,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unit": "s"
+          "mappings": []
         },
         "overrides": []
       },
@@ -1574,15 +1575,31 @@
       "pluginVersion": "10.4.1",
       "targets": [
         {
-          "exemplar": false,
-          "expr": "lodestar_finalized_attached_validators_count",
-          "interval": "",
-          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_produced_aggregate_participants_sum[$rate_interval])/rate(lodestar_produced_aggregate_participants_count[$rate_interval])",
+          "legendFormat": "Aggregate",
+          "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_produced_sync_contribution_participants_sum[$rate_interval])/rate(lodestar_produced_sync_contribution_participants_count[$rate_interval])",
+          "hide": false,
+          "legendFormat": "Sync Contribution",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "Attached Proposers",
-      "type": "stat"
+      "title": "Average Produced Aggregate Participants",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -1658,8 +1675,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 48
+        "x": 0,
+        "y": 54
       },
       "id": 537,
       "options": {
@@ -1752,7 +1769,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 56
       },
       "id": 548,
       "options": {
@@ -2113,7 +2130,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_produced_aggregate_participants_sum[$rate_interval])\n/\nrate(lodestar_produced_aggregate_participants_count[$rate_interval])",
+          "expr": "rate(lodestar_produced_aggregate_participants_sum[$rate_interval])/rate(lodestar_produced_aggregate_participants_count[$rate_interval])",
           "legendFormat": "Aggregate",
           "range": true,
           "refId": "A"
@@ -2124,7 +2141,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_produced_sync_contribution_participants_sum[$rate_interval])\n/\nrate(lodestar_produced_sync_contribution_participants_count[$rate_interval])",
+          "expr": "rate(lodestar_produced_sync_contribution_participants_sum[$rate_interval])/rate(lodestar_produced_sync_contribution_participants_count[$rate_interval])",
           "hide": false,
           "legendFormat": "Sync Contribution",
           "range": true,
