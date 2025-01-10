@@ -124,7 +124,7 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
 );
 
 /**
- * Engine block selection reasons tracked in metrics
+ * Engine block selection reasons tracked in metrics / logs
  */
 export enum EngineBlockSelectionReason {
   BuilderDisabled = "builder_disabled",
@@ -138,7 +138,7 @@ export enum EngineBlockSelectionReason {
 }
 
 /**
- * Builder block selection reasons tracked in metrics
+ * Builder block selection reasons tracked in metrics / logs
  */
 export enum BuilderBlockSelectionReason {
   EngineDisabled = "engine_disabled",
