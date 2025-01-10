@@ -65,6 +65,10 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
     byPeer: {quota: 2, quotaTimeMs: 12_000},
   },
+  // TODO FOCIL: Review this limit
+  [ReqRespMethod.InclusionListByCommitteeIndices]: {
+    byPeer: {quota: 5, quotaTimeMs: 12_000},
+  },
 };
 
 // Helper to produce a getRequestCount function
