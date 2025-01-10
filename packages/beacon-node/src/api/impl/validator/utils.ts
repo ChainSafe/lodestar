@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconStateAllForks, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
-import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, ValidatorIndex} from "@lodestar/types";
+import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
 
@@ -9,7 +9,7 @@ export function computeSubnetForCommitteesAtSlot(
   slot: Slot,
   committeesAtSlot: number,
   committeeIndex: CommitteeIndex
-): number {
+): SubnetID {
   const slotsSinceEpochStart = computeSlotsSinceEpochStart(slot);
   const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;

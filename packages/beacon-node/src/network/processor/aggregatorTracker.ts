@@ -1,8 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
+import {Slot, SubnetID} from "@lodestar/types";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
-
-type SubnetId = number;
 
 // Subscriptions are submitted max two epochs in advance
 const MAX_SLOTS_CACHED = SLOTS_PER_EPOCH * 2;
@@ -12,17 +10,17 @@ const MAX_SLOTS_CACHED = SLOTS_PER_EPOCH * 2;
  * to only then insert attestations into the op pool
  */
 export class AggregatorTracker {
-  private subnetAggregatorsBySlot = new MapDef<Slot, Set<SubnetId>>(() => new Set());
+  private subnetAggregatorsBySlot = new MapDef<Slot, Set<SubnetID>>(() => new Set());
 
   get maxSlotsCached(): number {
     return MAX_SLOTS_CACHED;
   }
 
-  addAggregator(subnet: SubnetId, slot: Slot): void {
+  addAggregator(subnet: SubnetID, slot: Slot): void {
     this.subnetAggregatorsBySlot.getOrDefault(slot).add(subnet);
   }
 
-  shouldAggregate(subnet: SubnetId, slot: Slot): boolean {
+  shouldAggregate(subnet: SubnetID, slot: Slot): boolean {
     return this.subnetAggregatorsBySlot.get(slot)?.has(subnet) === true;
   }
 

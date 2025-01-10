@@ -20,6 +20,7 @@ import {
   IndexedAttestation,
   RootHex,
   Slot,
+  SubnetID,
   SyncPeriod,
   ValidatorIndex,
   electra,
@@ -798,7 +799,7 @@ export class EpochCache {
   /**
    * Compute the correct subnet for a slot/committee index
    */
-  computeSubnetForSlot(slot: number, committeeIndex: number): number {
+  computeSubnetForSlot(slot: number, committeeIndex: number): SubnetID {
     const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
     const committeesPerSlot = this.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
     const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;

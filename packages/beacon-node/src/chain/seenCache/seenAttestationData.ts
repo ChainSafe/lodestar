@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {CommitteeIndex, RootHex, Slot, phase0} from "@lodestar/types";
+import {CommitteeIndex, RootHex, Slot, SubnetID, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {InsertOutcome} from "../opPools/types.js";
@@ -23,7 +23,7 @@ export type AttestationDataCacheEntry = {
   // caching this for 3 slots take 600 instances max, this is nothing compared to attestations processed per slot
   // for example in a mainnet node subscribing to all subnets, attestations are processed up to 20k per slot
   attestationData: phase0.AttestationData;
-  subnet: number;
+  subnet: SubnetID;
 };
 
 export enum RejectReason {

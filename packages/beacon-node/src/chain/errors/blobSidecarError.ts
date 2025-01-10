@@ -1,4 +1,4 @@
-import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {RootHex, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum BlobSidecarErrorCode {
@@ -28,7 +28,7 @@ export enum BlobSidecarErrorCode {
 
 export type BlobSidecarErrorType =
   | {code: BlobSidecarErrorCode.INDEX_TOO_LARGE; blobIdx: number; maxBlobsPerBlock: number}
-  | {code: BlobSidecarErrorCode.INVALID_INDEX; blobIdx: number; subnet: number}
+  | {code: BlobSidecarErrorCode.INVALID_INDEX; blobIdx: number; subnet: SubnetID}
   | {code: BlobSidecarErrorCode.INVALID_KZG; blobIdx: number}
   | {code: BlobSidecarErrorCode.INVALID_KZG_TXS}
   | {code: BlobSidecarErrorCode.INCORRECT_SLOT; blockSlot: Slot; blobSlot: Slot; blobIdx: number}

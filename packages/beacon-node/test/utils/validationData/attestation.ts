@@ -2,7 +2,7 @@ import {BitArray, toHexString} from "@chainsafe/ssz";
 import {DataAvailabilityStatus, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Slot, phase0, ssz} from "@lodestar/types";
+import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
@@ -37,7 +37,7 @@ export type AttestationValidDataOpts = {
 export function getAttestationValidData(opts: AttestationValidDataOpts): {
   chain: IBeaconChain;
   attestation: phase0.Attestation;
-  subnet: number;
+  subnet: SubnetID;
   validatorIndex: number;
 } {
   const currentSlot = opts.currentSlot ?? 100;

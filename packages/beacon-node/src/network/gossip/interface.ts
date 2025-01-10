@@ -9,6 +9,7 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
+  SubnetID,
   altair,
   capella,
   deneb,
@@ -54,16 +55,16 @@ export interface IGossipTopic {
 
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
-  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: number};
+  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: SubnetID};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
-  [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
+  [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: SubnetID};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
   [GossipType.proposer_slashing]: {type: GossipType.proposer_slashing};
   [GossipType.attester_slashing]: {type: GossipType.attester_slashing};
   [GossipType.sync_committee_contribution_and_proof]: {
     type: GossipType.sync_committee_contribution_and_proof;
   };
-  [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: number};
+  [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: SubnetID};
   [GossipType.light_client_finality_update]: {type: GossipType.light_client_finality_update};
   [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
   [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};

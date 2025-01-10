@@ -38,6 +38,6 @@ export class SeenSyncCommitteeMessages {
   }
 }
 
-function seenCacheKey(subnet: number, validatorIndex: ValidatorIndex): ValidatorSubnetKey {
+function seenCacheKey(subnet: SubcommitteeIndex, validatorIndex: ValidatorIndex): ValidatorSubnetKey {
   return `${subnet}-${validatorIndex}`;
 }

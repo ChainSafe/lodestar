@@ -1,7 +1,7 @@
 import {ChainConfig} from "@lodestar/config";
 import {KZG_COMMITMENT_INCLUSION_PROOF_DEPTH, KZG_COMMITMENT_SUBTREE_INDEX0} from "@lodestar/params";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
-import {BlobIndex, Root, Slot, deneb, ssz} from "@lodestar/types";
+import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -14,7 +14,7 @@ import {RegenCaller} from "../regen/index.js";
 export async function validateGossipBlobSidecar(
   chain: IBeaconChain,
   blobSidecar: deneb.BlobSidecar,
-  subnet: number
+  subnet: SubnetID
 ): Promise<void> {
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
@@ -236,6 +236,6 @@ function validateInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
   );
 }
 
-function computeSubnetForBlobSidecar(blobIndex: BlobIndex, config: ChainConfig): number {
+function computeSubnetForBlobSidecar(blobIndex: BlobIndex, config: ChainConfig): SubnetID {
   return blobIndex % config.BLOB_SIDECAR_SUBNET_COUNT;
 }
