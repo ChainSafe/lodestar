@@ -504,12 +504,7 @@ export class Network implements INetwork {
   ): Promise<deneb.BlobSidecar[]> {
     const fork = this.config.getForkName(request.startSlot);
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(
-        peerId,
-        ReqRespMethod.BlobSidecarsByRange,
-        [isForkPostElectra(fork) ? Version.V2 : Version.V1],
-        request
-      ),
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
       request.count * this.config.getMaxBlobsPerBlock(fork),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
@@ -517,14 +512,8 @@ export class Network implements INetwork {
   }
 
   async sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]> {
-    const fork = this.config.getForkName(this.clock.currentSlot);
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(
-        peerId,
-        ReqRespMethod.BlobSidecarsByRoot,
-        [isForkPostElectra(fork) ? Version.V2 : Version.V1],
-        request
-      ),
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
     );

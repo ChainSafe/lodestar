@@ -63,21 +63,9 @@ export const BlobSidecarsByRange = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
-export const BlobSidecarsByRangeV2 = toProtocol({
-  method: ReqRespMethod.BlobSidecarsByRange,
-  version: Version.V2,
-  contextBytesType: ContextBytesType.ForkDigest,
-});
-
 export const BlobSidecarsByRoot = toProtocol({
   method: ReqRespMethod.BlobSidecarsByRoot,
   version: Version.V1,
-  contextBytesType: ContextBytesType.ForkDigest,
-});
-
-export const BlobSidecarsByRootV2 = toProtocol({
-  method: ReqRespMethod.BlobSidecarsByRoot,
-  version: Version.V2,
   contextBytesType: ContextBytesType.ForkDigest,
 });
 

@@ -252,17 +252,9 @@ export class ReqRespBeaconNode extends ReqResp {
     }
 
     if (ForkSeq[fork] >= ForkSeq.deneb) {
-      // TODO Electra: Consider deprecating BlobSidecarsByRootV1 and BlobSidecarsByRangeV1 at fork boundary or after Electra is stable
       protocolsAtFork.push(
         [protocols.BlobSidecarsByRoot(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
         [protocols.BlobSidecarsByRange(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
-      );
-    }
-
-    if (ForkSeq[fork] >= ForkSeq.electra) {
-      protocolsAtFork.push(
-        [protocols.BlobSidecarsByRootV2(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
-        [protocols.BlobSidecarsByRangeV2(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
       );
     }
 
