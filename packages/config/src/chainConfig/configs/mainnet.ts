@@ -68,6 +68,7 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 256,
   // 2**11 (= 2,048) Eth1 blocks ~8 hours
   ETH1_FOLLOW_DISTANCE: 2048,
+  ATTESTATION_DEADLINE: 4,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -111,4 +112,10 @@ export const chainConfig: ChainConfig = {
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,
   // 2*7 * 10**9 (= 128,000,000,000)
   MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
+
+  // Focil
+  // 2**4 (= 16)
+  MAX_REQUEST_INCLUSION_LIST: 16,
+  // 2**13 (=8192)
+  MAX_BYTES_PER_INCLUSION_LIST: 8192
 };

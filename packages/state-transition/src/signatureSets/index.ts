@@ -18,6 +18,7 @@ export * from "./proposerSlashings.js";
 export * from "./randao.js";
 export * from "./voluntaryExits.js";
 export * from "./blsToExecutionChange.js";
+export * from "./inclusionList.js";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.

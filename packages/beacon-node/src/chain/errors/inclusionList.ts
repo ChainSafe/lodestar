@@ -1,0 +1,24 @@
+import { Slot } from "@lodestar/types";
+import {GossipActionError} from "./gossipValidation.js";
+
+export enum InclusionListErrorCode {
+  MESSAGE_TOO_LARGE = "INCLUSION_LIST_ERROR_MESSAGE_TOO_LARGE",
+  INVALID_SLOT = "INCLUSION_LIST_ERROR_INVALID_SLOT",
+  NOT_TIMELY = "INCLUSION_LIST_ERROR_NOT_TIMELY",
+  INVALID_COMMITTEE_ROOT = "INCLUSION_LIST_ERROR_INVALID_COMMITTEE_ROOT",
+  VALIDATOR_NOT_IN_COMMITTEE = "INCLUSION_LIST_ERROR_VALIDATOR_NOT_IN_COMMITTEE",
+  TOO_MANY_TRANSACTIONS = "INCLUSION_LIST_ERROR_TOO_MANY_TRANSACTIONS",
+  SPAM = "INCLUSION_LIST_ERROR_SPAM",
+  INVALID_SIGNATURE = "INCLUSION_LIST_ERROR_INVALID_SIGNATURE",
+}
+export type InclusionListErrorType =
+  | {code: InclusionListErrorCode.MESSAGE_TOO_LARGE}
+  | {code: InclusionListErrorCode.INVALID_SLOT; inclusionListSlot: Slot; currentSlot: Slot}
+  | {code: InclusionListErrorCode.NOT_TIMELY}
+  | {code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT}
+  | {code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE}
+  | {code: InclusionListErrorCode.TOO_MANY_TRANSACTIONS; numTransactions: number; transactionLimit: number}
+  | {code: InclusionListErrorCode.SPAM}
+  | {code: InclusionListErrorCode.INVALID_SIGNATURE}
+
+export class InclusionListError extends GossipActionError<InclusionListErrorType> {}

@@ -7,3 +7,4 @@ export * from "./syncCommittee.js";
 export * from "./syncCommitteeContributionAndProof.js";
 export * from "./voluntaryExit.js";
 export * from "./blsToExecutionChange.js";
+export * from "./inclusionList.js";

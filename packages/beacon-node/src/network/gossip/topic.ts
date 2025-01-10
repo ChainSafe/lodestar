@@ -69,6 +69,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.light_client_finality_update:
     case GossipType.light_client_optimistic_update:
     case GossipType.bls_to_execution_change:
+    case GossipType.inclusion_list:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -109,6 +110,8 @@ export function getGossipSSZType(topic: GossipTopic) {
         : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
+    case GossipType.inclusion_list:
+      return ssz.focil.SignedInclusionlist;
   }
 }
 
@@ -273,4 +276,5 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.light_client_finality_update]: false,
   [GossipType.light_client_optimistic_update]: false,
   [GossipType.bls_to_execution_change]: true,
+  [GossipType.inclusion_list]: true,
 };

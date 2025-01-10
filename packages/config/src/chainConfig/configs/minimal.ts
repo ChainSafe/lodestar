@@ -63,6 +63,7 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
+  ATTESTATION_DEADLINE: 4,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -107,4 +108,10 @@ export const chainConfig: ChainConfig = {
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 128000000000,
   // 2**6 * 10**9 (= 64,000,000,000)
   MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 64000000000,
+
+  // Focil
+  // 2**4 (= 16)
+  MAX_REQUEST_INCLUSION_LIST: 16,
+  // 2**13 (=8192)
+  MAX_BYTES_PER_INCLUSION_LIST: 8192
 };

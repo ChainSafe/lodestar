@@ -241,5 +241,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
+
+    // FOCIL
+    ATTESTATION_DEADLINE: focilForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: focilForkRelevant, 
+    MAX_BYTES_PER_INCLUSION_LIST: focilForkRelevant,
   };
 }

@@ -51,6 +51,7 @@ export type ChainConfig = {
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
   SHARD_COMMITTEE_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
+  ATTESTATION_DEADLINE: number;
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
@@ -75,6 +76,10 @@ export type ChainConfig = {
 
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
+
+  // Focil
+  MAX_REQUEST_INCLUSION_LIST: number;
+  MAX_BYTES_PER_INCLUSION_LIST: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -118,6 +123,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "number",
   SHARD_COMMITTEE_PERIOD: "number",
   ETH1_FOLLOW_DISTANCE: "number",
+  ATTESTATION_DEADLINE: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",
@@ -142,6 +148,10 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
+
+  // Focil
+  MAX_REQUEST_INCLUSION_LIST: "number",
+  MAX_BYTES_PER_INCLUSION_LIST: "number",
 };
 
 /** Allows values in a Spec file */

@@ -12,6 +12,7 @@ import {
   altair,
   capella,
   deneb,
+  focil,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -34,6 +35,7 @@ export enum GossipType {
   light_client_finality_update = "light_client_finality_update",
   light_client_optimistic_update = "light_client_optimistic_update",
   bls_to_execution_change = "bls_to_execution_change",
+  inclusion_list = "inclusion_list",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -67,6 +69,7 @@ export type GossipTopicTypeMap = {
   [GossipType.light_client_finality_update]: {type: GossipType.light_client_finality_update};
   [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
   [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};
+  [GossipType.inclusion_list]: {type: GossipType.inclusion_list};
 };
 
 export type GossipTopicMap = {
@@ -95,6 +98,7 @@ export type GossipTypeMap = {
   [GossipType.light_client_finality_update]: LightClientFinalityUpdate;
   [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
+  [GossipType.inclusion_list]: focil.SignedInclusionlist;
 };
 
 export type GossipFnByType = {

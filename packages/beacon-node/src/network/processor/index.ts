@@ -76,6 +76,7 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.sync_committee]: {},
   [GossipType.light_client_finality_update]: {},
   [GossipType.light_client_optimistic_update]: {},
+  [GossipType.inclusion_list]: {},
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
 
