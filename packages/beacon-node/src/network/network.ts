@@ -20,6 +20,7 @@ import {
   altair,
   capella,
   deneb,
+  focil,
   phase0,
 } from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -515,6 +516,18 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
+    );
+  }
+
+  // TODO FOCIL: add caller to this function
+  async sendInclusionListByCommitteeIndices(
+    peerId: PeerIdStr,
+    request: focil.InclusionListByCommitteeIndicesRequest
+  ): Promise<focil.SignedInclusionlist[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.InclusionListByCommitteeIndices, [Version.V1], request),
+      this.config.MAX_REQUEST_INCLUSION_LIST,
+      responseSszTypeByMethod[ReqRespMethod.InclusionListByCommitteeIndices]
     );
   }
 

@@ -111,7 +111,7 @@ export type VersionedHashes = Uint8Array[];
 
 export type InclusionList = {
   transactions: Uint8Array[];
-}
+};
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -140,7 +140,7 @@ export interface IExecutionEngine {
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
     executionRequests?: ExecutionRequests,
-    inclusionList?: InclusionList,
+    inclusionList?: InclusionList
   ): Promise<ExecutePayloadResponse>;
 
   /**

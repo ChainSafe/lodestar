@@ -1,28 +1,25 @@
+import {MAX_TRANSACTIONS_PER_INCLUSION_LIST} from "@lodestar/params";
 import {getInclusionListSignatureSet} from "@lodestar/state-transition";
 import {focil} from "@lodestar/types";
-import { GossipAction} from "../errors/index.js";
+import {InclusionListError, InclusionListErrorCode} from "../errors/inclusionList.js";
+import {GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import { InclusionListError, InclusionListErrorCode } from "../errors/inclusionList.js";
-import { MAX_TRANSACTIONS_PER_INCLUSION_LIST } from "@lodestar/params";
 
 export async function validateApiInclusionList(
   chain: IBeaconChain,
-  inclusionList: focil.SignedInclusionlist,
+  inclusionList: focil.SignedInclusionlist
 ): Promise<void> {
   return validateInclusionList(chain, inclusionList);
 }
 
 export async function validateGossipInclusionList(
   chain: IBeaconChain,
-  inclusionList: focil.SignedInclusionlist,
+  inclusionList: focil.SignedInclusionlist
 ): Promise<void> {
   return validateInclusionList(chain, inclusionList);
 }
 
-async function validateInclusionList(
-  chain: IBeaconChain,
-  inclusionList: focil.SignedInclusionlist,
-): Promise<void> {
+async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.SignedInclusionlist): Promise<void> {
   const slot = inclusionList.message.slot;
   // [REJECT] The size of message is within upperbound MAX_BYTES_PER_INCLUSION_LIST
 
@@ -54,7 +51,7 @@ async function validateInclusionList(
 
   // [REJECT] The signature of inclusion_list.signature is valid with respect to the validator index.
   const signatureSet = getInclusionListSignatureSet(chain.getHeadState(), inclusionList);
-  if (!await chain.bls.verifySignatureSets([signatureSet], {batchable: true})) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.INVALID_SIGNATURE,
     });

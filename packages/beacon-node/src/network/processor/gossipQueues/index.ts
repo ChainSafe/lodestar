@@ -66,7 +66,7 @@ const linearGossipQueueOpts: {
     maxLength: 8192, // TODO FOCIL: Verify this number. Unsigned IL uncompressed should be 8192.
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
-  }
+  },
 };
 
 const indexedGossipQueueOpts: {

@@ -232,12 +232,12 @@ export interface BlobsBundleRpc {
 type InclusionListRpc = {
   /** Array of DATA - Array of transaction objects */
   transactions: DATA[];
-}
+};
 
 type UpdateInclusionListResponse = {
   /** DATA, 8 Bytes - Identifier of the payload build process */
   payloadId: QUANTITY;
-}
+};
 
 export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {

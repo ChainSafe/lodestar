@@ -1,4 +1,4 @@
-import { Slot } from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum InclusionListErrorCode {
@@ -19,6 +19,6 @@ export type InclusionListErrorType =
   | {code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE}
   | {code: InclusionListErrorCode.TOO_MANY_TRANSACTIONS; numTransactions: number; transactionLimit: number}
   | {code: InclusionListErrorCode.SPAM}
-  | {code: InclusionListErrorCode.INVALID_SIGNATURE}
+  | {code: InclusionListErrorCode.INVALID_SIGNATURE};
 
 export class InclusionListError extends GossipActionError<InclusionListErrorType> {}

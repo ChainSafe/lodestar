@@ -204,18 +204,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
     executionRequests?: ExecutionRequests,
-    inclusionList?: InclusionList,  // TODO FOCIL: figure out how to get IL when process_execution_payload
+    inclusionList?: InclusionList // TODO FOCIL: figure out how to get IL when process_execution_payload
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.focil
         ? "engine_newPayloadV5"
         : ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_newPayloadV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_newPayloadV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_newPayloadV2"
-            : "engine_newPayloadV1";
+          ? "engine_newPayloadV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_newPayloadV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_newPayloadV2"
+              : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 

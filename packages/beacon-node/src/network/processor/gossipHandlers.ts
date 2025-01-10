@@ -33,11 +33,11 @@ import {
   validateGossipAttesterSlashing,
   validateGossipBlock,
   validateGossipBlsToExecutionChange,
+  validateGossipInclusionList,
   validateGossipProposerSlashing,
   validateGossipSyncCommittee,
   validateGossipVoluntaryExit,
   validateSyncCommitteeGossipContributionAndProof,
-  validateGossipInclusionList,
 } from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
@@ -598,10 +598,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
     },
 
-    [GossipType.inclusion_list]: async ({
-      gossipData,
-      topic,
-    }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
+    [GossipType.inclusion_list]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
       await validateGossipInclusionList(chain, inclusionList);
