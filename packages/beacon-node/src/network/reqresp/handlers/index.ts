@@ -39,7 +39,7 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       return onBeaconBlocksByRoot(body, chain, db);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
-      const fork = req.version === Version.V2 ? ForkName.electra : ForkName.deneb;
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
       const body = BlobSidecarsByRootRequestType(fork, chain.config).deserialize(req.data);
       return onBlobSidecarsByRoot(body, chain, db);
     },
