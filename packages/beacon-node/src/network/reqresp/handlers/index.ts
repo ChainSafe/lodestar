@@ -1,10 +1,9 @@
-import {ForkName} from "@lodestar/params";
 import {ProtocolHandler} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlobSidecarsByRootRequestType} from "../../../util/types.js";
-import {GetReqRespHandlerFn, ReqRespMethod, Version} from "../types.js";
+import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
