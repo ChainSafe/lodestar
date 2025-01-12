@@ -124,7 +124,7 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
 );
 
 /**
- * Engine block selection reasons tracked in metrics
+ * Engine block selection reasons tracked in metrics / logs
  */
 export enum EngineBlockSelectionReason {
   BuilderDisabled = "builder_disabled",
@@ -138,7 +138,7 @@ export enum EngineBlockSelectionReason {
 }
 
 /**
- * Builder block selection reasons tracked in metrics
+ * Builder block selection reasons tracked in metrics / logs
  */
 export enum BuilderBlockSelectionReason {
   EngineDisabled = "engine_disabled",
@@ -762,7 +762,15 @@ export function getValidatorApi(
     }
 
     if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
+      const reason =
+        isEngineEnabled === false
+          ? BuilderBlockSelectionReason.EngineDisabled
+          : engine.status === "pending"
+            ? BuilderBlockSelectionReason.EnginePending
+            : BuilderBlockSelectionReason.EngineError;
+
       logger.info("Selected builder block: no engine block produced", {
+        reason,
         ...loggerContext,
         durationMs: builder.durationMs,
         ...getBlockValueLogInfo(builder.value),
@@ -770,19 +778,26 @@ export function getValidatorApi(
 
       metrics?.blockProductionSelectionResults.inc({
         source: ProducedBlockSource.builder,
-        reason:
-          isEngineEnabled === false
-            ? BuilderBlockSelectionReason.EngineDisabled
-            : engine.status === "pending"
-              ? BuilderBlockSelectionReason.EnginePending
-              : BuilderBlockSelectionReason.EngineError,
+        reason,
       });
 
       return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
     }
 
     if (engine.status === "fulfilled" && builder.status !== "fulfilled") {
+      const reason =
+        isBuilderEnabled === false
+          ? EngineBlockSelectionReason.BuilderDisabled
+          : builder.status === "pending"
+            ? EngineBlockSelectionReason.BuilderPending
+            : builder.reason instanceof NoBidReceived
+              ? EngineBlockSelectionReason.BuilderNoBid
+              : builder.reason instanceof TimeoutError
+                ? EngineBlockSelectionReason.BuilderTimeout
+                : EngineBlockSelectionReason.BuilderError;
+
       logger.info("Selected engine block: no builder block produced", {
+        reason,
         ...loggerContext,
         durationMs: engine.durationMs,
         ...getBlockValueLogInfo(engine.value),
@@ -790,16 +805,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSelectionResults.inc({
         source: ProducedBlockSource.engine,
-        reason:
-          isBuilderEnabled === false
-            ? EngineBlockSelectionReason.BuilderDisabled
-            : builder.status === "pending"
-              ? EngineBlockSelectionReason.BuilderPending
-              : builder.reason instanceof NoBidReceived
-                ? EngineBlockSelectionReason.BuilderNoBid
-                : builder.reason instanceof TimeoutError
-                  ? EngineBlockSelectionReason.BuilderTimeout
-                  : EngineBlockSelectionReason.BuilderError,
+        reason,
       });
 
       return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
@@ -817,6 +823,7 @@ export function getValidatorApi(
       metrics?.blockProductionSelectionResults.inc(result);
 
       logger.info(`Selected ${executionPayloadSource} block`, {
+        reason: result.reason,
         ...loggerContext,
         engineDurationMs: engine.durationMs,
         ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
