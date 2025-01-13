@@ -2,7 +2,7 @@
 
 Testing is critical to the Lodestar project and there are many types of tests that are run to build a product that is both effective AND efficient. This page will help to break down the different types of tests you will find in the Lodestar repo.
 
-There are a few flags you can set through env variables to override behavior of testing and its output.
+There are a few flags you can set through env variables to override behavior of testing atheir output.
 
 | ENV variable        | Effect | Impact                                                                                                                    |
 | ------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------- |
