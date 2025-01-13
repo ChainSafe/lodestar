@@ -436,11 +436,13 @@ export class SyncChain {
           if (hasPostDenebBlocks) {
             Object.assign(downloadInfo, {blobs, dataColumns});
           }
-          this.logger.debug("Downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo, peer});
+          this.logger.debug("Fully downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo, peer});
+          this.triggerBatchProcessor();
         } else {
-          this.logger.debug("Partially downloaded batch", {id: this.logId, ...batch.getMetadata(), peer});
+          const pendingDataColumns = res.result.pendingDataColumns?.join(",");
+          this.logger.debug("Partially downloaded batch", {id: this.logId, ...batch.getMetadata(), pendingDataColumns, peer});
+          // the flow will continue to call triggerBatchDownloader() below
         }
-        this.triggerBatchProcessor();
       } else {
         this.logger.verbose("Batch download error", {id: this.logId, ...batch.getMetadata()}, res.err);
         batch.downloadingError(); // Throws after MAX_DOWNLOAD_ATTEMPTS
