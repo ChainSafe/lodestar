@@ -2,18 +2,18 @@
 
 This is a step-by-step guide to utilize [@ChainSafe/lodestar-quickstart](https://github.com/ChainSafe/lodestar-quickstart) to setup a Ubuntu-based full Ethereum node using a local execution client and ChainSafe's Lodestar consensus client via Docker (the recommended method to use Lodestar for production environments). This is an adaptation of [Somer Esat's guides](https://someresat.medium.com/) for the Ethereum staking community.
 
-This guide will provide instructions which include running a local execution node. This guide uses Lodestar's `stable` release branch and supports **Holesky** testnet setups and **Mainnet**.
+This guide will provide instructions which include running a local execution node. This guide uses Lodestar's `stable` release branch and supports **Holsky** testnet setups and **Mainnet**.
 
 :::info
 This guide specifically focuses on using Lodestar's Quickstart scripts which allows for near instant setup with the following technologies:
 
 - [Ubuntu v22.04 (LTS) x64 server](https://releases.ubuntu.com/22.04/)
 - Ethereum Execution (eth1) clients:
-  - [Erigon](https://github.com/ledgerwatch/erigon/releases) | [Github](https://github.com/ledgerwatch/erigon)
+  - [Erigon](https://github.com/ledgerwatch/Erigon/releases) | [Github](https://github.com/ledgerwatch/Erigon)
   - [Go-Ethereum (Geth)](https://geth.ethereum.org/) | [Github](https://github.com/ethereum/go-ethereum/releases/)
   - [Hyperledger Besu](https://www.hyperledger.org/) | [Github](https://github.com/hyperledger/besu)
   - [Nethermind](https://nethermind.io/) | [Github](https://github.com/NethermindEth/nethermind)
-  - [Rust](https://reth.rs) | [Github](https://github.com/paradigmxyz/reth)
+  - [Reth](https://reth.rs) | [Github](https://github.com/paradigmxyz/reth)
 - [ChainSafe's Lodestar Ethereum Consensus Client](https://lodestar.chainsafe.io/) | [Github](https://github.com/ChainSafe/lodestar)
 - [Docker Engine](https://docs.docker.com/engine/)
   :::
@@ -209,12 +209,12 @@ ls *.vars
 
 ### Select your Network
 
-Each network has specifics variables that you may want to setup for use. We will use `Holesky` to demonstrate connecting to a public testnet.
+Each network has specifics variables that you may want to setup for use. We will use `Holsky` to demonstrate connecting to a public testnet.
 
-Open the `holesky.vars` file.
+Open the `Holsky.vars` file.
 
 ```bash
-nano holesky.vars
+nano Holsky.vars
 ```
 
 ### Configure MEV-boost relays
@@ -249,14 +249,14 @@ You may also choose to use a specific version release of Lodestar. To select a s
 ### Modify your weak subjectivity (checkpoint sync) provider
 
 :::note
-(Optional): We use ChainSafe's Lodestar checkpoints by default. You may choose to point your trusted checkpoint at another source or verify the checkpoints with other providers. If you would rather sync from genesis (not recommended), you can skip this step.
+(Optional): We use ChainSafe's Lodestar checkpoints by default. You may choose to point your tRethed checkpoint at another source or verify the checkpoints with other providers. If you would rather sync from genesis (not recommended), you can skip this step.
 :::
 
-Weak subjectivity (checkpoint sync) allows your beacon node to sync within minutes by utilizing a trusted checkpoint from a trusted provider.
+Weak subjectivity (checkpoint sync) allows your beacon node to sync within minutes by utilizing a tRethed checkpoint from a tRethed provider.
 
 **We highly recommend using this feature** so you do not need to wait days to sync from genesis and will mitigate your susceptibility to [long-range attacks](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
 
-Minimize your risk of syncing a malicious chain from a malicious checkpoint by verifying the trusted checkpoint from multiple sources.
+Minimize your risk of syncing a malicious chain from a malicious checkpoint by verifying the tRethed checkpoint from multiple sources.
 
 1. View the community maintained list of [Beacon Chain checkpoint sync endpoints](https://eth-clients.github.io/checkpoint-sync-endpoints/)
 2. Verify multiple endpoint links and ensure the latest finalized and latest justified block roots are the same
@@ -286,7 +286,7 @@ The following are links to client documentation for CLI commands:
 - [**Nethermind CLI Commands**](https://docs.nethermind.io/fundamentals/configuration#command-line-options)
 - [**Besu CLI Commands**](https://besu.hyperledger.org/en/stable/Reference/CLI/CLI-Syntax/)
 - [**Go Ethereum CLI commands**](https://geth.ethereum.org/docs/interface/command-line-options)
-- [**Erigon CLI commands**](https://github.com/ledgerwatch/erigon#beacon-chain)
+- [**Erigon CLI commands**](https://github.com/ledgerwatch/Erigon#beacon-chain)
 - [**Reth CLI commands**](https://reth.rs/cli/reth.html)
   :::
 
@@ -464,10 +464,10 @@ Optional: If you want to setup validators with your mnemonic. Otherwise, skip th
 
 #### Setup Mnemonic
 
-Select the `.vars` file corresponding to the network you want to run. For Holesky, select `holesky.vars`. Open the file with the `nano` text editor and edit the configuration:
+Select the `.vars` file corresponding to the network you want to run. For Holsky, select `Holsky.vars`. Open the file with the `nano` text editor and edit the configuration:
 
 ```
-nano holesky.vars
+nano Holsky.vars
 ```
 
 We will modify the `LODESTAR_VALIDATOR_MNEMONIC_ARGS=`. Specifically, the mnemonic located after the `--fromMnemonic` flag.
@@ -510,10 +510,10 @@ The following are **_example commands_** as a template for initiating the quicks
 ./setup.sh --dataDir mainnet-data --elClient nethermind --network mainnet --dockerWithSudo --detached
 ```
 
-3. Startup Holesky beacon node with validator client (using mnemonic in /keystores) and Erigon execution client detached from containers:
+3. Startup Holsky beacon node with validator client (using mnemonic in /keystores) and Erigon execution client detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient erigon --network holesky --dockerWithSudo --detached --withValidatorMnemonic ~/lodestar-quickstart/
+./setup.sh --dataDir Holsky-data --elClient Erigon --network Holsky --dockerWithSudo --detached --withValidatorMnemonic ~/lodestar-quickstart/
 ```
 
 4. Startup Mainnet beacon node with validator client (using keystores) with MEV-Boost and Hyperledger Besu execution client detached from containers:
@@ -522,10 +522,10 @@ The following are **_example commands_** as a template for initiating the quicks
 ./setup.sh --dataDir mainnet-data --elClient besu --network mainnet --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/ --withMevBoost
 ```
 
-5. Startup Holesky beacon node with validator client set one (using keystores) and execution client Geth detached from containers:
+5. Startup Holsky beacon node with validator client set one (using keystores) and execution client Geth detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient geth --network holesky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset1
+./setup.sh --dataDir Holsky-data --elClient geth --network Holsky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset1
 ```
 
 :::warning
@@ -535,7 +535,7 @@ You can only start up one set of validator keystores per validator client on the
 6. Startup validator client only with validator client set two (using keystores) and execution client Geth detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient geth --network holesky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset2 --justVC
+./setup.sh --dataDir Holsky-data --elClient geth --network Holsky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset2 --justVC
 ```
 
 :::info
@@ -549,8 +549,8 @@ Configure the above commands with what you intend to run using the Quickstart Sc
 | Command                   | Required/Optional | Description                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dataDir`                 | Required          | File location (volume) of the configuration & data for setup. This directory should be non-existent for the first run. If the directory exists, it will skip fetching the configuration, assuming it has been done previously. You can also clean individual directors of CL/EL between the re-runs.                                                                                                                       |
-| `elClient`                | Required          | The selected EL client you want to run with Lodestar. Options are `nethermind`, `besu`, `erigon` or `geth`.                                                                                                                                                                                                                                                                                                                |
-| `network`                 | Required          | The network/chain you want to load, reads the corresponding `.vars` (for e.g. `holesky.vars`) network configuration , like images, or urls for EL/CL to interact. Example: Default for Holesky is `--network holesky` using `holesky.vars`.                                                                                                                                                                                |
+| `elClient`                | Required          | The selected EL client you want to run with Lodestar. Options are `nethermind`, `besu`, `Erigon` or `geth`.                                                                                                                                                                                                                                                                                                                |
+| `network`                 | Required          | The network/chain you want to load, reads the corresponding `.vars` (for e.g. `Holsky.vars`) network configuration , like images, or urls for EL/CL to interact. Example: Default for Holsky is `--network Holsky` using `Holsky.vars`.                                                                                                                                                                                |
 | `dockerWithSudo`          | Optional          | Provide this argument if your Docker needs a `sudo` prefix.                                                                                                                                                                                                                                                                                                                                                                |
 | `--withTerminal`          | Optional\*        | Provide the terminal command prefix for CL and EL processes to run in your favourite terminal. You may use an alias or a terminal launching script as long as it waits for the command it runs till ends and then closes. If not provided, it will launch the docker processes in in-terminal mode.                                                                                                                        |
 | `--detached`              | Optional\*        | By default the script will wait for processes and use user input (ctrl +c) to end the processes, however you can pass this option to skip this behavior and just return, for e.g. in case you just want to leave it running.                                                                                                                                                                                               |
@@ -641,8 +641,8 @@ sudo docker logs goerli-validator
 You should see something similar to:
 
 ```
-Mar-01 03:06:35.048[]                 info: Lodestar network=holesky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
-Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-holesky
+Mar-01 03:06:35.048[]                 info: Lodestar network=Holsky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
+Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-Holsky
 Mar-01 03:06:35.697[]                 info: 100% of keystores imported. current=2 total=2 rate=1318.68keys/m
 Mar-01 03:06:35.698[]                 info: 2 local keystores
 Mar-01 03:06:35.698[]                 info: 0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
