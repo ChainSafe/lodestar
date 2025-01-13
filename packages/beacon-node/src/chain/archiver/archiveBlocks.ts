@@ -42,10 +42,14 @@ export async function archiveBlocks(
   const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
   const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
+  // Filter out non-canonical blocks
+  const canonicalBlockRoots = new Set(finalizedCanonicalBlocks.map((block) => block.blockRoot));
+  const filteredFinalizedCanonicalBlocks = finalizedCanonicalBlocks.filter((block) => canonicalBlockRoots.has(block.blockRoot));
+
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
 
-  const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
+  const finalizedCanonicalBlockRoots: BlockRootSlot[] = filteredFinalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
     root: fromHex(block.blockRoot),
   }));

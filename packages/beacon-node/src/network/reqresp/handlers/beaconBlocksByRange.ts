@@ -37,9 +37,13 @@ export async function* onBeaconBlocksByRange(
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
     // getAllAncestorBlocks response includes the head node, so it's the full chain.
 
+    // Filter out non-canonical blocks
+    const canonicalBlockRoots = new Set(headChain.map((block) => block.blockRoot));
+    const filteredHeadChain = headChain.filter((block) => canonicalBlockRoots.has(block.blockRoot));
+
     // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
+    for (let i = filteredHeadChain.length - 1; i >= 0; i--) {
+      const block = filteredHeadChain[i];
 
       // Must include only blocks in the range requested
       if (block.slot >= startSlot && block.slot < endSlot) {
