@@ -42,6 +42,19 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true},
     },
   },
+  getInclusionListCommitteeDuties: {
+    args: {epoch: 0, indices: [1, 2, 3]},
+    res: {
+      data: [
+        {
+          pubkey: new Uint8Array(48).fill(1),
+          validatorIndex: 2,
+          slot: 3,
+        },
+      ],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
   produceBlockV2: {
     args: {
       slot: 32000,
@@ -98,6 +111,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {slot: 32000, subcommitteeIndex: 2, beaconBlockRoot: ZERO_HASH},
     res: {data: ssz.altair.SyncCommitteeContribution.defaultValue()},
   },
+  produceInclusionList: {
+    args: {slot: 32000},
+    res: {data: ssz.focil.InclusionList.defaultValue()},
+  },
   getAggregatedAttestation: {
     args: {attestationDataRoot: ZERO_HASH, slot: 32000},
     res: {data: ssz.phase0.Attestation.defaultValue()},
@@ -116,6 +133,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishContributionAndProofs: {
     args: {contributionAndProofs: [ssz.altair.SignedContributionAndProof.defaultValue()]},
+    res: undefined,
+  },
+  publishInclusionList: {
+    args: {signedInclusionList: ssz.focil.SignedInclusionList.defaultValue()},
     res: undefined,
   },
   prepareBeaconCommitteeSubnet: {

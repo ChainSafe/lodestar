@@ -981,6 +981,11 @@ export function getValidatorApi(
       return {data: contribution};
     },
 
+    async produceInclusionList() {
+      // TODO FOCIL: implement
+      throw Error("produceInclusionList is not implemented");
+    },
+
     async getProposerDuties({epoch}) {
       notWhileSyncing();
 
@@ -1210,6 +1215,11 @@ export function getValidatorApi(
       };
     },
 
+    async getInclusionListCommitteeDuties() {
+      // TODO FOCIL: implement
+      throw Error("getInclusionListCommitteeDuties is not implemented");
+    },
+
     async getAggregatedAttestation({attestationDataRoot, slot}) {
       notWhileSyncing();
 
@@ -1381,6 +1391,11 @@ export function getValidatorApi(
       if (errors.length === 1) {
         throw errors[0];
       }
+    },
+
+    async publishInclusionList() {
+      // TODO FOCIL: implement
+      throw Error("publishInclusionList is not implemented");
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {

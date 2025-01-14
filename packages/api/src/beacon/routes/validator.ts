@@ -14,6 +14,7 @@ import {
   UintBn64,
   ValidatorIndex,
   altair,
+  focil,
   phase0,
   ssz,
   sszTypesFor,
@@ -99,6 +100,18 @@ export const AttesterDutyType = new ContainerType(
     /** Index of validator in committee */
     validatorCommitteeIndex: ssz.UintNum64,
     /** The slot at which the validator must attest */
+    slot: ssz.Slot,
+  },
+  {jsonCase: "eth2"}
+);
+
+export const InclusionListDutyType = new ContainerType(
+  {
+    /** The validator's public key, uniquely identifying them */
+    pubkey: ssz.BLSPubkey,
+    /** Index of validator in validator registry */
+    validatorIndex: ssz.ValidatorIndex,
+    /** The slot at which the validator must propose the inclusion list*/
     slot: ssz.Slot,
   },
   {jsonCase: "eth2"}
@@ -202,6 +215,7 @@ export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
 export const AttesterDutyListType = ArrayOf(AttesterDutyType);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
 export const SyncDutyListType = ArrayOf(SyncDutyType);
+export const InclusionListDutyListType = ArrayOf(InclusionListDutyType);
 export const SignedAggregateAndProofListPhase0Type = ArrayOf(ssz.phase0.SignedAggregateAndProof);
 export const SignedAggregateAndProofListElectraType = ArrayOf(ssz.electra.SignedAggregateAndProof);
 export const SignedContributionAndProofListType = ArrayOf(ssz.altair.SignedContributionAndProof);
@@ -220,6 +234,7 @@ export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
 export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
 export type SyncDuty = ValueOf<typeof SyncDutyType>;
 export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
+export type InclusionListDutyList = ValueOf<typeof InclusionListDutyListType>;
 export type SignedAggregateAndProofListPhase0 = ValueOf<typeof SignedAggregateAndProofListPhase0Type>;
 export type SignedAggregateAndProofListElectra = ValueOf<typeof SignedAggregateAndProofListElectraType>;
 export type SignedAggregateAndProofList = SignedAggregateAndProofListPhase0 | SignedAggregateAndProofListElectra;
@@ -286,6 +301,23 @@ export type Endpoints = {
     {params: {epoch: Epoch}; body: unknown},
     SyncDutyList,
     ExecutionOptimisticMeta
+  >;
+
+  /**
+   * Get inclusion list committee duties
+   * Requests the beacon node to provide a set of inclusion list committee duties for a particular epoch.
+   */
+  getInclusionListCommitteeDuties: Endpoint<
+    "POST",
+    {
+      /** Should only be allowed 1 epoch ahead */
+      epoch: Epoch;
+      /** An array of the validator indices for which to obtain the duties */
+      indices: ValidatorIndices;
+    },
+    {params: {epoch: Epoch}; body: unknown},
+    InclusionListDutyList,
+    ExecutionOptimisticAndDependentRootMeta
   >;
 
   /**
@@ -393,6 +425,21 @@ export type Endpoints = {
   >;
 
   /**
+   * Produce an inclusion list
+   * Requests the beacon node to produce an inclusion list
+   */
+  produceInclusionList: Endpoint<
+    "GET",
+    {
+      /** The slot for which an inclusion list should be created */
+      slot: Slot;
+    },
+    {query: {slot: number}},
+    focil.InclusionList,
+    EmptyMeta
+  >;
+
+  /**
    * Get aggregated attestation
    * Aggregates all attestations matching given attestation data root and slot
    * Returns an aggregated `Attestation` object with same `AttestationData` root.
@@ -454,6 +501,18 @@ export type Endpoints = {
   publishContributionAndProofs: Endpoint<
     "POST",
     {contributionAndProofs: SignedContributionAndProofList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Publish inclusion list
+   * Verifies given inclusion list and publishes it on appropriate gossipsub topic.
+   */
+  publishInclusionList: Endpoint<
+    "POST",
+    {signedInclusionList: focil.SignedInclusionList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -614,6 +673,24 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: SyncDutyListType,
         meta: ExecutionOptimisticCodec,
+      },
+    },
+    getInclusionListCommitteeDuties: {
+      url: "/eth/v1/validator/duties/inclusion_list/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: InclusionListDutyListType,
+        meta: ExecutionOptimisticAndDependentRootCodec,
       },
     },
     produceBlockV2: {
@@ -825,6 +902,21 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: EmptyMetaCodec,
       },
     },
+    produceInclusionList: {
+      url: "/eth/v1/validator/inclusion_list",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
+        schema: {
+          query: {slot: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: ssz.focil.InclusionList,
+        meta: EmptyMetaCodec,
+      },
+    },
     getAggregatedAttestation: {
       url: "/eth/v1/validator/aggregate_attestation",
       method: "GET",
@@ -962,6 +1054,24 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body}) => ({contributionAndProofs: SignedContributionAndProofListType.deserialize(body)}),
         schema: {
           body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    publishInclusionList: {
+      url: "/eth/v1/validator/inclusion_list",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedInclusionList}) => ({
+          body: ssz.focil.SignedInclusionList.toJson(signedInclusionList),
+        }),
+        parseReqJson: ({body}) => ({signedInclusionList: ssz.focil.SignedInclusionList.fromJson(body)}),
+        writeReqSsz: ({signedInclusionList}) => ({
+          body: ssz.focil.SignedInclusionList.serialize(signedInclusionList),
+        }),
+        parseReqSsz: ({body}) => ({signedInclusionList: ssz.focil.SignedInclusionList.deserialize(body)}),
+        schema: {
+          body: Schema.Object,
         },
       },
       resp: EmptyResponseCodec,
