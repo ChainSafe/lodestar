@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import {RootHex} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {PendingBlock, PendingBlockStatus, UnknownAndAncestorBlocks} from "../../../../src/sync/index.js";
 import {
   getAllDescendantBlocks,

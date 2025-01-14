@@ -1,28 +1,38 @@
-import {deneb, Root, Slot, ssz} from "@lodestar/types";
-import {toHex, verifyMerkleBranch} from "@lodestar/utils";
-import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {ChainConfig} from "@lodestar/config";
 import {KZG_COMMITMENT_INCLUSION_PROOF_DEPTH, KZG_COMMITMENT_SUBTREE_INDEX0} from "@lodestar/params";
+import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
-import {BlobSidecarGossipError, BlobSidecarErrorCode} from "../errors/blobSidecarError.js";
-import {GossipAction} from "../errors/gossipValidation.js";
-import {ckzg} from "../../util/kzg.js";
 import {byteArrayEquals} from "../../util/bytes.js";
+import {ckzg} from "../../util/kzg.js";
+import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
+import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlobSidecar(
   chain: IBeaconChain,
   blobSidecar: deneb.BlobSidecar,
-  gossipIndex: number
+  subnet: SubnetID
 ): Promise<void> {
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
-  // [REJECT] The sidecar is for the correct topic -- i.e. sidecar.index matches the topic {index}.
-  if (blobSidecar.index !== gossipIndex) {
+  // [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `blob_sidecar.index < MAX_BLOBS_PER_BLOCK`.
+  if (blobSidecar.index >= chain.config.MAX_BLOBS_PER_BLOCK) {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.INDEX_TOO_LARGE,
+      blobIdx: blobSidecar.index,
+      maxBlobsPerBlock: chain.config.MAX_BLOBS_PER_BLOCK,
+    });
+  }
+
+  // [REJECT] The sidecar is for the correct subnet -- i.e. `compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id`.
+  if (computeSubnetForBlobSidecar(blobSidecar.index, chain.config) !== subnet) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INVALID_INDEX,
       blobIdx: blobSidecar.index,
-      gossipIndex,
+      subnet,
     });
   }
 
@@ -57,7 +67,7 @@ export async function validateGossipBlobSidecar(
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
   const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-  const blockHex = toHex(blockRoot);
+  const blockHex = toRootHex(blockRoot);
   if (chain.forkChoice.getBlockHex(blockHex) !== null) {
     throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockHex});
   }
@@ -68,7 +78,7 @@ export async function validateGossipBlobSidecar(
   // _[IGNORE]_ The blob's block's parent (defined by `sidecar.block_parent_root`) has been seen (via both
   // gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is
   // retrieved).
-  const parentRoot = toHex(blobSidecar.signedBlockHeader.message.parentRoot);
+  const parentRoot = toRootHex(blobSidecar.signedBlockHeader.message.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
@@ -183,9 +193,9 @@ export function validateBlobSidecars(
         !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
       ) {
         throw new Error(
-          `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toHex(blobBlockRoot)} index=${
+          `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toRootHex(blobBlockRoot)} index=${
             blobSidecar.index
-          } for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} index=${index}`
+          } for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} index=${index}`
         );
       }
       blobs.push(blobSidecar.blob);
@@ -224,4 +234,8 @@ function validateInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
     KZG_COMMITMENT_SUBTREE_INDEX0 + blobSidecar.index,
     blobSidecar.signedBlockHeader.message.bodyRoot
   );
+}
+
+function computeSubnetForBlobSidecar(blobIndex: BlobIndex, config: ChainConfig): SubnetID {
+  return blobIndex % config.BLOB_SIDECAR_SUBNET_COUNT;
 }

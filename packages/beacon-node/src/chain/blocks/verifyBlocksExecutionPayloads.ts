@@ -1,33 +1,32 @@
-import {toHexString} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {
+  ExecutionStatus,
+  IForkChoice,
+  LVHInvalidResponse,
+  LVHValidResponse,
+  MaybeValidExecutionStatus,
+  ProtoBlock,
+  assertValidTerminalPowBlock,
+} from "@lodestar/fork-choice";
+import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  isExecutionStateType,
   isExecutionBlockBodyType,
-  isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
+  isExecutionStateType,
+  isMergeTransitionBlock as isMergeTransitionBlockFn,
 } from "@lodestar/state-transition";
-import {bellatrix, Slot, deneb, SignedBeaconBlock} from "@lodestar/types";
-import {
-  IForkChoice,
-  assertValidTerminalPowBlock,
-  ProtoBlock,
-  ExecutionStatus,
-  MaybeValidExecutionStatus,
-  LVHValidResponse,
-  LVHInvalidResponse,
-} from "@lodestar/fork-choice";
-import {ChainForkConfig} from "@lodestar/config";
-import {ErrorAborted, Logger} from "@lodestar/utils";
-import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
+import {SignedBeaconBlock, Slot, bellatrix, deneb, electra} from "@lodestar/types";
+import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 
-import {IExecutionEngine} from "../../execution/engine/interface.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {IClock} from "../../util/clock.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {BlockProcessOpts} from "../options.js";
-import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {IExecutionEngine} from "../../execution/engine/interface.js";
+import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {IClock} from "../../util/clock.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {BlockProcessOpts} from "../options.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
@@ -205,10 +204,8 @@ export async function verifyBlocksExecutionPayload(
     //     in import block
     if (isMergeTransitionBlock) {
       const mergeBlock = block.message as bellatrix.BeaconBlock;
-      const mergeBlockHash = toHexString(
-        chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock)
-      );
-      const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
+      const mergeBlockHash = toRootHex(chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
+      const powBlockRootHex = toRootHex(mergeBlock.body.executionPayload.parentHash);
       const powBlock = await chain.eth1.getPowBlock(powBlockRootHex).catch((error) => {
         // Lets just warn the user here, errors if any will be reported on
         // `assertValidTerminalPowBlock` checks
@@ -305,6 +302,8 @@ export async function verifyBlockExecutionPayload(
       ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
       : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+  const executionRequests =
+    ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
 
   const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);
@@ -312,7 +311,8 @@ export async function verifyBlockExecutionPayload(
     fork,
     executionPayloadEnabled,
     versionedHashes,
-    parentBlockRoot
+    parentBlockRoot,
+    executionRequests
   );
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
@@ -330,7 +330,7 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromParentBlockRoot: toHexString(block.message.parentRoot),
+        invalidateFromParentBlockRoot: toRootHex(block.message.parentRoot),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -407,7 +407,7 @@ function getSegmentErrorResponse(
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
       const block = blocks[mayBeLVHIndex];
       if (
-        toHexString((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
+        toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
         lvhResponse.latestValidExecHash
       ) {
         lvhFound = true;

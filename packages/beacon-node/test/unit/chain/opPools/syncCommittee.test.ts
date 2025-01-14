@@ -1,13 +1,13 @@
-import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, beforeAll, afterEach, vi, MockedObject} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
 import {altair} from "@lodestar/types";
+import {MockedObject, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 
 vi.mock("../../../../src/util/clock.js");
 
-describe("chain / opPools / SyncCommitteeMessagePool", function () {
+describe("chain / opPools / SyncCommitteeMessagePool", () => {
   let cache: SyncCommitteeMessagePool;
   const subcommitteeIndex = 2;
   const indexInSubcommittee = 3;
@@ -33,7 +33,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
-  afterEach(function () {
+  afterEach(() => {
     vi.clearAllTimers();
     vi.clearAllMocks();
   });

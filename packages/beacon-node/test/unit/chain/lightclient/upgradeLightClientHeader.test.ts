@@ -1,33 +1,34 @@
-import {describe, it, expect, beforeEach} from "vitest";
-import {LightClientHeader, ssz} from "@lodestar/types";
-import {ForkName, ForkSeq} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {LightClientHeader, ssz} from "@lodestar/types";
+import {beforeEach, describe, expect, it} from "vitest";
 
-describe("UpgradeLightClientHeader", function () {
+describe("UpgradeLightClientHeader", () => {
   let lcHeaderByFork: Record<ForkName, LightClientHeader>;
   let testSlots: Record<ForkName, number>;
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 1,
     BELLATRIX_FORK_EPOCH: 2,
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
+    ELECTRA_FORK_EPOCH: 5,
     PEERDAS_FORK_EPOCH: Infinity,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
-  beforeEach(function () {
+  beforeEach(() => {
     lcHeaderByFork = {
       phase0: ssz.altair.LightClientHeader.defaultValue(),
       altair: ssz.altair.LightClientHeader.defaultValue(),
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
+      electra: ssz.deneb.LightClientHeader.defaultValue(),
       peerdas: ssz.peerdas.LightClientHeader.defaultValue(),
     };
 
@@ -37,6 +38,7 @@ describe("UpgradeLightClientHeader", function () {
       bellatrix: 17,
       capella: 25,
       deneb: 33,
+      electra: 41,
       peerdas: 0,
     };
   });
@@ -52,7 +54,7 @@ describe("UpgradeLightClientHeader", function () {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];
 
-      it(`Successful upgrade ${fromFork}=>${toFork}`, function () {
+      it(`Successful upgrade ${fromFork}=>${toFork}`, () => {
         lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
         lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
 
@@ -87,7 +89,7 @@ describe("UpgradeLightClientHeader", function () {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];
 
-      it(`Throw upgrade error ${fromFork}=>${toFork}`, function () {
+      it(`Throw upgrade error ${fromFork}=>${toFork}`, () => {
         lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
         lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
 

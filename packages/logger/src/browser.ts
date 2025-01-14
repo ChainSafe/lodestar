@@ -1,8 +1,8 @@
+import {LogLevel, Logger} from "@lodestar/utils";
 import winston from "winston";
 import Transport from "winston-transport";
-import {LogLevel, Logger} from "@lodestar/utils";
-import {createWinstonLogger} from "./winston.js";
 import {LEVEL, MESSAGE, TimestampFormat, WinstonLogInfo} from "./interface.js";
+import {createWinstonLogger} from "./winston.js";
 
 export type BrowserLoggerOpts = {
   /**
@@ -57,7 +57,7 @@ class BrowserConsole extends Transport {
 
   constructor(opts: winston.transport.TransportStreamOptions | undefined) {
     super(opts);
-    this.level = opts?.level && this.levels.hasOwnProperty(opts.level) ? opts.level : "info";
+    this.level = opts?.level && Object.prototype.hasOwnProperty.call(this.levels, opts.level) ? opts.level : "info";
   }
 
   log(info: WinstonLogInfo, callback: () => void): void {
@@ -70,9 +70,7 @@ class BrowserConsole extends Transport {
     const message = info[MESSAGE];
 
     if (val <= this.levels[this.level as LogLevel]) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, no-console
       console[mappedMethod](message);
     }
 

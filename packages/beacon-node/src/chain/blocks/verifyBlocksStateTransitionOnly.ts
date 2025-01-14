@@ -1,16 +1,16 @@
 import {
   CachedBeaconStateAllForks,
-  stateTransition,
-  ExecutionPayloadStatus,
   DataAvailableStatus,
+  ExecutionPayloadStatus,
   StateHashTreeRootSource,
+  stateTransition,
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {BlockProcessOpts} from "../options.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**

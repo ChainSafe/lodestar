@@ -1,28 +1,32 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
-import {LightClientUpdate, Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  FINALIZED_ROOT_INDEX,
-  FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_INDEX,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
+  FINALIZED_ROOT_DEPTH,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  FINALIZED_ROOT_INDEX,
+  FINALIZED_ROOT_INDEX_ELECTRA,
   GENESIS_SLOT,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  NEXT_SYNC_COMMITTEE_DEPTH,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  NEXT_SYNC_COMMITTEE_INDEX,
+  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
 } from "@lodestar/params";
-import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
-import {isValidMerkleBranch} from "../utils/index.js";
+import {LightClientUpdate, Root, isElectraLightClientUpdate, ssz} from "@lodestar/types";
 import {SyncCommitteeFast} from "../types.js";
+import {isValidMerkleBranch} from "../utils/index.js";
+import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
+import {ILightClientStore} from "./store.js";
 import {
+  ZERO_HASH,
   isFinalityUpdate,
   isSyncCommitteeUpdate,
+  isValidLightClientHeader,
   isZeroedHeader,
   isZeroedSyncCommittee,
-  ZERO_HASH,
-  isValidLightClientHeader,
 } from "./utils.js";
-import {ILightClientStore} from "./store.js";
 
 export function validateLightClientUpdate(
   config: ChainForkConfig,
@@ -78,8 +82,8 @@ export function validateLightClientUpdate(
       !isValidMerkleBranch(
         finalizedRoot,
         update.finalityBranch,
-        FINALIZED_ROOT_DEPTH,
-        FINALIZED_ROOT_INDEX,
+        isElectraLightClientUpdate(update) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH,
+        isElectraLightClientUpdate(update) ? FINALIZED_ROOT_INDEX_ELECTRA : FINALIZED_ROOT_INDEX,
         update.attestedHeader.beacon.stateRoot
       )
     ) {
@@ -98,8 +102,8 @@ export function validateLightClientUpdate(
       !isValidMerkleBranch(
         ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
         update.nextSyncCommitteeBranch,
-        NEXT_SYNC_COMMITTEE_DEPTH,
-        NEXT_SYNC_COMMITTEE_INDEX,
+        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
+        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_INDEX_ELECTRA : NEXT_SYNC_COMMITTEE_INDEX,
         update.attestedHeader.beacon.stateRoot
       )
     ) {

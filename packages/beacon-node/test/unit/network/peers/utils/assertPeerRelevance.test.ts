@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
 import {phase0} from "@lodestar/types";
-import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
+import {describe, expect, it} from "vitest";
+import {IrrelevantPeerCode, assertPeerRelevance} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
 
 describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);

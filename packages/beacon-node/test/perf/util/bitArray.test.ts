@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {BitArray} from "@chainsafe/ssz";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 /**

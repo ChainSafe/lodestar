@@ -1,19 +1,24 @@
-import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
-import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  becomesNewEth1Data,
+} from "@lodestar/state-transition";
+import {phase0, ssz} from "@lodestar/types";
+import {ErrorAborted, Logger, TimeoutError, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
-import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
-import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
-import {getDeposits} from "./utils/deposits.js";
-import {Eth1DataAndDeposits, IEth1Provider} from "./interface.js";
+import {Eth1DepositsCache} from "./eth1DepositsCache.js";
+import {Eth1DataAndDeposits, EthJsonRpcBlockRaw, IEth1Provider} from "./interface.js";
 import {Eth1Options} from "./options.js";
-import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
+import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError} from "./provider/utils.js";
+import {getDeposits} from "./utils/deposits.js";
+import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MIN_BLOCKS_PER_BLOCK_QUERY = 10;
@@ -67,6 +72,8 @@ export class Eth1DepositDataTracker {
   /** Dynamically adjusted batch size to fetch deposit logs */
   private eth1GetLogsBatchSizeDynamic = MAX_BLOCKS_PER_LOG_QUERY;
   private readonly forcedEth1DataVote: phase0.Eth1Data | null;
+  /** To stop `runAutoUpdate()` in addition to AbortSignal */
+  private stopPolling: boolean;
 
   constructor(
     opts: Eth1Options,
@@ -81,6 +88,8 @@ export class Eth1DepositDataTracker {
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
+    // TODO Electra: fix scenario where node starts post-Electra and `stopPolling` will always be false
+    this.stopPolling = false;
 
     this.forcedEth1DataVote = opts.forcedEth1DataVote
       ? ssz.phase0.Eth1Data.deserialize(fromHex(opts.forcedEth1DataVote))
@@ -109,10 +118,22 @@ export class Eth1DepositDataTracker {
     }
   }
 
+  // TODO Electra: Figure out how an elegant way to stop eth1data polling
+  stopPollingEth1Data(): void {
+    this.stopPolling = true;
+  }
+
   /**
    * Return eth1Data and deposits ready for block production for a given state
    */
-  async getEth1DataAndDeposits(state: BeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+    if (
+      state.epochCtx.isPostElectra() &&
+      state.eth1DepositIndex >= (state as CachedBeaconStateElectra).depositRequestsStartIndex
+    ) {
+      // No need to poll eth1Data since Electra deprecates the mechanism after depositRequestsStartIndex is reached
+      return {eth1Data: state.eth1Data, deposits: []};
+    }
     const eth1Data = this.forcedEth1DataVote ?? (await this.getEth1Data(state));
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
@@ -141,7 +162,10 @@ export class Eth1DepositDataTracker {
    * Returns deposits to be included for a given state and eth1Data vote.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getDeposits(state: BeaconStateAllForks, eth1DataVote: phase0.Eth1Data): Promise<phase0.Deposit[]> {
+  private async getDeposits(
+    state: CachedBeaconStateAllForks,
+    eth1DataVote: phase0.Eth1Data
+  ): Promise<phase0.Deposit[]> {
     // No new deposits have to be included, continue
     if (eth1DataVote.depositCount === state.eth1DepositIndex) {
       return [];
@@ -162,7 +186,7 @@ export class Eth1DepositDataTracker {
   private async runAutoUpdate(): Promise<void> {
     let lastRunMs = 0;
 
-    while (!this.signal.aborted) {
+    while (!this.signal.aborted && !this.stopPolling) {
       lastRunMs = Date.now();
 
       try {
@@ -219,7 +243,7 @@ export class Eth1DepositDataTracker {
     const fromBlock = Math.min(remoteFollowBlock, this.getFromBlockToFetch(lastProcessedDepositBlockNumber));
     const toBlock = Math.min(remoteFollowBlock, fromBlock + this.eth1GetLogsBatchSizeDynamic - 1);
 
-    let depositEvents;
+    let depositEvents: phase0.DepositEvent[];
     try {
       depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
       // Increase the batch size linearly even if we scale down exponentially (half each time)
@@ -289,7 +313,7 @@ export class Eth1DepositDataTracker {
       lastProcessedDepositBlockNumber
     );
 
-    let blocksRaw;
+    let blocksRaw: EthJsonRpcBlockRaw[];
     try {
       blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
       // Increase the batch size linearly even if we scale down exponentially (half each time)
@@ -356,26 +380,24 @@ export class Eth1DepositDataTracker {
       this.eth1FollowDistance = Math.min(this.eth1FollowDistance + delta, this.config.ETH1_FOLLOW_DISTANCE);
 
       return true;
-    } else {
-      // Blocks are slower than expected, reduce eth1FollowDistance. Limit min CATCHUP_MIN_FOLLOW_DISTANCE
-      const delta =
-        this.eth1FollowDistance -
-        Math.max(this.eth1FollowDistance - ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW, ETH_MIN_FOLLOW_DISTANCE);
-      this.eth1FollowDistance = this.eth1FollowDistance - delta;
-
-      // Even if the blocks are slow, when we are all caught up as there is no
-      // further possibility to reduce follow distance, we need to call it quits
-      // for now, else it leads to an incessant poll on the EL
-      return delta === 0;
     }
+    // Blocks are slower than expected, reduce eth1FollowDistance. Limit min CATCHUP_MIN_FOLLOW_DISTANCE
+    const delta =
+      this.eth1FollowDistance -
+      Math.max(this.eth1FollowDistance - ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW, ETH_MIN_FOLLOW_DISTANCE);
+    this.eth1FollowDistance = this.eth1FollowDistance - delta;
+
+    // Even if the blocks are slow, when we are all caught up as there is no
+    // further possibility to reduce follow distance, we need to call it quits
+    // for now, else it leads to an incessant poll on the EL
+    return delta === 0;
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {
     if (lastCachedBlock === null) {
       return this.eth1Provider.deployBlock ?? 0;
-    } else {
-      return lastCachedBlock + 1;
     }
+    return lastCachedBlock + 1;
   }
 
   private async getLastProcessedDepositBlockNumber(): Promise<number | null> {

@@ -1,6 +1,6 @@
 import fs from "node:fs";
-import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import tmp from "tmp";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {initPeerIdAndEnr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {testLogger} from "../../utils.js";

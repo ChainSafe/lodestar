@@ -1,18 +1,18 @@
-import {PeerId} from "@libp2p/interface";
-import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
 // TODO: We should use this fork until https://github.com/libp2p/js-libp2p/pull/2387
 import {identify} from "@chainsafe/libp2p-identify";
+import {noise} from "@chainsafe/libp2p-noise";
 import {bootstrap} from "@libp2p/bootstrap";
+import {PeerId} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
-import {createLibp2p} from "libp2p";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
-import {noise} from "@chainsafe/libp2p-noise";
-import {defaultNetworkOptions, NetworkOptions} from "../options.js";
-import {Eth2PeerDataStore} from "../peers/datastore.js";
+import {createLibp2p} from "libp2p";
+import {Registry} from "prom-client";
 import {Libp2p, LodestarComponents} from "../interface.js";
+import {NetworkOptions, defaultNetworkOptions} from "../options.js";
+import {Eth2PeerDataStore} from "../peers/datastore.js";
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;

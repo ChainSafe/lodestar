@@ -1,23 +1,23 @@
-import {describe, it, expect, beforeEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
+import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {beforeEach, describe, expect, it} from "vitest";
+import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
 import {
+  DataAvailabilityStatus,
+  ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
   ProtoArray,
-  ExecutionStatus,
   ProtoBlock,
-  DataAvailabilityStatus,
 } from "../../../src/index.js";
-import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
-import {getBlockRoot, getStateRoot} from "./forkChoice.test.js";
+import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
 
-describe("Forkchoice / GetProposerHead", function () {
+describe("Forkchoice / GetProposerHead", () => {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -102,12 +102,12 @@ describe("Forkchoice / GetProposerHead", function () {
     currentSlot: genesisSlot + 1,
     justified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
-      balances: new Uint8Array(Array(32).fill(150)),
+      balances: new Uint16Array(Array(32).fill(150)),
       totalBalance: 32 * 150,
     },
     unrealizedJustified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
-      balances: new Uint8Array(Array(32).fill(150)),
+      balances: new Uint16Array(Array(32).fill(150)),
     },
     finalizedCheckpoint: {
       epoch: genesisEpoch,
@@ -119,7 +119,7 @@ describe("Forkchoice / GetProposerHead", function () {
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
     },
-    justifiedBalancesGetter: () => new Uint8Array(Array(32).fill(150)),
+    justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
   };
 

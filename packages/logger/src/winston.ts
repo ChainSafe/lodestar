@@ -2,7 +2,7 @@
 /* eslint-disable import/no-named-as-default-member */
 import winston from "winston";
 import type {Logger as Winston} from "winston";
-import {Logger, LoggerOptions, LogLevel, logLevelNum} from "./interface.js";
+import {LogLevel, Logger, LoggerOptions, logLevelNum} from "./interface.js";
 import {getFormat} from "./utils/format.js";
 import {LogData} from "./utils/json.js";
 
@@ -42,7 +42,7 @@ export class WinstonLogger implements Logger {
   constructor(protected readonly winston: Winston) {}
 
   static fromOpts(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): WinstonLogger {
-    return new WinstonLogger(this.createWinstonInstance(options, transports));
+    return new WinstonLogger(WinstonLogger.createWinstonInstance(options, transports));
   }
 
   static createWinstonInstance(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): Winston {

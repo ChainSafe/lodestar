@@ -1,36 +1,38 @@
-import {PeerId} from "@libp2p/interface";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerId} from "@libp2p/interface";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
+import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
+import {ForkSeq, MAX_BLOBS_PER_BLOCK, NUMBER_OF_COLUMNS, DATA_COLUMN_SIDECAR_SUBNET_COUNT} from "@lodestar/params";
+import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {
-  phase0,
-  deneb,
-  altair,
-  Root,
-  capella,
-  SlotRootHex,
-  SignedBeaconBlock,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  peerdas,
   ColumnIndex,
+  Root,
+  SignedAggregateAndProof,
+  SignedBeaconBlock,
+  SlotRootHex,
+  SubnetID,
+  WithBytes,
+  phase0,
+  altair,
+  capella,
+  deneb,
+  peerdas,
 } from "@lodestar/types";
-import {routes} from "@lodestar/api";
-import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK, NUMBER_OF_COLUMNS, DATA_COLUMN_SIDECAR_SUBNET_COUNT} from "@lodestar/params";
-import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
+import {sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
-import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {IClock} from "../util/clock.js";
 import {getCustodyConfig, CustodyConfig} from "../util/dataColumns.js";
 import {NetworkOptions} from "./options.js";
-import {WithBytes, INetwork} from "./interface.js";
+import {INetwork} from "./interface.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
@@ -38,17 +40,19 @@ import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from 
 import {CommitteeSubscription, NodeId} from "./subnets/index.js";
 import {isPublishToZeroPeersError} from "./util.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
+import {PeerIdStr, peerIdToString} from "../util/peerId.js";
+import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {getActiveForks} from "./forks.js";
+import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
+import {AggregatorTracker} from "./processor/aggregatorTracker.js";
+import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
   collectMaxResponseTypedWithBytes,
 } from "./reqresp/utils/collect.js";
-import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
-import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
-import {AggregatorTracker} from "./processor/aggregatorTracker.js";
-import {getActiveForks} from "./forks.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -321,7 +325,7 @@ export class Network implements INetwork {
     return this.subscribedToCoreTopics;
   }
 
-  shouldAggregate(subnet: number, slot: number): boolean {
+  shouldAggregate(subnet: SubnetID, slot: number): boolean {
     return this.aggregatorTracker.shouldAggregate(subnet, slot);
   }
 
@@ -337,9 +341,9 @@ export class Network implements INetwork {
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
     const slot = blobSidecar.signedBlockHeader.message.slot;
     const fork = this.config.getForkName(slot);
-    const index = blobSidecar.index;
+    const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, index}, blobSidecar, {
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, subnet}, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
   }
@@ -367,7 +371,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
+  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: SubnetID): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
     return this.publishGossip<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
@@ -418,7 +422,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<number> {
+  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number> {
     const fork = this.config.getForkName(signature.slot);
     return this.publishGossip<GossipType.sync_committee>({type: GossipType.sync_committee, fork, subnet}, signature, {
       ignoreDuplicatePublishError: true,
@@ -542,15 +546,12 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * MAX_BLOBS_PER_BLOCK,
+      request.count * this.config.MAX_BLOBS_PER_BLOCK,
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
 
-  async sendBlobSidecarsByRoot(
-    peerId: PeerIdStr,
-    request: deneb.BlobSidecarsByRootRequest
-  ): Promise<deneb.BlobSidecar[]> {
+  async sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
@@ -587,7 +588,7 @@ export class Network implements INetwork {
     versions: number[],
     request: Req
   ): AsyncIterable<ResponseIncoming> {
-    const requestType = requestSszTypeByMethod[method];
+    const requestType = requestSszTypeByMethod(this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker

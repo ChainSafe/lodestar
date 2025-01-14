@@ -1,24 +1,27 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  Epoch,
-  phase0,
-  capella,
-  Slot,
-  ssz,
-  StringType,
-  RootHex,
-  altair,
-  UintNum64,
-  LightClientOptimisticUpdate,
-  LightClientFinalityUpdate,
-  SSEPayloadAttributes,
-} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {
+  Attestation,
+  AttesterSlashing,
+  Epoch,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  RootHex,
+  SSEPayloadAttributes,
+  Slot,
+  StringType,
+  UintNum64,
+  altair,
+  capella,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 
-import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getExecutionForkTypes, getLightClientForkTypes} from "../../utils/fork.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -104,10 +107,10 @@ export type EventData = {
     block: RootHex;
     executionOptimistic: boolean;
   };
-  [EventType.attestation]: phase0.Attestation;
+  [EventType.attestation]: Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
   [EventType.proposerSlashing]: phase0.ProposerSlashing;
-  [EventType.attesterSlashing]: phase0.AttesterSlashing;
+  [EventType.attesterSlashing]: AttesterSlashing;
   [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
@@ -184,8 +187,7 @@ export type TypeJson<T> = {
   fromJson: (data: unknown) => T; // client
 };
 
-export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const WithVersion = <T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> => {
     return {
       toJson: ({data, version}) => ({
@@ -225,10 +227,28 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
       {jsonCase: "eth2"}
     ),
 
-    [EventType.attestation]: ssz.phase0.Attestation,
+    [EventType.attestation]: {
+      toJson: (attestation) => {
+        const fork = config.getForkName(attestation.data.slot);
+        return sszTypesFor(fork).Attestation.toJson(attestation);
+      },
+      fromJson: (attestation) => {
+        const fork = config.getForkName((attestation as Attestation).data.slot);
+        return sszTypesFor(fork).Attestation.fromJson(attestation);
+      },
+    },
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
     [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
-    [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing,
+    [EventType.attesterSlashing]: {
+      toJson: (attesterSlashing) => {
+        const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+        return sszTypesFor(fork).AttesterSlashing.toJson(attesterSlashing);
+      },
+      fromJson: (attesterSlashing) => {
+        const fork = config.getForkName(Number((attesterSlashing as AttesterSlashing).attestation1.data.slot));
+        return sszTypesFor(fork).AttesterSlashing.fromJson(attesterSlashing);
+      },
+    },
     [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(
@@ -268,9 +288,8 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getEventSerdes() {
-  const typeByEvent = getTypeByEvent();
+export function getEventSerdes(config: ChainForkConfig) {
+  const typeByEvent = getTypeByEvent(config);
 
   return {
     toJson: (event: BeaconEvent): unknown => {

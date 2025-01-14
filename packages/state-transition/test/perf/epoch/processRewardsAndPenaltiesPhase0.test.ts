@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {getAttestationDeltas} from "../../../src/epoch/getAttestationDeltas.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 import {StatePhase0Epoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
 
 // - On normal mainnet conditions

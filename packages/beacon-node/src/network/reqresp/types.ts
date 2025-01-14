@@ -1,7 +1,23 @@
 import {Type} from "@chainsafe/ssz";
+import {ChainConfig} from "@lodestar/config";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
-import {Metadata, Root, SignedBeaconBlock, altair, deneb, phase0, ssz, sszTypesFor, peerdas} from "@lodestar/types";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  Metadata,
+  Root,
+  SignedBeaconBlock,
+  altair,
+  deneb,
+  phase0,
+  ssz,
+  sszTypesFor,
+  peerdas,
+} from "@lodestar/types";
+import {BlobSidecarsByRootRequest} from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -62,9 +78,9 @@ type ResponseBodyByMethod = {
 };
 
 /** Request SSZ type for each method and ForkName */
-export const requestSszTypeByMethod: {
+export const requestSszTypeByMethod: (config: ChainConfig) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
-} = {
+} = (config) => ({
   [ReqRespMethod.Status]: ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,
@@ -81,16 +97,16 @@ export const requestSszTypeByMethod: {
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
-};
+});
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
 
 const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version) => {
   if (version === Version.V1) {
     return ssz.phase0.SignedBeaconBlock;
-  } else {
-    return ssz[fork].SignedBeaconBlock;
   }
+
+  return ssz[fork].SignedBeaconBlock;
 };
 
 export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
@@ -115,9 +131,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
 function onlyLightclientFork(fork: ForkName): ForkLightClient {
   if (isForkLightClient(fork)) {
     return fork;
-  } else {
-    throw Error(`Not a lightclient fork ${fork}`);
   }
+  throw Error(`Not a lightclient fork ${fork}`);
 }
 
 export type RequestTypedContainer = {

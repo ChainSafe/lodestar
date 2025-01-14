@@ -1,10 +1,10 @@
-import {describe, it, expect} from "vitest";
 import {ForkName} from "@lodestar/params";
-import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip/index.js";
+import {describe, expect, it} from "vitest";
+import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 import {config} from "../../../utils/config.js";
 
-describe("network / gossip / topic", function () {
+describe("network / gossip / topic", () => {
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
@@ -17,7 +17,7 @@ describe("network / gossip / topic", function () {
     ],
     [GossipType.blob_sidecar]: [
       {
-        topic: {type: GossipType.blob_sidecar, index: 1, fork: ForkName.deneb, encoding},
+        topic: {type: GossipType.blob_sidecar, subnet: 1, fork: ForkName.deneb, encoding},
         topicStr: "/eth2/46acb19a/blob_sidecar_1/ssz_snappy",
       },
     ],

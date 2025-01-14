@@ -1,15 +1,15 @@
-import {phase0} from "@lodestar/types";
 import {
-  getAttesterSlashableIndices,
   assertValidAttesterSlashing,
+  getAttesterSlashableIndices,
   getAttesterSlashingSignatureSets,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {phase0} from "@lodestar/types";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
 
 export async function validateApiAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: phase0.AttesterSlashing
+  attesterSlashing: phase0.AttesterSlashing // TODO Electra: Handle electra.AttesterSlashing
 ): Promise<void> {
   const prioritizeBls = true;
   return validateAttesterSlashing(chain, attesterSlashing, prioritizeBls);

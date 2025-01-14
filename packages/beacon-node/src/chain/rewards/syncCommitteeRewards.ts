@@ -1,7 +1,7 @@
+import {routes} from "@lodestar/api";
+import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {BeaconBlock, ValidatorIndex, altair} from "@lodestar/types";
-import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {routes} from "@lodestar/api";
 
 export type SyncCommitteeRewards = routes.beacon.SyncCommitteeRewards;
 type BalanceRecord = {val: number}; // Use val for convenient way to increment/decrement balance
@@ -51,7 +51,7 @@ export async function computeSyncCommitteeRewards(
     return rewards.filter(
       (reward) => filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
     );
-  } else {
-    return rewards;
   }
+
+  return rewards;
 }

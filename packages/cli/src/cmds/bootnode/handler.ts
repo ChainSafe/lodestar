@@ -1,21 +1,21 @@
 import path from "node:path";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {Discv5} from "@chainsafe/discv5";
 import {ENR} from "@chainsafe/enr";
-import {ErrorAborted} from "@lodestar/utils";
 import {HttpMetricsServer, RegistryMetricCreator, getHttpMetricsServer} from "@lodestar/beacon-node";
+import {ErrorAborted} from "@lodestar/utils";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 
-import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
-import {onGracefulShutdown, mkdir, writeFile600Perm} from "../../util/index.js";
-import {getVersionData} from "../../util/version.js";
-import {initPeerIdAndEnr} from "../beacon/initPeerIdAndEnr.js";
 import {parseArgs as parseMetricsArgs} from "../../options/beaconNodeOptions/metrics.js";
 import {parseArgs as parseNetworkArgs} from "../../options/beaconNodeOptions/network.js";
-import {getBeaconPaths} from "../beacon/paths.js";
-import {BeaconArgs} from "../beacon/options.js";
+import {GlobalArgs} from "../../options/index.js";
+import {mkdir, onGracefulShutdown, writeFile600Perm} from "../../util/index.js";
+import {getVersionData} from "../../util/version.js";
 import {initLogger} from "../beacon/handler.js";
+import {initPeerIdAndEnr} from "../beacon/initPeerIdAndEnr.js";
+import {BeaconArgs} from "../beacon/options.js";
+import {getBeaconPaths} from "../beacon/paths.js";
 import {BootnodeArgs} from "./options.js";
 
 /**
@@ -156,7 +156,6 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
 }
 
 /** Separate function to simplify unit testing of options merging */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
   const {version, commit} = getVersionData();

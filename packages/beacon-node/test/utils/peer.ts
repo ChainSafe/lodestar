@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {peerIdFromBytes} from "@libp2p/peer-id";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {peerIdToString} from "../../src/util/peerId.js";
 
 /**

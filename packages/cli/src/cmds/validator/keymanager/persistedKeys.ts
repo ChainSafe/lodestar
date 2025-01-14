@@ -1,15 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {ProposerConfig} from "@lodestar/validator";
 import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
+import {ProposerConfig} from "@lodestar/validator";
 import {
   getPubkeyHexFromKeystore,
   readPassphraseFile,
+  readProposerConfigDir,
   rmdirSyncMaybe,
   unlinkSyncMaybe,
   writeFile600Perm,
-  readProposerConfigDir,
 } from "../../../util/index.js";
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend, LocalKeystoreDefinition} from "./interface.js";

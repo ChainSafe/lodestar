@@ -1,7 +1,7 @@
 import {randomBytes} from "node:crypto";
 import {fromHex, toHex} from "@lodestar/utils";
-import {Assertion, Match, AssertionResult, NodePair} from "../interfaces.js";
 import {EL_GENESIS_ACCOUNT, EL_GENESIS_SECRET_KEY, SIM_ENV_CHAIN_ID} from "../constants.js";
+import {Assertion, AssertionResult, Match, NodePair} from "../interfaces.js";
 import {generateBlobsForTransaction} from "../utils/blobs.js";
 import {BlobsEIP4844Transaction} from "../web3js/blobsEIP4844Transaction.js";
 
@@ -35,7 +35,7 @@ export function createBlobsAssertion(
           gasLimit: "0xc350",
           maxPriorityFeePerGas: "0x3b9aca00",
           maxFeePerGas: "0x3ba26b20",
-          maxFeePerBlobGas: "0x3e8",
+          maxFeePerBlobGas: "0x3e",
           value: "0x10000",
           nonce: `0x${(nonce ?? 0).toString(16)}`,
           blobVersionedHashes,

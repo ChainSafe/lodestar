@@ -31,7 +31,7 @@ To run tests:
 - :test_tube: Run `yarn test:spec` for spec tests.
 - :test_tube: Run `yarn test` to run all tests.
 - :test_tube: Run `yarn check-types` to check TypeScript types.
-- :test_tube: Run `yarn lint` to run the linter (ESLint).
+- :test_tube: Run `yarn lint` to run the linter.
 
 Note that to run `test:e2e`, first ensure that the environment is correctly setup by running the `run_e2e_env.sh` script. This script requires a running docker engine.
 
@@ -125,6 +125,8 @@ Unsure where to begin contributing to Lodestar? Here are some ideas!
 4. If you've made a code change, make sure to lint and test your changes (`yarn lint` and `yarn test:unit`).
 5. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
 6. You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.
+
+Please note that trivial, non-code contributions such as spelling, grammar, typos, corrections, comments and link fixes are not acceptable pull requests. Although we appreciate the effort to fix these valid concerns, it is not practical for us to run our CI systems to accommodate minor external contributions which generate minimal value for the purpose of contribution/airdrop farming. It would be appreciated for you to open up an issue instead for our team to aggregate these types of contributions into a batch commit.
 
 ## Github Style Guide
 

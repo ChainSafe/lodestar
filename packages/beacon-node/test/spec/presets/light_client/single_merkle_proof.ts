@@ -1,13 +1,11 @@
-import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {TreeViewDU, Type} from "@chainsafe/ssz";
-import {RootHex, ssz} from "@lodestar/types";
-import {InputType} from "@lodestar/spec-test-util";
 import {ForkName} from "@lodestar/params";
+import {InputType} from "@lodestar/spec-test-util";
+import {RootHex, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
+import {expect} from "vitest";
 import {TestRunnerFn} from "../../utils/types.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
 type SingleMerkleProofTestCase = {
@@ -23,7 +21,11 @@ type SingleMerkleProofTestCase = {
   };
 };
 
-export const singleMerkleProof: TestRunnerFn<SingleMerkleProofTestCase, RootHex[]> = (fork, testHandler, testSuite) => {
+export const singleMerkleProof: TestRunnerFn<SingleMerkleProofTestCase, RootHex[]> = (
+  fork,
+  _testHandler,
+  testSuite
+) => {
   return {
     testFunction: (testcase) => {
       // Assert correct proof generation
@@ -39,7 +41,7 @@ export const singleMerkleProof: TestRunnerFn<SingleMerkleProofTestCase, RootHex[
         object: getObjectType(fork, testSuite),
       },
       getExpected: (testCase) => testCase.proof.branch,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expect(actual).deep.equals(expected);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

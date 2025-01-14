@@ -1,13 +1,12 @@
 import {routes} from "@lodestar/api";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {ApiError, ApplicationMethods} from "@lodestar/api/server";
+import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, ForkName, isForkPostElectra} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   reconstructFullBlockOrContents,
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, ForkName} from "@lodestar/params";
-import {sleep, fromHex, toHex} from "@lodestar/utils";
 import {
   peerdas,
   deneb,
@@ -16,17 +15,20 @@ import {
   SignedBeaconBlock,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  WithOptionalBytes,
 } from "@lodestar/types";
+import {fromHex, sleep, toRootHex} from "@lodestar/utils";
 import {
-  BlockSource,
-  getBlockInput,
-  ImportBlockOpts,
-  BlockInput,
   BlobsSource,
   BlockInputBlobs,
   BlockInputDataColumns,
   DataColumnsSource,
   BlockInputAvailableData,
+  BlockInput,
+  BlockInputDataBlobs,
+  BlockSource,
+  ImportBlockOpts,
+  getBlockInput,
 } from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -125,9 +127,9 @@ export function getBeaconBlockApi({
     // state transition to produce the stateRoot
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
-    const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+    const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
     // bodyRoot should be the same to produced block
-    const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
+    const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
@@ -175,7 +177,7 @@ export function getBeaconBlockApi({
             );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_UNKNOWN,
-              parentRoot: toHex(signedBlock.message.parentRoot),
+              parentRoot: toRootHex(signedBlock.message.parentRoot),
             });
           }
 
@@ -204,9 +206,8 @@ export function getBeaconBlockApi({
           const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
           if (chain.opts.broadcastValidationStrictness === "error") {
             throw Error(message);
-          } else {
-            chain.logger.warn(message, valLogMeta);
           }
+          chain.logger.warn(message, valLogMeta);
         }
         break;
       }
@@ -221,9 +222,8 @@ export function getBeaconBlockApi({
         const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
         if (chain.opts.broadcastValidationStrictness === "error") {
           throw Error(message);
-        } else {
-          chain.logger.warn(message, valLogMeta);
         }
+        chain.logger.warn(message, valLogMeta);
       }
     }
 
@@ -253,15 +253,17 @@ export function getBeaconBlockApi({
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway
-        chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
-          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
-              blockInput: blockForImport,
-              peer: IDENTITY_PEER_ID,
-            });
-          }
-          throw e;
-        }),
+        chain
+          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .catch((e) => {
+            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+              network.events.emit(NetworkEvent.unknownBlockParent, {
+                blockInput: blockForImport,
+                peer: IDENTITY_PEER_ID,
+              });
+            }
+            throw e;
+          }),
     ];
     await promiseAllMaybeAsync(publishPromises);
   };
@@ -272,7 +274,7 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const slot = signedBlindedBlock.message.slot;
-    const blockRoot = toHex(
+    const blockRoot = toRootHex(
       chain.config
         .getExecutionForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
@@ -287,25 +289,28 @@ export function getBeaconBlockApi({
       chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const contents = executionPayload
-        ? chain.producedContentsCache.get(toHex(executionPayload.blockHash)) ?? null
+        ? (chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null)
         : null;
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, opts);
-    } else {
-      const source = ProducedBlockSource.builder;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
-
-      const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
-
-      // the full block is published by relay and it's possible that the block is already known to us
-      // by gossip
-      //
-      // see: https://github.com/ChainSafe/lodestar/issues/5404
-      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
     }
+
+    const source = ProducedBlockSource.builder;
+    chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
+
+    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+      data: signedBlindedBlock,
+      bytes: context?.sszBytes,
+    });
+
+    // the full block is published by relay and it's possible that the block is already known to us
+    // by gossip
+    //
+    // see: https://github.com/ChainSafe/lodestar/issues/5404
+    chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+    return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
   };
 
   return {
@@ -383,7 +388,7 @@ export function getBeaconBlockApi({
             }
             finalized = false;
 
-            if (summary.blockRoot !== toHex(canonicalRoot)) {
+            if (summary.blockRoot !== toRootHex(canonicalRoot)) {
               const block = await db.block.get(fromHex(summary.blockRoot));
               if (block) {
                 result.push(toBeaconHeaderResponse(config, block));
@@ -436,9 +441,26 @@ export function getBeaconBlockApi({
 
     async getBlockAttestations({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getBlockAttestationsV2 to retrieve block attestations for post-electra fork=${fork}`
+        );
+      }
+
       return {
-        data: Array.from(block.message.body.attestations),
+        data: block.message.body.attestations,
         meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getBlockAttestationsV2({blockId}) {
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      return {
+        data: block.message.body.attestations,
+        meta: {executionOptimistic, finalized, version: config.getForkName(block.message.slot)},
       };
     },
 
@@ -502,7 +524,7 @@ export function getBeaconBlockApi({
       }
 
       if (!blobSidecars) {
-        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHex(blockRoot)}`);
+        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
       }
 
       return {
@@ -519,7 +541,7 @@ export function getBeaconBlockApi({
 
 async function reconstructBuilderBlockOrContents(
   chain: ApiModules["chain"],
-  signedBlindedBlock: SignedBlindedBeaconBlock
+  signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
 ): Promise<SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {

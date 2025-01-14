@@ -1,24 +1,22 @@
-import {EventEmitter} from "events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-import {toHexString} from "@chainsafe/ssz";
-import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
+import {EventEmitter} from "node:events";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {phase0, Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
-import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
+import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
+import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
+import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
-import {Metrics} from "../../metrics/metrics";
-import {byteArrayEquals} from "../../util/bytes.js";
-import {computeAnchorCheckpoint} from "../../chain/initState.js";
-import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
+import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
 /**
  * Timeout in ms to take a break from reading a backfillBatchSize from db, as just yielding
  * to sync loop gives hardly any.
@@ -251,7 +249,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       lte: backfillStartFromSlot,
     });
     modules.logger.info("Initializing from Checkpoint", {
-      root: toHexString(anchorCp.root),
+      root: toRootHex(anchorCp.root),
       epoch: anchorCp.epoch,
       backfillStartFromSlot,
       previousBackfilledRanges: JSON.stringify(previousBackfilledRanges),
@@ -264,7 +262,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
     const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
-    return new this(opts, {
+    return new BackfillSync(opts, {
       syncAnchor,
       backfillStartFromSlot,
       backfillRangeWrittenSlot,
@@ -327,7 +325,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           this.logger.error(
             `Backfilled till ${
               this.syncAnchor.lastBackSyncedBlock.slot
-            } but not found previous saved finalized or wsCheckpoint with root=${toHexString(
+            } but not found previous saved finalized or wsCheckpoint with root=${toRootHex(
               this.prevFinalizedCheckpointBlock.root
             )}, slot=${this.prevFinalizedCheckpointBlock.slot}`
           );
@@ -341,7 +339,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             this.logger.error(
               `Invalid root synced at a previous finalized or wsCheckpoint, slot=${
                 this.prevFinalizedCheckpointBlock.slot
-              }: expected=${toHexString(this.prevFinalizedCheckpointBlock.root)}, actual=${toHexString(
+              }: expected=${toRootHex(this.prevFinalizedCheckpointBlock.root)}, actual=${toRootHex(
                 this.syncAnchor.lastBackSyncedBlock.root
               )}`
             );
@@ -349,7 +347,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             break;
           }
           this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
-            root: toHexString(this.prevFinalizedCheckpointBlock.root),
+            root: toRootHex(this.prevFinalizedCheckpointBlock.root),
             slot: this.prevFinalizedCheckpointBlock.slot,
           });
 
@@ -379,7 +377,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         if (this.syncAnchor.lastBackSyncedBlock.slot === GENESIS_SLOT) {
           if (!byteArrayEquals(this.syncAnchor.lastBackSyncedBlock.block.message.parentRoot, ZERO_HASH)) {
             Error(
-              `Invalid Gensis Block with non zero parentRoot=${toHexString(
+              `Invalid Gensis Block with non zero parentRoot=${toRootHex(
                 this.syncAnchor.lastBackSyncedBlock.block.message.parentRoot
               )}`
             );
@@ -459,6 +457,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               this.status = BackfillSyncStatus.aborted;
               break;
             case BackfillSyncErrorCode.NOT_ANCHORED:
+            // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
             case BackfillSyncErrorCode.NOT_LINEAR:
               // Lets try to jump directly to the parent of this anchorBlock as previous
               // (segment) of blocks could be orphaned/missed
@@ -528,7 +527,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       )
         // TODO: explode and stop the entire node
         throw new Error(
-          `InvalidWsCheckpoint root=${toHex(this.wsCheckpointHeader.root)}, epoch=${
+          `InvalidWsCheckpoint root=${toRootHex(this.wsCheckpointHeader.root)}, epoch=${
             this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
           }, ${
             wsDbCheckpointBlock
@@ -537,7 +536,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           }`
         );
       this.logger.info("wsCheckpoint validated!", {
-        root: toHexString(this.wsCheckpointHeader.root),
+        root: toRootHex(this.wsCheckpointHeader.root),
         epoch: this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH,
       });
       this.wsValidated = true;
@@ -584,13 +583,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
             ) {
               this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
-                root: toHexString(this.prevFinalizedCheckpointBlock.root),
+                root: toRootHex(this.prevFinalizedCheckpointBlock.root),
                 slot: prevBackfillCpBlock.message.slot,
               });
             } else {
               validSequence = false;
               this.logger.warn(
-                `Invalid backfill sequence: previous finalized or checkpoint block root=${toHex(
+                `Invalid backfill sequence: previous finalized or checkpoint block root=${toRootHex(
                   this.prevFinalizedCheckpointBlock.root
                 )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
                   prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
@@ -644,7 +643,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     if (cleanupSeqs.length > 0) {
       await this.db.backfilledRanges.batchDelete(cleanupSeqs.map((entry) => entry.key));
       this.logger.debug(
-        `Cleaned up the old sequences between ${this.backfillStartFromSlot},${toHex(
+        `Cleaned up the old sequences between ${this.backfillStartFromSlot},${toRootHex(
           this.syncAnchor.lastBackSyncedBlock.root
         )}`,
         {cleanupSeqs: JSON.stringify(cleanupSeqs)}
@@ -670,26 +669,27 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     if (expectedSlot !== null && anchorBlock.message.slot !== expectedSlot)
       throw Error(
-        `Invalid slot of anchorBlock read from DB with root=${toHex(
+        `Invalid slot of anchorBlock read from DB with root=${toRootHex(
           anchorBlockRoot
         )}, expected=${expectedSlot}, actual=${anchorBlock.message.slot}`
       );
 
     // If possible, read back till anchorBlock > this.prevFinalizedCheckpointBlock
-    let parentBlock,
+    let parentBlock: SignedBeaconBlock | null,
       backCount = 1;
 
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
       backCount !== this.opts.backfillBatchSize &&
+      // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock
       if (anchorBlock.message.slot < this.prevFinalizedCheckpointBlock.slot) {
         throw Error(
-          `Skipped a prevFinalizedCheckpointBlock with slot=${toHex(
+          `Skipped a prevFinalizedCheckpointBlock with slot=${toRootHex(
             this.prevFinalizedCheckpointBlock.root
-          )}, root=${toHexString(this.prevFinalizedCheckpointBlock.root)}`
+          )}, root=${toRootHex(this.prevFinalizedCheckpointBlock.root)}`
         );
       }
       if (anchorBlock.message.slot === this.prevFinalizedCheckpointBlock.slot) {
@@ -700,7 +700,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           throw Error(
             `Invalid root for prevFinalizedCheckpointBlock at slot=${
               this.prevFinalizedCheckpointBlock.slot
-            }, expected=${toHexString(this.prevFinalizedCheckpointBlock.root)}, found=${toHex(anchorBlockRoot)}`
+            }, expected=${toRootHex(this.prevFinalizedCheckpointBlock.root)}, found=${toRootHex(anchorBlockRoot)}`
           );
         }
 
@@ -770,7 +770,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.blockbyroot});
 
     this.logger.verbose("Fetched new anchorBlock", {
-      root: toHexString(anchorBlockRoot),
+      root: toRootHex(anchorBlockRoot),
       slot: anchorBlock.data.message.slot,
     });
 
@@ -883,7 +883,7 @@ async function extractPreviousFinOrWsCheckpoint(
     const root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     prevFinalizedCheckpointBlock = {root, slot: nextPrevFinOrWsBlock.message.slot};
     logger?.debug("Extracted new prevFinalizedCheckpointBlock as potential previous finalized or wsCheckpoint", {
-      root: toHexString(prevFinalizedCheckpointBlock.root),
+      root: toRootHex(prevFinalizedCheckpointBlock.root),
       slot: prevFinalizedCheckpointBlock.slot,
     });
   } else {

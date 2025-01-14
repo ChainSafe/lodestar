@@ -1,14 +1,13 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   JsonOnlyResp,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";

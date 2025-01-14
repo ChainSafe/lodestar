@@ -1,9 +1,9 @@
-import {BitArray, toHexString} from "@chainsafe/ssz";
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {altair, Slot, Root, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
-import {MapDef} from "@lodestar/utils";
+import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -33,7 +33,6 @@ export type SyncContributionFast = {
 
 /** Hex string of `contribution.beaconBlockRoot` */
 type BlockRootHex = string;
-type Subnet = number;
 
 /**
  * Cache SyncCommitteeContribution and seen ContributionAndProof.
@@ -43,8 +42,8 @@ type Subnet = number;
 export class SyncContributionAndProofPool {
   private readonly bestContributionBySubnetRootBySlot = new MapDef<
     Slot,
-    MapDef<BlockRootHex, Map<Subnet, SyncContributionFast>>
-  >(() => new MapDef<BlockRootHex, Map<Subnet, SyncContributionFast>>(() => new Map<number, SyncContributionFast>()));
+    MapDef<BlockRootHex, Map<SubnetID, SyncContributionFast>>
+  >(() => new MapDef<BlockRootHex, Map<SubnetID, SyncContributionFast>>(() => new Map<number, SyncContributionFast>()));
 
   private lowestPermissibleSlot = 0;
 
@@ -72,7 +71,7 @@ export class SyncContributionAndProofPool {
   add(contributionAndProof: altair.ContributionAndProof, syncCommitteeParticipants: number): InsertOutcome {
     const {contribution} = contributionAndProof;
     const {slot, beaconBlockRoot} = contribution;
-    const rootHex = toHexString(beaconBlockRoot);
+    const rootHex = toRootHex(beaconBlockRoot);
 
     // Reject if too old.
     if (slot < this.lowestPermissibleSlot) {
@@ -90,17 +89,16 @@ export class SyncContributionAndProofPool {
     const bestContribution = bestContributionBySubnet.get(subnet);
     if (bestContribution) {
       return replaceIfBetter(bestContribution, contribution, syncCommitteeParticipants);
-    } else {
-      bestContributionBySubnet.set(subnet, contributionToFast(contribution, syncCommitteeParticipants));
-      return InsertOutcome.NewData;
     }
+    bestContributionBySubnet.set(subnet, contributionToFast(contribution, syncCommitteeParticipants));
+    return InsertOutcome.NewData;
   }
 
   /**
    * This is for the block factory, the same to process_sync_committee_contributions in the spec.
    */
   getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
-    const bestContributionBySubnet = this.bestContributionBySubnetRootBySlot.get(slot)?.get(toHexString(prevBlockRoot));
+    const bestContributionBySubnet = this.bestContributionBySubnetRootBySlot.get(slot)?.get(toRootHex(prevBlockRoot));
     if (!bestContributionBySubnet || bestContributionBySubnet.size === 0) {
       // TODO: Add metric for missing SyncAggregate
       // Must return signature as G2_POINT_AT_INFINITY when participating bits are empty

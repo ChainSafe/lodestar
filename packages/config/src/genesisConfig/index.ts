@@ -1,8 +1,8 @@
-import {toHexString} from "@chainsafe/ssz";
-import {ForkName, SLOTS_PER_EPOCH, DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
-import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
+import {DOMAIN_VOLUNTARY_EXIT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DomainType, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
+import {strip0xPrefix, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
-import {ForkDigestHex, CachedGenesis} from "./types.js";
+import {CachedGenesis, ForkDigestHex} from "./types.js";
 export type {ForkDigestContext} from "./types.js";
 
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
@@ -139,11 +139,7 @@ function computeForkDataRoot(currentVersion: Version, genesisValidatorsRoot: Roo
 }
 
 function toHexStringNoPrefix(hex: string | Uint8Array): string {
-  return strip0xPrefix(typeof hex === "string" ? hex : toHexString(hex));
-}
-
-function strip0xPrefix(hex: string): string {
-  return hex.startsWith("0x") ? hex.slice(2) : hex;
+  return strip0xPrefix(typeof hex === "string" ? hex : toHex(hex));
 }
 
 function computeForkDigest(currentVersion: Version, genesisValidatorsRoot: Root): ForkDigest {

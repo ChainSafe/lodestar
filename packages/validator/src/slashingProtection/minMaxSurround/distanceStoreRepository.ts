@@ -1,5 +1,5 @@
 import {Type} from "@chainsafe/ssz";
-import {encodeKey, DbReqOpts} from "@lodestar/db";
+import {DbReqOpts, encodeKey} from "@lodestar/db";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../../buckets.js";

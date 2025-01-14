@@ -1,8 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {ApiOptions} from "../../options.js";
 
 export function getNodeApi(
   opts: ApiOptions,
@@ -76,10 +76,9 @@ export function getNodeApi(
       if (isSyncing || isOptimistic || elOffline) {
         // 206: Node is syncing but can serve incomplete data
         return {status: syncingStatus ?? routes.node.NodeHealth.SYNCING};
-      } else {
-        // 200: Node is ready
-        return {status: routes.node.NodeHealth.READY};
       }
+      // 200: Node is ready
+      return {status: routes.node.NodeHealth.READY};
       // else {
       //   503: Node not initialized or having issues
       //   NOTE: Lodestar does not start its API until fully initialized, so this status can never be served

@@ -1,6 +1,6 @@
-import {expect} from "vitest";
 import {Node} from "@chainsafe/persistent-merkle-tree";
-import {Type, CompositeType, fromHexString, toHexString} from "@chainsafe/ssz";
+import {CompositeType, Type, fromHexString, toHexString} from "@chainsafe/ssz";
+import {expect} from "vitest";
 
 type ValidTestCaseData = {
   root: string;
@@ -21,7 +21,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
     console.log(
       JSON.stringify(
         testData.jsonValue,
-        (key, value: unknown) => (typeof value === "bigint" ? value.toString() : value),
+        (_key, value: unknown) => (typeof value === "bigint" ? value.toString() : value),
         2
       )
     );
@@ -168,9 +168,8 @@ function wrapErr<T>(fn: () => T, prefix: string): T {
 export function toJsonOrString(value: unknown): unknown {
   if (typeof value === "number" || typeof value === "bigint") {
     return value.toString(10);
-  } else {
-    return value;
   }
+  return value;
 }
 
 function renderTree(node: Node): void {

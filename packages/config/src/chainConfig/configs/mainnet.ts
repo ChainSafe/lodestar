@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
+import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
 // Mainnet config
@@ -48,12 +47,14 @@ export const chainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x04000000"),
   DENEB_FORK_EPOCH: 269568, // March 13, 2024, 01:55:35pm UTC
+  
+  // ELECTRA
+  ELECTRA_FORK_VERSION: b("0x05000000"),
+  ELECTRA_FORK_EPOCH: Infinity,
 
-  // Peerdas
-  PEERDAS_FORK_VERSION: b("0x05000000"),
+  // PEERDAS
+  PEERDAS_FORK_VERSION: b("0x06000000"),
   PEERDAS_FORK_EPOCH: Infinity,
-  EIP7594_FORK_VERSION: b("0x05000000"),
-  EIP7594_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -82,6 +83,10 @@ export const chainConfig: ChainConfig = {
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 8,
   // 2**16 (= 65,536)
   CHURN_LIMIT_QUOTIENT: 65536,
+  // 2**8 * 10**9 (= 256,000,000,000)
+  MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,
+  // 2*7 * 10**9 (= 128,000,000,000)
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
 
   // Fork choice
   // ---------------------------------------------------------------
@@ -101,11 +106,15 @@ export const chainConfig: ChainConfig = {
   // Networking
   // ---------------------------------------------------------------
 
-  // Deneb
+  // Blobs
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+  BLOB_SIDECAR_SUBNET_COUNT: 6,
+  MAX_BLOBS_PER_BLOCK: 6,
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
+  MAX_REQUEST_BLOB_SIDECARS: 768,
 
-  // Peerdas
+  // DAS
   SAMPLES_PER_SLOT: 8,
   CUSTODY_REQUIREMENT: 4,
   NODE_CUSTODY_REQUIREMENT: 1,

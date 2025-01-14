@@ -1,8 +1,8 @@
-import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, RootHex} from "@lodestar/types";
+import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
-import {toHex} from "@lodestar/utils";
+import {RootHex, phase0} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 
 export type Eth1DataGetter = ({
   timestampRange,
@@ -72,16 +72,14 @@ export function pickEth1Vote(state: BeaconStateAllForks, votesToConsider: phase0
   }
 
   // If there's a single winning vote with a majority vote that one
-  else if (eth1DataRootsMaxVotes.length === 1) {
+  if (eth1DataRootsMaxVotes.length === 1) {
     return eth1DataHashToEth1Data.get(eth1DataRootsMaxVotes[0]) ?? state.eth1Data;
   }
 
   // If there are multiple winning votes, vote for the latest one
-  else {
-    const latestMostVotedRoot =
-      eth1DataVotesOrder[Math.max(...eth1DataRootsMaxVotes.map((root) => eth1DataVotesOrder.indexOf(root)))];
-    return eth1DataHashToEth1Data.get(latestMostVotedRoot) ?? state.eth1Data;
-  }
+  const latestMostVotedRoot =
+    eth1DataVotesOrder[Math.max(...eth1DataRootsMaxVotes.map((root) => eth1DataVotesOrder.indexOf(root)))];
+  return eth1DataHashToEth1Data.get(latestMostVotedRoot) ?? state.eth1Data;
 }
 
 /**
@@ -120,7 +118,6 @@ function getKeysWithMaxValue<T>(map: Map<T, number>): T[] {
  * ✓ pickEth1Vote - max votes                                            37.89912 ops/s    26.38583 ms/op        -         29 runs   1.27 s
  */
 function getEth1DataKey(eth1Data: phase0.Eth1Data): string {
-  // return toHexString(ssz.phase0.Eth1Data.hashTreeRoot(eth1Data));
   return fastSerializeEth1Data(eth1Data);
 }
 
@@ -128,7 +125,7 @@ function getEth1DataKey(eth1Data: phase0.Eth1Data): string {
  * Serialize eth1Data types to a unique string ID. It is only used for comparison.
  */
 export function fastSerializeEth1Data(eth1Data: phase0.Eth1Data): string {
-  return toHex(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toHex(eth1Data.depositRoot);
+  return toRootHex(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toRootHex(eth1Data.depositRoot);
 }
 
 export function votingPeriodStartTime(config: ChainForkConfig, state: BeaconStateAllForks): number {

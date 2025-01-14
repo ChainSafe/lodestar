@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 
-describe("dataview", function () {
+describe("dataview", () => {
   const data = Uint8Array.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
 
   itBench({

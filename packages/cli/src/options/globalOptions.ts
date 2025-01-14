@@ -2,7 +2,7 @@ import {ACTIVE_PRESET} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {NetworkName, networkNames} from "../networks/index.js";
 import {readFile} from "../util/index.js";
-import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
+import {IParamsArgs, paramsOptions} from "./paramsOptions.js";
 
 type GlobalSingleArgs = {
   dataDir?: string;
@@ -11,6 +11,7 @@ type GlobalSingleArgs = {
   preset: string;
   presetFile?: string;
   supernode?: boolean;
+  rcConfig?: string;
 };
 
 export const defaultNetwork: NetworkName = "mainnet";
@@ -50,11 +51,16 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     description: "custody all subnets, alias to params.NODE_CUSTODY_REQUIREMENT for all subnets",
     type: "boolean",
   },
+
+  rcConfig: {
+    description: "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
+    type: "string",
+  },
 };
 
 export const rcConfigOption: [string, string, (configPath: string) => Record<string, unknown>] = [
   "rcConfig",
-  "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
+  globalSingleOptions.rcConfig.description as string,
   (configPath: string): Record<string, unknown> => readFile(configPath, ["json", "yml", "yaml"]),
 ];
 

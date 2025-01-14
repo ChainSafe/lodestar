@@ -1,18 +1,18 @@
-import {describe, it, expect, beforeAll, beforeEach} from "vitest";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
-import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
-import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
-import {generateCachedState} from "../../../utils/state.js";
-import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
-import {testLogger} from "../../../utils/logger.js";
-import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
-import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
+import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {FIFOBlockStateCache, toCheckpointHex} from "../../../../src/chain/index.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
+import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
+import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
+import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
+import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
+import {testLogger} from "../../../utils/logger.js";
+import {generateCachedState} from "../../../utils/state.js";
 
-describe("PersistentCheckpointStateCache", function () {
+describe("PersistentCheckpointStateCache", () => {
   let root0a: Buffer, root0b: Buffer, root1: Buffer, root2: Buffer;
   let cp0a: phase0.Checkpoint, cp0b: phase0.Checkpoint, cp1: phase0.Checkpoint, cp2: phase0.Checkpoint;
   let cp0aHex: CheckpointHex, cp0bHex: CheckpointHex, cp1Hex: CheckpointHex, cp2Hex: CheckpointHex;
@@ -90,10 +90,9 @@ describe("PersistentCheckpointStateCache", function () {
       {
         datastore,
         logger: testLogger(),
-        shufflingCache: new ShufflingCache(),
         blockStateCache: new FIFOBlockStateCache({}, {}),
       },
-      {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+      {maxCPStateEpochsInMemory: 2}
     );
     cache.add(cp0a, states["cp0a"]);
     cache.add(cp0b, states["cp0b"]);
@@ -135,7 +134,7 @@ describe("PersistentCheckpointStateCache", function () {
     expect((await cache.getOrReloadLatest(cp0bHex.rootHex, cp0b.epoch - 1))?.serialize()).toBeUndefined();
   });
 
-  it("pruneFinalized and getStateOrBytes", async function () {
+  it("pruneFinalized and getStateOrBytes", async () => {
     cache.add(cp2, states["cp2"]);
     expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
       states["cp0b"].hashTreeRoot()
@@ -165,10 +164,9 @@ describe("PersistentCheckpointStateCache", function () {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -182,7 +180,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       |0b--------root1--------root2
     //                       |
     //                       0a
-    it("single state at lowest memory epoch", async function () {
+    it("single state at lowest memory epoch", async () => {
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
       expect(cache.findSeedStateToReload(cp0aHex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
@@ -198,7 +196,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       0a------------------------------root3
     //                                    ^           ^
     //                           cp1a={0a, 21}       {0a, 22}=cp2a
-    it("multiple states at lowest memory epoch", async function () {
+    it("multiple states at lowest memory epoch", async () => {
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
 
@@ -242,10 +240,9 @@ describe("PersistentCheckpointStateCache", function () {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -259,7 +256,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       |0b--------root1--------root2-----root3
     //                       |
     //                       0a
-    it("no reorg", async function () {
+    it("no reorg", async () => {
       expect(fileApisBuffer.size).toEqual(0);
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -293,7 +290,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       |0b--------root1--------root2-root3 |
     //                       |                        |
     //                       0a                       |---------root4
-    it("reorg in same epoch", async function () {
+    it("reorg in same epoch", async () => {
       // mostly the same to the above test
       expect(fileApisBuffer.size).toEqual(0);
       cache.add(cp2, states["cp2"]);
@@ -338,7 +335,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                                            1a  ^
     //                                                |
     //                                               {1a, 22}=cp2a
-    it("reorg 1 epoch", async function () {
+    it("reorg 1 epoch", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -382,7 +379,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                                 0a ^           ^
     //                                    |           |
     //                            cp1a={0a, 21}     {0a, 22}=cp2a
-    it("reorg 2 epochs", async function () {
+    it("reorg 2 epochs", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -435,7 +432,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                                    ^           ^
     //                                    |           |
     //                            cp1a={0a, 21}     {0a, 22}=cp2a
-    it("reorg 3 epochs, persist cp 0a", async function () {
+    it("reorg 3 epochs, persist cp 0a", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -491,7 +488,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                      0a            ^           ^
     //                                    |           |
     //                            cp1b={0b, 21}     {0b, 22}=cp2b
-    it("reorg 3 epochs, prune but no persist", async function () {
+    it("reorg 3 epochs, prune but no persist", async () => {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -548,10 +545,9 @@ describe("PersistentCheckpointStateCache", function () {
         {
           datastore,
           logger: testLogger(),
-          shufflingCache: new ShufflingCache(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
         },
-        {maxCPStateEpochsInMemory: 1, processLateBlock: true}
+        {maxCPStateEpochsInMemory: 1}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -820,10 +816,9 @@ describe("PersistentCheckpointStateCache", function () {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
-          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
+          {maxCPStateEpochsInMemory: 0}
         );
         cache.add(cp0a, states["cp0a"]);
         cache.add(cp0b, states["cp0b"]);
@@ -911,10 +906,9 @@ describe("PersistentCheckpointStateCache", function () {
           {
             datastore,
             logger: testLogger(),
-            shufflingCache: new ShufflingCache(),
             blockStateCache: new FIFOBlockStateCache({}, {}),
           },
-          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
+          {maxCPStateEpochsInMemory: 0}
         );
 
         const root1a = Buffer.alloc(32, 100);

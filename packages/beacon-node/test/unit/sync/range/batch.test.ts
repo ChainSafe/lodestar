@@ -1,11 +1,11 @@
-import {describe, it, expect} from "vitest";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {expectThrowsLodestarError} from "../../../utils/errors.js";
-import {Batch, BatchStatus, BatchErrorCode, BatchError} from "../../../../src/sync/range/batch.js";
-import {EPOCHS_PER_BATCH} from "../../../../src/sync/constants.js";
+import {describe, expect, it} from "vitest";
 import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {EPOCHS_PER_BATCH} from "../../../../src/sync/constants.js";
+import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
+import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
 describe("sync / range / batch", () => {
   // Common mock data

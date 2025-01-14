@@ -1,14 +1,14 @@
-import {toHex, isErrorAborted} from "@lodestar/utils";
 import {SignedBeaconBlock} from "@lodestar/types";
-import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import type {BeaconChain} from "../chain.js";
-import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock} from "./importBlock.js";
-import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {assertLinearChainSegment} from "./utils/chainSegment.js";
+import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
 export {type ImportBlockOpts, AttestationImportOpt} from "./types.js";
@@ -53,7 +53,9 @@ export async function processBlocks(
 ): Promise<void> {
   if (blocks.length === 0) {
     return; // TODO: or throw?
-  } else if (blocks.length > 1) {
+  }
+
+  if (blocks.length > 1) {
     assertLinearChainSegment(this.config, blocks);
   }
 
@@ -127,7 +129,7 @@ export async function processBlocks(
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;
         const forkTypes = this.config.getForkTypes(blockSlot);
-        const invalidRoot = toHex(postState.hashTreeRoot());
+        const invalidRoot = toRootHex(postState.hashTreeRoot());
 
         const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
         this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
@@ -161,11 +163,13 @@ export async function processBlocks(
 function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError {
   if (e instanceof BlockError) {
     return e;
-  } else if (e instanceof Error) {
+  }
+
+  if (e instanceof Error) {
     const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e});
     blockError.stack = e.stack;
     return blockError;
-  } else {
-    return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
   }
+
+  return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
 }

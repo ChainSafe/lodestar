@@ -4,15 +4,14 @@ import {itBench} from "@dapplion/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
-import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
-// eslint-disable-next-line import/no-relative-packages
+import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
-import {BeaconDb} from "../../../../src/index.js";
+import {BeaconDb, StateArchiveMode} from "../../../../src/index.js";
 import {testLogger} from "../../../utils/logger.js";
 
 const logger = testLogger();
@@ -38,6 +37,7 @@ describe("produceBlockBody", () => {
         skipCreateStateCacheIfAvailable: true,
         archiveStateEpochFrequency: 1024,
         minSameMessageSignatureSetsToBatch: 32,
+        stateArchiveMode: StateArchiveMode.Frequency,
       },
       {
         nodeId: Buffer.alloc(32, crypto.randomBytes(32)),

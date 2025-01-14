@@ -3,8 +3,8 @@ import {
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
-  getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromBlobSidecarSerialized,
+  getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromDataColumnSidecarSerialized,
 } from "../../util/sszBytes.js";

@@ -1,7 +1,7 @@
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {PeerManagerOpts, PeerRpcScoreOpts} from "./peers/index.js";
-import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 import {NetworkProcessorOpts} from "./processor/index.js";
+import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 import {SubnetsServiceOpts} from "./subnets/interface.js";
 
 // Since Network is eventually intended to be run in a separate thread, ensure that all options are cloneable using structuredClone
@@ -40,8 +40,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   maxYoungGenerationSizeMb: 152,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
-  // this should only be set to true if useWorker is true
-  beaconAttestationBatchValidation: true,
   // This will enable the light client server by default
   disableLightClientServer: false,
 };

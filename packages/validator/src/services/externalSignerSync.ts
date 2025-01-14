@@ -1,11 +1,10 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {PublicKey} from "@chainsafe/blst";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toPrintableUrl} from "@lodestar/utils";
+import {fromHex, toPrintableUrl} from "@lodestar/utils";
 
-import {LoggerVc} from "../util/index.js";
 import {externalSignerGetKeys} from "../util/externalSignerClient.js";
+import {LoggerVc} from "../util/index.js";
 import {SignerType, ValidatorStore} from "./validatorStore.js";
 
 export type ExternalSignerOptions = {
@@ -77,7 +76,7 @@ export function pollExternalSignerPubkeys(
 
 function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
-    const pubkeyBytes = fromHexString(pubkeyHex);
+    const pubkeyBytes = fromHex(pubkeyHex);
     PublicKey.fromBytes(pubkeyBytes, true);
   }
 }

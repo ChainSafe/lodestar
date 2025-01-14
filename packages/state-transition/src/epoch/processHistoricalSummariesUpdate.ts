@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {EpochTransitionCache, CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateCapella, EpochTransitionCache} from "../types.js";
 
 /**
  * Persist blockRoots and stateRoots to historicalSummaries.

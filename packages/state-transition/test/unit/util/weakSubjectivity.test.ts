@@ -1,10 +1,10 @@
-import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
-import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/weakSubjectivity.js";
+import {describe, expect, it} from "vitest";
 import {getChurnLimit} from "../../../src/util/validator.js";
+import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/weakSubjectivity.js";
 
 describe("weak subjectivity tests", () => {
-  describe("computeWeakSubjectivityPeriodFromConstituents", function () {
+  describe("computeWeakSubjectivityPeriodFromConstituents", () => {
     const balance28 = 28;
     const balance32 = 32;
 

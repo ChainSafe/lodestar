@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import {ACTIVE_PRESET, EFFECTIVE_BALANCE_INCREMENT, PresetName} from "@lodestar/params";
+import {expect} from "chai";
 import {beforeProcessEpoch} from "../../src/index.js";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "./util.js";
 

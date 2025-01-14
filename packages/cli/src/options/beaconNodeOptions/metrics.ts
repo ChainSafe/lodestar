@@ -1,4 +1,4 @@
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type MetricsArgs = {
@@ -9,7 +9,7 @@ export type MetricsArgs = {
 
 export function parseArgs(args: MetricsArgs): IBeaconNodeOptions["metrics"] {
   return {
-    enabled: args["metrics"],
+    enabled: args.metrics,
     port: args["metrics.port"],
     address: args["metrics.address"],
   };

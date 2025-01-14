@@ -1,15 +1,17 @@
-import {describe, it, expect} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
+import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {MAX_DEPOSITS} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
-import {filterBy} from "../../../utils/db.js";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
-import {generateState} from "../../../utils/state.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
+import {describe, expect, it} from "vitest";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {DepositGetter, getDeposits, getDepositsWithProofs} from "../../../../src/eth1/utils/deposits.js";
+import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {filterBy} from "../../../utils/db.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateState} from "../../../utils/state.js";
 
-describe("eth1 / util / deposits", function () {
+describe("eth1 / util / deposits", () => {
   describe("getDeposits", () => {
     type TestCase = {
       id: string;
@@ -18,6 +20,7 @@ describe("eth1 / util / deposits", function () {
       depositIndexes: number[];
       expectedReturnedIndexes?: number[];
       error?: Eth1ErrorCode;
+      postElectra?: boolean;
     };
 
     const testCases: TestCase[] = [
@@ -70,18 +73,58 @@ describe("eth1 / util / deposits", function () {
         depositIndexes: [],
         expectedReturnedIndexes: [],
       },
+      {
+        id: "No deposits to be included post Electra after deposit_requests_start_index",
+        depositCount: 2030,
+        eth1DepositIndex: 2025,
+        depositIndexes: Array.from({length: 2030}, (_, i) => i),
+        expectedReturnedIndexes: [],
+        postElectra: true,
+      },
+      {
+        id: "Should return deposits post Electra before deposit_requests_start_index",
+        depositCount: 2022,
+        eth1DepositIndex: 2018,
+        depositIndexes: Array.from({length: 2022}, (_, i) => i),
+        expectedReturnedIndexes: [2018, 2019, 2020, 2021],
+        postElectra: true,
+      },
+      {
+        id: "Should return deposits less than MAX_DEPOSITS post Electra before deposit_requests_start_index",
+        depositCount: 10 * MAX_DEPOSITS,
+        eth1DepositIndex: 0,
+        depositIndexes: Array.from({length: 10 * MAX_DEPOSITS}, (_, i) => i),
+        expectedReturnedIndexes: Array.from({length: MAX_DEPOSITS}, (_, i) => i),
+        postElectra: true,
+      },
     ];
 
+    const postElectraConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 1,
+      BELLATRIX_FORK_EPOCH: 2,
+      CAPELLA_FORK_EPOCH: 3,
+      DENEB_FORK_EPOCH: 4,
+      ELECTRA_FORK_EPOCH: 5,
+    });
+    const postElectraSlot = postElectraConfig.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH + 1;
+
     for (const testCase of testCases) {
-      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error} = testCase;
-      it(id, async function () {
-        const state = generateState({eth1DepositIndex});
+      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error, postElectra} =
+        testCase;
+      it(id, async () => {
+        const state = postElectra
+          ? generateState({slot: postElectraSlot, eth1DepositIndex}, postElectraConfig)
+          : generateState({eth1DepositIndex});
+        const cachedState = createCachedBeaconStateTest(
+          state,
+          postElectra ? postElectraConfig : createChainForkConfig({})
+        );
         const eth1Data = generateEth1Data(depositCount);
         const deposits = depositIndexes.map((index) => generateDepositEvent(index));
         const depositsGetter: DepositGetter<phase0.DepositEvent> = async (indexRange) =>
           filterBy(deposits, indexRange, (deposit) => deposit.index);
 
-        const resultPromise = getDeposits(state, eth1Data, depositsGetter);
+        const resultPromise = getDeposits(cachedState, eth1Data, depositsGetter);
 
         if (expectedReturnedIndexes) {
           const result = await resultPromise;
@@ -96,7 +139,7 @@ describe("eth1 / util / deposits", function () {
   });
 
   describe("getDepositsWithProofs", () => {
-    it("return empty array if no pending deposits", function () {
+    it("return empty array if no pending deposits", () => {
       const initialValues = [Buffer.alloc(32)];
       const depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(initialValues);
       const depositCount = 0;
@@ -106,7 +149,7 @@ describe("eth1 / util / deposits", function () {
       expect(deposits).toEqual([]);
     });
 
-    it("return deposits with valid proofs", function () {
+    it("return deposits with valid proofs", () => {
       const depositEvents = Array.from(
         {length: 2},
         (_, index): phase0.DepositEvent => ({

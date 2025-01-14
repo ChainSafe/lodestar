@@ -6,11 +6,12 @@ import {
   MAX_REQUEST_BLOCKS_DENEB,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
+import {ChainConfig} from "@lodestar/config";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod} from "./types.js";
 import {requestSszTypeByMethod} from "./types.js";
 
-export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
+export const rateLimitQuotas: (config: ChainConfig) => Record<ReqRespMethod, InboundRateLimitQuota> = (config) => ({
   [ReqRespMethod.Status]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 5, quotaTimeMs: 15_000},
@@ -31,22 +32,22 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
   [ReqRespMethod.BeaconBlocksByRange]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlocksByRange, (req) => req.count),
+    getRequestCount: getRequestCountFn(config, ReqRespMethod.BeaconBlocksByRange, (req) => req.count),
   },
   [ReqRespMethod.BeaconBlocksByRoot]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 128, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
+    getRequestCount: getRequestCountFn(config, ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
   [ReqRespMethod.BlobSidecarsByRange]: {
     // Rationale: MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
-    byPeer: {quota: MAX_REQUEST_BLOB_SIDECARS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRange, (req) => req.count),
+    byPeer: {quota: config.MAX_REQUEST_BLOB_SIDECARS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(config, ReqRespMethod.BlobSidecarsByRange, (req) => req.count),
   },
   [ReqRespMethod.BlobSidecarsByRoot]: {
     // Rationale: quota of BeaconBlocksByRoot * MAX_BLOBS_PER_BLOCK
-    byPeer: {quota: 128 * MAX_BLOBS_PER_BLOCK, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
+    byPeer: {quota: config.MAX_REQUEST_BLOB_SIDECARS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(config, ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.DataColumnSidecarsByRange]: {
     // Rationale: MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS
@@ -65,7 +66,7 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
   [ReqRespMethod.LightClientUpdatesByRange]: {
     // Same rationale as for BeaconBlocksByRange
     byPeer: {quota: MAX_REQUEST_LIGHT_CLIENT_UPDATES, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.LightClientUpdatesByRange, (req) => req.count),
+    getRequestCount: getRequestCountFn(config, ReqRespMethod.LightClientUpdatesByRange, (req) => req.count),
   },
   [ReqRespMethod.LightClientFinalityUpdate]: {
     // Finality updates should not be requested more than once per epoch.
@@ -77,18 +78,19 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
     byPeer: {quota: 2, quotaTimeMs: 12_000},
   },
-};
+});
 
 // Helper to produce a getRequestCount function
 function getRequestCountFn<T extends ReqRespMethod>(
+  config: ChainConfig,
   method: T,
   fn: (req: RequestBodyByMethod[T]) => number
 ): (reqData: Uint8Array) => number {
-  const type = requestSszTypeByMethod[method];
+  const type = requestSszTypeByMethod(config)[method];
   return (reqData: Uint8Array) => {
     try {
       return (type && fn(type.deserialize(reqData))) ?? 1;
-    } catch (e) {
+    } catch (_e) {
       return 1;
     }
   };

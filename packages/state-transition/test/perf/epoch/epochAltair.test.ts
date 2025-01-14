@@ -1,28 +1,28 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {ForkSeq} from "@lodestar/params";
+import {processEpoch} from "../../../src/epoch/index.js";
+import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
+import {processEth1DataReset} from "../../../src/epoch/processEth1DataReset.js";
+import {processHistoricalRootsUpdate} from "../../../src/epoch/processHistoricalRootsUpdate.js";
+import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
+import {processJustificationAndFinalization} from "../../../src/epoch/processJustificationAndFinalization.js";
+import {processParticipationFlagUpdates} from "../../../src/epoch/processParticipationFlagUpdates.js";
+import {processRandaoMixesReset} from "../../../src/epoch/processRandaoMixesReset.js";
+import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
+import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
+import {processSlashings} from "../../../src/epoch/processSlashings.js";
+import {processSlashingsReset} from "../../../src/epoch/processSlashingsReset.js";
+import {processSyncCommitteeUpdates} from "../../../src/epoch/processSyncCommitteeUpdates.js";
 import {
-  computeStartSlotAtEpoch,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   beforeProcessEpoch,
+  computeStartSlotAtEpoch,
 } from "../../../src/index.js";
-import {beforeValue, LazyValue} from "../../utils/beforeValueMocha.js";
+import {LazyValue, beforeValue} from "../../utils/beforeValueMocha.js";
 import {getNetworkCachedState} from "../../utils/testFileCache.js";
-import {StateEpoch} from "../types.js";
 import {altairState} from "../params.js";
-import {processJustificationAndFinalization} from "../../../src/epoch/processJustificationAndFinalization.js";
-import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
-import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
-import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
-import {processSlashings} from "../../../src/epoch/processSlashings.js";
-import {processEth1DataReset} from "../../../src/epoch/processEth1DataReset.js";
-import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
-import {processSlashingsReset} from "../../../src/epoch/processSlashingsReset.js";
-import {processRandaoMixesReset} from "../../../src/epoch/processRandaoMixesReset.js";
-import {processHistoricalRootsUpdate} from "../../../src/epoch/processHistoricalRootsUpdate.js";
-import {processParticipationFlagUpdates} from "../../../src/epoch/processParticipationFlagUpdates.js";
-import {processSyncCommitteeUpdates} from "../../../src/epoch/processSyncCommitteeUpdates.js";
-import {processEpoch} from "../../../src/epoch/index.js";
+import {StateEpoch} from "../types.js";
 
 const slot = computeStartSlotAtEpoch(altairState.epoch) - 1;
 const stateId = `${altairState.network}_e${altairState.epoch}`;
@@ -46,6 +46,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
     fn: (state) => {
       const cache = beforeProcessEpoch(state);
       processEpoch(fork, state as CachedBeaconStateAltair, cache);
+      state.slot++;
       state.epochCtx.afterProcessEpoch(state, cache);
       // Simulate root computation through the next block to account for changes
       // 74184 hash64 ops - 92.730 ms
@@ -120,7 +121,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair processRegistryUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processRegistryUpdates(state, cache.value),
+    fn: (state) => processRegistryUpdates(ForkSeq.altair, state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
@@ -141,7 +142,9 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEffectiveBalanceUpdates(state, cache.value),
+    fn: (state) => {
+      processEffectiveBalanceUpdates(ForkSeq.altair, state, cache.value);
+    },
   });
 
   itBench({
@@ -172,7 +175,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     id: `${stateId} - altair processSyncCommitteeUpdates`,
     convergeFactor: 1 / 100, // Very unstable make it converge faster
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
-    fn: (state) => processSyncCommitteeUpdates(state),
+    fn: (state) => processSyncCommitteeUpdates(ForkSeq.altair, state),
   });
 
   itBench<StateEpoch, StateEpoch>({
@@ -185,6 +188,9 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
       return {state, cache: cacheAfter};
     },
     beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
-    fn: ({state, cache}) => state.epochCtx.afterProcessEpoch(state, cache),
+    fn: ({state, cache}) => {
+      state.slot++;
+      state.epochCtx.afterProcessEpoch(state, cache);
+    },
   });
 }

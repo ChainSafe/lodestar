@@ -1,7 +1,7 @@
+import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 /* eslint-disable no-console */
 import {activePreset} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {
   CLIQUE_SEALING_PERIOD,
   ETH_TTD_INCREMENT,
@@ -73,7 +73,6 @@ export function defineSimTestConfig(
     additionalSlots: opts.additionalSlotsForTTD ?? 2,
   });
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const forkConfig = createChainForkConfig({
     ...opts,
     GENESIS_DELAY: genesisDelaySeconds,
@@ -157,7 +156,7 @@ export const arrayGroupBy = <T>(
 ): Record<string, T[]> =>
   array.reduce(
     (acc, value, index, array) => {
-      (acc[predicate(value, index, array)] ||= []).push(value);
+      acc[predicate(value, index, array)]?.push(value);
       return acc;
     },
     {} as {[key: string]: T[]}

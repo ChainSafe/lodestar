@@ -1,11 +1,11 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, beforeAll, expect} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
+import {beforeAll, describe, expect, it} from "vitest";
 import {routes} from "../../../src/beacon/index.js";
 import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
+import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
 import {testData as configTestData} from "./testData/config.js";
@@ -18,17 +18,15 @@ import {testData as validatorTestData} from "./testData/validator.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.5.0";
+const version = "v3.0.0-alpha.6";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
 
 const definitions = {
@@ -57,9 +55,6 @@ const ignoredOperations = [
   /* missing route */
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
-  "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
-  /* Must support ssz response body */
-  "getLightClientUpdatesByRange", // https://github.com/ChainSafe/lodestar/issues/6841
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
@@ -108,7 +103,7 @@ describe("eventstream event data", () => {
     }
   });
 
-  const eventSerdes = routes.events.getEventSerdes();
+  const eventSerdes = routes.events.getEventSerdes(config);
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
   for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(

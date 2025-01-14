@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq} from "@lodestar/params";
 import {processSyncCommitteeUpdates} from "../../../src/epoch/processSyncCommitteeUpdates.js";
 import {StateAltair} from "../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
@@ -21,7 +21,7 @@ describe("altair processSyncCommitteeUpdates", () => {
     },
     fn: (state) => {
       const nextSyncCommitteeBefore = state.nextSyncCommittee;
-      processSyncCommitteeUpdates(state);
+      processSyncCommitteeUpdates(ForkSeq.altair, state);
       if (state.nextSyncCommittee === nextSyncCommitteeBefore) {
         throw Error("nextSyncCommittee instance has not changed");
       }

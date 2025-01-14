@@ -1,12 +1,11 @@
-import {toHexString} from "@chainsafe/ssz";
-import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Epoch, RootHex, phase0} from "@lodestar/types";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {StateCloneOpts} from "../regen/interface.js";
+import {StateRegenerationOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CheckpointStateCache, CacheItemType} from "./types.js";
+import {CacheItemType, CheckpointStateCache} from "./types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;
@@ -43,7 +42,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
     this.maxEpochs = maxEpochs;
   }
 
-  async getOrReload(cp: CheckpointHex, opts?: StateCloneOpts): Promise<CachedBeaconStateAllForks | null> {
+  async getOrReload(cp: CheckpointHex, opts?: StateRegenerationOpts): Promise<CachedBeaconStateAllForks | null> {
     return this.get(cp, opts);
   }
 
@@ -55,7 +54,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
   async getOrReloadLatest(
     rootHex: string,
     maxEpoch: number,
-    opts?: StateCloneOpts
+    opts?: StateRegenerationOpts
   ): Promise<CachedBeaconStateAllForks | null> {
     return this.getLatest(rootHex, maxEpoch, opts);
   }
@@ -65,7 +64,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
     return 0;
   }
 
-  get(cp: CheckpointHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
+  get(cp: CheckpointHex, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const cpKey = toCheckpointKey(cp);
     const item = this.cache.get(cpKey);
@@ -99,7 +98,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  getLatest(rootHex: RootHex, maxEpoch: Epoch, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
+  getLatest(rootHex: RootHex, maxEpoch: Epoch, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
@@ -144,7 +143,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
 
   delete(cp: phase0.Checkpoint): void {
     this.cache.delete(toCheckpointKey(toCheckpointHex(cp)));
-    const epochKey = toHexString(cp.root);
+    const epochKey = toRootHex(cp.root);
     const value = this.epochIndex.get(cp.epoch);
     if (value) {
       value.delete(epochKey);
@@ -170,11 +169,15 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
   dumpSummary(): routes.lodestar.StateCacheItem[] {
     return Array.from(this.cache.entries()).map(([key, state]) => ({
       slot: state.slot,
-      root: toHexString(state.hashTreeRoot()),
+      root: toRootHex(state.hashTreeRoot()),
       reads: this.cache.readCount.get(key) ?? 0,
       lastRead: this.cache.lastRead.get(key) ?? 0,
       checkpointState: true,
     }));
+  }
+
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+    return this.cache.values();
   }
 
   /** ONLY FOR DEBUGGING PURPOSES. For spec tests on error */
@@ -186,7 +189,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
 export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   return {
     epoch: checkpoint.epoch,
-    rootHex: toHexString(checkpoint.root),
+    rootHex: toRootHex(checkpoint.root),
   };
 }
 

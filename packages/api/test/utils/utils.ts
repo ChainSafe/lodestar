@@ -1,7 +1,7 @@
-import {MockedObject, vi} from "vitest";
-import {parse as parseQueryString} from "qs";
-import {FastifyInstance, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
+import {FastifyInstance, fastify} from "fastify";
+import {parse as parseQueryString} from "qs";
+import {MockedObject, vi} from "vitest";
 import {Endpoint} from "../../src/utils/index.js";
 import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/server/index.js";
 
@@ -14,15 +14,14 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
   addSszContentTypeParser(server);
 
   server.addHook("onError", (_request, _reply, error, done) => {
-    // eslint-disable-next-line no-console
     console.log(`onError: ${error.toString()}`);
     done();
   });
 
   const start = (): Promise<string> =>
     new Promise<string>((resolve, reject) => {
-      server.listen({port: 0}, function (err, address) {
-        if (err !== null && err != undefined) {
+      server.listen({port: 0}, (err, address) => {
+        if (err != null) {
           reject(err);
         } else {
           resolve(address);

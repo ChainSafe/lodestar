@@ -1,6 +1,6 @@
 import path from "node:path";
-import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 
@@ -13,7 +13,7 @@ const CHECKPOINT_FILE_NAME_LENGTH = 82;
 export class FileCPStateDatastore implements CPStateDatastore {
   private readonly folderPath: string;
 
-  constructor(parentDir: string = ".") {
+  constructor(parentDir = ".") {
     // by default use the beacon folder `/beacon/checkpoint_states`
     this.folderPath = path.join(parentDir, CHECKPOINT_STATES_FOLDER);
   }
@@ -28,18 +28,18 @@ export class FileCPStateDatastore implements CPStateDatastore {
 
   async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array): Promise<DatastoreKey> {
     const serializedCheckpoint = ssz.phase0.Checkpoint.serialize(cpKey);
-    const filePath = path.join(this.folderPath, toHexString(serializedCheckpoint));
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
     await writeIfNotExist(filePath, stateBytes);
     return serializedCheckpoint;
   }
 
   async remove(serializedCheckpoint: DatastoreKey): Promise<void> {
-    const filePath = path.join(this.folderPath, toHexString(serializedCheckpoint));
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
     await removeFile(filePath);
   }
 
   async read(serializedCheckpoint: DatastoreKey): Promise<Uint8Array | null> {
-    const filePath = path.join(this.folderPath, toHexString(serializedCheckpoint));
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
     return readFile(filePath);
   }
 
@@ -47,6 +47,6 @@ export class FileCPStateDatastore implements CPStateDatastore {
     const fileNames = await readFileNames(this.folderPath);
     return fileNames
       .filter((fileName) => fileName.startsWith("0x") && fileName.length === CHECKPOINT_FILE_NAME_LENGTH)
-      .map((fileName) => fromHexString(fileName));
+      .map((fileName) => fromHex(fileName));
   }
 }

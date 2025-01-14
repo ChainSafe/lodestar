@@ -1,16 +1,16 @@
-import {fastify} from "fastify";
-import {describe, it, expect, beforeAll, afterAll} from "vitest";
-import {ForkName} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
+import {ForkName} from "@lodestar/params";
+import {fastify} from "fastify";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {RpcPayload} from "../../../src/eth1/interface.js";
+import {numToQuantity} from "../../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
-import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 import {
   parseExecutionPayload,
   serializeExecutionPayload,
   serializeExecutionPayloadBody,
 } from "../../../src/execution/engine/types.js";
-import {RpcPayload} from "../../../src/eth1/interface.js";
-import {numToQuantity} from "../../../src/eth1/provider/utils.js";
+import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -219,7 +219,7 @@ describe("ExecutionEngine / http", () => {
 
     returnValue = response;
 
-    const res = await executionEngine.getPayloadBodiesByHash(reqBlockHashes);
+    const res = await executionEngine.getPayloadBodiesByHash(ForkName.bellatrix, reqBlockHashes);
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
@@ -268,7 +268,7 @@ describe("ExecutionEngine / http", () => {
 
     returnValue = response;
 
-    const res = await executionEngine.getPayloadBodiesByRange(startBlockNumber, blockCount);
+    const res = await executionEngine.getPayloadBodiesByRange(ForkName.bellatrix, startBlockNumber, blockCount);
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);

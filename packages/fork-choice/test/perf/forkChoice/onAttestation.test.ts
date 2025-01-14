@@ -1,9 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {AttestationData, IndexedAttestation} from "@lodestar/types/phase0";
+import {itBench} from "@dapplion/benchmark";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {AttestationData, IndexedAttestation} from "@lodestar/types/phase0";
 import {initializeForkChoice} from "./util.js";
 
 describe("ForkChoice onAttestation", () => {

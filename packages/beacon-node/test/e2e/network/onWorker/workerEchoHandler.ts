@@ -1,5 +1,5 @@
 import workerThreads from "node:worker_threads";
-import {spawn, Worker} from "@chainsafe/threads";
+import {Worker, spawn} from "@chainsafe/threads";
 
 export type EchoWorker = {
   send<T>(data: T): Promise<T>;

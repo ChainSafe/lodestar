@@ -1,7 +1,7 @@
 import {randomBytes} from "node:crypto";
-import xxhashFactory from "xxhash-wasm";
-import {itBench} from "@dapplion/benchmark";
 import {digest} from "@chainsafe/as-sha256";
+import {itBench} from "@dapplion/benchmark";
+import xxhashFactory from "xxhash-wasm";
 
 const hasher = await xxhashFactory();
 

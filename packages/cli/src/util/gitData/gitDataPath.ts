@@ -1,10 +1,9 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Persist git data and distribute through NPM so CLI consumers can know exactly

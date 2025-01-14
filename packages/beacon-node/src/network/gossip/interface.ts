@@ -1,24 +1,26 @@
-import {Libp2p} from "libp2p";
-import {Message, TopicValidatorResult} from "@libp2p/interface";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
+import {Message, TopicValidatorResult} from "@libp2p/interface";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {
+  Attestation,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  SignedBeaconBlock,
+  Slot,
+  SubnetID,
   altair,
   capella,
   deneb,
-  LightClientFinalityUpdate,
-  LightClientOptimisticUpdate,
   phase0,
-  SignedBeaconBlock,
-  Slot,
   peerdas,
 } from "@lodestar/types";
-import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {IBeaconChain} from "../../chain/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {Libp2p} from "libp2p";
 import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
+import {IBeaconChain} from "../../chain/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -36,6 +38,9 @@ export enum GossipType {
   bls_to_execution_change = "bls_to_execution_change",
 }
 
+export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
+export type BatchGossipType = GossipType.beacon_attestation;
+
 export enum GossipEncoding {
   ssz_snappy = "ssz_snappy",
 }
@@ -51,17 +56,17 @@ export interface IGossipTopic {
 
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
-  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; index: number};
+  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: SubnetID};
   [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; index: number};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
-  [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
+  [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: SubnetID};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
   [GossipType.proposer_slashing]: {type: GossipType.proposer_slashing};
   [GossipType.attester_slashing]: {type: GossipType.attester_slashing};
   [GossipType.sync_committee_contribution_and_proof]: {
     type: GossipType.sync_committee_contribution_and_proof;
   };
-  [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: number};
+  [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: SubnetID};
   [GossipType.light_client_finality_update]: {type: GossipType.light_client_finality_update};
   [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
   [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};
@@ -184,26 +189,26 @@ export type GossipHandlerParamGeneric<T extends GossipType> = {
 };
 
 export type GossipHandlers = {
-  [K in GossipType]: DefaultGossipHandler<K> | BatchGossipHandler<K>;
+  [K in GossipType]: SequentialGossipHandler<K> | BatchGossipHandler<K>;
 };
 
-export type DefaultGossipHandler<K extends GossipType> = (
+export type SequentialGossipHandler<K extends GossipType> = (
   gossipHandlerParam: GossipHandlerParamGeneric<K>
 ) => Promise<void>;
 
-export type DefaultGossipHandlers = {
-  [K in GossipType]: DefaultGossipHandler<K>;
+export type SequentialGossipHandlers = {
+  [K in SequentialGossipType]: SequentialGossipHandler<K>;
+};
+
+export type BatchGossipHandlers = {
+  [K in BatchGossipType]: BatchGossipHandler<K>;
 };
 
 export type BatchGossipHandler<K extends GossipType> = (
   gossipHandlerParams: GossipHandlerParamGeneric<K>[]
 ) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
-export type BatchGossipHandlers = {
-  [K in GossipType]?: BatchGossipHandler<K>;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
   ? T
   : never;

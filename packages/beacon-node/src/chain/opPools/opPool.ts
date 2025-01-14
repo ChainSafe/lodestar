@@ -1,4 +1,13 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {Id, Repository} from "@lodestar/db";
+import {
+  BLS_WITHDRAWAL_PREFIX,
+  ForkSeq,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -6,20 +15,12 @@ import {
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
 } from "@lodestar/state-transition";
-import {Repository, Id} from "@lodestar/db";
-import {
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  BLS_WITHDRAWAL_PREFIX,
-  MAX_ATTESTER_SLASHINGS,
-  ForkSeq,
-} from "@lodestar/params";
-import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock} from "@lodestar/types";
+import {AttesterSlashing, Epoch, SignedBeaconBlock, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
-import {Metrics} from "../../metrics/metrics.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
@@ -83,10 +84,10 @@ export class OpPool {
       persistDiff(
         db.attesterSlashing,
         Array.from(this.attesterSlashings.entries()).map(([key, value]) => ({
-          key: fromHexString(key),
+          key: fromHex(key),
           value: value.attesterSlashing,
         })),
-        toHexString
+        toHex
       ),
       persistDiff(
         db.proposerSlashing,
@@ -135,7 +136,7 @@ export class OpPool {
     if (!rootHash) rootHash = ssz.phase0.AttesterSlashing.hashTreeRoot(attesterSlashing);
     // TODO: Do once and cache attached to the AttesterSlashing object
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-    this.attesterSlashings.set(toHexString(rootHash), {
+    this.attesterSlashings.set(toRootHex(rootHash), {
       attesterSlashing,
       intersectingIndices,
     });
@@ -173,7 +174,7 @@ export class OpPool {
     blockType: BlockType,
     metrics: Metrics | null
   ): [
-    phase0.AttesterSlashing[],
+    AttesterSlashing[],
     phase0.ProposerSlashing[],
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[],
@@ -207,7 +208,8 @@ export class OpPool {
     });
 
     const endAttesterSlashings = stepsMetrics?.startTimer();
-    const attesterSlashings: phase0.AttesterSlashing[] = [];
+    const attesterSlashings: AttesterSlashing[] = [];
+    const maxAttesterSlashings = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
     attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
       /** Indices slashable in this attester slashing */
       const slashableIndices = new Set<ValidatorIndex>();
@@ -222,7 +224,7 @@ export class OpPool {
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
         }
-        if (attesterSlashings.length >= MAX_ATTESTER_SLASHINGS) {
+        if (attesterSlashings.length >= maxAttesterSlashings) {
           break attesterSlashing;
         }
       }
@@ -282,6 +284,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
+  // TODO Electra: Update to adapt electra.AttesterSlashing
   getAllAttesterSlashings(): phase0.AttesterSlashing[] {
     return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
   }
@@ -407,10 +410,9 @@ function isVoluntaryExitSignatureIncludable(stateFork: ForkSeq, voluntaryExitFor
   if (stateFork >= ForkSeq.deneb) {
     // Exists are perpetually valid https://eips.ethereum.org/EIPS/eip-7044
     return true;
-  } else {
-    // Can only include exits from the current and previous fork
-    return voluntaryExitFork === stateFork || voluntaryExitFork === stateFork - 1;
   }
+  // Can only include exits from the current and previous fork
+  return voluntaryExitFork === stateFork || voluntaryExitFork === stateFork - 1;
 }
 
 function isSlashableAtEpoch(validator: phase0.Validator, epoch: Epoch): boolean {

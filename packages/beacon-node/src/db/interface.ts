@@ -1,27 +1,27 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
+import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
+  BLSToExecutionChangeRepository,
+  BackfilledRanges,
+  BestLightClientUpdateRepository,
+  BlobSidecarsArchiveRepository,
+  BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositEventRepository,
+  CheckpointHeaderRepository,
   DepositDataRootRepository,
+  DepositEventRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
-  VoluntaryExitRepository,
-  BestLightClientUpdateRepository,
-  CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
-  BackfilledRanges,
-  BlobSidecarsRepository,
-  BlobSidecarsArchiveRepository,
   DataColumnSidecarsRepository,
   DataColumnSidecarsArchiveRepository,
-  BLSToExecutionChangeRepository,
+  VoluntaryExitRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
-import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 
 /**
  * The DB service manages the data layer of the beacon chain

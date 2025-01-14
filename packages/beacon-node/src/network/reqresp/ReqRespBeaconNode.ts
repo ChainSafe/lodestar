@@ -1,5 +1,4 @@
 import {PeerId} from "@libp2p/interface";
-import {Libp2p} from "libp2p";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
@@ -15,13 +14,15 @@ import {
 } from "@lodestar/reqresp";
 import {Metadata, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {Libp2p} from "libp2p";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score/index.js";
-import {NetworkCoreMetrics} from "../core/metrics.js";
 import {StatusCache} from "../statusCache.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
+import * as protocols from "./protocols.js";
 import {onOutgoingReqRespError} from "./score.js";
 import {
   GetReqRespHandlerFn,
@@ -32,7 +33,6 @@ import {
   requestSszTypeByMethod,
   responseSszTypeByMethod,
 } from "./types.js";
-import * as protocols from "./protocols.js";
 import {collectExactOneTyped} from "./utils/collect.js";
 
 export {getReqRespHandlers} from "./handlers/index.js";
@@ -156,7 +156,9 @@ export class ReqRespBeaconNode extends ReqResp {
 
     // Overwrite placeholder requestData from main thread with correct sequenceNumber
     if (method === ReqRespMethod.Ping) {
-      requestData = requestSszTypeByMethod[ReqRespMethod.Ping].serialize(this.metadataController.seqNumber);
+      requestData = requestSszTypeByMethod(this.config)[ReqRespMethod.Ping].serialize(
+        this.metadataController.seqNumber
+      );
     }
 
     // ReqResp outgoing request, emit from main thread to worker
@@ -209,7 +211,7 @@ export class ReqRespBeaconNode extends ReqResp {
     versions: number[],
     request: Req
   ): AsyncIterable<ResponseIncoming> {
-    const requestType = requestSszTypeByMethod[method];
+    const requestType = requestSszTypeByMethod(this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
     return this.sendRequestWithoutEncoding(peerId, method, versions, requestData);
   }

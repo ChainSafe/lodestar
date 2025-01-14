@@ -1,22 +1,22 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, vi, afterEach} from "vitest";
-import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
-import {generateProtoBlock} from "../../../utils/typeGenerator.js";
-import {testLogger} from "../../../utils/logger.js";
+import {ssz} from "@lodestar/types";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
-import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
+import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
+import {testLogger} from "../../../utils/logger.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
-describe("block archiver task", function () {
+describe("block archiver task", () => {
   const logger = testLogger();
 
   let dbStub: MockedBeaconDb;
   let forkChoiceStub: MockedBeaconChain["forkChoice"];
   let lightclientServer: MockedBeaconChain["lightClientServer"];
 
-  beforeEach(function () {
+  beforeEach(() => {
     const chain = getMockedBeaconChain();
     dbStub = getMockedBeaconDb();
     forkChoiceStub = chain.forkChoice;
@@ -30,7 +30,7 @@ describe("block archiver task", function () {
     vi.clearAllMocks();
   });
 
-  it("should archive finalized blocks", async function () {
+  it("should archive finalized blocks", async () => {
     const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue());
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(Buffer.from(blockBytes));
     // block i has slot i+1

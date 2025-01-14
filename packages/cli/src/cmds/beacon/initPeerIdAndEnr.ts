@@ -1,17 +1,17 @@
 import fs from "node:fs";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
+import {SignableENR, createPrivateKeyFromPeerId} from "@chainsafe/enr";
 import type {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {createPrivateKeyFromPeerId, SignableENR} from "@chainsafe/enr";
 import {Logger, fromHex} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {intToBytes} from "@lodestar/utils";
 
 import {exportToJSON, readPeerId} from "../../config/index.js";
-import {writeFile600Perm} from "../../util/file.js";
 import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
+import {writeFile600Perm} from "../../util/file.js";
 import {BeaconArgs} from "./options.js";
 
 /**
@@ -134,6 +134,7 @@ export function overwriteEnrWithCliArgs(
       enr.seq = preSeq + BigInt(1);
     }
     // invalidate cached signature
+    // biome-ignore lint/complexity/useLiteralKeys: `_signature` is a private attribute
     delete enr["_signature"];
   }
 }
@@ -166,14 +167,14 @@ export async function initPeerIdAndEnr(
     // attempt to read stored peer id
     try {
       peerId = await readPeerId(peerIdFile);
-    } catch (e) {
+    } catch (_e) {
       logger.warn("Unable to read peerIdFile, creating a new peer id");
       return {...(await newPeerIdAndENR()), newEnr: true};
     }
     // attempt to read stored enr
     try {
       enr = SignableENR.decodeTxt(fs.readFileSync(enrFile, "utf-8"), createPrivateKeyFromPeerId(peerId).privateKey);
-    } catch (e) {
+    } catch (_e) {
       logger.warn("Unable to decode stored local ENR, creating a new ENR");
       enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
       return {peerId, enr, newEnr: true};
@@ -199,10 +200,10 @@ export async function initPeerIdAndEnr(
     writeFile600Perm(enrFile, enr.encodeTxt());
     const nodeId = fromHex(enr.nodeId);
     return {peerId, enr, nodeId};
-  } else {
-    const {peerId, enr} = await newPeerIdAndENR();
-    overwriteEnrWithCliArgs(config, enr, args, logger, {newEnr: true, bootnode});
-    const nodeId = fromHex(enr.nodeId);
-    return {peerId, enr, nodeId};
   }
+
+  const {peerId, enr} = await newPeerIdAndENR();
+  overwriteEnrWithCliArgs(config, enr, args, logger, {newEnr: true, bootnode});
+  const nodeId = fromHex(enr.nodeId);
+  return {peerId, enr, nodeId};
 }

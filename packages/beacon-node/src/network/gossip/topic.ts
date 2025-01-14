@@ -1,5 +1,4 @@
-import {phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {ForkDigestContext} from "@lodestar/config";
+import {ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -9,10 +8,11 @@ import {
   MAX_BLOBS_PER_BLOCK,
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
 } from "@lodestar/params";
+import {Attestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
-import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap, SSZTypeOfGossipTopic} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
+import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
 export interface IGossipTopicCache {
   getTopic(topicStr: string): GossipTopic;
@@ -75,13 +75,12 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee:
       return `${topic.type}_${topic.subnet}`;
     case GossipType.blob_sidecar:
-      return `${topic.type}_${topic.index}`;
+      return `${topic.type}_${topic.subnet}`;
     case GossipType.data_column_sidecar:
       return `${topic.type}_${topic.index}`;
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getGossipSSZType(topic: GossipTopic) {
   switch (topic.type) {
     case GossipType.beacon_block:
@@ -92,13 +91,13 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.data_column_sidecar:
       return ssz.peerdas.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
-      return ssz.phase0.SignedAggregateAndProof;
+      return sszTypesFor(topic.fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return ssz.phase0.Attestation;
+      return sszTypesFor(topic.fork).Attestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
-      return ssz.phase0.AttesterSlashing;
+      return sszTypesFor(topic.fork).AttesterSlashing;
     case GossipType.voluntary_exit:
       return ssz.phase0.SignedVoluntaryExit;
     case GossipType.sync_committee_contribution_and_proof:
@@ -125,7 +124,7 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
   const sszType = getGossipSSZType(topic);
   try {
     return sszType.deserialize(serializedData) as SSZTypeOfGossipTopic<T>;
-  } catch (e) {
+  } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
 }
@@ -133,17 +132,17 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 /**
  * Deserialize a gossip serialized data into an Attestation object.
  */
-export function sszDeserializeAttestation(serializedData: Uint8Array): phase0.Attestation {
+export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   try {
-    return ssz.phase0.Attestation.deserialize(serializedData);
-  } catch (e) {
+    return sszTypesFor(fork).Attestation.deserialize(serializedData);
+  } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
 }
 
 // Parsing
 
-const gossipTopicRegex = new RegExp("^/eth2/(\\w+)/(\\w+)/(\\w+)");
+const gossipTopicRegex = /^\/eth2\/(\w+)\/(\w+)\/(\w+)/;
 
 /**
  * Parse a `GossipTopic` object from its stringified form.
@@ -188,10 +187,10 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
     }
 
     if (gossipTypeStr.startsWith(GossipType.blob_sidecar)) {
-      const indexStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the index
-      const index = parseInt(indexStr, 10);
-      if (Number.isNaN(index)) throw Error(`index ${indexStr} is not a number`);
-      return {type: GossipType.blob_sidecar, index, fork, encoding};
+      const subnetStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
+      const subnet = parseInt(subnetStr, 10);
+      if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
+      return {type: GossipType.blob_sidecar, subnet, fork, encoding};
     }
 
     if (gossipTypeStr.startsWith(GossipType.data_column_sidecar)) {
@@ -212,6 +211,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
  * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
  */
 export function getCoreTopicsAtFork(
+  config: ChainConfig,
   fork: ForkName,
   opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
@@ -231,10 +231,10 @@ export function getCoreTopicsAtFork(
     }
   }
 
-  // After Deneb also track blob_sidecar_{index}
+  // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    for (let index = 0; index < MAX_BLOBS_PER_BLOCK; index++) {
-      topics.push({type: GossipType.blob_sidecar, index});
+    for (let subnet = 0; subnet < config.BLOB_SIDECAR_SUBNET_COUNT; subnet++) {
+      topics.push({type: GossipType.blob_sidecar, subnet});
     }
   }
 

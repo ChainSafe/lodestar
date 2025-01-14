@@ -2,15 +2,15 @@ import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
-import {defaultNetwork, GlobalArgs} from "../../../options/index.js";
-import {assertValidPubkeysHex, parseRange, YargsError} from "../../../util/index.js";
-import {getAccountPaths} from "../paths.js";
-import {IValidatorCliArgs} from "../options.js";
-import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
-import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions.js";
+import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
+import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
+import {YargsError, assertValidPubkeysHex, parseRange} from "../../../util/index.js";
 import {showProgress} from "../../../util/progress.js";
+import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions.js";
+import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
+import {IValidatorCliArgs} from "../options.js";
+import {getAccountPaths} from "../paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
@@ -53,13 +53,12 @@ export async function getSignersFromArgs(
     // Using a remote signer with TESTNETS
     if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
       return getRemoteSigners(args);
-    } else {
-      return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
     }
+    return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
   }
 
   // UNSAFE, ONLY USE FOR TESTNETS - Derive keys directly from a mnemonic
-  else if (args.fromMnemonic) {
+  if (args.fromMnemonic) {
     if (network === defaultNetwork) {
       throw new YargsError("fromMnemonic must only be used in testnets");
     }
@@ -76,7 +75,7 @@ export async function getSignersFromArgs(
   }
 
   // Import JSON keystores and run
-  else if (args.importKeystores) {
+  if (args.importKeystores) {
     const keystoreDefinitions = importKeystoreDefinitionsFromExternalDir({
       keystoresPath: args.importKeystores,
       password: await readPassphraseOrPrompt(args),
@@ -98,52 +97,50 @@ export async function getSignersFromArgs(
       ignoreLockFile: args.force,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "imported_keystores.cache"),
-      disableThreadPool: args["disableKeystoresThreadPool"],
+      disableThreadPool: args.disableKeystoresThreadPool,
       logger,
       signal,
     });
   }
 
   // Remote keys are declared manually or will be fetched from external signer
-  else if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
+  if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
     return getRemoteSigners(args);
   }
 
   // Read keys from local account manager
-  else {
-    const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
+  const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
 
-    // Read and decrypt local keystores, imported via keymanager api or import cmd
-    const keystoreDefinitions = persistedKeysBackend.readAllKeystores();
+  // Read and decrypt local keystores, imported via keymanager api or import cmd
+  const keystoreDefinitions = persistedKeysBackend.readAllKeystores();
 
-    const needle = showProgress({
-      total: keystoreDefinitions.length,
-      frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
-      signal,
-      progress: ({ratePerSec, percentage, current, total}) => {
-        logger.info(
-          `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total} rate=${(
-            ratePerSec * 60
-          ).toFixed(2)}keys/m`
-        );
-      },
-    });
+  const needle = showProgress({
+    total: keystoreDefinitions.length,
+    frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
+    signal,
+    progress: ({ratePerSec, percentage, current, total}) => {
+      logger.info(
+        `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total} rate=${(
+          ratePerSec * 60
+        ).toFixed(2)}keys/m`
+      );
+    },
+  });
 
-    const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
-      ignoreLockFile: args.force,
-      onDecrypt: needle,
-      cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
-      disableThreadPool: args["disableKeystoresThreadPool"],
-      logger,
-      signal,
-    });
+  const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
+    ignoreLockFile: args.force,
+    onDecrypt: needle,
+    cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
+    disableThreadPool: args.disableKeystoresThreadPool,
+    logger,
+    signal,
+  });
 
-    // Read local remote keys, imported via keymanager api
-    const signerDefinitions = persistedKeysBackend.readAllRemoteKeys();
-    const remoteSigners = signerDefinitions.map(({url, pubkey}): Signer => ({type: SignerType.Remote, url, pubkey}));
+  // Read local remote keys, imported via keymanager api
+  const signerDefinitions = persistedKeysBackend.readAllRemoteKeys();
+  const remoteSigners = signerDefinitions.map(({url, pubkey}): Signer => ({type: SignerType.Remote, url, pubkey}));
 
-    return [...keystoreSigners, ...remoteSigners];
-  }
+  return [...keystoreSigners, ...remoteSigners];
 }
 
 export function getSignerPubkeyHex(signer: Signer): string {

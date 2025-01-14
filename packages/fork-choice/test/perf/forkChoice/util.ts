@@ -1,14 +1,14 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
+import {computeTotalBalance} from "../../../src/forkChoice/store.js";
 import {
+  DataAvailabilityStatus,
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
-  ProtoBlock,
   ProtoArray,
-  DataAvailabilityStatus,
+  ProtoBlock,
 } from "../../../src/index.js";
-import {computeTotalBalance} from "../../../src/forkChoice/store.js";
 
 const genesisSlot = 0;
 const genesisEpoch = 0;
@@ -41,7 +41,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     genesisSlot
   );
 
-  const balances = new Uint8Array(Array.from({length: opts.initialValidatorCount}, () => 32));
+  const balances = new Uint16Array(Array.from({length: opts.initialValidatorCount}, () => 32));
 
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot,

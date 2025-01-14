@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {Encoding, ProtocolAttributes} from "../../../src/index.js";
 import {formatProtocolID, parseProtocolID as reqrespParseProtocolID} from "../../../src/utils/index.js";
 

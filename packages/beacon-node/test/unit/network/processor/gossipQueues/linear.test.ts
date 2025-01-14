@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 import {LinearGossipQueue} from "../../../../../src/network/processor/gossipQueues/linear.js";
 import {DropType} from "../../../../../src/network/processor/gossipQueues/types.js";
 import {QueueType} from "../../../../../src/util/queue/index.js";

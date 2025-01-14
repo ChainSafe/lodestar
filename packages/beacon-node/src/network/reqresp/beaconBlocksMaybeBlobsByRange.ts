@@ -4,7 +4,6 @@ import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, peerdas, ssz} from "@lode
 import {ForkSeq, NUMBER_OF_COLUMNS, ForkName} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
-
 import {
   BlobsSource,
   BlockInput,
@@ -15,6 +14,7 @@ import {
   DataColumnsSource,
   BlockInputType,
   getBlockInputDataColumns,
+  BlockInputDataBlobs,
 } from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithBytes, WithOptionalBytes} from "../interface.js";
@@ -60,6 +60,7 @@ export async function beaconBlocksMaybeBlobsByRange(
     return {blocks, pendingDataColumns: null};
   }
 
+  // From Deneb
   // Only request blobs if they are recent enough
   else if (computeEpochAtSlot(startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
     if (forkSeq < ForkSeq.peerdas) {
@@ -144,10 +145,9 @@ export async function beaconBlocksMaybeBlobsByRange(
     }
   }
 
-  // Post Deneb but old blobs
-  else {
-    throw Error("Cannot sync blobs outside of blobs prune window");
-  }
+  // Data is out of range, only request blocks
+  const blocks = await network.sendBeaconBlocksByRange(peerId, request);
+  return blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange, block.bytes));
 }
 
 // Assumes that the blobs are in the same sequence as blocks, doesn't require block to be sorted
@@ -178,6 +178,7 @@ export function matchBlockWithBlobs(
 
       let blobSidecar: deneb.BlobSidecar;
       while (
+        // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
         (blobSidecar = allBlobSidecars[blobSideCarIndex])?.signedBlockHeader.message.slot === block.data.message.slot
       ) {
         blobSidecars.push(blobSidecar);

@@ -1,6 +1,4 @@
-import {describe, it, expect, beforeEach, vi, MockedObject, afterEach} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
-import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_SUBNET_SUBSCRIPTION,
@@ -8,14 +6,17 @@ import {
   SLOTS_PER_EPOCH,
   SUBNETS_PER_NODE,
 } from "@lodestar/params";
+import {ZERO_HASH} from "@lodestar/state-transition";
 import {getCurrentSlot} from "@lodestar/state-transition";
+import {SubnetID} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
-import {Clock, IClock} from "../../../../src/util/clock.js";
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Eth2Gossipsub} from "../../../../src/network/gossip/gossipsub.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
-import {testLogger} from "../../../utils/logger.js";
 import {AttnetsService} from "../../../../src/network/subnets/attnetsService.js";
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
+import {Clock, IClock} from "../../../../src/util/clock.js";
+import {testLogger} from "../../../utils/logger.js";
 
 vi.mock("../../../../src/network/gossip/gossipsub.js");
 
@@ -26,7 +27,6 @@ describe("AttnetsService", () => {
     "be"
   );
   const ALTAIR_FORK_EPOCH = 100;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createBeaconConfig({ALTAIR_FORK_EPOCH}, ZERO_HASH);
   // const {SECONDS_PER_SLOT} = config;
   let service: AttnetsService;
@@ -36,7 +36,7 @@ describe("AttnetsService", () => {
   let clock: IClock;
   const logger = testLogger();
 
-  beforeEach(function () {
+  beforeEach(() => {
     vi.useFakeTimers({now: Date.now()});
     gossipStub = vi.mocked(new Eth2Gossipsub({} as any, {} as any));
     vi.spyOn(gossipStub, "subscribeTopic").mockReturnValue(undefined);
@@ -78,8 +78,8 @@ describe("AttnetsService", () => {
     expect(gossipStub.subscribeTopic).toBeCalledWith(expect.objectContaining({fork: ForkName.phase0}));
     expect(gossipStub.subscribeTopic).not.toBeCalledWith({fork: ForkName.altair});
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2);
-    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: number}).subnet;
-    const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: number}).subnet;
+    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;
+    const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: SubnetID}).subnet;
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
     vi.advanceTimersByTime(config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * (ALTAIR_FORK_EPOCH - 2) * 1000);
     service.subscribeSubnetsToNextFork(ForkName.altair);
@@ -106,8 +106,8 @@ describe("AttnetsService", () => {
 
   it("should not subscribe to new short lived subnet if not aggregator", () => {
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
-    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: number}).subnet;
-    const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: number}).subnet;
+    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;
+    const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: SubnetID}).subnet;
     // should subscribe to new short lived subnet
     const newSubnet = 63;
     expect(newSubnet).not.toBe(firstSubnet);
@@ -125,8 +125,8 @@ describe("AttnetsService", () => {
 
   it("should subscribe to new short lived subnet if aggregator", () => {
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
-    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: number}).subnet;
-    const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: number}).subnet;
+    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;
+    const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: SubnetID}).subnet;
     // should subscribe to new short lived subnet
     const newSubnet = 63;
     expect(newSubnet).not.toBe(firstSubnet);
@@ -150,7 +150,7 @@ describe("AttnetsService", () => {
 
   it("should not subscribe to existing short lived subnet if aggregator", () => {
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
-    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: number}).subnet;
+    const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;
     // should not subscribe to existing short lived subnet
     const subscription: CommitteeSubscription = {
       validatorIndex: 2023,

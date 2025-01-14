@@ -1,5 +1,5 @@
-import type {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
+import type {FastifyInstance} from "fastify";
 import {ApplicationMethods, FastifyRoute} from "../../utils/server/index.js";
 import {Endpoints} from "../routes/index.js";
 
@@ -25,7 +25,7 @@ export function registerRoutes(
     // Enforces that we are declaring routes for every routeId in `Endpoints`
     [K in keyof Endpoints]: () => {
       // The Endpoints are enforced in each getRoutes return type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       [K2 in keyof Endpoints[K]]: FastifyRoute<any>;
     };
   } = {

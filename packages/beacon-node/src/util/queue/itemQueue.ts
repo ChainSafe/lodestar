@@ -1,13 +1,14 @@
-import {LinkedList} from "../array.js";
 import {callInNextEventLoop, nextEventLoop} from "../../util/eventLoop.js";
+import {LinkedList} from "../array.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
-import {defaultQueueOpts, QueueMetrics, JobQueueOpts, QueueType} from "./options.js";
+import {JobQueueOpts, QueueMetrics, QueueType, defaultQueueOpts} from "./options.js";
 
 /**
  * JobQueue that stores arguments in the job array instead of closures.
  * Supports a single itemProcessor, for arbitrary functions use the JobFnQueue
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export class JobItemQueue<Args extends any[], R> {
   private readonly opts: Required<JobQueueOpts>;
   /**

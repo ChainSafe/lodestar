@@ -1,5 +1,5 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {BitArray} from "@chainsafe/ssz";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 
@@ -12,7 +12,7 @@ describe("aggregationBits", () => {
   let indexes: number[];
   let bitlistTree: BitArray;
 
-  before(function () {
+  before(() => {
     const aggregationBits = BitArray.fromBoolArray(Array.from({length: len}, () => true));
     bitlistTree = ssz.phase0.CommitteeBits.toViewDU(aggregationBits);
     indexes = Array.from({length: len}, () => 165432);

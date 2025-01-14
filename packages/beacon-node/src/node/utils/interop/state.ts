@@ -1,8 +1,8 @@
-import {Bytes32, phase0, ssz, sszTypesFor, TimeSeconds} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";
 import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
-import {ForkName, GENESIS_SLOT} from "@lodestar/params";
+import {Bytes32, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
 
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
@@ -20,6 +20,7 @@ export type InteropStateOpts = {
   withEth1Credentials?: boolean;
 };
 
+// TODO: (@matthewkeil) - Only used by initDevState.  Consider combining into that function
 export function getInteropState(
   config: ChainForkConfig,
   {

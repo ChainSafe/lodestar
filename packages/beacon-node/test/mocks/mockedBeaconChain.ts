@@ -1,22 +1,22 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {vi, Mocked, Mock} from "vitest";
-import {config as defaultConfig} from "@lodestar/config/default";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkChoice, ProtoBlock, EpochDifference} from "@lodestar/fork-choice";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
+import {Mock, Mocked, vi} from "vitest";
+import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
-import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
-import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
-import {OpPool, AggregatedAttestationPool} from "../../src/chain/opPools/index.js";
-import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
-import {Clock} from "../../src/util/clock.js";
+import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
-import {getMockedLogger} from "./loggerMock.js";
+import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
+import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
+import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
+import {Clock} from "../../src/util/clock.js";
 import {getMockedClock} from "./clock.js";
+import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
@@ -27,6 +27,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   eth1: Mocked<Eth1ForBlockProduction>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
+  syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
@@ -94,10 +95,17 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
     };
   });
 
+  const SyncContributionAndProofPool = vi.fn().mockImplementation(() => {
+    return {
+      getAggregate: vi.fn(),
+    };
+  });
+
   return {
     ...mod,
     OpPool,
     AggregatedAttestationPool,
+    SyncContributionAndProofPool,
   };
 });
 
@@ -120,15 +128,16 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getClientVersion: vi.fn(),
       },
       executionBuilder: {},
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
-      aggregatedAttestationPool: new AggregatedAttestationPool(),
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      aggregatedAttestationPool: new AggregatedAttestationPool(config),
+      syncContributionAndProofPool: new SyncContributionAndProofPool(),
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),
+      pubkey2index: new PubkeyIndexMap(),
+      index2pubkey: [],
       produceCommonBlockBody: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
@@ -138,6 +147,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
       getHeadState: vi.fn(),
+      getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
       processBlock: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
@@ -169,7 +179,6 @@ export type MockedBeaconChainOptions = {
 
 export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): MockedBeaconChain {
   const {clock, genesisTime, config} = opts ?? {};
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-expect-error
   return new BeaconChain({
     clock: clock ?? "fake",

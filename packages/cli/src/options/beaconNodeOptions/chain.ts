@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {DEFAULT_STATE_ARCHIVE_MODE, IBeaconNodeOptions, StateArchiveMode, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {
@@ -23,12 +23,13 @@ export type ChainArgs = {
   "chain.trustedSetupPrecompute"?: number;
   "chain.trustedSetup"?: string;
   "safe-slots-to-import-optimistically": number;
-  "chain.archiveStateEpochFrequency": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
+  "chain.archiveStateEpochFrequency": number;
   "chain.archiveBlobEpochs"?: number;
+  "chain.stateArchiveMode": StateArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
@@ -37,13 +38,13 @@ export type ChainArgs = {
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
-    suggestedFeeRecipient: args["suggestedFeeRecipient"],
+    suggestedFeeRecipient: args.suggestedFeeRecipient,
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
     proposerBoostReorg: args["chain.proposerBoostReorg"],
@@ -56,13 +57,14 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     trustedSetupPrecompute: args["chain.trustedSetupPrecompute"],
     trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
-    archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
-    emitPayloadAttributes: args["emitPayloadAttributes"],
-    broadcastValidationStrictness: args["broadcastValidationStrictness"],
+    emitPayloadAttributes: args.emitPayloadAttributes,
+    broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
+    archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveBlobEpochs: args["chain.archiveBlobEpochs"],
+    stateArchiveMode: args["chain.stateArchiveMode"] ?? defaultOptions.chain.stateArchiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
@@ -216,6 +218,15 @@ Will double processing times. Use only for debugging purposes.",
     description: "Minimum number of epochs between archived states",
     default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
+    group: "chain",
+  },
+
+  "chain.stateArchiveMode": {
+    hidden: true,
+    choices: Object.values(StateArchiveMode),
+    description: `Strategy to manage archive states, only support ${DEFAULT_STATE_ARCHIVE_MODE} at this time`,
+    default: defaultOptions.chain.stateArchiveMode,
+    type: "string",
     group: "chain",
   },
 

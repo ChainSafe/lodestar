@@ -1,11 +1,11 @@
-import {describe, it, expect} from "vitest";
-import deepmerge from "deepmerge";
 import {getEnvLogger} from "@lodestar/logger/env";
+import deepmerge from "deepmerge";
+import {describe, expect, it} from "vitest";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
+import {hexToBuffer} from "../../../src/utils/conversion.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/validation.js";
 import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";
 import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
-import {hexToBuffer} from "../../../src/utils/conversion.js";
 
 const address = eoaProof.request.params[0] as string;
 const validAccountProof = eoaProof.dependentRequests[0].response.result as unknown as ELProof;

@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
-import {ChainConfig} from "../types.js";
+import {fromHex as b} from "@lodestar/utils";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Gnosis beacon chain config:
 // https://github.com/gnosischain/configs/blob/main/mainnet/config.yaml

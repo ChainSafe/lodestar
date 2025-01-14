@@ -1,9 +1,9 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
-import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
+import {fromHex} from "@lodestar/utils";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
+import {Eth1DataAndDeposits, IEth1ForBlockProduction, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
 import {Eth1Options} from "./options.js";
 import {Eth1Provider} from "./provider/eth1Provider.js";
 export {Eth1Provider};
@@ -53,9 +53,8 @@ export function initializeEth1ForBlockProduction(
       logger: modules.logger,
       signal: modules.signal,
     });
-  } else {
-    return new Eth1ForBlockProductionDisabled();
   }
+  return new Eth1ForBlockProductionDisabled();
 }
 
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
@@ -85,14 +84,13 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     if (this.eth1DepositDataTracker === null) {
       return {eth1Data: state.eth1Data, deposits: []};
-    } else {
-      return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
     }
+    return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
   }
 
   async getTerminalPowBlock(): Promise<Root | null> {
     const block = await this.eth1MergeBlockTracker.getTerminalPowBlock();
-    return block && fromHexString(block.blockHash);
+    return block && fromHex(block.blockHash);
   }
 
   getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
@@ -104,7 +102,11 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   startPollingMergeBlock(): void {
-    return this.eth1MergeBlockTracker.startPollingMergeBlock();
+    this.eth1MergeBlockTracker.startPollingMergeBlock();
+  }
+
+  stopPollingEth1Data(): void {
+    this.eth1DepositDataTracker?.stopPollingEth1Data();
   }
 }
 
@@ -138,6 +140,10 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   }
 
   startPollingMergeBlock(): void {
+    // Ignore
+  }
+
+  stopPollingEth1Data(): void {
     // Ignore
   }
 }

@@ -1,43 +1,46 @@
-import {Libp2p as ILibp2p} from "libp2p";
+import {Identify} from "@chainsafe/libp2p-identify";
 import {
-  Libp2pEvents,
   ComponentLogger,
-  NodeInfo,
-  ConnectionProtector,
   ConnectionGater,
+  ConnectionProtector,
   ContentRouting,
-  TypedEventTarget,
+  Libp2pEvents,
   Metrics,
+  NodeInfo,
   PeerId,
   PeerRouting,
   PeerStore,
+  TypedEventTarget,
   Upgrader,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
-import type {Datastore} from "interface-datastore";
-import {Identify} from "@chainsafe/libp2p-identify";
 import {
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
   SlotRootHex,
+  SubnetID,
+  WithBytes,
   altair,
   capella,
   deneb,
   phase0,
   peerdas,
 } from "@lodestar/types";
+import type {Datastore} from "interface-datastore";
+import {Libp2p as ILibp2p} from "libp2p";
 import {PeerIdStr} from "../util/peerId.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {INetworkEventBus} from "./events.js";
+import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";
-import {PendingGossipsubMessage} from "./processor/types.js";
 import {PeerAction} from "./peers/index.js";
 import {NodeId} from "./subnets/interface.js";
+import {PendingGossipsubMessage} from "./processor/types.js";
 
-export type WithBytes<T> = {data: T; bytes: Uint8Array};
 export type WithOptionalBytes<T> = {data: T; bytes: Uint8Array | null};
 
 /**
@@ -62,7 +65,7 @@ export interface INetwork extends INetworkCorePublic {
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
-  shouldAggregate(subnet: number, slot: Slot): boolean;
+  shouldAggregate(subnet: SubnetID, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
   searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
   // ReqResp
@@ -95,7 +98,7 @@ export interface INetwork extends INetworkCorePublic {
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;
   publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number>;
-  publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<number>;
+  publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number>;
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;

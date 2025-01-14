@@ -1,15 +1,15 @@
 import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, altair, capella} from "@lodestar/types";
-import {ISignatureSet} from "../util/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
-import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {ISignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
+import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
+import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
-import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 
 export * from "./attesterSlashings.js";
 export * from "./indexedAttestation.js";
@@ -31,6 +31,9 @@ export function getBlockSignatureSets(
     skipProposerSignature?: boolean;
   }
 ): ISignatureSet[] {
+  // fork based validations
+  const fork = state.config.getForkSeq(signedBlock.message.slot);
+
   const signatureSets = [
     getRandaoRevealSignatureSet(state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(state, signedBlock),
@@ -42,9 +45,6 @@ export function getBlockSignatureSets(
   if (!opts?.skipProposerSignature) {
     signatureSets.push(getBlockProposerSignatureSet(state, signedBlock));
   }
-
-  // fork based validations
-  const fork = state.config.getForkSeq(signedBlock.message.slot);
 
   // Only after altair fork, validate tSyncCommitteeSignature
   if (fork >= ForkSeq.altair) {

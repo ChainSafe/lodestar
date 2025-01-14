@@ -8,26 +8,27 @@ import {
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
+import {routes} from "@lodestar/api";
+import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAltair,
+  RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
-  RootCache,
 } from "@lodestar/state-transition";
-import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
-import {isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {toCheckpointHex} from "../stateCache/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
+import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {toCheckpointHex} from "../stateCache/index.js";
+import {AttestationImportOpt, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
@@ -69,13 +70,13 @@ export async function importBlock(
   const {block, source} = blockInput;
   const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
-  const blockRootHex = toHexString(blockRoot);
+  const blockRootHex = toRootHex(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(blockSlot);
-  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const fork = this.config.getForkSeq(blockSlot);
 
   // this is just a type assertion since blockinput with dataPromise type will not end up here
   if (blockInput.type === BlockInputType.dataPromise) {
@@ -160,10 +161,11 @@ export async function importBlock(
 
     for (const attestation of attestations) {
       try {
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
+        // TODO Electra: figure out how to reuse the attesting indices computed from state transition
+        const indexedAttestation = postState.epochCtx.getIndexedAttestation(fork, attestation);
         const {target, beaconBlockRoot} = attestation.data;
 
-        const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+        const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         this.seenAggregatedAttestations.add(
           target.epoch,
           attDataRoot,
@@ -248,7 +250,7 @@ export async function importBlock(
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();
-  const newHead = this.recomputeForkChoiceHead();
+  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
@@ -374,12 +376,6 @@ export async function importBlock(
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
-  if (parentEpoch < blockEpoch) {
-    // current epoch and previous epoch are likely cached in previous states
-    this.shufflingCache.processState(postState, postState.epochCtx.nextShuffling.epoch);
-    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
-  }
-
   if (blockSlot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
@@ -411,9 +407,9 @@ export async function importBlock(
       const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
       if (finalizedEpoch > preFinalizedEpoch) {
         this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-          block: toHexString(finalizedCheckpoint.root),
+          block: toRootHex(finalizedCheckpoint.root),
           epoch: finalizedCheckpoint.epoch,
-          state: toHexString(checkpointState.hashTreeRoot()),
+          state: toRootHex(checkpointState.hashTreeRoot()),
           executionOptimistic: false,
         });
         this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));

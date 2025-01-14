@@ -1,9 +1,9 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got, {RequestError} from "got";
-import yaml from "js-yaml";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
+import got, {RequestError} from "got";
+import yaml from "js-yaml";
 import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
@@ -109,7 +109,6 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   api.lighthouse = {
     async getPeers() {
       const res = await got(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       return {body: JSON.parse(res.body), status: res.statusCode};
     },
   };

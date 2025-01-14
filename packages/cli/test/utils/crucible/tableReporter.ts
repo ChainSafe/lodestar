@@ -33,9 +33,8 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     // Print slots once, may be called twice for missed block timer
     if (slot <= this.lastPrintedSlot) {
       return;
-    } else {
-      this.lastPrintedSlot = slot;
     }
+    this.lastPrintedSlot = slot;
 
     if (slot <= 0) {
       return;
@@ -59,12 +58,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         const participation: {head: number; source: number; target: number}[] = [];
 
         for (const node of nodes) {
-          participation.push(
-            stores["attestationParticipation"][node.beacon.id][slot] ?? {head: 0, source: 0, target: 0}
-          );
+          participation.push(stores.attestationParticipation[node.beacon.id][slot] ?? {head: 0, source: 0, target: 0});
           const syncCommitteeParticipation: number[] = [];
           for (let slot = startSlot; slot <= endSlot; slot++) {
-            syncCommitteeParticipation.push(stores["syncCommitteeParticipation"][node.beacon.id][slot] ?? 0);
+            syncCommitteeParticipation.push(stores.syncCommitteeParticipation[node.beacon.id][slot] ?? 0);
           }
           nodesSyncParticipationAvg.push(avg(syncCommitteeParticipation));
         }
@@ -88,19 +85,19 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     const peersCount: number[] = [];
 
     for (const node of nodes) {
-      const finalized = stores["finalized"][node.beacon.id][slot];
+      const finalized = stores.finalized[node.beacon.id][slot];
       if (!isNullish(finalized)) finalizedSlots.push(finalized);
 
-      const inclusionDelay = stores["inclusionDelay"][node.beacon.id][slot];
+      const inclusionDelay = stores.inclusionDelay[node.beacon.id][slot];
       if (!isNullish(inclusionDelay)) inclusionDelays.push(inclusionDelay);
 
-      const attestationsCount = stores["attestationsCount"][node.beacon.id][slot];
+      const attestationsCount = stores.attestationsCount[node.beacon.id][slot];
       if (!isNullish(attestationsCount)) attestationCounts.push(attestationsCount);
 
-      const head = stores["head"][node.beacon.id][slot];
+      const head = stores.head[node.beacon.id][slot];
       if (!isNullish(head)) heads.push(head);
 
-      const connectedPeerCount = stores["connectedPeerCount"][node.beacon.id][slot];
+      const connectedPeerCount = stores.connectedPeerCount[node.beacon.id][slot];
       if (!isNullish(connectedPeerCount)) peersCount.push(connectedPeerCount);
     }
 

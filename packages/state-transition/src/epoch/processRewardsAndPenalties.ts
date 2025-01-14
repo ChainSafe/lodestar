@@ -28,7 +28,8 @@ export function processRewardsAndPenalties(
   const balances = state.balances.getAll();
 
   for (let i = 0, len = rewards.length; i < len; i++) {
-    balances[i] += rewards[i] - penalties[i] - (slashingPenalties[i] ?? 0);
+    const result = balances[i] + rewards[i] - penalties[i] - (slashingPenalties[i] ?? 0);
+    balances[i] = Math.max(result, 0);
   }
 
   // important: do not change state one balance at a time. Set them all at once, constructing the tree in one go

@@ -1,12 +1,12 @@
-import {Logger} from "@lodestar/utils";
-import {RootHex, Slot, phase0} from "@lodestar/types";
-import {BeaconConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
+import {RootHex, Slot, phase0} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {BlockInput, BlockInputType, NullBlockInput} from "../chain/blocks/types.js";
-import {INetwork} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
-import {Metrics} from "../metrics/index.js";
 import {IBeaconDb} from "../db/index.js";
+import {Metrics} from "../metrics/index.js";
+import {INetwork} from "../network/index.js";
 import {SyncChainDebugState} from "./range/chain.js";
 export type {SyncChainDebugState};
 

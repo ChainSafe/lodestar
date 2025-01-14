@@ -1,10 +1,10 @@
+import {unmarshalPrivateKey, unmarshalPublicKey} from "@libp2p/crypto/keys";
 import type {PeerId} from "@libp2p/interface";
 import {peerIdFromBytes} from "@libp2p/peer-id";
 import {createFromPrivKey, createFromPubKey} from "@libp2p/peer-id-factory";
-import {unmarshalPrivateKey, unmarshalPublicKey} from "@libp2p/crypto/keys";
 import {fromString as uint8ArrayFromString} from "uint8arrays/from-string";
 import {toString as uint8ArrayToString} from "uint8arrays/to-string";
-import {writeFile600Perm, readFile} from "../util/index.js";
+import {readFile, writeFile600Perm} from "../util/index.js";
 
 // Peer id to / from JSON taken from peer-id-factory
 // See https://github.com/libp2p/js-libp2p-peer-id/pull/9 for more details
@@ -14,7 +14,8 @@ async function createFromParts(multihash: Uint8Array, privKey?: Uint8Array, pubK
     const key = await unmarshalPrivateKey(privKey);
 
     return createFromPrivKey(key);
-  } else if (pubKey != null) {
+  }
+  if (pubKey != null) {
     const key = unmarshalPublicKey(pubKey);
 
     return createFromPubKey(key);

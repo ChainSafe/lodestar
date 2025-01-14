@@ -45,7 +45,6 @@ function testRunnerMemoryBpi(testCases: {getInstance: (bytes: number) => unknown
       convergeFactor: 0.2 / 100,
     });
 
-    // eslint-disable-next-line no-console
     console.log(`${id.padEnd(longestId)} - ${bpi.toFixed(1)} bytes / instance`);
   }
 }

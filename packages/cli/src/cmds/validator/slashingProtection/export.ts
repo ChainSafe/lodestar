@@ -1,17 +1,16 @@
 import path from "node:path";
-import {toHexString} from "@chainsafe/ssz";
-import {InterchangeFormatVersion} from "@lodestar/validator";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {CliCommand} from "@lodestar/utils";
-import {YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
-import {parseLoggerArgs} from "../../../util/logger.js";
+import {CliCommand, toPubkeyHex} from "@lodestar/utils";
+import {InterchangeFormatVersion} from "@lodestar/validator";
+import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
+import {YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
+import {parseLoggerArgs} from "../../../util/logger.js";
 import {AccountValidatorArgs} from "../options.js";
-import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {getValidatorPaths} from "../paths.js";
-import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
+import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 
 type ExportArgs = {
   file: string;
@@ -44,8 +43,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
         coerce: (pubkeys: string[]): string[] =>
           // Parse ["0x11,0x22"] to ["0x11", "0x22"]
           pubkeys
-            .map((item) => item.split(","))
-            .flat(1)
+            .flatMap((item) => item.split(","))
             .map(ensure0xPrefix),
       },
     },
@@ -86,7 +84,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
           if (!isValidatePubkeyHex(pubkeyHex)) {
             throw new YargsError(`Invalid pubkey ${pubkeyHex}`);
           }
-          const existingPubkey = allPubkeys.find((pubkey) => toHexString(pubkey) === pubkeyHex);
+          const existingPubkey = allPubkeys.find((pubkey) => toPubkeyHex(pubkey) === pubkeyHex);
           if (!existingPubkey) {
             logger.warn("Pubkey not found in slashing protection db", {pubkey: pubkeyHex});
           } else {

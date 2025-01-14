@@ -1,7 +1,7 @@
 import {ChildProcess} from "node:child_process";
 import {Logger} from "@lodestar/logger";
+import {ChildProcessResolve, SpawnChildProcessOptions, execChildProcess, spawnChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
-import {SpawnChildProcessOptions, execChildProcess, spawnChildProcess, ChildProcessResolve} from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 const dockerNetworkIpRange = "192.168.0";
@@ -22,7 +22,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
       await execChildProcess(`docker network create --subnet ${dockerNetworkIpRange}.0/24 ${dockerNetworkName}`, {
         logger: this.logger,
       });
-    } catch {
+    } catch (_e) {
       // During multiple sim tests files the network might already exist
     }
   }
@@ -35,7 +35,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
           logger: this.logger,
         });
         return;
-      } catch {
+      } catch (_e) {
         await sleep(5000);
       }
     }

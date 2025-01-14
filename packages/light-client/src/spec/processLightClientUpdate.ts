@@ -1,9 +1,9 @@
+import {ChainForkConfig} from "@lodestar/config";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {LightClientUpdate, Slot, SyncPeriod} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee, sumBits} from "../utils/index.js";
-import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "./isBetterUpdate.js";
+import {LightClientUpdateSummary, isBetterUpdate, toLightClientUpdateSummary} from "./isBetterUpdate.js";
 import {ILightClientStore, MAX_SYNC_PERIODS_CACHE, SyncCommitteeFast} from "./store.js";
 import {getSafetyThreshold, isSyncCommitteeUpdate} from "./utils.js";
 import {validateLightClientUpdate} from "./validateLightClientUpdate.js";

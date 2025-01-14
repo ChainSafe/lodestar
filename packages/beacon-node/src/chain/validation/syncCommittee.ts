@@ -1,7 +1,7 @@
-import {toHexString} from "@chainsafe/ssz";
+import {SYNC_COMMITTEE_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair} from "@lodestar/types";
+import {SubnetID, altair} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";
@@ -14,10 +14,10 @@ type IndexInSubcommittee = number;
 export async function validateGossipSyncCommittee(
   chain: IBeaconChain,
   syncCommittee: altair.SyncCommitteeMessage,
-  subnet: number
+  subnet: SubnetID
 ): Promise<{indexInSubcommittee: IndexInSubcommittee}> {
   const {slot, validatorIndex, beaconBlockRoot} = syncCommittee;
-  const messageRoot = toHexString(beaconBlockRoot);
+  const messageRoot = toRootHex(beaconBlockRoot);
 
   const headState = chain.getHeadState();
   const indexInSubcommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
@@ -103,7 +103,7 @@ async function validateSyncCommitteeSigOnly(
 export function validateGossipSyncCommitteeExceptSig(
   chain: IBeaconChain,
   headState: CachedBeaconStateAllForks,
-  subnet: number,
+  subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubcommittee {
   const {slot, validatorIndex} = data;
@@ -144,7 +144,7 @@ export function validateGossipSyncCommitteeExceptSig(
  */
 function getIndexInSubcommittee(
   headState: CachedBeaconStateAllForks,
-  subnet: number,
+  subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubcommittee | null {
   const syncCommittee = headState.epochCtx.getIndexedSyncCommittee(data.slot);

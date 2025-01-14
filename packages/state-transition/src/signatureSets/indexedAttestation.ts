@@ -1,12 +1,12 @@
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {
+  ISignatureSet,
   computeSigningRoot,
   computeStartSlotAtEpoch,
   createAggregateSignatureSetFromComponents,
-  ISignatureSet,
 } from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 
 export function getAttestationDataSigningRoot(
   state: CachedBeaconStateAllForks,
@@ -41,7 +41,11 @@ export function getAttestationsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
+  // TODO: figure how to get attesting indices of an attestation once per block processing
   return signedBlock.message.body.attestations.map((attestation) =>
-    getIndexedAttestationSignatureSet(state, state.epochCtx.getIndexedAttestation(attestation))
+    getIndexedAttestationSignatureSet(
+      state,
+      state.epochCtx.getIndexedAttestation(state.config.getForkSeq(signedBlock.message.slot), attestation)
+    )
   );
 }

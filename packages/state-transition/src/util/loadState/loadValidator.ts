@@ -17,9 +17,8 @@ export function loadValidator(
       newValidatorValue[field] = seedValidator[field];
     }
     return ssz.phase0.Validator.toViewDU(newValidatorValue);
-  } else {
-    return ssz.phase0.Validator.deserializeToViewDU(newValidatorBytes);
   }
+  return ssz.phase0.Validator.deserializeToViewDU(newValidatorBytes);
 }
 
 /**

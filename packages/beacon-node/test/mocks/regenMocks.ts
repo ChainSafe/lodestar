@@ -1,4 +1,4 @@
-import {vi, Mocked} from "vitest";
+import {Mocked, vi} from "vitest";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 
 export type MockedQueuedStateRegenerator = Mocked<QueuedStateRegenerator>;

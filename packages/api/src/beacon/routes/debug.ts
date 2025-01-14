@@ -1,23 +1,22 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz, StringType, BeaconState} from "@lodestar/types";
+import {BeaconState, StringType, ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   WithVersion,
 } from "../../utils/codecs.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
 } from "../../utils/metadata.js";
+import {Schema} from "../../utils/schema.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
 import {WireFormat} from "../../utils/wireFormat.js";
-import {Schema} from "../../utils/schema.js";
 import {StateArgs} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -58,11 +57,34 @@ const DebugChainHeadType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+const ForkChoiceNodeType = new ContainerType(
+  {
+    slot: ssz.Slot,
+    blockRoot: stringType,
+    parentRoot: stringType,
+    justifiedEpoch: ssz.Epoch,
+    finalizedEpoch: ssz.Epoch,
+    weight: ssz.UintNum64,
+    validity: new StringType<"valid" | "invalid" | "optimistic">(),
+    executionBlockHash: stringType,
+  },
+  {jsonCase: "eth2"}
+);
+const ForkChoiceResponseType = new ContainerType(
+  {
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    forkChoiceNodes: ArrayOf(ForkChoiceNodeType),
+  },
+  {jsonCase: "eth2"}
+);
+
 const ProtoNodeListType = ArrayOf(ProtoNodeType);
 const DebugChainHeadListType = ArrayOf(DebugChainHeadType);
 
 type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
 type DebugChainHeadList = ValueOf<typeof DebugChainHeadListType>;
+type ForkChoiceResponse = ValueOf<typeof ForkChoiceResponseType>;
 
 export type Endpoints = {
   /**
@@ -74,6 +96,18 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     DebugChainHeadList,
+    EmptyMeta
+  >;
+
+  /**
+   * Retrieves all current fork choice context
+   */
+  getDebugForkChoice: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ForkChoiceResponse,
     EmptyMeta
   >;
 
@@ -113,6 +147,24 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         data: DebugChainHeadListType,
         meta: EmptyMetaCodec,
         onlySupport: WireFormat.json,
+      },
+    },
+    getDebugForkChoice: {
+      url: "/eth/v1/debug/fork_choice",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ForkChoiceResponseType,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
+        transform: {
+          toResponse: (data) => ({
+            ...(data as ForkChoiceResponse),
+          }),
+          fromResponse: (resp) => ({
+            data: resp as ForkChoiceResponse,
+          }),
+        },
       },
     },
     getProtoArrayNodes: {

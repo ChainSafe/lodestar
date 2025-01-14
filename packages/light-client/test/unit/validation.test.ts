@@ -1,9 +1,7 @@
-import {describe, it, expect, beforeAll, vi} from "vitest";
 import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {altair, ssz} from "@lodestar/types";
-import {chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_GINDEX,
@@ -11,11 +9,13 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {assertValidLightClientUpdate} from "../../src/validation.js";
+import {altair, ssz} from "@lodestar/types";
+import {beforeAll, describe, expect, it, vi} from "vitest";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
+import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
 
-describe("validation", function () {
+describe("validation", () => {
   // In browser test this process is taking more time than default 2000ms
   // specially on the CI
   vi.setConfig({testTimeout: 15000});
@@ -26,7 +26,7 @@ describe("validation", function () {
   let update: altair.LightClientUpdate;
   let snapshot: LightClientSnapshotFast;
 
-  beforeAll(function () {
+  beforeAll(() => {
     // Update slot must > snapshot slot
     // attestedHeaderSlot must == updateHeaderSlot + 1
     const snapshotHeaderSlot = 1;

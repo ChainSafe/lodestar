@@ -3,7 +3,6 @@ import {BeaconPreset} from "../types.js";
 // Mainnet preset
 // https://github.com/ethereum/consensus-specs/tree/dev/presets/mainnet
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export const mainnetPreset: BeaconPreset = {
   // Misc
   // ---------------------------------------------------------------
@@ -116,8 +115,24 @@ export const mainnetPreset: BeaconPreset = {
   ///////////
   FIELD_ELEMENTS_PER_BLOB: 4096,
   MAX_BLOB_COMMITMENTS_PER_BLOCK: 4096,
-  MAX_BLOBS_PER_BLOCK: 6,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: 17,
+
+  // ELECTRA
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: 8192,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: 16,
+  MAX_ATTESTER_SLASHINGS_ELECTRA: 1,
+  MAX_ATTESTATIONS_ELECTRA: 8,
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: 8,
+  MAX_PENDING_DEPOSITS_PER_EPOCH: 16,
+  // 2**11 * 10**9 (= 2,048,000,000,000) Gwei
+  MAX_EFFECTIVE_BALANCE_ELECTRA: 2048000000000,
+  MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: 4096,
+  MIN_ACTIVATION_BALANCE: 32000000000,
+  PENDING_DEPOSITS_LIMIT: 134217728,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT: 134217728,
+  PENDING_CONSOLIDATIONS_LIMIT: 262144,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: 1,
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: 4096,
 
   // PEERDAS
   ///////////

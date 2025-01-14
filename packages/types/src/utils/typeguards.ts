@@ -1,18 +1,21 @@
-import {ForkBlobs, ForkExecution} from "@lodestar/params";
+import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkBlobs, ForkExecution, ForkPostElectra} from "@lodestar/params";
 import {
-  BlockContents,
-  SignedBeaconBlock,
-  ExecutionPayload,
-  ExecutionPayloadAndBlobsBundle,
+  Attestation,
+  BeaconBlock,
   BeaconBlockBody,
   BeaconBlockOrContents,
-  SignedBeaconBlockOrContents,
-  ExecutionPayloadHeader,
   BlindedBeaconBlock,
-  SignedBlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  BlockContents,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
+  ExecutionPayloadHeader,
+  LightClientFinalityUpdate,
+  LightClientUpdate,
+  SignedBeaconBlock,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
   SignedBlockContents,
-  BeaconBlock,
 } from "../types.js";
 
 export function isExecutionPayload<F extends ForkExecution>(
@@ -65,4 +68,26 @@ export function isSignedBlockContents<F extends ForkBlobs>(
   data: SignedBeaconBlockOrContents | BeaconBlockOrContents
 ): data is SignedBlockContents<F> {
   return (data as SignedBlockContents<F>).kzgProofs !== undefined;
+}
+
+export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {
+  return (attestation as Attestation<ForkPostElectra>).committeeBits !== undefined;
+}
+
+export function isElectraLightClientUpdate(update: LightClientUpdate): update is LightClientUpdate<ForkPostElectra> {
+  const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
+  return (
+    updatePostElectra.finalityBranch !== undefined &&
+    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+  );
+}
+
+export function isELectraLightClientFinalityUpdate(
+  update: LightClientFinalityUpdate
+): update is LightClientFinalityUpdate<ForkPostElectra> {
+  const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
+  return (
+    updatePostElectra.finalityBranch !== undefined &&
+    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+  );
 }

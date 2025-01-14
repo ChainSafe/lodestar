@@ -1,4 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
+import {ApiClient, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -7,15 +8,14 @@ import {
   isStartSlotOfEpoch,
   isSyncCommitteeAggregator,
 } from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
-import {ApiClient, routes} from "@lodestar/api";
-import {IClock, LoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
+import {toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
-import {syncCommitteeIndicesToSubnets} from "./utils.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc} from "../util/index.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
+import {syncCommitteeIndicesToSubnets} from "./utils.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -287,7 +287,7 @@ export class SyncCommitteeDutiesService {
       // Using `alreadyWarnedReorg` avoids excessive logs.
 
       // TODO: Use memory-efficient toHexString()
-      const pubkeyHex = toHexString(duty.pubkey);
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       dutiesByIndex.set(validatorIndex, {duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
     }
 

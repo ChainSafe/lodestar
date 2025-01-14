@@ -1,19 +1,18 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, isForkBlobs} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isExecutionBlockBodyType,
-  isExecutionStateType,
-  isExecutionEnabled,
   getBlockProposerSignatureSet,
+  isExecutionBlockBodyType,
+  isExecutionEnabled,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
-import {sleep} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, deneb} from "@lodestar/types";
+import {sleep, toRootHex} from "@lodestar/utils";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
-import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlock(
@@ -55,7 +54,7 @@ export async function validateGossipBlock(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = toHexString(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
+  const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
   if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
@@ -71,7 +70,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-  const parentRoot = toHexString(block.parentRoot);
+  const parentRoot = toRootHex(block.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
@@ -109,6 +108,18 @@ export async function validateGossipBlock(
       parentSlot: parentBlock.slot,
       slot: blockSlot,
     });
+  }
+
+  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
+  if (isForkBlobs(fork)) {
+    const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
+    if (blobKzgCommitmentsLen > chain.config.MAX_BLOBS_PER_BLOCK) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        blobKzgCommitmentsLen,
+        commitmentLimit: chain.config.MAX_BLOBS_PER_BLOCK,
+      });
+    }
   }
 
   // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.

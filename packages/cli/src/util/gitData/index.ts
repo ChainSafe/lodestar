@@ -2,7 +2,7 @@ import {execSync} from "node:child_process";
 
 // This file is created in the build step and is distributed through NPM
 // MUST be in sync with `-/gitDataPath.ts` and `package.json` files.
-import {readGitDataFile, GitData} from "./gitDataPath.js";
+import {GitData, readGitDataFile} from "./gitDataPath.js";
 
 /** Reads git data from a persisted file or local git data at build time. */
 export function readAndGetGitData(): GitData {
@@ -11,7 +11,7 @@ export function readAndGetGitData(): GitData {
     let persistedGitData: Partial<GitData>;
     try {
       persistedGitData = readGitDataFile();
-    } catch (e) {
+    } catch (_e) {
       persistedGitData = {};
     }
 
@@ -23,13 +23,13 @@ export function readAndGetGitData(): GitData {
       branch:
         currentGitData.branch && currentGitData.branch.length > 0
           ? currentGitData.branch
-          : persistedGitData.branch ?? "",
+          : (persistedGitData.branch ?? ""),
       commit:
         currentGitData.commit && currentGitData.commit.length > 0
           ? currentGitData.commit
-          : persistedGitData.commit ?? "",
+          : (persistedGitData.commit ?? ""),
     };
-  } catch (e) {
+  } catch (_e) {
     return {
       branch: "",
       commit: "",
@@ -49,7 +49,7 @@ export function getGitData(): GitData {
 function getBranch(): string {
   try {
     return shellSilent("git rev-parse --abbrev-ref HEAD");
-  } catch (e) {
+  } catch (_e) {
     return "";
   }
 }
@@ -58,7 +58,7 @@ function getBranch(): string {
 function getCommit(): string {
   try {
     return shellSilent("git rev-parse --verify HEAD");
-  } catch (e) {
+  } catch (_e) {
     return "";
   }
 }

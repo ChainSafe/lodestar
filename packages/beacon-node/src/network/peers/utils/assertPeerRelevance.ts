@@ -1,5 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ForkDigest, Root, Slot, phase0, ssz} from "@lodestar/types";
+import {toHex, toRootHex} from "@lodestar/utils";
 
 // TODO: Why this value? (From Lighthouse)
 const FUTURE_SLOT_TOLERANCE = 1;
@@ -78,10 +78,10 @@ export function isZeroRoot(root: Root): boolean {
 export function renderIrrelevantPeerType(type: IrrelevantPeerType): string {
   switch (type.code) {
     case IrrelevantPeerCode.INCOMPATIBLE_FORKS:
-      return `INCOMPATIBLE_FORKS ours: ${toHexString(type.ours)} theirs: ${toHexString(type.theirs)}`;
+      return `INCOMPATIBLE_FORKS ours: ${toHex(type.ours)} theirs: ${toHex(type.theirs)}`;
     case IrrelevantPeerCode.DIFFERENT_CLOCKS:
       return `DIFFERENT_CLOCKS slotDiff: ${type.slotDiff}`;
     case IrrelevantPeerCode.DIFFERENT_FINALIZED:
-      return `DIFFERENT_FINALIZED root: ${toHexString(type.remoteRoot)} expected: ${toHexString(type.expectedRoot)}`;
+      return `DIFFERENT_FINALIZED root: ${toRootHex(type.remoteRoot)} expected: ${toRootHex(type.expectedRoot)}`;
   }
 }

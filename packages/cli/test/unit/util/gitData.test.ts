@@ -1,17 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, expect} from "vitest";
 import {findUpSync} from "find-up";
+import {describe, expect, it} from "vitest";
 import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath.js";
 import {getGitData} from "../../../src/util/index.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-describe("util / gitData", function () {
+describe("util / gitData", () => {
   // .gitData file is created at build time with the command
   // ```
   // npm run write-git-data

@@ -1,22 +1,22 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {computeTimeAtSlot, CachedBeaconStateBellatrix} from "@lodestar/state-transition";
-import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
-import {SyncState} from "../../../../../src/sync/interface.js";
+import {CachedBeaconStateBellatrix, G2_POINT_AT_INFINITY, computeTimeAtSlot} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
-import {BeaconChain} from "../../../../../src/chain/index.js";
-import {generateCachedBellatrixState} from "../../../../utils/state.js";
-import {PayloadIdCache} from "../../../../../src/execution/engine/payloadIdCache.js";
-import {toGraffitiBuffer} from "../../../../../src/util/graffiti.js";
-import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
-import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
-import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {BeaconChain} from "../../../../../src/chain/index.js";
+import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
+import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
+import {PayloadIdCache} from "../../../../../src/execution/engine/payloadIdCache.js";
+import {SyncState} from "../../../../../src/sync/interface.js";
+import {toGraffitiBuffer} from "../../../../../src/util/graffiti.js";
+import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
+import {generateCachedBellatrixState} from "../../../../utils/state.js";
+import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 
-describe("api/validator - produceBlockV2", function () {
+describe("api/validator - produceBlockV2", () => {
   let api: ReturnType<typeof getValidatorApi>;
   let modules: ApiTestModules;
   let state: CachedBeaconStateBellatrix;
@@ -32,7 +32,7 @@ describe("api/validator - produceBlockV2", function () {
     vi.clearAllMocks();
   });
 
-  it("correctly pass feeRecipient to produceBlock", async function () {
+  it("correctly pass feeRecipient to produceBlock", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
     const consensusBlockValue = ssz.Wei.defaultValue();
@@ -98,6 +98,10 @@ describe("api/validator - produceBlockV2", function () {
     modules.chain["eth1"].getEth1DataAndDeposits.mockResolvedValue({
       eth1Data: ssz.phase0.Eth1Data.defaultValue(),
       deposits: [],
+    });
+    modules.chain["syncContributionAndProofPool"].getAggregate.mockReturnValue({
+      syncCommitteeBits: ssz.altair.SyncCommitteeBits.defaultValue(),
+      syncCommitteeSignature: G2_POINT_AT_INFINITY,
     });
     modules.forkChoice.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
     modules.forkChoice.getFinalizedBlock.mockReturnValue({} as ProtoBlock);

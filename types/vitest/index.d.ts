@@ -1,11 +1,10 @@
-// eslint-disable-next-line import/no-extraneous-dependencies, @typescript-eslint/no-unused-vars
 import * as vitest from "vitest";
 
 interface CustomMatchers<R = unknown> {
   toBeValidEpochCommittee(opts: {committeeCount: number; validatorsPerCommittee: number; slotsPerEpoch: number}): R;
   /**
    * @deprecated
-   * We highly recommend to not use this matcher instead use detail test case
+   * We highly recommend to not use this matcher instead use detailed test case
    * where you don't need message to explain assertion
    *
    * @example
@@ -28,7 +27,7 @@ interface CustomMatchers<R = unknown> {
   toBeWithMessage(expected: unknown, message: string): R;
   /**
    * @deprecated
-   * We highly recommend to not use this matcher instead use detail test case with .toEqual
+   * We highly recommend to not use this matcher instead use detailed test case with .toEqual
    * where you don't need message to explain assertion
    * */
   toEqualWithMessage(expected: unknown, message: string): R;
@@ -42,7 +41,6 @@ interface CustomAsymmetricMatchers<R = unknown> extends CustomMatchers<R> {
 }
 
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  interface Assertion<T = any> extends CustomMatchers<T> {}
+    interface Assertion<T = any> extends CustomMatchers<T> {}
   interface AsymmetricMatchersContaining extends CustomAsymmetricMatchers {}
 }

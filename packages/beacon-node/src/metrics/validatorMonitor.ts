@@ -1,19 +1,19 @@
-import {
-  computeEpochAtSlot,
-  parseAttesterFlags,
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
-  parseParticipationFlags,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-  ParticipationFlags,
-} from "@lodestar/state-transition";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toHex} from "@lodestar/utils";
-import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  ParticipationFlags,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+  parseAttesterFlags,
+  parseParticipationFlags,
+} from "@lodestar/state-transition";
+import {BeaconBlock, RootHex, SubnetID, altair, deneb} from "@lodestar/types";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
-import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
+import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {LodestarMetrics} from "./metrics/lodestar.js";
 
@@ -52,7 +52,7 @@ export type ValidatorMonitor = {
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
     indexedAttestation: IndexedAttestation,
-    subnet: number,
+    subnet: SubnetID,
     sentPeers: number
   ): void;
   onPoolSubmitAggregatedAttestation(
@@ -392,7 +392,7 @@ export function createValidatorMonitor(
 
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
         summary.blockProposals.push({
-          blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+          blockRoot: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
           blockSlot: block.slot,
           poolSubmitDelaySec: delaySec,
           successfullyImported: false,
@@ -416,7 +416,7 @@ export function createValidatorMonitor(
           proposal.successfullyImported = true;
         } else {
           summary.blockProposals.push({
-            blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+            blockRoot: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
             blockSlot: block.slot,
             poolSubmitDelaySec: null,
             successfullyImported: true,
@@ -445,7 +445,7 @@ export function createValidatorMonitor(
 
           const attestationSummary = validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root));
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root));
           if (
             attestationSummary.poolSubmitDelayMinSec === null ||
             attestationSummary.poolSubmitDelayMinSec > delaySec
@@ -494,7 +494,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .aggregateInclusionDelaysSec.push(delaySec);
         }
       }
@@ -533,7 +533,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .aggregateInclusionDelaysSec.push(delaySec);
         }
       }
@@ -577,7 +577,7 @@ export function createValidatorMonitor(
 
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
-            .getOrDefault(toHex(indexedAttestation.data.target.root))
+            .getOrDefault(toRootHex(indexedAttestation.data.target.root))
             .blockInclusions.push({
               blockRoot: inclusionBlockRoot,
               blockSlot: inclusionBlockSlot,
@@ -644,13 +644,20 @@ export function createValidatorMonitor(
       }
 
       // Compute summaries of previous epoch attestation performance
-      const prevEpoch = Math.max(0, computeEpochAtSlot(headState.slot) - 1);
+      const prevEpoch = computeEpochAtSlot(headState.slot) - 1;
+
+      // During the end of first epoch, the prev epoch with be -1
+      // Skip this as there is no attestation and block proposal summary in epoch -1
+      if (prevEpoch === -1) {
+        return;
+      }
+
       const rootCache = new RootHexCache(headState);
 
       if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
         const {previousEpochParticipation} = headState as CachedBeaconStateAltair;
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
-        const prevEpochTargetRoot = toHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
+        const prevEpochTargetRoot = toRootHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
@@ -807,7 +814,7 @@ function renderAttestationSummary(
   }
 
   //
-  else if (flags.timelyTarget) {
+  if (flags.timelyTarget) {
     // timelyHead == false, means at least one is true
     // - attestation voted incorrect head
     // - attestation was included late
@@ -863,57 +870,55 @@ function renderAttestationSummary(
   }
 
   //
-  else if (flags.timelySource) {
+  if (flags.timelySource) {
     // timelyTarget == false && timelySource == true means that
     // - attestation voted the wrong target but distance is <= integer_squareroot(SLOTS_PER_EPOCH)
     return "wrong_target_timely_source";
   }
 
   //
-  else {
-    // timelySource == false, either:
-    // - attestation was not included in the block
-    // - included in block with wrong target (very unlikely)
-    // - included in block with distance > SLOTS_PER_EPOCH (very unlikely)
+  // timelySource == false, either:
+  // - attestation was not included in the block
+  // - included in block with wrong target (very unlikely)
+  // - included in block with distance > SLOTS_PER_EPOCH (very unlikely)
 
-    // Validator failed to submit an attestation for this epoch, validator client is probably offline
-    if (!summary || summary.poolSubmitDelayMinSec === null) {
-      return "no_submission";
-    }
-
-    const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
-    if (canonicalBlockInclusion) {
-      // Canonical block inclusion with no participation flags set means wrong target + late source
-      return "wrong_target_late_source";
-    }
-
-    const submittedLate =
-      summary.poolSubmitDelayMinSec >
-      (INTERVALS_LATE_ATTESTATION_SUBMISSION * config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
-
-    const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
-
-    if (submittedLate && aggregateInclusion) {
-      return "late_submit";
-    } else if (submittedLate && !aggregateInclusion) {
-      return "late_submit_no_aggregate_inclusion";
-    } else if (!submittedLate && aggregateInclusion) {
-      // TODO: Why was it missed then?
-      if (summary.blockInclusions.length) {
-        return "block_inclusion_but_orphan";
-      } else {
-        return "aggregate_inclusion_but_missed";
-      }
-      // } else if (!submittedLate && !aggregateInclusion) {
-    } else {
-      // Did the node had enough peers?
-      if (summary.poolSubmitSentPeers === 0) {
-        return "sent_to_zero_peers";
-      } else {
-        return "no_aggregate_inclusion";
-      }
-    }
+  // Validator failed to submit an attestation for this epoch, validator client is probably offline
+  if (!summary || summary.poolSubmitDelayMinSec === null) {
+    return "no_submission";
   }
+
+  const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
+  if (canonicalBlockInclusion) {
+    // Canonical block inclusion with no participation flags set means wrong target + late source
+    return "wrong_target_late_source";
+  }
+
+  const submittedLate =
+    summary.poolSubmitDelayMinSec >
+    (INTERVALS_LATE_ATTESTATION_SUBMISSION * config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
+
+  const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
+
+  if (submittedLate && aggregateInclusion) {
+    return "late_submit";
+  }
+  if (submittedLate && !aggregateInclusion) {
+    return "late_submit_no_aggregate_inclusion";
+  }
+
+  if (!submittedLate && aggregateInclusion) {
+    // TODO: Why was it missed then?
+    if (summary.blockInclusions.length) {
+      return "block_inclusion_but_orphan";
+    }
+    return "aggregate_inclusion_but_missed";
+    // } else if (!submittedLate && !aggregateInclusion) {
+  }
+  // Did the node had enough peers?
+  if (summary.poolSubmitSentPeers === 0) {
+    return "sent_to_zero_peers";
+  }
+  return "no_aggregate_inclusion";
 }
 
 function whyIsHeadVoteWrong(rootCache: RootHexCache, canonicalBlockInclusion: AttestationBlockInclusion): string {
@@ -961,9 +966,7 @@ function whyIsHeadVoteWrong(rootCache: RootHexCache, canonicalBlockInclusion: At
   //     \_(A)_(A)
   //
   // Vote for different heads on skipped slot
-  else {
-    return "wrong_head_vote";
-  }
+  return "wrong_head_vote";
 }
 
 function whyIsDistanceNotOk(
@@ -982,9 +985,7 @@ function whyIsDistanceNotOk(
   }
 
   //
-  else {
-    return "late_unknown";
-  }
+  return "late_unknown";
 }
 
 /** Returns true if the state's root record includes `block` */
@@ -1041,7 +1042,7 @@ export class RootHexCache {
   getBlockRootAtSlot(slot: Slot): RootHex {
     let root = this.blockRootSlotCache.get(slot);
     if (!root) {
-      root = toHex(getBlockRootAtSlot(this.state, slot));
+      root = toRootHex(getBlockRootAtSlot(this.state, slot));
       this.blockRootSlotCache.set(slot, root);
     }
     return root;

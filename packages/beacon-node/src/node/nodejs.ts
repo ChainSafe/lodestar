@@ -2,12 +2,12 @@ import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
 import {PeerId} from "@libp2p/interface";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
+import type {LoggerNode} from "@lodestar/logger/node";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import type {LoggerNode} from "@lodestar/logger/node";
-import {BeaconApiMethods} from "@lodestar/api/beacon/server";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
@@ -20,7 +20,7 @@ import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
+import {TrustedFileMode, initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {NodeId} from "../network/subnets/interface.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -310,7 +310,7 @@ export class BeaconNode {
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
-    return new this({
+    return new BeaconNode({
       opts,
       config,
       db,

@@ -1,10 +1,10 @@
 import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
-import {BufferedSource} from "../../utils/index.js";
 import {TypeSizes} from "../../types.js";
+import {BufferedSource} from "../../utils/index.js";
+import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress.js";
 import {maxEncodedLen} from "./utils.js";
-import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 
 export const MAX_VARINT_BYTES = 10;
 
@@ -35,7 +35,7 @@ export async function readSszSnappyHeader(bufferedSource: BufferedSource, type: 
     let sszDataLength: number;
     try {
       sszDataLength = varintDecode(buffer.subarray());
-    } catch (e) {
+    } catch (_e) {
       throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: Infinity});
     }
 

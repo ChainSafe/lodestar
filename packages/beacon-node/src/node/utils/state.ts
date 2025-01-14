@@ -3,8 +3,11 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
 import {interopDeposits} from "./interop/deposits.js";
-import {getInteropState, InteropStateOpts} from "./interop/state.js";
+import {InteropStateOpts, getInteropState} from "./interop/state.js";
 
+/**
+ * Builds state for `dev` command, for sim testing and some other tests
+ */
 export function initDevState(
   config: ChainForkConfig,
   validatorCount: number,

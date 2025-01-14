@@ -1,18 +1,18 @@
-import {EventEmitter} from "events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {EventEmitter} from "node:events";
 import {BeaconConfig} from "@lodestar/config";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, phase0} from "@lodestar/types";
-import {Logger, toHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
+import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
-import {INetwork} from "../../network/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
-import {PeerIdStr} from "../../util/peerId.js";
-import {ImportBlockOpts, AttestationImportOpt} from "../../chain/blocks/index.js";
+import {INetwork} from "../../network/index.js";
 import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
+import {PeerIdStr} from "../../util/peerId.js";
+import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
+import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
-import {ChainTarget, SyncChainFns, SyncChain, SyncChainDebugState} from "./chain.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -119,7 +119,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       syncType,
       startEpoch,
       targetSlot: target.slot,
-      targetRoot: toHex(target.root),
+      targetRoot: toRootHex(target.root),
     });
 
     // If the peer existed in any other chain, remove it.
@@ -150,17 +150,15 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       if (chain.isSyncing) {
         if (chain.syncType === RangeSyncType.Finalized) {
           return {status: RangeSyncStatus.Finalized, target: chain.target};
-        } else {
-          syncingHeadTargets.push(chain.target);
         }
+        syncingHeadTargets.push(chain.target);
       }
     }
 
     if (syncingHeadTargets.length > 0) {
       return {status: RangeSyncStatus.Head, targets: syncingHeadTargets};
-    } else {
-      return {status: RangeSyncStatus.Idle};
     }
+    return {status: RangeSyncStatus.Idle};
   }
 
   /** Full debug state for lodestar API */
@@ -256,7 +254,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         syncType,
         firstEpoch: syncChain.firstBatchEpoch,
         targetSlot: syncChain.target.slot,
-        targetRoot: toHex(syncChain.target.root),
+        targetRoot: toRootHex(syncChain.target.root),
       });
     }
 
@@ -293,7 +291,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           lastValidatedSlot: syncChain.lastValidatedSlot,
           firstEpoch: syncChain.firstBatchEpoch,
           targetSlot: syncChain.target.slot,
-          targetRoot: toHex(syncChain.target.root),
+          targetRoot: toRootHex(syncChain.target.root),
           validatedEpochs: syncChain.validatedEpochs,
         });
 

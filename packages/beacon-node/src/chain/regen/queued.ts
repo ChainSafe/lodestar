@@ -1,16 +1,21 @@
-import {toHexString} from "@chainsafe/ssz";
-import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
-import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
+import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
-import {IStateRegenerator, IStateRegeneratorInternal, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";
-import {StateRegenerator, RegenModules} from "./regen.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
+import {
+  IStateRegenerator,
+  IStateRegeneratorInternal,
+  RegenCaller,
+  RegenFnName,
+  StateRegenerationOpts,
+} from "./interface.js";
+import {RegenModules, StateRegenerator} from "./regen.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 // TODO: Should this constant be lower than above? 256 feels high
@@ -87,9 +92,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   getPreStateSync(
     block: BeaconBlock,
-    opts: StateCloneOpts = {dontTransferCache: true}
+    opts: StateRegenerationOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
-    const parentRoot = toHexString(block.parentRoot);
+    const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = this.forkChoice.getBlockHex(parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -167,7 +172,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void {
     const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
-    const maybeHeadStateRoot = toHexString(maybeHeadState.hashTreeRoot());
+    const maybeHeadStateRoot = toRootHex(maybeHeadState.hashTreeRoot());
     const logCtx = {
       newHeadSlot,
       newHeadBlockRoot,
@@ -213,7 +218,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   async getPreState(
     block: BeaconBlock,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
@@ -232,7 +237,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   async getCheckpointState(
     cp: phase0.Checkpoint,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
@@ -257,7 +262,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   async getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
@@ -269,7 +274,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   async getState(
     stateRoot: RootHex,
     rCaller: RegenCaller,
-    opts: StateCloneOpts = {dontTransferCache: true}
+    opts: StateRegenerationOpts = {dontTransferCache: true}
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 
@@ -289,7 +294,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
       entrypoint: regenRequest.key as RegenFnName,
     };
-    let timer;
+    let timer: (() => number) | undefined;
     try {
       timer = this.metrics?.regenFnCallDuration.startTimer(metricsLabels);
       switch (regenRequest.key) {

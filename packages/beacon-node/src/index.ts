@@ -1,4 +1,4 @@
-export {initStateFromAnchorState, initStateFromDb, initStateFromEth1} from "./chain/index.js";
+export {checkAndPersistAnchorState, initStateFromDb, initStateFromEth1} from "./chain/index.js";
 export {BeaconDb, type IBeaconDb} from "./db/index.js";
 export {Eth1Provider, type IEth1Provider} from "./eth1/index.js";
 export {createNodeJsLibp2p, type NodeJsLibp2pOpts} from "./network/index.js";
@@ -20,4 +20,4 @@ export {RestApiServer} from "./api/rest/base.js";
 export type {RestApiServerOpts, RestApiServerModules, RestApiServerMetrics} from "./api/rest/base.js";
 
 // Export type util for CLI - TEMP move to lodestar-types eventually
-export {getStateTypeFromBytes} from "./util/multifork.js";
+export {getStateTypeFromBytes, getStateSlotFromBytes} from "./util/multifork.js";

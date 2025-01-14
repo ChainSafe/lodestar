@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {resolveOrRacePromises, PromiseResult} from "../../src/promise.js";
+import {describe, expect, it} from "vitest";
+import {PromiseResult, resolveOrRacePromises} from "../../src/promise.js";
 import {NonEmptyArray} from "../../src/types.js";
 
 describe("resolveOrRacePromises", () => {
@@ -58,9 +58,8 @@ describe("resolveOrRacePromises", () => {
       const testPromises = timeouts.map((timeMs) => {
         if (timeMs > 0) {
           return resolveAfter(`${timeMs}`, timeMs);
-        } else {
-          return rejectAfter(`${timeMs}`, -timeMs);
         }
+        return rejectAfter(`${timeMs}`, -timeMs);
       });
       const testResults = (await resolveOrRacePromises(testPromises as unknown as NonEmptyArray<PromiseLike<unknown>>, {
         resolveTimeoutMs: cutoffMs,

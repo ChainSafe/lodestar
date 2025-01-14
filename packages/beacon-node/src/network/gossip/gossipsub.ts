@@ -1,32 +1,32 @@
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
-import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
-import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
+import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
+import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
-import {RegistryMetricCreator} from "../../metrics/index.js";
-import {PeersData} from "../peers/peersData.js";
-import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
-import {Libp2p} from "../interface.js";
-import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {GossipTopic, GossipType} from "./interface.js";
-import {GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
+import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {Libp2p} from "../interface.js";
+import {ClientKind} from "../peers/client.js";
+import {PeersData} from "../peers/peersData.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
-import {createEth2GossipsubMetrics, Eth2GossipsubMetrics} from "./metrics.js";
+import {GossipTopic, GossipType} from "./interface.js";
+import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
+import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
 import {
-  computeGossipPeerScoreParams,
-  gossipScoreThresholds,
   GOSSIP_D,
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
+  computeGossipPeerScoreParams,
+  gossipScoreThresholds,
 } from "./scoringParameters.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
@@ -122,7 +122,7 @@ export class Eth2Gossipsub extends GossipSub {
       // TODO: figure out a way to dynamically transition to the size
       dataTransform: new DataTransformSnappy(
         gossipTopicCache,
-        isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
+        Number.isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
@@ -181,10 +181,11 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics): void {
-    const mesh = this["mesh"];
+    const mesh = this.mesh;
+    // biome-ignore lint/complexity/useLiteralKeys: `topics` is a private attribute
     const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this["peers"];
-    const score = this["score"];
+    const peers = this.peers;
+    const score = this.score;
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();
 
@@ -319,16 +320,17 @@ export class Eth2Gossipsub extends GossipSub {
  * Left pad subnets to two characters. Assumes ATTESTATION_SUBNET_COUNT < 99
  * Otherwise grafana sorts the mesh peers chart as: [1,11,12,13,...]
  */
-function attSubnetLabel(subnet: number): string {
+function attSubnetLabel(subnet: SubnetID): string {
   if (subnet > 9) return String(subnet);
-  else return `0${subnet}`;
+
+  return `0${subnet}`;
 }
 
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(fork, {
+    const topics = getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });

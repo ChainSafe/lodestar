@@ -1,26 +1,26 @@
 import {IncomingMessage} from "node:http";
-import {describe, it, afterEach, expect, vi} from "vitest";
-import {RouteOptions, fastify} from "fastify";
 import {BooleanType, ContainerType, UintNumberType, ValueOf} from "@chainsafe/ssz";
 import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
+import {RouteOptions, fastify} from "fastify";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {WireFormat} from "../../../src/index.js";
+import {addSszContentTypeParser} from "../../../src/server/index.js";
 import {HttpClient, RouteDefinitionExtra} from "../../../src/utils/client/index.js";
-import {HttpStatusCode} from "../../../src/utils/httpStatusCode.js";
 import {
   AnyEndpoint,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
+  EmptyResponseData,
   JsonOnlyReq,
   JsonOnlyResponseCodec,
-  EmptyResponseData,
 } from "../../../src/utils/codecs.js";
-import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";
-import {Endpoint, Schema} from "../../../src/utils/index.js";
-import {WireFormat} from "../../../src/index.js";
 import {HttpHeader, MediaType} from "../../../src/utils/headers.js";
-import {addSszContentTypeParser} from "../../../src/server/index.js";
+import {HttpStatusCode} from "../../../src/utils/httpStatusCode.js";
+import {Endpoint, Schema} from "../../../src/utils/index.js";
+import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";
 
 /* eslint-disable @typescript-eslint/return-await */
 

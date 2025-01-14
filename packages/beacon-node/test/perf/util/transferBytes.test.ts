@@ -1,7 +1,7 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
 
-describe("transfer bytes", function () {
+describe("transfer bytes", () => {
   const sizes = [
     {size: 84, name: "Status"},
     {size: 112, name: "SignedVoluntaryExit"},

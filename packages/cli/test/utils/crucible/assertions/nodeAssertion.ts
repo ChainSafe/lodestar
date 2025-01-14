@@ -1,7 +1,7 @@
 import {SecretKey} from "@chainsafe/blst";
 import {routes} from "@lodestar/api/beacon";
 import {toHex} from "@lodestar/utils";
-import {AssertionResult, ValidatorClientKeys, Assertion, ValidatorClient} from "../interfaces.js";
+import {Assertion, AssertionResult, ValidatorClient, ValidatorClientKeys} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
 
@@ -17,11 +17,16 @@ export const nodeAssertion: Assertion<"node", {health: number; keyManagerKeys: s
 
     let keyManagerKeys: string[];
     // There is an authentication issue with the lighthouse keymanager client
-    if (node.validator.client == ValidatorClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
+    if (node.validator.client === ValidatorClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
       keyManagerKeys = [];
     } else {
-      const keys = (await node.validator.keyManager.listKeys()).value();
-      keyManagerKeys = keys.map((k) => k.validatingPubkey);
+      if (node.validator.keys.type === "local") {
+        const keys = (await node.validator.keyManager.listKeys()).value();
+        keyManagerKeys = keys.map((k) => k.validatingPubkey);
+      } else {
+        const keys = (await node.validator.keyManager.listRemoteKeys()).value();
+        keyManagerKeys = keys.map((k) => k.pubkey);
+      }
     }
 
     return {health, keyManagerKeys};
@@ -30,7 +35,7 @@ export const nodeAssertion: Assertion<"node", {health: number; keyManagerKeys: s
     const errors: AssertionResult[] = [];
 
     // There is an authentication issue with the lighthouse keymanager client
-    if (node.validator?.client == ValidatorClient.Lighthouse) return errors;
+    if (node.validator?.client === ValidatorClient.Lighthouse) return errors;
 
     const {health, keyManagerKeys} = store[slot];
 

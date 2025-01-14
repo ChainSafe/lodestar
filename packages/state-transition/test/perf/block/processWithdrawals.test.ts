@@ -1,15 +1,16 @@
 import {itBench} from "@dapplion/benchmark";
-import {CachedBeaconStateCapella} from "../../../src/index.js";
+import {ForkSeq} from "@lodestar/params";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
+import {CachedBeaconStateCapella} from "../../../src/index.js";
+import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";
 import {numValidators} from "../util.js";
-import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capella.js";
 
 // PERF: Fixed cost for MAX_WITHDRAWALS_PER_PAYLOAD probes
 //  + cost 'proportional' to $VALIDATOR_COUNT with balances under MAX_EFFECTIVE_BALANCE or
 //    having BLS withdrawal credential prefix as that validator probe is wasted.
 //
 // Best case:
-//  All Validator have balances > MAX_EFFECTIVE_BALANCE and ETH1 withdrawal credential prefix set
+//  All Validator have balances > MAX_EFFECTIVE_BALANCE and ETH1 withdrawal credential prefix set // TODO Electra: Not true anymore
 //
 // Worst case:
 //  All balances are low enough or withdrawal credential not set
@@ -69,7 +70,7 @@ describe("getExpectedWithdrawals", () => {
         return opts.cache ? state : state.clone(true);
       },
       fn: (state) => {
-        const {sampledValidators} = getExpectedWithdrawals(state);
+        const {sampledValidators} = getExpectedWithdrawals(ForkSeq.capella, state); // TODO Electra: Do test for electra
         if (sampledValidators !== opts.sampled) {
           throw Error(`Wrong sampledValidators ${sampledValidators} != ${opts.sampled}`);
         }

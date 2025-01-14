@@ -1,27 +1,27 @@
-import {toHexString} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {DataAvailabilityStatus, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkName} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailableStatus,
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
-  DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {bellatrix, deneb} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
-import {ProtoBlock, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {ChainForkConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
+import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
-import type {BeaconChain} from "../chain.js";
-import {BlockInput, ImportBlockOpts, BlockInputType} from "./types.js";
-import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
-import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
-import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
-import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
-import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
+import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
+import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
+import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
+import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
@@ -107,7 +107,7 @@ export async function verifyBlocksInEpoch(
           } as SegmentExecStatus),
 
       // data availability for the blobs
-      verifyBlocksDataAvailability(this, blocksInput, opts),
+      verifyBlocksDataAvailability(this, blocksInput, abortController.signal, opts),
 
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
@@ -158,6 +158,11 @@ export async function verifyBlocksInEpoch(
             this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
             break;
 
+          case ForkName.electra:
+            this.logger.info(ELECTRA_GIRAFFE_BANNER);
+            this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
+            break;
+
           default:
         }
       }
@@ -198,9 +203,9 @@ export async function verifyBlocksInEpoch(
 }
 
 function logOnPowBlock(logger: Logger, config: ChainForkConfig, mergeBlock: bellatrix.BeaconBlock): void {
-  const mergeBlockHash = toHexString(config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
-  const mergeExecutionHash = toHexString(mergeBlock.body.executionPayload.blockHash);
-  const mergePowHash = toHexString(mergeBlock.body.executionPayload.parentHash);
+  const mergeBlockHash = toRootHex(config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
+  const mergeExecutionHash = toRootHex(mergeBlock.body.executionPayload.blockHash);
+  const mergePowHash = toRootHex(mergeBlock.body.executionPayload.parentHash);
   logger.info(POS_PANDA_MERGE_TRANSITION_BANNER);
   logger.info("Execution transitioning from PoW to PoS!!!");
   logger.info("Importing block referencing terminal PoW block", {

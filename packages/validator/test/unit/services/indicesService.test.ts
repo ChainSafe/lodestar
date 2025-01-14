@@ -1,12 +1,12 @@
-import {describe, it, expect, beforeAll} from "vitest";
-import {toBufferBE} from "bigint-buffer";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
+import {toBufferBE} from "bigint-buffer";
+import {beforeAll, describe, expect, it} from "vitest";
+import {IndicesService} from "../../../src/services/indices.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {testLogger} from "../../utils/logger.js";
-import {IndicesService} from "../../../src/services/indices.js";
 
-describe("IndicesService", function () {
+describe("IndicesService", () => {
   const logger = testLogger();
   const api = getApiClientStub();
 
@@ -20,7 +20,7 @@ describe("IndicesService", function () {
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
   });
 
-  it("Should remove pubkey", async function () {
+  it("Should remove pubkey", async () => {
     const indicesService = new IndicesService(logger, api, null);
     const firstValidatorIndex = 0;
     const secondValidatorIndex = 1;

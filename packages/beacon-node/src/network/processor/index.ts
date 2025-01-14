@@ -1,14 +1,15 @@
-import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
-import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {pruneSetToMax} from "@lodestar/utils";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IBeaconChain} from "../../chain/interface.js";
+import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
+import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
+import {pruneSetToMax} from "@lodestar/utils";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {IBeaconChain} from "../../chain/interface.js";
 import {IBeaconDb} from "../../db/interface.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   GossipHandlers,
@@ -18,12 +19,11 @@ import {
   GossipValidatorFn,
 } from "../gossip/interface.js";
 import {PeerIdStr} from "../peers/index.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {createGossipQueues} from "./gossipQueues/index.js";
-import {PendingGossipsubMessage} from "./types.js";
-import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
+import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
+import {createGossipQueues} from "./gossipQueues/index.js";
 import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
+import {PendingGossipsubMessage} from "./types.js";
 
 export * from "./types.js";
 
@@ -173,7 +173,7 @@ export class NetworkProcessor {
     this.metrics = metrics;
     this.logger = logger;
     this.events = events;
-    this.gossipQueues = createGossipQueues(this.opts.beaconAttestationBatchValidation);
+    this.gossipQueues = createGossipQueues();
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
@@ -402,7 +402,9 @@ export class NetworkProcessor {
         if (item) {
           this.gossipTopicConcurrency[topic] += numMessages;
           this.processPendingGossipsubMessage(item)
-            .finally(() => (this.gossipTopicConcurrency[topic] -= numMessages))
+            .finally(() => {
+              this.gossipTopicConcurrency[topic] -= numMessages;
+            })
             .catch((e) => this.logger.error("processGossipAttestations must not throw", {}, e));
 
           jobsSubmitted += numMessages;

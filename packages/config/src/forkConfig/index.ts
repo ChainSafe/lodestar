@@ -1,17 +1,17 @@
 import {
-  GENESIS_EPOCH,
-  ForkName,
-  SLOTS_PER_EPOCH,
-  ForkSeq,
-  isForkLightClient,
-  isForkExecution,
-  isForkBlobs,
-  ForkExecution,
   ForkAll,
-  ForkLightClient,
   ForkBlobs,
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkSeq,
+  GENESIS_EPOCH,
+  SLOTS_PER_EPOCH,
+  isForkBlobs,
+  isForkExecution,
+  isForkLightClient,
 } from "@lodestar/params";
-import {Slot, Version, SSZTypesFor, sszTypesFor} from "@lodestar/types";
+import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
@@ -59,18 +59,26 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.CAPELLA_FORK_VERSION,
     prevForkName: ForkName.capella,
   };
+  const electra: ForkInfo = {
+    name: ForkName.electra,
+    seq: ForkSeq.electra,
+    epoch: config.ELECTRA_FORK_EPOCH,
+    version: config.ELECTRA_FORK_VERSION,
+    prevVersion: config.DENEB_FORK_VERSION,
+    prevForkName: ForkName.deneb,
+  };
   const peerdas: ForkInfo = {
     name: ForkName.peerdas,
     seq: ForkSeq.peerdas,
     epoch: config.PEERDAS_FORK_EPOCH,
     version: config.PEERDAS_FORK_VERSION,
-    prevVersion: config.DENEB_FORK_VERSION,
-    prevForkName: ForkName.deneb,
+    prevVersion: config.ELECTRA_FORK_VERSION,
+    prevForkName: ForkName.electra,
   };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, peerdas};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, peerdas};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -84,6 +92,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     // Fork convenience methods
     getForkInfo(slot: Slot): ForkInfo {
       const epoch = Math.floor(Math.max(slot, 0) / SLOTS_PER_EPOCH);
+      return this.getForkInfoAtEpoch(epoch);
+    },
+    getForkInfoAtEpoch(epoch: Epoch): ForkInfo {
       // NOTE: forks must be sorted by descending epoch, latest fork first
       for (const fork of forksDescendingEpochOrder) {
         if (epoch >= fork.epoch) return fork;
@@ -95,6 +106,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getForkSeq(slot: Slot): ForkSeq {
       return this.getForkInfo(slot).seq;
+    },
+    getForkSeqAtEpoch(epoch: Epoch): ForkSeq {
+      return this.getForkInfoAtEpoch(epoch).seq;
     },
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;

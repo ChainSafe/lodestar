@@ -1,18 +1,18 @@
-import {describe, it, expect} from "vitest";
 import {TopicScoreParams} from "@chainsafe/libp2p-gossipsub/score";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/configs";
+import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {describe, expect, it} from "vitest";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters.js";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 import {GossipType} from "../../../../src/network/index.js";
-import {ZERO_HASH} from "../../../../src/constants/index.js";
 
 /**
  * Refer to Teku tests at
  * https://github.com/ConsenSys/teku/blob/e18ab9903442410aa04b590c4cc46734e13d3ffd/networking/eth2/src/test/java/tech/pegasys/teku/networking/eth2/gossip/config/GossipScoringConfiguratorTest.java#L38
  */
-describe("computeGossipPeerScoreParams", function () {
+describe("computeGossipPeerScoreParams", () => {
   const config = createBeaconConfig(mainnetChainConfig, ZERO_HASH);
   // Cheap stub on new BeaconConfig instance
   config.forkName2ForkDigest = () => Buffer.alloc(4, 1);

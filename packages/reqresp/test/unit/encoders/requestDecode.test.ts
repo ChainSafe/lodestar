@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import {pipe} from "it-pipe";
+import {describe, expect, it} from "vitest";
 import {requestDecode} from "../../../src/encoders/requestDecode.js";
 import {requestEncodersCases, requestEncodersErrorCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";

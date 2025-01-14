@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import {describe, it, expect} from "vitest";
-import {IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {IBeaconNodeOptions, StateArchiveMode} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {describe, expect, it} from "vitest";
+import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
@@ -17,6 +17,7 @@ describe("options / beaconNodeOptions", () => {
       "rest.port": 7654,
       "rest.headerLimit": 16384,
       "rest.bodyLimit": 30e6,
+      "rest.stacktraces": true,
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
@@ -42,6 +43,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
+      "chain.stateArchiveMode": StateArchiveMode.Frequency,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -94,7 +96,6 @@ describe("options / beaconNodeOptions", () => {
       "network.blockCountPeerLimit": 500,
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
-      "network.beaconAttestationBatchValidation": true,
       "network.allowPublishToZeroPeers": true,
       "network.gossipsubD": 4,
       "network.gossipsubDLow": 2,
@@ -122,6 +123,7 @@ describe("options / beaconNodeOptions", () => {
           port: 7654,
           headerLimit: 16384,
           bodyLimit: 30e6,
+          stacktraces: true,
         },
       },
       chain: {
@@ -146,6 +148,7 @@ describe("options / beaconNodeOptions", () => {
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveBlobEpochs: 10000,
+        stateArchiveMode: StateArchiveMode.Frequency,
         nHistoricalStates: true,
         nHistoricalStatesFileDataStore: true,
         maxBlockStates: 100,
@@ -204,7 +207,6 @@ describe("options / beaconNodeOptions", () => {
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
         dontSendGossipAttestationsToForkchoice: true,
-        beaconAttestationBatchValidation: true,
         allowPublishToZeroPeers: true,
         gossipsubD: 4,
         gossipsubDLow: 2,

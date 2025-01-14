@@ -5,14 +5,15 @@ import {
   MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateCapella,
   CachedBeaconStateAltair,
+  CachedBeaconStateCapella,
+  CachedBeaconStateElectra,
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
-import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -21,6 +22,8 @@ import {processInactivityUpdates} from "./processInactivityUpdates.js";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization.js";
 import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates.js";
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates.js";
+import {processPendingConsolidations} from "./processPendingConsolidations.js";
+import {processPendingDeposits} from "./processPendingDeposits.js";
 import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
 import {processRegistryUpdates} from "./processRegistryUpdates.js";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
@@ -45,6 +48,8 @@ export {
   processParticipationFlagUpdates,
   processSyncCommitteeUpdates,
   processHistoricalSummariesUpdate,
+  processPendingDeposits,
+  processPendingConsolidations,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
@@ -65,6 +70,8 @@ export enum EpochTransitionStep {
   processEffectiveBalanceUpdates = "processEffectiveBalanceUpdates",
   processParticipationFlagUpdates = "processParticipationFlagUpdates",
   processSyncCommitteeUpdates = "processSyncCommitteeUpdates",
+  processPendingDeposits = "processPendingDeposits",
+  processPendingConsolidations = "processPendingConsolidations",
 }
 
 export function processEpoch(
@@ -76,7 +83,7 @@ export function processEpoch(
   // state.slashings is initially a Gwei (BigInt) vector, however since Nov 2023 it's converted to UintNum64 (number) vector in the state transition because:
   //  - state.slashings[nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR] is reset per epoch in processSlashingsReset()
   //  - max slashed validators per epoch is SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE which is 32 * 2 * 2048 = 131072 on mainnet
-  //  - with that and 32_000_000_000 MAX_EFFECTIVE_BALANCE, it still fits in a number given that Math.floor(Number.MAX_SAFE_INTEGER / 32_000_000_000) = 281474
+  //  - with that and 32_000_000_000 MAX_EFFECTIVE_BALANCE or 2048_000_000_000 MAX_EFFECTIVE_BALANCE_ELECTRA, it still fits in a number given that Math.floor(Number.MAX_SAFE_INTEGER / 32_000_000_000) = 281474
   if (maxValidatorsPerStateSlashing > maxSafeValidators) {
     throw new Error("Lodestar does not support this network, parameters don't fit number value inside state.slashings");
   }
@@ -100,7 +107,7 @@ export function processEpoch(
   // processRewardsAndPenalties(state, cache);
   {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRegistryUpdates});
-    processRegistryUpdates(state, cache);
+    processRegistryUpdates(fork, state, cache);
     timer?.();
   }
 
@@ -120,12 +127,32 @@ export function processEpoch(
 
   processEth1DataReset(state, cache);
 
+  if (fork >= ForkSeq.electra) {
+    const stateElectra = state as CachedBeaconStateElectra;
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({
+        step: EpochTransitionStep.processPendingDeposits,
+      });
+      processPendingDeposits(stateElectra, cache);
+      timer?.();
+    }
+
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({
+        step: EpochTransitionStep.processPendingConsolidations,
+      });
+      processPendingConsolidations(stateElectra, cache);
+      timer?.();
+    }
+  }
+
   {
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processEffectiveBalanceUpdates,
     });
-    processEffectiveBalanceUpdates(state, cache);
+    const numUpdate = processEffectiveBalanceUpdates(fork, state, cache);
     timer?.();
+    metrics?.numEffectiveBalanceUpdates.set(numUpdate);
   }
 
   processSlashingsReset(state, cache);
@@ -152,7 +179,7 @@ export function processEpoch(
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processSyncCommitteeUpdates,
       });
-      processSyncCommitteeUpdates(state as CachedBeaconStateAltair);
+      processSyncCommitteeUpdates(fork, state as CachedBeaconStateAltair);
       timer?.();
     }
   }

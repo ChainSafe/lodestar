@@ -1,12 +1,12 @@
 import {SecretKey} from "@chainsafe/blst";
 import {getClient} from "@lodestar/api";
-import {phase0, ssz} from "@lodestar/types";
+import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {CliCommand, toHexString} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
-import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
+import {phase0, ssz} from "@lodestar/types";
+import {CliCommand, toPubkeyHex} from "@lodestar/utils";
+import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 /* eslint-disable no-console */
 
@@ -52,7 +52,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
   const slot = BigInt(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
-  if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
+  if (Number.isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
   if (batchSize <= 0) throw Error(`batchSize must be > 0: ${batchSize}`);
 
   // TODO: Ask the user to confirm the range and slash action
@@ -77,7 +77,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const validators = (await client.beacon.getStateValidators({stateId: "head", validatorIds: pksHex})).value();
+    const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: pksHex})).value();
 
     // Submit all ProposerSlashing for range at once
     await Promise.all(
@@ -86,9 +86,9 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
         const {index, status, validator} = validators[i];
 
         try {
-          const validatorPkHex = toHexString(validator.pubkey);
+          const validatorPkHex = toPubkeyHex(validator.pubkey);
           if (validatorPkHex !== pkHex) {
-            throw Error(`getStateValidators did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
+            throw Error(`Beacon node did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
           }
 
           if (status === "active_slashed" || status === "exited_slashed") {

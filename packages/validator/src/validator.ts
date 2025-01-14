@@ -1,28 +1,27 @@
-import {toHexString} from "@chainsafe/ssz";
-import {BLSPubkey, phase0, ssz} from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {Genesis} from "@lodestar/types/phase0";
-import {Logger, toPrintableUrl} from "@lodestar/utils";
-import {getClient, ApiClient, routes, ApiRequestInit, defaultInit} from "@lodestar/api";
+import {ApiClient, ApiRequestInit, defaultInit, getClient, routes} from "@lodestar/api";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
-import {Clock, IClock} from "./util/clock.js";
+import {BLSPubkey, phase0, ssz} from "@lodestar/types";
+import {Genesis} from "@lodestar/types/phase0";
+import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
-import {BlockProposingService} from "./services/block.js";
-import {AttestationService} from "./services/attestation.js";
-import {IndicesService} from "./services/indices.js";
-import {SyncCommitteeService} from "./services/syncCommittee.js";
-import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepareBeaconProposer.js";
-import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
-import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
-import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
-import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
-import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
-import {ValidatorEventEmitter} from "./services/emitter.js";
-import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
-import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
+import {AttestationService} from "./services/attestation.js";
+import {BlockProposingService} from "./services/block.js";
+import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
+import {ValidatorEventEmitter} from "./services/emitter.js";
+import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
+import {IndicesService} from "./services/indices.js";
+import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
+import {SyncCommitteeService} from "./services/syncCommittee.js";
+import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
+import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
+import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
+import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
+import {Clock, IClock} from "./util/clock.js";
+import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
   opts: ValidatorOptions;
@@ -241,6 +240,7 @@ export class Validator {
       chainHeaderTracker,
       syncingStatusTracker,
       metrics,
+      config,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
@@ -264,7 +264,7 @@ export class Validator {
       }
     );
 
-    return new this({
+    return new Validator({
       opts,
       genesis,
       validatorStore,
@@ -329,6 +329,8 @@ export class Validator {
       strictFeeRecipientCheck,
     });
 
+    metrics?.defaultConfiguration.set({builderSelection: defaultBuilderSelection, broadcastValidation}, 1);
+
     // Instantiates block and attestation services and runs them once the chain has been started.
     return Validator.init(opts, genesis, metrics);
   }
@@ -372,7 +374,9 @@ export class Validator {
    * Create a signed voluntary exit message for the given validator by its key.
    */
   async signVoluntaryExit(publicKey: string, exitEpoch?: number): Promise<phase0.SignedVoluntaryExit> {
-    const validators = (await this.api.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})).value();
+    const validators = (
+      await this.api.beacon.postStateValidators({stateId: "head", validatorIds: [publicKey]})
+    ).value();
 
     const validator = validators[0];
     if (validator === undefined) {
@@ -396,14 +400,14 @@ async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Pro
     if (!ssz.Root.equals(genesisValidatorsRoot, nodeGenesisValidatorRoot)) {
       // this happens when the existing validator db served another network before
       opts.logger.error("Not the same genesisValidatorRoot", {
-        expected: toHexString(nodeGenesisValidatorRoot),
-        actual: toHexString(genesisValidatorsRoot),
+        expected: toRootHex(nodeGenesisValidatorRoot),
+        actual: toRootHex(genesisValidatorsRoot),
       });
       throw new NotEqualParamsError("Not the same genesisValidatorRoot");
     }
   } else {
     await metaDataRepository.setGenesisValidatorsRoot(nodeGenesisValidatorRoot);
-    opts.logger.info("Persisted genesisValidatorRoot", toHexString(nodeGenesisValidatorRoot));
+    opts.logger.info("Persisted genesisValidatorRoot", toRootHex(nodeGenesisValidatorRoot));
   }
 
   const nodeGenesisTime = genesis.genesisTime;

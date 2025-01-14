@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
+import {describe, expect, it} from "vitest";
 
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 
@@ -253,7 +253,7 @@ describe("computeDeltas", () => {
       nextEpoch: 0,
     }));
 
-    const balances = new Uint8Array([firstBalance, secondBalance]);
+    const balances = new Uint16Array([firstBalance, secondBalance]);
     // 1st validator is part of an attester slashing
     const equivocatingIndices = new Set([0]);
     let deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);

@@ -1,6 +1,7 @@
-import {ByteVectorType, UintNumberType, UintBigintType, BooleanType} from "@chainsafe/ssz";
+import {BooleanType, ByteVectorType, UintBigintType, UintNumberType} from "@chainsafe/ssz";
 import {ExecutionAddressType} from "../utils/executionAddress.js";
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want this name for variable
 export const Boolean = new BooleanType();
 export const Byte = new UintNumberType(1);
 export const Bytes4 = new ByteVectorType(4);
@@ -50,6 +51,7 @@ export const SubcommitteeIndex = UintNum64;
  */
 export const ValidatorIndex = UintNum64;
 export const WithdrawalIndex = UintNum64;
+export const DepositIndex = UintNum64;
 export const Gwei = UintBn64;
 export const Wei = UintBn256;
 export const Root = new ByteVectorType(32);

@@ -1,3 +1,4 @@
+import {ForkName} from "@lodestar/params";
 import {
   LightClientBootstrap,
   LightClientFinalityUpdate,
@@ -5,7 +6,6 @@ import {
   LightClientUpdate,
   SyncPeriod,
 } from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
 
 export interface LightClientTransport {
   getUpdates(

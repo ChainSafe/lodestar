@@ -1,17 +1,16 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import type * as fastify from "fastify";
 import {HttpHeader, MediaType, SUPPORTED_MEDIA_TYPES, parseAcceptHeader, parseContentTypeHeader} from "../headers.js";
 import {
   Endpoint,
-  RequestData,
   JsonRequestData,
   JsonRequestMethods,
+  RequestData,
   RequestWithBodyCodec,
+  RequestWithoutBodyCodec,
   RouteDefinition,
   SszRequestData,
   SszRequestMethods,
   isRequestWithoutBody,
-  RequestWithoutBodyCodec,
 } from "../types.js";
 import {WireFormat, fromWireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError} from "./error.js";

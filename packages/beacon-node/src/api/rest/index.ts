@@ -1,10 +1,10 @@
 import {Endpoints} from "@lodestar/api";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {registerRoutes} from "@lodestar/api/beacon/server";
-import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {NodeIsSyncing} from "../impl/errors.js";
-import {RestApiServer, RestApiServerModules, RestApiServerMetrics, RestApiServerOpts} from "./base.js";
+import {RestApiServer, RestApiServerMetrics, RestApiServerModules, RestApiServerOpts} from "./base.js";
 import {registerSwaggerUIRoutes} from "./swaggerUI.js";
 
 export {allNamespaces} from "@lodestar/api";
@@ -22,6 +22,7 @@ export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
   cors: "*",
   // beacon -> validator API is trusted, and for large amounts of keys the payload is multi-MB
   bodyLimit: 20 * 1024 * 1024, // 20MB for big block + blobs
+  stacktraces: false,
 };
 
 export type BeaconRestApiServerModules = RestApiServerModules & {

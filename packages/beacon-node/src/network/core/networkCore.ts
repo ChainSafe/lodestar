@@ -2,13 +2,14 @@ import {Connection, PeerId} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
+import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {Epoch, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
+import {Epoch, phase0} from "@lodestar/types";
+import {fromHex, withTimeout} from "@lodestar/utils";
 import {Libp2p} from "../interface.js";
 import {PeerManager} from "../peers/peerManager.js";
 import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
@@ -25,11 +26,11 @@ import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
 import {getConnectionsMap} from "../util.js";
 import {IClock, ClockEvent} from "../../util/clock.js";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
-import {NetworkEventBus} from "../events.js";
-import {Discv5Worker} from "../discv5/index.js";
-import {LocalStatusCache} from "../statusCache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
+import {Discv5Worker} from "../discv5/index.js";
+import {NetworkEventBus} from "../events.js";
+import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
@@ -148,7 +149,7 @@ export class NetworkCore implements INetworkCore {
 
     // Bind discv5's ENR to local metadata
     // resolve circular dependency by setting `discv5` variable after the peer manager is instantiated
-    // eslint-disable-next-line prefer-const
+    // biome-ignore lint/style/useConst: <explanation>
     let discv5: Discv5Worker | undefined;
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
@@ -193,6 +194,8 @@ export class NetworkCore implements INetworkCore {
     await gossip.start();
 
     const nodeId = computeNodeId(peerId);
+    // TODO-das this was updated by @twoeths a couple months after the line above was added by @g11tech
+    // const nodeId = enr ? fromHex(ENR.decodeTxt(enr).nodeId) : null;
     const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
@@ -222,6 +225,7 @@ export class NetworkCore implements INetworkCore {
     reqResp.registerProtocolsAtFork(forkCurrentSlot);
 
     // Bind discv5's ENR to local metadata
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     discv5 = peerManager["discovery"]?.discv5;
 
     // Initialize ENR with clock's fork
@@ -275,6 +279,7 @@ export class NetworkCore implements INetworkCore {
   async scrapeMetrics(): Promise<string> {
     return [
       (await this.metrics?.register.metrics()) ?? "",
+      // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
       (await this.peerManager["discovery"]?.discv5.scrapeMetrics()) ?? "",
     ]
       .filter((str) => str.length > 0)
@@ -313,7 +318,7 @@ export class NetworkCore implements INetworkCore {
     }
 
     for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
-      this.subscribeCoreTopicsAtFork(fork);
+      this.subscribeCoreTopicsAtFork(this.config, fork);
     }
   }
 
@@ -322,7 +327,7 @@ export class NetworkCore implements INetworkCore {
    */
   async unsubscribeGossipCoreTopics(): Promise<void> {
     for (const fork of this.subscribedForks.values()) {
-      this.unsubscribeCoreTopicsAtFork(fork);
+      this.unsubscribeCoreTopicsAtFork(this.config, fork);
     }
   }
 
@@ -342,6 +347,7 @@ export class NetworkCore implements INetworkCore {
   // REST API queries
 
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     const enr = await this.peerManager["discovery"]?.discv5.enr();
     const discoveryAddresses = [
       enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
@@ -404,6 +410,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   async dumpDiscv5KadValues(): Promise<string[]> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return (await this.peerManager["discovery"]?.discv5?.kadValues())?.map((enr) => enr.encodeTxt()) ?? [];
   }
 
@@ -420,6 +427,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return this.peerManager["discovery"]?.discv5.writeProfile(durationMs, dirpath) ?? "no discv5";
   }
 
@@ -428,6 +436,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     return this.peerManager["discovery"]?.discv5.writeHeapSnapshot(prefix, dirpath) ?? Promise.resolve("no discv5");
   }
 
@@ -449,7 +458,7 @@ export class NetworkCore implements INetworkCore {
           if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
             // Don't subscribe to new fork if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
-              this.subscribeCoreTopicsAtFork(nextFork);
+              this.subscribeCoreTopicsAtFork(this.config, nextFork);
               this.logger.info("Subscribing gossip topics before fork", {nextFork});
             } else {
               this.logger.info("Skipping subscribing gossip topics before fork", {nextFork});
@@ -468,7 +477,7 @@ export class NetworkCore implements INetworkCore {
           // After fork transition
           if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
             this.logger.info("Unsubscribing gossip topics from prev fork", {prevFork});
-            this.unsubscribeCoreTopicsAtFork(prevFork);
+            this.unsubscribeCoreTopicsAtFork(this.config, prevFork);
             this.attnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
             this.syncnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
           }
@@ -494,12 +503,12 @@ export class NetworkCore implements INetworkCore {
     }
   };
 
-  private subscribeCoreTopicsAtFork(fork: ForkName): void {
+  private subscribeCoreTopicsAtFork(config: BeaconConfig, fork: ForkName): void {
     if (this.subscribedForks.has(fork)) return;
     this.subscribedForks.add(fork);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {
+    for (const topic of getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
@@ -507,12 +516,12 @@ export class NetworkCore implements INetworkCore {
     }
   }
 
-  private unsubscribeCoreTopicsAtFork(fork: ForkName): void {
+  private unsubscribeCoreTopicsAtFork(config: BeaconConfig, fork: ForkName): void {
     if (!this.subscribedForks.has(fork)) return;
     this.subscribedForks.delete(fork);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {
+    for (const topic of getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {

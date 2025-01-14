@@ -1,12 +1,10 @@
-import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
-import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/config.js";
+import {describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/config.js";
+import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/config.js";
 import {getRoutes} from "../../../../src/beacon/server/config.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/config.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 describe("beacon / config", () => {
   runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);

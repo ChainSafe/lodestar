@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import {Interchange} from "@lodestar/validator";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {CliCommand} from "@lodestar/utils";
-import {parseLoggerArgs} from "../../../util/logger.js";
+import {Interchange} from "@lodestar/validator";
+import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
+import {parseLoggerArgs} from "../../../util/logger.js";
 import {AccountValidatorArgs} from "../options.js";
-import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {getValidatorPaths} from "../paths.js";
-import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
+import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 
 type ImportArgs = {
   file: string;

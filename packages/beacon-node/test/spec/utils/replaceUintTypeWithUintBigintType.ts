@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
 import {
-  Type,
-  UintNumberType,
-  UintBigintType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
+  Type,
+  UintBigintType,
+  UintNumberType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";

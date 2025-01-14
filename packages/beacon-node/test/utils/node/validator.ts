@@ -1,14 +1,14 @@
-import tmp from "tmp";
-import {vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
+import {ApiClient, ApiError, ApiResponse, HttpStatusCode} from "@lodestar/api";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
-import {ApiClient, ApiError, HttpStatusCode, ApiResponse} from "@lodestar/api";
-import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {mapValues} from "@lodestar/utils";
+import {Signer, SignerType, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import tmp from "tmp";
+import {vi} from "vitest";
 import {BeaconNode} from "../../../src/index.js";
-import {testLogger, TestLoggerOpts} from "../logger.js";
+import {TestLoggerOpts, testLogger} from "../logger.js";
 
 export async function getAndInitDevValidators({
   node,
@@ -97,7 +97,7 @@ export function getApiFromServerHandlers(api: BeaconApiMethods): ApiClient {
       return async (args: unknown) => {
         try {
           const apiResponse = new ApiResponse({} as any, null, new Response(null, {status: HttpStatusCode.OK}));
-          const result = await api(args, {});
+          const result = await api.call(apiModule, args, {});
           apiResponse.value = () => result.data;
           apiResponse.meta = () => result.meta;
           return apiResponse;

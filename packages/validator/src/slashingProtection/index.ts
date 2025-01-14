@@ -1,24 +1,23 @@
-import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, Epoch, Root} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
-import {LodestarValidatorDatabaseController} from "../types.js";
+import {Logger, toPubkeyHex} from "@lodestar/utils";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
-import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
+import {LodestarValidatorDatabaseController} from "../types.js";
 import {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,
   SlashingProtectionAttestationService,
 } from "./attestation/index.js";
-import {ISlashingProtection} from "./interface.js";
+import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
-  InterchangeLodestar,
   Interchange,
   InterchangeFormatVersion,
+  InterchangeLodestar,
   parseInterchange,
   serializeInterchange,
 } from "./interchange/index.js";
-import {MinMaxSurround, DistanceStoreRepository} from "./minMaxSurround/index.js";
-import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types.js";
+import {ISlashingProtection} from "./interface.js";
+import {DistanceStoreRepository, MinMaxSurround} from "./minMaxSurround/index.js";
+import {SlashingProtectionAttestation, SlashingProtectionBlock} from "./types.js";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation/index.js";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block/index.js";
@@ -63,7 +62,7 @@ export class SlashingProtection implements ISlashingProtection {
   async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: Logger): Promise<void> {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
     for (const validator of data) {
-      logger?.info("Importing slashing protection", {pubkey: toHexString(validator.pubkey)});
+      logger?.info("Importing slashing protection", {pubkey: toPubkeyHex(validator.pubkey)});
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
       await this.attestationService.importAttestations(validator.pubkey, validator.signedAttestations);
     }
@@ -77,7 +76,7 @@ export class SlashingProtection implements ISlashingProtection {
   ): Promise<Interchange> {
     const validatorData: InterchangeLodestar["data"] = [];
     for (const pubkey of pubkeys) {
-      logger?.info("Exporting slashing protection", {pubkey: toHexString(pubkey)});
+      logger?.info("Exporting slashing protection", {pubkey: toPubkeyHex(pubkey)});
       validatorData.push({
         pubkey,
         signedBlocks: await this.blockService.exportBlocks(pubkey),

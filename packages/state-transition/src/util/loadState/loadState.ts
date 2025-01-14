@@ -1,10 +1,10 @@
-import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
+import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
 import {BeaconStateAllForks, BeaconStateAltair} from "../../types.js";
 import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "../sszBytes.js";
-import {findModifiedValidators} from "./findModifiedValidators.js";
 import {findModifiedInactivityScores} from "./findModifiedInactivityScores.js";
+import {findModifiedValidators} from "./findModifiedValidators.js";
 import {loadValidator} from "./loadValidator.js";
 
 type MigrateStateOutput = {state: BeaconStateAllForks; modifiedValidators: number[]};
@@ -64,6 +64,25 @@ export function loadState(
   migratedState.commit();
 
   return {state: migratedState, modifiedValidators};
+}
+
+/**
+ * Load state and validators Uint8Array from state bytes.
+ */
+export function loadStateAndValidators(
+  chainForkConfig: ChainForkConfig,
+  stateBytes: Uint8Array
+): {state: BeaconStateAllForks; validatorsBytes: Uint8Array} {
+  // stateType could be any types, casting just to make typescript happy
+  const stateType = getStateTypeFromBytes(chainForkConfig, stateBytes) as typeof ssz.phase0.BeaconState;
+  const state = stateType.deserializeToViewDU(stateBytes);
+  const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+  const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
+  const allFields = Object.keys(stateType.fields);
+  const validatorFieldIndex = allFields.indexOf("validators");
+  const validatorRange = fieldRanges[validatorFieldIndex];
+  const validatorsBytes = stateBytes.subarray(validatorRange.start, validatorRange.end);
+  return {state, validatorsBytes};
 }
 
 /**

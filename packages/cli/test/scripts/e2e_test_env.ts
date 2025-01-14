@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";

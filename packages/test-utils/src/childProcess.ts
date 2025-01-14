@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 import childProcess, {ChildProcess, ChildProcessWithoutNullStreams} from "node:child_process";
-import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
-import {prettyMsToTime, retry, sleep, Logger} from "@lodestar/utils";
+import stream from "node:stream";
+import {Logger, prettyMsToTime, retry, sleep} from "@lodestar/utils";
 
 export type ChildProcessLogOptions = {
   /**
@@ -86,7 +86,7 @@ export function isPidRunning(pid: number): boolean {
     // Signal 0 is a special signal that checks if the process exists
     process.kill(pid, 0);
     return true;
-  } catch {
+  } catch (_e) {
     return false;
   }
 }
@@ -304,7 +304,7 @@ export async function spawnChildProcess(
           });
           proc.removeAllListeners("exit");
           resolve(proc);
-        } catch (error) {
+        } catch (_e) {
           reject(
             new Error(
               `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(healthTimeoutMs ?? 0)}`

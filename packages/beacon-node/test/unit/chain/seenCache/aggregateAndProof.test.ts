@@ -1,12 +1,12 @@
 import {BitArray} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
   AggregationInfo,
-  insertDesc,
   SeenAggregatedAttestations,
+  insertDesc,
 } from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
-describe("SeenAggregatedAttestations.isKnown", function () {
+describe("SeenAggregatedAttestations.isKnown", () => {
   const testCases: {
     id: string;
     seenAttestingBits: number[];
@@ -62,7 +62,7 @@ describe("SeenAggregatedAttestations.isKnown", function () {
   }
 });
 
-describe("insertDesc", function () {
+describe("insertDesc", () => {
   const testCases: {
     id: string;
     arr: number[][];

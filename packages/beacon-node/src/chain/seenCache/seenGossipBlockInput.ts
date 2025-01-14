@@ -1,10 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
 import {deneb, RootHex, SignedBeaconBlock, ssz, peerdas} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {pruneSetToMax} from "@lodestar/utils";
 import {BLOBSIDECAR_FIXED_SIZE, isForkBlobs, ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-
+import {pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Metrics} from "../../metrics/index.js";
 import {
+  BlobsSource,
   BlockInput,
   NullBlockInput,
   getBlockInput,
@@ -13,12 +14,10 @@ import {
   BlockInputCachedData,
   GossipedInputType,
   getBlockInputBlobs,
-  BlobsSource,
   DataColumnsSource,
   getBlockInputDataColumns,
   BlockInputDataColumns,
 } from "../blocks/types.js";
-import {Metrics} from "../../metrics/index.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 
 export enum BlockInputAvailabilitySource {
@@ -89,9 +88,9 @@ export class SeenGossipBlockInput {
           | {haveColumns: number; expectedColumns: null}
         );
       } {
-    let blockHex;
-    let blockCache;
-    let fork;
+    let blockHex: RootHex;
+    let blockCache: BlockInputCacheType;
+    let fork: ForkName;
 
     if (gossipedInput.type === GossipedInputType.block) {
       const {signedBlock, blockBytes} = gossipedInput;
@@ -351,6 +350,22 @@ export class SeenGossipBlockInput {
         throw Error(`invalid fork=${fork} data not implemented`);
       }
     }
+
+    // will need to wait for the block to showup
+    if (cachedData === undefined) {
+      throw Error("Missing cachedData for deneb+ blobs");
+    }
+    const {blobsCache} = cachedData;
+
+    return {
+      blockInput: {
+        block: null,
+        blockRootHex: blockHex,
+        cachedData,
+        blockInputPromise,
+      },
+      blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
+    };
   }
 }
 

@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -8,16 +9,11 @@ import {
   getCurrentEpoch,
   getRandaoMix,
 } from "@lodestar/state-transition";
-import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import {getValidatorStatus} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
-import {
-  filterStateValidatorsByStatus,
-  getStateValidatorIndex,
-  getValidatorStatus,
-  getStateResponse,
-  toValidatorResponse,
-} from "./utils.js";
+import {filterStateValidatorsByStatus, getStateResponse, getStateValidatorIndex, toValidatorResponse} from "./utils.js";
 
 export function getBeaconStateApi({
   chain,
@@ -104,7 +100,9 @@ export function getBeaconStateApi({
           data: validatorResponses,
           meta: {executionOptimistic, finalized},
         };
-      } else if (statuses.length) {
+      }
+
+      if (statuses.length) {
         const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,
@@ -128,6 +126,37 @@ export function getBeaconStateApi({
 
     async postStateValidators(args, context) {
       return this.getStateValidators(args, context);
+    },
+
+    async postStateValidatorIdentities({stateId, validatorIds = []}) {
+      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {pubkey2index} = chain.getHeadState().epochCtx;
+
+      let validatorIdentities: routes.beacon.ValidatorIdentities;
+
+      if (validatorIds.length) {
+        validatorIdentities = [];
+        for (const id of validatorIds) {
+          const resp = getStateValidatorIndex(id, state, pubkey2index);
+          if (resp.valid) {
+            const index = resp.validatorIndex;
+            const {pubkey, activationEpoch} = state.validators.getReadonly(index);
+            validatorIdentities.push({index, pubkey, activationEpoch});
+          }
+        }
+      } else {
+        const validatorsArr = state.validators.getAllReadonlyValues();
+        validatorIdentities = new Array(validatorsArr.length) as routes.beacon.ValidatorIdentities;
+        for (let i = 0; i < validatorsArr.length; i++) {
+          const {pubkey, activationEpoch} = validatorsArr[i];
+          validatorIdentities[i] = {index: i, pubkey, activationEpoch};
+        }
+      }
+
+      return {
+        data: validatorIdentities,
+        meta: {executionOptimistic, finalized},
+      };
     },
 
     async getStateValidator({stateId, validatorId}) {
@@ -164,7 +193,7 @@ export function getBeaconStateApi({
             }
             balances.push({index: id, balance: state.balances.get(id)});
           } else {
-            const index = headState.epochCtx.pubkey2index.get(id);
+            const index = headState.epochCtx.pubkey2index.get(fromHex(id));
             if (index != null && index <= state.validators.length) {
               balances.push({index, balance: state.balances.get(index)});
             }
@@ -202,7 +231,14 @@ export function getBeaconStateApi({
 
       const epoch = filters.epoch ?? computeEpochAtSlot(state.slot);
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(epoch);
+      const decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
+      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      if (!shuffling) {
+        throw new ApiError(
+          500,
+          `No shuffling found to calculate committees for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
+        );
+      }
       const committees = shuffling.committees;
       const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
         const slot = startSlot + slotInEpoch;

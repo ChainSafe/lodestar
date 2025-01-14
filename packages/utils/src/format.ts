@@ -1,4 +1,4 @@
-import {toHexString} from "./bytes.js";
+import {toRootHex} from "./bytes/index.js";
 import {ETH_TO_WEI} from "./ethConversion.js";
 
 /**
@@ -6,7 +6,7 @@ import {ETH_TO_WEI} from "./ethConversion.js";
  * 4 bytes can represent 4294967296 values, so the chance of collision is low
  */
 export function prettyBytes(root: Uint8Array | string): string {
-  const str = typeof root === "string" ? root : toHexString(root);
+  const str = typeof root === "string" ? root : toRootHex(root);
   return `${str.slice(0, 6)}…${str.slice(-4)}`;
 }
 
@@ -15,7 +15,7 @@ export function prettyBytes(root: Uint8Array | string): string {
  * Paired with block numbers or slots, it can still act as a decent identify-able format
  */
 export function prettyBytesShort(root: Uint8Array | string): string {
-  const str = typeof root === "string" ? root : toHexString(root);
+  const str = typeof root === "string" ? root : toRootHex(root);
   return `${str.slice(0, 6)}…`;
 }
 
@@ -25,7 +25,7 @@ export function prettyBytesShort(root: Uint8Array | string): string {
  * values on explorers like beaconcha.in while improving readability of logs
  */
 export function truncBytes(root: Uint8Array | string): string {
-  const str = typeof root === "string" ? root : toHexString(root);
+  const str = typeof root === "string" ? root : toRootHex(root);
   return str.slice(0, 14);
 }
 
@@ -45,10 +45,17 @@ export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDeci
 const MAX_DECIMAL_FACTOR = BigInt("100000");
 
 /**
+ * Format wei as ETH, with up to 5 decimals
+ */
+export function formatWeiToEth(wei: bigint): string {
+  return formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
+}
+
+/**
  * Format wei as ETH, with up to 5 decimals and append ' ETH'
  */
 export function prettyWeiToEth(wei: bigint): string {
-  return `${formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`;
+  return `${formatWeiToEth(wei)} ETH`;
 }
 
 /**
@@ -57,4 +64,11 @@ export function prettyWeiToEth(wei: bigint): string {
 export function prettyMsToTime(timeMs: number): string {
   const date = new Date(0, 0, 0, 0, 0, 0, timeMs);
   return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds()}`;
+}
+
+/**
+ * Remove 0x prefix from a string
+ */
+export function strip0xPrefix(hex: string): string {
+  return hex.startsWith("0x") ? hex.slice(2) : hex;
 }

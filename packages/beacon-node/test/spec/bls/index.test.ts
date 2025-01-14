@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import jsyaml from "js-yaml";
-import {expect, describe, it} from "vitest";
+import {describe, expect, it} from "vitest";
 import {blsSpecTests} from "../specTestVersioning.js";
 import {readdirSyncSpec} from "../utils/specTestIterator.js";
 import {testFnByType} from "./bls.js";
@@ -35,7 +35,7 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
 
     const fnTestDirpath = path.join(blsSpecTests.outputDir, fnName);
     for (const testName of readdirSyncSpec(fnTestDirpath)) {
-      it(`${fnName}/${testName}`, function (context) {
+      it(`${fnName}/${testName}`, (context) => {
         if (fn === "skip") {
           context.skip();
           return;

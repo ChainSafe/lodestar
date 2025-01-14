@@ -1,20 +1,21 @@
 import path from "node:path";
+import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  CachedBeaconStateBellatrix,
   CachedBeaconStateAltair,
-  CachedBeaconStatePhase0,
+  CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
+  CachedBeaconStatePhase0,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
   const config = createChainForkConfig({});
@@ -35,6 +36,8 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
         case ForkName.deneb:
           return slotFns.upgradeStateToDeneb(preState as CachedBeaconStateCapella);
+        case ForkName.electra:
+          return slotFns.upgradeStateToElectra(preState as CachedBeaconStateDeneb);
         case ForkName.peerdas:
           throw Error("not Implemented");
       }
@@ -49,7 +52,7 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
       timeout: 10000,
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(forkNext, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

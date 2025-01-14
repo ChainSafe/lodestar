@@ -1,20 +1,20 @@
 import {toHexString} from "@chainsafe/ssz";
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  CachedBeaconStateAllForks,
-  beforeProcessEpoch,
-} from "@lodestar/state-transition";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {
+  CachedBeaconStateAllForks,
+  beforeProcessEpoch,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
-import {BeaconNode} from "../../../src/index.js";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
-import {linspace} from "../../../src/util/numpy.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
+import {BeaconNode} from "../../../src/index.js";
+import {linspace} from "../../../src/util/numpy.js";
 
 /* eslint-disable no-console */
 
@@ -112,7 +112,7 @@ function avg(arr: number[]): number {
 /**
  * Print a table grid of (Y) epoch / (X) slot_per_epoch
  */
-function printEpochSlotGrid<T>(map: Map<Slot, T>, config: BeaconConfig, title: string): void {
+function printEpochSlotGrid<T>(map: Map<Slot, T>, _config: BeaconConfig, title: string): void {
   const lastSlot = Array.from(map.keys())[map.size - 1];
   const lastEpoch = computeEpochAtSlot(lastSlot);
   const rowsByEpochBySlot = linspace(0, lastEpoch).map((epoch) => {
@@ -132,7 +132,7 @@ function printEpochGrid(maps: Record<string, Map<Epoch, number>>, title: string)
     return epoch > max ? epoch : max;
   }, 0);
   const epochGrid = linspace(0, lastEpoch).map((epoch) =>
-    mapValues(maps, (val, key) => formatValue(maps[key].get(epoch)))
+    mapValues(maps, (_val, key) => formatValue(maps[key].get(epoch)))
   );
   console.log(renderTitle(title));
   console.table(epochGrid);

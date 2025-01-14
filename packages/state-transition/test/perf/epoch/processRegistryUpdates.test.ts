@@ -1,8 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
+import {ForkSeq} from "@lodestar/params";
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
 // - indicesEligibleForActivationQueue: Maxing deposits triggers 512 validator mutations
@@ -62,7 +63,7 @@ describe("phase0 processRegistryUpdates", () => {
       noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
       beforeEach: async ({state, cache}) => ({state: state.clone(), cache}),
-      fn: ({state, cache}) => processRegistryUpdates(state, cache),
+      fn: ({state, cache}) => processRegistryUpdates(ForkSeq.phase0, state, cache),
     });
   }
 });
@@ -77,7 +78,7 @@ type IndicesLengths = {
  * Create a state that causes `changeRatio` fraction (0,1) of validators to change their effective balance.
  */
 function getRegistryUpdatesTestData(
-  vc: number,
+  _vc: number,
   lengths: IndicesLengths
 ): {
   state: CachedBeaconStateAllForks;

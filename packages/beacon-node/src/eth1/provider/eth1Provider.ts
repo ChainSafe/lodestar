@@ -1,17 +1,16 @@
-import {toHexString} from "@chainsafe/ssz";
-import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex, isErrorAborted, createElapsedTimeTracker, toPrintableUrl} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
+import {phase0} from "@lodestar/types";
+import {createElapsedTimeTracker, fromHex, isErrorAborted, toHex, toPrintableUrl} from "@lodestar/utils";
 
 import {FetchError, isFetchError} from "@lodestar/api";
-import {linspace} from "../../util/numpy.js";
-import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
-import {Eth1Block, Eth1ProviderState, IEth1Provider} from "../interface.js";
-import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
-import {isValidAddress} from "../../util/address.js";
-import {EthJsonRpcBlockRaw} from "../interface.js";
 import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "../../execution/engine/utils.js";
+import {isValidAddress} from "../../util/address.js";
+import {linspace} from "../../util/numpy.js";
+import {Eth1Block, Eth1ProviderState, IEth1Provider} from "../interface.js";
+import {EthJsonRpcBlockRaw} from "../interface.js";
+import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
+import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,
@@ -20,9 +19,7 @@ import {
   JsonRpcHttpClientMetrics,
   ReqOpts,
 } from "./jsonRpcHttpClient.js";
-import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
+import {dataToBytes, isJsonRpcTruncatedError, numToQuantity, quantityToNum} from "./utils.js";
 
 /**
  * Binds return types to Ethereum JSON RPC methods
@@ -72,7 +69,7 @@ export class Eth1Provider implements IEth1Provider {
   ) {
     this.logger = opts.logger;
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
-    this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
+    this.depositContractAddress = toHex(config.DEPOSIT_CONTRACT_ADDRESS);
 
     const providerUrls = opts.providerUrls ?? DEFAULT_PROVIDER_URLS;
     this.rpc = new JsonRpcHttpClient(providerUrls, {

@@ -1,10 +1,20 @@
-import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName, ForkPreBlobs} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkBlobs,
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkPostElectra,
+  ForkPreBlobs,
+} from "@lodestar/params";
 import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
+import {ts as electra} from "./electra/index.js";
 import {ts as peerdas} from "./peerdas/index.js";
+
 import {Slot} from "./primitive/types.js";
 
 export * from "./primitive/types.js";
@@ -13,6 +23,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
+export {ts as electra} from "./electra/index.js";
 export {ts as peerdas} from "./peerdas/index.js";
 
 /** Common non-spec type to represent roots as strings */
@@ -23,6 +34,18 @@ export enum ProducedBlockSource {
   builder = "builder",
   engine = "engine",
 }
+
+export type WithBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes: Uint8Array;
+};
+
+export type WithOptionalBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes?: Uint8Array | null;
+};
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
@@ -36,6 +59,12 @@ type TypesByFork = {
     BeaconState: phase0.BeaconState;
     SignedBeaconBlock: phase0.SignedBeaconBlock;
     Metadata: phase0.Metadata;
+    Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.altair]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -53,6 +82,12 @@ type TypesByFork = {
     LightClientStore: altair.LightClientStore;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.bellatrix]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -78,6 +113,12 @@ type TypesByFork = {
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.capella]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -103,6 +144,12 @@ type TypesByFork = {
     SSEPayloadAttributes: capella.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.deneb]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -133,6 +180,49 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
+    IndexedAttestation: phase0.IndexedAttestation;
+    IndexedAttestationBigint: phase0.IndexedAttestationBigint;
+    AttesterSlashing: phase0.AttesterSlashing;
+    AggregateAndProof: phase0.AggregateAndProof;
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof;
+  };
+  [ForkName.electra]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: electra.BeaconBlock;
+    BeaconBlockBody: electra.BeaconBlockBody;
+    BeaconState: electra.BeaconState;
+    SignedBeaconBlock: electra.SignedBeaconBlock;
+    Metadata: altair.Metadata;
+    LightClientHeader: deneb.LightClientHeader;
+    LightClientBootstrap: electra.LightClientBootstrap;
+    LightClientUpdate: electra.LightClientUpdate;
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
+    LightClientStore: electra.LightClientStore;
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
+    ExecutionPayload: deneb.ExecutionPayload;
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
+    BuilderBid: electra.BuilderBid;
+    SignedBuilderBid: electra.SignedBuilderBid;
+    SSEPayloadAttributes: electra.SSEPayloadAttributes;
+    BlockContents: electra.BlockContents;
+    SignedBlockContents: electra.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: deneb.BlobsBundle;
+    Contents: deneb.Contents;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+    Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
+    ExecutionRequests: electra.ExecutionRequests;
   };
   [ForkName.peerdas]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -197,6 +287,7 @@ export type SignedBeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, 
 
 export type ExecutionPayload<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayload"];
 export type ExecutionPayloadHeader<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayloadHeader"];
+export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = TypesByFork[F]["ExecutionRequests"];
 
 export type BlobsBundle<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlobsBundle"];
 export type Contents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["Contents"];
@@ -221,3 +312,10 @@ export type Metadata<F extends ForkName = ForkAll> = TypesByFork[F]["Metadata"];
 export type BuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BuilderBid"];
 export type SignedBuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SignedBuilderBid"];
 export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
+
+export type Attestation<F extends ForkName = ForkAll> = TypesByFork[F]["Attestation"];
+export type IndexedAttestation<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestation"];
+export type IndexedAttestationBigint<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestationBigint"];
+export type AttesterSlashing<F extends ForkName = ForkAll> = TypesByFork[F]["AttesterSlashing"];
+export type AggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["AggregateAndProof"];
+export type SignedAggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["SignedAggregateAndProof"];

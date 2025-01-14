@@ -1,10 +1,10 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
-import {isEqualNonZeroRoot, minEpoch} from "../utils.js";
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround/index.js";
 import {SlashingProtectionAttestation} from "../types.js";
-import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors.js";
+import {isEqualNonZeroRoot, minEpoch} from "../utils.js";
 import {AttestationByTargetRepository} from "./attestationByTargetRepository.js";
 import {AttestationLowerBoundRepository} from "./attestationLowerBoundRepository.js";
+import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors.js";
 export {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,
@@ -39,7 +39,7 @@ export class SlashingProtectionAttestationService {
   async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
     const safeStatus = await this.checkAttestation(pubKey, attestation);
 
-    if (safeStatus != SafeStatus.SAME_DATA) {
+    if (safeStatus !== SafeStatus.SAME_DATA) {
       await this.insertAttestation(pubKey, attestation);
     }
 
@@ -63,13 +63,12 @@ export class SlashingProtectionAttestationService {
       // Interchange format allows for attestations without signing_root, then assume root is equal
       if (isEqualNonZeroRoot(sameTargetAtt.signingRoot, attestation.signingRoot)) {
         return SafeStatus.SAME_DATA;
-      } else {
-        throw new InvalidAttestationError({
-          code: InvalidAttestationErrorCode.DOUBLE_VOTE,
-          attestation: attestation,
-          prev: sameTargetAtt,
-        });
       }
+      throw new InvalidAttestationError({
+        code: InvalidAttestationErrorCode.DOUBLE_VOTE,
+        attestation: attestation,
+        prev: sameTargetAtt,
+      });
     }
 
     // Check for a surround vote

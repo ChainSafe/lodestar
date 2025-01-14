@@ -113,7 +113,7 @@ export function isSyncChainDone(batches: Batch[], lastEpochWithProcessBlocks: Ep
 
   if (lastAwaitingValidation) {
     return batchStartEpochIsAfterSlot(lastAwaitingValidation.startEpoch + EPOCHS_PER_BATCH, targetSlot);
-  } else {
-    return batchStartEpochIsAfterSlot(lastEpochWithProcessBlocks, targetSlot);
   }
+
+  return batchStartEpochIsAfterSlot(lastEpochWithProcessBlocks, targetSlot);
 }

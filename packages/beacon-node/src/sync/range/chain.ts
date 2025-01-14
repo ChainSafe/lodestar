@@ -1,28 +1,26 @@
-import {toHexString} from "@chainsafe/ssz";
-import {Epoch, Root, Slot, phase0} from "@lodestar/types";
-import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-
+import {Epoch, Root, Slot, phase0} from "@lodestar/types";
+import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {BlockInput, BlockInputType} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
-import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH} from "../constants.js";
 import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
+import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
-  validateBatchesStatus,
-  getNextBatchToProcess,
-  toBeDownloadedStartEpoch,
-  toArr,
   ChainPeersBalancer,
-  computeMostCommonTarget,
   batchStartEpochIsAfterSlot,
-  isSyncChainDone,
+  computeMostCommonTarget,
   getBatchSlotRange,
+  getNextBatchToProcess,
+  isSyncChainDone,
+  toArr,
+  toBeDownloadedStartEpoch,
+  validateBatchesStatus,
 } from "./utils/index.js";
 
 export type SyncChainModules = {
@@ -244,7 +242,7 @@ export class SyncChain {
   /** Full debug state for lodestar API */
   getDebugState(): SyncChainDebugState {
     return {
-      targetRoot: toHexString(this.target.root),
+      targetRoot: toRootHex(this.target.root),
       targetSlot: this.target.slot,
       syncType: this.syncType,
       status: this.status,

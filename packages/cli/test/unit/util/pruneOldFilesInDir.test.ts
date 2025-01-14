@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {rimraf} from "rimraf";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {pruneOldFilesInDir} from "../../../src/util/index.js";
 import {testFilesDir} from "../../utils.js";
 
@@ -53,6 +53,10 @@ describe("pruneOldFilesInDir", () => {
     pruneOldFilesInDir(emptyDir, DAYS_TO_MS);
 
     expect(fs.existsSync(emptyDir)).toBe(false);
+  });
+
+  it("should handle missing directories", () => {
+    expect(() => pruneOldFilesInDir(path.join(dataDir, "does-not-exist"), DAYS_TO_MS)).not.toThrowError();
   });
 
   function createFileWithAge(path: string, ageInDays: number): void {

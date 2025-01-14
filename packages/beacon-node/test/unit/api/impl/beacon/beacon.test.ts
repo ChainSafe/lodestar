@@ -1,20 +1,20 @@
-import {describe, it, expect, beforeAll} from "vitest";
 import {phase0} from "@lodestar/types";
-import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
+import {beforeAll, describe, expect, it} from "vitest";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
+import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {Mutable} from "../../../../utils/types.js";
 
-describe("beacon api implementation", function () {
+describe("beacon api implementation", () => {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconApi>;
 
-  beforeAll(function () {
+  beforeAll(() => {
     modules = getApiTestModules();
     api = getBeaconApi(modules);
   });
 
-  describe("getGenesis", function () {
-    it("success", async function () {
+  describe("getGenesis", () => {
+    it("success", async () => {
       (modules.chain as Mutable<typeof modules.chain, "genesisTime">).genesisTime = 0;
       (modules.chain as Mutable<typeof modules.chain, "genesisValidatorsRoot">).genesisValidatorsRoot =
         Buffer.alloc(32);

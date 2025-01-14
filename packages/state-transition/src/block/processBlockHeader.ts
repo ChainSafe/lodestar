@@ -1,7 +1,8 @@
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {BeaconBlock, BlindedBeaconBlock, ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {blindedOrFullBlockToHeader} from "../util/index.js";
 /**
  * Converts a Deposit record (created by the eth-execution deposit contract) into a Validator object that goes into the eth-consensus state.
@@ -32,7 +33,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: Beac
   // verify that the parent matches
   if (!byteArrayEquals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
     throw new Error(
-      `Block parent root ${toHexString(block.parentRoot)} does not match state latest block, block slot=${slot}`
+      `Block parent root ${toRootHex(block.parentRoot)} does not match state latest block, block slot=${slot}`
     );
   }
 

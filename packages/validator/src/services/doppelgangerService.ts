@@ -1,12 +1,11 @@
-import {fromHexString} from "@chainsafe/ssz";
-import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
-import {Logger, sleep, truncBytes} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {Logger, fromHex, sleep, truncBytes} from "@lodestar/utils";
+import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
 import {IClock} from "../util/index.js";
-import {Metrics} from "../metrics.js";
 import {IndicesService} from "./indices.js";
 
 // The number of epochs that must be checked before we assume that there are
@@ -69,7 +68,7 @@ export class DoppelgangerService {
     if (remainingEpochs > 0) {
       const previousEpoch = currentEpoch - 1;
       const attestedInPreviousEpoch = await this.slashingProtection.hasAttestedInEpoch(
-        fromHexString(pubkeyHex),
+        fromHex(pubkeyHex),
         previousEpoch
       );
 
@@ -276,11 +275,12 @@ export class DoppelgangerService {
 function getStatus(state: DoppelgangerState | undefined): DoppelgangerStatus {
   if (!state) {
     return DoppelgangerStatus.Unknown;
-  } else if (state.remainingEpochs <= 0) {
-    return DoppelgangerStatus.VerifiedSafe;
-  } else if (state.remainingEpochs === REMAINING_EPOCHS_IF_DOPPELGANGER) {
-    return DoppelgangerStatus.DoppelgangerDetected;
-  } else {
-    return DoppelgangerStatus.Unverified;
   }
+  if (state.remainingEpochs <= 0) {
+    return DoppelgangerStatus.VerifiedSafe;
+  }
+  if (state.remainingEpochs === REMAINING_EPOCHS_IF_DOPPELGANGER) {
+    return DoppelgangerStatus.DoppelgangerDetected;
+  }
+  return DoppelgangerStatus.Unverified;
 }

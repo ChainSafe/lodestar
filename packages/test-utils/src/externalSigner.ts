@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {dirSync as tmpDirSync} from "tmp";
-import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
 import {ForkSeq} from "@lodestar/params";
+import {GenericContainer, StartedTestContainer, Wait} from "testcontainers";
+import {dirSync as tmpDirSync} from "tmp";
 
 const web3signerVersion = "24.2.0";
 
@@ -69,7 +69,6 @@ export async function startExternalSigner({
   stream
     .on("data", (line) => process.stdout.write(line))
     .on("err", (line) => process.stderr.write(line))
-    // eslint-disable-next-line no-console
     .on("end", () => console.log("Stream closed"));
 
   return {

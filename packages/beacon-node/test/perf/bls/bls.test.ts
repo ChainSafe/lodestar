@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import {itBench} from "@dapplion/benchmark";
 import {
   PublicKey,
   SecretKey,
@@ -9,9 +8,10 @@ import {
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/blst";
+import {itBench} from "@dapplion/benchmark";
 import {linspace} from "../../../src/util/numpy.js";
 
-describe("BLS ops", function () {
+describe("BLS ops", () => {
   type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
   // signature needs to be in Uint8Array to match real situation
   type BlsSet = {publicKey: PublicKey; message: Uint8Array; signature: Uint8Array};

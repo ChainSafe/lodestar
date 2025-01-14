@@ -1,7 +1,7 @@
 import EventEmitter from "node:events";
-import {Mocked, vi} from "vitest";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
+import {Mocked, vi} from "vitest";
 import {IClock} from "../../src/util/clock.js";
 
 /**
@@ -74,5 +74,6 @@ export function getMockedClock(): Mocked<IClock> {
     },
     currentSlotWithGossipDisparity: undefined,
     isCurrentSlotGivenGossipDisparity: vi.fn(),
+    secFromSlot: vi.fn(),
   } as unknown as Mocked<IClock>;
 }

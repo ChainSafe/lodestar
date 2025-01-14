@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {ProtoArray, ExecutionStatus, DataAvailabilityStatus} from "../../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {DataAvailabilityStatus, ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -77,9 +77,13 @@ describe("getCommonAncestor", () => {
 
   for (const {nodeA, nodeB, ancestor} of testCases) {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      // biome-ignore lint/style/noNonNullAssertion: <explanation>
       const ancestorNode = fc.getCommonAncestor(fc.getNode(nodeA)!, fc.getNode(nodeB)!);
-      expect(ancestorNode && ancestorNode.blockRoot).toBe(ancestor);
+      if (ancestor) {
+        expect(ancestorNode?.blockRoot).toBe(ancestor);
+      } else {
+        expect(ancestorNode).toBeNull();
+      }
     });
   }
 

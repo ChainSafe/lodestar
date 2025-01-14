@@ -1,21 +1,21 @@
+import {BeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
   ForkName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {Epoch, Slot, ssz} from "@lodestar/types";
+import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
-import {BeaconConfig} from "@lodestar/config";
 import {ClockEvent, IClock} from "../../util/clock.js";
-import {GossipType} from "../gossip/index.js";
-import {MetadataController} from "../metadata.js";
-import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
-import {getActiveForks} from "../forks.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {stringifyGossipTopic} from "../gossip/topic.js";
+import {getActiveForks} from "../forks.js";
+import {GossipType} from "../gossip/index.js";
 import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";
-import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, GossipSubscriber, NodeId} from "./interface.js";
+import {stringifyGossipTopic} from "../gossip/topic.js";
+import {MetadataController} from "../metadata.js";
+import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
+import {CommitteeSubscription, GossipSubscriber, IAttnetsService, NodeId, SubnetsServiceOpts} from "./interface.js";
 import {computeSubscribedSubnet} from "./util.js";
 
 const gossipType = GossipType.beacon_attestation;
@@ -25,9 +25,8 @@ export enum SubnetSource {
   longLived = "long_lived",
 }
 
-type Subnet = number;
 // map of subnet to time to form stable mesh as seconds, null if not yet formed
-type AggregatorDutyInfo = Map<Subnet, number | null>;
+type AggregatorDutyInfo = Map<SubnetID, number | null>;
 
 /**
  * This value means node is not able to form stable mesh.
@@ -126,7 +125,7 @@ export class AttnetsService implements IAttnetsService {
   /**
    * Check if a subscription is still active before handling a gossip object
    */
-  shouldProcess(subnet: number, slot: Slot): boolean {
+  shouldProcess(subnet: SubnetID, slot: Slot): boolean {
     if (!this.aggregatorSlotSubnet.has(slot)) {
       return false;
     }

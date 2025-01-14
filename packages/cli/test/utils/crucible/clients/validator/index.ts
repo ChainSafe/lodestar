@@ -1,11 +1,11 @@
 import {writeFile} from "node:fs/promises";
-import {SHARED_JWT_SECRET, SHARED_VALIDATOR_PASSWORD, BN_REST_BASE_PORT} from "../../constants.js";
+import {BN_REST_BASE_PORT, SHARED_JWT_SECRET, SHARED_VALIDATOR_PASSWORD} from "../../constants.js";
 import {AtLeast, BeaconClient, ValidatorClient, ValidatorGeneratorOptions, ValidatorNode} from "../../interfaces.js";
 import {makeUniqueArray} from "../../utils/index.js";
 import {createKeystores} from "../../utils/keys.js";
 import {ensureDirectories} from "../../utils/paths.js";
-import {generateLodestarValidatorNode} from "./lodestar.js";
 import {generateLighthouseValidatorNode} from "./lighthouse.js";
+import {generateLodestarValidatorNode} from "./lodestar.js";
 
 export async function createValidatorNode<V extends ValidatorClient>(
   client: V,

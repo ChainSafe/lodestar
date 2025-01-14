@@ -1,20 +1,19 @@
-import {describe, it, beforeEach, afterEach, expect} from "vitest";
 import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
-import {createBeaconConfig, ChainConfig} from "@lodestar/config";
+import {HttpHeader, getClient, routes} from "@lodestar/api";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {getClient, HttpHeader, routes} from "@lodestar/api";
-import {sleep} from "@lodestar/utils";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {Validator} from "@lodestar/validator";
 import {phase0, ssz} from "@lodestar/types";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../../../utils/logger.js";
-import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
-import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
+import {sleep} from "@lodestar/utils";
+import {Validator} from "@lodestar/validator";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../../../utils/logger.js";
+import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-describe("lightclient api", function () {
+describe("lightclient api", () => {
   const SECONDS_PER_SLOT = 1;
   const ALTAIR_FORK_EPOCH = 0;
   const restPort = 9596;
@@ -81,7 +80,7 @@ describe("lightclient api", function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
   };
 
-  it("getLightClientUpdatesByRange()", async function () {
+  it("getLightClientUpdatesByRange()", async () => {
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     await waitForBestUpdate();
     const res = await client.getLightClientUpdatesByRange({startPeriod: 0, count: 1});
@@ -92,7 +91,7 @@ describe("lightclient api", function () {
     expect(res.meta().versions[0]).toBe(ForkName.altair);
   });
 
-  it("getLightClientOptimisticUpdate()", async function () {
+  it("getLightClientOptimisticUpdate()", async () => {
     await waitForBestUpdate();
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const res = await client.getLightClientOptimisticUpdate();
@@ -106,7 +105,7 @@ describe("lightclient api", function () {
     expect(res.headers.get(HttpHeader.ExposeHeaders)?.includes("Eth-Consensus-Version")).toBe(true);
   });
 
-  it.skip("getLightClientFinalityUpdate()", async function () {
+  it.skip("getLightClientFinalityUpdate()", async () => {
     // TODO: not sure how this causes subsequent tests failed
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, routes.events.EventType.finalizedCheckpoint, 240000);
     await sleep(SECONDS_PER_SLOT * 1000);
@@ -115,14 +114,14 @@ describe("lightclient api", function () {
     expect(finalityUpdate).toBeDefined();
   });
 
-  it("getLightClientCommitteeRoot() for the 1st period", async function () {
+  it("getLightClientCommitteeRoot() for the 1st period", async () => {
     await waitForBestUpdate();
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const committeeRes = await lightclient.getLightClientCommitteeRoot({startPeriod: 0, count: 1});
     committeeRes.assertOk();
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
-    const validators = (await client.getStateValidators({stateId: "head"})).value();
+    const validators = (await client.postStateValidators({stateId: "head"})).value();
     const pubkeys = validators.map((v) => v.validator.pubkey);
     expect(pubkeys.length).toBe(validatorCount);
     // only 2 validators spreading to 512 committee slots

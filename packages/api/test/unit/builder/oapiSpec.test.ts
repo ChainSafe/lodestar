@@ -2,15 +2,14 @@ import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
-import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {getDefinitions} from "../../../src/builder/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
+import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {testData} from "./testData.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const version = "v0.2.0";
@@ -23,7 +22,6 @@ const openApiFile: OpenApiFile = {
 };
 
 const definitions = getDefinitions(
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0})
 );
 

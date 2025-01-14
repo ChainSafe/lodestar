@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {altair} from "@lodestar/types";
-import {Match, AssertionResult, Assertion} from "../../interfaces.js";
+import {Assertion, AssertionResult, Match} from "../../interfaces.js";
 import {avg} from "../../utils/index.js";
 
 // Until we identity and fix the following issue, reducing the expected sync committee participation rate from 0.9 to 0.75

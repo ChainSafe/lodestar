@@ -18,6 +18,7 @@ export function initializeExecutionBuilder(
 ): IExecutionBuilder {
   switch (opts.mode) {
     case "http":
+      return new ExecutionBuilderHttp(opts, config, metrics, logger);
     default:
       return new ExecutionBuilderHttp(opts, config, metrics, logger);
   }

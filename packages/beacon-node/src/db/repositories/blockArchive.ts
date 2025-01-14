@@ -1,11 +1,11 @@
-import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
-import {Slot, Root, ssz, SignedBeaconBlock} from "@lodestar/types";
+import {Db, FilterOptions, KeyValue, Repository} from "@lodestar/db";
+import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
+import all from "it-all";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
-import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
+import {getParentRootIndexKey, getRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
 
 export interface BlockFilterOptions extends FilterOptions<Slot> {
@@ -105,7 +105,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
     const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
-    const step = (opts && opts.step) ?? 1;
+    const step = opts?.step ?? 1;
 
     for await (const value of valuesStream) {
       if ((value.message.slot - firstSlot) % step === 0) {

@@ -1,28 +1,27 @@
 import EventEmitter from "node:events";
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {config as minimalConfig} from "@lodestar/config/default";
 import {createChainForkConfig} from "@lodestar/config";
+import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
+import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
+import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
+import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
+import {ClockStopped} from "../../mocks/clock.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr} from "../../utils/peer.js";
-import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
-import {ClockStopped} from "../../mocks/clock.js";
-import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
-import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
-import {defaultSyncOptions} from "../../../src/sync/options.js";
-import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("sync by UnknownBlockSync", () => {
   const logger = testLogger();
   const slotSec = 0.3;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig({...minimalConfig, SECONDS_PER_SLOT: slotSec});
 
   beforeEach(() => {
@@ -119,11 +118,13 @@ describe("sync by UnknownBlockSync", () => {
       ]);
 
       let reportPeerResolveFn: (value: Parameters<INetwork["reportPeer"]>) => void;
-      const reportPeerPromise = new Promise<Parameters<INetwork["reportPeer"]>>((r) => (reportPeerResolveFn = r));
+      const reportPeerPromise = new Promise<Parameters<INetwork["reportPeer"]>>((r) => {
+        reportPeerResolveFn = r;
+      });
       let sendBeaconBlocksByRootResolveFn: (value: Parameters<INetwork["sendBeaconBlocksByRoot"]>) => void;
-      const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>(
-        (r) => (sendBeaconBlocksByRootResolveFn = r)
-      );
+      const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>((r) => {
+        sendBeaconBlocksByRootResolveFn = r;
+      });
 
       const network: Partial<INetwork> = {
         events: new NetworkEventBus(),
@@ -157,8 +158,12 @@ describe("sync by UnknownBlockSync", () => {
 
       let blockAResolver: () => void;
       let blockCResolver: () => void;
-      const blockAProcessed = new Promise<void>((resolve) => (blockAResolver = resolve));
-      const blockCProcessed = new Promise<void>((resolve) => (blockCResolver = resolve));
+      const blockAProcessed = new Promise<void>((resolve) => {
+        blockAResolver = resolve;
+      });
+      const blockCProcessed = new Promise<void>((resolve) => {
+        blockCResolver = resolve;
+      });
 
       const chain: Partial<IBeaconChain> = {
         clock: new ClockStopped(0),
@@ -234,7 +239,7 @@ describe("sync by UnknownBlockSync", () => {
   }
 });
 
-describe("UnknownBlockSync", function () {
+describe("UnknownBlockSync", () => {
   let network: INetwork;
   let chain: MockedBeaconChain;
   const logger = testLogger();

@@ -1,1 +1,1 @@
-export {loadState} from "./loadState.js";
+export {loadState, loadStateAndValidators} from "./loadState.js";

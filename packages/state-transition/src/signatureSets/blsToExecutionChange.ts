@@ -1,10 +1,10 @@
 import {PublicKey} from "@chainsafe/blst";
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
-import {BeaconConfig} from "@lodestar/config";
 
-import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
+import {ISignatureSet, SignatureSetType, computeSigningRoot, verifySignatureSet} from "../util/index.js";
 
 export function verifyBlsToExecutionChangeSignature(
   state: CachedBeaconStateAllForks,

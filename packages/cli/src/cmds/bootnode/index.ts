@@ -1,7 +1,7 @@
 import {CliCommand, CliCommandOptions} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
-import {bootnodeOptions, BootnodeArgs} from "./options.js";
 import {bootnodeHandler} from "./handler.js";
+import {BootnodeArgs, bootnodeOptions} from "./options.js";
 
 export const bootnode: CliCommand<BootnodeArgs, GlobalArgs> = {
   command: "bootnode",

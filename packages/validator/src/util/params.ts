@@ -1,11 +1,9 @@
 import {ChainConfig, chainConfigToJson} from "@lodestar/config";
-import {activePreset, BeaconPreset, presetToJson} from "@lodestar/params";
+import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
 
 type ConfigWithPreset = ChainConfig & BeaconPreset;
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 /**
  * Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.
@@ -73,6 +71,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
+  const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const peerdasForkRelevant = localConfig.PEERDAS_FORK_EPOCH < Infinity;
 
   return {
@@ -106,6 +105,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Deneb
     DENEB_FORK_VERSION: denebForkRelevant,
     DENEB_FORK_EPOCH: denebForkRelevant,
+    // electra
+    ELECTRA_FORK_VERSION: electraForkRelevant,
+    ELECTRA_FORK_EPOCH: electraForkRelevant,
 
     // peerdas
     PEERDAS_FORK_VERSION: peerdasForkRelevant,
@@ -141,6 +143,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // Networking (non-critical as those do not affect consensus)
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    BLOB_SIDECAR_SUBNET_COUNT: false,
+    MAX_REQUEST_BLOB_SIDECARS: false,
 
     // # Phase0Preset
     /////////////////
@@ -221,19 +225,35 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // # DenebPreset
     /////////////////
     FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
-    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+    // TODO-das @matthewkeil this was on unstable but looks like it was moved out of params to config 
+    // MAX_BLOBS_PER_BLOCK: denebForkRelevant,
 
-    // # PeerdasPreset
-    /////////////////
+    // ElectraPreset
+    MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
+    MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
+    MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: electraForkRelevant,
+    MAX_PENDING_DEPOSITS_PER_EPOCH: electraForkRelevant,
+    MAX_EFFECTIVE_BALANCE_ELECTRA: electraForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: electraForkRelevant,
+    MIN_ACTIVATION_BALANCE: electraForkRelevant,
+    PENDING_DEPOSITS_LIMIT: electraForkRelevant,
+    PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
+    PENDING_CONSOLIDATIONS_LIMIT: electraForkRelevant,
+    MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
+    MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
+    MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
+
+    // # Peerdas Preset
     FIELD_ELEMENTS_PER_CELL: peerdasForkRelevant,
     FIELD_ELEMENTS_PER_EXT_BLOB: peerdasForkRelevant,
     KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: peerdasForkRelevant,
     MAX_REQUEST_DATA_COLUMN_SIDECARS: peerdasForkRelevant,
     DATA_COLUMN_SIDECAR_SUBNET_COUNT: peerdasForkRelevant,
-
-    // Peerdas
     SAMPLES_PER_SLOT: peerdasForkRelevant,
     CUSTODY_REQUIREMENT: peerdasForkRelevant,
     NODE_CUSTODY_REQUIREMENT: false,

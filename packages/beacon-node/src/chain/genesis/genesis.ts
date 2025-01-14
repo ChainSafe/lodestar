@@ -1,25 +1,25 @@
-import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
+import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {
-  getTemporaryBlockHeader,
-  getGenesisBeaconState,
-  applyDeposits,
-  applyTimestamp,
-  applyEth1BlockHash,
-  CachedBeaconStateAllForks,
-  createCachedBeaconState,
   BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  applyDeposits,
+  applyEth1BlockHash,
+  applyTimestamp,
+  createCachedBeaconState,
   createEmptyEpochCacheImmutableData,
   getActiveValidatorIndices,
+  getGenesisBeaconState,
+  getTemporaryBlockHeader,
 } from "@lodestar/state-transition";
+import {phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 import {IEth1Provider} from "../../eth1/index.js";
 import {IEth1StreamParams} from "../../eth1/interface.js";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream.js";
-import {DepositTree} from "../../db/repositories/depositDataRoot.js";
-import {IGenesisBuilder, GenesisResult} from "./interface.js";
+import {GenesisResult, IGenesisBuilder} from "./interface.js";
 
 export type GenesisBuilderKwargs = {
   config: ChainForkConfig;
@@ -124,9 +124,9 @@ export class GenesisBuilder implements IGenesisBuilder {
           depositTree: this.depositTree,
           block,
         };
-      } else {
-        this.throttledLog(`Waiting for min genesis time ${block.timestamp} / ${this.config.MIN_GENESIS_TIME}`);
       }
+
+      this.throttledLog(`Waiting for min genesis time ${block.timestamp} / ${this.config.MIN_GENESIS_TIME}`);
     }
 
     throw Error("depositsStream stopped without a valid genesis state");
@@ -147,11 +147,11 @@ export class GenesisBuilder implements IGenesisBuilder {
       if (this.activatedValidatorCount >= this.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
         this.logger.info("Found enough genesis validators", {blockNumber});
         return blockNumber;
-      } else {
-        this.throttledLog(
-          `Found ${this.state.validators.length} / ${this.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT} validators to genesis`
-        );
       }
+
+      this.throttledLog(
+        `Found ${this.state.validators.length} / ${this.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT} validators to genesis`
+      );
     }
 
     throw Error("depositsStream stopped without a valid genesis state");

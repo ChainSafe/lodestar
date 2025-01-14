@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
-import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
+import {LodestarError, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {QueueErrorCode} from "../../util/queue/index.js";
 import {GossipActionError} from "./gossipValidation.js";
@@ -65,6 +64,8 @@ export enum BlockErrorCode {
   TOO_MANY_SKIPPED_SLOTS = "TOO_MANY_SKIPPED_SLOTS",
   /** The blobs are unavailable */
   DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
+  /** Block contains too many kzg commitments */
+  TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
 }
 
 type ExecutionErrorStatus = Exclude<
@@ -106,7 +107,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
   | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
-  | {code: BlockErrorCode.DATA_UNAVAILABLE};
+  | {code: BlockErrorCode.DATA_UNAVAILABLE}
+  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
@@ -151,8 +153,8 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
       return {
         code: type.code,
         slot: type.postState.slot,
-        root: toHexString(type.root),
-        expectedRoot: toHexString(type.expectedRoot),
+        root: toRootHex(type.root),
+        expectedRoot: toRootHex(type.expectedRoot),
       };
 
     default:

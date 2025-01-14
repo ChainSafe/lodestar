@@ -1,10 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {BeaconState} from "@lodestar/types";
-import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {ApiModules} from "../types.js";
+import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ZERO_HASH_HEX} from "@lodestar/params";
+import {BeaconState, ssz} from "@lodestar/types";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiModules} from "../types.js";
 
 export function getDebugApi({
   chain,
@@ -19,6 +21,35 @@ export function getDebugApi({
           root: block.blockRoot,
           executionOptimistic: isOptimisticBlock(block),
         })),
+      };
+    },
+
+    async getDebugForkChoice() {
+      return {
+        data: {
+          justifiedCheckpoint: chain.forkChoice.getJustifiedCheckpoint(),
+          finalizedCheckpoint: chain.forkChoice.getFinalizedCheckpoint(),
+          forkChoiceNodes: chain.forkChoice.getAllNodes().map((node) => ({
+            slot: node.slot,
+            blockRoot: node.blockRoot,
+            parentRoot: node.parentRoot,
+            justifiedEpoch: node.justifiedEpoch,
+            finalizedEpoch: node.finalizedEpoch,
+            weight: node.weight,
+            validity: (() => {
+              switch (node.executionStatus) {
+                case ExecutionStatus.Valid:
+                  return "valid";
+                case ExecutionStatus.Invalid:
+                  return "invalid";
+                case ExecutionStatus.Syncing:
+                case ExecutionStatus.PreMerge:
+                  return "optimistic";
+              }
+            })(),
+            executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+          })),
+        },
       };
     },
 

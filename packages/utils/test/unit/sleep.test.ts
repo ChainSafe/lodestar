@@ -1,14 +1,14 @@
-import {describe, it, expect} from "vitest";
-import {sleep} from "../../src/sleep.js";
+import {describe, expect, it} from "vitest";
 import {ErrorAborted} from "../../src/errors.js";
+import {sleep} from "../../src/sleep.js";
 
-describe("sleep", function () {
-  it("Should resolve timeout", async function () {
+describe("sleep", () => {
+  it("Should resolve timeout", async () => {
     const controller = new AbortController();
     await sleep(0, controller.signal);
   });
 
-  it("Should abort timeout with signal", async function () {
+  it("Should abort timeout with signal", async () => {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 10);
 
@@ -17,7 +17,7 @@ describe("sleep", function () {
     await expect(sleep(sleepTime, controller.signal)).rejects.toThrow(ErrorAborted);
   });
 
-  it("Should abort timeout with already aborted signal", async function () {
+  it("Should abort timeout with already aborted signal", async () => {
     const controller = new AbortController();
 
     controller.abort();

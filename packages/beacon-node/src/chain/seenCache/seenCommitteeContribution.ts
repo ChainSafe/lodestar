@@ -1,7 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Slot, ValidatorIndex} from "@lodestar/types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@lodestar/types/altair";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 import {AggregationInfo, insertDesc} from "./seenAggregateAndProof.js";
@@ -101,5 +100,5 @@ function seenAggregatorKey(subcommitteeIndex: number, aggregatorIndex: Validator
 
 function toContributionDataKey(contribution: SyncCommitteeContribution): ContributionDataKey {
   const {slot, beaconBlockRoot, subcommitteeIndex} = contribution;
-  return `${slot} - ${toHexString(beaconBlockRoot)} - ${subcommitteeIndex}`;
+  return `${slot} - ${toRootHex(beaconBlockRoot)} - ${subcommitteeIndex}`;
 }

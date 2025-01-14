@@ -1,3 +1,5 @@
+import {routes} from "@lodestar/api";
+import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -6,8 +8,6 @@ import {
   processAttestationsAltair,
 } from "@lodestar/state-transition";
 import {BeaconBlock, altair, phase0} from "@lodestar/types";
-import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
-import {routes} from "@lodestar/api";
 
 export type BlockRewards = routes.beacon.BlockRewards;
 type SubRewardValue = number; // All reward values should be integer
@@ -90,9 +90,9 @@ function computeSyncAggregateReward(block: altair.BeaconBlock, preState: CachedB
     const {syncProposerReward} = preState.epochCtx;
 
     return syncCommitteeBits.getTrueBitIndexes().length * Math.floor(syncProposerReward); // syncProposerReward should already be integer
-  } else {
-    return 0; // phase0 block does not have syncAggregate
   }
+
+  return 0; // phase0 block does not have syncAggregate
 }
 
 /**

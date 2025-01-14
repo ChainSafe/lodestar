@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
-import {ForkName, ForkSeq} from "@lodestar/params";
 import {BeaconConfig, ForkInfo} from "@lodestar/config";
-import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks.js";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {describe, expect, it} from "vitest";
+import {getActiveForks, getCurrentAndNextFork} from "../../../src/network/forks.js";
 
 function getForkConfig({
   phase0,
@@ -9,6 +9,7 @@ function getForkConfig({
   bellatrix,
   capella,
   deneb,
+  electra,
   peerdas,
 }: {
   phase0: number;
@@ -16,6 +17,7 @@ function getForkConfig({
   bellatrix: number;
   capella: number;
   deneb: number;
+  electra: number;
   peerdas: number;
 }): BeaconConfig {
   const forks: Record<ForkName, ForkInfo> = {
@@ -59,13 +61,21 @@ function getForkConfig({
       prevVersion: Buffer.from([0, 0, 0, 3]),
       prevForkName: ForkName.capella,
     },
+    electra: {
+      name: ForkName.electra,
+      seq: ForkSeq.electra,
+      epoch: electra,
+      version: Buffer.from([0, 0, 0, 5]),
+      prevVersion: Buffer.from([0, 0, 0, 4]),
+      prevForkName: ForkName.deneb,
+    },
     peerdas: {
       name: ForkName.peerdas,
       seq: ForkSeq.peerdas,
       epoch: peerdas,
-      version: Buffer.from([0, 0, 0, 5]),
-      prevVersion: Buffer.from([0, 0, 0, 4]),
-      prevForkName: ForkName.deneb,
+      version: Buffer.from([0, 0, 0, 6]),
+      prevVersion: Buffer.from([0, 0, 0, 5]),
+      prevForkName: ForkName.electra,
     },
   };
   const forksAscendingEpochOrder = Object.values(forks);
@@ -143,10 +153,12 @@ const testScenarios = [
 for (const testScenario of testScenarios) {
   const {phase0, altair, bellatrix, capella, testCases} = testScenario;
   const deneb = Infinity;
+  const electra = Infinity;
+  // TODO-das @matthewkeil This does not seem right for both to be Infinity... need to check with @g11tech
   const peerdas = Infinity;
 
   describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, peerdas});
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, electra, peerdas});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;

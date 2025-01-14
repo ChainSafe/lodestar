@@ -16,8 +16,19 @@ export const assert = {
    */
   equal<T>(actual: T, expected: T, message?: string): void {
     if (!(actual === expected)) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new AssertionError(`${message || "Expected values to be equal"}: ${actual} === ${expected}`);
+    }
+  },
+
+  /**
+   * Assert not null
+   * ```
+   * actual !== null
+   * ```
+   */
+  notNull<T>(actual: T | null, message?: string): asserts actual is T {
+    if (!(actual !== null)) {
+      throw new AssertionError(`${message || "Expected value to be not null"}`);
     }
   },
 

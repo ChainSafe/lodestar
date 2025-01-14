@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import {hasher, Tree} from "@chainsafe/persistent-merkle-tree";
+import {Tree, hasher} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -11,7 +11,7 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {altair, LightClientBootstrap, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
+import {LightClientBootstrap, Slot, SyncPeriod, altair, phase0, ssz} from "@lodestar/types";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
 import {getConsoleLogger} from "../../src/utils/logger.js";

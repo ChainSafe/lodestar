@@ -1,12 +1,13 @@
-import {expect, describe, it} from "vitest";
-import {ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
-import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 
-import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
-import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
+import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
+import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -24,13 +25,27 @@ describe("upgradeState", () => {
     const newState = upgradeStateToDeneb(stateView);
     expect(() => newState.toValue()).not.toThrow();
   });
+  it("upgradeStateToElectra", () => {
+    const denebState = ssz.deneb.BeaconState.defaultViewDU();
+    const config = getConfig(ForkName.deneb);
+    const stateView = createCachedBeaconState(
+      denebState,
+      {
+        config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
+      },
+      {skipSyncCommitteeCache: true}
+    );
+    const newState = upgradeStateToElectra(stateView);
+    expect(() => newState.toValue()).not.toThrow();
+  });
 });
 
 const ZERO_HASH = Buffer.alloc(32, 0);
 /** default config with ZERO_HASH as genesisValidatorsRoot */
 const config = createBeaconConfig(chainConfig, ZERO_HASH);
 
-/* eslint-disable @typescript-eslint/naming-convention */
 function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
   switch (fork) {
     case ForkName.phase0:
@@ -55,12 +70,21 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
       });
+    case ForkName.electra:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: forkEpoch,
+      });
     case ForkName.peerdas:
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
         PEERDAS_FORK_EPOCH: forkEpoch,
       });
   }

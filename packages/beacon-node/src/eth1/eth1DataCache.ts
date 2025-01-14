@@ -21,6 +21,6 @@ export class Eth1DataCache {
 
   async getHighestCachedBlockNumber(): Promise<number | null> {
     const highestEth1Data = await this.db.eth1Data.lastValue();
-    return highestEth1Data && highestEth1Data.blockNumber;
+    return highestEth1Data?.blockNumber ?? null;
   }
 }

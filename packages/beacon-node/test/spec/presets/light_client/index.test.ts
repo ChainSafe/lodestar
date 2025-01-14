@@ -7,8 +7,6 @@ import {singleMerkleProof} from "./single_merkle_proof.js";
 import {sync} from "./sync.js";
 import {updateRanking} from "./update_ranking.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 const lightClient: TestRunnerFn<any, any> = (fork, testName, testSuite) => {
   const testFn = lightclientTestFns[testName];
   if (testFn === undefined) {

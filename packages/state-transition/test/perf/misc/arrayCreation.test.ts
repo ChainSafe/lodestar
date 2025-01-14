@@ -1,4 +1,4 @@
-describe.skip("array creation", function () {
+describe.skip("array creation", () => {
   const testCases: {id: string; fn: (n: number) => void}[] = [
     {
       id: "Array.from(() => 0)",
@@ -36,7 +36,6 @@ describe.skip("array creation", function () {
       }
       const to = process.hrtime.bigint();
       const diffMs = Number(to - from) / 1e6;
-      // eslint-disable-next-line no-console
       console.log(`${id}: ${diffMs / opsRun} ms`);
     });
   }

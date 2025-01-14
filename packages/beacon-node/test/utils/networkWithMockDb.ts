@@ -5,6 +5,7 @@ import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
+import {StateArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
@@ -56,6 +57,7 @@ export async function getNetworkForTest(
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
       minSameMessageSignatureSetsToBatch: 32,
+      stateArchiveMode: StateArchiveMode.Frequency,
     },
     {
       nodeId: Buffer.alloc(32, crypto.randomBytes(32)),

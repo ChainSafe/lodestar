@@ -1,13 +1,14 @@
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {ForkSeq} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
-import {getRandaoMix} from "../util/index.js";
 import {
-  isMergeTransitionComplete,
-  getFullOrBlindedPayloadFromBody,
   executionPayloadToPayloadHeader,
+  getFullOrBlindedPayloadFromBody,
+  isMergeTransitionComplete,
 } from "../util/execution.js";
+import {getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
@@ -23,7 +24,7 @@ export function processExecutionPayload(
     const {latestExecutionPayloadHeader} = state;
     if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
       throw Error(
-        `Invalid execution payload parentHash ${toHexString(payload.parentHash)} latest blockHash ${toHexString(
+        `Invalid execution payload parentHash ${toRootHex(payload.parentHash)} latest blockHash ${toRootHex(
           latestExecutionPayloadHeader.blockHash
         )}`
       );
@@ -33,9 +34,7 @@ export function processExecutionPayload(
   // Verify random
   const expectedRandom = getRandaoMix(state, state.epochCtx.epoch);
   if (!byteArrayEquals(payload.prevRandao, expectedRandom)) {
-    throw Error(
-      `Invalid execution payload random ${toHexString(payload.prevRandao)} expected=${toHexString(expectedRandom)}`
-    );
+    throw Error(`Invalid execution payload random ${toHex(payload.prevRandao)} expected=${toHex(expectedRandom)}`);
   }
 
   // Verify timestamp
@@ -50,8 +49,8 @@ export function processExecutionPayload(
 
   if (fork >= ForkSeq.deneb) {
     const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
-    if (blobKzgCommitmentsLen > MAX_BLOBS_PER_BLOCK) {
-      throw Error(`blobKzgCommitmentsLen exceeds limit=${MAX_BLOBS_PER_BLOCK}`);
+    if (blobKzgCommitmentsLen > state.config.MAX_BLOBS_PER_BLOCK) {
+      throw Error(`blobKzgCommitmentsLen exceeds limit=${state.config.MAX_BLOBS_PER_BLOCK}`);
     }
   }
 

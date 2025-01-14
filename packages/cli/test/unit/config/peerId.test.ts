@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {describe, expect, it} from "vitest";
+import {readPeerId, writePeerId} from "../../../src/config/index.js";
 import {getTestdirPath} from "../../utils.js";
-import {writePeerId, readPeerId} from "../../../src/config/index.js";
 
 describe("config / peerId", () => {
   const peerIdFilepath = getTestdirPath("./test-peer-id.json");

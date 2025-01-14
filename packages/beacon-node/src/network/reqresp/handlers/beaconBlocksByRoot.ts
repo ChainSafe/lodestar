@@ -1,6 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {Slot, phase0} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -33,7 +33,7 @@ export async function* onBeaconBlocksByRoot(
       if (slot === undefined) {
         const slotFromBytes = getSlotFromSignedBeaconBlockSerialized(blockBytes);
         if (slotFromBytes === null) {
-          throw Error(`Invalid block bytes for block root ${toHexString(root)}`);
+          throw Error(`Invalid block bytes for block root ${toRootHex(root)}`);
         }
         slot = slotFromBytes;
       }

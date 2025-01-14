@@ -1,12 +1,12 @@
 import {
-  Type,
-  BooleanType,
-  UintBigintType,
-  UintNumberType,
-  BitVectorType,
   BitListType,
+  BitVectorType,
+  BooleanType,
   ContainerType,
   ListBasicType,
+  Type,
+  UintBigintType,
+  UintNumberType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
@@ -19,8 +19,6 @@ const uint32 = new UintNumberType(4);
 const uint64 = new UintBigintType(8);
 const uint128 = new UintBigintType(16);
 const uint256 = new UintBigintType(32);
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 // class SingleFieldTestStruct(Container):
 //     A: byte
@@ -122,7 +120,7 @@ export function getTestType(testType: string, testCase: string): Type<unknown> {
       const elementType = vecElementTypes[elementTypeStr as keyof typeof vecElementTypes];
       if (elementType === undefined) throw Error(`No vecElementType for ${elementTypeStr}: '${testCase}'`);
       const length = parseInt(lengthStr);
-      if (isNaN(length)) throw Error(`Bad length ${length}: '${testCase}'`);
+      if (Number.isNaN(length)) throw Error(`Bad length ${length}: '${testCase}'`);
       return new VectorBasicType(elementType, length);
     }
 
@@ -175,6 +173,6 @@ export function getTestType(testType: string, testCase: string): Type<unknown> {
 function parseSecondNum(str: string, id: string): number {
   const match = str.match(/[^\W_]+_([0-9]+)/);
   const num = parseInt((match || [])[1]);
-  if (isNaN(num)) throw Error(`Bad ${id} ${str}`);
+  if (Number.isNaN(num)) throw Error(`Bad ${id} ${str}`);
   return num;
 }

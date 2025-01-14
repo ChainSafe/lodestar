@@ -1,8 +1,8 @@
 import {execSync} from "node:child_process";
 import os from "node:os";
-import {describe, it, expect, beforeAll, afterAll} from "vitest";
-import all from "it-all";
 import {getEnvLogger} from "@lodestar/logger/env";
+import all from "it-all";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {LevelDbController} from "../../../src/controller/index.js";
 
 describe("LevelDB controller", () => {
@@ -137,7 +137,7 @@ describe("LevelDB controller", () => {
         if (res?.startsWith("Usage: gdu ")) {
           return "gdu";
         }
-      } catch {
+      } catch (_e) {
         /* eslint-disable no-console */
         console.error("Cannot find gdu command, falling back to du");
       }
