@@ -10,6 +10,11 @@ export type ValidatorRegistration = {
 };
 
 export class ValidatorRegistrationCache {
+  /**
+   * Map to track registrations by validator pubkey which is used here instead of
+   * validator index as `bellatrix.ValidatorRegistrationV1` does not contain the index
+   * and builder flow in general prefers to use pubkey over index.
+   */
   private readonly registrationByValidatorPubkey: Map<string, ValidatorRegistration>;
   constructor() {
     this.registrationByValidatorPubkey = new Map();
