@@ -52,6 +52,7 @@ docs/pages/libraries/lightclient-prover/lightclient.md
 docs/pages/libraries/lightclient-prover/prover.md
 docs/pages/api/api-reference.md
 docs/pages/contribution/getting-started.md
+docs/static/install
 ## Docusaurus
 docs/.docusaurus/
 docs/build/

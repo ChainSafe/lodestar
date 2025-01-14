@@ -18,7 +18,7 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 
 ## Requirements for Running a Light-Client
 
-Access to an beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/beacon-APIs/tree/v2.5.0/apis/beacon/light_client):
+Access to a beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/beacon-APIs/tree/v2.5.0/apis/beacon/light_client):
 
 - [`GET /eth/v1/beacon/light_client/updates`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientUpdatesByRange)
 - [`GET /eth/v1/beacon/light_client/optimistic_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientOptimisticUpdate)
@@ -32,7 +32,7 @@ You can find more information about the light-client protocol in the [specificat
 ## Getting started
 
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/run/getting-started/installation) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet).
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet).
 
 ## Light-Client CLI Example
 
@@ -92,7 +92,7 @@ lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (opti
 
 ## Browser Integration
 
-If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.20.0` version.
+If you want to use Lightclient in browser and are facing some issues in building it with bundlers like webpack, vite. We suggest using our distribution build. The support for single distribution build is started from `1.20.0` version.
 
 Directly link the dist build with the `<script />` tag with tools like unpkg or other. e.g.
 

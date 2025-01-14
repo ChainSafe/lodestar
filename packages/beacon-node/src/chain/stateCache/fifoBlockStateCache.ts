@@ -4,7 +4,7 @@ import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
-import {StateCloneOpts} from "../regen/interface.js";
+import {StateRegenerationOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
 
@@ -93,7 +93,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
   /**
    * Get a state from this cache given a state root hex.
    */
-  get(rootHex: RootHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
+  get(rootHex: RootHex, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
     if (!item) {

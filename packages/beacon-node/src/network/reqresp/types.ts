@@ -1,4 +1,5 @@
 import {Type} from "@chainsafe/ssz";
+import {ChainConfig} from "@lodestar/config";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
@@ -15,6 +16,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
+import {BlobSidecarsByRootRequest, BlobSidecarsByRootRequestType} from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -44,7 +46,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
-  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecarsByRootRequest;
+  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -68,9 +70,9 @@ type ResponseBodyByMethod = {
 };
 
 /** Request SSZ type for each method and ForkName */
-export const requestSszTypeByMethod: {
+export const requestSszTypeByMethod: (config: ChainConfig) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
-} = {
+} = (config) => ({
   [ReqRespMethod.Status]: ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,
@@ -78,12 +80,12 @@ export const requestSszTypeByMethod: {
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
-  [ReqRespMethod.BlobSidecarsByRoot]: ssz.deneb.BlobSidecarsByRootRequest,
+  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(config),
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
-};
+});
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
 

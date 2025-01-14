@@ -316,7 +316,7 @@ export class NetworkCore implements INetworkCore {
     }
 
     for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
-      this.subscribeCoreTopicsAtFork(fork);
+      this.subscribeCoreTopicsAtFork(this.config, fork);
     }
   }
 
@@ -325,7 +325,7 @@ export class NetworkCore implements INetworkCore {
    */
   async unsubscribeGossipCoreTopics(): Promise<void> {
     for (const fork of this.subscribedForks.values()) {
-      this.unsubscribeCoreTopicsAtFork(fork);
+      this.unsubscribeCoreTopicsAtFork(this.config, fork);
     }
   }
 
@@ -456,7 +456,7 @@ export class NetworkCore implements INetworkCore {
           if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
             // Don't subscribe to new fork if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
-              this.subscribeCoreTopicsAtFork(nextFork);
+              this.subscribeCoreTopicsAtFork(this.config, nextFork);
               this.logger.info("Subscribing gossip topics before fork", {nextFork});
             } else {
               this.logger.info("Skipping subscribing gossip topics before fork", {nextFork});
@@ -475,7 +475,7 @@ export class NetworkCore implements INetworkCore {
           // After fork transition
           if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
             this.logger.info("Unsubscribing gossip topics from prev fork", {prevFork});
-            this.unsubscribeCoreTopicsAtFork(prevFork);
+            this.unsubscribeCoreTopicsAtFork(this.config, prevFork);
             this.attnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
             this.syncnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
           }
@@ -501,12 +501,12 @@ export class NetworkCore implements INetworkCore {
     }
   };
 
-  private subscribeCoreTopicsAtFork(fork: ForkName): void {
+  private subscribeCoreTopicsAtFork(config: BeaconConfig, fork: ForkName): void {
     if (this.subscribedForks.has(fork)) return;
     this.subscribedForks.add(fork);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {
+    for (const topic of getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
@@ -514,12 +514,12 @@ export class NetworkCore implements INetworkCore {
     }
   }
 
-  private unsubscribeCoreTopicsAtFork(fork: ForkName): void {
+  private unsubscribeCoreTopicsAtFork(config: BeaconConfig, fork: ForkName): void {
     if (!this.subscribedForks.has(fork)) return;
     this.subscribedForks.delete(fork);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(fork, {
+    for (const topic of getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {

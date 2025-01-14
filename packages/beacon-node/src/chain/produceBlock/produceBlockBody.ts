@@ -1,11 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, isForkExecution} from "@lodestar/params";
+import {ForkExecution, ForkSeq, isForkExecution, isForkLightClient} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
-  computeEpochAtSlot,
   computeTimeAtSlot,
   getCurrentEpoch,
   getExpectedWithdrawals,
@@ -38,6 +37,7 @@ import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {fromGraffitiBuffer} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -143,16 +143,31 @@ export async function produceBlockBody<T extends BlockType>(
     ? Object.assign({}, commonBlockBody)
     : await produceCommonBlockBody.call(this, blockType, currentState, blockAttr);
 
-  const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings, blsToExecutionChanges} =
-    blockBody;
+  const {
+    graffiti,
+    attestations,
+    deposits,
+    voluntaryExits,
+    attesterSlashings,
+    proposerSlashings,
+    syncAggregate,
+    blsToExecutionChanges,
+  } = blockBody;
 
   Object.assign(logMeta, {
+    graffiti: fromGraffitiBuffer(graffiti),
     attestations: attestations.length,
     deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
   });
+
+  if (isForkLightClient(fork)) {
+    Object.assign(logMeta, {
+      syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
+    });
+  }
 
   const endExecutionPayload = stepsMetrics?.startTimer();
   if (isForkExecution(fork)) {
@@ -608,7 +623,6 @@ export async function produceCommonBlockBody<T extends BlockType>(
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const blockEpoch = computeEpochAtSlot(slot);
   const fork = currentState.config.getForkName(slot);
 
   // TODO:
@@ -653,7 +667,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   }
 
   const endSyncAggregate = stepsMetrics?.startTimer();
-  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+  if (ForkSeq[fork] >= ForkSeq.altair) {
     const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(
       syncAggregate.syncCommitteeBits.getTrueBitIndexes().length

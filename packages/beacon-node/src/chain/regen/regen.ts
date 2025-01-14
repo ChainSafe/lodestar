@@ -20,7 +20,7 @@ import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
-import {IStateRegeneratorInternal, RegenCaller, StateCloneOpts} from "./interface.js";
+import {IStateRegeneratorInternal, RegenCaller, StateRegenerationOpts} from "./interface.js";
 
 export type RegenModules = {
   db: IBeaconDb;
@@ -51,7 +51,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    */
   async getPreState(
     block: BeaconBlock,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     regenCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     const parentBlock = this.modules.forkChoice.getBlock(block.parentRoot);
@@ -84,7 +84,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    */
   async getCheckpointState(
     cp: phase0.Checkpoint,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     regenCaller: RegenCaller,
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
@@ -99,7 +99,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
   async getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     regenCaller: RegenCaller,
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
@@ -146,7 +146,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
   async getState(
     stateRoot: RootHex,
     caller: RegenCaller,
-    opts?: StateCloneOpts,
+    opts?: StateRegenerationOpts,
     // internal option, don't want to expose to external caller
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
@@ -322,7 +322,7 @@ async function processSlotsByCheckpoint(
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
-  opts: StateCloneOpts
+  opts: StateRegenerationOpts
 ): Promise<CachedBeaconStateAllForks> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
   if (postState.slot < slot) {
@@ -343,7 +343,7 @@ async function processSlotsToNearestCheckpoint(
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
-  opts: StateCloneOpts
+  opts: StateRegenerationOpts
 ): Promise<CachedBeaconStateAllForks> {
   const preSlot = preState.slot;
   const postSlot = slot;

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, strip0xPrefix, toHex} from "@lodestar/utils";
 
 // "c-kzg" has hardcoded the mainnet value, do not use params
 export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
@@ -153,11 +153,4 @@ export function trustedSetupJsonToTxt(data: TrustedSetupJSON): TrustedSetupTXT {
     ...data.setup_G1.map(strip0xPrefix),
     ...data.setup_G2.map(strip0xPrefix),
   ].join("\n");
-}
-
-function strip0xPrefix(hex: string): string {
-  if (hex.startsWith("0x")) {
-    return hex.slice(2);
-  }
-  return hex;
 }

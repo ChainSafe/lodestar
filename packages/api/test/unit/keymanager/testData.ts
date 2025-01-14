@@ -12,7 +12,7 @@ import {GenericServerTestCases} from "../../utils/genericServerTest.js";
 const pubkeyRand = "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576";
 const ethaddressRand = "0xabcf8e0d4e9587369b2301d0790347320302cc09";
 const graffitiRandUtf8 = "636861696e736166652f6c6f64657374";
-const gasLimitRand = 30_000_000;
+const gasLimitRand = 36_000_000;
 const builderBoostFactorRand = BigInt(100);
 
 export const testData: GenericServerTestCases<Endpoints> = {

@@ -78,7 +78,6 @@ export type BeaconPreset = {
   ///////////
   FIELD_ELEMENTS_PER_BLOB: number;
   MAX_BLOB_COMMITMENTS_PER_BLOCK: number;
-  MAX_BLOBS_PER_BLOCK: number;
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: number;
 
   // ELECTRA
@@ -179,7 +178,6 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   ///////////
   FIELD_ELEMENTS_PER_BLOB: "number",
   MAX_BLOB_COMMITMENTS_PER_BLOCK: "number",
-  MAX_BLOBS_PER_BLOCK: "number",
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: "number",
 
   // ELECTRA

@@ -10,7 +10,7 @@ import {
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
+import {BeaconBlock, RootHex, SubnetID, altair, deneb} from "@lodestar/types";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
@@ -52,7 +52,7 @@ export type ValidatorMonitor = {
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
     indexedAttestation: IndexedAttestation,
-    subnet: number,
+    subnet: SubnetID,
     sentPeers: number
   ): void;
   onPoolSubmitAggregatedAttestation(

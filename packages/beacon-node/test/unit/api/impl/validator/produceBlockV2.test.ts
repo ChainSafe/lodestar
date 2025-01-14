@@ -1,7 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {CachedBeaconStateBellatrix, computeTimeAtSlot} from "@lodestar/state-transition";
+import {CachedBeaconStateBellatrix, G2_POINT_AT_INFINITY, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -98,6 +98,10 @@ describe("api/validator - produceBlockV2", () => {
     modules.chain["eth1"].getEth1DataAndDeposits.mockResolvedValue({
       eth1Data: ssz.phase0.Eth1Data.defaultValue(),
       deposits: [],
+    });
+    modules.chain["syncContributionAndProofPool"].getAggregate.mockReturnValue({
+      syncCommitteeBits: ssz.altair.SyncCommitteeBits.defaultValue(),
+      syncCommitteeSignature: G2_POINT_AT_INFINITY,
     });
     modules.forkChoice.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
     modules.forkChoice.getFinalizedBlock.mockReturnValue({} as ProtoBlock);

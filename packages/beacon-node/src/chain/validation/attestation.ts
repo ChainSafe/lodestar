@@ -27,6 +27,7 @@ import {
   Root,
   RootHex,
   Slot,
+  SubnetID,
   electra,
   isElectraAttestation,
   phase0,
@@ -58,7 +59,7 @@ export type BatchResult = {
 export type AttestationValidationResult = {
   attestation: Attestation;
   indexedAttestation: IndexedAttestation;
-  subnet: number;
+  subnet: SubnetID;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
 };
@@ -93,7 +94,7 @@ export async function validateGossipAttestationsSameAttData(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytesArr: GossipAttestation[],
-  subnet: number,
+  subnet: SubnetID,
   // for unit test, consumers do not need to pass this
   step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
@@ -232,7 +233,7 @@ async function validateAttestationNoSignatureCheck(
   chain: IBeaconChain,
   attestationOrBytes: AttestationOrBytes,
   /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number | null
+  subnet: SubnetID | null
 ): Promise<Step0Result> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
@@ -342,7 +343,7 @@ async function validateAttestationNoSignatureCheck(
 
   let committeeValidatorIndices: Uint32Array;
   let getSigningRoot: () => Uint8Array;
-  let expectedSubnet: number;
+  let expectedSubnet: SubnetID;
   if (attestationOrCache.cache) {
     committeeValidatorIndices = attestationOrCache.cache.committeeValidatorIndices;
     const signingRoot = attestationOrCache.cache.signingRoot;
@@ -762,7 +763,7 @@ export function getCommitteeIndices(
 /**
  * Compute the correct subnet for a slot/committee index
  */
-export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, committeeIndex: number): number {
+export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, committeeIndex: number): SubnetID {
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
   const committeesSinceEpochStart = shuffling.committeesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;

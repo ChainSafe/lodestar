@@ -10,8 +10,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO DENEB: Configure the blob subnets in a followup PR
-  "BLOB_SIDECAR_SUBNET_COUNT",
 ]);
 
 describe("api / impl / config", () => {
@@ -60,7 +58,7 @@ async function downloadRemoteConstants(commit: string): Promise<string[]> {
   const constantNames: string[] = [];
 
   for (const spec of await Promise.all(downloadedSpecs)) {
-    const matches = spec.matchAll(/\|\s`*([A-Z_]+)`\s\|/g);
+    const matches = spec.matchAll(/\|\s`*([A-Z_]+)`\s+\|/g);
     for (const match of matches) {
       constantNames.push(match[1]);
     }

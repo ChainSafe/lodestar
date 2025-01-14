@@ -3,6 +3,7 @@ import type {PeerId, PeerInfo} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {SubnetID} from "@lodestar/types";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {NetworkCoreMetrics} from "../core/metrics.js";
@@ -65,7 +66,7 @@ type SubnetRequestInfo = {
 };
 
 export type SubnetDiscvQueryMs = {
-  subnet: number;
+  subnet: SubnetID;
   type: SubnetType;
   toUnixMs: UnixMs;
   maxPeersToDiscover: number;
