@@ -111,7 +111,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
     case GossipType.inclusion_list:
-      return ssz.focil.SignedInclusionlist;
+      return ssz.focil.SignedInclusionList;
   }
 }
 

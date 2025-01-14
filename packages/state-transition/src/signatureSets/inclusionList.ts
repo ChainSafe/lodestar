@@ -6,7 +6,7 @@ import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index
 
 export function getInclusionListSignatureSet(
   state: CachedBeaconStateAllForks,
-  inclusionList: focil.SignedInclusionlist
+  inclusionList: focil.SignedInclusionList
 ): ISignatureSet {
   const message = inclusionList.message;
   const validatorIndex = message.validatorIndex;

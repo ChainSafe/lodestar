@@ -2,7 +2,7 @@ import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
 export type InclusionList = ValueOf<typeof ssz.InclusionList>;
-export type SignedInclusionlist = ValueOf<typeof ssz.SignedInclusionlist>;
+export type SignedInclusionList = ValueOf<typeof ssz.SignedInclusionList>;
 export type InclusionListByCommitteeIndicesRequest = ValueOf<typeof ssz.InclusionListByCommitteeIndicesRequest>;
 
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;

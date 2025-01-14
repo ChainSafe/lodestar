@@ -7,19 +7,19 @@ import {IBeaconChain} from "../index.js";
 
 export async function validateApiInclusionList(
   chain: IBeaconChain,
-  inclusionList: focil.SignedInclusionlist
+  inclusionList: focil.SignedInclusionList
 ): Promise<void> {
   return validateInclusionList(chain, inclusionList);
 }
 
 export async function validateGossipInclusionList(
   chain: IBeaconChain,
-  inclusionList: focil.SignedInclusionlist
+  inclusionList: focil.SignedInclusionList
 ): Promise<void> {
   return validateInclusionList(chain, inclusionList);
 }
 
-async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.SignedInclusionlist): Promise<void> {
+async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.SignedInclusionList): Promise<void> {
   const slot = inclusionList.message.slot;
   // [REJECT] The size of message is within upperbound MAX_BYTES_PER_INCLUSION_LIST
 

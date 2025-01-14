@@ -13,7 +13,7 @@ export const InclusionList = new ContainerType({
   transactions: new ListCompositeType(bellatrixSsz.Transaction, MAX_TRANSACTIONS_PER_INCLUSION_LIST),
 });
 
-export const SignedInclusionlist = new ContainerType({
+export const SignedInclusionList = new ContainerType({
   message: InclusionList,
   signature: BLSSignature,
 });

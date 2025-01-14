@@ -98,7 +98,7 @@ export type GossipTypeMap = {
   [GossipType.light_client_finality_update]: LightClientFinalityUpdate;
   [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
-  [GossipType.inclusion_list]: focil.SignedInclusionlist;
+  [GossipType.inclusion_list]: focil.SignedInclusionList;
 };
 
 export type GossipFnByType = {

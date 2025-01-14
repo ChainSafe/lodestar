@@ -68,7 +68,7 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
-  [ReqRespMethod.InclusionListByCommitteeIndices]: focil.SignedInclusionlist;
+  [ReqRespMethod.InclusionListByCommitteeIndices]: focil.SignedInclusionList;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -114,7 +114,7 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
-  [ReqRespMethod.InclusionListByCommitteeIndices]: () => ssz.focil.SignedInclusionlist,
+  [ReqRespMethod.InclusionListByCommitteeIndices]: () => ssz.focil.SignedInclusionList,
 };
 
 function onlyLightclientFork(fork: ForkName): ForkLightClient {

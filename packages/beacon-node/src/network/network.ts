@@ -523,7 +523,7 @@ export class Network implements INetwork {
   async sendInclusionListByCommitteeIndices(
     peerId: PeerIdStr,
     request: focil.InclusionListByCommitteeIndicesRequest
-  ): Promise<focil.SignedInclusionlist[]> {
+  ): Promise<focil.SignedInclusionList[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.InclusionListByCommitteeIndices, [Version.V1], request),
       this.config.MAX_REQUEST_INCLUSION_LIST,
