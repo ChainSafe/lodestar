@@ -2,7 +2,9 @@ import {asyncUnshuffleList, unshuffleList} from "@chainsafe/swap-or-not-shuffle"
 import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_BEACON_ATTESTER,
+  DOMAIN_IL_COMMITTEE,
   GENESIS_SLOT,
+  IL_COMMITTEE_SIZE,
   MAX_COMMITTEES_PER_SLOT,
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
@@ -84,28 +86,33 @@ export type EpochShuffling = {
   /**
    * List of list of committees Committees
    *
-   * Committees by index, by slot
+   * Beacon committees by index, by slot
    *
    * Note: With a high amount of shards, or low amount of validators,
    * some shards may not have a committee this epoch
    */
-  committees: Uint32Array[][];
+  beaconCommittees: Uint32Array[][];
 
   /**
-   * Committees per slot, for fast attestation verification
+   * Beacon committees per slot, for fast attestation verification
    */
-  committeesPerSlot: number;
+  beaconCommitteesPerSlot: number;
+
+  /**
+   * Inclusion list committees by index
+   */
+  inclusionListCommittees: Uint32Array[];
 };
 
-export function computeCommitteeCount(activeValidatorCount: number): number {
+export function computeBeaconCommitteeCount(activeValidatorCount: number): number {
   const validatorsPerSlot = intDiv(activeValidatorCount, SLOTS_PER_EPOCH);
   const committeesPerSlot = intDiv(validatorsPerSlot, TARGET_COMMITTEE_SIZE);
   return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
 }
 
-function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
+function buildBeaconCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
   const activeValidatorCount = shuffling.length;
-  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
+  const committeesPerSlot = computeBeaconCommitteeCount(activeValidatorCount);
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
   const committees = new Array<Uint32Array[]>(SLOTS_PER_EPOCH);
@@ -128,21 +135,43 @@ function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
   return committees;
 }
 
+function buildInclusionListCommitteeFromShuffling(shuffling: Uint32Array): Uint32Array[] {
+  const committees: Uint32Array[] = [];
+
+  for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
+    const startOffSet = slot * IL_COMMITTEE_SIZE;
+    const endOffset = startOffSet + IL_COMMITTEE_SIZE;
+
+    const slotCommittee = shuffling.subarray(startOffSet, endOffset);
+    committees.push(slotCommittee);
+  }
+
+  return committees;
+}
+
 export function computeEpochShuffling(
   // TODO: (@matthewkeil) remove state/epoch and pass in seed to clean this up
   state: BeaconStateAllForks,
   activeIndices: Uint32Array,
   epoch: Epoch
 ): EpochShuffling {
+  // Beacon Committee
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-  const committees = buildCommitteesFromShuffling(shuffling);
+  const committees = buildBeaconCommitteesFromShuffling(shuffling);
+
+  // Inclusion List Committee
+  const ilSeed = getSeed(state, epoch, DOMAIN_IL_COMMITTEE);
+  const ilShuffling = unshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
+  const ilCommittees = buildInclusionListCommitteeFromShuffling(ilShuffling);
+
   return {
     epoch,
     activeIndices,
     shuffling,
-    committees,
-    committeesPerSlot: committees[0].length,
+    beaconCommittees: committees,
+    beaconCommitteesPerSlot: committees[0].length,
+    inclusionListCommittees: ilCommittees,
   };
 }
 
@@ -152,15 +181,23 @@ export async function computeEpochShufflingAsync(
   activeIndices: Uint32Array,
   epoch: Epoch
 ): Promise<EpochShuffling> {
+  // Beacon Committee
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = await asyncUnshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-  const committees = buildCommitteesFromShuffling(shuffling);
+  const committees = buildBeaconCommitteesFromShuffling(shuffling);
+
+  // Inclusion List Committee
+  const ilSeed = getSeed(state, epoch, DOMAIN_IL_COMMITTEE);
+  const ilShuffling = await asyncUnshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
+  const ilCommittees = buildInclusionListCommitteeFromShuffling(ilShuffling);
+
   return {
     epoch,
     activeIndices,
     shuffling,
-    committees,
-    committeesPerSlot: committees[0].length,
+    beaconCommittees: committees,
+    beaconCommitteesPerSlot: committees[0].length,
+    inclusionListCommittees: ilCommittees,
   };
 }
 

@@ -16,7 +16,7 @@ import {
 import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
 import {
-  computeCommitteeCount,
+  computeBeaconCommitteeCount,
   computeEpochAtSlot,
   createCachedBeaconState,
   getActiveValidatorIndices,
@@ -136,13 +136,13 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     // previous epoch attestations
     const numPrevAttestations = SLOTS_PER_EPOCH * MAX_ATTESTATIONS;
     const activeValidatorCount = pubkeys.length;
-    const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
+    const committeesPerSlot = computeBeaconCommitteeCount(activeValidatorCount);
     for (let i = 0; i < numPrevAttestations; i++) {
       const slotInEpoch = i % SLOTS_PER_EPOCH;
       const slot = previousEpoch * SLOTS_PER_EPOCH + slotInEpoch;
       const index = i % committeesPerSlot;
       const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(previousEpoch);
-      const committee = shuffling.committees[slotInEpoch][index];
+      const committee = shuffling.beaconCommittees[slotInEpoch][index];
       phase0CachedState23637.previousEpochAttestations.push(
         ssz.phase0.PendingAttestation.toViewDU({
           aggregationBits: BitArray.fromBoolArray(Array.from({length: committee.length}, () => true)),
@@ -166,7 +166,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const slot = currentEpoch * SLOTS_PER_EPOCH + slotInEpoch;
       const index = i % committeesPerSlot;
       const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(previousEpoch);
-      const committee = shuffling.committees[slotInEpoch][index];
+      const committee = shuffling.beaconCommittees[slotInEpoch][index];
 
       phase0CachedState23637.currentEpochAttestations.push(
         ssz.phase0.PendingAttestation.toViewDU({

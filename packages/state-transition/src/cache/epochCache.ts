@@ -27,7 +27,7 @@ import {
 } from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
-import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
+import {AttesterDuty, calculateBeaconCommitteeAssignments} from "../util/calculateBeaconCommitteeAssignments.js";
 import {
   EpochShuffling,
   IShufflingCache,
@@ -759,7 +759,7 @@ export class EpochCache {
       throw new Error("Attempt to get committees without providing CommitteeIndex");
     }
 
-    const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
+    const slotCommittees = this.getShufflingAtSlot(slot).beaconCommittees[slot % SLOTS_PER_EPOCH];
     const committees = [];
 
     for (const index of indices) {
@@ -792,7 +792,7 @@ export class EpochCache {
   }
 
   getCommitteeCountPerSlot(epoch: Epoch): number {
-    return this.getShufflingAtEpoch(epoch).committeesPerSlot;
+    return this.getShufflingAtEpoch(epoch).beaconCommitteesPerSlot;
   }
 
   /**
@@ -921,7 +921,7 @@ export class EpochCache {
     requestedValidatorIndices: ValidatorIndex[]
   ): Map<ValidatorIndex, AttesterDuty> {
     const shuffling = this.getShufflingAtEpoch(epoch);
-    return calculateCommitteeAssignments(shuffling, requestedValidatorIndices);
+    return calculateBeaconCommitteeAssignments(shuffling, requestedValidatorIndices);
   }
 
   /**

@@ -6,7 +6,7 @@ import {
 } from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
-import {computeCommitteeCount} from "@lodestar/state-transition";
+import {computeBeaconCommitteeCount} from "@lodestar/state-transition";
 import {getActiveForks} from "../forks.js";
 import {Eth2Context, Eth2GossipsubModules} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
@@ -301,7 +301,7 @@ function expectedAggregatorCountPerSlot(activeValidatorCount: number): {
   aggregatorsPerslot: number;
   committeesPerSlot: number;
 } {
-  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
+  const committeesPerSlot = computeBeaconCommitteeCount(activeValidatorCount);
   const committeesPerEpoch = committeesPerSlot * SLOTS_PER_EPOCH;
   const smallerCommitteeSize = Math.floor(activeValidatorCount / committeesPerEpoch);
   const largerCommiteeeSize = smallerCommitteeSize + 1;

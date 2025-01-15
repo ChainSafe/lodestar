@@ -12,14 +12,14 @@ export interface AttesterDuty {
   slot: Slot;
 }
 
-export function calculateCommitteeAssignments(
+export function calculateBeaconCommitteeAssignments(
   epochShuffling: EpochShuffling,
   requestedValidatorIndices: ValidatorIndex[]
 ): Map<ValidatorIndex, AttesterDuty> {
   const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
   const duties = new Map<ValidatorIndex, AttesterDuty>();
 
-  const epochCommittees = epochShuffling.committees;
+  const epochCommittees = epochShuffling.beaconCommittees;
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
     const slotCommittees = epochCommittees[epochSlot];
     for (let i = 0, committeesAtSlot = slotCommittees.length; i < committeesAtSlot; i++) {

@@ -747,8 +747,8 @@ export function getCommitteeIndices(
   attestationSlot: Slot,
   attestationIndex: number
 ): Uint32Array {
-  const {committees} = shuffling;
-  const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
+  const {beaconCommittees} = shuffling;
+  const slotCommittees = beaconCommittees[attestationSlot % SLOTS_PER_EPOCH];
 
   if (attestationIndex >= slotCommittees.length) {
     throw new AttestationError(GossipAction.REJECT, {
@@ -764,7 +764,7 @@ export function getCommitteeIndices(
  */
 export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, committeeIndex: number): number {
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
-  const committeesSinceEpochStart = shuffling.committeesPerSlot * slotsSinceEpochStart;
+  const committeesSinceEpochStart = shuffling.beaconCommitteesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }
 

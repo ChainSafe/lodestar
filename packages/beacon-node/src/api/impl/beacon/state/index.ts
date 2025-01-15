@@ -239,7 +239,7 @@ export function getBeaconStateApi({
           `No shuffling found to calculate committees for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
         );
       }
-      const committees = shuffling.committees;
+      const committees = shuffling.beaconCommittees;
       const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
         const slot = startSlot + slotInEpoch;
         if (filters.slot !== undefined && filters.slot !== slot) {

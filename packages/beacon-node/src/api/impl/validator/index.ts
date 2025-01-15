@@ -19,7 +19,8 @@ import {
   CachedBeaconStateAllForks,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
-  calculateCommitteeAssignments,
+  calculateBeaconCommitteeAssignments,
+  calculateInclusionListCommitteeAssignments,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
@@ -1137,7 +1138,7 @@ export function getValidatorApi(
           `No shuffling found to calculate committee assignments for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
         );
       }
-      const committeeAssignments = calculateCommitteeAssignments(shuffling, indices);
+      const committeeAssignments = calculateBeaconCommitteeAssignments(shuffling, indices);
       const duties: routes.validator.AttesterDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
@@ -1215,9 +1216,64 @@ export function getValidatorApi(
       };
     },
 
-    async getInclusionListCommitteeDuties() {
-      // TODO FOCIL: implement
-      throw Error("getInclusionListCommitteeDuties is not implemented");
+    async getInclusionListCommitteeDuties({epoch, indices}) {
+      notWhileSyncing();
+
+      if (indices.length === 0) {
+        throw new ApiError(400, "No validator to get inclusion list committee duties");
+      }
+
+      // May request for an epoch that's in the future
+      await waitForNextClosestEpoch();
+
+      // should not compare to headEpoch in order to handle skipped slots
+      // Check if the epoch is in the future after waiting for requested slot
+      if (epoch > chain.clock.currentEpoch + 1) {
+        throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+      }
+
+      const head = chain.forkChoice.getHead();
+      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+
+      // TODO: Determine what the current epoch would be if we fast-forward our system clock by
+      // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+      //
+      // Most of the time, `tolerantCurrentEpoch` will be equal to `currentEpoch`. However, during
+      // the first `MAXIMUM_GOSSIP_CLOCK_DISPARITY` duration of the epoch `tolerantCurrentEpoch`
+      // will equal `currentEpoch + 1`
+
+      // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
+      const pubkeys = getPubkeysForIndices(state.validators, indices);
+      const decisionRoot = state.epochCtx.getShufflingDecisionRoot(epoch);
+      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      if (!shuffling) {
+        throw new ApiError(
+          500,
+          `No shuffling found to calculate committee assignments for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
+        );
+      }
+      const committeeAssignments = calculateInclusionListCommitteeAssignments(shuffling, indices);
+      const duties: routes.validator.InclusionListDuty[] = [];
+      for (let i = 0, len = indices.length; i < len; i++) {
+        const validatorIndex = indices[i];
+        const duty = committeeAssignments.get(validatorIndex) as routes.validator.InclusionListDuty | undefined;
+        if (duty) {
+          // Mutate existing object instead of re-creating another new object with spread operator
+          // Should be faster and require less memory
+          duty.pubkey = pubkeys[i];
+          duties.push(duty);
+        }
+      }
+
+      const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
+
+      return {
+        data: duties,
+        meta: {
+          dependentRoot: toRootHex(dependentRoot),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      };
     },
 
     async getAggregatedAttestation({attestationDataRoot, slot}) {
