@@ -110,8 +110,7 @@ export function getAttDataFromAttestationSerialized(data: Uint8Array): AttDataBa
  * This is used for GossipQueue.
  */
 export function getBeaconAttestationGossipIndex(fork: ForkName, data: Uint8Array): AttDataBase64 | null {
-  const forkSeq = ForkSeq[fork];
-  return forkSeq >= ForkSeq.electra
+  return ForkSeq[fork] >= ForkSeq.electra
     ? getAttDataFromSingleAttestationSerialized(data)
     : getAttDataFromAttestationSerialized(data);
 }
@@ -120,8 +119,7 @@ export function getBeaconAttestationGossipIndex(fork: ForkName, data: Uint8Array
  * Extract slot from `beacon_attestation` gossip message serialized bytes.
  */
 export function getSlotFromBeaconAttestationSerialized(fork: ForkName, data: Uint8Array): Slot | null {
-  const forkSeq = ForkSeq[fork];
-  return forkSeq >= ForkSeq.electra
+  return ForkSeq[fork] >= ForkSeq.electra
     ? getSlotFromSingleAttestationSerialized(data)
     : getSlotFromAttestationSerialized(data);
 }
@@ -130,8 +128,7 @@ export function getSlotFromBeaconAttestationSerialized(fork: ForkName, data: Uin
  * Extract block root from `beacon_attestation` gossip message serialized bytes.
  */
 export function getBlockRootFromBeaconAttestationSerialized(fork: ForkName, data: Uint8Array): BlockRootHex | null {
-  const forkSeq = ForkSeq[fork];
-  return forkSeq >= ForkSeq.electra
+  return ForkSeq[fork] >= ForkSeq.electra
     ? getBlockRootFromSingleAttestationSerialized(data)
     : getBlockRootFromAttestationSerialized(data);
 }
