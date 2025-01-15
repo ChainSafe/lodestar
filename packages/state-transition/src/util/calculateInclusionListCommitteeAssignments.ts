@@ -1,19 +1,13 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CommitteeIndex, Slot, ValidatorIndex} from "@lodestar/types";
+import {Slot, ValidatorIndex} from "@lodestar/types";
 import {EpochShuffling} from "./epochShuffling.js";
-
-// Copied from lodestar-api package to avoid depending on the package
-export interface InclusionListDuty {
-  validatorIndex: ValidatorIndex;
-  slot: Slot;
-}
 
 export function calculateInclusionListCommitteeAssignments(
   epochShuffling: EpochShuffling,
   requestedValidatorIndices: ValidatorIndex[]
-): Map<ValidatorIndex, InclusionListDuty> {
+): Map<ValidatorIndex, {slot: Slot}> {
   const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
-  const duties = new Map<ValidatorIndex, InclusionListDuty>();
+  const duties = new Map<ValidatorIndex, {slot: Slot}>();
 
   const epochCommittees = epochShuffling.inclusionListCommittees;
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
@@ -23,10 +17,7 @@ export function calculateInclusionListCommitteeAssignments(
       const validatorIndex = slotCommittee[i];
 
       if (requestedValidatorIndicesSet.has(validatorIndex)) {
-        duties.set(validatorIndex, {
-          validatorIndex,
-          slot: epochShuffling.epoch * SLOTS_PER_EPOCH + epochSlot,
-        });
+        duties.set(validatorIndex, {slot: epochShuffling.epoch * SLOTS_PER_EPOCH + epochSlot});
       }
     }
   }

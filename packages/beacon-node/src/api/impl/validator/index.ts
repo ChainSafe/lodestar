@@ -1256,12 +1256,9 @@ export function getValidatorApi(
       const duties: routes.validator.InclusionListDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
-        const duty = committeeAssignments.get(validatorIndex) as routes.validator.InclusionListDuty | undefined;
+        const duty = committeeAssignments.get(validatorIndex);
         if (duty) {
-          // Mutate existing object instead of re-creating another new object with spread operator
-          // Should be faster and require less memory
-          duty.pubkey = pubkeys[i];
-          duties.push(duty);
+          duties.push({pubkey: pubkeys[i], validatorIndex, slot: duty.slot});
         }
       }
 

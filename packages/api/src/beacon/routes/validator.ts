@@ -427,7 +427,7 @@ export type Endpoints = {
 
   /**
    * Produce an inclusion list
-   * Requests the beacon node to produce an inclusion list
+   * Requests the beacon node to produce an inclusion list.
    */
   produceInclusionList: Endpoint<
     "GET",
