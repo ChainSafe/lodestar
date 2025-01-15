@@ -407,7 +407,7 @@ function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
 /**
  * Alias of `getSlotFromOffset` for readability
  */
-function getIndexFromOffset(data: Uint8Array, offset: number): ValidatorIndex | CommitteeIndex | null {
+function getIndexFromOffset(data: Uint8Array, offset: number): (ValidatorIndex | CommitteeIndex) | null {
   return getSlotFromOffset(data, offset);
 }
 
