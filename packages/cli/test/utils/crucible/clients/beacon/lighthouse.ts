@@ -28,6 +28,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   const cliParams: Record<string, unknown> = {
     "testnet-dir": rootDirMounted,
     datadir: rootDirMounted,
+    // Enable the RESTful HTTP API server. Disabled by default.
     http: null,
     "http-address": "0.0.0.0",
     "http-port": ports.beacon.httpPort,
