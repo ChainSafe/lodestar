@@ -70,7 +70,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
         : undefined,
       bootstrap: async () => {
         await writeFile(path.join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(forkConfig)));
-        await writeFile(path.join(rootDir, "deploy_block.txt"), "0");
+        await writeFile(path.join(rootDir, "deposit_contract_block.txt"), "0");
       },
       cli: {
         command: isDocker ? "lighthouse" : (process.env.LIGHTHOUSE_BINARY_PATH as string),
