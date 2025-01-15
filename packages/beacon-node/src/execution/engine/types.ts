@@ -496,7 +496,7 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
       prefixedRequests = prefixedRequests.slice(2);
     }
 
-    const currentRequestType = Number(prefixedRequests.substring(0, 2));
+    const currentRequestType = parseInt(prefixedRequests.substring(0, 2), 16);
 
     if (!isExecutionRequestType(currentRequestType)) {
       throw Error(`Invalid request type currentRequestType=${prefixedRequests.substring(0, 2)}`);
