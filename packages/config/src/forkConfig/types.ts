@@ -10,6 +10,12 @@ export type ForkInfo = {
   prevForkName: ForkName;
 };
 
+/** Set of config values that frequently change across hard-forks */
+export type ConfigValue = {
+  MAX_BLOBS_PER_BLOCK: number;
+  MAX_REQUEST_BLOB_SIDECARS: number;
+};
+
 /**
  * Fork schedule and helper methods
  */
@@ -39,8 +45,6 @@ export type ForkConfig = {
   getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution>;
   /** Get blobs SSZ types by hard-fork*/
   getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs>;
-  /** Get max blobs per block by hard-fork */
-  getMaxBlobsPerBlock(fork: ForkName): number;
-  /** Get max request blob sidecars by hard-fork */
-  getMaxRequestBlobSidecars(fork: ForkName): number;
+  /** Get config value by hard-fork */
+  getValue<K extends keyof ConfigValue>(fork: ForkName, name: K): ConfigValue[K];
 };

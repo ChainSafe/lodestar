@@ -16,5 +16,5 @@ export const signedBLSToExecutionChangeVersionedType = new ContainerType(
 export type SignedBLSToExecutionChangeVersioned = ValueOf<typeof signedBLSToExecutionChangeVersionedType>;
 
 export const BlobSidecarsByRootRequestType = (fork: ForkName, config: BeaconConfig) =>
-  new ListCompositeType(ssz.deneb.BlobIdentifier, config.getMaxRequestBlobSidecars(fork));
+  new ListCompositeType(ssz.deneb.BlobIdentifier, config.getValue(fork, "MAX_REQUEST_BLOB_SIDECARS"));
 export type BlobSidecarsByRootRequest = ValueOf<ReturnType<typeof BlobSidecarsByRootRequestType>>;

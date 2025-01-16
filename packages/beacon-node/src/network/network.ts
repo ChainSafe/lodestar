@@ -506,7 +506,7 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * this.config.getMaxBlobsPerBlock(fork),
+      request.count * this.config.getValue(fork, "MAX_BLOBS_PER_BLOCK"),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }

@@ -25,7 +25,7 @@ export async function validateGossipBlobSidecar(
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
   // [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `blob_sidecar.index < MAX_BLOBS_PER_BLOCK`.
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(fork);
+  const maxBlobsPerBlock = chain.config.getValue(fork, "MAX_BLOBS_PER_BLOCK");
   if (blobSidecar.index >= maxBlobsPerBlock) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INDEX_TOO_LARGE,
