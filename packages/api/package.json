@@ -71,7 +71,7 @@
   },
   "dependencies": {
     "@chainsafe/persistent-merkle-tree": "^0.8.0",
-    "@chainsafe/ssz": "^0.18.0",
+    "@chainsafe/ssz": "^0.19.0",
     "@lodestar/config": "^1.25.0",
     "@lodestar/params": "^1.25.0",
     "@lodestar/types": "^1.25.0",
