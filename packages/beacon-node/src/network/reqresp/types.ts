@@ -1,5 +1,5 @@
 import {Type} from "@chainsafe/ssz";
-import {ChainConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
@@ -72,7 +72,7 @@ type ResponseBodyByMethod = {
 /** Request SSZ type for each method and ForkName */
 // TODO Electra: Currently setting default fork to deneb because not every caller of requestSszTypeByMethod can provide fork info
 export const requestSszTypeByMethod: (
-  config: ChainConfig,
+  config: BeaconConfig,
   fork?: ForkName
 ) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;

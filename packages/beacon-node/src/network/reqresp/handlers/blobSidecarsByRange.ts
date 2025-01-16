@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT, isForkPostElectra} from "@lodestar/params";
+import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -105,9 +105,7 @@ export function validateBlobSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  const maxRequestBlobSidecars = isForkPostElectra(config.getForkName(startSlot))
-    ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA
-    : config.MAX_REQUEST_BLOB_SIDECARS;
+  const maxRequestBlobSidecars = config.getMaxRequestBlobSidecars(config.getForkName(startSlot));
 
   if (count > maxRequestBlobSidecars) {
     count = maxRequestBlobSidecars;

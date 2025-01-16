@@ -133,5 +133,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getMaxBlobsPerBlock(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_BLOBS_PER_BLOCK_ELECTRA : config.MAX_BLOBS_PER_BLOCK;
     },
+    getMaxRequestBlobSidecars(fork: ForkName): number {
+      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
+    },
   };
 }

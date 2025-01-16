@@ -1,6 +1,6 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
-import {ChainConfig} from "@lodestar/config";
-import {ForkName, isForkPostElectra} from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 
 // Misc SSZ types used only in the beacon-node package, no need to upstream to types
@@ -15,9 +15,6 @@ export const signedBLSToExecutionChangeVersionedType = new ContainerType(
 );
 export type SignedBLSToExecutionChangeVersioned = ValueOf<typeof signedBLSToExecutionChangeVersionedType>;
 
-export const BlobSidecarsByRootRequestType = (fork: ForkName, config: ChainConfig) =>
-  new ListCompositeType(
-    ssz.deneb.BlobIdentifier,
-    isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS
-  );
+export const BlobSidecarsByRootRequestType = (fork: ForkName, config: BeaconConfig) =>
+  new ListCompositeType(ssz.deneb.BlobIdentifier, config.getMaxRequestBlobSidecars(fork));
 export type BlobSidecarsByRootRequest = ValueOf<ReturnType<typeof BlobSidecarsByRootRequestType>>;
