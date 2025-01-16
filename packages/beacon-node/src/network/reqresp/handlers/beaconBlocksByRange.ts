@@ -1,4 +1,5 @@
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
+import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkBlobs} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -12,7 +13,7 @@ export async function* onBeaconBlocksByRange(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  const {startSlot, count} = validateBeaconBlocksByRangeRequest(request);
+  const {startSlot, count} = validateBeaconBlocksByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
 
   const finalized = db.blockArchive;
@@ -69,6 +70,7 @@ export async function* onBeaconBlocksByRange(
 }
 
 export function validateBeaconBlocksByRangeRequest(
+  config: BeaconConfig,
   request: deneb.BlobSidecarsByRangeRequest
 ): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
@@ -84,9 +86,10 @@ export function validateBeaconBlocksByRangeRequest(
 
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
-  if (count > MAX_REQUEST_BLOCKS) {
-    // TODO: This is probably not right as `BeaconBlocksByRangeV2` takes at most `MAX_REQUEST_BLOCKS_DENEB`
-    count = MAX_REQUEST_BLOCKS;
+  const maxRequestBlocks = isForkBlobs(config.getForkName(startSlot)) ? MAX_REQUEST_BLOCKS_DENEB : MAX_REQUEST_BLOCKS;
+
+  if (count > maxRequestBlocks) {
+    count = maxRequestBlocks;
   }
 
   return {startSlot, count};
