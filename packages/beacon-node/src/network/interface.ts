@@ -78,7 +78,7 @@ export interface INetwork extends INetworkCorePublic {
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<WithBytes<SignedBeaconBlock>[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
-  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
+  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: peerdas.DataColumnSidecarsByRangeRequest

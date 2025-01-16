@@ -5,7 +5,6 @@ import {
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkLightClient,
-  MAX_BLOBS_PER_BLOCK,
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
 } from "@lodestar/params";
 import {Attestation, ssz, sszTypesFor} from "@lodestar/types";

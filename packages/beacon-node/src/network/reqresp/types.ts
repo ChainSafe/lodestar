@@ -17,7 +17,7 @@ import {
   sszTypesFor,
   peerdas,
 } from "@lodestar/types";
-import {BlobSidecarsByRootRequest} from "../../util/types.js";
+import {BlobSidecarsByRootRequest, BlobSidecarsByRootRequestType} from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -49,7 +49,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
-  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecarsByRootRequest;
+  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: peerdas.DataColumnSidecarsByRangeRequest;
   [ReqRespMethod.DataColumnSidecarsByRoot]: peerdas.DataColumnSidecarsByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
@@ -89,7 +89,7 @@ export const requestSszTypeByMethod: (config: ChainConfig) => {
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
-  [ReqRespMethod.BlobSidecarsByRoot]: ssz.deneb.BlobSidecarsByRootRequest,
+  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.peerdas.DataColumnSidecarsByRangeRequest,
   [ReqRespMethod.DataColumnSidecarsByRoot]: ssz.peerdas.DataColumnSidecarsByRootRequest,
 

@@ -112,8 +112,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // peerdas
     PEERDAS_FORK_VERSION: peerdasForkRelevant,
     PEERDAS_FORK_EPOCH: peerdasForkRelevant,
-    EIP7594_FORK_VERSION: peerdasForkRelevant,
-    EIP7594_FORK_EPOCH: peerdasForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -227,8 +225,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
-    // TODO-das @matthewkeil this was on unstable but looks like it was moved out of params to config 
-    // MAX_BLOBS_PER_BLOCK: denebForkRelevant,
+    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
 
     // ElectraPreset
     MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,

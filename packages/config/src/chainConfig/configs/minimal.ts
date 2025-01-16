@@ -51,9 +51,6 @@ export const chainConfig: ChainConfig = {
   // Peerdas
   PEERDAS_FORK_VERSION: b("0x05000001"),
   PEERDAS_FORK_EPOCH: Infinity,
-  EIP7594_FORK_VERSION: b("0x05000001"),
-  EIP7594_FORK_EPOCH: Infinity,
-
   // Time parameters
   // ---------------------------------------------------------------
   // [customized] Faster for testing purposes

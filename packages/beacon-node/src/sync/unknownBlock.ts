@@ -696,9 +696,14 @@ export class UnknownBlockSync {
           this.network,
           peer,
           unavailableBlockInput,
-          this.metrics,
           peerClient,
-          this.logger
+          {
+            engineGetBlobsCache: this.engineGetBlobsCache,
+            executionEngine: this.chain.executionEngine,
+            blockInputsRetryTrackerCache: this.blockInputsRetryTrackerCache,
+            metrics: this.metrics,
+            logger: this.logger,
+          }
         );
 
         // Peer does not have the block, try with next peer

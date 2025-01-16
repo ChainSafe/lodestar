@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, peerdas, ssz} from "@lodestar/types";
+import {deneb, Epoch, phase0, SignedBeaconBlock, Slot, peerdas, ssz, WithBytes} from "@lodestar/types";
 import {ForkSeq, NUMBER_OF_COLUMNS, ForkName} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
@@ -14,10 +14,9 @@ import {
   DataColumnsSource,
   BlockInputType,
   getBlockInputDataColumns,
-  BlockInputDataBlobs,
 } from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {INetwork, WithBytes, WithOptionalBytes} from "../interface.js";
+import {INetwork, WithOptionalBytes} from "../interface.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {computeNodeId} from "../subnets/index.js";
@@ -62,7 +61,7 @@ export async function beaconBlocksMaybeBlobsByRange(
 
   // From Deneb
   // Only request blobs if they are recent enough
-  else if (computeEpochAtSlot(startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
+  if (startEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
     if (forkSeq < ForkSeq.peerdas) {
       const [allBlocks, allBlobSidecars] = await Promise.all([
         network.sendBeaconBlocksByRange(peerId, request),
@@ -78,76 +77,79 @@ export async function beaconBlocksMaybeBlobsByRange(
         BlobsSource.byRange
       );
       return {blocks, pendingDataColumns: null};
-    } else {
-      const {custodyConfig} = network;
-      // get columns
-      const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.sampledColumns;
-      const peerColumns = network.getConnectedPeerCustody(peerId);
-
-      // get match
-      const columns = peerColumns.reduce((acc, elem) => {
-        if (neededColumns.includes(elem)) {
-          acc.push(elem);
-        }
-        return acc;
-      }, [] as number[]);
-
-      if (columns.length === 0 && partialDownload !== null) {
-        // this peer has nothing to offer and should not have been selected for batch download
-        // throw error?
-        return partialDownload;
-      }
-
-      const pendingDataColumns = neededColumns.reduce((acc, elem) => {
-        if (!columns.includes(elem)) {
-          acc.push(elem);
-        }
-        return acc;
-      }, [] as number[]);
-
-      const dataColumnRequest = {...request, columns};
-      const [allBlocks, allDataColumnSidecars] = await Promise.all([
-        partialDownload
-          ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block, bytes: blockInput.blockBytes!}))
-          : network.sendBeaconBlocksByRange(peerId, request),
-        columns.length === 0 ? [] : network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
-      ]);
-      logger?.debug("ByRange requests", {
-        beaconBlocksRequest: JSON.stringify(ssz.phase0.BeaconBlocksByRangeRequest.toJson(request)),
-        dataColumnRequest: JSON.stringify(ssz.peerdas.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest)),
-        [`allBlocks(${allBlocks.length})`]: allBlocks.map((blk) => blk.data.message.slot).join(" "),
-        [`allDataColumnSidecars(${allDataColumnSidecars.length})`]: allDataColumnSidecars
-          .map((dCol) => `${dCol.signedBlockHeader.message.slot}:${dCol.index}`)
-          .join(" "),
-        peerColumns: peerColumns.join(" "),
-        peerId,
-        peerClient,
-        prevPartialDownload: partialDownload ? true : false,
-      });
-
-      const blocks = matchBlockWithDataColumns(
-        network,
-        peerId,
-        config,
-        custodyConfig,
-        columns,
-        allBlocks,
-        allDataColumnSidecars,
-        endSlot,
-        BlockSource.byRange,
-        DataColumnsSource.byRange,
-        partialDownload,
-        peerClient,
-        logger
-      );
-
-      return {blocks, pendingDataColumns: pendingDataColumns.length > 0 ? pendingDataColumns : null};
     }
+    const {custodyConfig} = network;
+    // get columns
+    const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.sampledColumns;
+    const peerColumns = network.getConnectedPeerCustody(peerId);
+
+    // get match
+    const columns = peerColumns.reduce((acc, elem) => {
+      if (neededColumns.includes(elem)) {
+        acc.push(elem);
+      }
+      return acc;
+    }, [] as number[]);
+
+    if (columns.length === 0 && partialDownload !== null) {
+      // this peer has nothing to offer and should not have been selected for batch download
+      // throw error?
+      return partialDownload;
+    }
+
+    const pendingDataColumns = neededColumns.reduce((acc, elem) => {
+      if (!columns.includes(elem)) {
+        acc.push(elem);
+      }
+      return acc;
+    }, [] as number[]);
+
+    const dataColumnRequest = {...request, columns};
+    const [allBlocks, allDataColumnSidecars] = await Promise.all([
+      partialDownload
+        ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block, bytes: blockInput.blockBytes!}))
+        : network.sendBeaconBlocksByRange(peerId, request),
+      columns.length === 0 ? [] : network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
+    ]);
+    logger?.debug("ByRange requests", {
+      beaconBlocksRequest: JSON.stringify(ssz.phase0.BeaconBlocksByRangeRequest.toJson(request)),
+      dataColumnRequest: JSON.stringify(ssz.peerdas.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest)),
+      [`allBlocks(${allBlocks.length})`]: allBlocks.map((blk) => blk.data.message.slot).join(" "),
+      [`allDataColumnSidecars(${allDataColumnSidecars.length})`]: allDataColumnSidecars
+        .map((dCol) => `${dCol.signedBlockHeader.message.slot}:${dCol.index}`)
+        .join(" "),
+      peerColumns: peerColumns.join(" "),
+      peerId,
+      peerClient,
+      prevPartialDownload: partialDownload ? true : false,
+    });
+
+    const blocks = matchBlockWithDataColumns(
+      network,
+      peerId,
+      config,
+      custodyConfig,
+      columns,
+      allBlocks,
+      allDataColumnSidecars,
+      endSlot,
+      BlockSource.byRange,
+      DataColumnsSource.byRange,
+      partialDownload,
+      peerClient,
+      logger
+    );
+
+    return {blocks, pendingDataColumns: pendingDataColumns.length > 0 ? pendingDataColumns : null};
   }
 
   // Data is out of range, only request blocks
   const blocks = await network.sendBeaconBlocksByRange(peerId, request);
-  return blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange, block.bytes));
+  return {
+    blocks: blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange, block.bytes)),
+    // TODO-das @matthewkeil check that null is the correct condition here. from merge unstable/electra into peerDAS
+    pendingDataColumns: null,
+  };
 }
 
 // Assumes that the blobs are in the same sequence as blocks, doesn't require block to be sorted
@@ -347,7 +349,10 @@ export function matchBlockWithDataColumns(
         }
 
         for (const dataColumnSidecar of dataColumnSidecars) {
-          cachedData.dataColumnsCache.set(dataColumnSidecar.index, {dataColumn: dataColumnSidecar, dataColumnBytes: null});
+          cachedData.dataColumnsCache.set(dataColumnSidecar.index, {
+            dataColumn: dataColumnSidecar,
+            dataColumnBytes: null,
+          });
         }
 
         if (shouldHaveAllData) {

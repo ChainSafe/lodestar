@@ -253,6 +253,13 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
+    ExecutionRequests: electra.ExecutionRequests;
   };
 };
 

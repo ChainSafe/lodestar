@@ -110,7 +110,8 @@ async function maybeValidateBlobs(
           : await raceWithCutoff(
               chain,
               blockInput,
-              blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>
+              blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
+              signal
             );
 
       if (blockData.fork === ForkName.deneb) {

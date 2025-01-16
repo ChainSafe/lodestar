@@ -25,7 +25,6 @@ import {
   DataColumnsSource,
   BlockInputAvailableData,
   BlockInput,
-  BlockInputDataBlobs,
   BlockSource,
   ImportBlockOpts,
   getBlockInput,

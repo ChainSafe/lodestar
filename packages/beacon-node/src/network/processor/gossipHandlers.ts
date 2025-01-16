@@ -41,7 +41,6 @@ import {
   validateGossipSyncCommittee,
   validateGossipVoluntaryExit,
   validateSyncCommitteeGossipContributionAndProof,
-  validateGossipAttestation,
   AttestationOrBytes,
   AttestationValidationResult,
 } from "../../chain/validation/index.js";
@@ -415,10 +414,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }
     // TODO-das @matthewkeil this was a merge conflict from getBlobsV1 on unstable merging into peerDAS need to check
     // if this condition should still be included
-    else if (blockInput.type === BlockInputType.availableData) {
-      metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blockInput.blockData.blobs.length);
-    }
+    // else if (blockInput.type === BlockInputType.availableData) {
+    //   metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
+    //   metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blockInput.blockData.blobs.length);
+    // }
   }
 
   return {

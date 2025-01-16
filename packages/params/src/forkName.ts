@@ -98,6 +98,14 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
 
 export type ForkPrePeerDAS = ForkPreElectra | ForkName.electra;
 export type ForkPeerDAS = Exclude<ForkName, ForkPrePeerDAS>;
+export const forkPostPeerDAS = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+]);
 export function isForkPeerDAS(fork: ForkName): fork is ForkPeerDAS {
   return isForkPostElectra(fork) && fork !== ForkName.electra;
 }

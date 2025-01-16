@@ -8,7 +8,6 @@ import {BlobAndProof} from "@lodestar/types/deneb";
 import {
   BlobsSource,
   BlockInput,
-  BlockInputDataBlobs,
   BlockInputType,
   BlockSource,
   NullBlockInput,
@@ -349,7 +348,7 @@ export async function unavailableBeaconBlobsByRootPreFulu(
   if (blobs.length !== blobKzgCommitmentsLen) {
     throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
   }
-  const blockData = {fork: cachedData.fork, ...allBlobs, blobsSource: BlobsSource.byRoot} as BlockInputDataBlobs;
+  const blockData = {fork: cachedData.fork, ...allBlobs, blobsSource: BlobsSource.byRoot} as BlockInputBlobs;
   cachedData.resolveAvailability(blockData);
   metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
 
@@ -536,11 +535,11 @@ export async function unavailableBeaconBlobsByRoot(
   unavailableBlockInput: BlockInput | NullBlockInput,
   peerClient: string,
   opts: {
-    logger?: Logger;
+    logger: Logger;
     metrics: Metrics | null;
     executionEngine: IExecutionEngine;
-    engineGetBlobsCache?: Map<RootHex, BlobAndProof | null>;
-    blockInputsRetryTrackerCache?: Set<RootHex>;
+    engineGetBlobsCache: Map<RootHex, BlobAndProof | null>;
+    blockInputsRetryTrackerCache: Set<RootHex>;
   }
 ): Promise<BlockInput> {
   if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {

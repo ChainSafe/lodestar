@@ -60,7 +60,7 @@ export type BlockInputBlobs = ForkBlobsInfo & {
   blobsSource: BlobsSource;
 };
 export type BlobsCacheMap = Map<number, BlobData>;
-type CachedBlobs = CachedDataItem &
+export type CachedBlobs = CachedDataItem &
   ForkBlobsInfo &
   Availability<BlockInputBlobs> & {
     blobsCache: BlobsCacheMap;
