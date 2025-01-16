@@ -16,6 +16,7 @@ import {
   BlockInputDataColumns,
   getBlockInput,
   getBlockInputBlobs,
+  CachedBlobs,
 } from "../../chain/blocks/types.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
@@ -179,8 +180,8 @@ export async function unavailableBeaconBlobsByRootPreFulu(
   peerId: PeerIdStr,
   unavailableBlockInput: BlockInput | NullBlockInput,
   block: SignedBeaconBlock,
-  blockBytes: Uint8Array,
-  cachedData: NullBlockInput["cachedData"],
+  blockBytes: Uint8Array | null,
+  cachedData: CachedBlobs,
   opts: {
     metrics: Metrics | null;
     executionEngine: IExecutionEngine;
@@ -369,7 +370,7 @@ export async function unavailableBeaconBlobsByRootPeerDas(
   peerId: PeerIdStr,
   unavailableBlockInput: BlockInput | NullBlockInput,
   block: SignedBeaconBlock,
-  blockBytes: Uint8Array,
+  blockBytes: Uint8Array | null,
   cachedData: NullBlockInput["cachedData"],
   metrics: Metrics | null,
   peerClient: string,
@@ -522,7 +523,7 @@ export async function unavailableBeaconBlobsByRootPeerDas(
       }
     }
   } else {
-    throw Error(`Invalid cachedData fork=${cachedData.fork} for unavailableBeaconBlobsByRoot`);
+    throw Error("Invalid cachedData for unavailableBeaconBlobsByRoot");
   }
 
   return availableBlockInput;
@@ -572,7 +573,7 @@ export async function unavailableBeaconBlobsByRoot(
       unavailableBlockInput,
       block,
       blockBytes,
-      cachedData,
+      cachedData as CachedBlobs,
       opts
     );
   }
