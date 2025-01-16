@@ -17,6 +17,7 @@ import {
   DataColumnsSource,
   getBlockInputDataColumns,
   BlockInputDataColumns,
+  CachedBlobs,
 } from "../blocks/types.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 
@@ -352,16 +353,18 @@ export class SeenGossipBlockInput {
     }
 
     // will need to wait for the block to showup
+    // biome-ignore lint/correctness/noUnreachable: <explanation>
     if (cachedData === undefined) {
       throw Error("Missing cachedData for deneb+ blobs");
     }
-    const {blobsCache} = cachedData;
+
+    const {blobsCache} = cachedData as CachedBlobs;
 
     return {
       blockInput: {
         block: null,
         blockRootHex: blockHex,
-        cachedData,
+        cachedData: cachedData as BlockInputCachedData,
         blockInputPromise,
       },
       blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
