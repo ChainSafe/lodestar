@@ -214,6 +214,10 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
+  if (ForkSeq[fork] >= ForkSeq.focil) {
+    topics.push({type: GossipType.inclusion_list});
+  }
+
   // After Deneb also track blob_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
     for (let index = 0; index < MAX_BLOBS_PER_BLOCK; index++) {
