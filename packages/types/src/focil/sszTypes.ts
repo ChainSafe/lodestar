@@ -1,5 +1,5 @@
 import {BitVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
-import {IL_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_INCLUSION_LIST} from "@lodestar/params";
+import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_INCLUSION_LIST} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
@@ -20,7 +20,7 @@ export const SignedInclusionList = new ContainerType({
 
 export const InclusionListByCommitteeIndicesRequest = new ContainerType({
   slot: Slot,
-  committeeIndices: new BitVectorType(IL_COMMITTEE_SIZE),
+  committeeIndices: new BitVectorType(INCLUSION_LIST_COMMITTEE_SIZE),
 });
 
 export const BeaconState = new ContainerType({

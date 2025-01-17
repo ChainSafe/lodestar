@@ -2,9 +2,9 @@ import {asyncUnshuffleList, unshuffleList} from "@chainsafe/swap-or-not-shuffle"
 import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_BEACON_ATTESTER,
-  DOMAIN_IL_COMMITTEE,
+  DOMAIN_INCLUSION_LIST_COMMITTEE,
   GENESIS_SLOT,
-  IL_COMMITTEE_SIZE,
+  INCLUSION_LIST_COMMITTEE_SIZE,
   MAX_COMMITTEES_PER_SLOT,
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
@@ -139,8 +139,8 @@ function buildInclusionListCommitteeFromShuffling(shuffling: Uint32Array): Uint3
   const committees: Uint32Array[] = [];
 
   for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
-    const startOffSet = slot * IL_COMMITTEE_SIZE;
-    const endOffset = startOffSet + IL_COMMITTEE_SIZE;
+    const startOffSet = slot * INCLUSION_LIST_COMMITTEE_SIZE;
+    const endOffset = startOffSet + INCLUSION_LIST_COMMITTEE_SIZE;
 
     const slotCommittee = shuffling.subarray(startOffSet, endOffset);
     committees.push(slotCommittee);
@@ -161,7 +161,7 @@ export function computeEpochShuffling(
   const committees = buildBeaconCommitteesFromShuffling(shuffling);
 
   // Inclusion List Committee
-  const ilSeed = getSeed(state, epoch, DOMAIN_IL_COMMITTEE);
+  const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
   const ilShuffling = unshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
   const ilCommittees = buildInclusionListCommitteeFromShuffling(ilShuffling);
 
@@ -187,7 +187,7 @@ export async function computeEpochShufflingAsync(
   const committees = buildBeaconCommitteesFromShuffling(shuffling);
 
   // Inclusion List Committee
-  const ilSeed = getSeed(state, epoch, DOMAIN_IL_COMMITTEE);
+  const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
   const ilShuffling = await asyncUnshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
   const ilCommittees = buildInclusionListCommitteeFromShuffling(ilShuffling);
 
