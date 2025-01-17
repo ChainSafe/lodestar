@@ -105,7 +105,7 @@ export function validateBlobSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  const maxRequestBlobSidecars = config.getValue(config.getForkName(startSlot), "MAX_REQUEST_BLOB_SIDECARS");
+  const maxRequestBlobSidecars = config.getMaxRequestBlobSidecars(config.getForkName(startSlot));
 
   if (count > maxRequestBlobSidecars) {
     count = maxRequestBlobSidecars;

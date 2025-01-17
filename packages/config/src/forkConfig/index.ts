@@ -14,7 +14,7 @@ import {
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
-import {ConfigValue, ForkConfig, ForkInfo} from "./types.js";
+import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
 
@@ -130,15 +130,11 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return sszTypesFor(forkName);
     },
-    getValue<K extends keyof ConfigValue>(fork: ForkName, name: K): ConfigValue[K] {
-      switch (name) {
-        case "MAX_BLOBS_PER_BLOCK":
-          return isForkPostElectra(fork) ? config.MAX_BLOBS_PER_BLOCK_ELECTRA : config.MAX_BLOBS_PER_BLOCK;
-        case "MAX_REQUEST_BLOB_SIDECARS":
-          return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
-        default:
-          throw Error(`Config value "${name}" does not exist`);
-      }
+    getMaxBlobsPerBlock(fork: ForkName): number {
+      return isForkPostElectra(fork) ? config.MAX_BLOBS_PER_BLOCK_ELECTRA : config.MAX_BLOBS_PER_BLOCK;
+    },
+    getMaxRequestBlobSidecars(fork: ForkName): number {
+      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
   };
 }
