@@ -186,4 +186,6 @@ export interface IExecutionEngine {
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
   getBlobs(fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
+
+  updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<void>;
 }

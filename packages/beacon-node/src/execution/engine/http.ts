@@ -204,7 +204,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
     executionRequests?: ExecutionRequests,
-    inclusionList?: InclusionList // TODO FOCIL: figure out how to get IL when process_execution_payload
+    _inclusionList?: InclusionList // TODO FOCIL: figure out how to get IL when process_execution_payload
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.focil
@@ -520,6 +520,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
 
     return response.map(deserializeBlobAndProofs);
+  }
+
+  async updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<void> {
+    const method = "engine_updatePayloadWithInclusionListV1";
+    await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+      method,
+      params: [payloadId, {transactions: inclusionList.transactions.map(bytesToData)}],
+    });
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

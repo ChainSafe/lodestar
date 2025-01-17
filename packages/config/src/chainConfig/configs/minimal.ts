@@ -64,6 +64,7 @@ export const chainConfig: ChainConfig = {
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
   ATTESTATION_DEADLINE: 4,
+  PROPOSER_INCLUSION_LIST_CUT_OFF: 11,
 
   // Validator cycle
   // ---------------------------------------------------------------

@@ -244,6 +244,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // FOCIL
     ATTESTATION_DEADLINE: focilForkRelevant,
+    PROPOSER_INCLUSION_LIST_CUT_OFF: focilForkRelevant,
     MAX_REQUEST_INCLUSION_LIST: focilForkRelevant,
     MAX_BYTES_PER_INCLUSION_LIST: focilForkRelevant,
   };

@@ -69,6 +69,7 @@ export const chainConfig: ChainConfig = {
   // 2**11 (= 2,048) Eth1 blocks ~8 hours
   ETH1_FOLLOW_DISTANCE: 2048,
   ATTESTATION_DEADLINE: 4,
+  PROPOSER_INCLUSION_LIST_CUT_OFF: 11,
 
   // Validator cycle
   // ---------------------------------------------------------------

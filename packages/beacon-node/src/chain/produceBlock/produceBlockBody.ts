@@ -37,7 +37,13 @@ import {Logger, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {
+  IExecutionBuilder,
+  IExecutionEngine,
+  InclusionList,
+  PayloadAttributes,
+  PayloadId,
+} from "../../execution/index.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -447,6 +453,24 @@ export async function prepareExecutionPayload(
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
   return {isPremerge: false, payloadId, prepType};
+}
+
+export async function prepareExecutionPayloadInclusionList(
+  chain: {executionEngine: IExecutionEngine},
+  logger: Logger,
+  payloadId: PayloadId,
+  slot: Slot
+): Promise<void> {
+  // TODO FOCIL: Gather the current slot's inclusion list transactions, filter out duplicates
+  const inclusionList: InclusionList = {transactions: []};
+
+  await chain.executionEngine.updatePayloadWithInclusionList(payloadId, inclusionList);
+
+  logger.verbose("Updated payload with inclusion list", {
+    slot,
+    payloadId,
+    transactions: inclusionList.transactions.length,
+  });
 }
 
 async function prepareExecutionPayloadHeader(

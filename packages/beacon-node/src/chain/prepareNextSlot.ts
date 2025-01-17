@@ -17,8 +17,13 @@ import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
-import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {
+  getPayloadAttributesForSSE,
+  prepareExecutionPayload,
+  prepareExecutionPayloadInclusionList,
+} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
+import {PayloadId} from "../execution/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
@@ -169,7 +174,7 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
-          await prepareExecutionPayload(
+          const {payloadId} = (await prepareExecutionPayload(
             this.chain,
             this.logger,
             fork as ForkExecution, // State is of execution type
@@ -178,11 +183,15 @@ export class PrepareNextSlotScheduler {
             finalizedBlockHash,
             updatedPrepareState,
             feeRecipient
-          );
+          )) as {payloadId: PayloadId};
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
             proposerIndex,
             feeRecipient,
+          });
+
+          this.schedulePayloadInclusionListUpdate(payloadId, clockSlot).catch((e) => {
+            this.logger.error("Failed to update payload with inclusion list", {payloadId, prepareSlot}, e);
           });
         }
 
@@ -239,5 +248,17 @@ export class PrepareNextSlotScheduler {
     });
     state.hashTreeRoot();
     hashTreeRootTimer?.();
+  }
+
+  /**
+   * Schedule task to update payload with inclusion list transactions that gathered up to `PROPOSER_INCLUSION_LIST_CUT_OFF`
+   */
+  async schedulePayloadInclusionListUpdate(payloadId: PayloadId, clockSlot: Slot): Promise<void> {
+    await sleep(
+      Math.max(0, (this.config.PROPOSER_INCLUSION_LIST_CUT_OFF - this.chain.clock.secFromSlot(clockSlot)) * 1000),
+      this.signal
+    );
+
+    await prepareExecutionPayloadInclusionList(this.chain, this.logger, payloadId, clockSlot);
   }
 }

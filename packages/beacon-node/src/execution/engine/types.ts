@@ -130,7 +130,7 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getInclusionListV1: InclusionListRpc;
 
-  engine_updatePayloadWithInclusionListV1: UpdateInclusionListResponse;
+  engine_updatePayloadWithInclusionListV1: void;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -232,11 +232,6 @@ export interface BlobsBundleRpc {
 type InclusionListRpc = {
   /** Array of DATA - Array of transaction objects */
   transactions: DATA[];
-};
-
-type UpdateInclusionListResponse = {
-  /** DATA, 8 Bytes - Identifier of the payload build process */
-  payloadId: QUANTITY;
 };
 
 export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {
