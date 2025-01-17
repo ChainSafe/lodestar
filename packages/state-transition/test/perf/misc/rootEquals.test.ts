@@ -1,5 +1,5 @@
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
 
 // As of Sep 2023
@@ -16,7 +16,7 @@ describe("root equals", () => {
 
   // This benchmark is very unstable in CI. We already know that "ssz.Root.equals" is the fastest
   const runsFactor = 1000;
-  itBench({
+  bench({
     id: "ssz.Root.equals",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -26,7 +26,7 @@ describe("root equals", () => {
     runsFactor,
   });
 
-  itBench({
+  bench({
     id: "byteArrayEquals",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -36,7 +36,7 @@ describe("root equals", () => {
     runsFactor,
   });
 
-  itBench({
+  bench({
     id: "Buffer.compare",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {

@@ -1,5 +1,5 @@
+import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {fromHexString} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
@@ -22,7 +22,7 @@ describe("produceBlockBody", () => {
   let chain: BeaconChain;
   let state: CachedBeaconStateAltair;
 
-  before(async () => {
+  beforeAll(async () => {
     db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
     state = stateOg.clone();
     chain = new BeaconChain(
@@ -51,13 +51,13 @@ describe("produceBlockBody", () => {
     );
   });
 
-  after(async () => {
+  afterAll(async () => {
     // If before blocks fail, db won't be declared
     if (db !== undefined) await db.close();
     if (chain !== undefined) await chain.close();
   });
 
-  itBench({
+  bench({
     id: "proposeBlockBody type=full, size=empty",
     minRuns: 5,
     maxMs: Infinity,

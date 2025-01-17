@@ -1,6 +1,6 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import assert from "node:assert";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ssz} from "@lodestar/types";
-import {expect} from "chai";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes.js";
@@ -38,7 +38,7 @@ describe("validate gossip attestation", () => {
         state,
         bitIndex: i,
       });
-      expect(subnet).to.be.equal(subnet0);
+      assert.deepEqual(subnet, subnet0);
       attestations.push(attestation);
     }
 
@@ -52,7 +52,7 @@ describe("validate gossip attestation", () => {
       };
     });
 
-    itBench({
+    bench({
       id: `batch validate gossip attestation - vc ${vc} - chunk ${chunkSize}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {

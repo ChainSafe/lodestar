@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
+import {bench, describe} from "@chainsafe/benchmark";
 import {toHexString} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
 
 // Results in Linux Dec 2021
 //
@@ -14,19 +14,19 @@ describe("misc / bytes32 to hex", () => {
   const bytes32 = crypto.randomBytes(32);
   const uint8Arr = randomBytesUint8Array(32);
 
-  itBench("bytes32 toHexString", () => {
+  bench("bytes32 toHexString", () => {
     toHexString(bytes32);
   });
 
-  itBench("bytes32 Buffer.toString(hex)", () => {
+  bench("bytes32 Buffer.toString(hex)", () => {
     bytes32.toString("hex");
   });
 
-  itBench("bytes32 Buffer.toString(hex) from Uint8Array", () => {
+  bench("bytes32 Buffer.toString(hex) from Uint8Array", () => {
     Buffer.from(uint8Arr).toString("hex");
   });
 
-  itBench("bytes32 Buffer.toString(hex) + 0x", () => {
+  bench("bytes32 Buffer.toString(hex) + 0x", () => {
     "0x" + bytes32.toString("hex");
   });
 });
