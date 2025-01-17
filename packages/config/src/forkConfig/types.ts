@@ -10,9 +10,7 @@ export type ForkInfo = {
   prevForkName: ForkName;
 };
 
-/**
- * Set of config values that frequently change across hard-forks
- */
+/** Set of config values that frequently change across hard-forks */
 export type ConfigValue = {
   MAX_BLOBS_PER_BLOCK: number;
   MAX_REQUEST_BLOB_SIDECARS: number;
