@@ -12,6 +12,7 @@ import {
 import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
+import {PayloadId} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
@@ -23,7 +24,6 @@ import {
   prepareExecutionPayloadInclusionList,
 } from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
-import {PayloadId} from "../execution/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;

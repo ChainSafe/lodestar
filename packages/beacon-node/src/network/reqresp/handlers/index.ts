@@ -55,9 +55,9 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.LightClientFinalityUpdate]: () => onLightClientFinalityUpdate(chain),
     [ReqRespMethod.LightClientOptimisticUpdate]: () => onLightClientOptimisticUpdate(chain),
     [ReqRespMethod.InclusionListByCommitteeIndices]: (req) => {
-      const body = ssz.focil.InclusionListByCommitteeIndicesRequest.deserialize(req.data);
+      const _body = ssz.focil.InclusionListByCommitteeIndicesRequest.deserialize(req.data);
       // TODO FOCIL: Implement this
-      throw Error(`InclusionListByCommitteeIndices is not implemented`);
+      throw Error("InclusionListByCommitteeIndices is not implemented");
     },
   };
 
