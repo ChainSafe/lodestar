@@ -3,9 +3,9 @@ import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
-import {hasExecutionWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
+import {hasCompoundingWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
-import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
+import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 
 // TODO Electra: Clean up necessary as there is a lot of overlap with isValidSwitchToCompoundRequest
 export function processConsolidationRequest(
@@ -49,11 +49,8 @@ export function processConsolidationRequest(
   const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   const currentEpoch = state.epochCtx.epoch;
 
-  // Verify withdrawal credentials
-  if (
-    !hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials) ||
-    !hasExecutionWithdrawalCredential(targetValidator.withdrawalCredentials)
-  ) {
+  // Verify that target has compounding withdrawal credentials
+  if (!hasCompoundingWithdrawalCredential(targetValidator.withdrawalCredentials)) {
     return;
   }
 
@@ -71,6 +68,16 @@ export function processConsolidationRequest(
     return;
   }
 
+  // Verify the source has been active long enough
+  if (currentEpoch < sourceValidator.activationEpoch + state.config.SHARD_COMMITTEE_PERIOD) {
+    return;
+  }
+
+  // Verify the source has no pending withdrawals in the queue
+  if (getPendingBalanceToWithdraw(state, sourceIndex) > 0) {
+    return;
+  }
+
   // TODO Electra: See if we can get rid of big int
   const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(sourceValidator.effectiveBalance));
   sourceValidator.exitEpoch = exitEpoch;
@@ -81,11 +88,6 @@ export function processConsolidationRequest(
     targetIndex,
   });
   state.pendingConsolidations.push(pendingConsolidation);
-
-  // Churn any target excess active balance of target and raise its max
-  if (hasEth1WithdrawalCredential(targetValidator.withdrawalCredentials)) {
-    switchToCompoundingValidator(state, targetIndex);
-  }
 }
 
 /**

@@ -2,6 +2,7 @@ import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
 export type Attestation = ValueOf<typeof ssz.Attestation>;
+export type SingleAttestation = ValueOf<typeof ssz.SingleAttestation>;
 export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;
 export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>;
 export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>;

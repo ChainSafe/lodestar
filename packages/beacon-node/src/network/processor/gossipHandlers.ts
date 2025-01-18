@@ -1,8 +1,18 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostElectra, ForkPreElectra, ForkSeq, isForkPostElectra} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {Root, SignedBeaconBlock, Slot, UintNum64, deneb, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  Root,
+  SignedBeaconBlock,
+  SingleAttestation,
+  Slot,
+  SubnetID,
+  UintNum64,
+  deneb,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
 import {
   BlobSidecarValidation,
@@ -28,6 +38,7 @@ import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
+  toElectraSingleAttestation,
   validateGossipAggregateAndProof,
   validateGossipAttestationsSameAttData,
   validateGossipAttesterSlashing,
@@ -180,12 +191,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   async function validateBeaconBlob(
     blobSidecar: deneb.BlobSidecar,
     blobBytes: Uint8Array,
-    gossipIndex: number,
+    subnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput | NullBlockInput> {
     const blobBlockHeader = blobSidecar.signedBlockHeader.message;
     const slot = blobBlockHeader.slot;
+    const fork = config.getForkName(slot);
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
     const blockHex = prettyBytes(blockRoot);
 
@@ -203,7 +215,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     );
 
     try {
-      await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
+      await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -213,10 +225,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       logger.debug("Received gossip blob", {
         slot: slot,
         root: blockHex,
-        curentSlot: chain.clock.currentSlot,
+        currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
-        gossipIndex,
+        subnet,
         ...blockInputMeta,
         recvToValLatency,
         recvToValidation,
@@ -364,7 +376,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const blockInput = await validateBeaconBlob(
         blobSidecar,
         serializedData,
-        topic.index,
+        topic.subnet,
         peerIdStr,
         seenTimestampSec
       );
@@ -645,14 +657,27 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         results.push(null);
 
         // Handler
-        const {indexedAttestation, attDataRootHex, attestation, committeeIndex} = validationResult.result;
+        const {
+          indexedAttestation,
+          attDataRootHex,
+          attestation,
+          committeeIndex,
+          committeeValidatorIndex,
+          committeeSize,
+        } = validationResult.result;
         metrics?.registerGossipUnaggregatedAttestation(gossipHandlerParams[i].seenTimestampSec, indexedAttestation);
 
         try {
           // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
           // but don't add to attestation pool, to save CPU and RAM
           if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-            const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
+            const insertOutcome = chain.attestationPool.add(
+              committeeIndex,
+              attestation,
+              attDataRootHex,
+              committeeValidatorIndex,
+              committeeSize
+            );
             metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
           }
         } catch (e) {
@@ -667,7 +692,21 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           }
         }
 
-        chain.emitter.emit(routes.events.EventType.attestation, attestation);
+        if (isForkPostElectra(fork)) {
+          chain.emitter.emit(
+            routes.events.EventType.singleAttestation,
+            attestation as SingleAttestation<ForkPostElectra>
+          );
+        } else {
+          chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
+          chain.emitter.emit(
+            routes.events.EventType.singleAttestation,
+            toElectraSingleAttestation(
+              attestation as SingleAttestation<ForkPreElectra>,
+              indexedAttestation.attestingIndices[0]
+            )
+          );
+        }
       }
 
       if (batchableBls) {

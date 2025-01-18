@@ -316,6 +316,8 @@ export const Attestation = new ContainerType(
   {typeName: "Attestation", jsonCase: "eth2"}
 );
 
+export const SingleAttestation = Attestation;
+
 export const AttesterSlashing = new ContainerType(
   {
     // In state transition, AttesterSlashing attestations are only partially validated. Their slot and epoch could

@@ -176,9 +176,9 @@ jobs:
         with:
           node: ${{ matrix.node }}
       - name: Install Chrome browser
-        run: npx @puppeteer/browsers install chromedriver@latest --path /tmp
+        run: npx @puppeteer/browsers install chromedriver@stable --path /tmp
       - name: Install Firefox browser
-        run: npx @puppeteer/browsers install firefox@latest --path /tmp
+        run: npx @puppeteer/browsers install firefox@stable --path /tmp
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'

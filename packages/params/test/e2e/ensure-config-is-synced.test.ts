@@ -8,13 +8,12 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.5.0-alpha.8";
+const specConfigCommit = "v1.5.0-beta.0";
 /**
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
- * For `MAX_BLOBS_PER_BLOCK`, see https://github.com/ChainSafe/lodestar/issues/7172
  */
-const ignoredLocalPresetFields: (keyof BeaconPreset)[] = ["MAX_BLOBS_PER_BLOCK"];
+const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});

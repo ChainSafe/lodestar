@@ -1,4 +1,4 @@
-// Forked from https://github.com/nodeca/js-yaml/blob/master/lib/js-yaml/type/int.js
+// Forked from https://github.com/nodeca/js-yaml/blob/master/lib/type/int.js
 // Currently only supports loading ints
 import yaml from "js-yaml";
 

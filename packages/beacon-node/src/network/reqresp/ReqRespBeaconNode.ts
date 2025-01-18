@@ -156,7 +156,9 @@ export class ReqRespBeaconNode extends ReqResp {
 
     // Overwrite placeholder requestData from main thread with correct sequenceNumber
     if (method === ReqRespMethod.Ping) {
-      requestData = requestSszTypeByMethod[ReqRespMethod.Ping].serialize(this.metadataController.seqNumber);
+      requestData = requestSszTypeByMethod(this.config)[ReqRespMethod.Ping].serialize(
+        this.metadataController.seqNumber
+      );
     }
 
     // ReqResp outgoing request, emit from main thread to worker
@@ -205,7 +207,8 @@ export class ReqRespBeaconNode extends ReqResp {
     versions: number[],
     request: Req
   ): AsyncIterable<ResponseIncoming> {
-    const requestType = requestSszTypeByMethod[method];
+    const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
+    const requestType = requestSszTypeByMethod(this.config, fork)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
     return this.sendRequestWithoutEncoding(peerId, method, versions, requestData);
   }

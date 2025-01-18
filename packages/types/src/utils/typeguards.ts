@@ -16,6 +16,7 @@ import {
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
+  SingleAttestation,
 } from "../types.js";
 
 export function isExecutionPayload<F extends ForkExecution>(
@@ -72,6 +73,12 @@ export function isSignedBlockContents<F extends ForkBlobs>(
 
 export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {
   return (attestation as Attestation<ForkPostElectra>).committeeBits !== undefined;
+}
+
+export function isElectraSingleAttestation(
+  singleAttestation: SingleAttestation
+): singleAttestation is SingleAttestation<ForkPostElectra> {
+  return (singleAttestation as SingleAttestation<ForkPostElectra>).committeeIndex !== undefined;
 }
 
 export function isElectraLightClientUpdate(update: LightClientUpdate): update is LightClientUpdate<ForkPostElectra> {

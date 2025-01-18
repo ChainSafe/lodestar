@@ -71,9 +71,6 @@ async function validateAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
-  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, seenAttDataKey) : null;
-
   let attIndex: number | null;
   if (ForkSeq[fork] >= ForkSeq.electra) {
     attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
@@ -88,6 +85,9 @@ async function validateAggregateAndProof(
   } else {
     attIndex = attData.index;
   }
+
+  const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
+  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, attIndex, seenAttDataKey) : null;
 
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;

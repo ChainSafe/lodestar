@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
+export {getExpectedGasLimit} from "./utils.js";
 
 import {ExecutionBuilderHttp, ExecutionBuilderHttpOpts, defaultExecutionBuilderHttpOpts} from "./http.js";
 

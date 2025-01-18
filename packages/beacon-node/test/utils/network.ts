@@ -2,6 +2,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {SubnetID} from "@lodestar/types";
 import {INetwork, Network, NetworkEvent} from "../../src/network/index.js";
 import {Libp2p} from "../../src/network/interface.js";
 import {createNodeJsLibp2p} from "../../src/network/libp2p/index.js";
@@ -55,7 +56,7 @@ export function onPeerDisconnect(network: Network): Promise<void> {
 /**
  * Generate valid filled attnets BitVector
  */
-export function getAttnets(subnetIds: number[] = []): BitArray {
+export function getAttnets(subnetIds: SubnetID[] = []): BitArray {
   const attnets = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
   for (const subnetId of subnetIds) {
     attnets.set(subnetId, true);
@@ -66,7 +67,7 @@ export function getAttnets(subnetIds: number[] = []): BitArray {
 /**
  * Generate valid filled syncnets BitVector
  */
-export function getSyncnets(subnetIds: number[] = []): BitArray {
+export function getSyncnets(subnetIds: SubnetID[] = []): BitArray {
   const syncnets = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
   for (const subnetId of subnetIds) {
     syncnets.set(subnetId, true);
