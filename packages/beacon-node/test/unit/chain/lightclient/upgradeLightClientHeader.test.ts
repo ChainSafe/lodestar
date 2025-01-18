@@ -28,6 +28,7 @@ describe("UpgradeLightClientHeader", () => {
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.deneb.LightClientHeader.defaultValue(),
+      focil: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -37,6 +38,7 @@ describe("UpgradeLightClientHeader", () => {
       capella: 25,
       deneb: 33,
       electra: 41,
+      focil: 49,
     };
   });
 

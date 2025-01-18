@@ -31,8 +31,16 @@ export const BeaconBlockBody = new ContainerType({
   ...electraSsz.BeaconBlockBody.fields,
 });
 
+export const BeaconBlock = new ContainerType({
+  ...electraSsz.BeaconBlock.fields,
+});
+
 export const SignedBeaconBlock = new ContainerType({
   ...electraSsz.SignedBeaconBlock.fields,
+});
+
+export const BlindedBeaconBlockBody = new ContainerType({
+  ...electraSsz.BlindedBeaconBlockBody.fields,
 });
 
 export const SignedBlindedBeaconBlock = new ContainerType({
@@ -41,4 +49,8 @@ export const SignedBlindedBeaconBlock = new ContainerType({
 
 export const ExecutionPayload = new ContainerType({
   ...electraSsz.ExecutionPayload.fields,
+});
+
+export const ExecutionPayloadHeader = new ContainerType({
+  ...electraSsz.ExecutionPayloadHeader.fields,
 });

@@ -14,8 +14,9 @@ describe("BlockStateCacheImpl", () => {
     epoch: 0,
     activeIndices: new Uint32Array(),
     shuffling: new Uint32Array(),
-    committees: [],
-    committeesPerSlot: 1,
+    beaconCommittees: [],
+    beaconCommitteesPerSlot: 1,
+    inclusionListCommittees: [],
   };
 
   beforeEach(() => {

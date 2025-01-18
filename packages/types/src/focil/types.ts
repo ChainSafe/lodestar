@@ -7,6 +7,9 @@ export type InclusionListByCommitteeIndicesRequest = ValueOf<typeof ssz.Inclusio
 
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
+export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
 export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
+export type BlindedBeaconBlockBody = ValueOf<typeof ssz.BlindedBeaconBlockBody>;
 export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlock>;
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
+export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;

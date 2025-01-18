@@ -38,6 +38,9 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
           return slotFns.upgradeStateToDeneb(preState as CachedBeaconStateCapella);
         case ForkName.electra:
           return slotFns.upgradeStateToElectra(preState as CachedBeaconStateDeneb);
+        case ForkName.focil:
+          // TODO FOCIL: likely not needed, there are no state changes in FOCIL
+          throw Error(`Unsupported fork ${forkNext}`);
       }
     },
     options: {

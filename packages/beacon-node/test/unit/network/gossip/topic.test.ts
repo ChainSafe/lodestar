@@ -81,6 +81,13 @@ describe("network / gossip / topic", () => {
         topicStr: "/eth2/8e04f66f/light_client_optimistic_update/ssz_snappy",
       },
     ],
+    [GossipType.inclusion_list]: [
+      {
+        topic: {type: GossipType.inclusion_list, fork: ForkName.focil, encoding},
+        // TODO FOCIL: this is not correct
+        topicStr: "/eth2/46acb19a/inclusion_list/ssz_snappy",
+      },
+    ],
   };
 
   for (const topics of Object.values(testCases)) {

@@ -11,8 +11,9 @@ describe("FIFOBlockStateCache", () => {
     epoch: 0,
     activeIndices: new Uint32Array(),
     shuffling: new Uint32Array(),
-    committees: [],
-    committeesPerSlot: 1,
+    beaconCommittees: [],
+    beaconCommitteesPerSlot: 1,
+    inclusionListCommittees: [],
   };
 
   const state1 = generateCachedState({slot: 0});
