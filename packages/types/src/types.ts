@@ -258,6 +258,7 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.SingleAttestation;
     Attestation: electra.Attestation;
     IndexedAttestation: electra.IndexedAttestation;
     IndexedAttestationBigint: electra.IndexedAttestationBigint;

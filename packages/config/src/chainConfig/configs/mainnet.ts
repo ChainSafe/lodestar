@@ -52,7 +52,7 @@ export const chainConfig: ChainConfig = {
   ELECTRA_FORK_VERSION: b("0x05000000"),
   ELECTRA_FORK_EPOCH: 1000000, // Arbitrary value served as placeholder
 
-  // ELECTRA
+  // FOCIL
   FOCIL_FORK_VERSION: b("0x06000000"),
   FOCIL_FORK_EPOCH: Infinity,
 
