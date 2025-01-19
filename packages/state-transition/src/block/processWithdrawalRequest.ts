@@ -76,6 +76,7 @@ export function processWithdrawalRequest(
       withdrawableEpoch,
     });
     state.pendingPartialWithdrawals.push(pendingPartialWithdrawal);
+    state.pendingPartialWithdrawals.commit();
   }
 }
 
