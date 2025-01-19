@@ -52,7 +52,7 @@ export function isValidVoluntaryExit(
   );
 }
 
-function isValidVoluntaryExitElectra(
+export function isValidVoluntaryExitElectra(
   state: CachedBeaconStateElectra,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true

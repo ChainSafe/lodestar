@@ -23,6 +23,7 @@ import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
+import {CachedBeaconStateElectra, isValidVoluntaryExitElectra} from "@lodestar/state-transition/src/index.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
@@ -247,7 +248,9 @@ export class OpPool {
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
         !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
-        isValidVoluntaryExit(state, voluntaryExit, false) &&
+        (stateFork >= ForkSeq.electra
+          ? isValidVoluntaryExitElectra(state as CachedBeaconStateElectra, voluntaryExit, false)
+          : isValidVoluntaryExit(state, voluntaryExit, false)) &&
         // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
         // However we must make sure that the signature fork is the same, or it will become invalid if included through
         // a future fork.

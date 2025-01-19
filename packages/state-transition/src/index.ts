@@ -53,7 +53,7 @@ export {
 } from "./cache/effectiveBalanceIncrements.js";
 
 // BeaconChain validation
-export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
+export {isValidVoluntaryExit, isValidVoluntaryExitElectra} from "./block/processVoluntaryExit.js";
 export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
 export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
