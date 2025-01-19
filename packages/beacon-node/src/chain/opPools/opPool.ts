@@ -10,10 +10,12 @@ import {
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
+  isValidVoluntaryExitElectra,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, Epoch, SignedBeaconBlock, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
@@ -23,7 +25,6 @@ import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
-import {CachedBeaconStateElectra, isValidVoluntaryExitElectra} from "@lodestar/state-transition/src/index.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
