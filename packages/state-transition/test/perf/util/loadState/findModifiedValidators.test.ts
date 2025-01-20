@@ -64,6 +64,7 @@ describe("find modified validators by different ways", () => {
         for (const validatorIndex of expectedModifiedValidators) {
           clonedState.validators.get(validatorIndex).pubkey = Buffer.alloc(48, 0);
         }
+        clonedState.commit();
         const validatorsBytes = Uint8Array.from(stateBytes.subarray(validatorsRange.start, validatorsRange.end));
         const validatorsBytes2 = clonedState.validators.serialize();
         const modifiedValidators: number[] = [];
