@@ -61,16 +61,16 @@ describe("find modified validators by different ways", () => {
           : expectedModifiedValidators.length + " modified validators";
 
       // TODO: Diagnose why this benchmark failing after upgrade
-      // https://github.com/ChainSafe/lodestar/issues/7380          
+      // https://github.com/ChainSafe/lodestar/issues/7380
       bench.skip({
         id: `${prefix} - ${testCaseName}`,
-        beforeEach: ()  => {
+        beforeEach: () => {
           const clonedState = state.clone();
           for (const validatorIndex of expectedModifiedValidators) {
             clonedState.validators.get(validatorIndex).pubkey = Buffer.alloc(48, 0);
           }
-          clonedState.commit();    
-          return clonedState
+          clonedState.commit();
+          return clonedState;
         },
         fn: (clonedState) => {
           const validatorsBytes = Uint8Array.from(stateBytes.subarray(validatorsRange.start, validatorsRange.end));
