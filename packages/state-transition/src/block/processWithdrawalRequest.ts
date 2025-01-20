@@ -17,10 +17,11 @@ import {initiateValidatorExit} from "./initiateValidatorExit.js";
 export function processWithdrawalRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra,
+  pendingPartialWithdrawals: electra.PendingPartialWithdrawal[],
   withdrawalRequest: electra.WithdrawalRequest
 ): void {
   const amount = Number(withdrawalRequest.amount);
-  const {pendingPartialWithdrawals, validators, epochCtx} = state;
+  const {validators, epochCtx} = state;
   // no need to use unfinalized pubkey cache from 6110 as validator won't be active anyway
   const {pubkey2index, config} = epochCtx;
   const isFullExitRequest = amount === FULL_EXIT_REQUEST_AMOUNT;
@@ -42,8 +43,7 @@ export function processWithdrawalRequest(
     return;
   }
 
-  // TODO Electra: Consider caching pendingPartialWithdrawals
-  const pendingBalanceToWithdraw = getPendingBalanceToWithdraw(state, validatorIndex);
+  const pendingBalanceToWithdraw = getPendingBalanceToWithdraw(pendingPartialWithdrawals, validatorIndex);
   const validatorBalance = state.balances.get(validatorIndex);
 
   if (isFullExitRequest) {
@@ -76,7 +76,7 @@ export function processWithdrawalRequest(
       withdrawableEpoch,
     });
     state.pendingPartialWithdrawals.push(pendingPartialWithdrawal);
-    state.pendingPartialWithdrawals.commit();
+    pendingPartialWithdrawals.push(pendingPartialWithdrawal);
   }
 }
 

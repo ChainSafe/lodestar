@@ -71,8 +71,11 @@ export function processOperations(
       processDepositRequest(stateElectra, depositRequest);
     }
 
-    for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {
-      processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest);
+    if (bodyElectra.executionRequests.withdrawals.length > 0) {
+      const pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.getAllReadonly();
+      for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {
+        processWithdrawalRequest(fork, stateElectra, pendingPartialWithdrawals, elWithdrawalRequest);
+      }
     }
 
     for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {

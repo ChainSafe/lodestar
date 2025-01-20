@@ -74,7 +74,7 @@ export function processConsolidationRequest(
   }
 
   // Verify the source has no pending withdrawals in the queue
-  if (getPendingBalanceToWithdraw(state, sourceIndex) > 0) {
+  if (getPendingBalanceToWithdraw(state.pendingPartialWithdrawals.getAllReadonly(), sourceIndex) > 0) {
     return;
   }
 

@@ -5,9 +5,9 @@ import {
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
-import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
+import {Epoch, ValidatorIndex, electra, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {BeaconStateAllForks, CachedBeaconStateElectra, EpochCache} from "../types.js";
+import {BeaconStateAllForks, EpochCache} from "../types.js";
 import {hasCompoundingWithdrawalCredential} from "./electra.js";
 
 /**
@@ -82,9 +82,11 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
   return MIN_ACTIVATION_BALANCE;
 }
 
-export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
-  return state.pendingPartialWithdrawals
-    .getAllReadonly()
+export function getPendingBalanceToWithdraw(
+  pendingPartialWithdrawals: electra.PendingPartialWithdrawal[],
+  validatorIndex: ValidatorIndex
+): number {
+  return pendingPartialWithdrawals
     .filter((item) => item.validatorIndex === validatorIndex)
     .reduce((total, item) => total + Number(item.amount), 0);
 }
