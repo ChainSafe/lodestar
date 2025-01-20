@@ -247,7 +247,7 @@ export class OpPool {
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
         !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
-        isValidVoluntaryExit(state, voluntaryExit, false) &&
+        isValidVoluntaryExit(stateFork, state, voluntaryExit, false) &&
         // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
         // However we must make sure that the signature fork is the same, or it will become invalid if included through
         // a future fork.
