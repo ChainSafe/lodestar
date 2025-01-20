@@ -57,9 +57,8 @@ function isValidVoluntaryExitElectra(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): boolean {
-  const pendingPartialWithdrawals = state.pendingPartialWithdrawals.getAllReadonly();
   // only exit validator if it has no pending withdrawals in the queue (post-Electra only)
-  if (getPendingBalanceToWithdraw(pendingPartialWithdrawals, signedVoluntaryExit.message.validatorIndex) === 0) {
+  if (getPendingBalanceToWithdraw(state, signedVoluntaryExit.message.validatorIndex) === 0) {
     return isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature);
   }
 
