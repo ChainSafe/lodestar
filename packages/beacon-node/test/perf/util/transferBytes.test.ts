@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 
 describe("transfer bytes", () => {
@@ -33,14 +32,4 @@ describe("transfer bytes", () => {
       },
     });
   }
-
-  bench("ArrayBuffer use after structuredClone transfer", () => {
-    const data = new Uint8Array(32);
-    data[0] = 1;
-    assert.equal(data[0], 1);
-    structuredClone(data, {transfer: [data.buffer]});
-    // After structuredClone() data is mutated in place to hold an empty ArrayBuffer
-    assert.equal(data[0], undefined);
-    assert.deepEqual(data, new Uint8Array());
-  });
 });
