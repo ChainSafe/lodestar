@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {bench, describe} from "@chainsafe/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
@@ -58,22 +59,19 @@ describe("find modified validators by different ways", () => {
         expectedModifiedValidators.length === 0
           ? "no difference"
           : expectedModifiedValidators.length + " modified validators";
-      bench({
-        id: `${prefix} - ${testCaseName}`,
-        beforeEach: () => {
-          const clonedState = state.clone();
-          for (const validatorIndex of expectedModifiedValidators) {
-            clonedState.validators.get(validatorIndex).pubkey = Buffer.alloc(48, 0);
-          }
-          clonedState.commit();
-          return clonedState;
-        },
-        fn: (clonedState) => {
-          const validatorsBytes = Uint8Array.from(stateBytes.subarray(validatorsRange.start, validatorsRange.end));
-          const validatorsBytes2 = clonedState.validators.serialize();
-          const modifiedValidators: number[] = [];
-          findModifiedValidators(validatorsBytes, validatorsBytes2, modifiedValidators);
-        },
+      bench(`${prefix} - ${testCaseName}`, () => {
+        const clonedState = state.clone();
+        for (const validatorIndex of expectedModifiedValidators) {
+          clonedState.validators.get(validatorIndex).pubkey = Buffer.alloc(48, 0);
+        }
+        const validatorsBytes = Uint8Array.from(stateBytes.subarray(validatorsRange.start, validatorsRange.end));
+        const validatorsBytes2 = clonedState.validators.serialize();
+        const modifiedValidators: number[] = [];
+        findModifiedValidators(validatorsBytes, validatorsBytes2, modifiedValidators);
+        assert.deepEqual(
+          modifiedValidators.sort((a, b) => a - b),
+          expectedModifiedValidators
+        );
       });
     }
   });
