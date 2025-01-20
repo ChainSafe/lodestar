@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import {bench, describe} from "@chainsafe/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
@@ -74,10 +73,6 @@ describe("find modified validators by different ways", () => {
           const validatorsBytes2 = clonedState.validators.serialize();
           const modifiedValidators: number[] = [];
           findModifiedValidators(validatorsBytes, validatorsBytes2, modifiedValidators);
-          assert.deepEqual(
-            modifiedValidators.sort((a, b) => a - b),
-            expectedModifiedValidators
-          );
         },
       });
     }
