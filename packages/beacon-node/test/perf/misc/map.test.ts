@@ -8,6 +8,7 @@ describe("misc / Map", () => {
 
   bench({
     id: "Object access 1 prop",
+    runsFactor: times,
     beforeEach: () => ({a: 1}),
     fn: (obj) => {
       obj.a;
@@ -16,6 +17,7 @@ describe("misc / Map", () => {
 
   bench({
     id: "Map access 1 prop",
+    runsFactor: times,
     beforeEach: () => new Map([["a", 1]]),
     fn: (map) => {
       map.get("a");
