@@ -59,17 +59,17 @@ describe("find modified validators by different ways", () => {
         expectedModifiedValidators.length === 0
           ? "no difference"
           : expectedModifiedValidators.length + " modified validators";
-
-      const modifiedState = state.clone();
-      for (const validatorIndex of expectedModifiedValidators) {
-        modifiedState.validators.get(validatorIndex).pubkey = Buffer.alloc(48, 0);
-      }
-      modifiedState.commit();
-
       bench({
         id: `${prefix} - ${testCaseName}`,
-        fn: () => {
-          const clonedState = modifiedState.clone();
+        beforeEach: ()  => {
+          const clonedState = state.clone();
+          for (const validatorIndex of expectedModifiedValidators) {
+            clonedState.validators.get(validatorIndex).pubkey = Buffer.alloc(48, 0);
+          }
+          clonedState.commit();    
+          return clonedState
+        },
+        fn: (clonedState) => {
           const validatorsBytes = Uint8Array.from(stateBytes.subarray(validatorsRange.start, validatorsRange.end));
           const validatorsBytes2 = clonedState.validators.serialize();
           const modifiedValidators: number[] = [];
