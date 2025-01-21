@@ -14,7 +14,7 @@ export function getBeaconApi(
   const state = getBeaconStateApi(modules);
   const rewards = getBeaconRewardsApi(modules);
 
-  const {chain, config} = modules;
+  const {chain, config, db} = modules;
 
   return {
     ...block,
@@ -29,6 +29,17 @@ export function getBeaconApi(
           genesisTime: chain.genesisTime,
           genesisValidatorsRoot: chain.genesisValidatorsRoot,
         },
+      };
+    },
+
+    async getDepositSnapshot() {
+      const snapshot = await db.depositTreeSnapshot.lastValue();
+      if (snapshot == null) {
+        throw new Error("No deposit tree snapshot available");
+      }
+
+      return {
+        data: snapshot,
       };
     },
   };

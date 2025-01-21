@@ -277,6 +277,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: undefined,
     res: {data: ssz.phase0.Genesis.defaultValue()},
   },
+  getDepositSnapshot: {
+    args: undefined,
+    res: {data: ssz.phase0.DepositTreeSnapshot.defaultValue()},
+  },
 };
 
 function getDefaultBlindedBlock(slot: Slot): SignedBlindedBeaconBlock {

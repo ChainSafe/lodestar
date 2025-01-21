@@ -46,6 +46,8 @@ export type Endpoints = block.Endpoints &
       phase0.Genesis,
       EmptyMeta
     >;
+  } & {
+    getDepositSnapshot: Endpoint<"GET", EmptyArgs, EmptyRequest, phase0.DepositTreeSnapshot, EmptyMeta>;
   };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -56,6 +58,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: EmptyRequestCodec,
       resp: {
         data: ssz.phase0.Genesis,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getDepositSnapshot: {
+      url: "/eth/v1/beacon/deposit_snapshot",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ssz.phase0.DepositTreeSnapshot,
         meta: EmptyMetaCodec,
       },
     },
