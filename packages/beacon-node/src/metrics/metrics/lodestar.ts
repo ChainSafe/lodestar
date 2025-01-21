@@ -1656,6 +1656,17 @@ export function createLodestarMetrics(
         help: "If found then 1 with terminal block details",
         labelNames: ["terminalBlockHash", "terminalBlockNumber", "terminalBlockTD"],
       }),
+
+      // EIP-4881 Snapshot
+      persistSnapshotResult: register.gauge<{result: string}>({
+        name: "lodestar_eth1_persist_snapshot_result_total",
+        help: "Total number of persistSnapshot runs by result",
+        labelNames: ["result"],
+      }),
+      finalizedDepositCount: register.gauge({
+        name: "lodestar_eth1_finalized_deposit_count",
+        help: "The finalized deposit count",
+      }),
     },
 
     eth1HttpClient: {

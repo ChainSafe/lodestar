@@ -12,6 +12,7 @@ import {
   CheckpointHeaderRepository,
   DepositDataRootRepository,
   DepositEventRepository,
+  DepositTreeSnapshotRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
@@ -51,6 +52,7 @@ export interface IBeaconDb {
   preGenesisState: PreGenesisState;
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
+  depositTreeSnapshot: DepositTreeSnapshotRepository;
   // all deposit data roots and merkle tree
   depositDataRoot: DepositDataRootRepository;
   eth1Data: Eth1DataRepository;

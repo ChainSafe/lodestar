@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics} from "@lodestar/db";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {DepositTreeSnapshotRepository} from "./repositories/depositTreeSnapshot.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -45,6 +46,7 @@ export class BeaconDb implements IBeaconDb {
   blsToExecutionChange: BLSToExecutionChangeRepository;
 
   depositDataRoot: DepositDataRootRepository;
+  depositTreeSnapshot: DepositTreeSnapshotRepository;
   eth1Data: Eth1DataRepository;
   preGenesisState: PreGenesisState;
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
@@ -75,7 +77,8 @@ export class BeaconDb implements IBeaconDb {
     this.proposerSlashing = new ProposerSlashingRepository(config, db);
     this.attesterSlashing = new AttesterSlashingRepository(config, db);
     this.depositEvent = new DepositEventRepository(config, db);
-    this.depositDataRoot = new DepositDataRootRepository(config, db);
+    this.depositTreeSnapshot = new DepositTreeSnapshotRepository(config, db);
+    this.depositDataRoot = new DepositDataRootRepository(config, db, this.depositTreeSnapshot);
     this.eth1Data = new Eth1DataRepository(config, db);
     this.preGenesisState = new PreGenesisState(config, db);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(config, db);

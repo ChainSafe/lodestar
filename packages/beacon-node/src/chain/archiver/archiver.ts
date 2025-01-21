@@ -105,6 +105,9 @@ export class Archiver {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
 
+      // persistDepositTreeSnapshot catches error on its own to avoid breaking finalized checkpoint processing
+      await this.persistDepositTreeSnapshot(finalized);
+
       this.chain.regen.pruneOnFinalized(finalizedEpoch);
 
       // tasks rely on extended fork choice
@@ -118,6 +121,20 @@ export class Archiver {
       });
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+    }
+  };
+
+  private persistDepositTreeSnapshot = async (finalized: CheckpointWithHex): Promise<void> => {
+    try {
+      const finalizedDepositCount = await this.statesArchiverStrategy.persistDepositTreeSnapshot(
+        finalized,
+        this.metrics
+      );
+      await this.db.depositEvent.deleteOld(finalizedDepositCount);
+      await this.db.depositTreeSnapshot.deleteOld(finalizedDepositCount);
+      // TODO: not sure how to delete old Eth1Data as there is no timestamp here
+    } catch (e) {
+      this.logger.error("Error persisting deposit tree snapshot", {epoch: finalized.epoch}, e as Error);
     }
   };
 

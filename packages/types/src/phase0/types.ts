@@ -10,6 +10,7 @@ export type Checkpoint = ValueOf<typeof ssz.Checkpoint>;
 export type DepositMessage = ValueOf<typeof ssz.DepositMessage>;
 export type DepositData = ValueOf<typeof ssz.DepositData>;
 export type DepositEvent = ValueOf<typeof ssz.DepositEvent>;
+export type DepositTreeSnapshot = ValueOf<typeof ssz.DepositTreeSnapshot>;
 export type Eth1Data = ValueOf<typeof ssz.Eth1Data>;
 export type Eth1DataOrdered = ValueOf<typeof ssz.Eth1DataOrdered>;
 export type Eth1Block = ValueOf<typeof ssz.Eth1Block>;

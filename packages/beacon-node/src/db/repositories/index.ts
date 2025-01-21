@@ -11,6 +11,7 @@ export {ProposerSlashingRepository} from "./proposerSlashing.js";
 export {VoluntaryExitRepository} from "./voluntaryExit.js";
 export {DepositEventRepository} from "./depositEvent.js";
 
+export {DepositTreeSnapshotRepository} from "./depositTreeSnapshot.js";
 export {DepositDataRootRepository} from "./depositDataRoot.js";
 export {Eth1DataRepository} from "./eth1Data.js";
 

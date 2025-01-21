@@ -1,19 +1,22 @@
-import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
+import {CompositeViewDU} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, KeyValue, Repository} from "@lodestar/db";
-import {Root, ssz} from "@lodestar/types";
+import {Root, phase0, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
+import {DepositTreeSnapshotRepository} from "./depositTreeSnapshot.js";
 
-// TODO: Review where is best to put this type
-export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
+export type DepositTree = CompositeViewDU<typeof ssz.phase0.DepositDataRootPartialList>;
 
 export class DepositDataRootRepository extends Repository<number, Root> {
+  // partial deposit root tree
   private depositRootTree?: DepositTree;
+  private snapshotRepo: DepositTreeSnapshotRepository;
 
-  constructor(config: ChainForkConfig, db: Db) {
+  constructor(config: ChainForkConfig, db: Db, snapshotRepo: DepositTreeSnapshotRepository) {
     const bucket = Bucket.index_depositDataRoot;
     super(config, db, bucket, ssz.Root, getBucketNameByValue(bucket));
+    this.snapshotRepo = snapshotRepo;
   }
 
   decodeKey(data: Buffer): number {
@@ -51,9 +54,21 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   }
 
   async getDepositRootTree(): Promise<DepositTree> {
+    // at startup, we should use db's snapshot or download from checkpoint sync and persist there
     if (!this.depositRootTree) {
-      const values = await this.values();
-      this.depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(values);
+      const snapshot = await this.snapshotRepo.lastValue();
+      if (snapshot == null) {
+        throw new Error("DepositTreeSnapshot not found");
+      }
+      const values = await this.values({gte: snapshot.depositCount});
+      this.depositRootTree = ssz.phase0.DepositDataRootPartialList.toPartialViewDU({
+        finalized: snapshot.finalized,
+        root: snapshot.depositRoot,
+        count: snapshot.depositCount,
+      });
+      for (const root of values) {
+        this.depositRootTree.push(root);
+      }
     }
     return this.depositRootTree;
   }
@@ -61,6 +76,37 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   async getDepositRootTreeAtIndex(depositIndex: number): Promise<DepositTree> {
     const depositRootTree = await this.getDepositRootTree();
     return depositRootTree.sliceTo(depositIndex);
+  }
+
+  /**
+   * Return true if we successfully persist the snapshot and updated the deposit root tree
+   */
+  async onFinalizedEth1Data(eth1Data: phase0.Eth1Data, blockNumber: number): Promise<boolean> {
+    const finalizedDepositCount = eth1Data.depositCount;
+    const depositRootTree = await this.getDepositRootTree();
+    if (depositRootTree.length <= finalizedDepositCount) {
+      // ignore if our deposit root tree is not synced
+      // finalizedDepositCount could be the same over epochs, no need to process again
+      return false;
+    }
+
+    const snapshot = depositRootTree.toSnapshot(finalizedDepositCount);
+    const depositSnapshot: phase0.DepositTreeSnapshot = {
+      finalized: snapshot.finalized,
+      depositRoot: snapshot.root,
+      depositCount: snapshot.count,
+      executionBlockHash: eth1Data.blockHash,
+      // blockHash + blockHeight come from different sources
+      // blockHash is from finalized BeaconState's eth1data.
+      // blockHeight is from `depositCount - 1` deposit event
+      // when we fetch snapshot from db in `getDepositRootTree()`, we don't need execution blockHash + blockHeight anyway
+      executionBlockHeight: blockNumber,
+    };
+
+    await this.snapshotRepo.put(finalizedDepositCount, depositSnapshot);
+    this.depositRootTree = depositRootTree.sliceFrom(finalizedDepositCount);
+
+    return true;
   }
 
   private async depositRootTreeSet(index: number, value: Uint8Array): Promise<void> {

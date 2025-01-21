@@ -5,6 +5,7 @@ import {
   ListBasicType,
   ListCompositeType,
   ListUintNum64Type,
+  PartialListCompositeType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
@@ -134,6 +135,18 @@ export const DepositData = new ContainerType(
 );
 
 export const DepositDataRootList = new ListCompositeType(Root, 2 ** DEPOSIT_CONTRACT_TREE_DEPTH);
+export const DepositTreeSnapshot = new ContainerType(
+  {
+    finalized: DepositDataRootList,
+    depositRoot: Root,
+    depositCount: UintNum64,
+    executionBlockHash: Root,
+    executionBlockHeight: UintNum64,
+  },
+  {typeName: "DepositsDataSnapshot", jsonCase: "eth2"}
+);
+
+export const DepositDataRootPartialList = new PartialListCompositeType(Root, 2 ** DEPOSIT_CONTRACT_TREE_DEPTH);
 
 export const DepositEvent = new ContainerType(
   {

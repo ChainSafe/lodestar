@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {CachedBeaconStateElectra, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
@@ -16,6 +16,13 @@ import {StateArchiveStrategy, StatesArchiverOpts} from "../interface.js";
  * These states will be pruned once a new state is persisted
  */
 export const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
+
+enum PersistSnapshotResult {
+  NoTreeBackedState = "no_tree_backed_state",
+  NoDepositEvent = "no_deposit_event",
+  NotSyncedDepositRootTree = "not_synced_deposit_root_tree",
+  Success = "success",
+}
 
 /**
  * Archives finalized states from active bucket to archive bucket.
@@ -114,6 +121,55 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
         root: rootHex,
       });
     }
+  }
+
+  async persistDepositTreeSnapshot(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<number> {
+    // starting from Mar 2024, the finalized state could be from disk or in memory
+    const finalizedState = await this.regen.getCheckpointStateOrBytes(finalized);
+    const {rootHex} = finalized;
+    if (!finalizedState) {
+      throw Error(`No state in cache for finalized checkpoint state epoch #${finalized.epoch} root ${rootHex}`);
+    }
+
+    if (finalizedState instanceof Uint8Array) {
+      // with the current DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3, it's most likely the state is in memory
+      // it's not worth to reload the state from disk just to persist snapshot
+      // in this case, we should be able to server snapshot api using the old snapshot
+      // the next time the network is stable, we should be able to persist the new snapshot
+      metrics?.eth1.persistSnapshotResult.inc({result: PersistSnapshotResult.NoTreeBackedState});
+      throw Error("Finalized state is not in cache");
+    }
+
+    const eth1Data = finalizedState.eth1Data;
+    const finalizedDepositCount = eth1Data.depositCount;
+
+    if (
+      finalizedState.epochCtx.isPostElectra() &&
+      finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositRequestsStartIndex
+    ) {
+      // No need to poll eth1Data since Electra deprecates the mechanism after depositRequestsStartIndex is reached
+      return finalizedDepositCount;
+    }
+
+    metrics?.eth1.finalizedDepositCount.set(finalizedDepositCount);
+    const lastFinalizedDepositEvent = await this.db.depositEvent.get(finalizedDepositCount - 1);
+    if (lastFinalizedDepositEvent == null) {
+      // ignore if we our depositEvent db is not synced
+      metrics?.eth1.persistSnapshotResult.inc({result: PersistSnapshotResult.NoDepositEvent});
+      throw Error(`No deposit event found for index ${finalizedDepositCount - 1}`);
+    }
+
+    const persistSuccess = await this.db.depositDataRoot.onFinalizedEth1Data(
+      eth1Data,
+      lastFinalizedDepositEvent.blockNumber
+    );
+    if (!persistSuccess) {
+      metrics?.eth1.persistSnapshotResult.inc({result: PersistSnapshotResult.NotSyncedDepositRootTree});
+    } else {
+      metrics?.eth1.persistSnapshotResult.inc({result: PersistSnapshotResult.Success});
+    }
+
+    return finalizedDepositCount;
   }
 }
 

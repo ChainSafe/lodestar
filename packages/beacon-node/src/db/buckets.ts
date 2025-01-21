@@ -61,6 +61,7 @@ export enum Bucket {
   // 54 was for bestPartialLightClientUpdate, allocate a fresh one
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
+  phase0_depositTreeSnapshot = 57, // deposit count -> DepositTreeSnapshot
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
