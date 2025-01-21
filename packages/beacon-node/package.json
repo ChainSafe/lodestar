@@ -100,7 +100,7 @@
     "@chainsafe/enr": "^3.0.0",
     "@chainsafe/libp2p-gossipsub": "^13.0.0",
     "@chainsafe/libp2p-identify": "^1.0.0",
-    "@chainsafe/libp2p-noise": "^15.0.0",
+    "@chainsafe/libp2p-noise": "^16.0.1",
     "@chainsafe/persistent-merkle-tree": "^0.9.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "2.0.0",
