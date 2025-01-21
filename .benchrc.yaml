@@ -2,5 +2,5 @@
 threshold: 3
 maxMs: 60000
 minRuns: 10
-triggerGC: false
+triggerGC: true
 sort: true
