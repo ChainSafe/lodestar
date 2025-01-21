@@ -58,7 +58,15 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     if (!this.depositRootTree) {
       const snapshot = await this.snapshotRepo.lastValue();
       if (snapshot == null) {
-        throw new Error("DepositTreeSnapshot not found");
+        // snapshot may not be available for the 1st time because the checkpointSync URL does not support
+        // after some time, the beacon node will finalize and populate the snapshot
+        this.depositRootTree = ssz.phase0.DepositDataRootPartialList.defaultPartialViewDU();
+        const values = await this.values();
+        for (const root of values) {
+          this.depositRootTree.push(root);
+        }
+        this.depositRootTree.commit();
+        return this.depositRootTree;
       }
       const values = await this.values({gte: snapshot.depositCount});
       this.depositRootTree = ssz.phase0.DepositDataRootPartialList.toPartialViewDU({
