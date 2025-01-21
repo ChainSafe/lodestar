@@ -14,7 +14,7 @@ describe("getPendingBalanceToWithdraw", () => {
       vc: 10000,
     }) as unknown as CachedBeaconStateElectra;
 
-    const pendingPartialWithdrawals = Array.from({length: 1000}, (_, i) =>
+    const pendingPartialWithdrawals = Array.from({length: 10000}, (_, i) =>
       ssz.electra.PendingPartialWithdrawal.toViewDU({
         validatorIndex: i,
         amount: BigInt(i * 1000),
@@ -28,34 +28,44 @@ describe("getPendingBalanceToWithdraw", () => {
     state.pendingPartialWithdrawals.commit();
   });
   // itBench({
-  //   id: "getPendingBalanceToWithdraw - singe call",
+  //   id: "getPendingBalanceToWithdraw - singe call early index",
   //   fn: () => {
   //     getPendingBalanceToWithdraw2(state, 90);
   //   },
   // });
   // itBench({
-  //   id: "getPendingBalanceToWithdraw - multiple calls same index",
+  //   id: "getPendingBalanceToWithdraw - singe call late index",
   //   fn: () => {
-  //     getPendingBalanceToWithdraw2(state, 90);
-  //     getPendingBalanceToWithdraw2(state, 90);
-  //     getPendingBalanceToWithdraw2(state, 90);
-  //     getPendingBalanceToWithdraw2(state, 90);
+  //     getPendingBalanceToWithdraw2(state, 9999);
   //   },
   // });
-  itBench({
-    id: "getPendingBalanceToWithdraw - multiple calls different index",
-    fn: () => {
-      getPendingBalanceToWithdraw1(state, 90);
-      getPendingBalanceToWithdraw1(state, 190);
-      getPendingBalanceToWithdraw1(state, 290);
-      getPendingBalanceToWithdraw1(state, 390);
-    },
-  });
+  // itBench({
+  //   id: "getPendingBalanceToWithdraw - multiple calls same index",
+  //   fn: () => {
+  //     getPendingBalanceToWithdraw1(state, 90);
+  //     getPendingBalanceToWithdraw1(state, 90);
+  //     getPendingBalanceToWithdraw1(state, 90);
+  //     getPendingBalanceToWithdraw1(state, 90);
+  //     getPendingBalanceToWithdraw1(state, 90);
+  //   },
+  // });
+  // itBench({
+  //   id: "getPendingBalanceToWithdraw - multiple calls different index",
+  //   fn: () => {
+  //     getPendingBalanceToWithdraw2(state, 90);
+  //     getPendingBalanceToWithdraw2(state, 190);
+  //     getPendingBalanceToWithdraw2(state, 290);
+  //     getPendingBalanceToWithdraw2(state, 390);
+  //     getPendingBalanceToWithdraw2(state, 5000);
+  //     getPendingBalanceToWithdraw2(state, 9999);
+  //   },
+  // });
 });
 
-// ✔ getPendingBalanceToWithdraw - singe call                             29641.05 ops/s    33.73700 us/op   x0.233      72987 runs   2.52 s
-// ✔ getPendingBalanceToWithdraw - multiple calls same index              4212.548 ops/s    237.3860 us/op        -       3821 runs   1.11 s
-// ✔ getPendingBalanceToWithdraw - multiple calls different index         5039.586 ops/s    198.4290 us/op   x0.359       7108 runs   1.59 s
+// ✔ getPendingBalanceToWithdraw - singe call early index                 1919.128 ops/s    521.0700 us/op        -        968 runs   1.01 s
+// ✔ getPendingBalanceToWithdraw - singe call late index                  1830.476 ops/s    546.3060 us/op        -       1292 runs   1.21 s
+// ✔ getPendingBalanceToWithdraw - multiple calls same index              406.8484 ops/s    2.457918 ms/op        -        125 runs  0.810 s
+// ✔ getPendingBalanceToWithdraw - multiple calls different index         342.1865 ops/s     2.922383 ms/op       -        105 runs  0.808 s
 function getPendingBalanceToWithdraw1(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
   let total = 0;
   for (let i = 0; i < state.pendingPartialWithdrawals.length; i++) {
@@ -67,9 +77,10 @@ function getPendingBalanceToWithdraw1(state: CachedBeaconStateElectra, validator
   return total;
 }
 
-//  ✔ getPendingBalanceToWithdraw - singe call                            7202.432 ops/s    138.8420 us/op   x4.115       9422 runs   1.47 s
-//  ✔ getPendingBalanceToWithdraw - multiple calls same index             1685.860 ops/s    593.1690 us/op   x2.499       4083 runs   2.93 s
-//  ✔ getPendingBalanceToWithdraw - multiple calls different index        1806.727 ops/s    553.4870 us/op        -       2552 runs   1.92 s
+//  ✔ getPendingBalanceToWithdraw - singe call early index                464.4678 ops/s    2.153002 ms/op        -        708 runs   2.03 s
+//  ✔ getPendingBalanceToWithdraw - singe call late index                 485.1491 ops/s    2.061222 ms/op        -        444 runs   1.42 s
+//  ✔ getPendingBalanceToWithdraw - multiple calls same index             104.1376 ops/s    9.602679 ms/op        -         34 runs  0.829 s
+//  ✔ getPendingBalanceToWithdraw - multiple calls different index        83.56981 ops/s    11.96604 ms/op        -         37 runs  0.952 s
 function getPendingBalanceToWithdraw2(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
   return state.pendingPartialWithdrawals
     .getAllReadonly()
