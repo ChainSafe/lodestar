@@ -2,5 +2,8 @@
 threshold: 3
 maxMs: 60000
 minRuns: 10
+# Default is set to 0.005, which is too low considering the benchmark setup we have
+# Changing it to 0.05 which is 5/100, so 5% difference of moving average among run times
+convergeFactor: 0.05
 triggerGC: false
 sort: true
