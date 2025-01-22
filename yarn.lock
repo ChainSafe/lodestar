@@ -440,10 +440,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.4.1.tgz#cfc0737e25f8c206767bdb6703e7943e5d44513e"
   integrity sha512-IqeeGwQihK6Y2EYLFofqs2eY2ep1I2MvQXHzOAI+5iQN51OZlUkrLgyAugu2x86xZewDk5xas7lNczkzFzF62w==
 
-"@chainsafe/benchmark@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/benchmark/-/benchmark-1.2.0.tgz#b8a27c5a5f2ba7bf0c1b56b0e0dc33ca34146b83"
-  integrity sha512-8gorQEdhp2NwlUmQ/o1g47IBQ2kwdF14ptN9itOrf06W9koVOoG5hz7lQ2JZl3yxrH7z3qZAI+1Y05Qr73OFag==
+"@chainsafe/benchmark@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/benchmark/-/benchmark-1.2.1.tgz#f1cf509b951e24daaa234613d11da47043d721ad"
+  integrity sha512-JeUvCfVMQ8h+GU2KC6YUlw5ROF2Y7LcXs7HWB8CcvsVEGx6RafPj3BOlsLqJM8u6d5sO7PRnkQlmVeOMQnGGZg==
   dependencies:
     "@actions/cache" "^4.0.0"
     "@actions/github" "^6.0.0"
@@ -453,6 +453,7 @@
     cli-table3 "^0.6.5"
     csv-parse "^5.6.0"
     csv-stringify "^6.5.2"
+    debug "^4.4.0"
     glob "^10.4.5"
     log-symbols "^7.0.0"
     yaml "^2.7.0"
