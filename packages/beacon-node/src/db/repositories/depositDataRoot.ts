@@ -68,6 +68,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
         this.depositRootTree.commit();
         return this.depositRootTree;
       }
+
       const values = await this.values({gte: snapshot.depositCount});
       this.depositRootTree = ssz.phase0.DepositDataRootPartialList.toPartialViewDU({
         finalized: snapshot.finalized,
@@ -76,6 +77,17 @@ export class DepositDataRootRepository extends Repository<number, Root> {
       });
       for (const root of values) {
         this.depositRootTree.push(root);
+      }
+
+      // for nodes synced from genesis, we have all values in db, it's good to confirm depositRootTree is correct
+      // it happens only 1 time so not a big deal
+      const firstEntry = await this.get(0);
+      if (firstEntry != null) {
+        const allValues = await this.values();
+        const fullTree = ssz.phase0.DepositDataRootList.toViewDU(allValues);
+        if(Buffer.compare(fullTree.hashTreeRoot(), this.depositRootTree.hashTreeRoot()) !== 0) {
+          throw new Error("Partial deposit root tree is not correct");
+        }
       }
     }
     return this.depositRootTree;
