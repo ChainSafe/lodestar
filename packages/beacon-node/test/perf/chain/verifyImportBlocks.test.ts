@@ -105,9 +105,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) =>
-        getBlockInput.preData(chain.config, block, BlockSource.byRange, null)
-      );
+      const blocksImport = blocks.value.map((block) => getBlockInput.preData(chain.config, block, BlockSource.byRange));
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

@@ -100,11 +100,10 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
 
       const expectedResponse = blocksWithBlobs.map(([block, blobSidecars]) => {
         const blobs = blobSidecars !== undefined ? blobSidecars : [];
-        return getBlockInput.availableData(config, block, BlockSource.byRange, null, {
+        return getBlockInput.availableData(config, block, BlockSource.byRange, {
           fork: ForkName.electra,
           blobs,
           blobsSource: BlobsSource.byRange,
-          blobsBytes: blobs.map(() => null),
         });
       });
 
