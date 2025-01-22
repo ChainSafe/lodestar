@@ -21,7 +21,7 @@ const MAX_INCLUSION_LISTS_PER_SLOT = INCLUSION_LIST_COMMITTEE_SIZE * 2;
 type CachedInclusionList = {
   // TODO FOCIL: we might cache transactions here
   inclusionList: focil.SignedInclusionList;
-  equivocated: boolean;
+  seenTwice: boolean;
 };
 
 export enum InclusionListInsertOutcome {
@@ -34,7 +34,7 @@ export enum InclusionListInsertOutcome {
   /**  */
   Late = "Late",
   /** */
-  Equivocated = "Equivocated",
+  SeenTwice = "SeenTwice",
 }
 
 /**
@@ -83,12 +83,12 @@ export class InclusionListPool {
     // Track equivocations
     const inclusionListByValidator = inclusionListsByValidator.get(inclusionList.message.validatorIndex);
     if (inclusionListByValidator) {
-      inclusionListByValidator.equivocated = true;
-      return InclusionListInsertOutcome.Equivocated;
+      inclusionListByValidator.seenTwice = true;
+      return InclusionListInsertOutcome.SeenTwice;
     }
 
     // Create new inclusion list
-    inclusionListsByValidator.set(validatorIndex, {inclusionList, equivocated: false});
+    inclusionListsByValidator.set(validatorIndex, {inclusionList, seenTwice: false});
     return InclusionListInsertOutcome.New;
   }
 
@@ -100,8 +100,8 @@ export class InclusionListPool {
 
     for (const inclusionListByValidator of [this.inclusionListByValidatorBySlot.get(slot)]) {
       if (inclusionListByValidator) {
-        for (const {inclusionList, equivocated} of inclusionListByValidator.values()) {
-          if (!equivocated) {
+        for (const {inclusionList, seenTwice} of inclusionListByValidator.values()) {
+          if (!seenTwice) {
             inclusionLists.push(inclusionList);
           }
         }
@@ -111,8 +111,8 @@ export class InclusionListPool {
     return inclusionLists;
   }
 
-  getEntry(slot: Slot, validatorIndex: ValidatorIndex): CachedInclusionList | undefined {
-    return this.inclusionListByValidatorBySlot.get(slot)?.get(validatorIndex);
+  seenTwice(slot: Slot, validatorIndex: ValidatorIndex): boolean {
+    return this.inclusionListByValidatorBySlot.get(slot)?.get(validatorIndex)?.seenTwice === true;
   }
 
   /**

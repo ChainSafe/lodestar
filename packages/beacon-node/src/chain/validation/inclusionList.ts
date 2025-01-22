@@ -49,7 +49,7 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
 
   // TODO FOCIL: use a different cache similar to `seenAttesters` here?
   // [IGNORE] The message is either the first or second valid message received from the validator with index message.validator_index.
-  if (chain.inclusionListPool.getEntry(slot, validatorIndex)?.equivocated === true) {
+  if (chain.inclusionListPool.seenTwice(slot, validatorIndex)) {
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.MORE_THAN_TWO,
       validatorIndex,
