@@ -175,7 +175,10 @@ export class BeaconNode {
       // we already checked that we didn't have any snapshot before fetching it, but just to make sure
       const deletedSnapshots = await db.depositTreeSnapshot.deleteOld(wsDepositSnapshot.depositCount);
       await db.depositTreeSnapshot.add(wsDepositSnapshot);
-      logger.info("Persisted ws deposit snapshot at startup", {depositCount: wsDepositSnapshot.depositCount, deletedSnapshots});
+      logger.info("Persisted ws deposit snapshot at startup", {
+        depositCount: wsDepositSnapshot.depositCount,
+        deletedSnapshots,
+      });
     }
 
     let metrics = null;

@@ -21,6 +21,10 @@ export class Eth1DataCache {
 
   async getHighestCachedBlockNumber(): Promise<number | null> {
     const highestEth1Data = await this.db.eth1Data.lastValue();
-    return highestEth1Data?.blockNumber ?? null;
+    const snapshot = await this.db.depositTreeSnapshot.lastValue();
+
+    // for the first time, when there is no eth1 data in the db, go with snapshot block height if we have it
+    // otherwise start with the last eth1 block number
+    return highestEth1Data?.blockNumber ?? snapshot?.executionBlockHeight ?? null;
   }
 }

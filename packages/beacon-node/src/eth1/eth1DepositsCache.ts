@@ -129,7 +129,11 @@ export class Eth1DepositsCache {
    */
   async getHighestDepositEventBlockNumber(): Promise<number | null> {
     const latestEvent = await this.db.depositEvent.lastValue();
-    return latestEvent?.blockNumber || null;
+    const snapshot = await this.db.depositTreeSnapshot.lastValue();
+
+    // for the first time, when there is no deposit event in the db, go with snapshot block height if we have it
+    // otherwise start with the last deposit event block number
+    return latestEvent?.blockNumber ?? snapshot?.executionBlockHeight ?? null;
   }
 
   /**
