@@ -5,9 +5,11 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {DepositTreeSnapshot} from "@lodestar/types/phase0";
 import {ErrorAborted} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
@@ -73,6 +75,39 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       logger,
       abortController.signal
     );
+
+    const dbSnapshot = await db.depositTreeSnapshot.lastKey();
+    let wsDepositSnapshot: DepositTreeSnapshot | null = null;
+    if (dbSnapshot == null && args.checkpointSyncUrl != null) {
+      try {
+        // Validate the weakSubjectivityServerUrl and only log the origin to mask the
+        // username password credentials
+        const checkpointSyncUrl = new URL(args.checkpointSyncUrl);
+        logger.info("Fetching deposit snapshot", {
+          checkpointSyncUrl: checkpointSyncUrl.origin,
+        });
+        const api = getClient({baseUrl: args.checkpointSyncUrl}, {config});
+        wsDepositSnapshot = (
+          await api.beacon.getDepositSnapshot({
+            responseWireFormat: WireFormat.json,
+            headers: {
+              [HttpHeader.Accept]: MediaType.json,
+            },
+          })
+        ).json();
+        logger.info("Fetched deposit snapshot", {depositCount: wsDepositSnapshot?.depositCount});
+      } catch (e) {
+        logger.error("Invalid", {checkpointSyncUrl: args.checkpointSyncUrl}, e as Error);
+        throw e;
+      }
+    } else {
+      if (dbSnapshot != null) {
+        logger.verbose("Using deposit snapshot from database", {depositCount: dbSnapshot});
+      } else if (args.checkpointSyncUrl == null) {
+        logger.verbose("No deposit snapshot from database and no checkpointSyncUrl provided");
+      }
+    }
+
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const node = await BeaconNode.init({
       opts: options,
@@ -83,6 +118,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerId,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
+      wsDepositSnapshot,
       wsCheckpoint,
     });
 

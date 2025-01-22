@@ -7,6 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
+import {DepositTreeSnapshot} from "@lodestar/types/phase0";
 import {sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -52,6 +53,7 @@ export type BeaconNodeInitModules = {
   peerId: PeerId;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
+  wsDepositSnapshot: DepositTreeSnapshot | null;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 };
@@ -149,6 +151,7 @@ export class BeaconNode {
     peerId,
     peerStoreDir,
     anchorState,
+    wsDepositSnapshot,
     wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
@@ -167,6 +170,13 @@ export class BeaconNode {
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
+
+    if (wsDepositSnapshot != null) {
+      // we already checked that we didn't have any snapshot before fetching it, but just to make sure
+      const deletedSnapshots = await db.depositTreeSnapshot.deleteOld(wsDepositSnapshot.depositCount);
+      await db.depositTreeSnapshot.add(wsDepositSnapshot);
+      logger.info("Persisted ws deposit snapshot at startup", {depositCount: wsDepositSnapshot.depositCount, deletedSnapshots});
+    }
 
     let metrics = null;
     if (
