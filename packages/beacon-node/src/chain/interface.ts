@@ -31,6 +31,7 @@ import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
+import {SerializedCache} from "../util/serializedCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
@@ -59,7 +60,6 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {ShufflingCache} from "./shufflingCache.js";
-import {SerializedCache} from "../util/serializedCache.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};

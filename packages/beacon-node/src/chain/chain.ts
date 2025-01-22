@@ -48,6 +48,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {SerializedCache} from "../util/serializedCache.js";
 import {Archiver} from "./archiver/archiver.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
@@ -101,7 +102,6 @@ import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
-import {SerializedCache} from "../util/serializedCache.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
