@@ -85,17 +85,8 @@ export type EngineApiRpcParamTypes = {
   engine_getBlobsV1: [DATA[]];
 };
 
-export type EngineGetPayloadMethod = keyof {
-  [K in keyof EngineApiRpcReturnTypes as K extends `engine_getPayloadV${number}`
-    ? K
-    : never]: EngineApiRpcReturnTypes[K];
-};
-
-export type EngineNewPayloadMethod = keyof {
-  [K in keyof EngineApiRpcReturnTypes as K extends `engine_newPayloadV${number}`
-    ? K
-    : never]: EngineApiRpcReturnTypes[K];
-};
+export type EngineGetPayloadMethod = keyof EngineApiRpcReturnTypes & `engine_getPayloadV${number}`;
+export type EngineNewPayloadMethod = keyof EngineApiRpcReturnTypes & `engine_newPayloadV${number}`;
 
 export type PayloadStatus = {
   status: ExecutionPayloadStatus;
