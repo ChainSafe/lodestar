@@ -57,7 +57,16 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     // at startup, we should use db's snapshot or download from checkpoint sync and persist there
     if (!this.depositRootTree) {
       const snapshot = await this.snapshotRepo.lastValue();
-      if (snapshot == null) {
+      const lastKey = await this.lastKey();
+      const firstEntry = await this.get(0);
+      if (snapshot == null || (lastKey != null && lastKey + 1 < snapshot.depositCount)) {
+        // no snapshot or snapshot is too new, see if we can rebuild the full tree via DepositDataRootPartialList type
+        if (firstEntry == null) {
+          throw new Error(
+            `Partial deposit root tree persisted but there is no snapshot or cannot use it, snapshot depositCount ${snapshot?.depositCount} lastKey ${lastKey}`
+          );
+        }
+
         // snapshot may not be available for the 1st time because the checkpointSync URL does not support
         // after some time, the beacon node will finalize and populate the snapshot
         this.depositRootTree = ssz.phase0.DepositDataRootPartialList.defaultPartialViewDU();
@@ -78,14 +87,14 @@ export class DepositDataRootRepository extends Repository<number, Root> {
       for (const root of values) {
         this.depositRootTree.push(root);
       }
+      this.depositRootTree.commit();
 
       // for nodes synced from genesis, we have all values in db, it's good to confirm depositRootTree is correct
       // it happens only 1 time so not a big deal
-      const firstEntry = await this.get(0);
       if (firstEntry != null) {
         const allValues = await this.values();
         const fullTree = ssz.phase0.DepositDataRootList.toViewDU(allValues);
-        if(Buffer.compare(fullTree.hashTreeRoot(), this.depositRootTree.hashTreeRoot()) !== 0) {
+        if (Buffer.compare(fullTree.hashTreeRoot(), this.depositRootTree.hashTreeRoot()) !== 0) {
           throw new Error("Partial deposit root tree is not correct");
         }
       }
@@ -119,7 +128,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
       // blockHash + blockHeight come from different sources
       // blockHash is from finalized BeaconState's eth1data.
       // blockHeight is from `depositCount - 1` deposit event
-      // when we fetch snapshot from db in `getDepositRootTree()`, we don't need execution blockHash + blockHeight anyway
+      // when we fetch snapshot from db in `getDepositRootTree()`, we only need blockHeight to know where to start the fetch at the very 1st time
       executionBlockHeight: blockNumber,
     };
 
