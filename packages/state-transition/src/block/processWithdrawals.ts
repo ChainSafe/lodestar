@@ -8,7 +8,7 @@ import {
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
-import {capella, ssz, ValidatorIndex} from "@lodestar/types";
+import {ValidatorIndex, capella, ssz} from "@lodestar/types";
 
 import {toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
