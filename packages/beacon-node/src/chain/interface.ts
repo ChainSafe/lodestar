@@ -59,6 +59,7 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {SerializedCache} from "../util/serializedCache.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -128,6 +129,9 @@ export interface IBeaconChain {
   readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
+  // Cache for serialized objects
+  readonly serializedCache: SerializedCache;
+
   readonly opts: IChainOptions;
 
   /** Stop beacon chain processing */

@@ -101,6 +101,7 @@ import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
+import {SerializedCache} from "../util/serializedCache.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -166,6 +167,8 @@ export class BeaconChain implements IBeaconChain {
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
+
+  readonly serializedCache: SerializedCache;
 
   readonly opts: IChainOptions;
 
@@ -343,6 +346,8 @@ export class BeaconChain implements IBeaconChain {
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
+
+    this.serializedCache = new SerializedCache();
 
     this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests

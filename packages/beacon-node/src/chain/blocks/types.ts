@@ -34,13 +34,15 @@ export enum GossipedInputType {
   blob = "blob",
 }
 
-type BlobsCacheMap = Map<number, {
-  blobSidecar: deneb.BlobSidecar;
-  blobBytes: Uint8Array | null,
-}>;
+type BlobsCacheMap = Map<
+  number,
+  {
+    blobSidecar: deneb.BlobSidecar;
+  }
+>;
 
 type ForkBlobsInfo = {fork: ForkBlobs};
-export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
+export type BlockInputBlobs = {blobs: deneb.BlobSidecar[]; blobsSource: BlobsSource};
 export type BlockInputDataBlobs = ForkBlobsInfo & BlockInputBlobs;
 export type BlockInputData = BlockInputDataBlobs;
 
@@ -49,7 +51,7 @@ type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (d
 type CachedBlobs = {blobsCache: BlobsCacheMap} & Availability<BlockInputDataBlobs>;
 export type CachedData = ForkBlobsInfo & CachedBlobs;
 
-export type BlockInput = {block: SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
+export type BlockInput = {block: SignedBeaconBlock; source: BlockSource} & (
   | {type: BlockInputType.preData | BlockInputType.outOfRangeData}
   | ({type: BlockInputType.availableData} & {blockData: BlockInputData})
   // the blobsSource here is added to BlockInputBlobs when availability is resolved
@@ -68,12 +70,7 @@ export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clo
 }
 
 export const getBlockInput = {
-  preData(
-    config: ChainForkConfig,
-    block: SignedBeaconBlock,
-    source: BlockSource,
-    blockBytes: Uint8Array | null
-  ): BlockInput {
+  preData(config: ChainForkConfig, block: SignedBeaconBlock, source: BlockSource): BlockInput {
     if (config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
       throw Error(`Post Deneb block slot ${block.message.slot}`);
     }
@@ -81,7 +78,6 @@ export const getBlockInput = {
       type: BlockInputType.preData,
       block,
       source,
-      blockBytes,
     };
   },
 
@@ -91,12 +87,7 @@ export const getBlockInput = {
   //
   // This can help with some of the requests of syncing without data for some use cases for e.g.
   // building states or where importing data isn't important if valid child exists like ILs
-  outOfRangeData(
-    config: ChainForkConfig,
-    block: SignedBeaconBlock,
-    source: BlockSource,
-    blockBytes: Uint8Array | null
-  ): BlockInput {
+  outOfRangeData(config: ChainForkConfig, block: SignedBeaconBlock, source: BlockSource): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
       throw Error(`Pre Deneb block slot ${block.message.slot}`);
     }
@@ -104,7 +95,6 @@ export const getBlockInput = {
       type: BlockInputType.outOfRangeData,
       block,
       source,
-      blockBytes,
     };
   },
 
@@ -112,7 +102,6 @@ export const getBlockInput = {
     config: ChainForkConfig,
     block: SignedBeaconBlock,
     source: BlockSource,
-    blockBytes: Uint8Array | null,
     blockData: BlockInputData
   ): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
@@ -122,7 +111,6 @@ export const getBlockInput = {
       type: BlockInputType.availableData,
       block,
       source,
-      blockBytes,
       blockData,
     };
   },
@@ -131,7 +119,6 @@ export const getBlockInput = {
     config: ChainForkConfig,
     block: SignedBeaconBlock,
     source: BlockSource,
-    blockBytes: Uint8Array | null,
     cachedData: CachedData
   ): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
@@ -141,7 +128,6 @@ export const getBlockInput = {
       type: BlockInputType.dataPromise,
       block,
       source,
-      blockBytes,
       cachedData,
     };
   },
@@ -149,18 +135,16 @@ export const getBlockInput = {
 
 export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlockInputBlobs, "blobsSource"> {
   const blobs = [];
-  const blobsBytes = [];
 
   for (let index = 0; index < blobsCache.size; index++) {
     const blobCache = blobsCache.get(index);
     if (blobCache === undefined) {
       throw Error(`Missing blobSidecar at index=${index}`);
     }
-    const {blobSidecar, blobBytes} = blobCache;
+    const {blobSidecar} = blobCache;
     blobs.push(blobSidecar);
-    blobsBytes.push(blobBytes);
   }
-  return {blobs, blobsBytes};
+  return {blobs};
 }
 
 export enum AttestationImportOpt {
