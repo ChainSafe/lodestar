@@ -34,14 +34,16 @@ export enum GossipedInputType {
   blob = "blob",
 }
 
-type BlobsCacheMap = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
+type BlobsCacheMap = Map<number, {
+  blobSidecar: deneb.BlobSidecar;
+  blobBytes: Uint8Array | null,
+}>;
 
 type ForkBlobsInfo = {fork: ForkBlobs};
-type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
-export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
+export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
+export type BlockInputDataBlobs = ForkBlobsInfo & BlockInputBlobs;
 export type BlockInputData = BlockInputDataBlobs;
 
-export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (data: T) => void};
 
 type CachedBlobs = {blobsCache: BlobsCacheMap} & Availability<BlockInputDataBlobs>;
@@ -145,7 +147,7 @@ export const getBlockInput = {
   },
 };
 
-export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlobsData, "blobsSource"> {
+export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlockInputBlobs, "blobsSource"> {
   const blobs = [];
   const blobsBytes = [];
 
