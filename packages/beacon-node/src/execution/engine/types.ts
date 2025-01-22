@@ -7,6 +7,9 @@ import {
   ForkName,
   ForkSeq,
   WITHDRAWAL_REQUEST_TYPE,
+  isForkBlobs,
+  isForkPostElectra,
+  isForkWithdrawals,
 } from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, Wei, bellatrix, capella, deneb, electra, ssz} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -80,6 +83,18 @@ export type EngineApiRpcParamTypes = {
   engine_getClientVersionV1: [ClientVersionRpc];
 
   engine_getBlobsV1: [DATA[]];
+};
+
+export type EngineGetPayloadMethod = keyof {
+  [K in keyof EngineApiRpcReturnTypes as K extends `engine_getPayloadV${number}`
+    ? K
+    : never]: EngineApiRpcReturnTypes[K];
+};
+
+export type EngineNewPayloadMethod = keyof {
+  [K in keyof EngineApiRpcReturnTypes as K extends `engine_newPayloadV${number}`
+    ? K
+    : never]: EngineApiRpcReturnTypes[K];
 };
 
 export type PayloadStatus = {
@@ -220,6 +235,32 @@ export interface BlobsBundleRpc {
   commitments: DATA[]; // each 48 bytes
   blobs: DATA[]; // each 4096 * 32 = 131072 bytes
   proofs: DATA[]; // some ELs could also provide proofs, each 48 bytes
+}
+
+export function getPayloadMethodByFork(fork: ForkName): EngineGetPayloadMethod {
+  switch (true) {
+    case isForkPostElectra(fork):
+      return "engine_getPayloadV4";
+    case isForkBlobs(fork):
+      return "engine_getPayloadV3";
+    case isForkWithdrawals(fork):
+      return "engine_getPayloadV2";
+    default:
+      return "engine_getPayloadV1";
+  }
+}
+
+export function newPayloadMethodByFork(fork: ForkName): EngineNewPayloadMethod {
+  switch (true) {
+    case isForkPostElectra(fork):
+      return "engine_newPayloadV4";
+    case isForkBlobs(fork):
+      return "engine_newPayloadV3";
+    case isForkWithdrawals(fork):
+      return "engine_newPayloadV2";
+    default:
+      return "engine_newPayloadV1";
+  }
 }
 
 export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {

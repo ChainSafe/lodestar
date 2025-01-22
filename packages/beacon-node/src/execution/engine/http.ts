@@ -36,6 +36,8 @@ import {
   assertReqSizeLimit,
   deserializeBlobAndProofs,
   deserializeExecutionPayloadBody,
+  getPayloadMethodByFork,
+  newPayloadMethodByFork,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
@@ -204,58 +206,56 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     parentBlockRoot?: Root,
     executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
-    const method =
-      ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_newPayloadV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_newPayloadV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_newPayloadV2"
-            : "engine_newPayloadV1";
+    const method = newPayloadMethodByFork(fork);
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
     let engineRequest: EngineRequest;
-    if (ForkSeq[fork] >= ForkSeq.deneb) {
-      if (versionedHashes === undefined) {
-        throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
-      }
-      if (parentBlockRoot === undefined) {
-        throw Error(`parentBlockRoot required in notifyNewPayload for fork=${fork}`);
-      }
 
-      const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
-      const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
-
-      if (ForkSeq[fork] >= ForkSeq.electra) {
-        if (executionRequests === undefined) {
-          throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
-        }
-        const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
+    switch (method) {
+      case "engine_newPayloadV1":
+      case "engine_newPayloadV2":
         engineRequest = {
-          method: "engine_newPayloadV4",
+          method,
+          params: [serializedExecutionPayload],
+          methodOpts: notifyNewPayloadOpts,
+        };
+        break;
+      case "engine_newPayloadV3":
+        if (versionedHashes === undefined || parentBlockRoot === undefined) {
+          throw Error(
+            `versionedHashes and parentBlockRoot required in notifyNewPayload for fork=${fork} versionedHashes=${versionedHashes} parentBlockRoot=${parentBlockRoot}`
+          );
+        }
+        engineRequest = {
+          method,
           params: [
             serializedExecutionPayload,
-            serializedVersionedHashes,
-            parentBeaconBlockRoot,
-            serializedExecutionRequests,
+            serializeVersionedHashes(versionedHashes),
+            serializeBeaconBlockRoot(parentBlockRoot),
           ],
           methodOpts: notifyNewPayloadOpts,
         };
-      } else {
+        break;
+      case "engine_newPayloadV4":
+        if (versionedHashes === undefined || parentBlockRoot === undefined || executionRequests === undefined) {
+          throw Error(
+            `versionedHashes, parentBlockRoot, and executionRequests required in notifyNewPayload for fork=${fork} versionedHashes=${versionedHashes} parentBlockRoot=${parentBlockRoot} executionRequests=${executionRequests}`
+          );
+        }
         engineRequest = {
-          method: "engine_newPayloadV3",
-          params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
+          method,
+          params: [
+            serializedExecutionPayload,
+            serializeVersionedHashes(versionedHashes),
+            serializeBeaconBlockRoot(parentBlockRoot),
+            serializeExecutionRequests(executionRequests),
+          ],
           methodOpts: notifyNewPayloadOpts,
         };
-      }
-    } else {
-      const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
-      engineRequest = {
-        method,
-        params: [serializedExecutionPayload],
-        methodOpts: notifyNewPayloadOpts,
-      };
+        break;
+      default:
+        throw Error(`Unsupported method: ${method}`);
     }
 
     const {status, latestValidHash, validationError} = await (
@@ -415,14 +415,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
-    const method =
-      ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_getPayloadV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_getPayloadV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_getPayloadV2"
-            : "engine_getPayloadV1";
+    const method = getPayloadMethodByFork(fork);
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
