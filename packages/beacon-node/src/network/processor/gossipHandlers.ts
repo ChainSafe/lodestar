@@ -613,9 +613,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.inclusion_list]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
+      // TODO FOCIL: should we persist invalid ssz value>
       await validateGossipInclusionList(chain, inclusionList);
 
-      // TODO FOCIL: Need to add this into a pool
+      try {
+        const insertOutcome = chain.inclusionListPool.add(inclusionList);
+        metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        logger.error("Error adding inclusionList to pool", {}, e as Error);
+      }
     },
   };
 }

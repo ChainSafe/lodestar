@@ -39,7 +39,13 @@ import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+import {
+  AttestationPool,
+  InclusionListPool,
+  OpPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -108,6 +114,7 @@ export interface IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
+  readonly inclusionListPool: InclusionListPool;
   readonly opPool: OpPool;
 
   // Gossip seen cache

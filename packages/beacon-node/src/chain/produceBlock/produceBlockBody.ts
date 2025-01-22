@@ -39,7 +39,6 @@ import {numToQuantity} from "../../eth1/provider/utils.js";
 import {
   IExecutionBuilder,
   IExecutionEngine,
-  InclusionList,
   PayloadAttributes,
   PayloadId,
   getExpectedGasLimit,
@@ -47,6 +46,7 @@ import {
 import {fromGraffitiBuffer} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
+import {InclusionListPool} from "../opPools/inclusionListPool.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -505,20 +505,25 @@ export async function prepareExecutionPayload(
 }
 
 export async function prepareExecutionPayloadInclusionList(
-  chain: {executionEngine: IExecutionEngine},
+  chain: {executionEngine: IExecutionEngine; inclusionListPool: InclusionListPool},
   logger: Logger,
   payloadId: PayloadId,
   slot: Slot
 ): Promise<void> {
-  // TODO FOCIL: Gather the current slot's inclusion list transactions, filter out duplicates
-  const inclusionList: InclusionList = {transactions: []};
+  const inclusionsLists = chain.inclusionListPool.get(slot);
 
-  await chain.executionEngine.updatePayloadWithInclusionList(payloadId, inclusionList);
+  const transactions: Uint8Array[] = [];
+  for (const inclusionList of inclusionsLists) {
+    // TODO FOCIL: filter out duplicates? how do we identify unique transactions?
+    transactions.concat(inclusionList.message.transactions);
+  }
+
+  await chain.executionEngine.updatePayloadWithInclusionList(payloadId, {transactions});
 
   logger.verbose("Updated payload with inclusion list", {
     slot,
     payloadId,
-    transactions: inclusionList.transactions.length,
+    transactions: transactions.length,
   });
 }
 

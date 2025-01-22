@@ -199,6 +199,7 @@ export class PrepareNextSlotScheduler {
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
+          // TODO FOCIL: do we wanna emit data about inclusion lists here
           const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,

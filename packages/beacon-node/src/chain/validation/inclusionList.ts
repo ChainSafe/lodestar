@@ -20,7 +20,7 @@ export async function validateGossipInclusionList(
 }
 
 async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.SignedInclusionList): Promise<void> {
-  const slot = inclusionList.message.slot;
+  const {slot, validatorIndex} = inclusionList.message;
   // [REJECT] The size of message is within upperbound MAX_BYTES_PER_INCLUSION_LIST
 
   // [REJECT] The slot message.slot is equal to the previous or current slot.
@@ -47,7 +47,14 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
     });
   }
 
+  // TODO FOCIL: use a different cache similar to `seenAttesters` here?
   // [IGNORE] The message is either the first or second valid message received from the validator with index message.validator_index.
+  if (chain.inclusionListPool.getEntry(slot, validatorIndex)?.equivocated === true) {
+    throw new InclusionListError(GossipAction.IGNORE, {
+      code: InclusionListErrorCode.MORE_THAN_TWO,
+      validatorIndex,
+    });
+  }
 
   // [REJECT] The signature of inclusion_list.signature is valid with respect to the validator index.
   const signatureSet = getInclusionListSignatureSet(chain.getHeadState(), inclusionList);

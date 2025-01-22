@@ -3,6 +3,7 @@ import {BeaconState} from "@lodestar/types";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
+import {InclusionListInsertOutcome} from "../../chain/opPools/inclusionListPool.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -888,6 +889,15 @@ export function createLodestarMetrics(
       syncContributionAndProofPoolSize: register.gauge({
         name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
         help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
+      }),
+      inclusionListPoolSize: register.gauge({
+        name: "lodestar_oppool_inclusion_list_pool_size",
+        help: "Current size of the InclusionListPool = total inclusion lists unique by validator and slot",
+      }),
+      inclusionListPoolInsertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
+        name: "lodestar_inclusion_list_pool_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding an inclusion list in a pool",
+        labelNames: ["insertOutcome"],
       }),
     },
 

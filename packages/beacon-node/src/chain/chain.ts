@@ -69,6 +69,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
+  InclusionListPool,
   OpPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
@@ -137,6 +138,7 @@ export class BeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly inclusionListPool: InclusionListPool;
   readonly opPool = new OpPool();
 
   // Gossip seen cache
@@ -239,6 +241,7 @@ export class BeaconChain implements IBeaconChain {
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
     );
+    this.inclusionListPool = new InclusionListPool(config, clock);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -1037,6 +1040,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+    metrics.opPool.inclusionListPoolSize.set(this.inclusionListPool.size);
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
 
     const forkChoiceMetrics = this.forkChoice.getMetrics();
@@ -1062,6 +1066,7 @@ export class BeaconChain implements IBeaconChain {
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
     this.syncCommitteeMessagePool.prune(slot);
+    this.inclusionListPool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);

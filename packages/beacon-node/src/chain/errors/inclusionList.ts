@@ -1,4 +1,4 @@
-import {Slot} from "@lodestar/types";
+import {Slot, ValidatorIndex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum InclusionListErrorCode {
@@ -10,6 +10,7 @@ export enum InclusionListErrorCode {
   TOO_MANY_TRANSACTIONS = "INCLUSION_LIST_ERROR_TOO_MANY_TRANSACTIONS",
   SPAM = "INCLUSION_LIST_ERROR_SPAM",
   INVALID_SIGNATURE = "INCLUSION_LIST_ERROR_INVALID_SIGNATURE",
+  MORE_THAN_TWO = "INCLUSION_LIST_ERROR_MORE_THAN_TWO",
 }
 export type InclusionListErrorType =
   | {code: InclusionListErrorCode.MESSAGE_TOO_LARGE}
@@ -19,6 +20,7 @@ export type InclusionListErrorType =
   | {code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE}
   | {code: InclusionListErrorCode.TOO_MANY_TRANSACTIONS; numTransactions: number; transactionLimit: number}
   | {code: InclusionListErrorCode.SPAM}
-  | {code: InclusionListErrorCode.INVALID_SIGNATURE};
+  | {code: InclusionListErrorCode.INVALID_SIGNATURE}
+  | {code: InclusionListErrorCode.MORE_THAN_TWO; validatorIndex: ValidatorIndex};
 
 export class InclusionListError extends GossipActionError<InclusionListErrorType> {}
