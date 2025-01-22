@@ -16,8 +16,12 @@ export class DepositTreeSnapshotRepository extends Repository<number, phase0.Dep
   /**
    * Only keep the snapshot of the last finalized deposit count
    */
-  async deleteOld(finalizedDepositCount: number): Promise<void> {
+  async deleteOld(finalizedDepositCount: number): Promise<number> {
     const oldKeys = await this.keys({lt: finalizedDepositCount});
-    await this.batchDelete(oldKeys);
+    if (oldKeys.length > 0) {
+      await this.batchDelete(oldKeys);
+    }
+
+    return oldKeys.length;
   }
 }

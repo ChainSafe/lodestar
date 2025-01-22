@@ -130,10 +130,16 @@ export class Archiver {
         finalized,
         this.metrics
       );
-      await this.db.depositTreeSnapshot.deleteOld(finalizedDepositCount);
+      const deletedSnapshots = await this.db.depositTreeSnapshot.deleteOld(finalizedDepositCount);
       // do not delete this.db.depositRootTree to keep it compatible to the old implementation
-      await this.db.depositEvent.deleteOld(finalizedDepositCount);
+      const deletedEvents = await this.db.depositEvent.deleteOld(finalizedDepositCount);
       // TODO: not sure how to delete old Eth1Data as there is no timestamp here
+
+      this.logger.verbose("Persisted new finalized deposit snapshot", {
+        depositCount: finalizedDepositCount,
+        deletedSnapshots,
+        deletedEvents,
+      });
     } catch (e) {
       this.logger.error("Error persisting deposit tree snapshot", {epoch: finalized.epoch}, e as Error);
     }

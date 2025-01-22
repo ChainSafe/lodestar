@@ -13,12 +13,15 @@ export class DepositEventRepository extends Repository<number, phase0.DepositEve
     super(config, db, bucket, ssz.phase0.DepositEvent, getBucketNameByValue(bucket));
   }
 
-  async deleteOld(depositCount: number): Promise<void> {
+  async deleteOld(depositCount: number): Promise<number> {
     const firstDepositIndex = await this.firstKey();
     if (firstDepositIndex === null) {
-      return;
+      return 0;
     }
-    await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));
+
+    const length = depositCount - firstDepositIndex;
+    await this.batchDelete(Array.from({length}, (_, i) => i + firstDepositIndex));
+    return length;
   }
 
   async batchPutValues(depositEvents: phase0.DepositEvent[]): Promise<void> {
