@@ -227,13 +227,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       // of those which need to be fetched
       dataPromiseBlobsAlreadyAvailable: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_already_available_total",
-        help: "Count of blocks that were already available in blockinput cache via gossip",
+        help: "Count of data promise blocks' blobs that were already available in blockinput cache via gossip",
       }),
       dataPromiseBlobsDelayedGossipAvailable: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_delayed_gossip_available_total",
-        help: "Count of blobs that became available delayed via gossip post block arrival",
+        help: "Count of data promise blocks' blobs that became available delayed via gossip post block arrival",
       }),
-      dataPromiseBlobsDeplayedGossipAvailableSavedGetBlobsCompute: register.gauge({
+      dataPromiseBlobsDelayedGossipAvailableSavedGetBlobsCompute: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_delayed_gossip_saved_computation_total",
         help: "Count of late available blobs that saved blob sidecar computation from getblobs",
       }),

@@ -7027,6 +7027,1011 @@
       ],
       "title": "Avg block verified to blob availability delay",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 311
+      },
+      "id": 569,
+      "panels": [],
+      "title": "GetBlobs Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit",
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 312
+      },
+      "id": 575,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_blockinputs_already_available_total[$rate_interval])/((rate(beacon_blockinputs_already_available_total[$rate_interval]) +\nrate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])) or vector(1))",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Already available blocks when arrived",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_blockinput_blobs_already_available_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Blobs of already available blocks",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Availability at block arrival",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit",
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 312
+      },
+      "id": 584,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_found_nonnull_in_getblobs_cache_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "old unavailable blobs already present in getblobs cache",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_found_null_in_getblobs_cache_total[$rate_interval])/((rate(beacon_blockinput_blobs_already_available_total[$rate_interval])+\nrate(beacon_datapromise_blockinput_blobs_responded_nonnull_in_getblobs_api_total[$rate_interval])+\nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "old unavailable blobs but null in getblobs cache",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_notfound_in_getblobs_cache_total[$rate_interval])/((rate(beacon_blockinput_blobs_already_available_total[$rate_interval])+\nrate(beacon_datapromise_blockinput_blobs_responded_nonnull_in_getblobs_api_total[$rate_interval])+\nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "new unavailable blobs for getblobs",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Blobs Availability in GetBlobs Cache",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit",
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 320
+      },
+      "id": 577,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_queried_in_getblobs_api_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "total blobs queried in api",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_responded_nonnull_in_getblobs_api_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blobs available",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_responded_null_in_getblobs_api_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blobs not available",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_errored_as_null_in_getblobs_api_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blobs errored",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "actual useful blobs (not delayed goissip available)",
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "title": "GetBlobs API Stats",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit",
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 320
+      },
+      "id": 578,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_finally_queried_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blobs finally req/resp queried",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blobs finally req/resp fetched",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_retried_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "total blobs retried",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "total blobs retried and resolved",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "delayed gossip blobs available",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_blobs_delayed_gossip_saved_computation_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "delayed gossip blobs used",
+          "range": true,
+          "refId": "F"
+        }
+      ],
+      "title": "Network fetch stats",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit",
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 328
+      },
+      "id": 580,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinputs_available_using_getblobs_total[$rate_interval])/((rate(beacon_blockinputs_already_available_total[$rate_interval]) +\nrate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])) or vector(1))",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blocks used getBlobs blobs",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinputs_tried_for_blobs_pull_total[$rate_interval])/((rate(beacon_blockinputs_already_available_total[$rate_interval]) +\nrate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blocks queried getblobs",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])/((rate(beacon_blockinputs_already_available_total[$rate_interval]) +\nrate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blocks available from getblobs",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinputs_retried_and_resolved_from_network_total[$rate_interval])/((rate(beacon_blockinputs_already_available_total[$rate_interval]) +\nrate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])) or vector(1))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blocks available after network blobs retries",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Block availability resolution stats",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit",
+          "unitScale": true
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "beacon_datapromise_blockinputs_retried_for_blobs_pull_total"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 328
+      },
+      "id": 581,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinputs_retried_for_blobs_pull_total[$rate_interval])/((rate(beacon_blockinputs_already_available_total[$rate_interval]) +\nrate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])) or vector(1))",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Retry",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 336
+      },
+      "id": 582,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "getblob_cache_size",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "getblob cache size",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "beacon_datapromise_blockinput_retry_tracker_cache_size",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blockinput retry cache size",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Cache size",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 336
+      },
+      "id": 585,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(getblob_cache_pruned_total[$rate_interval])",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "getblob cache pruned",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_datapromise_blockinput_retry_tracker_cache_pruned[$rate_interval])",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "blockinput retry cache pruned",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Cache prune rate",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",
