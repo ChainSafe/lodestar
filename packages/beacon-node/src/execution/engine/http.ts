@@ -32,6 +32,7 @@ import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
+  EngineNewPayloadMethod,
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeBlobAndProofs,
@@ -208,8 +209,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<ExecutePayloadResponse> {
     const method = newPayloadMethodByFork(fork);
 
-    const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
-
     let engineRequest: EngineRequest;
 
     switch (method) {
@@ -217,40 +216,30 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case "engine_newPayloadV2":
         engineRequest = {
           method,
-          params: [serializedExecutionPayload],
+          params: generateSerializedNewPayloadParams(fork, method, {executionPayload}),
           methodOpts: notifyNewPayloadOpts,
         };
         break;
       case "engine_newPayloadV3":
-        if (versionedHashes === undefined || parentBlockRoot === undefined) {
-          throw Error(
-            `versionedHashes and parentBlockRoot required in notifyNewPayload for fork=${fork} versionedHashes=${versionedHashes} parentBlockRoot=${parentBlockRoot}`
-          );
-        }
         engineRequest = {
           method,
-          params: [
-            serializedExecutionPayload,
-            serializeVersionedHashes(versionedHashes),
-            serializeBeaconBlockRoot(parentBlockRoot),
-          ],
+          params: generateSerializedNewPayloadParams(fork, method, {
+            executionPayload,
+            versionedHashes,
+            parentBlockRoot,
+          }),
           methodOpts: notifyNewPayloadOpts,
         };
         break;
       case "engine_newPayloadV4":
-        if (versionedHashes === undefined || parentBlockRoot === undefined || executionRequests === undefined) {
-          throw Error(
-            `versionedHashes, parentBlockRoot, and executionRequests required in notifyNewPayload for fork=${fork} versionedHashes=${versionedHashes} parentBlockRoot=${parentBlockRoot} executionRequests=${executionRequests}`
-          );
-        }
         engineRequest = {
           method,
-          params: [
-            serializedExecutionPayload,
-            serializeVersionedHashes(versionedHashes),
-            serializeBeaconBlockRoot(parentBlockRoot),
-            serializeExecutionRequests(executionRequests),
-          ],
+          params: generateSerializedNewPayloadParams(fork, method, {
+            executionPayload,
+            versionedHashes,
+            parentBlockRoot,
+            executionRequests,
+          }),
           methodOpts: notifyNewPayloadOpts,
         };
         break;
@@ -571,3 +560,47 @@ type EngineRequestByKey = {
 type EngineRequest = EngineRequestByKey[EngineRequestKey];
 type EngineResponseByKey = {[K in EngineRequestKey]: EngineApiRpcReturnTypes[K]};
 type EngineResponse = EngineResponseByKey[EngineRequestKey];
+
+/**
+ *
+ * Generate serialized params according to `method`.
+ *
+ * `params` must not allow numeric keys because we rely Object.keys() to return keys in insertion order.
+ * eg. {versionedHashes, parentBlockRoot, executionRequests} has to return [versionedHashes, parentBlockRoot, executionRequests]
+ * Having numeric key will not guarantee keys in insertion order.
+ */
+function generateSerializedNewPayloadParams<T extends EngineNewPayloadMethod>(
+  fork: ForkName,
+  method: T,
+  params: Record<Exclude<string, `${number}`>, unknown>
+): EngineApiRpcParamTypes[T] {
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) {
+      throw new Error(`${key} is required for method=${method} in fork=${fork}`);
+    }
+  }
+
+  const keys = Object.keys(params);
+  const result = [];
+
+  for (const key of keys) {
+    switch (key) {
+      case "executionPayload":
+        result.push(serializeExecutionPayload(fork, params[key] as ExecutionPayload));
+        break;
+      case "versionedHashes":
+        result.push(serializeVersionedHashes(params[key] as VersionedHashes));
+        break;
+      case "parentBlockRoot":
+        result.push(serializeBeaconBlockRoot(params[key] as Root));
+        break;
+      case "executionRequests":
+        result.push(serializeExecutionRequests(params[key] as ExecutionRequests));
+        break;
+      default:
+        result.push(params[key]);
+    }
+  }
+
+  return result as EngineApiRpcParamTypes[T];
+}
