@@ -306,6 +306,11 @@ export function createValidatorMonitor(
       lastRegisteredStatusEpoch = currentEpoch;
       const previousEpoch = currentEpoch - 1;
 
+      // There won't be any validator activity in epoch -1
+      if (previousEpoch === -1) {
+        return;
+      }
+
       for (const [index, monitoredValidator] of validators.entries()) {
         // We subtract two from the state of the epoch that generated these summaries.
         //

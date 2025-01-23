@@ -73,7 +73,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.18.0",
+    "@chainsafe/ssz": "^0.19.1",
     "@lodestar/params": "^1.25.0",
     "ethereum-cryptography": "^2.0.0"
   },
