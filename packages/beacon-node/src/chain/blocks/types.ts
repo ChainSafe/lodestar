@@ -34,12 +34,7 @@ export enum GossipedInputType {
   blob = "blob",
 }
 
-type BlobsCacheMap = Map<
-  number,
-  {
-    blobSidecar: deneb.BlobSidecar;
-  }
->;
+type BlobsCacheMap = Map<number, deneb.BlobSidecar>;
 
 type ForkBlobsInfo = {fork: ForkBlobs};
 export type BlockInputBlobs = {blobs: deneb.BlobSidecar[]; blobsSource: BlobsSource};
@@ -137,11 +132,10 @@ export function getBlockInputBlobs(blobsCache: BlobsCacheMap): Omit<BlockInputBl
   const blobs = [];
 
   for (let index = 0; index < blobsCache.size; index++) {
-    const blobCache = blobsCache.get(index);
-    if (blobCache === undefined) {
+    const blobSidecar = blobsCache.get(index);
+    if (blobSidecar === undefined) {
       throw Error(`Missing blobSidecar at index=${index}`);
     }
-    const {blobSidecar} = blobCache;
     blobs.push(blobSidecar);
   }
   return {blobs};

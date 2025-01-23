@@ -93,9 +93,7 @@ export class SeenGossipBlockInput {
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
-      blockCache.cachedData?.blobsCache.set(blobSidecar.index, {
-        blobSidecar,
-      });
+      blockCache.cachedData?.blobsCache.set(blobSidecar.index, blobSidecar);
     }
 
     if (!this.blockInputCache.has(blockHex)) {

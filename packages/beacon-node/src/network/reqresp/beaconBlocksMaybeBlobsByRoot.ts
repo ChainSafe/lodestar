@@ -135,7 +135,7 @@ export async function unavailableBeaconBlobsByRoot(
           const {blob, proof: kzgProof} = catchedBlobAndProof;
           const kzgCommitmentInclusionProof = computeInclusionProof(fork, block.message.body, index);
           const blobSidecar = {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-          blobsCache.set(blobSidecar.index, {blobSidecar});
+          blobsCache.set(blobSidecar.index, blobSidecar);
         }
       } else if (blockTriedBefore) {
         // only retry it from network
@@ -176,7 +176,7 @@ export async function unavailableBeaconBlobsByRoot(
         // add them in cache so that its reflected in all the blockInputs that carry this
         // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
         // verifyBlocksDataAvailability
-        blobsCache.set(blobSidecar.index, {blobSidecar});
+        blobsCache.set(blobSidecar.index, blobSidecar);
       } else {
         metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailable.inc();
         metrics?.blockInputFetchStats.dataPromiseBlobsDeplayedGossipAvailableSavedGetBlobsCompute.inc();
@@ -239,7 +239,7 @@ export async function unavailableBeaconBlobsByRoot(
   // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
   // verifyBlocksDataAvailability
   for (const blobSidecar of networkResBlobSidecars) {
-    blobsCache.set(blobSidecar.index, {blobSidecar});
+    blobsCache.set(blobSidecar.index, blobSidecar);
   }
 
   // check and see if all blobs are now available and in that case resolve availability
