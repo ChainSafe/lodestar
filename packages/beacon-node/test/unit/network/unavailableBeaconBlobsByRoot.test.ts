@@ -174,7 +174,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
     const blockData = {
       fork: ForkName.deneb as ForkBlobs,
       blobs: allBlobs,
-      blobsBytes: [null, null, null, null, null],
       blobsSource: BlobsSource.byRoot,
     };
     const resolvedBlobs = getBlockInput.availableData(config, signedBlock, BlockSource.byRoot, blockData);

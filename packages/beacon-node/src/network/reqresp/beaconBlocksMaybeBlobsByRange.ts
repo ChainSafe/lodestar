@@ -100,7 +100,6 @@ export function matchBlockWithBlobs(
         fork: config.getForkName(block.data.message.slot),
         blobs: blobSidecars,
         blobsSource,
-        blobsBytes: Array.from({length: blobKzgCommitmentsLen}, () => null),
       } as BlockInputDataBlobs;
 
       // TODO DENEB: instead of null, pass payload in bytes

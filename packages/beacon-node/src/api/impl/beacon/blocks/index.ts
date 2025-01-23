@@ -75,7 +75,6 @@ export function getBeaconBlockApi({
         fork: config.getForkName(signedBlock.message.slot),
         blobs: blobSidecars,
         blobsSource: BlobsSource.api,
-        blobsBytes: blobSidecars.map(() => null),
       } as BlockInputDataBlobs;
       blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
