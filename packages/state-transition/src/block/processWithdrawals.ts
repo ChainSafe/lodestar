@@ -202,11 +202,11 @@ export function getExpectedWithdrawals(
 }
 
 function getPartiallyWithdrawnBalance(withdrawals: capella.Withdrawal[], validatorIndex: ValidatorIndex): number {
-  let total = 0;
+  let total = BigInt(0);
   for (const withdrawal of withdrawals) {
     if (withdrawal.validatorIndex === validatorIndex) {
-      total += Number(withdrawal.amount);
+      total += withdrawal.amount;
     }
   }
-  return total;
+  return Number(total);
 }
