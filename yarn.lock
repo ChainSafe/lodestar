@@ -357,10 +357,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/as-chacha20poly1305/-/as-chacha20poly1305-0.1.0.tgz#7da6f8796f9b42dac6e830a086d964f1f9189e09"
   integrity sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==
 
-"@chainsafe/as-sha256@0.6.1", "@chainsafe/as-sha256@^0.6.1":
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.6.1.tgz#0643cf699118f2a0db6d8ce6e8d68fe7c5084158"
-  integrity sha512-bYDOK5aK7NYE/ZZ/A3C+Q8ZrEWdzpH80fcEotjgX3pmntv3SJfOTTYE53mjnPSEZFlv/rST0H/ZETsz8Wab9iw==
+"@chainsafe/as-sha256@1.0.0", "@chainsafe/as-sha256@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.0.0.tgz#9095ad42dce13887b5877fce70592e573940ecd7"
+  integrity sha512-EYw5IZ99Mhn7K8d1eDDH66AFhPy9GcD7bfiqm9mwFjsg8MViEEicGl62b5YPzufBTFh7X7qWAe6yWpr/gbaVEw==
 
 "@chainsafe/as-sha256@^0.4.1":
   version "0.4.1"
@@ -595,12 +595,12 @@
   dependencies:
     "@chainsafe/is-ip" "^2.0.1"
 
-"@chainsafe/persistent-merkle-tree@0.9.1", "@chainsafe/persistent-merkle-tree@^0.9.1":
-  version "0.9.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.9.1.tgz#fd29d36381f53e1d04c3ffbbb92eb91a9f460f96"
-  integrity sha512-UVMKbWcKr1Y56qgy6m1W4peUaCwwsn/W2Vd5Ffu7Tb9lMW80q0IaW7e97jvyWd2SDfqVQ1p2XP4bBj6WAcfZvg==
+"@chainsafe/persistent-merkle-tree@1.0.1", "@chainsafe/persistent-merkle-tree@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-1.0.1.tgz#4eb5a8e3367bc3957c88c8b9bad9610209e00fed"
+  integrity sha512-aQtYdXHmWRowcQK0h91HfHMO3bezQLk9wjQXv2CCcTbTim31BnCbPVpNbvAUWvEbifLQYvM18moygvEtdUNhXg==
   dependencies:
-    "@chainsafe/as-sha256" "0.6.1"
+    "@chainsafe/as-sha256" "1.0.0"
     "@chainsafe/hashtree" "1.0.1"
     "@noble/hashes" "^1.3.0"
 
@@ -612,10 +612,10 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@noble/hashes" "^1.3.0"
 
-"@chainsafe/persistent-ts@^0.19.2":
-  version "0.19.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-0.19.2.tgz#f7da892b76f5a159d568bacd96563c2c56c3e99c"
-  integrity sha512-CFz1jniPezZJmrPdYkm1wbCj7+H0yWfrAs4qE4HJ3ZWWqcTu3KQWgqUVZ7J4WGxuYU9HAXJSYsO3xtAqHWm8YQ==
+"@chainsafe/persistent-ts@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-1.0.0.tgz#09ed7ab163a72d8ee9a154be589901bbc570a359"
+  integrity sha512-Xwu59vDQwJWcF4QbIdi9gvRVnkLBOc7Y5JUpINS4TVRtp4omhjEsqO4rFSCUhC8opyg1HcNSQEjL4IgYLGouuw==
 
 "@chainsafe/prometheus-gc-stats@^1.0.0":
   version "1.0.2"
@@ -666,13 +666,13 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/ssz@^0.19.1":
-  version "0.19.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.19.1.tgz#e6f88561cf83204d23a401cb8f4344eedcbcbae4"
-  integrity sha512-LsEx6vbQPxNG3ydjabjIHcvhbW6GvugTw2tAIB39mmLNIsbYk1YUdskHHsM29+Oe3937ekdk2NZpo3QHye5zJA==
+"@chainsafe/ssz@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-1.0.1.tgz#dd1373cb4387fdd869d377f0fc5460edf422bd78"
+  integrity sha512-+QugG2Wbw3zWmCSIYsjAGoJXmT899ecdfI9OJVG6e3A6pPMJHH4EgENzXYy02ZUDhHXNhJ5c9pA4dElGfT7b4Q==
   dependencies:
-    "@chainsafe/as-sha256" "0.6.1"
-    "@chainsafe/persistent-merkle-tree" "0.9.1"
+    "@chainsafe/as-sha256" "1.0.0"
+    "@chainsafe/persistent-merkle-tree" "1.0.1"
 
 "@chainsafe/swap-or-not-shuffle-darwin-arm64@0.0.2":
   version "0.0.2"

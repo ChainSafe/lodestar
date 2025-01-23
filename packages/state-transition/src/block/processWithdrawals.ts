@@ -8,7 +8,7 @@ import {
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
-import {capella, ssz} from "@lodestar/types";
+import {ValidatorIndex, capella, ssz} from "@lodestar/types";
 
 import {toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
@@ -154,13 +154,10 @@ export function getExpectedWithdrawals(
   for (n = 0; n < bound; n++) {
     // Get next validator in turn
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
-    const partiallyWithdrawnBalance = withdrawals
-      .filter((withdrawal) => withdrawal.validatorIndex === validatorIndex)
-      .reduce((acc, withdrawal) => acc + Number(withdrawal.amount), 0);
 
     const validator = validators.getReadonly(validatorIndex);
     const balance = isPostElectra
-      ? balances.get(validatorIndex) - partiallyWithdrawnBalance
+      ? balances.get(validatorIndex) - getPartiallyWithdrawnBalance(withdrawals, validatorIndex)
       : balances.get(validatorIndex);
     const {withdrawableEpoch, withdrawalCredentials, effectiveBalance} = validator;
     const hasWithdrawableCredentials = isPostElectra
@@ -202,4 +199,14 @@ export function getExpectedWithdrawals(
   }
 
   return {withdrawals, sampledValidators: n, processedPartialWithdrawalsCount};
+}
+
+function getPartiallyWithdrawnBalance(withdrawals: capella.Withdrawal[], validatorIndex: ValidatorIndex): number {
+  let total = BigInt(0);
+  for (const withdrawal of withdrawals) {
+    if (withdrawal.validatorIndex === validatorIndex) {
+      total += withdrawal.amount;
+    }
+  }
+  return Number(total);
 }

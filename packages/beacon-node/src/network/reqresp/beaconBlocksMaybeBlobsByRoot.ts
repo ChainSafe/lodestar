@@ -181,7 +181,7 @@ export async function unavailableBeaconBlobsByRoot(
         blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
       } else {
         metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailable.inc();
-        metrics?.blockInputFetchStats.dataPromiseBlobsDeplayedGossipAvailableSavedGetBlobsCompute.inc();
+        metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailableSavedGetBlobsCompute.inc();
       }
     }
     // may be blobsidecar arrived in the timespan of making the request
@@ -255,7 +255,7 @@ export async function unavailableBeaconBlobsByRoot(
   resolveAvailability(blockData);
   metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
 
-  metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
+  metrics?.blockInputFetchStats.totalDataPromiseBlockInputsResolvedAvailable.inc();
   if (getBlobsUseful) {
     metrics?.blockInputFetchStats.totalDataPromiseBlockInputsAvailableUsingGetBlobs.inc();
   }
