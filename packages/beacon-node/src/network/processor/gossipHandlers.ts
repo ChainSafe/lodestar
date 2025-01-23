@@ -345,6 +345,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       const signedBlock = sszDeserialize(topic, serializedData);
       const blockInput = await validateBeaconBlock(signedBlock, topic.fork, peerIdStr, seenTimestampSec);
+      chain.serializedCache.set(signedBlock, serializedData);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
