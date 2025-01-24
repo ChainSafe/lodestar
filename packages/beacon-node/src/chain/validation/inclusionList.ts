@@ -1,4 +1,3 @@
-import {MAX_TRANSACTIONS_PER_INCLUSION_LIST} from "@lodestar/params";
 import {getInclusionListSignatureSet} from "@lodestar/state-transition";
 import {focil} from "@lodestar/types";
 import {InclusionListError, InclusionListErrorCode} from "../errors/inclusionList.js";
@@ -47,15 +46,6 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
   // [IGNORE] The inclusion_list_committee for slot message.slot on the current branch corresponds to message.inclusion_list_committee_root, as determined by hash_tree_root(inclusion_list_committee) == message.inclusion_list_committee_root.
 
   // [REJECT] The validator index message.validator_index is within the inclusion_list_committee corresponding to message.inclusion_list_committee_root.
-
-  // [REJECT] The transactions message.transactions length is within upperbound MAX_TRANSACTIONS_PER_INCLUSION_LIST
-  if (transactions.length > MAX_TRANSACTIONS_PER_INCLUSION_LIST) {
-    throw new InclusionListError(GossipAction.REJECT, {
-      code: InclusionListErrorCode.TOO_MANY_TRANSACTIONS,
-      numTransactions: transactions.length,
-      transactionLimit: MAX_TRANSACTIONS_PER_INCLUSION_LIST,
-    });
-  }
 
   // TODO FOCIL: use a different cache similar to `seenAttesters` here?
   // [IGNORE] The message is either the first or second valid message received from the validator with index message.validator_index.

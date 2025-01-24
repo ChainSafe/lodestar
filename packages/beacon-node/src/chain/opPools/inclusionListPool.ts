@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
-import {Slot, ValidatorIndex, focil} from "@lodestar/types";
+import {Slot, ValidatorIndex, bellatrix, focil} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IClock} from "../../util/clock.js";
@@ -20,7 +20,7 @@ const SLOTS_RETAINED = 2; // TODO FOCIL: do we even need to retain previous slot
 const MAX_INCLUSION_LISTS_PER_SLOT = INCLUSION_LIST_COMMITTEE_SIZE * 2;
 
 type CachedInclusionList = {
-  transactions: focil.InclusionListTransactions;
+  transactions: bellatrix.Transactions;
   seenTwice: boolean;
 };
 
@@ -95,8 +95,8 @@ export class InclusionListPool {
   /**
    * Return a list of unique inclusion list transactions for the given slot
    */
-  getTransactions(slot: Slot): focil.InclusionListTransactions {
-    const uniqueTransactions: focil.InclusionListTransactions = [];
+  getTransactions(slot: Slot): bellatrix.Transactions {
+    const uniqueTransactions: bellatrix.Transactions = [];
 
     const inclusionListsByValidator = this.inclusionListByValidatorBySlot.get(slot);
     if (!inclusionListsByValidator) {

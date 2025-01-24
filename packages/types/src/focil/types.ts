@@ -4,7 +4,6 @@ import * as ssz from "./sszTypes.js";
 export type InclusionList = ValueOf<typeof ssz.InclusionList>;
 export type SignedInclusionList = ValueOf<typeof ssz.SignedInclusionList>;
 export type InclusionListByCommitteeIndicesRequest = ValueOf<typeof ssz.InclusionListByCommitteeIndicesRequest>;
-export type InclusionListTransactions = ValueOf<typeof ssz.InclusionListTransactions>;
 
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;

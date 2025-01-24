@@ -1,22 +1,17 @@
-import {BitVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
-import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_INCLUSION_LIST} from "@lodestar/params";
+import {BitVectorType, ContainerType} from "@chainsafe/ssz";
+import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
 
-export const InclusionListTransactions = new ListCompositeType(
-  bellatrixSsz.Transaction,
-  MAX_TRANSACTIONS_PER_INCLUSION_LIST
-);
-
 export const InclusionList = new ContainerType(
   {
     slot: Slot,
     validatorIndex: ValidatorIndex,
     inclusionListCommitteeRoot: Root,
-    transactions: InclusionListTransactions,
+    transactions: bellatrixSsz.Transactions,
   },
   {typeName: "InclusionList", jsonCase: "eth2"}
 );
