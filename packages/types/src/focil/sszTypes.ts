@@ -1,10 +1,12 @@
-import {BitVectorType, ContainerType} from "@chainsafe/ssz";
+import {BitVectorType, ContainerType, VectorBasicType} from "@chainsafe/ssz";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
+
+export const InclusionListCommittee = new VectorBasicType(ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE);
 
 export const InclusionList = new ContainerType(
   {
