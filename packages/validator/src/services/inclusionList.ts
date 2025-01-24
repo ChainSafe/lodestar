@@ -83,7 +83,7 @@ export class InclusionListService {
         try {
           signedInclusionLists.push(await this.validatorStore.signInclusionList(duty, inclusionListNoValidatorIndex));
         } catch (e) {
-          this.logger.error("Error signing inclusiont list");
+          this.logger.error("Error signing inclusion list", {}, e as Error);
         }
       })
     );
@@ -94,7 +94,7 @@ export class InclusionListService {
         (await this.api.validator.publishInclusionList({signedInclusionList})).assertOk();
         this.logger.info(`Published inclusionList ${signedInclusionList.message}`);
       } catch (e) {
-        this.logger.error("Error publishing inclusionList");
+        this.logger.error("Error publishing inclusionList", {}, e as Error);
       }
     }
   }
