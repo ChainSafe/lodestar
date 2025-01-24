@@ -277,4 +277,6 @@ export const CONSOLIDATION_REQUEST_TYPE = 0x02;
 
 // focil
 export const INCLUSION_LIST_COMMITTEE_SIZE = 16;
-export const MAX_TRANSACTIONS_PER_INCLUSION_LIST = 1;
+// TODO FOCIL: same as `MAX_TRANSACTIONS_PER_PAYLOAD` for now but will likely
+// be removed as we limit inclusion lists by bytes and not transaction count
+export const MAX_TRANSACTIONS_PER_INCLUSION_LIST = 1048576;
