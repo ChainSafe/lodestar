@@ -63,9 +63,9 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
-  // TODO FOCIL: these values don't make sense, we only have 6 seconds per slot
-  ATTESTATION_DEADLINE: 4,
-  PROPOSER_INCLUSION_LIST_CUT_OFF: 11,
+  ATTESTATION_DEADLINE: 2,
+  PROPOSER_INCLUSION_LIST_CUT_OFF: 5,
+  VIEW_FREEZE_DEADLINE: 3,
 
   // Validator cycle
   // ---------------------------------------------------------------

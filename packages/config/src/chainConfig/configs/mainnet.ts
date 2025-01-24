@@ -70,6 +70,7 @@ export const chainConfig: ChainConfig = {
   ETH1_FOLLOW_DISTANCE: 2048,
   ATTESTATION_DEADLINE: 4,
   PROPOSER_INCLUSION_LIST_CUT_OFF: 11,
+  VIEW_FREEZE_DEADLINE: 9,
 
   // Validator cycle
   // ---------------------------------------------------------------

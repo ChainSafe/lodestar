@@ -53,6 +53,7 @@ export type ChainConfig = {
   ETH1_FOLLOW_DISTANCE: number;
   ATTESTATION_DEADLINE: number;
   PROPOSER_INCLUSION_LIST_CUT_OFF: number;
+  VIEW_FREEZE_DEADLINE: number;
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
@@ -132,6 +133,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   ETH1_FOLLOW_DISTANCE: "number",
   ATTESTATION_DEADLINE: "number",
   PROPOSER_INCLUSION_LIST_CUT_OFF: "number",
+  VIEW_FREEZE_DEADLINE: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",
