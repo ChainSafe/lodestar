@@ -437,7 +437,7 @@ export type Endpoints = {
     },
     {query: {slot: number}},
     focil.InclusionList,
-    EmptyMeta
+    VersionMeta
   >;
 
   /**
@@ -514,7 +514,7 @@ export type Endpoints = {
   publishInclusionList: Endpoint<
     "POST",
     {signedInclusionList: focil.SignedInclusionList},
-    {body: unknown},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -915,7 +915,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: ssz.focil.InclusionList,
-        meta: EmptyMetaCodec,
+        meta: VersionCodec,
       },
     },
     getAggregatedAttestation: {
@@ -1063,16 +1063,29 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/validator/inclusion_list",
       method: "POST",
       req: {
-        writeReqJson: ({signedInclusionList}) => ({
-          body: ssz.focil.SignedInclusionList.toJson(signedInclusionList),
-        }),
+        writeReqJson: ({signedInclusionList}) => {
+          const fork = config.getForkName(signedInclusionList.message.slot);
+          return {
+            body: ssz.focil.SignedInclusionList.toJson(signedInclusionList),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
         parseReqJson: ({body}) => ({signedInclusionList: ssz.focil.SignedInclusionList.fromJson(body)}),
-        writeReqSsz: ({signedInclusionList}) => ({
-          body: ssz.focil.SignedInclusionList.serialize(signedInclusionList),
-        }),
+        writeReqSsz: ({signedInclusionList}) => {
+          const fork = config.getForkName(signedInclusionList.message.slot);
+          return {
+            body: ssz.focil.SignedInclusionList.serialize(signedInclusionList),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
         parseReqSsz: ({body}) => ({signedInclusionList: ssz.focil.SignedInclusionList.deserialize(body)}),
         schema: {
           body: Schema.Object,
+          headers: {[MetaHeader.Version]: Schema.String},
         },
       },
       resp: EmptyResponseCodec,

@@ -113,7 +113,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   produceInclusionList: {
     args: {slot: 32000},
-    res: {data: ssz.focil.InclusionList.defaultValue()},
+    res: {data: ssz.focil.InclusionList.defaultValue(), meta: {version: ForkName.focil}},
   },
   getAggregatedAttestation: {
     args: {attestationDataRoot: ZERO_HASH, slot: 32000},
