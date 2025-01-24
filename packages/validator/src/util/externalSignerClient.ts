@@ -13,6 +13,7 @@ import {
   Slot,
   altair,
   capella,
+  focil,
   phase0,
   ssz,
   sszTypesFor,
@@ -35,6 +36,7 @@ export enum SignableMessageType {
   SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
   VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
   BLS_TO_EXECUTION_CHANGE = "BLS_TO_EXECUTION_CHANGE",
+  INCLUSION_LIST = "INCLUSION_LIST",
 }
 
 const AggregationSlotType = new ContainerType({
@@ -84,7 +86,8 @@ export type SignableMessage =
   | {type: SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF; data: ValueOf<typeof SyncAggregatorSelectionDataType>}
   | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
   | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
-  | {type: SignableMessageType.BLS_TO_EXECUTION_CHANGE; data: capella.BLSToExecutionChange};
+  | {type: SignableMessageType.BLS_TO_EXECUTION_CHANGE; data: capella.BLSToExecutionChange}
+  | {type: SignableMessageType.INCLUSION_LIST; data: focil.InclusionList};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
@@ -100,6 +103,7 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF]: true,
   [SignableMessageType.VALIDATOR_REGISTRATION]: false,
   [SignableMessageType.BLS_TO_EXECUTION_CHANGE]: true,
+  [SignableMessageType.INCLUSION_LIST]: false,
 };
 
 type Web3SignerSerializedRequest = {
@@ -274,5 +278,8 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.BLS_TO_EXECUTION_CHANGE:
       return {BLS_TO_EXECUTION_CHANGE: ssz.capella.BLSToExecutionChange.toJson(payload.data)};
+
+    case SignableMessageType.INCLUSION_LIST:
+      return {inclusion_list: ssz.focil.InclusionList.toJson(payload.data)};
   }
 }

@@ -8,6 +8,7 @@ import {
   DOMAIN_BEACON_ATTESTER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_INCLUSION_LIST_COMMITTEE,
   DOMAIN_RANDAO,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
@@ -39,6 +40,7 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
+  focil,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -689,6 +691,35 @@ export class ValidatorStore {
     };
   }
 
+  async signInclusionList(
+    duty: routes.validator.InclusionListDuty,
+    inclusionListNoValidatorIndex: focil.InclusionList
+  ): Promise<focil.SignedInclusionList> {
+    const {slot: signingSlot, inclusionListCommitteeRoot, transactions} = inclusionListNoValidatorIndex;
+
+    this.validateInclusionListDuty(duty, inclusionListNoValidatorIndex);
+
+    const inclusionList: focil.InclusionList = {
+      slot: duty.slot,
+      validatorIndex: duty.validatorIndex,
+      inclusionListCommitteeRoot,
+      transactions,
+    }
+
+    const domain = this.config.getDomain(signingSlot, DOMAIN_INCLUSION_LIST_COMMITTEE);
+    const signingRoot = computeSigningRoot(ssz.focil.InclusionList, inclusionList, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.INCLUSION_LIST,
+      data: inclusionList,
+    }
+
+    return {
+      message: inclusionList,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
   isDoppelgangerSafe(pubkeyHex: PubkeyHex): boolean {
     // If doppelganger is not enabled we assumed all keys to be safe for use
     return !this.doppelgangerService || this.doppelgangerService.isDoppelgangerSafe(pubkeyHex);
@@ -816,6 +847,16 @@ export class ValidatorStore {
     if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
     }
+  }
+
+  /** Prevent signing bad data sent by the Beacon node */
+  private validateInclusionListDuty(duty: routes.validator.InclusionListDuty, inclusionList: focil.InclusionList): void {
+    if (duty.slot !== inclusionList.slot) {
+      throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != il.slot ${inclusionList.slot}`);
+    }
+
+    // TODO FOCIL: Maybe check if validator index in inclusionListCommitteeRoot?
+
   }
 
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
