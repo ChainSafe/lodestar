@@ -27,6 +27,7 @@ import {
   altair,
   capella,
   deneb,
+  focil,
   phase0,
 } from "@lodestar/types";
 import type {Datastore} from "interface-datastore";
@@ -84,6 +85,7 @@ export interface INetwork extends INetworkCorePublic {
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
+  publishInclusionList(inclusionList: focil.SignedInclusionList): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;

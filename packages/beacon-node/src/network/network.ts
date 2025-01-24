@@ -414,6 +414,15 @@ export class Network implements INetwork {
     );
   }
 
+  async publishInclusionList(inclusionList: focil.SignedInclusionList): Promise<number> {
+    const fork = this.config.getForkName(inclusionList.message.slot);
+    return this.publishGossip<GossipType.inclusion_list>(
+      {type: GossipType.inclusion_list, fork},
+      inclusionList,
+      {ignoreDuplicatePublishError: true} // TODO FOCIL: Double check if we want to ignore duplicate error
+    )
+  }
+
   private async publishGossip<K extends GossipType>(
     topic: GossipTopicMap[K],
     object: GossipTypeMap[K],

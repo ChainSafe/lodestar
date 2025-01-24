@@ -67,7 +67,7 @@ import {
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateApiAggregateAndProof, validateApiInclusionList} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {NoBidReceived} from "../../../execution/builder/http.js";
@@ -1467,9 +1467,14 @@ export function getValidatorApi(
       }
     },
 
-    async publishInclusionList() {
-      // TODO FOCIL: implement
-      throw Error("publishInclusionList is not implemented");
+    async publishInclusionList({signedInclusionList}) {
+      notWhileSyncing();
+
+      // TODO FOCIL: Add error handling
+
+      await validateApiInclusionList(chain, signedInclusionList);
+
+      await network.publishInclusionList(signedInclusionList);
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
