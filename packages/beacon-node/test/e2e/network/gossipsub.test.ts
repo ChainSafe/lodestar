@@ -285,7 +285,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Publish and receive a inclusion list", async () => {
+  it("Publish and receive an inclusion list", async () => {
     let onInclusionList: (fu: Uint8Array) => void;
     const onInclusionListPromise = new Promise<Uint8Array>((resolve) => {
       onInclusionList = resolve;

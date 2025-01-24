@@ -296,6 +296,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.lightClientFinalityUpdate]: WithVersion(
       (fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate
     ),
+
     [EventType.inclusionList]: WithVersion(() => ssz.focil.SignedInclusionList),
   };
 }

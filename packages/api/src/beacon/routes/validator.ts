@@ -436,6 +436,7 @@ export type Endpoints = {
       slot: Slot;
     },
     {query: {slot: number}},
+    // TODO FOCIL: the api should probably return only the relevant data
     focil.InclusionList,
     VersionMeta
   >;
