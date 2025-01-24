@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {Slot, ValidatorIndex, focil} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+import {byteArrayEquals} from "../../util/bytes.js";
 import {IClock} from "../../util/clock.js";
 import {OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot} from "./utils.js";
@@ -9,7 +10,7 @@ import {pruneBySlot} from "./utils.js";
 /**
  *
  */
-const SLOTS_RETAINED = 2; // TODO FOCIL: do we even need to retain previous slots?
+const SLOTS_RETAINED = 2; // TODO FOCIL: do we even need to retain previous slot?
 
 /**
  * The maximum number of distinct `SignedInclusionList` that will be stored in each slot.
@@ -19,8 +20,7 @@ const SLOTS_RETAINED = 2; // TODO FOCIL: do we even need to retain previous slot
 const MAX_INCLUSION_LISTS_PER_SLOT = INCLUSION_LIST_COMMITTEE_SIZE * 2;
 
 type CachedInclusionList = {
-  // TODO FOCIL: we might cache transactions here
-  inclusionList: focil.SignedInclusionList;
+  transactions: focil.InclusionListTransactions;
   seenTwice: boolean;
 };
 
@@ -61,7 +61,7 @@ export class InclusionListPool {
   }
 
   add(inclusionList: focil.SignedInclusionList): InclusionListInsertOutcome {
-    const {slot, validatorIndex} = inclusionList.message;
+    const {slot, validatorIndex, transactions} = inclusionList.message;
 
     // Reject any inclusion lists that are too old.
     if (slot < this.lowestPermissibleSlot) {
@@ -81,34 +81,43 @@ export class InclusionListPool {
     }
 
     // Track equivocations
-    const inclusionListByValidator = inclusionListsByValidator.get(inclusionList.message.validatorIndex);
+    const inclusionListByValidator = inclusionListsByValidator.get(validatorIndex);
     if (inclusionListByValidator) {
       inclusionListByValidator.seenTwice = true;
       return InclusionListInsertOutcome.SeenTwice;
     }
 
     // Create new inclusion list
-    inclusionListsByValidator.set(validatorIndex, {inclusionList, seenTwice: false});
+    inclusionListsByValidator.set(validatorIndex, {transactions, seenTwice: false});
     return InclusionListInsertOutcome.New;
   }
 
   /**
-   *
+   * Return a list of unique inclusion list transactions for the given slot
    */
-  get(slot: Slot): focil.SignedInclusionList[] {
-    const inclusionLists: focil.SignedInclusionList[] = [];
+  getTransactions(slot: Slot): focil.InclusionListTransactions {
+    const uniqueTransactions: focil.InclusionListTransactions = [];
 
-    for (const inclusionListByValidator of [this.inclusionListByValidatorBySlot.get(slot)]) {
-      if (inclusionListByValidator) {
-        for (const {inclusionList, seenTwice} of inclusionListByValidator.values()) {
-          if (!seenTwice) {
-            inclusionLists.push(inclusionList);
-          }
+    const inclusionListsByValidator = this.inclusionListByValidatorBySlot.get(slot);
+    if (!inclusionListsByValidator) {
+      return uniqueTransactions;
+    }
+
+    for (const {transactions, seenTwice} of inclusionListsByValidator.values()) {
+      if (seenTwice) {
+        continue;
+      }
+
+      for (const transaction of transactions) {
+        const duplicate = uniqueTransactions.some((existing) => byteArrayEquals(transaction, existing));
+
+        if (!duplicate) {
+          uniqueTransactions.push(transaction);
         }
       }
     }
 
-    return inclusionLists;
+    return uniqueTransactions;
   }
 
   seenTwice(slot: Slot, validatorIndex: ValidatorIndex): boolean {

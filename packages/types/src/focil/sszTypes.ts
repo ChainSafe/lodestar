@@ -6,12 +6,17 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
 
+export const InclusionListTransactions = new ListCompositeType(
+  bellatrixSsz.Transaction,
+  MAX_TRANSACTIONS_PER_INCLUSION_LIST
+);
+
 export const InclusionList = new ContainerType(
   {
     slot: Slot,
     validatorIndex: ValidatorIndex,
     inclusionListCommitteeRoot: Root,
-    transactions: new ListCompositeType(bellatrixSsz.Transaction, MAX_TRANSACTIONS_PER_INCLUSION_LIST),
+    transactions: InclusionListTransactions,
   },
   {typeName: "InclusionList", jsonCase: "eth2"}
 );

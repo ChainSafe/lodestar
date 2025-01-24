@@ -613,7 +613,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.inclusion_list]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
-      // TODO FOCIL: should we persist invalid ssz value>
+      // TODO FOCIL: should we persist invalid ssz value?
       await validateGossipInclusionList(chain, inclusionList);
 
       try {

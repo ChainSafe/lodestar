@@ -510,13 +510,7 @@ export async function prepareExecutionPayloadInclusionList(
   payloadId: PayloadId,
   slot: Slot
 ): Promise<void> {
-  const inclusionsLists = chain.inclusionListPool.get(slot);
-
-  const transactions: Uint8Array[] = [];
-  for (const inclusionList of inclusionsLists) {
-    // TODO FOCIL: filter out duplicates? how do we identify unique transactions?
-    transactions.concat(inclusionList.message.transactions);
-  }
+  const transactions = chain.inclusionListPool.getTransactions(slot);
 
   await chain.executionEngine.updatePayloadWithInclusionList(payloadId, {transactions});
 
