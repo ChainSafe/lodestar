@@ -1,8 +1,10 @@
-import {getInclusionListSignatureSet} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getInclusionListSignatureSet} from "@lodestar/state-transition";
 import {focil} from "@lodestar/types";
 import {InclusionListError, InclusionListErrorCode} from "../errors/inclusionList.js";
 import {GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import { getShufflingDependentRoot } from "../../util/dependentRoot.js";
+import { SLOTS_PER_EPOCH } from "@lodestar/params";
 
 export async function validateApiInclusionList(
   chain: IBeaconChain,
@@ -19,7 +21,7 @@ export async function validateGossipInclusionList(
 }
 
 async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.SignedInclusionList): Promise<void> {
-  const {slot, validatorIndex, transactions} = inclusionList.message;
+  const {slot, validatorIndex, transactions, inclusionListCommitteeRoot} = inclusionList.message;
 
   // [REJECT] The size of message is within upperbound MAX_BYTES_PER_INCLUSION_LIST
   // TODO FOCIL: spec is outdated, we need to check total size of all transactions
@@ -43,9 +45,37 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
 
   // [IGNORE] The slot message.slot is equal to the current slot, or it is equal to the previous slot and the current time is less than attestation_deadline seconds into the slot.
 
+
+  const headBlock = chain.forkChoice.getHead(); // Head block in current branch
+  const headBlockEpoch = computeEpochAtSlot(headBlock.slot);
+  const ilEpoch = computeEpochAtSlot(slot);
+  const shufflingDependentRoot = getShufflingDependentRoot(chain.forkChoice, ilEpoch, headBlockEpoch, headBlock);
+  const shuffling = await chain.shufflingCache.get(ilEpoch, shufflingDependentRoot);
+
+  if (shuffling === null) {
+    throw new Error("Shuffling not available"); // TODO FOCIL: Handle shuffling cache miss
+  }
+
   // [IGNORE] The inclusion_list_committee for slot message.slot on the current branch corresponds to message.inclusion_list_committee_root, as determined by hash_tree_root(inclusion_list_committee) == message.inclusion_list_committee_root.
+  const inclusionListCommitteeRootFromShuffling = shuffling.inclusionListCommitteeRoots[slot % SLOTS_PER_EPOCH];
+  if (inclusionListCommitteeRoot !== inclusionListCommitteeRootFromShuffling){
+    throw new InclusionListError(GossipAction.IGNORE, {
+      code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT,
+      received: inclusionListCommitteeRoot,
+      expected: inclusionListCommitteeRootFromShuffling 
+    });
+  }
+
 
   // [REJECT] The validator index message.validator_index is within the inclusion_list_committee corresponding to message.inclusion_list_committee_root.
+  const inclusionListCommitteeFromShuffling = shuffling.inclusionListCommittees[slot % SLOTS_PER_EPOCH];
+  if (!inclusionListCommitteeFromShuffling.includes(validatorIndex)) {
+    throw new InclusionListError(GossipAction.REJECT, {
+      code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE,
+      validatorIndex,
+      committee: inclusionListCommitteeFromShuffling,
+    });
+  }
 
   // TODO FOCIL: use a different cache similar to `seenAttesters` here?
   // [IGNORE] The message is either the first or second valid message received from the validator with index message.validator_index.

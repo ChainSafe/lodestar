@@ -1,4 +1,4 @@
-import {Slot, ValidatorIndex} from "@lodestar/types";
+import {Root, Slot, ValidatorIndex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum InclusionListErrorCode {
@@ -15,8 +15,8 @@ export type InclusionListErrorType =
   | {code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED; inclusionListSize: number; sizeLimit: number}
   | {code: InclusionListErrorCode.INVALID_SLOT; inclusionListSlot: Slot; currentSlot: Slot}
   | {code: InclusionListErrorCode.NOT_TIMELY}
-  | {code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT}
-  | {code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE}
+  | {code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT; received: Root; expected: Root}
+  | {code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE; validatorIndex: number; committee: Uint32Array}
   | {code: InclusionListErrorCode.SPAM}
   | {code: InclusionListErrorCode.INVALID_SIGNATURE}
   | {code: InclusionListErrorCode.MORE_THAN_TWO; validatorIndex: ValidatorIndex};
