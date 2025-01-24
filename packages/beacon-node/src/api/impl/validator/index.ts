@@ -1471,9 +1471,10 @@ export function getValidatorApi(
       notWhileSyncing();
 
       // TODO FOCIL: Add error handling
-      // TODO FOCIL: Figure out if we need to add IL to opPool here
 
       await validateApiInclusionList(chain, signedInclusionList);
+
+      chain.inclusionListPool.add(signedInclusionList);
 
       await network.publishInclusionList(signedInclusionList);
     },
