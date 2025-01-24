@@ -40,6 +40,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     ALTAIR_FORK_EPOCH: 1,
     BELLATRIX_FORK_EPOCH: 1,
     CAPELLA_FORK_EPOCH: 1,
+    DENEB_FORK_EPOCH: 1,
+    ELECTRA_FORK_EPOCH: 1,
+    FOCIL_FORK_EPOCH: 1,
   });
   const START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
@@ -233,13 +236,13 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       }
     }
 
-    const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
+    const lightClientOptimisticUpdate = ssz.electra.LightClientOptimisticUpdate.defaultValue();
     lightClientOptimisticUpdate.signatureSlot = START_SLOT;
     await netA.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
     const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
     expect(Buffer.from(optimisticUpdate)).toEqual(
-      Buffer.from(ssz.capella.LightClientOptimisticUpdate.serialize(lightClientOptimisticUpdate))
+      Buffer.from(ssz.electra.LightClientOptimisticUpdate.serialize(lightClientOptimisticUpdate))
     );
   });
 
@@ -272,14 +275,49 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       }
     }
 
-    const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
+    const lightClientFinalityUpdate = ssz.electra.LightClientFinalityUpdate.defaultValue();
     lightClientFinalityUpdate.signatureSlot = START_SLOT;
     await netA.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 
     const optimisticUpdate = await onLightClientFinalityUpdatePromise;
     expect(Buffer.from(optimisticUpdate)).toEqual(
-      Buffer.from(ssz.capella.LightClientFinalityUpdate.serialize(lightClientFinalityUpdate))
+      Buffer.from(ssz.electra.LightClientFinalityUpdate.serialize(lightClientFinalityUpdate))
     );
+  });
+
+  it("Publish and receive a inclusion list", async () => {
+    let onInclusionList: (fu: Uint8Array) => void;
+    const onInclusionListPromise = new Promise<Uint8Array>((resolve) => {
+      onInclusionList = resolve;
+    });
+
+    const {netA, netB} = await mockModules({
+      [GossipType.inclusion_list]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
+        onInclusionList(gossipData.serializedData);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
+
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!netA.closed) {
+      await sleep(500);
+      if (await hasSomeMeshPeer(netA)) {
+        break;
+      }
+    }
+
+    const inclusionList = ssz.focil.SignedInclusionList.defaultValue();
+    inclusionList.message.slot = START_SLOT;
+    await netA.publishInclusionList(inclusionList);
+
+    const received = await onInclusionListPromise;
+    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.focil.SignedInclusionList.serialize(inclusionList)));
   });
 }
 
