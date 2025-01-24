@@ -188,6 +188,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.light_client_finality_update:
       case GossipType.light_client_optimistic_update:
       case GossipType.bls_to_execution_change:
+      case GossipType.inclusion_list:
         return {type: gossipTypeStr, fork, encoding};
     }
 
