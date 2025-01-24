@@ -517,7 +517,7 @@ export async function prepareExecutionPayloadInclusionList(
   logger.verbose("Updated payload with inclusion list", {
     slot,
     payloadId,
-    transactions: transactions.length,
+    numTransactions: transactions.length,
   });
 }
 

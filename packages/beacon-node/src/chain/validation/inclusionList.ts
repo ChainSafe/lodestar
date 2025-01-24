@@ -20,8 +20,18 @@ export async function validateGossipInclusionList(
 }
 
 async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.SignedInclusionList): Promise<void> {
-  const {slot, validatorIndex} = inclusionList.message;
+  const {slot, validatorIndex, transactions} = inclusionList.message;
+
   // [REJECT] The size of message is within upperbound MAX_BYTES_PER_INCLUSION_LIST
+  // TODO FOCIL: spec is outdated, we need to check total size of all transactions
+  const inclusionListSize = transactions.reduce((total, transaction) => total + transaction.byteLength, 0);
+  if (inclusionListSize > chain.config.MAX_BYTES_PER_INCLUSION_LIST) {
+    throw new InclusionListError(GossipAction.REJECT, {
+      code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED,
+      inclusionListSize,
+      sizeLimit: chain.config.MAX_BYTES_PER_INCLUSION_LIST,
+    });
+  }
 
   // [REJECT] The slot message.slot is equal to the previous or current slot.
   if (slot !== chain.clock.currentSlot && slot !== chain.clock.currentSlot - 1) {
@@ -39,10 +49,10 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
   // [REJECT] The validator index message.validator_index is within the inclusion_list_committee corresponding to message.inclusion_list_committee_root.
 
   // [REJECT] The transactions message.transactions length is within upperbound MAX_TRANSACTIONS_PER_INCLUSION_LIST
-  if (inclusionList.message.transactions.length > MAX_TRANSACTIONS_PER_INCLUSION_LIST) {
+  if (transactions.length > MAX_TRANSACTIONS_PER_INCLUSION_LIST) {
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.TOO_MANY_TRANSACTIONS,
-      numTransactions: inclusionList.message.transactions.length,
+      numTransactions: transactions.length,
       transactionLimit: MAX_TRANSACTIONS_PER_INCLUSION_LIST,
     });
   }

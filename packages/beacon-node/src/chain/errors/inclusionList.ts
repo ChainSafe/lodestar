@@ -2,7 +2,7 @@ import {Slot, ValidatorIndex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum InclusionListErrorCode {
-  MESSAGE_TOO_LARGE = "INCLUSION_LIST_ERROR_MESSAGE_TOO_LARGE",
+  MAXIMUM_SIZE_EXCEEDED = "INCLUSION_LIST_ERROR_MAXIMUM_SIZE_EXCEEDED",
   INVALID_SLOT = "INCLUSION_LIST_ERROR_INVALID_SLOT",
   NOT_TIMELY = "INCLUSION_LIST_ERROR_NOT_TIMELY",
   INVALID_COMMITTEE_ROOT = "INCLUSION_LIST_ERROR_INVALID_COMMITTEE_ROOT",
@@ -13,7 +13,7 @@ export enum InclusionListErrorCode {
   MORE_THAN_TWO = "INCLUSION_LIST_ERROR_MORE_THAN_TWO",
 }
 export type InclusionListErrorType =
-  | {code: InclusionListErrorCode.MESSAGE_TOO_LARGE}
+  | {code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED; inclusionListSize: number; sizeLimit: number}
   | {code: InclusionListErrorCode.INVALID_SLOT; inclusionListSlot: Slot; currentSlot: Slot}
   | {code: InclusionListErrorCode.NOT_TIMELY}
   | {code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT}
