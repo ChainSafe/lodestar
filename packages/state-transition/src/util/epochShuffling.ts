@@ -10,7 +10,7 @@ import {
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {Epoch, RootHex, ValidatorIndex, ssz} from "@lodestar/types";
+import {Epoch, Root, RootHex, ValidatorIndex, ssz} from "@lodestar/types";
 import {GaugeExtra, Logger, NoLabels, intDiv, toRootHex} from "@lodestar/utils";
 import {BeaconStateAllForks} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
@@ -99,9 +99,14 @@ export type EpochShuffling = {
   beaconCommitteesPerSlot: number;
 
   /**
-   * Inclusion list committees by index
+   * Inclusion list committees by slot for a epoch
    */
   inclusionListCommittees: Uint32Array[];
+
+  /**
+   * Inclusion list committee roots by slot for a epoch
+   */
+  inclusionListCommitteeRoots: Root[];
 };
 
 export function computeBeaconCommitteeCount(activeValidatorCount: number): number {
@@ -135,18 +140,21 @@ function buildBeaconCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array
   return committees;
 }
 
-function buildInclusionListCommitteeFromShuffling(shuffling: Uint32Array): Uint32Array[] {
+function buildInclusionListCommitteeFromShuffling(shuffling: Uint32Array): {committees: Uint32Array[], committeeRoots: Root[]} {
   const committees: Uint32Array[] = [];
+  const committeeRoots: Root[] = [];
 
   for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
     const startOffSet = slot * INCLUSION_LIST_COMMITTEE_SIZE;
     const endOffset = startOffSet + INCLUSION_LIST_COMMITTEE_SIZE;
 
     const slotCommittee = shuffling.subarray(startOffSet, endOffset);
+    const committeeRoot = ssz.focil.InclusionListCommittee.hashTreeRoot([...slotCommittee]);
     committees.push(slotCommittee);
+    committeeRoots.push(committeeRoot);
   }
 
-  return committees;
+  return {committees, committeeRoots};
 }
 
 export function computeEpochShuffling(
@@ -163,7 +171,7 @@ export function computeEpochShuffling(
   // Inclusion List Committee
   const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
   const ilShuffling = unshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
-  const ilCommittees = buildInclusionListCommitteeFromShuffling(ilShuffling);
+  const {committees: ilCommittees, committeeRoots: ilCommitteeRoots} = buildInclusionListCommitteeFromShuffling(ilShuffling);
 
   return {
     epoch,
@@ -172,6 +180,7 @@ export function computeEpochShuffling(
     beaconCommittees: committees,
     beaconCommitteesPerSlot: committees[0].length,
     inclusionListCommittees: ilCommittees,
+    inclusionListCommitteeRoots: ilCommitteeRoots,
   };
 }
 
@@ -189,7 +198,7 @@ export async function computeEpochShufflingAsync(
   // Inclusion List Committee
   const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
   const ilShuffling = await asyncUnshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
-  const ilCommittees = buildInclusionListCommitteeFromShuffling(ilShuffling);
+  const {committees: ilCommittees, committeeRoots: ilCommitteeRoots} = buildInclusionListCommitteeFromShuffling(ilShuffling);
 
   return {
     epoch,
@@ -198,6 +207,7 @@ export async function computeEpochShufflingAsync(
     beaconCommittees: committees,
     beaconCommitteesPerSlot: committees[0].length,
     inclusionListCommittees: ilCommittees,
+    inclusionListCommitteeRoots: ilCommitteeRoots,
   };
 }
 
