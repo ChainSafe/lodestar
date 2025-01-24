@@ -1476,6 +1476,11 @@ export function getValidatorApi(
 
       chain.inclusionListPool.add(signedInclusionList);
 
+      chain.emitter.emit(routes.events.EventType.inclusionList, {
+        version: config.getForkName(signedInclusionList.message.slot),
+        data: signedInclusionList,
+      });
+
       await network.publishInclusionList(signedInclusionList);
     },
 

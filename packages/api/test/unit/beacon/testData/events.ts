@@ -254,4 +254,18 @@ export const eventTestData: EventData = {
     slot: "1",
     versioned_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
   }),
+  // TODO FOCIL: update example value
+  [EventType.inclusionList]: {
+    version: ForkName.focil,
+    data: ssz.focil.SignedInclusionList.fromJson({
+      message: {
+        slot: "0",
+        validator_index: "0",
+        inclusion_list_committee_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        transactions: ["0x0000000000000000000000000000000000000000000000000000000000000000"],
+      },
+      signature:
+        "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    }),
+  },
 };

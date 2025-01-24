@@ -622,6 +622,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       } catch (e) {
         logger.error("Error adding inclusionList to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.inclusionList, {
+        version: config.getForkName(inclusionList.message.slot),
+        data: inclusionList,
+      });
     },
   };
 }

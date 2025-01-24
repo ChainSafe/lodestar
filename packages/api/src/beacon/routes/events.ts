@@ -15,6 +15,7 @@ import {
   altair,
   capella,
   electra,
+  focil,
   phase0,
   ssz,
   sszTypesFor,
@@ -76,6 +77,8 @@ export enum EventType {
   payloadAttributes = "payload_attributes",
   /** The node has received a valid blobSidecar (from P2P or API) */
   blobSidecar = "blob_sidecar",
+  /** The node has received a valid inclusion list (from P2P or API) */
+  inclusionList = "inclusion_list",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
@@ -94,6 +97,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
   [EventType.payloadAttributes]: EventType.payloadAttributes,
   [EventType.blobSidecar]: EventType.blobSidecar,
+  [EventType.inclusionList]: EventType.inclusionList,
 };
 
 export type EventData = {
@@ -138,6 +142,7 @@ export type EventData = {
   [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
   [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
+  [EventType.inclusionList]: {version: ForkName; data: focil.SignedInclusionList};
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -291,6 +296,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.lightClientFinalityUpdate]: WithVersion(
       (fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate
     ),
+    [EventType.inclusionList]: WithVersion(() => ssz.focil.SignedInclusionList),
   };
 }
 
