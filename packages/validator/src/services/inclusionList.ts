@@ -1,15 +1,15 @@
 import {ApiClient} from "@lodestar/api";
+import {InclusionListDutyList} from "@lodestar/api/lib/beacon/routes/validator.js";
 import {ChainForkConfig} from "@lodestar/config";
-import {Slot, focil } from "@lodestar/types";
+import {Slot, focil} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
+import {InclusionListDutiesService} from "./inclusionListDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
-import { InclusionListDutiesService } from "./inclusionListDuties.js";
-import { InclusionListDutyList } from "@lodestar/api/lib/beacon/routes/validator.js";
 
 /**
  * Service that sets up and handles validator inclusion list duties.
@@ -24,7 +24,7 @@ export class InclusionListService {
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     chainHeadTracker: ChainHeaderTracker,
-    syncingStatusTracker: SyncingStatusTracker,
+    syncingStatusTracker: SyncingStatusTracker
   ) {
     this.dutiesService = new InclusionListDutiesService(
       logger,
@@ -32,7 +32,7 @@ export class InclusionListService {
       clock,
       validatorStore,
       chainHeadTracker,
-      syncingStatusTracker,
+      syncingStatusTracker
     );
 
     // At most every slot, check existing duties from InclusionListDutiesService and run tasks
@@ -56,11 +56,10 @@ export class InclusionListService {
     const inclusionListNoValidatorIndex = await this.produceInclusionList(slot);
 
     await this.signAndPublishInclusionList(inclusionListNoValidatorIndex, duties);
-
   };
 
   // Note: The inclusion list returned here is a "blueprint" ie. every field
-  // is filled except validator index = 0. Need to replace validator index to 
+  // is filled except validator index = 0. Need to replace validator index to
   // form a valid InclusionList
   private async produceInclusionList(slot: Slot): Promise<focil.InclusionList> {
     // Produce one IL per slot
@@ -74,7 +73,7 @@ export class InclusionListService {
 
   private async signAndPublishInclusionList(
     inclusionListNoValidatorIndex: focil.InclusionList,
-    duties: InclusionListDutyList,
+    duties: InclusionListDutyList
   ) {
     const signedInclusionLists: focil.SignedInclusionList[] = [];
 
@@ -87,7 +86,7 @@ export class InclusionListService {
           this.logger.error("Error signing inclusiont list");
         }
       })
-    )
+    );
 
     // Publish ILs right away
     for (const signedInclusionList of signedInclusionLists) {

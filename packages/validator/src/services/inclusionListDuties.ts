@@ -9,6 +9,7 @@ import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
+// TODO FOCIL: Do we need 2 epochs like attestations?
 const HISTORICAL_DUTIES_EPOCHS = 2;
 
 type InclusionListDuty = routes.validator.InclusionListDuty;
@@ -35,7 +36,7 @@ export class InclusionListDutiesService {
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     chainHeadTracker: ChainHeaderTracker,
-    syncingStatusTracker: SyncingStatusTracker,
+    syncingStatusTracker: SyncingStatusTracker
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
@@ -270,7 +271,12 @@ export class InclusionListDutiesService {
         priorDependentRoot: currentEpochDependentRoot,
         newDependentRoot: previousDutyDependentRoot,
       });
-      await this.handleInclusionListDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, previousDutyDependentRoot);
+      await this.handleInclusionListDutiesReorg(
+        currentEpoch,
+        slot,
+        currentEpochDependentRoot,
+        previousDutyDependentRoot
+      );
     }
   };
 

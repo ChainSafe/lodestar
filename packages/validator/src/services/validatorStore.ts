@@ -704,7 +704,7 @@ export class ValidatorStore {
       validatorIndex: duty.validatorIndex,
       inclusionListCommitteeRoot,
       transactions,
-    }
+    };
 
     const domain = this.config.getDomain(signingSlot, DOMAIN_INCLUSION_LIST_COMMITTEE);
     const signingRoot = computeSigningRoot(ssz.focil.InclusionList, inclusionList, domain);
@@ -712,7 +712,7 @@ export class ValidatorStore {
     const signableMessage: SignableMessage = {
       type: SignableMessageType.INCLUSION_LIST,
       data: inclusionList,
-    }
+    };
 
     return {
       message: inclusionList,
@@ -850,13 +850,15 @@ export class ValidatorStore {
   }
 
   /** Prevent signing bad data sent by the Beacon node */
-  private validateInclusionListDuty(duty: routes.validator.InclusionListDuty, inclusionList: focil.InclusionList): void {
+  private validateInclusionListDuty(
+    duty: routes.validator.InclusionListDuty,
+    inclusionList: focil.InclusionList
+  ): void {
     if (duty.slot !== inclusionList.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != il.slot ${inclusionList.slot}`);
     }
 
     // TODO FOCIL: Maybe check if validator index in inclusionListCommitteeRoot?
-
   }
 
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {

@@ -420,7 +420,7 @@ export class Network implements INetwork {
       {type: GossipType.inclusion_list, fork},
       inclusionList,
       {ignoreDuplicatePublishError: true} // TODO FOCIL: Double check if we want to ignore duplicate error
-    )
+    );
   }
 
   private async publishGossip<K extends GossipType>(
