@@ -68,6 +68,15 @@ export function getBeaconPoolApi({
     },
 
     async getPoolAttesterSlashings() {
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getPoolAttesterSlashingsV2 to retrieve pool attester slashings for post-electra fork=${fork}`
+        );
+      }
+
       return {data: chain.opPool.getAllAttesterSlashings()};
     },
 
