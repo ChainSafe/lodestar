@@ -470,13 +470,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       topic,
     }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
       const {serializedData} = gossipData;
+      const {fork} = topic;
       const attesterSlashing = sszDeserialize(topic, serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler
 
       try {
-        chain.opPool.insertAttesterSlashing(attesterSlashing);
+        chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
         chain.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);

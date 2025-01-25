@@ -26,7 +26,7 @@ export enum Bucket {
   phase0_depositData = 12, // [DEPRECATED] index -> DepositData
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
-  phase0_attesterSlashing = 15, // Root -> AttesterSlashing
+  allForks_attesterSlashing = 15, // Root -> AttesterSlashing
   capella_blsToExecutionChange = 16, // ValidatorIndex -> SignedBLSToExecutionChange
   // checkpoint states
   allForks_checkpointState = 17, // Root -> BeaconState

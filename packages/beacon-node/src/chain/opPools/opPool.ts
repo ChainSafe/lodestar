@@ -1,12 +1,14 @@
 import {Id, Repository} from "@lodestar/db";
 import {
   BLS_WITHDRAWAL_PREFIX,
+  ForkName,
   ForkSeq,
   MAX_ATTESTER_SLASHINGS,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -26,7 +28,7 @@ import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
-  attesterSlashing: phase0.AttesterSlashing;
+  attesterSlashing: AttesterSlashing;
   intersectingIndices: number[];
 };
 
@@ -132,8 +134,12 @@ export class OpPool {
   }
 
   /** Must be validated beforehand */
-  insertAttesterSlashing(attesterSlashing: phase0.AttesterSlashing, rootHash?: Uint8Array): void {
-    if (!rootHash) rootHash = ssz.phase0.AttesterSlashing.hashTreeRoot(attesterSlashing);
+  insertAttesterSlashing(fork: ForkName, attesterSlashing: AttesterSlashing, rootHash?: Uint8Array): void {
+    if (!rootHash) {
+      const type = isForkPostElectra(fork) ? ssz.electra.AttesterSlashing : ssz.phase0.AttesterSlashing;
+      rootHash = type.hashTreeRoot(attesterSlashing);
+    }
+
     // TODO: Do once and cache attached to the AttesterSlashing object
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     this.attesterSlashings.set(toRootHex(rootHash), {
@@ -284,8 +290,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
-  // TODO Electra: Update to adapt electra.AttesterSlashing
-  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
+  getAllAttesterSlashings(): AttesterSlashing[] {
     return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
   }
 

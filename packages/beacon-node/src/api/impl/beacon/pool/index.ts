@@ -163,13 +163,14 @@ export function getBeaconPoolApi({
 
     async submitPoolAttesterSlashings({attesterSlashing}) {
       await validateApiAttesterSlashing(chain, attesterSlashing);
-      chain.opPool.insertAttesterSlashing(attesterSlashing);
+      chain.opPool.insertAttesterSlashing(ForkName.phase0, attesterSlashing);
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
-      // TODO Electra: Refactor submitPoolAttesterSlashings and submitPoolAttesterSlashingsV2
-      await this.submitPoolAttesterSlashings({attesterSlashing});
+      await validateApiAttesterSlashing(chain, attesterSlashing);
+      chain.opPool.insertAttesterSlashing(ForkName.electra, attesterSlashing);
+      await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
