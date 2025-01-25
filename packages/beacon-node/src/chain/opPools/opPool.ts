@@ -68,7 +68,7 @@ export class OpPool {
     ]);
 
     for (const attesterSlashing of attesterSlashings) {
-      this.insertAttesterSlashing(attesterSlashing.value, attesterSlashing.key);
+      this.insertAttesterSlashing(ForkName.electra, attesterSlashing.value, attesterSlashing.key);
     }
     for (const proposerSlashing of proposerSlashings) {
       this.insertProposerSlashing(proposerSlashing);
