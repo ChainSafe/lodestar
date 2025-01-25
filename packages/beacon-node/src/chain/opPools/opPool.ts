@@ -8,7 +8,6 @@ import {
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
-  isForkPostElectra,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -17,7 +16,15 @@ import {
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
 } from "@lodestar/state-transition";
-import {AttesterSlashing, Epoch, SignedBeaconBlock, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  Epoch,
+  SignedBeaconBlock,
+  ValidatorIndex,
+  capella,
+  phase0,
+  sszTypesFor,
+} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -136,7 +143,7 @@ export class OpPool {
   /** Must be validated beforehand */
   insertAttesterSlashing(fork: ForkName, attesterSlashing: AttesterSlashing, rootHash?: Uint8Array): void {
     if (!rootHash) {
-      const type = isForkPostElectra(fork) ? ssz.electra.AttesterSlashing : ssz.phase0.AttesterSlashing;
+      const type = sszTypesFor(fork).AttesterSlashing;
       rootHash = type.hashTreeRoot(attesterSlashing);
     }
 
