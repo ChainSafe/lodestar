@@ -1,5 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 import {
+  ForkName,
   MAX_ATTESTER_SLASHINGS,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_PROPOSER_SLASHINGS,
@@ -63,7 +64,7 @@ describe("opPool", () => {
 
 function fillAttesterSlashing(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
   for (const attestation of generateIndexedAttestations(state, count)) {
-    pool.insertAttesterSlashing({
+    pool.insertAttesterSlashing(ForkName.phase0, {
       attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
       attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
     });
