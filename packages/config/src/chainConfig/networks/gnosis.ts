@@ -51,4 +51,7 @@ export const gnosisChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x04000064"),
   DENEB_FORK_EPOCH: 889856, // 2024-03-11T18:30:20.000Z
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x05000064"),
+  ELECTRA_FORK_EPOCH: Infinity,
 };
