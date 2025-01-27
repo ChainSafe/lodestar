@@ -1,6 +1,5 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
-import {ForkName} from "@lodestar/params";
 import {Logger, MetricsRegister} from "@lodestar/utils";
 import type {Libp2p} from "libp2p";
 import {Metrics, getMetrics} from "./metrics.js";
