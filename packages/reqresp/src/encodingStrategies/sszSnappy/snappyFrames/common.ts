@@ -20,9 +20,7 @@ export const IDENTIFIER_FRAME = Buffer.from([0xff, 0x06, 0x00, 0x00, 0x73, 0x4e,
 export const UNCOMPRESSED_CHUNK_SIZE = 65536;
 
 export function crc(value: Uint8Array): Buffer {
-  // this function doesn't actually need a buffer
-  // see https://github.com/napi-rs/node-rs/blob/main/packages/crc32/index.d.ts
-  const x = crc32c.calculate(value as Buffer);
+  const x = crc32c.calculate(value);
   const result = Buffer.allocUnsafe?.(4) ?? Buffer.alloc(4);
 
   // As defined in section 3 of https://github.com/google/snappy/blob/master/framing_format.txt
