@@ -91,21 +91,22 @@ export class ReqResp {
    * Throws if the same protocol is registered twice.
    * Can be called at any time, no concept of started / stopped
    */
-  async registerProtocol(fork: ForkName, protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
+  async registerProtocol(protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
+    const {handler: _handler, inboundRateLimits, ...rest} = protocol;
+
+    if (inboundRateLimits) {
+      // Rate limits can change across hard forks and must always be updated
+      this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
+    }
 
     // libp2p will throw if handler for protocol is already registered, allow to overwrite behavior
     if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
       return;
     }
 
-    const {handler: _handler, inboundRateLimits, ...rest} = protocol;
     this.registerDialOnlyProtocol(rest);
     this.dialOnlyProtocols.set(protocolID, false);
-
-    if (inboundRateLimits) {
-      this.rateLimiter.initRateLimits(fork, protocolID, inboundRateLimits);
-    }
 
     return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
   }

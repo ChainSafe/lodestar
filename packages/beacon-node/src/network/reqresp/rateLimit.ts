@@ -1,10 +1,13 @@
 import {BeaconConfig} from "@lodestar/config";
-import {MAX_REQUEST_BLOCKS, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {ForkName, MAX_REQUEST_BLOCKS, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod} from "./types.js";
 import {requestSszTypeByMethod} from "./types.js";
 
-export const rateLimitQuotas: (config: BeaconConfig) => Record<ReqRespMethod, InboundRateLimitQuota> = (config) => ({
+export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<ReqRespMethod, InboundRateLimitQuota> = (
+  fork,
+  config
+) => ({
   [ReqRespMethod.Status]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 5, quotaTimeMs: 15_000},
@@ -34,12 +37,12 @@ export const rateLimitQuotas: (config: BeaconConfig) => Record<ReqRespMethod, In
   },
   [ReqRespMethod.BlobSidecarsByRange]: {
     // Rationale: MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
-    byPeer: (fork) => ({quota: config.getMaxRequestBlobSidecars(fork), quotaTimeMs: 10_000}),
+    byPeer: {quota: config.getMaxRequestBlobSidecars(fork), quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(config, ReqRespMethod.BlobSidecarsByRange, (req) => req.count),
   },
   [ReqRespMethod.BlobSidecarsByRoot]: {
     // Rationale: quota of BeaconBlocksByRoot * MAX_BLOBS_PER_BLOCK
-    byPeer: (fork) => ({quota: config.getMaxRequestBlobSidecars(fork), quotaTimeMs: 10_000}),
+    byPeer: {quota: config.getMaxRequestBlobSidecars(fork), quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(config, ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.LightClientBootstrap]: {

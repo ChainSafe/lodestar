@@ -1,10 +1,11 @@
 import {getEmptyLogger} from "@lodestar/logger/empty";
-import {ForkName} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ReqResp} from "../../src/ReqResp.js";
 import {RespStatus} from "../../src/interface.js";
+import {RateLimiterQuota} from "../../src/rate_limiter/rateLimiterGRCA.js";
+import {Protocol} from "../../src/types.js";
 import {getEmptyHandler, sszSnappyPing} from "../fixtures/messages.js";
 import {numberToStringProtocol, numberToStringProtocolDialOnly, pingProtocol} from "../fixtures/protocols.js";
 import {MockLibP2pStream} from "../utils/index.js";
@@ -14,7 +15,6 @@ describe("ResResp", () => {
   let reqresp: ReqResp;
   let libp2p: Libp2p;
   let logger: Logger;
-  const fork = ForkName.deneb;
   const ping = pingProtocol(getEmptyHandler());
 
   beforeEach(() => {
@@ -60,18 +60,44 @@ describe("ResResp", () => {
 
   describe("duplex protocol", () => {
     it("should register protocol and dial", async () => {
-      await reqresp.registerProtocol(fork, numberToStringProtocol);
+      await reqresp.registerProtocol(numberToStringProtocol);
 
       expect(reqresp.getRegisteredProtocols()).toEqual(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
       expect(libp2p.handle).toHaveBeenCalledOnce();
     });
 
     it("should not register handler twice for same protocol if ignoreIfDuplicate=true", async () => {
-      await reqresp.registerProtocol(fork, numberToStringProtocol, {ignoreIfDuplicate: true});
+      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
       expect(libp2p.handle).toHaveBeenCalledOnce();
 
-      await reqresp.registerProtocol(fork, numberToStringProtocol, {ignoreIfDuplicate: true});
+      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
       expect(libp2p.handle).toHaveBeenCalledOnce();
+    });
+
+    it("should apply new rate limits if same protocol is registered with different limits", async () => {
+      // Initial registration of protocol
+      const {quota, quotaTimeMs} = numberToStringProtocol.inboundRateLimits?.byPeer as RateLimiterQuota;
+      const initialMsPerToken = quotaTimeMs / quota;
+      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
+      const initialLimit = reqresp["rateLimiter"]["rateLimitersPerPeer"].get(
+        "/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"
+      );
+      // Sanity check expected value
+      expect(initialLimit?.["msPerToken"]).toBe(initialMsPerToken);
+
+      // Register same protocol with new by peer rate limits
+      const updatedQuota: RateLimiterQuota = {quota: 10, quotaTimeMs: 15_000};
+      const updatedProtocol: Protocol = {
+        ...numberToStringProtocol,
+        inboundRateLimits: {byPeer: updatedQuota},
+      };
+      const updatedMsPerToken = updatedQuota.quotaTimeMs / updatedQuota.quota;
+      await reqresp.registerProtocol(updatedProtocol, {ignoreIfDuplicate: true});
+      const updatedLimit = reqresp["rateLimiter"]["rateLimitersPerPeer"].get(
+        "/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"
+      );
+      // New limits should be applied
+      expect(updatedLimit?.["msPerToken"]).toBe(updatedMsPerToken);
     });
   });
 });
