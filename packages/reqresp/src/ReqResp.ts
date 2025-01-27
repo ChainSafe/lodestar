@@ -1,5 +1,6 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
+import {ForkName} from "@lodestar/params";
 import {Logger, MetricsRegister} from "@lodestar/utils";
 import type {Libp2p} from "libp2p";
 import {Metrics, getMetrics} from "./metrics.js";
@@ -90,7 +91,7 @@ export class ReqResp {
    * Throws if the same protocol is registered twice.
    * Can be called at any time, no concept of started / stopped
    */
-  async registerProtocol(protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
+  async registerProtocol(fork: ForkName, protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
 
     // libp2p will throw if handler for protocol is already registered, allow to overwrite behavior
@@ -103,7 +104,7 @@ export class ReqResp {
     this.dialOnlyProtocols.set(protocolID, false);
 
     if (inboundRateLimits) {
-      this.rateLimiter.initRateLimits(protocolID, inboundRateLimits);
+      this.rateLimiter.initRateLimits(fork, protocolID, inboundRateLimits);
     }
 
     return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));

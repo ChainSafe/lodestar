@@ -45,11 +45,11 @@ export interface InboundRateLimitQuota {
   /**
    * Will be tracked for the protocol per peer
    */
-  byPeer?: RateLimiterQuota;
+  byPeer?: ((fork: ForkName) => RateLimiterQuota) | RateLimiterQuota;
   /**
    * Will be tracked regardless of the peer
    */
-  total?: RateLimiterQuota;
+  total?: ((fork: ForkName) => RateLimiterQuota) | RateLimiterQuota;
   /**
    * Some requests may be counted multiple e.g. getBlocksByRange
    * for such implement this method else `1` will be used default

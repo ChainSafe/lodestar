@@ -1,4 +1,5 @@
 import {getEmptyLogger} from "@lodestar/logger/empty";
+import {ForkName} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -13,6 +14,7 @@ describe("ResResp", () => {
   let reqresp: ReqResp;
   let libp2p: Libp2p;
   let logger: Logger;
+  const fork = ForkName.deneb;
   const ping = pingProtocol(getEmptyHandler());
 
   beforeEach(() => {
@@ -58,17 +60,17 @@ describe("ResResp", () => {
 
   describe("duplex protocol", () => {
     it("should register protocol and dial", async () => {
-      await reqresp.registerProtocol(numberToStringProtocol);
+      await reqresp.registerProtocol(fork, numberToStringProtocol);
 
       expect(reqresp.getRegisteredProtocols()).toEqual(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
       expect(libp2p.handle).toHaveBeenCalledOnce();
     });
 
     it("should not register handler twice for same protocol if ignoreIfDuplicate=true", async () => {
-      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
+      await reqresp.registerProtocol(fork, numberToStringProtocol, {ignoreIfDuplicate: true});
       expect(libp2p.handle).toHaveBeenCalledOnce();
 
-      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
+      await reqresp.registerProtocol(fork, numberToStringProtocol, {ignoreIfDuplicate: true});
       expect(libp2p.handle).toHaveBeenCalledOnce();
     });
   });

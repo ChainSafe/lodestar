@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface";
+import {ForkName} from "@lodestar/params";
 import {InboundRateLimitQuota, ReqRespRateLimiterOpts} from "../types.js";
 import {RateLimiterGRCA} from "./rateLimiterGRCA.js";
 
@@ -28,27 +29,30 @@ export class ReqRespRateLimiter {
     return this.rateLimitMultiplier > 0;
   }
 
-  initRateLimits(protocolID: ProtocolID, rateLimits: InboundRateLimitQuota): void {
+  initRateLimits(fork: ForkName, protocolID: ProtocolID, rateLimits: InboundRateLimitQuota): void {
     if (!this.enabled) {
       return;
     }
 
     if (rateLimits.byPeer) {
+      const {quota, quotaTimeMs} =
+        typeof rateLimits.byPeer === "function" ? rateLimits.byPeer(fork) : rateLimits.byPeer;
       this.rateLimitersPerPeer.set(
         protocolID,
         RateLimiterGRCA.fromQuota<string>({
-          quotaTimeMs: rateLimits.byPeer.quotaTimeMs,
-          quota: rateLimits.byPeer.quota * this.rateLimitMultiplier,
+          quotaTimeMs: quotaTimeMs,
+          quota: quota * this.rateLimitMultiplier,
         })
       );
     }
 
     if (rateLimits.total) {
+      const {quota, quotaTimeMs} = typeof rateLimits.total === "function" ? rateLimits.total(fork) : rateLimits.total;
       this.rateLimitersTotal.set(
         protocolID,
         RateLimiterGRCA.fromQuota<null>({
-          quotaTimeMs: rateLimits.total.quotaTimeMs,
-          quota: rateLimits.total.quota * this.rateLimitMultiplier,
+          quotaTimeMs: quotaTimeMs,
+          quota: quota * this.rateLimitMultiplier,
         })
       );
     }
