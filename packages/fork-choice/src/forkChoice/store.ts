@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
+import {Root, RootHex, Slot, ValidatorIndex, focil, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
 
@@ -11,6 +11,12 @@ import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interfa
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 
 export type JustifiedBalances = EffectiveBalanceIncrements;
+
+export type InclusionListStoreKey = [Slot, Root];
+// TODO FOCIL: Need prune mechanism to these three
+class InclusionListStore extends Map<InclusionListStoreKey, focil.InclusionList[]> {}
+class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {};
+class InclusionListCommitteeRootStore extends Set<RootHex> {};
 
 /**
  * Returns the justified balances of checkpoint.
@@ -44,6 +50,9 @@ export interface IForkChoiceStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
+  inclusionLists: InclusionListStore;
+  inclusionListEquivocators: InclusionListEquivocatorStore;
+  unsatisifiedInclusionListBlocks: InclusionListCommitteeRootStore;
 }
 
 /**
@@ -57,6 +66,9 @@ export class ForkChoiceStore implements IForkChoiceStore {
   equivocatingIndices = new Set<ValidatorIndex>();
   justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
+  inclusionLists = new InclusionListStore();
+  inclusionListEquivocators = new InclusionListEquivocatorStore();
+  unsatisifiedInclusionListBlocks = new InclusionListCommitteeRootStore();
 
   constructor(
     currentSlot: Slot,

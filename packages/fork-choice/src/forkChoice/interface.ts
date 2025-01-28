@@ -165,6 +165,10 @@ export interface IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
   onAttesterSlashing(slashing: phase0.AttesterSlashing): void;
+  /**
+   * inclusionListCommittee is a list of IL committee validators' index in the current slot 
+   */
+  onInclusionList(state: CachedBeaconStateAllForks, inclusionList: focil.SignedInclusionList, secFromSlot: number): void;
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.

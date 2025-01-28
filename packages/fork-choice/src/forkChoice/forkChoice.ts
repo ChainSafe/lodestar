@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {INTERVALS_PER_SLOT, isForkPostFocil, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   EffectiveBalanceIncrements,
@@ -13,7 +13,7 @@ import {
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
-import {BeaconBlock, Epoch, Root, RootHex, Slot, ValidatorIndex, bellatrix, phase0, ssz} from "@lodestar/types";
+import {BeaconBlock, Epoch, Root, RootHex, Slot, ValidatorIndex, bellatrix, focil, phase0, ssz} from "@lodestar/types";
 import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
@@ -41,7 +41,7 @@ import {
   NotReorgedReason,
   PowBlockHex,
 } from "./interface.js";
-import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
+import {CheckpointWithHex, IForkChoiceStore, InclusionListStoreKey, JustifiedBalances, toCheckpointWithHex} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -748,6 +748,56 @@ export class ForkChoice implements IForkChoice {
     for (const validatorIndex of intersectingIndices) {
       this.fcStore.equivocatingIndices.add(validatorIndex);
     }
+  }
+
+  // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
+  onInclusionList(state: CachedBeaconStateAllForks, inclusionList: focil.SignedInclusionList, secFromSlot: number): void {
+    const currentSlot = this.fcStore.currentSlot;
+    const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
+
+    // If the inclusion list is from the previous slot, ignore it if already past the attestation deadline
+    const isBeforeAttestingInterval = secFromSlot >= Math.floor(this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT);
+    if (slot === currentSlot - 1 && !isBeforeAttestingInterval) {
+      return;
+    }
+
+    // TODO FOCIL: Remove magic number
+    const isBeforeFreezeDeadline = slot === currentSlot && secFromSlot < 9; // VIEW_FREEZE_DEADLINE
+
+
+    const equivocators = this.fcStore.inclusionListEquivocators.get([slot, inclusionListCommitteeRoot]);
+
+    // Do not process inclusion lists from known equivocators 
+    if (equivocators !== undefined && equivocators.has(validatorIndex)) {
+      return;
+    }
+
+    const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
+    const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
+    const validatorInclusionLists = storedInclusionLists.filter(il => il.validatorIndex === validatorIndex);
+
+    if (validatorInclusionLists.length > 0) {
+      const validatorInclusionList = validatorInclusionLists[0];
+
+      // TODO FOCIL: Avoid using JSON.stringify to compare ILs
+      if (JSON.stringify(validatorInclusionList) !== JSON.stringify(inclusionList.message)) {
+        // We have equivocation evidence for `validator_index`, record it as equivocator
+        const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();
+        equivocators.add(validatorIndex);
+        this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
+      }
+
+    } else if (isBeforeFreezeDeadline) {
+      const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
+      inclusionLists.push(inclusionList.message);
+      this.fcStore.inclusionLists.set(storeKey, inclusionLists);
+    }
+
+    return;
+  }
+
+  addInclusionListUnsatisfiedBlock(blockRoot: RootHex) {
+    this.fcStore.unsatisifiedInclusionListBlocks.add(blockRoot);
   }
 
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined {
