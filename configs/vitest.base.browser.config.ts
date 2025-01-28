@@ -1,4 +1,4 @@
-/// <reference types="@vitest/browser/providers/webdriverio" />
+/// <reference types="@vitest/browser/providers/playwright" />
 
 import path from "node:path";
 import {defineConfig} from "vitest/config";
@@ -16,19 +16,6 @@ export default defineConfig({
       globals: {Buffer: true, process: true},
       protocolImports: true,
     }),
-    // TODO: Should be removed when the vite issue is fixed
-    // https://github.com/vitest-dev/vitest/issues/6203#issuecomment-2245836028
-    {
-      name: "defineArgv",
-      config() {
-        return {
-          define: {
-            "process.argv": "[]",
-            "process.nextTick": "function noop(){}",
-          },
-        };
-      },
-    },
   ],
   test: {
     include: ["**/*.test.ts"],
@@ -47,12 +34,14 @@ export default defineConfig({
       enabled: false,
     },
     browser: {
+      enabled: true,
       headless: true,
-      provider: "webdriverio",
+      ui: false,
       screenshotFailures: false,
+      provider: "playwright",
       instances: [
         {
-          browser: "chrome",
+          browser: "chromium",
         },
         {
           browser: "firefox",
@@ -64,5 +53,12 @@ export default defineConfig({
     alias: {
       "node:perf_hooks": path.join(__dirname, "../scripts/vitest/polyfills/perf_hooks.js"),
     },
+  },
+  optimizeDeps: {
+    include: [
+      "vite-plugin-node-polyfills/shims/buffer",
+      "vite-plugin-node-polyfills/shims/global",
+      "vite-plugin-node-polyfills/shims/process",
+    ],
   },
 });
