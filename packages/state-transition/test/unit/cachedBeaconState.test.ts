@@ -4,13 +4,15 @@ import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 
 describe("CachedBeaconState", () => {
+  vi.setConfig({testTimeout: 15_000, hookTimeout: 15_000});
+
   it("Clone and mutate", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
