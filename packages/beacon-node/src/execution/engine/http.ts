@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {bellatrix, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {strip0xPrefix} from "@lodestar/utils";
 import {

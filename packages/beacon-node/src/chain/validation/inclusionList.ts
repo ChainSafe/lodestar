@@ -1,10 +1,10 @@
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, getInclusionListSignatureSet} from "@lodestar/state-transition";
 import {focil} from "@lodestar/types";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {InclusionListError, InclusionListErrorCode} from "../errors/inclusionList.js";
 import {GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import { getShufflingDependentRoot } from "../../util/dependentRoot.js";
-import { SLOTS_PER_EPOCH } from "@lodestar/params";
 
 export async function validateApiInclusionList(
   chain: IBeaconChain,
@@ -45,7 +45,6 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
 
   // [IGNORE] The slot message.slot is equal to the current slot, or it is equal to the previous slot and the current time is less than attestation_deadline seconds into the slot.
 
-
   const headBlock = chain.forkChoice.getHead(); // Head block in current branch
   const headBlockEpoch = computeEpochAtSlot(headBlock.slot);
   const ilEpoch = computeEpochAtSlot(slot);
@@ -58,14 +57,13 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
 
   // [IGNORE] The inclusion_list_committee for slot message.slot on the current branch corresponds to message.inclusion_list_committee_root, as determined by hash_tree_root(inclusion_list_committee) == message.inclusion_list_committee_root.
   const inclusionListCommitteeRootFromShuffling = shuffling.inclusionListCommitteeRoots[slot % SLOTS_PER_EPOCH];
-  if (inclusionListCommitteeRoot !== inclusionListCommitteeRootFromShuffling){
+  if (inclusionListCommitteeRoot !== inclusionListCommitteeRootFromShuffling) {
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT,
       received: inclusionListCommitteeRoot,
-      expected: inclusionListCommitteeRootFromShuffling 
+      expected: inclusionListCommitteeRootFromShuffling,
     });
   }
-
 
   // [REJECT] The validator index message.validator_index is within the inclusion_list_committee corresponding to message.inclusion_list_committee_root.
   const inclusionListCommitteeFromShuffling = shuffling.inclusionListCommittees[slot % SLOTS_PER_EPOCH];

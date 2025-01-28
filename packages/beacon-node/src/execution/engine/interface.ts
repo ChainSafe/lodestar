@@ -152,7 +152,7 @@ export interface IExecutionEngine {
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
     executionRequests?: ExecutionRequests,
-    inclusionListTransactions?: bellatrix.Transactions,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse>;
 
   /**

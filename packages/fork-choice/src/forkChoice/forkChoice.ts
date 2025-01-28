@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {INTERVALS_PER_SLOT, isForkPostFocil, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, isForkPostFocil} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   EffectiveBalanceIncrements,
@@ -41,7 +41,13 @@ import {
   NotReorgedReason,
   PowBlockHex,
 } from "./interface.js";
-import {CheckpointWithHex, IForkChoiceStore, InclusionListStoreKey, JustifiedBalances, toCheckpointWithHex} from "./store.js";
+import {
+  CheckpointWithHex,
+  IForkChoiceStore,
+  InclusionListStoreKey,
+  JustifiedBalances,
+  toCheckpointWithHex,
+} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -189,7 +195,9 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Attempt to return parent block if head is IL unsatisified
-    return this.fcStore.unsatisifiedInclusionListBlocks.has(headRoot) ? this.protoArray.getBlock(head.parentRoot) ?? head : head;
+    return this.fcStore.unsatisifiedInclusionListBlocks.has(headRoot)
+      ? (this.protoArray.getBlock(head.parentRoot) ?? head)
+      : head;
   }
 
   /**
@@ -773,7 +781,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(state: CachedBeaconStateAllForks, inclusionList: focil.SignedInclusionList, secFromSlot: number): void {
+  onInclusionList(
+    state: CachedBeaconStateAllForks,
+    inclusionList: focil.SignedInclusionList,
+    secFromSlot: number
+  ): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
 
@@ -786,17 +798,16 @@ export class ForkChoice implements IForkChoice {
     // TODO FOCIL: Remove magic number
     const isBeforeFreezeDeadline = slot === currentSlot && secFromSlot < 9; // VIEW_FREEZE_DEADLINE
 
-
     const equivocators = this.fcStore.inclusionListEquivocators.get([slot, inclusionListCommitteeRoot]);
 
-    // Do not process inclusion lists from known equivocators 
+    // Do not process inclusion lists from known equivocators
     if (equivocators !== undefined && equivocators.has(validatorIndex)) {
       return;
     }
 
     const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
     const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
-    const validatorInclusionLists = storedInclusionLists.filter(il => il.validatorIndex === validatorIndex);
+    const validatorInclusionLists = storedInclusionLists.filter((il) => il.validatorIndex === validatorIndex);
 
     if (validatorInclusionLists.length > 0) {
       const validatorInclusionList = validatorInclusionLists[0];
@@ -808,7 +819,6 @@ export class ForkChoice implements IForkChoice {
         equivocators.add(validatorIndex);
         this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
       }
-
     } else if (isBeforeFreezeDeadline) {
       const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
       inclusionLists.push(inclusionList.message);

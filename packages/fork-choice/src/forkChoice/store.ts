@@ -15,8 +15,8 @@ export type JustifiedBalances = EffectiveBalanceIncrements;
 export type InclusionListStoreKey = [Slot, Root];
 // TODO FOCIL: Need prune mechanism to these three
 class InclusionListStore extends Map<InclusionListStoreKey, focil.InclusionList[]> {}
-class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {};
-class InclusionListCommitteeRootStore extends Set<RootHex> {};
+class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {}
+class InclusionListCommitteeRootStore extends Set<RootHex> {}
 
 /**
  * Returns the justified balances of checkpoint.

@@ -8,7 +8,7 @@ import {
   ProtoBlock,
   assertValidTerminalPowBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq, isForkPostFocil, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
+import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, isForkPostFocil} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   isExecutionBlockBodyType,
@@ -26,9 +26,9 @@ import {Metrics} from "../../metrics/metrics.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {InclusionListPool} from "../opPools/inclusionListPool.js";
 import {BlockProcessOpts} from "../options.js";
 import {ImportBlockOpts} from "./types.js";
-import { InclusionListPool } from "../opPools/inclusionListPool.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
@@ -38,7 +38,7 @@ export type VerifyBlockExecutionPayloadModules = {
   metrics: Metrics | null;
   forkChoice: IForkChoice;
   config: ChainForkConfig;
-  inclusionListPool: InclusionListPool,
+  inclusionListPool: InclusionListPool;
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};
@@ -316,7 +316,7 @@ export async function verifyBlockExecutionPayload(
     versionedHashes,
     parentBlockRoot,
     executionRequests,
-    ilTransactions,
+    ilTransactions
   );
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
@@ -383,8 +383,10 @@ export async function verifyBlockExecutionPayload(
 
     case ExecutionPayloadStatus.INVALID_INCLUSION_LIST: {
       // Add IL-unsatisified block to fcstore
-      const blockRoot = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
-      chain.forkChoice.addInclusionListUnsatisfiedBlock(blockRoot)
+      const blockRoot = toRootHex(
+        chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+      );
+      chain.forkChoice.addInclusionListUnsatisfiedBlock(blockRoot);
 
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,

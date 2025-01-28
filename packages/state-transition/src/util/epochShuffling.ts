@@ -140,7 +140,10 @@ function buildBeaconCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array
   return committees;
 }
 
-function buildInclusionListCommitteeFromShuffling(shuffling: Uint32Array): {committees: Uint32Array[], committeeRoots: Root[]} {
+function buildInclusionListCommitteeFromShuffling(shuffling: Uint32Array): {
+  committees: Uint32Array[];
+  committeeRoots: Root[];
+} {
   const committees: Uint32Array[] = [];
   const committeeRoots: Root[] = [];
 
@@ -171,7 +174,8 @@ export function computeEpochShuffling(
   // Inclusion List Committee
   const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
   const ilShuffling = unshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
-  const {committees: ilCommittees, committeeRoots: ilCommitteeRoots} = buildInclusionListCommitteeFromShuffling(ilShuffling);
+  const {committees: ilCommittees, committeeRoots: ilCommitteeRoots} =
+    buildInclusionListCommitteeFromShuffling(ilShuffling);
 
   return {
     epoch,
@@ -198,7 +202,8 @@ export async function computeEpochShufflingAsync(
   // Inclusion List Committee
   const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
   const ilShuffling = await asyncUnshuffleList(activeIndices, ilSeed, SHUFFLE_ROUND_COUNT);
-  const {committees: ilCommittees, committeeRoots: ilCommitteeRoots} = buildInclusionListCommitteeFromShuffling(ilShuffling);
+  const {committees: ilCommittees, committeeRoots: ilCommitteeRoots} =
+    buildInclusionListCommitteeFromShuffling(ilShuffling);
 
   return {
     epoch,

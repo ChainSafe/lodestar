@@ -581,8 +581,8 @@ export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndP
 
 export function serializeInclusionList(data: bellatrix.Transactions): InclusionListRpc {
   return {
-    transactions: data.map((tran) => bytesToData(tran))
-  }
+    transactions: data.map((tran) => bytesToData(tran)),
+  };
 }
 
 export function assertReqSizeLimit(blockHashesReqCount: number, count: number): void {

@@ -1,6 +1,16 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, ValidatorIndex, focil, phase0} from "@lodestar/types";
+import {
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  focil,
+  phase0,
+} from "@lodestar/types";
 import {
   DataAvailabilityStatus,
   LVHExecResponse,
@@ -167,9 +177,13 @@ export interface IForkChoice {
    */
   onAttesterSlashing(slashing: phase0.AttesterSlashing): void;
   /**
-   * inclusionListCommittee is a list of IL committee validators' index in the current slot 
+   * inclusionListCommittee is a list of IL committee validators' index in the current slot
    */
-  onInclusionList(state: CachedBeaconStateAllForks, inclusionList: focil.SignedInclusionList, secFromSlot: number): void;
+  onInclusionList(
+    state: CachedBeaconStateAllForks,
+    inclusionList: focil.SignedInclusionList,
+    secFromSlot: number
+  ): void;
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
