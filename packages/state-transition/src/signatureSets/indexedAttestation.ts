@@ -1,5 +1,5 @@
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {
   ISignatureSet,
@@ -32,7 +32,7 @@ export function getAttestationWithIndicesSignatureSet(
 
 export function getIndexedAttestationSignatureSet(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation
+  indexedAttestation: IndexedAttestation
 ): ISignatureSet {
   return getAttestationWithIndicesSignatureSet(state, indexedAttestation, indexedAttestation.attestingIndices);
 }
