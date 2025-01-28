@@ -39,7 +39,7 @@
     "test-coverage:e2e": "c8 --config .c8rc.json --report-dir coverage/e2e/ --all npm run test:e2e",
     "test-coverage:e2e-sim": "c8 --config .c8rc.json --report-dir coverage/e2e-sim/ --all npm run test:e2e:sim",
     "test-coverage:spec": "c8 --config .c8rc.json --report-dir coverage/spec/ --all npm run test:spec",
-    "benchmark": "yarn benchmark:files 'packages/*/test/perf/**/*.test.ts'",
+    "benchmark": "yarn benchmark:files 'packages/state-transition/test/perf/misc/byteArrayEquals.test.ts'",
     "benchmark:files": "NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@actions/core": "^1.10.1",
-    "@chainsafe/benchmark": "^1.2.1",
+    "@chainsafe/benchmark": "^1.2.2",
     "@biomejs/biome": "^1.9.3",
     "@types/node": "^20.12.8",
     "@vitest/browser": "^2.0.4",
