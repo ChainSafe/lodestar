@@ -458,7 +458,7 @@ export function getBeaconBlockApi({
           };
         }
       } else if (blockId === "head") {
-        const head = chain.forkChoice.getHead();
+        const head = chain.forkChoice.getAttesterHead();
         return {
           data: {root: fromHex(head.blockRoot)},
           meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},

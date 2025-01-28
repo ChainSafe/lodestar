@@ -176,6 +176,23 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Focil: Get attester's head
+   * See `get_attester_head()`
+   */
+  // TODO FOCIL: Can getAttesterHead return unsatisified block when predictProposerHead calls?
+  getAttesterHead(): ProtoBlock {
+    const head = this.getHead();
+    const headRoot = head.blockRoot;
+
+    if (!head.isFocilEnabled) {
+      return head;
+    }
+
+    // Attempt to return parent block if head is IL unsatisified
+    return this.fcStore.unsatisifiedInclusionListBlocks.has(headRoot) ? this.protoArray.getBlock(head.parentRoot) ?? head : head;
+  }
+
+  /**
    *
    * A multiplexer to wrap around the traditional `updateHead()` according to the scenario
    * Scenarios as follow:
@@ -193,22 +210,27 @@ export class ForkChoice implements IForkChoice {
     const {mode} = opt;
 
     const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    let result;
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        return {head: this.predictProposerHead(canonicialHeadBlock, opt.slot)};
+        result = {head: this.predictProposerHead(canonicialHeadBlock, opt.slot)};
+        break;
       case UpdateHeadOpt.GetProposerHead: {
         const {
           proposerHead: head,
           isHeadTimely,
           notReorgedReason,
         } = this.getProposerHead(canonicialHeadBlock, opt.secFromSlot, opt.slot);
-        return {head, isHeadTimely, notReorgedReason};
+        result = {head, isHeadTimely, notReorgedReason};
+        break;
       }
       case UpdateHeadOpt.GetCanonicialHead:
-        return {head: canonicialHeadBlock};
       default:
-        return {head: canonicialHeadBlock};
+        result = {head: canonicialHeadBlock};
+        break;
     }
+
+    return result;
   }
 
   /**

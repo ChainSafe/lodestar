@@ -917,10 +917,10 @@ export function getValidatorApi(
 
       // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
       // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
-      const headState = chain.getHeadState();
+      const headState = chain.getAttesterHeadState();
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
-      const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
+      const headBlockRootHex = chain.forkChoice.getAttesterHead().blockRoot;
       const headBlockRoot = fromHex(headBlockRootHex);
       const fork = config.getForkName(slot);
 

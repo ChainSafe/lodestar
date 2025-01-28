@@ -149,6 +149,7 @@ export interface IBeaconChain {
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
   getHeadState(): CachedBeaconStateAllForks;
+  getAttesterHeadState(): CachedBeaconStateAllForks;
   getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
   getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 

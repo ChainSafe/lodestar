@@ -422,6 +422,17 @@ export class BeaconChain implements IBeaconChain {
     return headState;
   }
 
+  // TOOD FOCIL: Temporary clone of `getHeadState()` to minimize impact on other parts that relies to real head
+  getAttesterHeadState(): CachedBeaconStateAllForks {
+    // head state should always exist
+    const head = this.forkChoice.getAttesterHead();
+    const headState = this.regen.getClosestHeadState(head);
+    if (!headState) {
+      throw Error(`headState does not exist for head root=${head.blockRoot} slot=${head.slot}`);
+    }
+    return headState;
+  }
+
   async getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
     return this.getHeadStateAtEpoch(this.clock.currentEpoch, regenCaller);
   }

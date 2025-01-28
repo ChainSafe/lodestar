@@ -1,6 +1,6 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
+import {BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, ValidatorIndex, focil, phase0} from "@lodestar/types";
 import {
   DataAvailabilityStatus,
   LVHExecResponse,
@@ -99,6 +99,7 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
+  getAttesterHead(): ProtoBlock;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
