@@ -79,11 +79,11 @@ export class InclusionListService {
     await Promise.all(
       duties.map(async (duty) => {
         const inclusionList: focil.InclusionList = {
-            slot: duty.slot,
-            validatorIndex: duty.validatorIndex,
-            inclusionListCommitteeRoot: duty.committeeRoot,
-            transactions: inclusionListTransactions,
-        }
+          slot: duty.slot,
+          validatorIndex: duty.validatorIndex,
+          inclusionListCommitteeRoot: duty.committeeRoot,
+          transactions: inclusionListTransactions,
+        };
         // TODO FOCIL: Log and log context here
         try {
           signedInclusionLists.push(await this.validatorStore.signInclusionList(duty, inclusionList));

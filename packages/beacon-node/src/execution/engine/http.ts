@@ -543,13 +543,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   async getInclusionList(parentHash: RootHex): Promise<bellatrix.Transactions> {
     const method = "engine_getInclusionListV1";
-    const response = await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({
       method,
       params: [parentHash],
     });
 
     return deserializeInclusionList(response);
-  } 
+  }
 
   async updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<void> {
     const method = "engine_updatePayloadWithInclusionListV1";

@@ -610,9 +610,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
     },
 
-    [GossipType.inclusion_list]: async ({gossipData, 
-      topic,       
-      seenTimestampSec}: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
+    [GossipType.inclusion_list]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
       // TODO FOCIL: should we persist invalid ssz value?

@@ -179,10 +179,7 @@ export interface IForkChoice {
   /**
    * inclusionListCommittee is a list of IL committee validators' index in the current slot
    */
-  onInclusionList(
-    inclusionList: focil.SignedInclusionList,
-    secFromSlot: number
-  ): void;
+  onInclusionList(inclusionList: focil.SignedInclusionList, secFromSlot: number): void;
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.

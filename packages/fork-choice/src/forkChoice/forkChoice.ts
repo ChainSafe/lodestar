@@ -781,10 +781,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(
-    inclusionList: focil.SignedInclusionList,
-    secFromSlot: number
-  ): void {
+  onInclusionList(inclusionList: focil.SignedInclusionList, secFromSlot: number): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
 
@@ -800,7 +797,7 @@ export class ForkChoice implements IForkChoice {
     const equivocators = this.fcStore.inclusionListEquivocators.get([slot, inclusionListCommitteeRoot]);
 
     // Do not process inclusion lists from known equivocators
-    if (equivocators !== undefined && equivocators.has(validatorIndex)) {
+    if (equivocators?.has(validatorIndex)) {
       return;
     }
 

@@ -5,9 +5,9 @@ import {EpochShuffling} from "./epochShuffling.js";
 export function calculateInclusionListCommitteeAssignments(
   epochShuffling: EpochShuffling,
   requestedValidatorIndices: ValidatorIndex[]
-): Map<ValidatorIndex, {slot: Slot, committeeRoot: Root}> {
+): Map<ValidatorIndex, {slot: Slot; committeeRoot: Root}> {
   const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
-  const duties = new Map<ValidatorIndex, {slot: Slot, committeeRoot: Root}>();
+  const duties = new Map<ValidatorIndex, {slot: Slot; committeeRoot: Root}>();
 
   const epochCommittees = epochShuffling.inclusionListCommittees;
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
@@ -17,7 +17,10 @@ export function calculateInclusionListCommitteeAssignments(
       const validatorIndex = slotCommittee[i];
 
       if (requestedValidatorIndicesSet.has(validatorIndex)) {
-        duties.set(validatorIndex, {slot: epochShuffling.epoch * SLOTS_PER_EPOCH + epochSlot, committeeRoot: epochShuffling.inclusionListCommitteeRoots[epochSlot]});
+        duties.set(validatorIndex, {
+          slot: epochShuffling.epoch * SLOTS_PER_EPOCH + epochSlot,
+          committeeRoot: epochShuffling.inclusionListCommitteeRoots[epochSlot],
+        });
       }
     }
   }
