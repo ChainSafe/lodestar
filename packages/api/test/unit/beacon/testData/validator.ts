@@ -50,6 +50,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
           pubkey: new Uint8Array(48).fill(1),
           validatorIndex: 2,
           slot: 3,
+          inclusionListCommitteeRoot: ZERO_HASH,
         },
       ],
       meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
@@ -113,7 +114,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   produceInclusionList: {
     args: {slot: 32000},
-    res: {data: ssz.focil.InclusionList.defaultValue(), meta: {version: ForkName.focil}},
+    res: {data: [ssz.bellatrix.Transaction.defaultValue()], meta: {version: ForkName.focil}},
   },
   getAggregatedAttestation: {
     args: {attestationDataRoot: ZERO_HASH, slot: 32000},

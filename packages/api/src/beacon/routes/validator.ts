@@ -115,7 +115,7 @@ export const InclusionListDutyType = new ContainerType(
     /** The slot at which the validator must propose the inclusion list*/
     slot: ssz.Slot,
     /** Inclusion List Committee Root */
-    committeeRoot: ssz.Root,
+    inclusionListCommitteeRoot: ssz.Root,
   },
   {jsonCase: "eth2"}
 );

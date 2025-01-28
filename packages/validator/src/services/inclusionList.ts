@@ -81,7 +81,7 @@ export class InclusionListService {
         const inclusionList: focil.InclusionList = {
           slot: duty.slot,
           validatorIndex: duty.validatorIndex,
-          inclusionListCommitteeRoot: duty.committeeRoot,
+          inclusionListCommitteeRoot: duty.inclusionListCommitteeRoot,
           transactions: inclusionListTransactions,
         };
         // TODO FOCIL: Log and log context here
