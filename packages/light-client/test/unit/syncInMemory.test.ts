@@ -24,7 +24,7 @@ function getSyncCommittee(
 
 describe("syncInMemory", () => {
   // In browser test this process is taking more time than default 2000ms
-  vi.setConfig({testTimeout: 10000});
+  vi.setConfig({testTimeout: 10000, hookTimeout: 10000});
 
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
