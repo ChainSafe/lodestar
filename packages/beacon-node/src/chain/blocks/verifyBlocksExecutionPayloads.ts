@@ -8,7 +8,7 @@ import {
   ProtoBlock,
   assertValidTerminalPowBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
+import {ForkSeq, isForkPostFocil, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   isExecutionBlockBodyType,
@@ -306,7 +306,7 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
-  const ilTransactions = ForkSeq[fork] >= ForkSeq.focil ? chain.inclusionListPool.getTransactions(currentSlot) : undefined;
+  const ilTransactions = isForkPostFocil(fork) ? chain.inclusionListPool.getTransactions(currentSlot) : undefined;
 
   const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);
@@ -381,6 +381,18 @@ export async function verifyBlockExecutionPayload(
     // back. But for now, lets assume other mechanisms like unknown parent block of a future
     // child block will cause it to replay
 
+    case ExecutionPayloadStatus.INVALID_INCLUSION_LIST: {
+      // Add IL-unsatisified block to fcstore
+      const blockRoot = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+      chain.forkChoice.addInclusionListUnsatisfiedBlock(blockRoot)
+
+      const execError = new BlockError(block, {
+        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+        execStatus: execResult.status,
+        errorMessage: execResult.validationError,
+      });
+      return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
+    }
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:
     case ExecutionPayloadStatus.UNAVAILABLE: {

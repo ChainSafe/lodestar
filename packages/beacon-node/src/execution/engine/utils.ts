@@ -66,6 +66,7 @@ function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutionPayload
     case ExecutionPayloadStatus.INVALID:
     case ExecutionPayloadStatus.SYNCING:
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+    case ExecutionPayloadStatus.INVALID_INCLUSION_LIST: 
       return ExecutionEngineState.SYNCING;
 
     case ExecutionPayloadStatus.UNAVAILABLE:
