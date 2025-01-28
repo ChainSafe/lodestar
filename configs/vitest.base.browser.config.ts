@@ -45,15 +45,23 @@ export default defineConfig({
       enabled: false,
     },
     browser: {
-      name: "chrome",
       headless: true,
       provider: "webdriverio",
       screenshotFailures: false,
-      providerOptions: {
-        capabilities: {
-          browserVersion: "stable",
+      instances: [
+        {
+          browser: "chrome",
+          capabilities: {
+            browserVersion: "stable",
+          },
         },
-      },
+        {
+          browser: "firefox",
+          capabilities: {
+            browserVersion: "stable",
+          },
+        },
+      ],
     },
   },
   resolve: {
