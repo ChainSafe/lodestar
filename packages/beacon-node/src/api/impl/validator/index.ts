@@ -1279,7 +1279,7 @@ export function getValidatorApi(
         const validatorIndex = indices[i];
         const duty = committeeAssignments.get(validatorIndex);
         if (duty) {
-          duties.push({pubkey: pubkeys[i], validatorIndex, slot: duty.slot});
+          duties.push({pubkey: pubkeys[i], validatorIndex, slot: duty.slot, committeeRoot: duty.committeeRoot});
         }
       }
 
