@@ -39,6 +39,7 @@ export default defineConfig({
       ui: false,
       screenshotFailures: false,
       provider: "playwright",
+      connectTimeout: 90_0000,
       instances: [
         {
           browser: "chromium",
