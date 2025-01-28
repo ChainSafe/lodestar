@@ -1,3 +1,5 @@
+/// <reference types="@vitest/browser/providers/webdriverio" />
+
 import path from "node:path";
 import {defineConfig} from "vitest/config";
 const __dirname = new URL(".", import.meta.url).pathname;
@@ -51,15 +53,9 @@ export default defineConfig({
       instances: [
         {
           browser: "chrome",
-          capabilities: {
-            browserVersion: "stable",
-          },
         },
         {
-          browser: "firefox",
-          capabilities: {
-            browserVersion: "stable",
-          },
+          browser: "firefox"
         },
       ],
     },

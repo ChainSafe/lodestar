@@ -22,6 +22,7 @@ export default mergeConfig(
       }),
     ],
     build: {
+      target: "es2022",
       rollupOptions: {
         output: {
           footer: `
