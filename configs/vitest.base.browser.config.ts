@@ -41,15 +41,13 @@ export default defineConfig({
       provider: "playwright",
       connectTimeout: 90_0000,
       instances: [
+        // TODO: Add support for webkit when available
         {
           browser: "chromium",
         },
         {
           browser: "firefox",
-        },
-        {
-          browser: "webkit",
-        },
+        }
       ],
     },
   },
