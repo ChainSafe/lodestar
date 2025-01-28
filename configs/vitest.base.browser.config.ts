@@ -47,6 +47,9 @@ export default defineConfig({
         {
           browser: "firefox",
         },
+        {
+          browser: "webkit",
+        },
       ],
     },
   },
