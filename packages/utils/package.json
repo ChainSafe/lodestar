@@ -32,7 +32,7 @@
     "lint:fix": "yarn run lint --write",
     "test:unit": "vitest --run --dir test/unit",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
-    "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:chrome": "vitest --run --browser chromium --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
     "check-readme": "typescript-docs-verifier"
