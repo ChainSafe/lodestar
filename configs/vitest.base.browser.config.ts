@@ -3,7 +3,7 @@ import {defineConfig} from "vitest/config";
 const __dirname = new URL(".", import.meta.url).pathname;
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import topLevelAwait from "vite-plugin-top-level-await";
-import {blsBrowserPlugin} from "./scripts/vite/plugins/blsBrowserPlugin.js";
+import {blsBrowserPlugin} from "../scripts/vite/plugins/blsBrowserPlugin.js";
 
 export default defineConfig({
   plugins: [
@@ -39,7 +39,7 @@ export default defineConfig({
       "**/.{idea,git,cache,output,temp}/**",
       "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*",
     ],
-    setupFiles: [path.join(__dirname, "./scripts/vitest/setupFiles/customMatchers.ts")],
+    setupFiles: [path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts")],
     reporters: ["default", "hanging-process"],
     coverage: {
       enabled: false,
@@ -58,7 +58,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "node:perf_hooks": path.join(__dirname, "scripts/vitest/polyfills/perf_hooks.js"),
+      "node:perf_hooks": path.join(__dirname, "../scripts/vitest/polyfills/perf_hooks.js"),
     },
   },
 });

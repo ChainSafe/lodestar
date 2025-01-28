@@ -17,8 +17,8 @@ export default defineConfig({
       "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*",
     ],
     setupFiles: [
-      path.join(__dirname, "./scripts/vitest/setupFiles/customMatchers.ts"),
-      path.join(__dirname, "./scripts/vitest/setupFiles/dotenv.ts"),
+      path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
+      path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
     ],
     reporters: process.env.GITHUB_ACTIONS
       ? ["verbose", "hanging-process", "github-actions"]
@@ -45,7 +45,7 @@ export default defineConfig({
         "**/spec-tests-bls/**",
       ],
     },
-    diff: process.env.TEST_COMPACT_DIFF ? path.join(import.meta.dirname, "./scripts/vitest/vitest.diff.ts") : undefined,
+    diff: process.env.TEST_COMPACT_DIFF ? path.join(import.meta.dirname, "../scripts/vitest/vitest.diff.ts") : undefined,
     onConsoleLog: () => !process.env.TEST_QUIET_CONSOLE,
   },
 });
