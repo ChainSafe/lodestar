@@ -1,6 +1,6 @@
+import {visualizer} from "rollup-plugin-visualizer";
 import {UserConfig, defineConfig} from "vite";
 import {nodePolyfills} from "vite-plugin-node-polyfills";
-import {visualizer} from "rollup-plugin-visualizer";
 import topLevelAwait from "vite-plugin-top-level-await";
 import {blsBrowserPlugin} from "../scripts/vite/plugins/blsBrowserPlugin.js";
 
@@ -57,13 +57,10 @@ export function getBaseViteConfig(
         formats: ["es"],
         name: libName,
         fileName: (format) => {
-          if (format === "esm" || format === "es") {
-            return `${libName.toLowerCase()}.min.mjs`;
-          } else if (format === "cjs") {
-            return `${libName.toLowerCase()}.min.cjs`;
-          } else {
-            return `${libName.toLowerCase()}.min.${format}.js`;
-          }
+          if (format === "esm" || format === "es") return `${libName.toLowerCase()}.min.mjs`;
+          if (format === "cjs") return `${libName.toLowerCase()}.min.cjs`;
+
+          return `${libName.toLowerCase()}.min.${format}.js`;
         },
       },
       rollupOptions: {
