@@ -241,6 +241,11 @@ export interface IForkChoice {
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
    */
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
+
+  /**
+   * Add IL-unsatisifed block root to store.
+   */
+  addInclusionListUnsatisfiedBlock(blockRoot: RootHex): void;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
