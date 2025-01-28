@@ -14,6 +14,7 @@ import {
   UintBn64,
   ValidatorIndex,
   altair,
+  bellatrix,
   focil,
   phase0,
   ssz,
@@ -438,8 +439,7 @@ export type Endpoints = {
       slot: Slot;
     },
     {query: {slot: number}},
-    // TODO FOCIL: the api should probably return only the relevant data
-    focil.InclusionList,
+    bellatrix.Transactions,
     VersionMeta
   >;
 
@@ -917,7 +917,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: ssz.focil.InclusionList,
+        data: ssz.bellatrix.Transactions,
         meta: VersionCodec,
       },
     },

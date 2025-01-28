@@ -1,7 +1,6 @@
 import {ApiClient} from "@lodestar/api";
 import {InclusionListDutyList} from "@lodestar/api/lib/beacon/routes/validator.js";
-import {ChainForkConfig} from "@lodestar/config";
-import {Slot, focil} from "@lodestar/types";
+import {Slot, bellatrix, focil} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -53,15 +52,15 @@ export class InclusionListService {
     await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
 
     // If there is more than one duty, all validators on duty will sign and publish the same IL
-    const inclusionListNoValidatorIndex = await this.produceInclusionList(slot);
+    const inclusionListTransactions = await this.produceInclusionList(slot);
 
-    await this.signAndPublishInclusionList(inclusionListNoValidatorIndex, duties);
+    await this.signAndPublishInclusionList(inclusionListTransactions, duties);
   };
 
   // Note: The inclusion list returned here is a "blueprint" ie. every field
   // is filled except validator index = 0. Need to replace validator index to
   // form a valid InclusionList
-  private async produceInclusionList(slot: Slot): Promise<focil.InclusionList> {
+  private async produceInclusionList(slot: Slot): Promise<bellatrix.Transactions> {
     // Produce one IL per slot
     return (await this.api.validator.produceInclusionList({slot})).value();
   }
@@ -72,16 +71,22 @@ export class InclusionListService {
    */
 
   private async signAndPublishInclusionList(
-    inclusionListNoValidatorIndex: focil.InclusionList,
+    inclusionListTransactions: bellatrix.Transactions,
     duties: InclusionListDutyList
   ) {
     const signedInclusionLists: focil.SignedInclusionList[] = [];
 
     await Promise.all(
       duties.map(async (duty) => {
+        const inclusionList: focil.InclusionList = {
+            slot: duty.slot,
+            validatorIndex: duty.validatorIndex,
+            inclusionListCommitteeRoot: duty.committeeRoot,
+            transactions: inclusionListTransactions,
+        }
         // TODO FOCIL: Log and log context here
         try {
-          signedInclusionLists.push(await this.validatorStore.signInclusionList(duty, inclusionListNoValidatorIndex));
+          signedInclusionLists.push(await this.validatorStore.signInclusionList(duty, inclusionList));
         } catch (e) {
           this.logger.error("Error signing inclusion list", {}, e as Error);
         }

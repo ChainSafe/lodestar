@@ -693,20 +693,11 @@ export class ValidatorStore {
 
   async signInclusionList(
     duty: routes.validator.InclusionListDuty,
-    inclusionListNoValidatorIndex: focil.InclusionList
+    inclusionList: focil.InclusionList
   ): Promise<focil.SignedInclusionList> {
-    const {slot: signingSlot, inclusionListCommitteeRoot, transactions} = inclusionListNoValidatorIndex;
+    this.validateInclusionListDuty(duty, inclusionList);
 
-    this.validateInclusionListDuty(duty, inclusionListNoValidatorIndex);
-
-    const inclusionList: focil.InclusionList = {
-      slot: duty.slot,
-      validatorIndex: duty.validatorIndex,
-      inclusionListCommitteeRoot,
-      transactions,
-    };
-
-    const domain = this.config.getDomain(signingSlot, DOMAIN_INCLUSION_LIST_COMMITTEE);
+    const domain = this.config.getDomain(inclusionList.slot, DOMAIN_INCLUSION_LIST_COMMITTEE);
     const signingRoot = computeSigningRoot(ssz.focil.InclusionList, inclusionList, domain);
 
     const signableMessage: SignableMessage = {
@@ -716,7 +707,7 @@ export class ValidatorStore {
 
     return {
       message: inclusionList,
-      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+      signature: await this.getSignature(duty.pubkey, signingRoot, inclusionList.slot, signableMessage),
     };
   }
 

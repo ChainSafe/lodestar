@@ -1003,9 +1003,32 @@ export function getValidatorApi(
       return {data: contribution};
     },
 
-    async produceInclusionList() {
-      // TODO FOCIL: implement
-      throw Error("produceInclusionList is not implemented");
+    async produceInclusionList({slot}) {
+      notWhileSyncing();
+
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
+      // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
+      const headState = chain.getAttesterHeadState();
+      const headSlot = headState.slot;
+      const headBlockRootHex = chain.forkChoice.getAttesterHead().blockRoot;
+      const headBlockRoot = fromHex(headBlockRootHex);
+
+      const beaconBlockRoot =
+        slot >= headSlot
+          ? // When attesting to the head slot or later, always use the head of the chain.
+            headBlockRoot
+          : // Permit attesting to slots *prior* to the current head. This is desirable when
+            // the VC and BN are out-of-sync due to time issues or overloading.
+            getBlockRootAtSlot(headState, slot);
+
+      const ilTransactions = await chain.executionEngine.getInclusionList(toRootHex(beaconBlockRoot));
+
+      return {
+        data: ilTransactions,
+        meta: {version: config.getForkName(slot)},
+      };
     },
 
     async getProposerDuties({epoch}) {
