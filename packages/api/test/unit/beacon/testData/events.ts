@@ -29,6 +29,10 @@ export const eventTestData: EventData = {
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     executionOptimistic: false,
   },
+  [EventType.blockGossip]: {
+    slot: 10,
+    block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+  },
   [EventType.attestation]: ssz.phase0.Attestation.fromJson({
     aggregation_bits: "0x01",
     signature:

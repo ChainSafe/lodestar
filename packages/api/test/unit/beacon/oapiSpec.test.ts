@@ -75,13 +75,7 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-const ignoredTopics = [
-  /*
-   https://github.com/ChainSafe/lodestar/issues/6470
-   topic block_gossip not implemented
-   */
-  "block_gossip",
-];
+const ignoredTopics: string[] = [];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
