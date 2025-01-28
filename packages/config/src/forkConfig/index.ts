@@ -71,8 +71,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const focil: ForkInfo = {
     name: ForkName.focil,
     seq: ForkSeq.focil,
-    epoch: config.FOCIL_FORK_EPOCH,
-    version: config.FOCIL_FORK_VERSION,
+    epoch: config.EIP7805_FORK_EPOCH,
+    version: config.EIP7805_FORK_VERSION,
     prevVersion: config.ELECTRA_FORK_VERSION,
     prevForkName: ForkName.electra,
   };

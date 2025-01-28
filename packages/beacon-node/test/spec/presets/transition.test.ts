@@ -115,7 +115,7 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: 0,
-        FOCIL_FORK_EPOCH: forkEpoch,
+        EIP7805_FORK_EPOCH: forkEpoch,
       };
   }
 }

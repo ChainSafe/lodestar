@@ -53,8 +53,8 @@ export const chainConfig: ChainConfig = {
   ELECTRA_FORK_EPOCH: 1000000, // Arbitrary value served as placeholder
 
   // FOCIL
-  FOCIL_FORK_VERSION: b("0x06000000"),
-  FOCIL_FORK_EPOCH: Infinity,
+  EIP7805_FORK_VERSION: b("0x06000000"),
+  EIP7805_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------

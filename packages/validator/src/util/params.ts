@@ -72,7 +72,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
-  const focilForkRelevant = localConfig.FOCIL_FORK_EPOCH < Infinity;
+  const focilForkRelevant = localConfig.EIP7805_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -109,8 +109,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     ELECTRA_FORK_VERSION: electraForkRelevant,
     ELECTRA_FORK_EPOCH: electraForkRelevant,
     // focil
-    FOCIL_FORK_VERSION: focilForkRelevant,
-    FOCIL_FORK_EPOCH: focilForkRelevant,
+    EIP7805_FORK_VERSION: focilForkRelevant,
+    EIP7805_FORK_EPOCH: focilForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
