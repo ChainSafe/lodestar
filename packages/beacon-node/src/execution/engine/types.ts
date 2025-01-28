@@ -585,6 +585,10 @@ export function serializeInclusionList(data: bellatrix.Transactions): InclusionL
   };
 }
 
+export function deserializeInclusionList(data: InclusionListRpc): bellatrix.Transactions {
+  return data.transactions.map((tran) => dataToBytes(tran, null));
+}
+
 export function assertReqSizeLimit(blockHashesReqCount: number, count: number): void {
   if (blockHashesReqCount > count) {
     throw new Error(`Requested blocks must not be > ${count}`);

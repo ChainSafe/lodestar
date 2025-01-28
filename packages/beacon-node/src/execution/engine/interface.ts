@@ -199,5 +199,7 @@ export interface IExecutionEngine {
 
   getBlobs(fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
 
+  getInclusionList(parentHash: RootHex): Promise<bellatrix.Transactions>;
+
   updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<void>;
 }
