@@ -103,6 +103,7 @@ describe("Forkchoice", () => {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
+      isFocilEnabled: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
   };

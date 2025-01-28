@@ -21,6 +21,7 @@ import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
+import { isForkPostFocil } from "@lodestar/params";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
@@ -61,6 +62,8 @@ export function initializeForkChoice(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
+  const isFocilEnabled = isForkPostFocil(config.getForkName(currentSlot));
+
   return new forkchoiceConstructor(
     config,
 
@@ -83,6 +86,7 @@ export function initializeForkChoice(
         stateRoot: toRootHex(blockHeader.stateRoot),
         blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimisitcally assume is timely
+        isFocilEnabled,
 
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toRootHex(justifiedCheckpoint.root),

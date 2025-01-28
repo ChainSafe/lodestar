@@ -551,6 +551,9 @@ export class ForkChoice implements IForkChoice {
       this.proposerBoostRoot = blockRootHex;
     }
 
+    // Communicate if focil is enabled
+    const isFocilEnabled = isForkPostFocil(this.config.getForkName(currentSlot));
+
     // As per specs, we should be validating here the terminal conditions of
     // the PoW if this were a merge transition block.
     // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
@@ -639,6 +642,7 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toRootHex(targetRoot),
       stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
+      isFocilEnabled,
 
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toRootHex(state.currentJustifiedCheckpoint.root),

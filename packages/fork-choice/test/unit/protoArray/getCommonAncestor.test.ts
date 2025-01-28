@@ -41,6 +41,7 @@ describe("getCommonAncestor", () => {
       unrealizedFinalizedRoot: "-",
 
       timeliness: false,
+      isFocilEnabled: false,
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -67,6 +68,7 @@ describe("getCommonAncestor", () => {
         unrealizedFinalizedRoot: "-",
 
         timeliness: false,
+        isFocilEnabled: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
