@@ -42,8 +42,8 @@ export function getBaseViteConfig(
       legalComments: "none",
       sourcemap: "inline",
       supported: {
-        'top-level-await': true
-      }
+        "top-level-await": true,
+      },
     },
     build: {
       // "modules" refer to ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14']
