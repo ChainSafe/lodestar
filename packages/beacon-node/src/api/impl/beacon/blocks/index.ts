@@ -198,8 +198,6 @@ export function getBeaconBlockApi({
       }
     }
 
-    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
-
     // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
     // REST request promise without any extra infrastructure.
     const msToBlockSlot =
@@ -208,6 +206,8 @@ export function getBeaconBlockApi({
       // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
       await sleep(msToBlockSlot);
     }
+
+    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
 
     // TODO: Validate block
     metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
