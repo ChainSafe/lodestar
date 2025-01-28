@@ -610,7 +610,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
     },
 
-    [GossipType.inclusion_list]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
+    [GossipType.inclusion_list]: async ({gossipData, 
+      topic,       
+      seenTimestampSec}: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
       // TODO FOCIL: should we persist invalid ssz value?
@@ -619,6 +621,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       try {
         const insertOutcome = chain.inclusionListPool.add(inclusionList);
         metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
+
+        const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
+        chain.forkChoice.onInclusionList(inclusionList, secFromSlot);
       } catch (e) {
         logger.error("Error adding inclusionList to pool", {}, e as Error);
       }

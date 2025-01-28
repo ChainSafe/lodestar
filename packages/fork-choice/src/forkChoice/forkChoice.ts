@@ -782,7 +782,6 @@ export class ForkChoice implements IForkChoice {
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
   onInclusionList(
-    state: CachedBeaconStateAllForks,
     inclusionList: focil.SignedInclusionList,
     secFromSlot: number
   ): void {

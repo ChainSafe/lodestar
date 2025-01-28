@@ -180,7 +180,6 @@ export interface IForkChoice {
    * inclusionListCommittee is a list of IL committee validators' index in the current slot
    */
   onInclusionList(
-    state: CachedBeaconStateAllForks,
     inclusionList: focil.SignedInclusionList,
     secFromSlot: number
   ): void;

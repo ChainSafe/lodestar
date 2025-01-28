@@ -1476,6 +1476,9 @@ export function getValidatorApi(
 
       chain.inclusionListPool.add(signedInclusionList);
 
+      const secFromSlot = chain.clock.secFromSlot(signedInclusionList.message.slot, Date.now() / 1000);
+      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot);
+
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: config.getForkName(signedInclusionList.message.slot),
         data: signedInclusionList,
