@@ -1,5 +1,5 @@
 import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, ForkName, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix, capella} from "@lodestar/types";
 import {Blob, BlobAndProof, KZGCommitment, KZGProof} from "@lodestar/types/deneb";
 
 import {DATA} from "../../eth1/provider/utils.js";
@@ -149,7 +149,7 @@ export interface IExecutionEngine {
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
     executionRequests?: ExecutionRequests,
-    inclusionList?: InclusionList
+    inclusionListTransactions?: bellatrix.Transactions,
   ): Promise<ExecutePayloadResponse>;
 
   /**

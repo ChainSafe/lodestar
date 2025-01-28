@@ -28,6 +28,7 @@ import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ImportBlockOpts} from "./types.js";
+import { InclusionListPool } from "../opPools/inclusionListPool.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
@@ -37,6 +38,7 @@ export type VerifyBlockExecutionPayloadModules = {
   metrics: Metrics | null;
   forkChoice: IForkChoice;
   config: ChainForkConfig;
+  inclusionListPool: InclusionListPool,
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};
@@ -304,6 +306,7 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
+  const ilTransactions = chain.inclusionListPool.getTransactions(currentSlot);
 
   const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);
@@ -312,7 +315,8 @@ export async function verifyBlockExecutionPayload(
     executionPayloadEnabled,
     versionedHashes,
     parentBlockRoot,
-    executionRequests
+    executionRequests,
+    ilTransactions,
   );
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 

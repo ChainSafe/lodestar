@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {bellatrix, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {strip0xPrefix} from "@lodestar/utils";
 import {
@@ -41,6 +41,7 @@ import {
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
   serializeExecutionRequests,
+  serializeInclusionList,
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
@@ -204,7 +205,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
     executionRequests?: ExecutionRequests,
-    _inclusionList?: InclusionList // TODO FOCIL: figure out how to get IL when process_execution_payload
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.focil
@@ -247,6 +248,23 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           ],
           methodOpts: notifyNewPayloadOpts,
         };
+        if (ForkSeq[fork] >= ForkSeq.focil) {
+          if (inclusionListTransactions === undefined) {
+            throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
+          }
+          const serializedILTransactions = serializeInclusionList(inclusionListTransactions);
+          engineRequest = {
+            method: "engine_newPayloadV5",
+            params: [
+              serializedExecutionPayload,
+              serializedVersionedHashes,
+              parentBeaconBlockRoot,
+              serializedExecutionRequests,
+              serializedILTransactions,
+            ],
+            methodOpts: notifyNewPayloadOpts,
+          };
+        }
       } else {
         engineRequest = {
           method: "engine_newPayloadV3",
