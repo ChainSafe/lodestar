@@ -1,28 +1,14 @@
 #!/bin/bash
 
-# List of warnings to ignore (add new patterns here)
-IGNORE_WARNINGS=(
-  'engine "deno" appears to be invalid'
-  'engine "bun" appears to be invalid'
-)
-
-# Run yarn install --check-files and capture output
+# run yarn install --check-files, capturing stderr
 OUTPUT=$(yarn install --check-files 2>&1)
-echo "$OUTPUT"
 
-# Build grep filter arguments dynamically
-FILTER_ARGS=()
-for pattern in "${IGNORE_WARNINGS[@]}"; do
-  FILTER_ARGS+=(-e "$pattern")
-done
+echo $OUTPUT
 
-# Filter out specified warnings
-FILTERED_OUTPUT=$(echo "$OUTPUT" | grep -viF "${FILTER_ARGS[@]}")
-
-# Check for remaining warnings
-if echo "$FILTERED_OUTPUT" | grep -qi 'warning'; then
-  echo "There were unexpected warnings in yarn install --check-files"
+# grep the output for 'warning'
+if echo "$OUTPUT" | grep -qi 'warning'; then
+  echo "There were warnings in yarn install --check-files"
   exit 1
 else
-  echo "No unexpected warnings in yarn install --check-files"
+  echo "No warnings in yarn install --check-files"
 fi
