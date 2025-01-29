@@ -17,6 +17,7 @@ import {
   AttesterSlashing,
   BeaconBlock,
   Epoch,
+  IndexedAttestation,
   Root,
   RootHex,
   Slot,
@@ -697,7 +698,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -1210,7 +1211,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#validate_on_attestation
    */
   private validateOnAttestation(
-    indexedAttestation: phase0.IndexedAttestation,
+    indexedAttestation: IndexedAttestation,
     slot: Slot,
     blockRootHex: string,
     targetEpoch: Epoch,

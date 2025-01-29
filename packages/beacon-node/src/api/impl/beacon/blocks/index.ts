@@ -207,6 +207,8 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
+    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+
     // TODO: Validate block
     metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
     chain.logger.info("Publishing block", valLogMeta);

@@ -1,5 +1,5 @@
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {IndexedAttestationBigint, phase0} from "@lodestar/types";
+import {IndexedAttestation, IndexedAttestationBigint} from "@lodestar/types";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {verifySignatureSet} from "../util/index.js";
@@ -9,7 +9,7 @@ import {verifySignatureSet} from "../util/index.js";
  */
 export function isValidIndexedAttestation(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation,
+  indexedAttestation: IndexedAttestation,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {

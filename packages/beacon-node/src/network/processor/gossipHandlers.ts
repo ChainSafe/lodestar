@@ -122,7 +122,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   ): Promise<BlockInput> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
-    const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const blockShortHex = prettyBytes(blockRootHex);
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
@@ -140,7 +141,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // blockInput can't be returned null, improve by enforcing via return types
     if (blockInput.block === null) {
       throw Error(
-        `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockHex} slot=${slot}`
+        `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockShortHex} slot=${slot}`
       );
     }
     const blockInputMeta =
@@ -148,7 +149,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     const logCtx = {
       slot: slot,
-      root: blockHex,
+      root: blockShortHex,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
@@ -169,12 +170,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
 
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
+
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
-          logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
+          logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 
