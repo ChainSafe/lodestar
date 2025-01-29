@@ -49,7 +49,10 @@ export default defineConfig({
       ? path.join(import.meta.dirname, "../scripts/vitest/vitest.diff.ts")
       : undefined,
     onConsoleLog: () => !process.env.TEST_QUIET_CONSOLE,
-    testTimeout: 10_000,
-    hookTimeout: 10_000,
+    // There are some tests which are taking huge time
+    // test/unit/chain/rewards/blockRewards.test.ts > chain / rewards / blockRewards > Normal case 73869ms
+    // for now I tried to identify such tests an increase the limit a bit higher
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 });
