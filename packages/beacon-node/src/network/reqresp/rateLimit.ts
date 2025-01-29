@@ -1,5 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, MAX_REQUEST_BLOCKS, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {
+  ForkName,
+  isForkBlobs,
+  MAX_REQUEST_BLOCKS,
+  MAX_REQUEST_BLOCKS_DENEB,
+  MAX_REQUEST_LIGHT_CLIENT_UPDATES,
+} from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod} from "./types.js";
 import {requestSszTypeByMethod} from "./types.js";
@@ -27,12 +33,12 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
   // Do not matter
   [ReqRespMethod.BeaconBlocksByRange]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
-    byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
+    byPeer: {quota: isForkBlobs(fork) ? MAX_REQUEST_BLOCKS_DENEB : MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(config, ReqRespMethod.BeaconBlocksByRange, (req) => req.count),
   },
   [ReqRespMethod.BeaconBlocksByRoot]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
-    byPeer: {quota: 128, quotaTimeMs: 10_000},
+    byPeer: {quota: isForkBlobs(fork) ? MAX_REQUEST_BLOCKS_DENEB : MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(config, ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
   [ReqRespMethod.BlobSidecarsByRange]: {
