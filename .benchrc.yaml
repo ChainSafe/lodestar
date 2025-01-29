@@ -7,5 +7,5 @@ minRuns: 10
 convergeFactor: 0.075 # 7.5 / 100
 triggerGC: false
 sort: true
-convergence: cv
+convergence: linear
 averageCalculation: clean-outliers
