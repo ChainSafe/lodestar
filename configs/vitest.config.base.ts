@@ -24,35 +24,11 @@ export default defineConfig({
       ? ["verbose", "hanging-process", "github-actions"]
       : [process.env.TEST_COMPACT_OUTPUT ? "basic" : "verbose", "hanging-process"],
     coverage: {
-      enabled: process.env.CI === "true",
-      clean: true,
-      all: false,
-      extension: [".ts"],
-      provider: "v8",
-      reporter: [["lcovonly", {file: "lcov.info"}], ["text"]],
-      reportsDirectory: "./coverage",
-      exclude: [
-        "**/*.d.ts",
-        "**/*.js",
-        "**/lib/**",
-        "**/coverage/**",
-        "**/scripts/**",
-        "**/test/**",
-        "**/types/**",
-        "**/bin/**",
-        "**/node_modules/**",
-        "**/spec-tests/**",
-        "**/spec-tests-bls/**",
-      ],
+      enabled: false,
     },
     diff: process.env.TEST_COMPACT_DIFF
       ? path.join(import.meta.dirname, "../scripts/vitest/vitest.diff.ts")
       : undefined,
     onConsoleLog: () => !process.env.TEST_QUIET_CONSOLE,
-    // There are some tests which are taking huge time
-    // test/unit/chain/rewards/blockRewards.test.ts > chain / rewards / blockRewards > Normal case 73869ms
-    // for now I tried to identify such tests an increase the limit a bit higher
-    testTimeout: 20_000,
-    hookTimeout: 20_000,
   },
 });
