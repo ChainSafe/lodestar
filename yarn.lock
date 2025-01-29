@@ -440,10 +440,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.4.1.tgz#cfc0737e25f8c206767bdb6703e7943e5d44513e"
   integrity sha512-IqeeGwQihK6Y2EYLFofqs2eY2ep1I2MvQXHzOAI+5iQN51OZlUkrLgyAugu2x86xZewDk5xas7lNczkzFzF62w==
 
-"@chainsafe/benchmark@^1.2.2":
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/benchmark/-/benchmark-1.2.2.tgz#ab9395cc841f1f47b9e3df9db4392e9f1a9d5c83"
-  integrity sha512-lTQpLQHI8ayqUE5tUytZGxCPmPyMSSqesHnmDFUxCbnIAHJuUY4QUaMTz1/ilaftNeexWNvt9paGNRx8FTU64A==
+"@chainsafe/benchmark@^1.2.3":
+  version "1.2.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/benchmark/-/benchmark-1.2.3.tgz#568d62e898077eec3bf4a035cbee49f8c8d7cf4e"
+  integrity sha512-5rQKK2ar1k8DwqEMU5hTQlTrtrPzNdlfrMtbRgtrfYT/QpSADXGq1vBlywofY1D8HuEuv1LhRrn3p2rgibIXew==
   dependencies:
     "@actions/cache" "^4.0.0"
     "@actions/github" "^6.0.0"
