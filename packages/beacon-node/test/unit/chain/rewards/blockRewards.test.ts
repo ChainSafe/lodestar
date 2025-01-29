@@ -81,8 +81,6 @@ describe("chain / rewards / blockRewards", () => {
 
   for (const {id, timeout, opts} of testCases) {
     it(`${id}`, async () => {
-      if (timeout) vi.setConfig({testTimeout: timeout, hookTimeout: timeout});
-
       const state = generatePerfTestCachedStateAltair();
       const block = getBlockAltair(state, opts);
       // Populate permanent root caches of the block
@@ -124,7 +122,7 @@ describe("chain / rewards / blockRewards", () => {
       expect(attestations).toBe(rewardCache.attestations);
       expect(syncAggregate).toBe(rewardCache.syncAggregate);
       expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
-    });
+    }, {timeout: timeout ?? 20_0000});
   }
 
   // Check if `computeBlockRewards` consults reward cache in the post state first
