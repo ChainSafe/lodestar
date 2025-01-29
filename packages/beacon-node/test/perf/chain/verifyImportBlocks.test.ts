@@ -2,10 +2,10 @@ import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/ben
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
+import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
 import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
 import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
