@@ -1,4 +1,4 @@
-/// <reference types="@vitest/browser/providers/playwright" />
+/// <reference types="@vitest/browser/providers/webdriverio" />
 
 import path from "node:path";
 import {defineConfig} from "vitest/config";
@@ -38,39 +38,26 @@ export default defineConfig({
       headless: true,
       ui: false,
       screenshotFailures: false,
-      provider: "playwright",
+      // Recommended provider is `playwright` but it's causing following error on CI
+      // Error: Failed to connect to the browser session "af5be85a-7f29-4299-b680-b07f0cfc2520" within the timeout.
+      // TODO: Debug the issue in later versions of playwright and vitest
+      provider: "webdriverio",
       connectTimeout: 90_0000,
       instances: [
         // TODO: Add support for webkit when available
         {
           browser: "firefox",
           maxConcurrency: 1,
-          launch: {
-            timeout: 90_0000,
-            slowMo: 50,
-            logger: {
-              isEnabled: () => !!process.env.CI,
-              log(name, severity, message, _args, _hints) {
-                console.info(`[${name}] ${severity} ${message}}`);
-              },
-            },
+          capabilities: {
+            browserVersion: "stable",
           },
-          context: {},
         },
         {
-          browser: "chromium",
+          browser: "chrome",
           maxConcurrency: 1,
-          launch: {
-            timeout: 90_0000,
-            slowMo: 50,
-            logger: {
-              isEnabled: () => !!process.env.CI,
-              log(name, severity, message, _args, _hints) {
-                console.info(`[${name}] ${severity} ${message}}`);
-              },
-            },
+          capabilities: {
+            browserVersion: "stable",
           },
-          context: {},
         },
       ],
     },
