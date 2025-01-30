@@ -30,6 +30,7 @@ import {
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
+  EngineApiParamTypes,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   EngineNewPayloadMethod,
@@ -557,7 +558,7 @@ type EngineRequestKey = keyof EngineApiRpcParamTypes;
 type EngineRequestByKey = {
   [K in EngineRequestKey]: {method: K; params: EngineApiRpcParamTypes[K]; methodOpts: ReqOpts};
 };
-type EngineRequest = EngineRequestByKey[EngineRequestKey];
+export type EngineRequest = EngineRequestByKey[EngineRequestKey];
 type EngineResponseByKey = {[K in EngineRequestKey]: EngineApiRpcReturnTypes[K]};
 type EngineResponse = EngineResponseByKey[EngineRequestKey];
 
@@ -569,36 +570,31 @@ type EngineResponse = EngineResponseByKey[EngineRequestKey];
  * eg. {versionedHashes, parentBlockRoot, executionRequests} has to return [versionedHashes, parentBlockRoot, executionRequests]
  * Having numeric key will not guarantee keys in insertion order.
  */
-function generateSerializedNewPayloadParams<T extends EngineNewPayloadMethod>(
+export function generateSerializedNewPayloadParams<T extends EngineNewPayloadMethod>(
   fork: ForkName,
   method: T,
-  params: Record<Exclude<string, `${number}`>, unknown>
+  params: {[K in keyof EngineApiParamTypes[T]]: EngineApiParamTypes[T][K] | undefined}
 ): EngineApiRpcParamTypes[T] {
+  const result = [];
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined) {
       throw new Error(`${key} is required for method=${method} in fork=${fork}`);
     }
-  }
-
-  const keys = Object.keys(params);
-  const result = [];
-
-  for (const key of keys) {
     switch (key) {
       case "executionPayload":
-        result.push(serializeExecutionPayload(fork, params[key] as ExecutionPayload));
+        result.push(serializeExecutionPayload(fork, value as ExecutionPayload));
         break;
       case "versionedHashes":
-        result.push(serializeVersionedHashes(params[key] as VersionedHashes));
+        result.push(serializeVersionedHashes(value as VersionedHashes));
         break;
       case "parentBlockRoot":
-        result.push(serializeBeaconBlockRoot(params[key] as Root));
+        result.push(serializeBeaconBlockRoot(value as Root));
         break;
       case "executionRequests":
-        result.push(serializeExecutionRequests(params[key] as ExecutionRequests));
+        result.push(serializeExecutionRequests(value as ExecutionRequests));
         break;
       default:
-        result.push(params[key]);
+        result.push(value);
     }
   }
 

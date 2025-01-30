@@ -85,6 +85,19 @@ export type EngineApiRpcParamTypes = {
   engine_getBlobsV1: [DATA[]];
 };
 
+// Can extend keys to other engine API whenever it sees fit
+export type EngineApiParamTypes = {
+  engine_newPayloadV1: {executionPayload: ExecutionPayload};
+  engine_newPayloadV2: {executionPayload: ExecutionPayload};
+  engine_newPayloadV3: {executionPayload: ExecutionPayload; versionedHashes: VersionedHashes; parentBlockRoot: Root};
+  engine_newPayloadV4: {
+    executionPayload: ExecutionPayload;
+    versionedHashes: VersionedHashes;
+    parentBlockRoot: Root;
+    executionRequests: ExecutionRequests;
+  };
+};
+
 export type EngineGetPayloadMethod = keyof EngineApiRpcParamTypes & `engine_getPayloadV${number}`;
 export type EngineNewPayloadMethod = keyof EngineApiRpcParamTypes & `engine_newPayloadV${number}`;
 
