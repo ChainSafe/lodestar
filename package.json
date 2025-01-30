@@ -29,7 +29,7 @@
     "docs:lint:fix": "prettier '**/*.md' --write",
     "test": "lerna run test --concurrency 1",
     "test:unit": "lerna run test:unit --concurrency 1",
-    "test:browsers": "test:browsers:firefox && test:browsers:chromium",
+    "test:browsers": "yarn test:browsers:firefox && yarn test:browsers:chromium",
     "test:browsers:firefox": "lerna run test:browsers -- --browser firefox",
     "test:browsers:chromium": "lerna run test:browsers -- --browser firefox",
     "test:e2e": "lerna run test:e2e --concurrency 1",
