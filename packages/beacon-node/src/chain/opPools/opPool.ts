@@ -143,8 +143,7 @@ export class OpPool {
   /** Must be validated beforehand */
   insertAttesterSlashing(fork: ForkName, attesterSlashing: AttesterSlashing, rootHash?: Uint8Array): void {
     if (!rootHash) {
-      const type = sszTypesFor(fork).AttesterSlashing;
-      rootHash = type.hashTreeRoot(attesterSlashing);
+      rootHash = sszTypesFor(fork).AttesterSlashing.hashTreeRoot(attesterSlashing);
     }
 
     // TODO: Do once and cache attached to the AttesterSlashing object
