@@ -107,7 +107,7 @@ function toProtocol(protocol: ProtocolSummary) {
     encoding: Encoding.SSZ_SNAPPY,
     contextBytes: toContextBytes(protocol.contextBytesType, config),
     inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
-    requestSizes: requestSszTypeByMethod(config)[protocol.method],
+    requestSizes: requestSszTypeByMethod(fork, config)[protocol.method],
     responseSizes: (fork) => responseSszTypeByMethod[protocol.method](fork, protocol.version),
   });
 }

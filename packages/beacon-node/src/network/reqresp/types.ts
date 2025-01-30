@@ -70,13 +70,12 @@ type ResponseBodyByMethod = {
 };
 
 /** Request SSZ type for each method and ForkName */
-// TODO Electra: Currently setting default fork to deneb because not every caller of requestSszTypeByMethod can provide fork info
 export const requestSszTypeByMethod: (
-  config: BeaconConfig,
-  fork?: ForkName
+  fork: ForkName,
+  config: BeaconConfig
 ) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
-} = (config, fork = ForkName.deneb) => ({
+} = (fork, config) => ({
   [ReqRespMethod.Status]: ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,
