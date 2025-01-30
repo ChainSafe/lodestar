@@ -13,9 +13,9 @@ export class AttesterSlashingRepository extends Repository<Uint8Array, AttesterS
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_attesterSlashing;
     /**
-     * We are using ssz.electra.AttesterSlashing type since it is backward compatible with ssz.phase0.AttesterSlashing
-     * But this also means the length of attestingIndices is not checked/enfoced here. Need to make sure length
-     * is correct when put/get
+     * We are using `ssz.electra.AttesterSlashing` type since it is backward compatible with `ssz.phase0.AttesterSlashing`
+     * But this also means the length of `attestingIndices` is not checked/enforced here. Need to make sure length
+     * is correct before writing to db.
      */
     const type = ssz.electra.AttesterSlashing;
     super(config, db, bucket, type, getBucketNameByValue(bucket));
