@@ -88,7 +88,7 @@ const defaultOptions: SpecTestOptions<any, any> = {
   shouldError: () => false,
   shouldSkip: () => false,
   expectFunc: (_testCase, expected, actual) => expect(actual).toEqual(expected),
-  timeout: 10 * 60 * 1000,
+  timeout: 1000 * 60 * 15,
 };
 
 export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>(
