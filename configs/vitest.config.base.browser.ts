@@ -45,20 +45,22 @@ export default defineConfig({
       connectTimeout: 90_0000,
       instances: [
         // TODO: Add support for webkit when available
+        // Invalid types from webdriverio for capabilities 
         {
           browser: "firefox",
           maxConcurrency: 1,
           capabilities: {
             browserVersion: "stable",
           },
-        },
+        } as never,
+        // Invalid types from webdriverio for capabilities 
         {
           browser: "chrome",
           maxConcurrency: 1,
           capabilities: {
             browserVersion: "stable",
           },
-        },
+        } as never,
       ],
     },
   },
