@@ -215,10 +215,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     blockInputFetchStats: {
       // of already available blocks which didn't have to go through blobs pull
-      totalDataAvailableBlockInputs: register.gauge({
-        name: "beacon_blockinputs_already_available_total",
-        help: "Total number of block inputs whose blobs were already available",
-      }),
       totalDataAvailableBlockInputBlobs: register.gauge({
         name: "beacon_blockinput_blobs_already_available_total",
         help: "Total number of block input blobs that of already available blocks",
@@ -278,9 +274,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Number of blobs successfully fetched from the network",
       }),
 
+      totalDataAvailableBlockInputs: register.gauge({
+        name: "beacon_blockinputs_already_available_total",
+        help: "Total number of block inputs whose blobs were already available",
+      }),
       totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
         name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
         help: "Count of block inputs that became available using non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsAvailableFromGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_from_getblobs_total",
+        help: "Count of block inputs that became available from non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp: register.gauge({
+        name: "beacon_datapromise_blockinputs_finally_available_from_reqresp_total",
+        help: "Count of block inputs that became available using the req/resp from network",
       }),
       totalDataPromiseBlockInputsTried: register.gauge({
         name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
@@ -289,6 +297,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
         name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
         help: "Total number of block inputs that were successfully resolved as available on blobs pull",
+      }),
+      totalDataPromiseBlockInputsRetriedAvailableFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinputs_retried_and_resolved_from_network_total",
+        help: "Number of blockinputs successfully resolved from the network on retries",
       }),
 
       // retry counts
@@ -303,10 +315,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       dataPromiseBlobsRetriedAvailableFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total",
         help: "Number of blobs successfully fetched from the network on retries",
-      }),
-      totalDataPromiseBlockInputsRetriedAvailableFromNetwork: register.gauge({
-        name: "beacon_datapromise_blockinputs_retried_and_resolved_from_network_total",
-        help: "Number of blockinputs successfully resolved from the network on retries",
       }),
 
       // some caches stats

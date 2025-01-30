@@ -258,6 +258,12 @@ export async function unavailableBeaconBlobsByRoot(
   metrics?.blockInputFetchStats.totalDataPromiseBlockInputsResolvedAvailable.inc();
   if (getBlobsUseful) {
     metrics?.blockInputFetchStats.totalDataPromiseBlockInputsAvailableUsingGetBlobs.inc();
+    if (networkReqIdentifiers.length === 0) {
+      metrics?.blockInputFetchStats.totalDataPromiseBlockInputsAvailableFromGetBlobs.inc();
+    }
+  }
+  if (networkResBlobSidecars.length > 0) {
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp.inc();
   }
   if (blockTriedBefore) {
     metrics?.blockInputFetchStats.totalDataPromiseBlockInputsRetriedAvailableFromNetwork.inc();
