@@ -44,11 +44,19 @@ export default defineConfig({
         // TODO: Add support for webkit when available
         {
           browser: "firefox",
-          maxConcurrency: 1,
+          launch: {
+            timeout: 90_0000,
+            slowMo: 50,
+          },
+          context: {},
         },
         {
           browser: "chromium",
-          maxConcurrency: 1,
+          launch: {
+            timeout: 90_0000,
+            slowMo: 50,
+          },
+          context: {},
         },
       ],
     },
