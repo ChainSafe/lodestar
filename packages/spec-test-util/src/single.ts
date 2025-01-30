@@ -103,7 +103,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
   }
 
   describe(name, () => {
-    if (options.timeout !== undefined) {
+    if (options.timeout) {
       vi.setConfig({testTimeout: options.timeout, hookTimeout: options.timeout});
     }
 
