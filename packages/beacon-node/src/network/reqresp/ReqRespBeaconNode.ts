@@ -137,9 +137,9 @@ export class ReqRespBeaconNode extends ReqResp {
       }
     }
 
-    // Subscribe required protocols, prevent libp2p for throwing if already registered
+    // Subscribe required protocols
     for (const [protocol, handler] of mustSubscribeProtocols) {
-      this.registerProtocol({...protocol, handler}, {ignoreIfDuplicate: true}).catch((e) => {
+      this.registerProtocol({...protocol, handler}).catch((e) => {
         this.logger.error("Error on ReqResp.registerProtocol", {protocolID: this.formatProtocolID(protocol)}, e);
       });
     }
