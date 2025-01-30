@@ -44,17 +44,31 @@ export default defineConfig({
         // TODO: Add support for webkit when available
         {
           browser: "firefox",
+          maxConcurrency: 1,
           launch: {
             timeout: 90_0000,
             slowMo: 50,
+            logger: {
+              isEnabled: () => !!process.env.CI,
+              log(name, severity, message, _args, _hints) {
+                console.info(`[${name}] ${severity} ${message}}`);
+              },
+            },
           },
           context: {},
         },
         {
           browser: "chromium",
+          maxConcurrency: 1,
           launch: {
             timeout: 90_0000,
             slowMo: 50,
+            logger: {
+              isEnabled: () => !!process.env.CI,
+              log(name, severity, message, _args, _hints) {
+                console.info(`[${name}] ${severity} ${message}}`);
+              },
+            },
           },
           context: {},
         },
