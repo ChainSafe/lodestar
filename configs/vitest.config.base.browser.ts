@@ -43,10 +43,12 @@ export default defineConfig({
       instances: [
         // TODO: Add support for webkit when available
         {
-          browser: "chromium",
+          browser: "firefox",
+          maxConcurrency: 1,
         },
         {
-          browser: "firefox",
+          browser: "chromium",
+          maxConcurrency: 1,
         },
       ],
     },
