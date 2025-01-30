@@ -104,7 +104,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
   describe(name, () => {
     if (options.timeout !== undefined) {
-      vi.setConfig({testTimeout: options.timeout ?? 10 * 60 * 1000});
+      vi.setConfig({testTimeout: options.timeout, hookTimeout: options.timeout});
     }
 
     for (const testSubDirname of fs.readdirSync(testCaseDirectoryPath)) {
