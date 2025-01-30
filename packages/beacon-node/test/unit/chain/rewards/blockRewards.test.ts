@@ -80,53 +80,53 @@ describe("chain / rewards / blockRewards", () => {
   ];
 
   for (const {id, timeout, opts} of testCases) {
-    it(
-      `${id}`,
-      async () => {
-        const state = generatePerfTestCachedStateAltair();
-        const block = getBlockAltair(state, opts);
-        // Populate permanent root caches of the block
-        ssz.altair.BeaconBlock.hashTreeRoot(block.message);
-        // Populate tree root caches of the state
-        state.hashTreeRoot();
-        cachedStateAltairPopulateCaches(state);
-        const calculatedBlockReward = await computeBlockRewards(block.message, state as CachedBeaconStateAllForks);
-        const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
-          calculatedBlockReward;
+    if (timeout) {
+      vi.setConfig({testTimeout: timeout, hookTimeout: timeout});
+    }
 
-        // Sanity check
-        expect(proposerIndex).toBe(block.message.proposerIndex);
-        expect(total).toBe(attestations + syncAggregate + proposerSlashings + attesterSlashings);
-        if (opts.syncCommitteeBitsLen === 0) {
-          expect(syncAggregate).toBe(0);
-        }
-        if (opts.attestationLen === 0) {
-          expect(attestations).toBe(0);
-        }
-        if (opts.proposerSlashingLen === 0) {
-          expect(proposerSlashings).toBe(0);
-        }
-        if (opts.attesterSlashingLen === 0) {
-          expect(attesterSlashings).toBe(0);
-        }
+    it(`${id}`, async () => {
+      const state = generatePerfTestCachedStateAltair();
+      const block = getBlockAltair(state, opts);
+      // Populate permanent root caches of the block
+      ssz.altair.BeaconBlock.hashTreeRoot(block.message);
+      // Populate tree root caches of the state
+      state.hashTreeRoot();
+      cachedStateAltairPopulateCaches(state);
+      const calculatedBlockReward = await computeBlockRewards(block.message, state as CachedBeaconStateAllForks);
+      const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
+        calculatedBlockReward;
 
-        const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
-          verifyProposer: false,
-          verifySignatures: false,
-          verifyStateRoot: false,
-        });
+      // Sanity check
+      expect(proposerIndex).toBe(block.message.proposerIndex);
+      expect(total).toBe(attestations + syncAggregate + proposerSlashings + attesterSlashings);
+      if (opts.syncCommitteeBitsLen === 0) {
+        expect(syncAggregate).toBe(0);
+      }
+      if (opts.attestationLen === 0) {
+        expect(attestations).toBe(0);
+      }
+      if (opts.proposerSlashingLen === 0) {
+        expect(proposerSlashings).toBe(0);
+      }
+      if (opts.attesterSlashingLen === 0) {
+        expect(attesterSlashings).toBe(0);
+      }
 
-        // Cross check with rewardCache
-        const rewardCache = postState.proposerRewards;
-        expect(total).toBe(rewardCache.attestations + rewardCache.syncAggregate + rewardCache.slashing);
-        expect(attestations).toBe(rewardCache.attestations);
-        expect(syncAggregate).toBe(rewardCache.syncAggregate);
-        expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
-      },
-      {timeout: timeout ?? 20_0000}
-    );
+      const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        dataAvailableStatus: DataAvailableStatus.available,
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      });
+
+      // Cross check with rewardCache
+      const rewardCache = postState.proposerRewards;
+      expect(total).toBe(rewardCache.attestations + rewardCache.syncAggregate + rewardCache.slashing);
+      expect(attestations).toBe(rewardCache.attestations);
+      expect(syncAggregate).toBe(rewardCache.syncAggregate);
+      expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
+    });
   }
 
   // Check if `computeBlockRewards` consults reward cache in the post state first
