@@ -1143,16 +1143,6 @@ export class BeaconChain implements IBeaconChain {
     if (headState === null) {
       this.logger.verbose("Head state is null");
     }
-
-    // TODO-Electra: Deprecating eth1Data poll requires a check on a finalized checkpoint state.
-    // Will resolve this later
-    // if (cpEpoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity)) {
-    //   // finalizedState can be safely casted to Electra state since cp is already post-Electra
-    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositRequestsStartIndex) {
-    //     // Signal eth1 to stop polling eth1Data
-    //     this.eth1.stopPollingEth1Data();
-    //   }
-    // }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
