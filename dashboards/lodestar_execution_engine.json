@@ -3224,7 +3224,7 @@
           "expr": "lodestar_eth1_latest_block_ttd",
           "hide": false,
           "interval": "",
-          "legendFormat": "lastest block td",
+          "legendFormat": "latest block td",
           "refId": "A"
         },
         {
