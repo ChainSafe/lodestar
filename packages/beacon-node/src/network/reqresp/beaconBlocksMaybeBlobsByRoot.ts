@@ -104,9 +104,9 @@ export async function unavailableBeaconBlobsByRoot(
 
   const blockTriedBefore = blockInputsRetryTrackerCache?.has(blockRootHex) === true;
   if (blockTriedBefore) {
-    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsReTried.inc();
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsReTriedBlobsPull.inc();
   } else {
-    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTried.inc();
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTriedBlobsPull.inc();
     blockInputsRetryTrackerCache?.add(blockRootHex);
   }
 
@@ -152,6 +152,9 @@ export async function unavailableBeaconBlobsByRoot(
     }
   }
 
+  if (engineReqIdentifiers.length > 0) {
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTriedGetBlobs.inc();
+  }
   const versionedHashes = engineReqIdentifiers.map((bi) => bi.versionedHash);
   metrics?.blockInputFetchStats.dataPromiseBlobsEngineGetBlobsApiRequests.inc(versionedHashes.length);
 
