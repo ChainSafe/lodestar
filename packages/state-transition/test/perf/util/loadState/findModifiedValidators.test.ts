@@ -60,9 +60,7 @@ describe("find modified validators by different ways", () => {
           ? "no difference"
           : expectedModifiedValidators.length + " modified validators";
 
-      // TODO: Diagnose why this benchmark failing after upgrade
-      // https://github.com/ChainSafe/lodestar/issues/7380
-      bench.skip({
+      bench({
         id: `${prefix} - ${testCaseName}`,
         beforeEach: () => {
           const clonedState = state.clone();
