@@ -1,7 +1,6 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {expect} from "chai";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 
-describe("transfer bytes", function () {
+describe("transfer bytes", () => {
   const sizes = [
     {size: 84, name: "Status"},
     {size: 112, name: "SignedVoluntaryExit"},
@@ -19,28 +18,18 @@ describe("transfer bytes", function () {
   for (const {size, name} of sizes) {
     const array = new Uint8Array(size);
     for (let i = 0; i < array.length; i++) array[i] = Math.random() * 255;
-    itBench({
+    bench({
       id: `transfer serialized ${name} (${size} B)`,
       beforeEach: () => array.slice(),
       fn: async (a) => {
         structuredClone(a, {transfer: [a.buffer]});
       },
     });
-    itBench({
+    bench({
       id: `copy serialized ${name} (${size} B)`,
       fn: async () => {
         structuredClone(array);
       },
     });
   }
-
-  it("ArrayBuffer use after structuredClone transfer", () => {
-    const data = new Uint8Array(32);
-    data[0] = 1;
-    expect(data[0]).equals(1);
-    structuredClone(data, {transfer: [data.buffer]});
-    // After structuredClone() data is mutated in place to hold an empty ArrayBuffer
-    expect(data[0]).equals(undefined);
-    expect(data).deep.equals(new Uint8Array());
-  });
 });

@@ -1,6 +1,6 @@
-import {vi, Mocked} from "vitest";
 import {Logger} from "@lodestar/logger";
 import {getEnvLogger} from "@lodestar/logger/env";
+import {Mocked, vi} from "vitest";
 import {getLoggerVc} from "../../src/util/index.js";
 import {ClockMock} from "./clock.js";
 

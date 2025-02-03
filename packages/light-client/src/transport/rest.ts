@@ -1,4 +1,5 @@
-import mitt from "mitt";
+import {type ApiClient, routes} from "@lodestar/api";
+import {type ForkName} from "@lodestar/params";
 import {
   LightClientBootstrap,
   LightClientFinalityUpdate,
@@ -6,8 +7,7 @@ import {
   LightClientUpdate,
   type SyncPeriod,
 } from "@lodestar/types";
-import {type ApiClient, routes} from "@lodestar/api";
-import {type ForkName} from "@lodestar/params";
+import mitt from "mitt";
 import {MittEmitter} from "../events.js";
 import {type LightClientTransport} from "./interface.js";
 

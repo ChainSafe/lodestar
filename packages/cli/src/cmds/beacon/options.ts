@@ -1,7 +1,7 @@
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
-import {beaconNodeOptions, paramsOptions, BeaconNodeArgs} from "../../options/index.js";
+import {BeaconNodeArgs, beaconNodeOptions, paramsOptions} from "../../options/index.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {defaultBeaconPaths, BeaconPaths} from "./paths.js";
+import {BeaconPaths, defaultBeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
   forceGenesis?: boolean;
@@ -33,7 +33,6 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   genesisStateFile: {
-    hidden: true,
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
   },
@@ -80,7 +79,6 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   ignoreWeakSubjectivityCheck: {
     description:
       "Ignore the checkpoint sync state failing the weak subjectivity check. This is relevant in testnets where the weak subjectivity period is too small for even few epochs of non finalization causing last finalized to be out of range. This flag is not recommended for mainnet use.",
-    hidden: true,
     type: "boolean",
     group: "weak subjectivity",
   },
@@ -120,7 +118,6 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   persistNetworkIdentity: {
-    hidden: true,
     description: "Whether to reuse the same peer-id across restarts",
     type: "boolean",
   },

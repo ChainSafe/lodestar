@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {activePreset} from "@lodestar/params";
-import {Simulation} from "../utils/crucible/simulation.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
-import {Match, BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
+import {BeaconClient, ExecutionClient, Match} from "../utils/crucible/interfaces.js";
+import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 

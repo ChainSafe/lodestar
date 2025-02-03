@@ -1,24 +1,24 @@
-import {describe, it, expect, beforeAll, vi, Mocked, beforeEach, afterEach} from "vitest";
-import {toBufferBE} from "bigint-buffer";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
-import {chainConfig} from "@lodestar/config/default";
+import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {ssz} from "@lodestar/types";
+import {chainConfig} from "@lodestar/config/default";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {toBufferBE} from "bigint-buffer";
+import {Mocked, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties.js";
-import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
-import {ClockMock} from "../../utils/clock.js";
-import {initValidatorStore} from "../../utils/validatorStore.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
+import {ClockMock} from "../../utils/clock.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
+import {initValidatorStore} from "../../utils/validatorStore.js";
 
 vi.mock("../../../src/services/chainHeaderTracker.js");
 
-describe("AttestationDutiesService", function () {
+describe("AttestationDutiesService", () => {
   const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
@@ -33,7 +33,7 @@ describe("AttestationDutiesService", function () {
   const defaultValidator: routes.beacon.ValidatorResponse = {
     index,
     balance: 32e9,
-    status: "active",
+    status: "active_ongoing",
     validator: ssz.phase0.Validator.defaultValue(),
   };
 
@@ -61,7 +61,7 @@ describe("AttestationDutiesService", function () {
     controller.abort();
   });
 
-  it("Should fetch indexes and duties", async function () {
+  it("Should fetch indexes and duties", async () => {
     // Reply with some duties
     const slot = 1;
     const epoch = computeEpochAtSlot(slot);
@@ -118,7 +118,7 @@ describe("AttestationDutiesService", function () {
     expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
   });
 
-  it("Should remove signer from attestation duties", async function () {
+  it("Should remove signer from attestation duties", async () => {
     // Reply with some duties
     const slot = 1;
     const duty: routes.validator.AttesterDuty = {
@@ -165,7 +165,7 @@ describe("AttestationDutiesService", function () {
     expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).toEqual({});
   });
 
-  it("Should fetch duties when node is resynced", async function () {
+  it("Should fetch duties when node is resynced", async () => {
     // Node is syncing
     api.node.getSyncingStatus.mockResolvedValue(
       mockApiResponse({data: {headSlot: 0, syncDistance: 1, isSyncing: true, isOptimistic: false, elOffline: false}})

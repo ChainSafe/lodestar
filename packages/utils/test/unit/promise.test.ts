@@ -1,7 +1,7 @@
 /* Causing this error on usage of expect.any(Number)  */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import {describe, it, expect} from "vitest";
-import {wrapPromise, PromiseRejectedResult, PromiseFulfilledResult} from "../../src/promise.js";
+import {describe, expect, it} from "vitest";
+import {PromiseFulfilledResult, PromiseRejectedResult, wrapPromise} from "../../src/promise.js";
 
 describe("promise", () => {
   describe("wrapPromise", () => {

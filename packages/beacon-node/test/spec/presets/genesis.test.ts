@@ -1,6 +1,5 @@
 import path from "node:path";
-import {expect} from "vitest";
-import {phase0, Root, ssz, TimeSeconds, ExecutionPayloadHeader, sszTypesFor} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -8,21 +7,20 @@ import {
   initializeBeaconStateFromEth1,
   isValidGenesisState,
 } from "@lodestar/state-transition";
+import {ExecutionPayloadHeader, Root, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
+import {expect} from "vitest";
 
 import {ACTIVE_PRESET} from "@lodestar/params";
+import {getConfig} from "../../utils/config.js";
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
-import {getConfig} from "../../utils/config.js";
 
-import {RunnerType} from "../utils/types.js";
-import {specTestIterator} from "../utils/specTestIterator.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType} from "../utils/types.js";
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 const genesis: TestRunnerFn<any, any> = (fork, testName, testSuite) => {
   const testFn = genesisTestFns[testName];
@@ -86,7 +84,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
       },
       timeout: 60000,
       getExpected: (testCase) => testCase.state,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
@@ -108,7 +106,7 @@ const genesisValidity: TestRunnerFn<GenesisValidityTestCase, boolean> = (fork) =
         genesis: ssz[fork].BeaconState,
       },
       getExpected: (testCase) => testCase.is_valid,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expect(actual).toEqualWithMessage(expected, "isValidGenesisState is not" + expected);
       },
     },

@@ -16,10 +16,15 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
   const eventSerdes = getEventSerdes(config);
 
   return {
-    eventstream: async ({topics, signal, onEvent, onError, onClose}) => {
+    eventstream: async ({
+      topics,
+      signal,
+      onEvent,
+      onError,
+      onClose,
+    }): Promise<ApiResponse<Endpoints["eventstream"]>> => {
       const query = stringifyQuery({topics});
       const url = `${urlJoin(baseUrl, definitions.eventstream.url)}?${query}`;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       const EventSource = await getEventSource();
       const eventSource = new EventSource(url);
 
@@ -40,7 +45,7 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
       // EventSource will try to reconnect always on all errors
       // `eventSource.onerror` events are informative but don't indicate the EventSource closed
       // The only way to abort the connection from the client is via eventSource.close()
-      eventSource.onerror = function onerror(err) {
+      eventSource.onerror = function onerror(err): void {
         const errEs = err as unknown as EventSourceError;
 
         // Ignore noisy errors due to beacon node being offline

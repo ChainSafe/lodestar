@@ -1,6 +1,6 @@
-import {describe, it, expect, beforeEach, afterEach, vi, Mocked} from "vitest";
-import {EpochDifference, ProtoBlock, ForkChoice} from "@lodestar/fork-choice";
+import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 
 vi.mock("@lodestar/fork-choice");
@@ -26,9 +26,8 @@ describe("util / getShufflingDependentRoot", () => {
     forkchoiceStub.getDependentRoot.mockImplementation((block, epochDiff) => {
       if (block === headBattHeadBlock && epochDiff === EpochDifference.previous) {
         return "current";
-      } else {
-        throw new Error("should not be called");
       }
+      throw new Error("should not be called");
     });
     expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toEqual("current");
   });
@@ -39,9 +38,8 @@ describe("util / getShufflingDependentRoot", () => {
     forkchoiceStub.getDependentRoot.mockImplementation((block, epochDiff) => {
       if (block === headBattHeadBlock && epochDiff === EpochDifference.current) {
         return "0x000";
-      } else {
-        throw new Error("should not be called");
       }
+      throw new Error("should not be called");
     });
     expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toEqual("0x000");
   });

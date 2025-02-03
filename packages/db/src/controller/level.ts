@@ -1,6 +1,6 @@
-import {ClassicLevel} from "classic-level";
 import {Logger} from "@lodestar/utils";
-import {DbReqOpts, DatabaseController, DatabaseOptions, FilterOptions, KeyValue} from "./interface.js";
+import {ClassicLevel} from "classic-level";
+import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
 
 enum Status {
@@ -78,11 +78,11 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   setMetrics(metrics: LevelDbControllerMetrics): void {
     if (this.metrics !== null) {
       throw Error("metrics can only be set once");
-    } else {
-      this.metrics = metrics;
-      if (this.status === Status.started) {
-        this.collectDbSizeMetric();
-      }
+    }
+
+    this.metrics = metrics;
+    if (this.status === Status.started) {
+      this.collectDbSizeMetric();
     }
   }
 

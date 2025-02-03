@@ -1,9 +1,9 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got, {RequestError} from "got";
-import yaml from "js-yaml";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
+import got, {RequestError} from "got";
+import yaml from "js-yaml";
 import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
@@ -28,11 +28,8 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   const cliParams: Record<string, unknown> = {
     "testnet-dir": rootDirMounted,
     datadir: rootDirMounted,
+    // Enable the RESTful HTTP API server. Disabled by default.
     http: null,
-    //  Enable the RESTful HTTP API server. Disabled by default.
-    // Forces the HTTP to indicate that the node is synced when sync is actually
-    // stalled. This is useful for very small testnets. TESTING ONLY. DO NOT USE ON MAINNET.
-    "http-allow-sync-stalled": null,
     "http-address": "0.0.0.0",
     "http-port": ports.beacon.httpPort,
     "http-allow-origin": "*",
@@ -74,7 +71,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
         : undefined,
       bootstrap: async () => {
         await writeFile(path.join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(forkConfig)));
-        await writeFile(path.join(rootDir, "deploy_block.txt"), "0");
+        await writeFile(path.join(rootDir, "deposit_contract_block.txt"), "0");
       },
       cli: {
         command: isDocker ? "lighthouse" : (process.env.LIGHTHOUSE_BINARY_PATH as string),
@@ -109,7 +106,6 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   api.lighthouse = {
     async getPeers() {
       const res = await got(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       return {body: JSON.parse(res.body), status: res.statusCode};
     },
   };

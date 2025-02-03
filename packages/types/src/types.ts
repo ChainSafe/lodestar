@@ -7,12 +7,12 @@ import {
   ForkPostElectra,
   ForkPreBlobs,
 } from "@lodestar/params";
-import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
+import {ts as phase0} from "./phase0/index.js";
 import {Slot} from "./primitive/types.js";
 
 export * from "./primitive/types.js";
@@ -32,6 +32,18 @@ export enum ProducedBlockSource {
   engine = "engine",
 }
 
+export type WithBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes: Uint8Array;
+};
+
+export type WithOptionalBytes<T> = {
+  data: T;
+  /** SSZ serialized `data` bytes */
+  bytes?: Uint8Array | null;
+};
+
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
 
@@ -44,6 +56,7 @@ type TypesByFork = {
     BeaconState: phase0.BeaconState;
     SignedBeaconBlock: phase0.SignedBeaconBlock;
     Metadata: phase0.Metadata;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -67,6 +80,7 @@ type TypesByFork = {
     LightClientStore: altair.LightClientStore;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -98,6 +112,7 @@ type TypesByFork = {
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -129,6 +144,7 @@ type TypesByFork = {
     SSEPayloadAttributes: capella.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -165,6 +181,7 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: phase0.Attestation;
     Attestation: phase0.Attestation;
     IndexedAttestation: phase0.IndexedAttestation;
     IndexedAttestationBigint: phase0.IndexedAttestationBigint;
@@ -201,6 +218,7 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.SingleAttestation;
     Attestation: electra.Attestation;
     IndexedAttestation: electra.IndexedAttestation;
     IndexedAttestationBigint: electra.IndexedAttestationBigint;
@@ -269,6 +287,7 @@ export type SignedBuilderBid<F extends ForkExecution = ForkExecution> = TypesByF
 export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
 
 export type Attestation<F extends ForkName = ForkAll> = TypesByFork[F]["Attestation"];
+export type SingleAttestation<F extends ForkName = ForkAll> = TypesByFork[F]["SingleAttestation"];
 export type IndexedAttestation<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestation"];
 export type IndexedAttestationBigint<F extends ForkName = ForkAll> = TypesByFork[F]["IndexedAttestationBigint"];
 export type AttesterSlashing<F extends ForkName = ForkAll> = TypesByFork[F]["AttesterSlashing"];

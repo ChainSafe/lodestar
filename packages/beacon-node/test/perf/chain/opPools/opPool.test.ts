@@ -1,5 +1,6 @@
-import {itBench} from "@dapplion/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {
+  ForkName,
   MAX_ATTESTER_SLASHINGS,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_PROPOSER_SLASHINGS,
@@ -7,8 +8,8 @@ import {
 } from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-// eslint-disable-next-line import/no-relative-packages
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
+import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";
 import {generateBlsToExecutionChanges} from "../../../fixtures/capella.js";
 import {
@@ -16,18 +17,18 @@ import {
   generateSignedBeaconBlockHeader,
   generateVoluntaryExits,
 } from "../../../fixtures/phase0.js";
-import {BlockType} from "../../../../src/chain/interface.js";
 
 describe("opPool", () => {
   let originalState: CachedBeaconStateAltair;
 
-  before(function () {
-    this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
+  beforeAll(
+    () => {
+      originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
+    },
+    2 * 60 * 1000 // Generating the states for the first time is very slow
+  );
 
-    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
-  });
-
-  itBench({
+  bench({
     id: "getSlashingsAndExits - default max",
     beforeEach: () => {
       const pool = new OpPool();
@@ -43,7 +44,7 @@ describe("opPool", () => {
     },
   });
 
-  itBench({
+  bench({
     id: "getSlashingsAndExits - 2k",
     beforeEach: () => {
       const pool = new OpPool();
@@ -64,7 +65,7 @@ describe("opPool", () => {
 
 function fillAttesterSlashing(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
   for (const attestation of generateIndexedAttestations(state, count)) {
-    pool.insertAttesterSlashing({
+    pool.insertAttesterSlashing(ForkName.phase0, {
       attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
       attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
     });

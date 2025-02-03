@@ -3,8 +3,8 @@ import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, HexString, JsonRpcRequest} from "../types.js";
 import {bufferToHex} from "./conversion.js";
 import {getELBlock, getELCode, getELProof} from "./execution.js";
-import {isValidAccount, isValidBlock, isValidCodeHash, isValidStorageKeys} from "./validation.js";
 import {ELRpcProvider} from "./rpc_provider.js";
+import {isValidAccount, isValidBlock, isValidCodeHash, isValidStorageKeys} from "./validation.js";
 
 type VerificationResult<T> = {data: T; valid: true} | {valid: false; data?: undefined};
 

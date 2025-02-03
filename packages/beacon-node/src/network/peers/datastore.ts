@@ -1,6 +1,6 @@
 import {BaseDatastore} from "datastore-core";
 import {LevelDatastore} from "datastore-level";
-import {Key, KeyQuery, Query, Pair} from "interface-datastore";
+import {Key, KeyQuery, Pair, Query} from "interface-datastore";
 
 type MemoryItem = {
   lastAccessedMs: number;
@@ -147,8 +147,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     if (this._dirtyItems.size >= this._threshold) {
       try {
         await this._commitData();
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (_e) {}
     }
   }
 

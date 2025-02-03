@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {KeymanagerApiMethods, registerRoutes} from "@lodestar/api/keymanager/server";
+import {RestApiServer, RestApiServerModules, RestApiServerOpts} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {toHex} from "@lodestar/utils";
 import {writeFile600Perm} from "../../../util/index.js";
@@ -80,6 +80,7 @@ function readFileIfExists(filepath: string): string | null {
     return fs.readFileSync(filepath, "utf8").trim();
   } catch (e) {
     if ((e as {code: string}).code === "ENOENT") return null;
-    else throw e;
+
+    throw e;
   }
 }

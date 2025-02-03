@@ -28,49 +28,49 @@ export function isBetterUpdate(newUpdate: LightClientUpdateSummary, oldUpdate: L
   const oldNumActiveParticipants = oldUpdate.activeParticipants;
   const newHasSupermajority = newNumActiveParticipants * 3 >= SYNC_COMMITTEE_SIZE * 2;
   const oldHasSupermajority = oldNumActiveParticipants * 3 >= SYNC_COMMITTEE_SIZE * 2;
-  if (newHasSupermajority != oldHasSupermajority) {
+  if (newHasSupermajority !== oldHasSupermajority) {
     return newHasSupermajority;
   }
-  if (!newHasSupermajority && newNumActiveParticipants != oldNumActiveParticipants) {
+  if (!newHasSupermajority && newNumActiveParticipants !== oldNumActiveParticipants) {
     return newNumActiveParticipants > oldNumActiveParticipants;
   }
 
   // Compare presence of relevant sync committee
   const newHasRelevantSyncCommittee =
     newUpdate.isSyncCommitteeUpdate &&
-    computeSyncPeriodAtSlot(newUpdate.attestedHeaderSlot) == computeSyncPeriodAtSlot(newUpdate.signatureSlot);
+    computeSyncPeriodAtSlot(newUpdate.attestedHeaderSlot) === computeSyncPeriodAtSlot(newUpdate.signatureSlot);
   const oldHasRelevantSyncCommittee =
     oldUpdate.isSyncCommitteeUpdate &&
-    computeSyncPeriodAtSlot(oldUpdate.attestedHeaderSlot) == computeSyncPeriodAtSlot(oldUpdate.signatureSlot);
-  if (newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee) {
+    computeSyncPeriodAtSlot(oldUpdate.attestedHeaderSlot) === computeSyncPeriodAtSlot(oldUpdate.signatureSlot);
+  if (newHasRelevantSyncCommittee !== oldHasRelevantSyncCommittee) {
     return newHasRelevantSyncCommittee;
   }
 
   // Compare indication of any finality
   const newHasFinality = newUpdate.isFinalityUpdate;
   const oldHasFinality = oldUpdate.isFinalityUpdate;
-  if (newHasFinality != oldHasFinality) {
+  if (newHasFinality !== oldHasFinality) {
     return newHasFinality;
   }
 
   // Compare sync committee finality
   if (newHasFinality) {
     const newHasSyncCommitteeFinality =
-      computeSyncPeriodAtSlot(newUpdate.finalizedHeaderSlot) == computeSyncPeriodAtSlot(newUpdate.attestedHeaderSlot);
+      computeSyncPeriodAtSlot(newUpdate.finalizedHeaderSlot) === computeSyncPeriodAtSlot(newUpdate.attestedHeaderSlot);
     const oldHasSyncCommitteeFinality =
-      computeSyncPeriodAtSlot(oldUpdate.finalizedHeaderSlot) == computeSyncPeriodAtSlot(oldUpdate.attestedHeaderSlot);
-    if (newHasSyncCommitteeFinality != oldHasSyncCommitteeFinality) {
+      computeSyncPeriodAtSlot(oldUpdate.finalizedHeaderSlot) === computeSyncPeriodAtSlot(oldUpdate.attestedHeaderSlot);
+    if (newHasSyncCommitteeFinality !== oldHasSyncCommitteeFinality) {
       return newHasSyncCommitteeFinality;
     }
   }
 
   // Tiebreaker 1: Sync committee participation beyond supermajority
-  if (newNumActiveParticipants != oldNumActiveParticipants) {
+  if (newNumActiveParticipants !== oldNumActiveParticipants) {
     return newNumActiveParticipants > oldNumActiveParticipants;
   }
 
   // Tiebreaker 2: Prefer older data (fewer changes to best)
-  if (newUpdate.attestedHeaderSlot != oldUpdate.attestedHeaderSlot) {
+  if (newUpdate.attestedHeaderSlot !== oldUpdate.attestedHeaderSlot) {
     return newUpdate.attestedHeaderSlot < oldUpdate.attestedHeaderSlot;
   }
   return newUpdate.signatureSlot < oldUpdate.signatureSlot;

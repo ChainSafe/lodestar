@@ -1,9 +1,9 @@
 import {PresetName} from "./presetName.js";
+import {presetStatus} from "./presetStatus.js";
+import {gnosisPreset} from "./presets/gnosis.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
-import {gnosisPreset} from "./presets/gnosis.js";
-import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset, userOverrides} from "./setPreset.js";
+import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
 export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";
@@ -91,12 +91,11 @@ export const {
 
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  MAX_BLOBS_PER_BLOCK,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
 
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
-  PENDING_BALANCE_DEPOSITS_LIMIT,
+  PENDING_DEPOSITS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PENDING_CONSOLIDATIONS_LIMIT,
   MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
@@ -107,6 +106,7 @@ export const {
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+  MAX_PENDING_DEPOSITS_PER_EPOCH,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
 } = activePreset;
 
@@ -197,7 +197,6 @@ export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 export const MAX_REQUEST_BLOCKS_DENEB = 2 ** 7; // 128
-export const MAX_REQUEST_BLOB_SIDECARS = MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK;
 
 // Lightclient pre-computed
 /**
@@ -256,11 +255,11 @@ export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
 
 // ssz.deneb.BeaconBlockBody.getPathInfo(['blobKzgCommitments',0]).gindex
-export const KZG_COMMITMENT_GINDEX0 = ACTIVE_PRESET === PresetName.minimal ? 864 : 221184;
+export const KZG_COMMITMENT_GINDEX0 = ACTIVE_PRESET === PresetName.minimal ? 1728 : 221184;
 export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
 
 // ssz.deneb.BlobSidecars.elementType.fixedSize
-export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131672 : 131928;
+export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131704 : 131928;
 
 // Electra Misc
 export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;
@@ -271,3 +270,6 @@ export const FINALIZED_ROOT_INDEX_ELECTRA = 41;
 export const NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA = 87;
 export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
 export const NEXT_SYNC_COMMITTEE_INDEX_ELECTRA = 23;
+export const DEPOSIT_REQUEST_TYPE = 0x00;
+export const WITHDRAWAL_REQUEST_TYPE = 0x01;
+export const CONSOLIDATION_REQUEST_TYPE = 0x02;

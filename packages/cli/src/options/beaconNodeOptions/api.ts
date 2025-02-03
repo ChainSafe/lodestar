@@ -1,4 +1,4 @@
-import {defaultOptions, IBeaconNodeOptions, allNamespaces} from "@lodestar/beacon-node";
+import {IBeaconNodeOptions, allNamespaces, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 const enabledAll = "*";
@@ -22,7 +22,7 @@ export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
     rest: {
       api: args["rest.namespace"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["rest.cors"],
-      enabled: args["rest"],
+      enabled: args.rest,
       address: args["rest.address"],
       port: args["rest.port"],
       headerLimit: args["rest.headerLimit"],
@@ -59,7 +59,7 @@ export const options: CliCommandOptions<ApiArgs> = {
       // Enable all
       if (namespaces.includes(enabledAll)) return allNamespaces;
       // Parse ["debug,lodestar"] to ["debug", "lodestar"]
-      return namespaces.map((val) => val.split(",")).flat(1);
+      return namespaces.flatMap((val) => val.split(","));
     },
   },
 

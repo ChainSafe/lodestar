@@ -1,27 +1,27 @@
 import fs from "node:fs";
-import got from "got";
 import {ENR} from "@chainsafe/enr";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
 import {getStateSlotFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {Checkpoint} from "@lodestar/types/phase0";
-import {Slot} from "@lodestar/types";
-import {fromHex, callFnWhenAwait, Logger, formatBytes} from "@lodestar/utils";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  getLatestBlockRoot,
   computeCheckpointEpochAtStateSlot,
+  getLatestBlockRoot,
   loadState,
 } from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
+import {Checkpoint} from "@lodestar/types/phase0";
+import {Logger, callFnWhenAwait, formatBytes, fromHex} from "@lodestar/utils";
+import got from "got";
 import {parseBootnodesFile} from "../util/format.js";
-import * as mainnet from "./mainnet.js";
-import * as dev from "./dev.js";
-import * as gnosis from "./gnosis.js";
-import * as sepolia from "./sepolia.js";
-import * as holesky from "./holesky.js";
 import * as chiado from "./chiado.js";
+import * as dev from "./dev.js";
 import * as ephemery from "./ephemery.js";
+import * as gnosis from "./gnosis.js";
+import * as holesky from "./holesky.js";
+import * as mainnet from "./mainnet.js";
+import * as sepolia from "./sepolia.js";
 
 export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
@@ -109,7 +109,6 @@ export async function getNetworkBootnodes(network: NetworkName): Promise<string[
       const bootEnrs = await fetchBootnodes(network);
       bootnodes.push(...bootEnrs);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
     }
   }
@@ -127,7 +126,7 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
   for (const enrStr of bootnodes) {
     try {
       ENR.decodeTxt(enrStr);
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Invalid ENR found in ${bootnodesFilePath}:\n    ${enrStr}`);
     }
   }
@@ -211,7 +210,7 @@ export async function fetchWeakSubjectivityState(
 }
 
 export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
-  const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
+  const checkpointRegex = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
   const match = checkpointRegex.exec(checkpointStr.toLowerCase());
   if (!match) {
     throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);

@@ -5,6 +5,7 @@ import {ENRKey} from "../metadata.js";
 export enum ENRRelevance {
   no_tcp = "no_tcp",
   no_eth2 = "no_eth2",
+  // biome-ignore lint/style/useNamingConvention: Need to use the this name for network convention
   unknown_forkDigest = "unknown_forkDigest",
   relevant = "relevant",
 }

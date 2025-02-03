@@ -1,7 +1,7 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {getAttestationDeltas} from "../../../src/epoch/getAttestationDeltas.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 import {StatePhase0Epoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
 
 // - On normal mainnet conditions
@@ -39,7 +39,7 @@ describe("phase0 getAttestationDeltas", () => {
   ];
 
   for (const {id, isInInactivityLeak, flagFactors} of testCases) {
-    itBench<StatePhase0Epoch, StatePhase0Epoch>({
+    bench<StatePhase0Epoch, StatePhase0Epoch>({
       id: `phase0 getAttestationDeltas - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {

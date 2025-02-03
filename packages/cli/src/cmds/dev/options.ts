@@ -1,7 +1,7 @@
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
-import {beaconOptions, BeaconArgs} from "../beacon/options.js";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
+import {BeaconArgs, beaconOptions} from "../beacon/options.js";
 import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
@@ -81,12 +81,12 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     default: true,
   },
   eth1: {
-    ...beaconNodeOptions["eth1"],
+    ...beaconNodeOptions.eth1,
     defaultDescription: undefined,
     default: false,
   },
   rest: {
-    ...beaconNodeOptions["rest"],
+    ...beaconNodeOptions.rest,
     defaultDescription: undefined,
     default: true,
   },

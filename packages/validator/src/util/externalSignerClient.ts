@@ -1,27 +1,25 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {fetch} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkPreExecution, ForkSeq} from "@lodestar/params";
+import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
 import {
-  phase0,
-  altair,
-  capella,
+  AggregateAndProof,
   BeaconBlock,
   BlindedBeaconBlock,
-  AggregateAndProof,
-  sszTypesFor,
-  ssz,
-  Slot,
   Epoch,
-  RootHex,
   Root,
+  RootHex,
+  Slot,
+  altair,
+  capella,
+  phase0,
+  ssz,
+  sszTypesFor,
 } from "@lodestar/types";
-import {ForkPreExecution, ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {BeaconConfig} from "@lodestar/config";
-import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 export enum SignableMessageType {
   AGGREGATION_SLOT = "AGGREGATION_SLOT",
@@ -243,14 +241,14 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
             block_header: ssz.phase0.BeaconBlockHeader.toJson(blindedOrFullBlockToHeader(config, payload.data)),
           },
         };
-      } else {
-        return {
-          beacon_block: {
-            version,
-            block: config.getForkTypes(payload.data.slot).BeaconBlock.toJson(payload.data),
-          },
-        };
       }
+
+      return {
+        beacon_block: {
+          version,
+          block: config.getForkTypes(payload.data.slot).BeaconBlock.toJson(payload.data),
+        },
+      };
     }
 
     case SignableMessageType.DEPOSIT:

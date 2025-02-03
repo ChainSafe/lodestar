@@ -1,5 +1,5 @@
 import {RootHex} from "@lodestar/types";
-import {bytesToBigInt, bigIntToBytes, toHex, fromHex} from "@lodestar/utils";
+import {bigIntToBytes, bytesToBigInt, fromHex, toHex} from "@lodestar/utils";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
@@ -53,7 +53,7 @@ export function numToQuantity(num: number | bigint): QUANTITY {
  */
 export function quantityToNum(hex: QUANTITY, id = ""): number {
   const num = parseInt(hex, 16);
-  if (isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
+  if (Number.isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
   return num;
 }
 

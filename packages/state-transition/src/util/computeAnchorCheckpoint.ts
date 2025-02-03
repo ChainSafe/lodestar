@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz, phase0} from "@lodestar/types";
 import {GENESIS_SLOT, ZERO_HASH} from "@lodestar/params";
+import {phase0, ssz} from "@lodestar/types";
 import {BeaconStateAllForks} from "../types.js";
 import {blockToHeader} from "./blockRoot.js";
 import {computeCheckpointEpochAtStateSlot} from "./epoch.js";
@@ -9,8 +9,8 @@ export function computeAnchorCheckpoint(
   config: ChainForkConfig,
   anchorState: BeaconStateAllForks
 ): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
-  let blockHeader;
-  let root;
+  let blockHeader: phase0.BeaconBlockHeader;
+  let root: Uint8Array;
   const blockTypes = config.getForkTypes(anchorState.latestBlockHeader.slot);
 
   if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {

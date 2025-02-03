@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
@@ -25,14 +25,12 @@ export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaco
   // jwt auth mechanism.
   if (providerUrls === undefined && args["execution.urls"]) {
     providerUrls = args["execution.urls"];
-    jwtSecretHex = args["jwtSecret"]
-      ? extractJwtHexSecret(fs.readFileSync(args["jwtSecret"], "utf-8").trim())
-      : undefined;
-    jwtId = args["jwtId"];
+    jwtSecretHex = args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined;
+    jwtId = args.jwtId;
   }
 
   return {
-    enabled: args["eth1"],
+    enabled: args.eth1,
     providerUrls,
     jwtSecretHex,
     jwtId,
@@ -59,7 +57,7 @@ export const options: CliCommandOptions<Eth1Args> = {
     string: true,
     coerce: (urls: string[]): string[] =>
       // Parse ["url1,url2"] to ["url1", "url2"]
-      urls.map((item) => item.split(",")).flat(1),
+      urls.flatMap((item) => item.split(",")),
     group: "eth1",
   },
 

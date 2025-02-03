@@ -1,6 +1,4 @@
 import {digest} from "@chainsafe/as-sha256";
-import {Epoch, Bytes32, DomainType, ValidatorIndex} from "@lodestar/types";
-import {assert, bytesToBigInt, intToBytes} from "@lodestar/utils";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -13,8 +11,10 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {BeaconStateAllForks} from "../types.js";
+import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
+import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {BeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
 
@@ -57,30 +57,40 @@ export function computeProposerIndex(
     throw Error("Validator indices must not be empty");
   }
 
-  // TODO: Inline outside this function
-  const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-  const MAX_EFFECTIVE_BALANCE_INCREMENT =
-    fork >= ForkSeq.electra
-      ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
-      : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+  if (fork >= ForkSeq.electra) {
+    const MAX_RANDOM_VALUE = 2 ** 16 - 1;
+    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
 
-  let i = 0;
-  /* eslint-disable-next-line no-constant-condition */
-  while (true) {
-    const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
-    const randByte = digest(
-      Buffer.concat([
-        seed,
-        //
-        intToBytes(Math.floor(i / 32), 8, "le"),
-      ])
-    )[i % 32];
+    let i = 0;
+    while (true) {
+      const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
+      const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
+      const offset = (i % 16) * 2;
+      const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
 
-    const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
-    if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randByte) {
-      return candidateIndex;
+      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+      if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
+        return candidateIndex;
+      }
+
+      i += 1;
     }
-    i += 1;
+  } else {
+    const MAX_RANDOM_BYTE = 2 ** 8 - 1;
+    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+
+    let i = 0;
+    while (true) {
+      const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
+      const randomByte = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 32), 8, "le")]))[i % 32];
+
+      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+      if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomByte) {
+        return candidateIndex;
+      }
+
+      i += 1;
+    }
   }
 }
 
@@ -100,37 +110,54 @@ export function getNextSyncCommitteeIndices(
   activeValidatorIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): ValidatorIndex[] {
-  // TODO: Bechmark if it's necessary to inline outside of this function
-  const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-  const MAX_EFFECTIVE_BALANCE_INCREMENT =
-    fork >= ForkSeq.electra
-      ? MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT
-      : MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
-
-  const epoch = computeEpochAtSlot(state.slot) + 1;
-
-  const activeValidatorCount = activeValidatorIndices.length;
-  const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
-  let i = 0;
   const syncCommitteeIndices = [];
-  while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
-    const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
-    const candidateIndex = activeValidatorIndices[shuffledIndex];
-    const randByte = digest(
-      Buffer.concat([
-        seed,
-        //
-        intToBytes(Math.floor(i / 32), 8, "le"),
-      ])
-    )[i % 32];
 
-    const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
-    if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randByte) {
-      syncCommitteeIndices.push(candidateIndex);
+  if (fork >= ForkSeq.electra) {
+    const MAX_RANDOM_VALUE = 2 ** 16 - 1;
+    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
+
+    const epoch = computeEpochAtSlot(state.slot) + 1;
+    const activeValidatorCount = activeValidatorIndices.length;
+    const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
+
+    let i = 0;
+    while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
+      const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
+      const candidateIndex = activeValidatorIndices[shuffledIndex];
+      const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
+      const offset = (i % 16) * 2;
+      const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
+
+      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+      if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
+        syncCommitteeIndices.push(candidateIndex);
+      }
+
+      i += 1;
     }
+  } else {
+    const MAX_RANDOM_BYTE = 2 ** 8 - 1;
+    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
-    i++;
+    const epoch = computeEpochAtSlot(state.slot) + 1;
+    const activeValidatorCount = activeValidatorIndices.length;
+    const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
+
+    let i = 0;
+    while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
+      const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
+      const candidateIndex = activeValidatorIndices[shuffledIndex];
+      const randomByte = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 32), 8, "le")]))[i % 32];
+
+      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+      if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomByte) {
+        syncCommitteeIndices.push(candidateIndex);
+      }
+
+      i += 1;
+    }
   }
+
   return syncCommitteeIndices;
 }
 
@@ -155,7 +182,7 @@ export function computeShuffledIndex(index: number, indexCount: number, seed: By
     const position = Math.max(permuted, flip);
     const source = digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
     const byte = source[Math.floor((position % 256) / 8)];
-    const bit = (byte >> position % 8) % 2;
+    const bit = (byte >> (position % 8)) % 2;
     permuted = bit ? flip : permuted;
   }
   return permuted;

@@ -1,44 +1,50 @@
-import {
-  Bytes32,
-  Root,
-  RootHex,
-  Slot,
-  ssz,
-  ValidatorIndex,
-  BLSPubkey,
-  BLSSignature,
-  capella,
-  deneb,
-  Wei,
-  SSEPayloadAttributes,
-  BeaconBlock,
-  BeaconBlockBody,
-  ExecutionPayloadHeader,
-  BlindedBeaconBlockBody,
-  BlindedBeaconBlock,
-  sszTypesFor,
-  electra,
-} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkExecution, ForkSeq, isForkExecution, isForkLightClient} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateCapella,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
-  computeEpochAtSlot,
   computeTimeAtSlot,
-  getRandaoMix,
   getCurrentEpoch,
-  isMergeTransitionComplete,
   getExpectedWithdrawals,
+  getRandaoMix,
+  isMergeTransitionComplete,
 } from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep, Logger, toRootHex} from "@lodestar/utils";
-import type {BeaconChain} from "../chain.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
+import {
+  BLSPubkey,
+  BLSSignature,
+  BeaconBlock,
+  BeaconBlockBody,
+  BlindedBeaconBlock,
+  BlindedBeaconBlockBody,
+  Bytes32,
+  ExecutionPayloadHeader,
+  Root,
+  RootHex,
+  SSEPayloadAttributes,
+  Slot,
+  ValidatorIndex,
+  Wei,
+  capella,
+  deneb,
+  electra,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
+import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {
+  IExecutionBuilder,
+  IExecutionEngine,
+  PayloadAttributes,
+  PayloadId,
+  getExpectedGasLimit,
+} from "../../execution/index.js";
+import {fromGraffitiBuffer} from "../../util/graffiti.js";
+import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
@@ -143,16 +149,31 @@ export async function produceBlockBody<T extends BlockType>(
     ? Object.assign({}, commonBlockBody)
     : await produceCommonBlockBody.call(this, blockType, currentState, blockAttr);
 
-  const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings, blsToExecutionChanges} =
-    blockBody;
+  const {
+    graffiti,
+    attestations,
+    deposits,
+    voluntaryExits,
+    attesterSlashings,
+    proposerSlashings,
+    syncAggregate,
+    blsToExecutionChanges,
+  } = blockBody;
 
   Object.assign(logMeta, {
+    graffiti: fromGraffitiBuffer(graffiti),
     attestations: attestations.length,
     deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
   });
+
+  if (isForkLightClient(fork)) {
+    Object.assign(logMeta, {
+      syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
+    });
+  }
 
   const endExecutionPayload = stepsMetrics?.startTimer();
   if (isForkExecution(fork)) {
@@ -208,6 +229,39 @@ export async function produceBlockBody<T extends BlockType>(
         fetchedTime,
       });
 
+      const targetGasLimit = this.executionBuilder.getValidatorRegistration(proposerPubKey)?.gasLimit;
+      if (!targetGasLimit) {
+        // This should only happen if cache was cleared due to restart of beacon node
+        this.logger.warn("Failed to get validator registration, could not check header gas limit", {
+          slot: blockSlot,
+          proposerIndex,
+          proposerPubKey: toPubkeyHex(proposerPubKey),
+        });
+      } else {
+        const headerGasLimit = builderRes.header.gasLimit;
+        const parentGasLimit = (currentState as CachedBeaconStateBellatrix).latestExecutionPayloadHeader.gasLimit;
+        const expectedGasLimit = getExpectedGasLimit(parentGasLimit, targetGasLimit);
+
+        const lowerBound = Math.min(parentGasLimit, expectedGasLimit);
+        const upperBound = Math.max(parentGasLimit, expectedGasLimit);
+
+        if (headerGasLimit < lowerBound || headerGasLimit > upperBound) {
+          throw Error(
+            `Header gas limit ${headerGasLimit} is outside of acceptable range [${lowerBound}, ${upperBound}]`
+          );
+        }
+
+        if (headerGasLimit !== expectedGasLimit) {
+          this.logger.warn("Header gas limit does not match expected value", {
+            slot: blockSlot,
+            headerGasLimit,
+            expectedGasLimit,
+            parentGasLimit,
+            targetGasLimit,
+          });
+        }
+      }
+
       if (ForkSeq[fork] >= ForkSeq.deneb) {
         const {blobKzgCommitments} = builderRes;
         if (blobKzgCommitments === undefined) {
@@ -219,6 +273,14 @@ export async function produceBlockBody<T extends BlockType>(
         Object.assign(logMeta, {blobs: blobKzgCommitments.length});
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
+      }
+
+      if (ForkSeq[fork] >= ForkSeq.electra) {
+        const {executionRequests} = builderRes;
+        if (executionRequests === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
+        }
+        (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
       }
     }
 
@@ -285,7 +347,6 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            // validate blindedBlobsBundle
             if (this.opts.sanityCheckExecutionEngineBlobs) {
               validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
@@ -455,6 +516,7 @@ async function prepareExecutionPayloadHeader(
   header: ExecutionPayloadHeader;
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
+  executionRequests?: electra.ExecutionRequests;
 }> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
@@ -481,26 +543,26 @@ export async function getExecutionPayloadParentHash(
   if (isMergeTransitionComplete(state)) {
     // Post-merge, normal payload
     return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};
-  } else {
-    if (
-      !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
-      getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-    )
-      throw new Error(
-        `InvalidMergeTBH epoch: expected >= ${
-          chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-        }, actual: ${getCurrentEpoch(state)}`
-      );
-
-    const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
-    if (terminalPowBlockHash === null) {
-      // Pre-merge, no prepare payload call is needed
-      return {isPremerge: true};
-    } else {
-      // Signify merge via producing on top of the last PoW block
-      return {isPremerge: false, parentHash: terminalPowBlockHash};
-    }
   }
+
+  if (
+    !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
+    getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+  ) {
+    throw new Error(
+      `InvalidMergeTBH epoch: expected >= ${
+        chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+      }, actual: ${getCurrentEpoch(state)}`
+    );
+  }
+
+  const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
+  if (terminalPowBlockHash === null) {
+    // Pre-merge, no prepare payload call is needed
+    return {isPremerge: true};
+  }
+  // Signify merge via producing on top of the last PoW block
+  return {isPremerge: false, parentHash: terminalPowBlockHash};
 }
 
 export async function getPayloadAttributesForSSE(
@@ -536,9 +598,9 @@ export async function getPayloadAttributesForSSE(
       payloadAttributes,
     };
     return ssePayloadAttributes;
-  } else {
-    throw Error("The execution is still pre-merge");
   }
+
+  throw Error("The execution is still pre-merge");
 }
 
 function preparePayloadAttributes(
@@ -600,7 +662,6 @@ export async function produceCommonBlockBody<T extends BlockType>(
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const blockEpoch = computeEpochAtSlot(slot);
   const fork = currentState.config.getForkName(slot);
 
   // TODO:
@@ -645,7 +706,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   }
 
   const endSyncAggregate = stepsMetrics?.startTimer();
-  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+  if (ForkSeq[fork] >= ForkSeq.altair) {
     const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(
       syncAggregate.syncCommitteeBits.getTrueBitIndexes().length

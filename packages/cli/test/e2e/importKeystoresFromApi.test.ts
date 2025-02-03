@@ -1,18 +1,18 @@
 import path from "node:path";
-import {describe, it, expect, beforeAll, vi, onTestFinished} from "vitest";
-import {rimraf} from "rimraf";
-import {DeletionStatus, getClient, ImportStatus} from "@lodestar/api/keymanager";
-import {config} from "@lodestar/config/default";
-import {Interchange} from "@lodestar/validator";
 import {HttpStatusCode} from "@lodestar/api";
+import {DeletionStatus, ImportStatus, getClient} from "@lodestar/api/keymanager";
+import {config} from "@lodestar/config/default";
 import {bufferStderr, spawnCliCommand} from "@lodestar/test-utils";
 import {getKeystoresStr} from "@lodestar/test-utils";
+import {Interchange} from "@lodestar/validator";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 
-describe("import keystores from api", function () {
+describe("import keystores from api", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-keystores-test");
@@ -30,7 +30,6 @@ describe("import keystores from api", function () {
 
   const genesisValidatorsRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
   const slashingProtection: Interchange = {
-    /* eslint-disable @typescript-eslint/naming-convention */
     metadata: {
       interchange_format_version: "5",
       genesis_validators_root: genesisValidatorsRoot,
@@ -119,7 +118,7 @@ describe("import keystores from api", function () {
     });
   });
 
-  it("run 'validator' check keys are loaded + delete", async function () {
+  it("run 'validator' check keys are loaded + delete", async () => {
     const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();
@@ -139,7 +138,7 @@ describe("import keystores from api", function () {
     await expectKeys(keymanagerClient, [], "Wrong listKeys after deleting");
   });
 
-  it("different process check no keys are loaded", async function () {
+  it("different process check no keys are loaded", async () => {
     const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();
@@ -149,7 +148,7 @@ describe("import keystores from api", function () {
     await expectKeys(keymanagerClient, [], "Wrong listKeys");
   });
 
-  it("reject calls without bearerToken", async function () {
+  it("reject calls without bearerToken", async () => {
     const {stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();

@@ -1,30 +1,32 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
+import {BeaconConfig} from "@lodestar/config";
 import {
-  altair,
-  isElectraLightClientUpdate,
+  DOMAIN_SYNC_COMMITTEE,
+  FINALIZED_ROOT_DEPTH,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  FINALIZED_ROOT_INDEX,
+  FINALIZED_ROOT_INDEX_ELECTRA,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  NEXT_SYNC_COMMITTEE_DEPTH,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  NEXT_SYNC_COMMITTEE_INDEX,
+  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
+} from "@lodestar/params";
+import {
   LightClientFinalityUpdate,
   LightClientUpdate,
   Root,
   Slot,
+  altair,
+  isELectraLightClientFinalityUpdate,
+  isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
-import {
-  FINALIZED_ROOT_INDEX,
-  FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_INDEX,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
-  DOMAIN_SYNC_COMMITTEE,
-  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
-  FINALIZED_ROOT_DEPTH_ELECTRA,
-  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
-} from "@lodestar/params";
-import {BeaconConfig} from "@lodestar/config";
-import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
-import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
 import {SyncCommitteeFast} from "./types.js";
 import {computeSyncPeriodAtSlot} from "./utils/clock.js";
+import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
+import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 
 /**
  *
@@ -80,12 +82,19 @@ export function assertValidLightClientUpdate(
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
 export function assertValidFinalityProof(update: LightClientFinalityUpdate): void {
+  const finalizedRootDepth = isELectraLightClientFinalityUpdate(update)
+    ? FINALIZED_ROOT_DEPTH_ELECTRA
+    : FINALIZED_ROOT_DEPTH;
+  const finalizedRootIndex = isELectraLightClientFinalityUpdate(update)
+    ? FINALIZED_ROOT_INDEX_ELECTRA
+    : FINALIZED_ROOT_INDEX;
+
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon),
       update.finalityBranch,
-      FINALIZED_ROOT_DEPTH,
-      FINALIZED_ROOT_INDEX,
+      finalizedRootDepth,
+      finalizedRootIndex,
       update.attestedHeader.beacon.stateRoot
     )
   ) {

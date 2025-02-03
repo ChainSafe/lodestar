@@ -1,7 +1,7 @@
-import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {bytesToInt} from "@lodestar/utils";
 import {Db, Repository} from "@lodestar/db";
+import {phase0, ssz} from "@lodestar/types";
+import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {
@@ -14,8 +14,7 @@ export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdere
     return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getId(value: phase0.Eth1Data): number {
+  getId(_value: phase0.Eth1Data): number {
     throw new Error("Unable to create timestamp from block hash");
   }
 

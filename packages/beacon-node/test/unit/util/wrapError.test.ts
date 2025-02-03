@@ -1,17 +1,19 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {wrapError} from "../../../src/util/wrapError.js";
 
 describe("util / wrapError", () => {
   const error = Error("test-error");
   async function throwNoAwait(shouldThrow: boolean): Promise<boolean> {
     if (shouldThrow) throw error;
-    else return true;
+
+    return true;
   }
 
   async function throwAwait(shouldThrow: boolean): Promise<boolean> {
     await new Promise((r) => setTimeout(r, 0));
     if (shouldThrow) throw error;
-    else return true;
+
+    return true;
   }
 
   it("Handle error and result with throwNoAwait", async () => {

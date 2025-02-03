@@ -13,9 +13,10 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
   const fnPromises: Promise<void>[] = [];
 
   for (const blockInput of blocksInput) {
-    const {block, blockBytes} = blockInput;
+    const {block} = blockInput;
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
+    const blockBytes = this.serializedCache.get(block);
     if (blockBytes) {
       // skip serializing data if we already have it
       this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
@@ -31,7 +32,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
 
     if (blockInput.type === BlockInputType.availableData || blockInput.type === BlockInputType.dataPromise) {
       const blobSidecars =
-        blockInput.type == BlockInputType.availableData
+        blockInput.type === BlockInputType.availableData
           ? blockInput.blockData.blobs
           : // At this point of import blobs are available and can be safely awaited
             (await blockInput.cachedData.availabilityPromise).blobs;

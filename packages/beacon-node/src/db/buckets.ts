@@ -26,7 +26,7 @@ export enum Bucket {
   phase0_depositData = 12, // [DEPRECATED] index -> DepositData
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
-  phase0_attesterSlashing = 15, // Root -> AttesterSlashing
+  allForks_attesterSlashing = 15, // Root -> AttesterSlashing
   capella_blsToExecutionChange = 16, // ValidatorIndex -> SignedBLSToExecutionChange
   // checkpoint states
   allForks_checkpointState = 17, // Root -> BeaconState
@@ -68,11 +68,10 @@ export enum Bucket {
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
   const keys = Object.keys(Bucket).filter((x) => {
-    if (isNaN(parseInt(x))) {
-      return Bucket[x as keyof typeof Bucket] == enumValue;
-    } else {
-      return false;
+    if (Number.isNaN(parseInt(x))) {
+      return Bucket[x as keyof typeof Bucket] === enumValue;
     }
+    return false;
   }) as (keyof typeof Bucket)[];
   if (keys.length > 0) {
     return keys[0];

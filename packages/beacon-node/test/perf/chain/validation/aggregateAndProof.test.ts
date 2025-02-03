@@ -1,6 +1,5 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {ssz} from "@lodestar/types";
-// eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof.js";
@@ -19,7 +18,7 @@ describe("validate gossip signedAggregateAndProof", () => {
   for (const [id, agg] of Object.entries({struct: aggStruct})) {
     const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(aggStruct);
 
-    itBench({
+    bench({
       id: `validate api signedAggregateAndProof - ${id}`,
       beforeEach: () => {
         chain.seenAggregators["validatorIndexesByEpoch"].clear();
@@ -31,7 +30,7 @@ describe("validate gossip signedAggregateAndProof", () => {
       },
     });
 
-    itBench({
+    bench({
       id: `validate gossip signedAggregateAndProof - ${id}`,
       beforeEach: () => {
         chain.seenAggregators["validatorIndexesByEpoch"].clear();

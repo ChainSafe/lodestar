@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 
 describe("Altair status flags", () => {
   for (let prev = 0b000; prev <= 0b111; prev++) {

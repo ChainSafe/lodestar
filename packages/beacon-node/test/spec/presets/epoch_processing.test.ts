@@ -1,26 +1,24 @@
 import path from "node:path";
-import {expect} from "vitest";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  EpochTransitionCache,
   BeaconStateAllForks,
-  beforeProcessEpoch,
+  CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  EpochTransitionCache,
+  beforeProcessEpoch,
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {ACTIVE_PRESET} from "@lodestar/params";
+import {expect} from "vitest";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 export type EpochTransitionFn = (state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache) => void;
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 const epochTransitionFns: Record<string, EpochTransitionFn> = {
   effective_balance_updates: (state, epochTransitionCache) => {
@@ -46,7 +44,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     epochFns.processSyncCommitteeUpdates(fork, state as CachedBeaconStateAltair);
   },
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
-  pending_balance_deposits: epochFns.processPendingBalanceDeposits as EpochTransitionFn,
+  pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
 };
 
@@ -99,12 +97,12 @@ const epochProcessing =
           post: ssz[fork].BeaconState,
         },
         getExpected: (testCase) => testCase.post,
-        expectFunc: (testCase, expected, actual) => {
+        expectFunc: (_testCase, expected, actual) => {
           expectEqualBeaconState(fork, expected, actual);
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         shouldSkip: (_testcase, name, _index) =>
-          skipTestNames !== undefined && skipTestNames.some((skipTestName) => name.includes(skipTestName)),
+          skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false,
       },
     };
   };

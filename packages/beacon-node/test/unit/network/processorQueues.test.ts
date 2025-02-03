@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
 import {sleep} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 
 type ValidateOpts = {
   skipAsync1: boolean;
@@ -21,10 +21,10 @@ async function validateTest(job: string, tracker: string[], opts: ValidateOpts):
 async function getStateFromCache(retrieveSync: boolean): Promise<number> {
   if (retrieveSync) {
     return 1;
-  } else {
-    await sleep(0);
-    return 2;
   }
+
+  await sleep(0);
+  return 2;
 }
 
 describe("event loop with branching async", () => {

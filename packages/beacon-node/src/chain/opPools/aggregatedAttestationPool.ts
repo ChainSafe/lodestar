@@ -1,40 +1,40 @@
-import {aggregateSignatures, Signature} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {EpochDifference, IForkChoice} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkSeq,
-  isForkPostElectra,
   MAX_ATTESTATIONS,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_COMMITTEES_PER_SLOT,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {
-  phase0,
-  Epoch,
-  Slot,
-  ssz,
-  ValidatorIndex,
-  RootHex,
-  electra,
-  isElectraAttestation,
-  Attestation,
-} from "@lodestar/types";
-import {
   CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
-import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {MapDef, toRootHex, assert} from "@lodestar/utils";
-import {ChainForkConfig} from "@lodestar/config";
-import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
-import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import {
+  Attestation,
+  Epoch,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  electra,
+  isElectraAttestation,
+  phase0,
+  ssz,
+} from "@lodestar/types";
+import {assert, MapDef, toRootHex} from "@lodestar/utils";
+import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {InsertOutcome} from "./types.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 type DataRootHex = string;
 
@@ -141,7 +141,7 @@ export class AggregatedAttestationPool {
       attestationGroupByIndexByDataHash.set(dataRootHex, attestationGroupByIndex);
     }
 
-    let committeeIndex;
+    let committeeIndex: number | null;
 
     if (isForkPostElectra(this.config.getForkName(slot))) {
       if (!isElectraAttestation(attestation)) {
@@ -547,9 +547,9 @@ export class MatchingDataAttestationGroup {
     const maxAttestation = isPostElectra ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
     if (attestations.length <= maxAttestation) {
       return attestations;
-    } else {
-      return attestations.sort((a, b) => b.notSeenAttesterCount - a.notSeenAttesterCount).slice(0, maxAttestation);
     }
+
+    return attestations.sort((a, b) => b.notSeenAttesterCount - a.notSeenAttesterCount).slice(0, maxAttestation);
   }
 
   /** Get attestations for API. */
@@ -636,45 +636,43 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
   }
 
   // altair and future forks
-  else {
-    // Get attestations to be included in an altair block.
-    // Attestations are sorted by inclusion distance then number of attesters.
-    // Attestations should pass the validation when processing attestations in state-transition.
-    // check for altair block already
-    const altairState = state as CachedBeaconStateAltair;
-    const previousParticipation = altairState.previousEpochParticipation.getAll();
-    const currentParticipation = altairState.currentEpochParticipation.getAll();
-    const stateEpoch = computeEpochAtSlot(state.slot);
-    // this function could be called multiple times with same slot + committeeIndex
-    const cachedNotSeenValidators = new Map<string, Set<number>>();
+  // Get attestations to be included in an altair block.
+  // Attestations are sorted by inclusion distance then number of attesters.
+  // Attestations should pass the validation when processing attestations in state-transition.
+  // check for altair block already
+  const altairState = state as CachedBeaconStateAltair;
+  const previousParticipation = altairState.previousEpochParticipation.getAll();
+  const currentParticipation = altairState.currentEpochParticipation.getAll();
+  const stateEpoch = computeEpochAtSlot(state.slot);
+  // this function could be called multiple times with same slot + committeeIndex
+  const cachedNotSeenValidators = new Map<string, Set<number>>();
 
-    return (epoch: Epoch, slot: Slot, committeeIndex: number) => {
-      const participationStatus =
-        epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
+  return (epoch: Epoch, slot: Slot, committeeIndex: number) => {
+    const participationStatus =
+      epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
 
-      if (participationStatus === null) {
-        return null;
-      }
-      const cacheKey = slot + "_" + committeeIndex;
-      let notSeenAttestingIndices = cachedNotSeenValidators.get(cacheKey);
-      if (notSeenAttestingIndices != null) {
-        // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-        return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
-      }
-
-      const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
-      notSeenAttestingIndices = new Set<number>();
-      for (const [i, validatorIndex] of committee.entries()) {
-        // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
-        if (participationStatus[validatorIndex] === 0) {
-          notSeenAttestingIndices.add(i);
-        }
-      }
-      cachedNotSeenValidators.set(cacheKey, notSeenAttestingIndices);
+    if (participationStatus === null) {
+      return null;
+    }
+    const cacheKey = slot + "_" + committeeIndex;
+    let notSeenAttestingIndices = cachedNotSeenValidators.get(cacheKey);
+    if (notSeenAttestingIndices != null) {
       // if all validators are seen then return null, we don't need to check for any attestations of same committee again
       return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
-    };
-  }
+    }
+
+    const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
+    notSeenAttestingIndices = new Set<number>();
+    for (const [i, validatorIndex] of committee.entries()) {
+      // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
+      if (participationStatus[validatorIndex] === 0) {
+        notSeenAttestingIndices.add(i);
+      }
+    }
+    cachedNotSeenValidators.set(cacheKey, notSeenAttestingIndices);
+    // if all validators are seen then return null, we don't need to check for any attestations of same committee again
+    return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
+  };
 }
 
 export function extractParticipationPhase0(
@@ -716,7 +714,7 @@ export function getValidateAttestationDataFn(
   const stateEpoch = state.epochCtx.epoch;
   return (attData: phase0.AttestationData) => {
     const targetEpoch = attData.target.epoch;
-    let justifiedCheckpoint;
+    let justifiedCheckpoint: phase0.Checkpoint;
     // simple check first
     if (targetEpoch === stateEpoch) {
       justifiedCheckpoint = currentJustifiedCheckpoint;
@@ -761,7 +759,7 @@ export function isValidAttestationData(
   data: phase0.AttestationData
 ): boolean {
   const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
-  let justifiedCheckpoint;
+  let justifiedCheckpoint: phase0.Checkpoint;
   const stateEpoch = state.epochCtx.epoch;
   const targetEpoch = data.target.epoch;
 

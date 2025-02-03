@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 import {gnosisChainConfig as gnosis} from "./gnosis.js";
@@ -38,4 +37,7 @@ export const chiadoChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x0400006f"),
   DENEB_FORK_EPOCH: 516608, // Wed Jan 31 2024 18:15:40 GMT+0000
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x0500006f"),
+  ELECTRA_FORK_EPOCH: Infinity,
 };

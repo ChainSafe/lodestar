@@ -1,9 +1,8 @@
 import {BitArray} from "@chainsafe/ssz";
-import {describe, expect, it} from "vitest";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {SubnetID, ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-// eslint-disable-next-line import/no-relative-packages
+import {describe, expect, it} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
@@ -31,7 +30,6 @@ describe("validateAttestation", () => {
 
   const getState = memoOnce(() => generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot}));
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function getValidData(opts?: Partial<AttestationValidDataOpts>) {
     return getAttestationValidData({
       currentSlot: stateSlot,
@@ -311,7 +309,7 @@ describe("validateAttestation", () => {
   async function expectGossipError(
     chain: IBeaconChain,
     attestationOrBytes: GossipAttestation,
-    subnet: number,
+    subnet: SubnetID,
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
@@ -343,7 +341,7 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.phase0, gossipAttestation)).toEqual(
+    expect(getSeenAttDataKeyFromGossipAttestation(gossipAttestation)).toEqual(
       getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.phase0, aggregateAndProofBytes)
     );
   });
@@ -365,7 +363,7 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.electra.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.electra, gossipAttestation)).toEqual(
+    expect(getSeenAttDataKeyFromGossipAttestation(gossipAttestation)).toEqual(
       getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.electra, aggregateAndProofBytes)
     );
   });

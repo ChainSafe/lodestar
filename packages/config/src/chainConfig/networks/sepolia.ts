@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {fromHex as b} from "@lodestar/utils";
-import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Sepolia beacon chain config:
 // https://github.com/eth-clients/sepolia/blob/main/metadata/config.yaml

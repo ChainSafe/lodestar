@@ -1,11 +1,11 @@
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
+  computeStartSlotAtEpoch,
   getBlockRootAtSlot,
   getEffectiveBalanceIncrementsZeroInactive,
 } from "@lodestar/state-transition";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
@@ -35,7 +35,7 @@ export class CheckpointBalancesCache {
     const epochBoundaryRoot =
       epochBoundarySlot === state.slot ? blockRootHex : toRootHex(getBlockRootAtSlot(state, epochBoundarySlot));
 
-    const index = this.items.findIndex((item) => item.epoch === epoch && item.rootHex == epochBoundaryRoot);
+    const index = this.items.findIndex((item) => item.epoch === epoch && item.rootHex === epochBoundaryRoot);
     if (index === -1) {
       if (this.items.length === MAX_BALANCE_CACHE_SIZE) {
         this.items.shift();

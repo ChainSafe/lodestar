@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
+import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 
 /**
  * Upgrade a state from bellatrix to capella.
@@ -64,6 +64,7 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
   // Commit new added fields ViewDU to the root node
   stateCapella.commit();
   // Clear cache to ensure the cache of bellatrix fields is not used by new capella fields
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateCapella["clearCache"]();
 
   return stateCapella;

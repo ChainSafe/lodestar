@@ -8,10 +8,10 @@ import {
   SYNC_REWARD_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {altair, ValidatorIndex} from "@lodestar/types";
+import {ValidatorIndex, altair} from "@lodestar/types";
 import {bigIntSqrt} from "@lodestar/utils";
-import {BeaconStateAllForks} from "../types.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {BeaconStateAllForks} from "../types.js";
 import {getNextSyncCommitteeIndices} from "./seed.js";
 
 /**

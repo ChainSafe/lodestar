@@ -1,11 +1,11 @@
-import {describe, it, expect, beforeEach} from "vitest";
 import {PublicKey, SecretKey, Signature} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
+import {beforeEach, describe, expect, it} from "vitest";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {testLogger} from "../../../utils/logger.js";
 
-describe("BlsVerifier ", function () {
+describe("BlsVerifier ", () => {
   // take time for creating thread pool
   const numKeys = 3;
   const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));

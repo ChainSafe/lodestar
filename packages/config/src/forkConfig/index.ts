@@ -1,17 +1,18 @@
 import {
-  GENESIS_EPOCH,
-  ForkName,
-  SLOTS_PER_EPOCH,
-  ForkSeq,
-  isForkLightClient,
-  isForkExecution,
-  isForkBlobs,
-  ForkExecution,
   ForkAll,
-  ForkLightClient,
   ForkBlobs,
+  ForkExecution,
+  ForkLightClient,
+  ForkName,
+  ForkSeq,
+  GENESIS_EPOCH,
+  SLOTS_PER_EPOCH,
+  isForkBlobs,
+  isForkExecution,
+  isForkLightClient,
+  isForkPostElectra,
 } from "@lodestar/params";
-import {Slot, Version, SSZTypesFor, sszTypesFor, Epoch} from "@lodestar/types";
+import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
@@ -128,6 +129,12 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
       }
       return sszTypesFor(forkName);
+    },
+    getMaxBlobsPerBlock(fork: ForkName): number {
+      return isForkPostElectra(fork) ? config.MAX_BLOBS_PER_BLOCK_ELECTRA : config.MAX_BLOBS_PER_BLOCK;
+    },
+    getMaxRequestBlobSidecars(fork: ForkName): number {
+      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
   };
 }

@@ -1,29 +1,29 @@
-import {rimraf} from "rimraf";
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {intToBytes} from "@lodestar/utils";
 import {LevelDbController, encodeKey} from "@lodestar/db";
+import {ssz} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
+import {rimraf} from "rimraf";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
+import {Bucket} from "../../../../../src/db/buckets.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 import {testLogger} from "../../../../utils/logger.js";
-import {Bucket} from "../../../../../src/db/buckets.js";
 
-describe("block archive repository", function () {
+describe("block archive repository", () => {
   const testDir = "./.tmp";
   let blockArchive: BlockArchiveRepository;
   let db: LevelDbController;
 
-  beforeEach(async function () {
+  beforeEach(async () => {
     db = await LevelDbController.create({name: testDir}, {logger: testLogger()});
     blockArchive = new BlockArchiveRepository(config, db);
   });
-  afterEach(async function () {
+  afterEach(async () => {
     await db.close();
     rimraf.sync(testDir);
   });
 
-  it("should retrieve blocks in order", async function () {
+  it("should retrieve blocks in order", async () => {
     await blockArchive.batchPut(
       Array.from({length: 1001}, (_, i) => {
         const slot = i;
@@ -106,7 +106,7 @@ describe("block archive repository", function () {
     }
   });
 
-  it("should store indexes when adding single block", async function () {
+  it("should store indexes when adding single block", async () => {
     const spy = vi.spyOn(db, "put");
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
@@ -120,7 +120,7 @@ describe("block archive repository", function () {
     );
   });
 
-  it("should store indexes when block batch", async function () {
+  it("should store indexes when block batch", async () => {
     const spy = vi.spyOn(db, "put");
     const blocks = [ssz.phase0.SignedBeaconBlock.defaultValue(), ssz.phase0.SignedBeaconBlock.defaultValue()];
     await blockArchive.batchAdd(blocks);
@@ -152,14 +152,14 @@ describe("block archive repository", function () {
     );
   });
 
-  it("should get slot by root", async function () {
+  it("should get slot by root", async () => {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const slot = await blockArchive.getSlotByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     expect(slot).toBe(block.message.slot);
   });
 
-  it("should get block by root", async function () {
+  it("should get block by root", async () => {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
@@ -167,14 +167,14 @@ describe("block archive repository", function () {
     expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
   });
 
-  it("should get slot by parent root", async function () {
+  it("should get slot by parent root", async () => {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const slot = await blockArchive.getSlotByParentRoot(block.message.parentRoot);
     expect(slot).toBe(block.message.slot);
   });
 
-  it("should get block by parent root", async function () {
+  it("should get block by parent root", async () => {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);

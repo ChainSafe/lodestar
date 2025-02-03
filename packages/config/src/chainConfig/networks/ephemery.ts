@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {fromHex as b} from "@lodestar/utils";
-import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Ephemery dynamic beacon chain config:
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml
@@ -38,6 +37,9 @@ const baseChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x5000101b"),
   DENEB_FORK_EPOCH: 5,
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x6000101b"),
+  ELECTRA_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------

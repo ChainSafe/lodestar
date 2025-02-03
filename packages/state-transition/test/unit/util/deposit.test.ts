@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
-import {ssz} from "@lodestar/types";
 import {createChainForkConfig} from "@lodestar/config";
 import {MAX_DEPOSITS} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {getEth1DepositCount} from "../../../src/index.js";
 import {createCachedBeaconStateTest} from "../../utils/state.js";
 
@@ -29,7 +29,6 @@ describe("getEth1DepositCount", () => {
     const postElectraState = createCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
-        /* eslint-disable @typescript-eslint/naming-convention */
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
@@ -63,7 +62,6 @@ describe("getEth1DepositCount", () => {
     const postElectraState = createCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
-        /* eslint-disable @typescript-eslint/naming-convention */
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,

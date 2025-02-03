@@ -18,9 +18,8 @@ export function querySerializeProofPathsArr(paths: JsonPath[]): string[] {
 export function queryParseProofPathsArr(pathStrs: string | string[]): JsonPath[] {
   if (Array.isArray(pathStrs)) {
     return pathStrs.map((pathStr) => queryParseProofPaths(pathStr));
-  } else {
-    return [queryParseProofPaths(pathStrs)];
   }
+  return [queryParseProofPaths(pathStrs)];
 }
 
 /**
@@ -50,7 +49,7 @@ export type U64Str = string;
 
 export function fromU64Str(u64Str: U64Str): number {
   const u64 = parseInt(u64Str, 10);
-  if (!isFinite(u64)) {
+  if (!Number.isFinite(u64)) {
     throw Error(`Invalid uin64 ${u64Str}`);
   }
   return u64;
@@ -104,7 +103,7 @@ export function fromGraffitiHex(hex?: string): string | undefined {
   }
   try {
     return new TextDecoder("utf8").decode(fromHex(hex));
-  } catch {
+  } catch (_e) {
     // allow malformed graffiti hex string
     return hex;
   }

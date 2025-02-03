@@ -37,7 +37,7 @@ export async function profileNodeJS(durationMs: number): Promise<string> {
 export async function writeHeapSnapshot(prefix: string, dirpath: string): Promise<string> {
   // Lazily import NodeJS only modules
   const fs = await import("node:fs");
-  const v8 = await import("v8");
+  const v8 = await import("node:v8");
   const snapshotStream = v8.getHeapSnapshot();
   const filepath = `${dirpath}/${prefix}_${new Date().toISOString()}.heapsnapshot`;
   const fileStream = fs.createWriteStream(filepath);

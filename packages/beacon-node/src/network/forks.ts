@@ -1,5 +1,5 @@
-import {ForkName} from "@lodestar/params";
 import {ChainForkConfig, ForkInfo} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 
 /**
@@ -86,7 +86,6 @@ export function getCurrentAndNextFork(
   }
 
   return {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     currentFork: forks[currentForkIdx] || forks[0],
     nextFork: hasNextFork ? forks[nextForkIdx] : undefined,
   };

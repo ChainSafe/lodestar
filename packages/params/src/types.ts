@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * Compile-time chain configuration
  */
@@ -80,7 +78,6 @@ export type BeaconPreset = {
   ///////////
   FIELD_ELEMENTS_PER_BLOB: number;
   MAX_BLOB_COMMITMENTS_PER_BLOCK: number;
-  MAX_BLOBS_PER_BLOCK: number;
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: number;
 
   // ELECTRA
@@ -89,10 +86,11 @@ export type BeaconPreset = {
   MAX_ATTESTER_SLASHINGS_ELECTRA: number;
   MAX_ATTESTATIONS_ELECTRA: number;
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: number;
+  MAX_PENDING_DEPOSITS_PER_EPOCH: number;
   MAX_EFFECTIVE_BALANCE_ELECTRA: number;
   MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: number;
   MIN_ACTIVATION_BALANCE: number;
-  PENDING_BALANCE_DEPOSITS_LIMIT: number;
+  PENDING_DEPOSITS_LIMIT: number;
   PENDING_PARTIAL_WITHDRAWALS_LIMIT: number;
   PENDING_CONSOLIDATIONS_LIMIT: number;
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: number;
@@ -180,7 +178,6 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   ///////////
   FIELD_ELEMENTS_PER_BLOB: "number",
   MAX_BLOB_COMMITMENTS_PER_BLOCK: "number",
-  MAX_BLOBS_PER_BLOCK: "number",
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: "number",
 
   // ELECTRA
@@ -189,10 +186,11 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_ATTESTER_SLASHINGS_ELECTRA: "number",
   MAX_ATTESTATIONS_ELECTRA: "number",
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: "number",
+  MAX_PENDING_DEPOSITS_PER_EPOCH: "number",
   MAX_EFFECTIVE_BALANCE_ELECTRA: "number",
   MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: "number",
   MIN_ACTIVATION_BALANCE: "number",
-  PENDING_BALANCE_DEPOSITS_LIMIT: "number",
+  PENDING_DEPOSITS_LIMIT: "number",
   PENDING_PARTIAL_WITHDRAWALS_LIMIT: "number",
   PENDING_CONSOLIDATIONS_LIMIT: "number",
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: "number",

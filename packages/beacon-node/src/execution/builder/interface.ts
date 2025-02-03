@@ -1,15 +1,19 @@
-import {
-  bellatrix,
-  Root,
-  Slot,
-  BLSPubkey,
-  deneb,
-  Wei,
-  SignedBeaconBlockOrContents,
-  ExecutionPayloadHeader,
-  SignedBlindedBeaconBlock,
-} from "@lodestar/types";
 import {ForkExecution} from "@lodestar/params";
+import {
+  BLSPubkey,
+  Epoch,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
+import {ValidatorRegistration} from "./cache.js";
 
 export interface IExecutionBuilder {
   /**
@@ -26,7 +30,8 @@ export interface IExecutionBuilder {
 
   updateStatus(shouldEnable: boolean): void;
   checkStatus(): Promise<void>;
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  registerValidator(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  getValidatorRegistration(pubkey: BLSPubkey): ValidatorRegistration | undefined;
   getHeader(
     fork: ForkExecution,
     slot: Slot,
@@ -36,6 +41,9 @@ export interface IExecutionBuilder {
     header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionRequests?: electra.ExecutionRequests;
   }>;
-  submitBlindedBlock(signedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents>;
+  submitBlindedBlock(
+    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
+  ): Promise<SignedBeaconBlockOrContents>;
 }

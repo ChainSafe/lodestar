@@ -1,18 +1,18 @@
-import {BeaconBlockBody, capella, electra} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
+import {BeaconBlockBody, capella, electra} from "@lodestar/types";
 
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
-import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
-import {processDeposit} from "./processDeposit.js";
-import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
-import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
-import {processDepositRequest} from "./processDepositRequest.js";
-import {ProcessBlockOpts} from "./types.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
+import {processDeposit} from "./processDeposit.js";
+import {processDepositRequest} from "./processDepositRequest.js";
+import {processProposerSlashing} from "./processProposerSlashing.js";
+import {processVoluntaryExit} from "./processVoluntaryExit.js";
+import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
+import {ProcessBlockOpts} from "./types.js";
 
 export {
   processProposerSlashing,
@@ -68,7 +68,7 @@ export function processOperations(
     const bodyElectra = body as electra.BeaconBlockBody;
 
     for (const depositRequest of bodyElectra.executionRequests.deposits) {
-      processDepositRequest(fork, stateElectra, depositRequest);
+      processDepositRequest(stateElectra, depositRequest);
     }
 
     for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {

@@ -2,8 +2,8 @@
 
 // MUST import first to apply preset from args and set ssz hasher
 import "./applyPreset.js";
-import {YargsError} from "./util/index.js";
 import {getLodestarCli, yarg} from "./cli.js";
+import {YargsError} from "./util/index.js";
 import "source-map-support/register.js";
 
 const lodestar = getLodestarCli();
@@ -14,7 +14,6 @@ void lodestar
       // Show command help message when no command is provided
       if (msg.includes("Not enough non-option arguments")) {
         yarg.showHelp();
-        // eslint-disable-next-line no-console
         console.log("\n");
       }
     }
@@ -22,7 +21,6 @@ void lodestar
     const errorMessage =
       err !== undefined ? (err instanceof YargsError ? err.message : err.stack) : msg || "Unknown error";
 
-    // eslint-disable-next-line no-console
     console.error(` ✖ ${errorMessage}\n`);
     process.exit(1);
   })

@@ -1,9 +1,9 @@
-import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {describe, expect, it} from "vitest";
 import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
-describe("beacon state api utils", function () {
+describe("beacon state api utils", () => {
   describe("getStateValidatorIndex", () => {
     const state = generateCachedAltairState();
     const pubkey2index = state.epochCtx.pubkey2index;

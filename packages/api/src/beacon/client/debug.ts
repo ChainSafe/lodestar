@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ApiClientMethods, createApiClientMethods, IHttpClient} from "../../utils/client/index.js";
+import {ApiClientMethods, IHttpClient, createApiClientMethods} from "../../utils/client/index.js";
 import {Endpoints, getDefinitions} from "../routes/debug.js";
 
 export type ApiClient = ApiClientMethods<Endpoints>;

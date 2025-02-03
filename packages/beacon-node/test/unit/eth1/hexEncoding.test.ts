@@ -1,11 +1,11 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
   QUANTITY,
+  bytesToQuantity,
+  numToQuantity,
+  quantityToBigint,
   quantityToBytes,
   quantityToNum,
-  quantityToBigint,
-  numToQuantity,
-  bytesToQuantity,
 } from "../../../src/eth1/provider/utils.js";
 
 describe("eth1 / hex encoding", () => {

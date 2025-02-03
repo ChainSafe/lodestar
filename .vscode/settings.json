@@ -1,0 +1,27 @@
+{
+  "window.title": "${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}[${activeRepositoryBranchName}]",
+  // For `sysoev.vscode-open-in-github` extension
+  "openInGitHub.defaultBranch": "unstable",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit",
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome" 
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "biomejs.biome" 
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+}

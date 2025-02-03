@@ -1,6 +1,6 @@
-import {capella} from "@lodestar/types";
 import {MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
-import {Match, AssertionResult, Assertion} from "../interfaces.js";
+import {capella} from "@lodestar/types";
+import {Assertion, AssertionResult, Match} from "../interfaces.js";
 
 type WithdrawalsData = {
   withdrawalCount: number;

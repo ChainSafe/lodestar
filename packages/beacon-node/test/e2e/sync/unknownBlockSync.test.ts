@@ -1,28 +1,27 @@
-import {describe, it, afterEach, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
+import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
 import {ChainConfig} from "@lodestar/config";
-import {phase0} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {routes} from "@lodestar/api";
-import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
-import {getDevBeaconNode} from "../../utils/node/beacon.js";
-import {waitForEvent} from "../../utils/events/resolver.js";
-import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {phase0} from "@lodestar/types";
+import {afterEach, describe, it, vi} from "vitest";
+import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {NetworkEvent} from "../../../src/network/index.js";
+import {waitForEvent} from "../../utils/events/resolver.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
-import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
-import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
-describe("sync / unknown block sync", function () {
+describe("sync / unknown block sync", () => {
   vi.setConfig({testTimeout: 40_000});
 
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 
@@ -46,7 +45,7 @@ describe("sync / unknown block sync", function () {
   ];
 
   for (const {id, event} of testCases) {
-    it(id, async function () {
+    it(id, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 4;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
@@ -122,7 +121,7 @@ describe("sync / unknown block sync", function () {
       await connected;
       loggerNodeA.info("Node A connected to Node B");
 
-      const headInput = getBlockInput.preData(config, head, BlockSource.gossip, null);
+      const headInput = getBlockInput.preData(config, head, BlockSource.gossip);
 
       switch (event) {
         case NetworkEvent.unknownBlockParent:

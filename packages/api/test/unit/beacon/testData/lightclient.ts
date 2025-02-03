@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {Endpoints} from "../../../../src/beacon/routes/lightclient.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -14,7 +14,7 @@ const signatureSlot = ssz.Slot.defaultValue();
 export const testData: GenericServerTestCases<Endpoints> = {
   getLightClientUpdatesByRange: {
     args: {startPeriod: 1, count: 2},
-    res: {data: [lightClientUpdate], meta: {versions: [ForkName.bellatrix]}},
+    res: {data: [lightClientUpdate, lightClientUpdate], meta: {versions: [ForkName.altair, ForkName.altair]}},
   },
   getLightClientOptimisticUpdate: {
     args: undefined,

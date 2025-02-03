@@ -1,30 +1,31 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
-import {ErrorAborted} from "@lodestar/utils";
-import {LevelDbController} from "@lodestar/db";
-import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {ProcessShutdownCallback} from "@lodestar/validator";
+import {LevelDbController} from "@lodestar/db";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {ErrorAborted} from "@lodestar/utils";
+import {ProcessShutdownCallback} from "@lodestar/validator";
 
-import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
+import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {LogArgs} from "../../options/logOptions.js";
 import {
-  onGracefulShutdown,
-  mkdir,
-  writeFile600Perm,
   cleanOldLogFiles,
+  mkdir,
+  onGracefulShutdown,
   parseLoggerArgs,
   pruneOldFilesInDir,
+  writeFile600Perm,
 } from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
-import {LogArgs} from "../../options/logOptions.js";
-import {BeaconArgs} from "./options.js";
-import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
 import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+import {BeaconArgs} from "./options.js";
+import {getBeaconPaths} from "./paths.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -35,6 +36,10 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
+
+  if (hasher.name !== "as-sha256") {
+    throw Error(`Loaded incorrect hasher ${hasher.name}, expected as-sha256`);
+  }
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
@@ -158,7 +163,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 }
 
 /** Separate function to simplify unit testing of options merging */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 
@@ -175,14 +179,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 
-  // Combine bootnodes from different sources
-  const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
-    args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
-    isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
-  );
-  // Deduplicate and set combined bootnodes
-  beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
-
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {
     const {depositContractDeployBlock} = getNetworkData(network);
@@ -191,8 +187,19 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
   const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
-  // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+
+  if (args.discv5 !== false) {
+    // Inject ENR to beacon options
+    beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+
+    // Combine bootnodes from different sources
+    const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
+      args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
+      isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
+    );
+    // Deduplicate and set combined bootnodes
+    beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
+  }
 
   if (args.disableLightClientServer) {
     beaconNodeOptions.set({chain: {disableLightClientServer: true}});

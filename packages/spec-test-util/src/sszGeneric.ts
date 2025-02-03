@@ -1,7 +1,7 @@
-import path from "node:path";
 import fs from "node:fs";
-import {uncompress} from "snappyjs";
+import path from "node:path";
 import {loadYaml} from "@lodestar/utils";
+import {uncompress} from "snappyjs";
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 

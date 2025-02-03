@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -11,8 +11,8 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
 import {processAttestationsAltair} from "../../../src/block/processAttestationsAltair.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
@@ -56,7 +56,7 @@ describe("altair processAttestation", () => {
   ];
 
   for (const {id, opts} of testCases) {
-    itBench<StateAttestations, StateAttestations>({
+    bench<StateAttestations, StateAttestations>({
       id: `altair processAttestation - ${perfStateId} ${id}`,
       before: () => {
         const state = generatePerfTestCachedStateAltair();
@@ -100,7 +100,7 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
     {name: "100% committees", ratio: 1},
   ];
   for (const {name, ratio} of testCases) {
-    itBench<CachedBeaconStateAltair, CachedBeaconStateAltair>({
+    bench<CachedBeaconStateAltair, CachedBeaconStateAltair>({
       id: `altair processAttestation - setStatus - ${name} join`,
       before: () => {
         const state = generatePerfTestCachedStateAltair();

@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {getDefaultGraffiti, toGraffitiBuffer} from "../../../src/util/graffiti.js";
+import {describe, expect, it} from "vitest";
 import {ClientCode} from "../../../src/execution/index.js";
+import {getDefaultGraffiti, toGraffitiBuffer} from "../../../src/util/graffiti.js";
 
 describe("Graffiti helper", () => {
   describe("toGraffitiBuffer", () => {

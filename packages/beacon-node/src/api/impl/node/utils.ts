@@ -44,6 +44,7 @@ function getPeerState(status: StreamStatus): routes.node.PeerState {
     case "closing":
       return "disconnecting";
     case "closed":
+      return "disconnected";
     default:
       return "disconnected";
   }

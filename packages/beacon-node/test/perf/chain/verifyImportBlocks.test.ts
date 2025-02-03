@@ -1,27 +1,19 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {LevelDbController} from "@lodestar/db";
+import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-// eslint-disable-next-line import/no-relative-packages
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
-import {
-  getNetworkCachedState,
-  getNetworkCachedBlock,
-  // eslint-disable-next-line import/no-relative-packages
-} from "../../../../state-transition/test/utils/testFileCache.js";
-import {
-  beforeValue,
-  // eslint-disable-next-line import/no-relative-packages
-} from "../../../../state-transition/test/utils/beforeValueMocha.js";
+import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
+import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
+import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {testLogger} from "../../utils/logger.js";
+import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
+import {BeaconDb, StateArchiveMode} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
-import {BeaconDb} from "../../../src/index.js";
-import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
+import {testLogger} from "../../utils/logger.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -36,13 +28,22 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
   });
 
-  before("Check correct params", () => {
+  let db: BeaconDb;
+
+  beforeAll(async () => {
     // Must start at the first slot of the epoch to have a proper checkpoint state.
     // Using `computeStartSlotAtEpoch(...) - 1` will cause the chain to initialize with a state that's not the checkpoint
     // state, so processing the first block of the epoch will cause error `BLOCK_ERROR_WOULD_REVERT_FINALIZED_SLOT`
     if (rangeSyncTest.startSlot % SLOTS_PER_EPOCH !== 0) {
       throw Error("startSlot must be the first slot in the epoch");
     }
+
+    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
+  });
+
+  afterAll(async () => {
+    // If before blocks fail, db won't be declared
+    if (db !== undefined) await db.close();
   });
 
   const blocks = beforeValue(
@@ -65,16 +66,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     return state;
   }, timeoutInfura);
 
-  let db: BeaconDb;
-  before(async () => {
-    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
-  });
-  after(async () => {
-    // If before blocks fail, db won't be declared
-    if (db !== undefined) await db.close();
-  });
-
-  itBench({
+  bench({
     id: `altair verifyImport ${network}_s${startSlot}:${slotCount}`,
     minRuns: 5,
     maxRuns: Infinity,
@@ -92,6 +84,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
           minSameMessageSignatureSetsToBatch: 32,
+          stateArchiveMode: StateArchiveMode.Frequency,
         },
         {
           config: state.config,
@@ -111,9 +104,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) =>
-        getBlockInput.preData(chain.config, block, BlockSource.byRange, null)
-      );
+      const blocksImport = blocks.value.map((block) => getBlockInput.preData(chain.config, block, BlockSource.byRange));
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

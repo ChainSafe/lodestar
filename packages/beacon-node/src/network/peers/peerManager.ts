@@ -1,33 +1,33 @@
-import {Connection, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {Connection, PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
+import {LoggerNode} from "@lodestar/logger/node";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Metadata, altair, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
-import {LoggerNode} from "@lodestar/logger/node";
-import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
+import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
-import {NetworkEvent, INetworkEventBus, NetworkEventData} from "../events.js";
-import {Libp2p} from "../interface.js";
-import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
-import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
-import {SubnetsService} from "../subnets/index.js";
-import {SubnetType} from "../metadata.js";
-import {Eth2Gossipsub} from "../gossip/gossipsub.js";
-import {StatusCache} from "../statusCache.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
+import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
+import {Eth2Gossipsub} from "../gossip/gossipsub.js";
+import {Libp2p} from "../interface.js";
+import {SubnetType} from "../metadata.js";
+import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
+import {StatusCache} from "../statusCache.js";
+import {SubnetsService} from "../subnets/index.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
-import {PeersData, PeerData} from "./peersData.js";
-import {getKnownClientFromAgentVersion, ClientKind} from "./client.js";
+import {PeerData, PeersData} from "./peersData.js";
+import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 import {
+  assertPeerRelevance,
   getConnectedPeerIds,
   hasSomeConnectedPeer,
-  assertPeerRelevance,
   prioritizePeers,
   renderIrrelevantPeerType,
 } from "./utils/index.js";
-import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -276,11 +276,14 @@ export class PeerManager {
 
       switch (request.method) {
         case ReqRespMethod.Ping:
-          return this.onPing(peer, request.body);
+          this.onPing(peer, request.body);
+          return;
         case ReqRespMethod.Goodbye:
-          return this.onGoodbye(peer, request.body);
+          this.onGoodbye(peer, request.body);
+          return;
         case ReqRespMethod.Status:
-          return this.onStatus(peer, request.body);
+          this.onStatus(peer, request.body);
+          return;
       }
     } catch (e) {
       this.logger.error("Error onRequest handler", {}, e as Error);
@@ -383,7 +386,7 @@ export class PeerManager {
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
-    } catch (e) {
+    } catch (_e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -395,7 +398,7 @@ export class PeerManager {
       // If peer replies a PING request also update lastReceivedMsg
       const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) peerData.lastReceivedMsgUnixTsMs = Date.now();
-    } catch (e) {
+    } catch (_e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -403,7 +406,7 @@ export class PeerManager {
   private async requestStatus(peer: PeerId, localStatus: phase0.Status): Promise<void> {
     try {
       this.onStatus(peer, await this.reqResp.sendStatus(peer, localStatus));
-    } catch (e) {
+    } catch (_e) {
       // TODO: Failed to get peer latest status: downvote but don't disconnect
     }
   }
@@ -423,7 +426,7 @@ export class PeerManager {
    * NOTE: Discovery should only add a new query if one isn't already queued.
    */
   private heartbeat(): void {
-    // timer is safe without a try {} catch {}, in case of error the metric won't register and timer is GC'ed
+    // timer is safe without a try {} catch (_e) {}, in case of error the metric won't register and timer is GC'ed
     const timer = this.metrics?.peerManager.heartbeatDuration.startTimer();
 
     const connectedPeers = this.getConnectedPeerIds();

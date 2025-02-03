@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {describe, it, expect} from "vitest";
 import {routes} from "@lodestar/api";
+import {describe, expect, it} from "vitest";
 
 import {parseProposerConfig} from "../../../src/util/index.js";
 
@@ -15,7 +14,7 @@ const testValue = {
       strictFeeRecipientCheck: true,
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       builder: {
-        gasLimit: 30000000,
+        gasLimit: 36000000,
         selection: undefined,
         boostFactor: undefined,
       },
@@ -27,7 +26,7 @@ const testValue = {
       builder: {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.BuilderAlways,
-        boostFactor: BigInt(18446744073709551616),
+        boostFactor: 18446744073709551616n,
       },
     },
   },
@@ -36,7 +35,7 @@ const testValue = {
     strictFeeRecipientCheck: true,
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
-      gasLimit: 30000000,
+      gasLimit: 36000000,
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(50),
     },

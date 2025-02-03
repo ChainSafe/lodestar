@@ -45,17 +45,17 @@ export interface JsonRpcResponseWithErrorPayload<T> {
 }
 
 // Make the very flexible el response type to match different libraries easily
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type JsonRpcResponse<T = any, E = any> =
   | JsonRpcResponseWithResultPayload<T>
   | JsonRpcResponseWithErrorPayload<E>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type JsonRpcBatchResponse<T = any, E = any> = JsonRpcResponse<T, E>[];
 
 // Response can be a single response or an array of responses in case of batch request
 // Make the very flexible el response type to match different libraries easily
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type JsonRpcResponseOrBatch<T = any, E = any> = JsonRpcResponse<T, E> | JsonRpcBatchResponse<T, E>;
 
 export type HexString = string;
@@ -145,7 +145,6 @@ export interface ELAccessListResponse {
 
 export type ELStorageProof = Pick<ELProof, "storageHash" | "storageProof">;
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export type ELApi = {
   eth_getBalance: (address: string, block?: number | string) => string;
   eth_createAccessList: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => ELAccessListResponse;

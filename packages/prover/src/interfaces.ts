@@ -1,6 +1,6 @@
 import {ChainConfig} from "@lodestar/config";
 import {NetworkName} from "@lodestar/config/networks";
-import {Logger, LogLevel} from "@lodestar/utils";
+import {LogLevel, Logger} from "@lodestar/utils";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponse, JsonRpcResponseOrBatch} from "./types.js";
 import {ELRpcProvider} from "./utils/rpc_provider.js";
@@ -27,7 +27,7 @@ export type ELRequestHandler<Params = unknown[], Response = unknown> = (
   payload: JsonRpcRequestOrBatch<Params>
 ) => Promise<JsonRpcResponseOrBatch<Response> | undefined>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ELRequestHandlerAny = ELRequestHandler<any, any>;
 
 /**

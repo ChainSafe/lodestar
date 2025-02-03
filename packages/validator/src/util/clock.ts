@@ -1,8 +1,8 @@
-import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
+import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
@@ -119,17 +119,14 @@ export class Clock implements IClock {
     if (timeItem === TimeItem.Slot) {
       if (msFromGenesis >= 0) {
         return milliSecondsPerSlot - (msFromGenesis % milliSecondsPerSlot);
-      } else {
-        return Math.abs(msFromGenesis % milliSecondsPerSlot);
       }
-    } else {
-      const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
-      if (msFromGenesis >= 0) {
-        return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
-      } else {
-        return Math.abs(msFromGenesis % milliSecondsPerEpoch);
-      }
+      return Math.abs(msFromGenesis) % milliSecondsPerSlot;
     }
+    const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
+    if (msFromGenesis >= 0) {
+      return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
+    }
+    return Math.abs(msFromGenesis) % milliSecondsPerEpoch;
   }
 }
 

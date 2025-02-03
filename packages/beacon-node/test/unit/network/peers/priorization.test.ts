@@ -1,20 +1,19 @@
+import {BitArray} from "@chainsafe/ssz";
 import {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {BitArray} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import {describe, expect, it} from "vitest";
+import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 import {
   ExcessPeerDisconnectReason,
-  prioritizePeers,
   PrioritizePeersOpts,
+  prioritizePeers,
   sortPeersToPrune,
 } from "../../../../src/network/peers/utils/prioritizePeers.js";
 import {getAttnets, getSyncnets} from "../../../utils/network.js";
-import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 
 type Result = ReturnType<typeof prioritizePeers>;
 
-// eslint-disable-next-line vitest/valid-describe-callback
 describe("network / peers / priorization", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
@@ -264,8 +263,7 @@ describe("network / peers / priorization", async () => {
   }
 });
 
-// eslint-disable-next-line vitest/valid-describe-callback
-describe("sortPeersToPrune", async function () {
+describe("sortPeersToPrune", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
     const peer = await createSecp256k1PeerId();

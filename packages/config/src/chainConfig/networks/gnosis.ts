@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {fromHex as b} from "@lodestar/utils";
 import {PresetName} from "@lodestar/params";
-import {ChainConfig} from "../types.js";
+import {fromHex as b} from "@lodestar/utils";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Gnosis beacon chain config:
 // https://github.com/gnosischain/configs/blob/main/mainnet/config.yaml
@@ -52,4 +51,7 @@ export const gnosisChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x04000064"),
   DENEB_FORK_EPOCH: 889856, // 2024-03-11T18:30:20.000Z
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x05000064"),
+  ELECTRA_FORK_EPOCH: Infinity,
 };

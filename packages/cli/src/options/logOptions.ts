@@ -1,5 +1,5 @@
-import {LogLevels, CliCommandOptions} from "@lodestar/utils";
 import {LogLevel, logFormats} from "@lodestar/logger";
+import {CliCommandOptions, LogLevels} from "@lodestar/utils";
 import {LOG_FILE_DISABLE_KEYWORD} from "../util/logger.js";
 
 export type LogArgs = {
@@ -65,6 +65,6 @@ export const logOptions: CliCommandOptions<LogArgs> = {
     description: "Set log level for a specific module by name: 'chain=debug' or 'network=debug,chain=debug'",
     type: "array",
     string: true,
-    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
+    coerce: (args: string[]) => args.flatMap((item) => item.split(",")),
   },
 };

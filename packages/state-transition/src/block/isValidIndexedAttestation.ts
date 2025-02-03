@@ -1,15 +1,15 @@
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
+import {IndexedAttestation, IndexedAttestationBigint} from "@lodestar/types";
+import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {verifySignatureSet} from "../util/index.js";
-import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
  */
 export function isValidIndexedAttestation(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation,
+  indexedAttestation: IndexedAttestation,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
@@ -18,14 +18,13 @@ export function isValidIndexedAttestation(
 
   if (verifySignature) {
     return verifySignatureSet(getIndexedAttestationSignatureSet(state, indexedAttestation));
-  } else {
-    return true;
   }
+  return true;
 }
 
 export function isValidIndexedAttestationBigint(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestationBigint,
+  indexedAttestation: IndexedAttestationBigint,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
@@ -34,9 +33,8 @@ export function isValidIndexedAttestationBigint(
 
   if (verifySignature) {
     return verifySignatureSet(getIndexedAttestationBigintSignatureSet(state, indexedAttestation));
-  } else {
-    return true;
   }
+  return true;
 }
 
 /**

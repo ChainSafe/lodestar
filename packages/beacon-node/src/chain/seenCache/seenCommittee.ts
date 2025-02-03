@@ -1,4 +1,4 @@
-import {SubcommitteeIndex, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
+import {RootHex, Slot, SubcommitteeIndex, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
 /**
@@ -38,6 +38,6 @@ export class SeenSyncCommitteeMessages {
   }
 }
 
-function seenCacheKey(subnet: number, validatorIndex: ValidatorIndex): ValidatorSubnetKey {
+function seenCacheKey(subnet: SubcommitteeIndex, validatorIndex: ValidatorIndex): ValidatorSubnetKey {
   return `${subnet}-${validatorIndex}`;
 }

@@ -1,18 +1,18 @@
-import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkBlobs, ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedState} from "../../../utils/state.js";
 
-describe("gossip block validation", function () {
+describe("gossip block validation", () => {
   let chain: MockedBeaconChain;
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
@@ -20,12 +20,15 @@ describe("gossip block validation", function () {
   let job: SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
-  const block = ssz.phase0.BeaconBlock.defaultValue();
+  const block = ssz.deneb.BeaconBlock.defaultValue();
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
   const maxSkipSlots = 10;
 
-  beforeEach(function () {
+  beforeEach(() => {
+    // Fill up with kzg commitments
+    block.body.blobKzgCommitments = Array.from({length: config.MAX_BLOBS_PER_BLOCK}, () => new Uint8Array([0]));
+
     chain = getMockedBeaconChain();
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
@@ -33,7 +36,6 @@ describe("gossip block validation", function () {
     chain.forkChoice = forkChoice;
     regen = chain.regen;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (chain as any).opts = {maxSkipSlots};
 
     verifySignature = chain.bls.verifySignatureSets;
@@ -50,7 +52,7 @@ describe("gossip block validation", function () {
     job = {signature, message: block};
   });
 
-  it("FUTURE_SLOT", async function () {
+  it("FUTURE_SLOT", async () => {
     // Set the block slot to after the current clock
     const signedBlock = {signature, message: {...block, slot: clockSlot + 1}};
 
@@ -60,7 +62,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("WOULD_REVERT_FINALIZED_SLOT", async function () {
+  it("WOULD_REVERT_FINALIZED_SLOT", async () => {
     // Set finalized epoch to be greater than block's epoch
     forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: Infinity, root: ZERO_HASH, rootHex: ""});
 
@@ -70,7 +72,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("ALREADY_KNOWN", async function () {
+  it("ALREADY_KNOWN", async () => {
     // Make the fork choice return a block summary for the proposed block
     forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
 
@@ -80,7 +82,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("REPEAT_PROPOSAL", async function () {
+  it("REPEAT_PROPOSAL", async () => {
     // Register the proposer as known
     chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
 
@@ -90,7 +92,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("PARENT_UNKNOWN (fork-choice)", async function () {
+  it("PARENT_UNKNOWN (fork-choice)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Return not known for parent block too
@@ -102,7 +104,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("TOO_MANY_SKIPPED_SLOTS", async function () {
+  it("TOO_MANY_SKIPPED_SLOTS", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Return parent block with 1 slot way back than maxSkipSlots
@@ -114,7 +116,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("NOT_LATER_THAN_PARENT", async function () {
+  it("NOT_LATER_THAN_PARENT", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -126,7 +128,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("PARENT_UNKNOWN (regen)", async function () {
+  it("PARENT_UNKNOWN (regen)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -140,7 +142,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("PROPOSAL_SIGNATURE_INVALID", async function () {
+  it("PROPOSAL_SIGNATURE_INVALID", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -156,7 +158,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("INCORRECT_PROPOSER", async function () {
+  it("INCORRECT_PROPOSER", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -175,7 +177,7 @@ describe("gossip block validation", function () {
     );
   });
 
-  it("valid", async function () {
+  it("valid", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -185,9 +187,47 @@ describe("gossip block validation", function () {
     regen.getPreState.mockResolvedValue(state);
     // BLS signature verifier returns valid
     verifySignature.mockResolvedValue(true);
-    // Force proposer shuffling cache to return wrong value
+    // Force proposer shuffling cache to return correct value
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
     await validateGossipBlock(config, chain, job, ForkName.phase0);
+  });
+
+  it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    // Regen returns some state
+    const state = generateCachedState();
+    regen.getPreState.mockResolvedValue(state);
+    // BLS signature verifier returns valid
+    verifySignature.mockResolvedValue(true);
+    // Force proposer shuffling cache to return correct value
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex + 1);
+    // Add one extra kzg commitment in the block so it goes over the limit
+    (job as SignedBeaconBlock<ForkBlobs>).message.body.blobKzgCommitments.push(new Uint8Array([0]));
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.deneb),
+      BlockErrorCode.TOO_MANY_KZG_COMMITMENTS
+    );
+  });
+
+  it("deneb - valid", async () => {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    // Regen returns some state
+    const state = generateCachedState();
+    regen.getPreState.mockResolvedValue(state);
+    // BLS signature verifier returns valid
+    verifySignature.mockResolvedValue(true);
+    // Force proposer shuffling cache to return correct value
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    // Keep number of kzg commitments as is so it stays within the limit
+
+    await validateGossipBlock(config, chain, job, ForkName.deneb);
   });
 });

@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {TrustedSetupJSON, trustedSetupJsonToBin, TRUSTED_SETUP_BIN_FILEPATH} from "../../../src/util/kzg.js";
+import {TRUSTED_SETUP_BIN_FILEPATH, TrustedSetupJSON, trustedSetupJsonToBin} from "../../../src/util/kzg.js";
 
 // CLI TOOL: Use to transform a JSON trusted setup into .ssz
 //

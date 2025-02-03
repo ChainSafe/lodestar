@@ -1,15 +1,15 @@
-import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {PeerId} from "@libp2p/interface";
-import {LodestarError, fromHex} from "@lodestar/utils";
 import {getEmptyLogger} from "@lodestar/logger/empty";
+import {LodestarError, fromHex} from "@lodestar/utils";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {Protocol, RespStatus} from "../../../src/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 import {handleRequest} from "../../../src/response/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
+import {pingProtocol} from "../../fixtures/protocols.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {MockLibP2pStream, expectEqualByteChunks} from "../../utils/index.js";
 import {getValidPeerId} from "../../utils/peer.js";
-import {pingProtocol} from "../../fixtures/protocols.js";
 
 const testCases: {
   id: string;

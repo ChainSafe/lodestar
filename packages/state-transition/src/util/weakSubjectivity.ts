@@ -6,7 +6,7 @@ import {Checkpoint} from "@lodestar/types/phase0";
 import {toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/constants.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
-import {computeEpochAtSlot, getCurrentEpoch, computeCheckpointEpochAtStateSlot} from "./epoch.js";
+import {computeCheckpointEpochAtStateSlot, computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";
 import {getCurrentSlot} from "./slot.js";
 import {getActiveValidatorIndices, getChurnLimit} from "./validator.js";
 
@@ -80,7 +80,6 @@ export function computeWeakSubjectivityPeriodFromConstituents(
   const t = Math.floor(totalBalanceByIncrement / N);
   const T = MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI;
   const delta = churnLimit;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const Delta = MAX_DEPOSITS * SLOTS_PER_EPOCH;
   const D = SAFETY_DECAY;
 

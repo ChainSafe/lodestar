@@ -1,14 +1,13 @@
-import {describe} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {Endpoints} from "../../../../src/beacon/routes/beacon/index.js";
+import {describe} from "vitest";
 import {getClient} from "../../../../src/beacon/client/beacon.js";
+import {Endpoints} from "../../../../src/beacon/routes/beacon/index.js";
 import {getRoutes} from "../../../../src/beacon/server/beacon.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/beacon.js";
 
 describe("beacon / beacon", () => {
   runGenericServerTest<Endpoints>(
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2}),
     getClient,
     getRoutes,

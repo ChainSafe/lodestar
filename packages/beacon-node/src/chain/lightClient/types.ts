@@ -26,7 +26,7 @@
  * ```
  */
 export type SyncCommitteeWitness = {
-  /** Vector[Bytes32, 4] */
+  /** Vector[Bytes32, 4] or Vector[Bytes32, 5] depending on the fork */
   witness: Uint8Array[];
   currentSyncCommitteeRoot: Uint8Array;
   nextSyncCommitteeRoot: Uint8Array;

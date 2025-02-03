@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IHttpClient, HttpClient, HttpClientModules, HttpClientOptions} from "../utils/client/index.js";
+import {HttpClient, HttpClientModules, HttpClientOptions, IHttpClient} from "../utils/client/index.js";
 import type {ApiClient} from "./client.js";
 import * as keymanager from "./client.js";
 
@@ -18,6 +18,7 @@ export type {
   GraffitiData,
   GasLimitData,
   BuilderBoostFactorData,
+  ProposerConfigResponse,
 } from "./routes.js";
 
 export type {ApiClient};

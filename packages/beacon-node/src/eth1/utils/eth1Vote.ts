@@ -1,7 +1,7 @@
-import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, RootHex} from "@lodestar/types";
+import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
+import {RootHex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
 export type Eth1DataGetter = ({
@@ -72,16 +72,14 @@ export function pickEth1Vote(state: BeaconStateAllForks, votesToConsider: phase0
   }
 
   // If there's a single winning vote with a majority vote that one
-  else if (eth1DataRootsMaxVotes.length === 1) {
+  if (eth1DataRootsMaxVotes.length === 1) {
     return eth1DataHashToEth1Data.get(eth1DataRootsMaxVotes[0]) ?? state.eth1Data;
   }
 
   // If there are multiple winning votes, vote for the latest one
-  else {
-    const latestMostVotedRoot =
-      eth1DataVotesOrder[Math.max(...eth1DataRootsMaxVotes.map((root) => eth1DataVotesOrder.indexOf(root)))];
-    return eth1DataHashToEth1Data.get(latestMostVotedRoot) ?? state.eth1Data;
-  }
+  const latestMostVotedRoot =
+    eth1DataVotesOrder[Math.max(...eth1DataRootsMaxVotes.map((root) => eth1DataVotesOrder.indexOf(root)))];
+  return eth1DataHashToEth1Data.get(latestMostVotedRoot) ?? state.eth1Data;
 }
 
 /**

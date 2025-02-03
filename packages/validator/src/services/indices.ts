@@ -1,8 +1,8 @@
+import {ApiClient, routes} from "@lodestar/api";
 import {ValidatorIndex} from "@lodestar/types";
 import {Logger, MapDef, toPubkeyHex} from "@lodestar/utils";
-import {ApiClient, routes} from "@lodestar/api";
-import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
+import {batchItems} from "../util/index.js";
 
 /**
  * This is to prevent the "Request body is too large" issue for http post.
@@ -20,7 +20,6 @@ type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn";
 
 const statusToSimpleStatusMapping = (status: routes.beacon.ValidatorStatus): SimpleValidatorStatus => {
   switch (status) {
-    case "active":
     case "active_exiting":
     case "active_slashed":
     case "active_ongoing":

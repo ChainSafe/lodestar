@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {encode as varintEncode} from "uint8-varint";
-import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {encode as varintEncode} from "uint8-varint";
 import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
 import {ResponseOutgoing, TypeSizes} from "../../src/types.js";
 import {
@@ -15,7 +15,6 @@ import {
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type SszSnappyTestBlockData = {

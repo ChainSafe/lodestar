@@ -1,22 +1,23 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
 import {
-  Slot,
-  ssz,
-  RootHex,
-  deneb,
-  isSignedBlockContents,
-  SignedBeaconBlock,
   BeaconBlockBody,
+  RootHex,
+  SignedBeaconBlock,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
+  Slot,
+  deneb,
+  isSignedBlockContents,
+  ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
-import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
+import {getExecutionForkTypes, toForkName} from "../../../utils/fork.js";
+import {fromHeaders} from "../../../utils/headers.js";
+import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
   ExecutionOptimisticAndFinalizedCodec,
   ExecutionOptimisticAndFinalizedMeta,
@@ -24,8 +25,6 @@ import {
   ExecutionOptimisticFinalizedAndVersionMeta,
   MetaHeader,
 } from "../../../utils/metadata.js";
-import {getExecutionForkTypes, toForkName} from "../../../utils/fork.js";
-import {fromHeaders} from "../../../utils/headers.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -225,7 +224,7 @@ export type Endpoints = {
   >;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: {block_id: string}}, any, any>> = {
   writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
   parseReq: ({params}) => ({blockId: params.block_id}),
@@ -500,7 +499,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
             body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
-
             headers: {
               [MetaHeader.Version]: fork,
             },

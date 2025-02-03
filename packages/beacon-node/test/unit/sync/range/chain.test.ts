@@ -1,16 +1,16 @@
-import {describe, it, afterEach} from "vitest";
 import {config} from "@lodestar/config/default";
-import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {linspace} from "../../../../src/util/numpy.js";
-import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/chain.js";
-import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
+import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
+import {afterEach, describe, it} from "vitest";
+import {BlockInput, BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
+import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
+import {linspace} from "../../../../src/util/numpy.js";
 import {testLogger} from "../../../utils/logger.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
-import {BlockInput, BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -72,7 +72,7 @@ describe("sync / range / chain", () => {
         }
       };
 
-      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
+      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (_peerId, request) => {
         const blocks: BlockInput[] = [];
         for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
           if (skippedSlots?.has(i)) {
@@ -89,8 +89,7 @@ describe("sync / range / chain", () => {
                 message: generateEmptyBlock(i),
                 signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
               },
-              BlockSource.byRange,
-              null
+              BlockSource.byRange
             )
           );
         }
@@ -124,7 +123,7 @@ describe("sync / range / chain", () => {
     const peers = [peer];
 
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
-    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
+    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (_peer, request) => {
       const blocks: BlockInput[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         blocks.push(
@@ -134,8 +133,7 @@ describe("sync / range / chain", () => {
               message: generateEmptyBlock(i),
               signature: ACCEPT_BLOCK,
             },
-            BlockSource.byRange,
-            null
+            BlockSource.byRange
           )
         );
       }

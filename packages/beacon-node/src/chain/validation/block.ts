@@ -1,18 +1,18 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, isForkBlobs} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isExecutionBlockBodyType,
-  isExecutionStateType,
-  isExecutionEnabled,
   getBlockProposerSignatureSet,
+  isExecutionBlockBodyType,
+  isExecutionEnabled,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
+import {SignedBeaconBlock, deneb} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
-import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlock(
@@ -108,6 +108,19 @@ export async function validateGossipBlock(
       parentSlot: parentBlock.slot,
       slot: blockSlot,
     });
+  }
+
+  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
+  if (isForkBlobs(fork)) {
+    const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
+    const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(fork);
+    if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        blobKzgCommitmentsLen,
+        commitmentLimit: maxBlobsPerBlock,
+      });
+    }
   }
 
   // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.

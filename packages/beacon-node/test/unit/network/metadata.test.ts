@@ -1,10 +1,10 @@
-import {describe, it, expect} from "vitest";
-import {toHex} from "@lodestar/utils";
 import {ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 import {getENRForkID} from "../../../src/network/metadata.js";
 import {config} from "../../utils/config.js";
 
-describe("network / metadata / getENRForkID", function () {
+describe("network / metadata / getENRForkID", () => {
   // At 0, next fork is altair
   const currentEpoch = 0;
   const enrForkID = getENRForkID(config, currentEpoch);

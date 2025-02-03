@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export type SlashingProtectionInterchangeTest = {
   name: string;
   genesis_validators_root: string;

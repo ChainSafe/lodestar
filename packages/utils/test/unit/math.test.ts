@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
-import {bigIntMin, bigIntMax, intDiv, intSqrt, bigIntSqrt} from "../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {bigIntMax, bigIntMin, bigIntSqrt, intDiv, intSqrt} from "../../src/index.js";
 
-describe("util/maths", function () {
+describe("util/maths", () => {
   describe("bigIntMin", () => {
     it("if a is lt should return a", () => {
       const a = BigInt(1);

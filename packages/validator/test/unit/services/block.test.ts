@@ -1,22 +1,22 @@
-import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {sleep} from "@lodestar/utils";
-import {ssz, ProducedBlockSource} from "@lodestar/types";
-import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
+import {ProducedBlockSource, ssz} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
 
-describe("BlockDutiesService", function () {
+describe("BlockDutiesService", () => {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
   const validatorStore = vi.mocked(new ValidatorStore());
@@ -36,7 +36,7 @@ describe("BlockDutiesService", function () {
   });
   afterEach(() => controller.abort());
 
-  it("Should produce, sign, and publish a block", async function () {
+  it("Should produce, sign, and publish a block", async () => {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     api.validator.getProposerDuties.mockResolvedValue(
@@ -111,7 +111,7 @@ describe("BlockDutiesService", function () {
     ]);
   });
 
-  it("Should produce, sign, and publish a blinded block", async function () {
+  it("Should produce, sign, and publish a blinded block", async () => {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     api.validator.getProposerDuties.mockResolvedValue(

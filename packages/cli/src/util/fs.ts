@@ -21,7 +21,8 @@ export function unlinkSyncMaybe(filepath: string): boolean {
   } catch (e) {
     const {code} = e as ErrorFs;
     if (code === "ENOENT") return false;
-    else throw e;
+
+    throw e;
   }
 }
 
@@ -37,7 +38,8 @@ export function rmdirSyncMaybe(dirpath: string): boolean {
     // about error codes https://nodejs.org/api/fs.html#fspromisesrmdirpath-options
     // ENOENT error on Windows and an ENOTDIR
     if (code === "ENOENT" || code === "ENOTDIR") return false;
-    else throw e;
+
+    throw e;
   }
 }
 

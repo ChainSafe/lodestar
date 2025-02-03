@@ -1,5 +1,5 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {byteArrayEquals} from "@chainsafe/ssz";
 
 export const SYNC_COMMITTEES_DEPTH = 4;
 export const SYNC_COMMITTEES_INDEX = 11;

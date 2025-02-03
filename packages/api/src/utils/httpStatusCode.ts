@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * Hypertext Transfer Protocol (HTTP) response status codes.
  * @see {@link https://www.rfc-editor.org/rfc/rfc7231#section-6}

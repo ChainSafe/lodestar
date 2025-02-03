@@ -1,12 +1,13 @@
-import {ssz} from "@lodestar/types";
 import {ProtocolHandler} from "@lodestar/reqresp";
+import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {BlobSidecarsByRootRequestType} from "../../../util/types.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
+import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -37,7 +38,8 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       return onBeaconBlocksByRoot(body, chain, db);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
-      const body = ssz.deneb.BlobSidecarsByRootRequest.deserialize(req.data);
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
+      const body = BlobSidecarsByRootRequestType(fork, chain.config).deserialize(req.data);
       return onBlobSidecarsByRoot(body, chain, db);
     },
     [ReqRespMethod.BlobSidecarsByRange]: (req) => {

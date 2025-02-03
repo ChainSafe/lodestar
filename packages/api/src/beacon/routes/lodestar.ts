@@ -1,15 +1,19 @@
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Schema, Endpoint, RouteDefinitions} from "../../utils/index.js";
+import {Epoch, RootHex, Slot, ssz} from "@lodestar/types";
 import {
+  ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
+  EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -21,7 +25,7 @@ export type SyncChainDebugState = {
   status: string;
   startEpoch: number;
   peers: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   batches: any[];
 };
 
@@ -74,6 +78,16 @@ export type LodestarNodePeer = NodePeer & {
 };
 
 export type LodestarThreadType = "main" | "network" | "discv5";
+
+const HistoricalSummariesResponseType = new ContainerType(
+  {
+    historicalSummaries: ssz.capella.HistoricalSummaries,
+    proof: ArrayOf(ssz.Bytes8),
+  },
+  {jsonCase: "eth2"}
+);
+
+export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -212,6 +226,16 @@ export type Endpoints = {
     {query: {state?: PeerState[]; direction?: PeerDirection[]}},
     LodestarNodePeer[],
     {count: number}
+  >;
+
+  /** Returns historical summaries and proof for a given state ID */
+  getHistoricalSummaries: Endpoint<
+    // ⏎
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    HistoricalSummariesResponse,
+    EmptyMeta
   >;
 
   /** Dump Discv5 Kad values */
@@ -364,6 +388,21 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
       },
       resp: JsonOnlyResponseCodec,
+    },
+    getHistoricalSummaries: {
+      url: "/eth/v1/lodestar/historical_summaries/{state_id}",
+      method: "GET",
+      req: {
+        writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
+        parseReq: ({params}) => ({stateId: params.state_id}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+        },
+      },
+      resp: {
+        data: HistoricalSummariesResponseType,
+        meta: EmptyMetaCodec,
+      },
     },
     discv5GetKadValues: {
       url: "/eth/v1/debug/discv5_kad_values",

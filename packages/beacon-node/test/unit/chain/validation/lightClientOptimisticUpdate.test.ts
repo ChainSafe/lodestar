@@ -1,18 +1,17 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {altair, ssz} from "@lodestar/types";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {altair, ssz} from "@lodestar/types";
 import {RequiredSelective} from "@lodestar/utils";
-import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
+import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
-describe("Light Client Optimistic Update validation", function () {
+describe("Light Client Optimistic Update validation", () => {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   const config = createChainForkConfig({
     ...defaultChainConfig,
-    /* eslint-disable @typescript-eslint/naming-convention */
     ALTAIR_FORK_EPOCH: 1,
     BELLATRIX_FORK_EPOCH: 3,
     CAPELLA_FORK_EPOCH: Infinity,

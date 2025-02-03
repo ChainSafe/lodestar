@@ -74,14 +74,12 @@ export async function waitForNodeSync(
 }
 
 export async function waitForNodeSyncStatus(env: Simulation, node: NodePair): Promise<void> {
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = (await node.beacon.api.node.getSyncingStatus()).value();
     if (!result.isSyncing) {
       break;
-    } else {
-      await sleep(1000, env.options.controller.signal);
     }
+    await sleep(1000, env.options.controller.signal);
   }
 }
 

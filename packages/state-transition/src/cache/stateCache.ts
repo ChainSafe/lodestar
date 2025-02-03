@@ -2,17 +2,17 @@ import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
+import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 import {
   BeaconStateAllForks,
-  BeaconStateExecutions,
-  BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
   BeaconStateElectra,
+  BeaconStateExecutions,
+  BeaconStatePhase0,
 } from "./types.js";
-import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 
 export type BeaconStateCache = {
   config: BeaconConfig;
@@ -254,9 +254,11 @@ export function isCachedBeaconState<T extends BeaconStateAllForks>(
 // This cache is populated during epoch transition, and should be preserved for performance.
 // If the cache is missing too often, means that our clone strategy is not working well.
 export function isStateValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   return state.validators["nodesPopulated"] === true;
 }
 
 export function isStateBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
   return state.balances["nodesPopulated"] === true;
 }

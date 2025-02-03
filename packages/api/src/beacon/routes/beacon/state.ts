@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType, ValidatorStatus} from "@lodestar/types";
-import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
+import {CommitteeIndex, Epoch, RootHex, Slot, StringType, ValidatorStatus, phase0, ssz} from "@lodestar/types";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
+import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
 import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
@@ -269,7 +268,7 @@ export type Endpoints = {
   >;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const stateIdOnlyReq: RequestCodec<Endpoint<"GET", {stateId: StateId}, {params: {state_id: string}}, any, any>> = {
   writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
   parseReq: ({params}) => ({stateId: params.state_id}),

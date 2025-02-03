@@ -1,6 +1,6 @@
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {CliCommandOptions, LogLevel, LogLevels} from "@lodestar/utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
+import {CliCommandOptions, LogLevel, LogLevels} from "@lodestar/utils";
 import {YargsError} from "../utils/errors.js";
 
 export type GlobalArgs = {

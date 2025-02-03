@@ -6,7 +6,7 @@ try {
   } else {
     defaultPoolSize = (await import("node:os")).availableParallelism();
   }
-} catch (e) {
+} catch (_e) {
   defaultPoolSize = 8;
 }
 

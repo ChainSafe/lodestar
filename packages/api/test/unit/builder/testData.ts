@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 
 import {Endpoints} from "../../../src/builder/routes.js";
 import {GenericServerTestCases} from "../../utils/genericServerTest.js";
@@ -23,7 +23,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: ssz.bellatrix.SignedBuilderBid.defaultValue(), meta: {version: ForkName.bellatrix}},
   },
   submitBlindedBlock: {
-    args: {signedBlindedBlock: ssz.deneb.SignedBlindedBeaconBlock.defaultValue()},
+    args: {signedBlindedBlock: {data: ssz.deneb.SignedBlindedBeaconBlock.defaultValue()}},
     res: {data: ssz.bellatrix.ExecutionPayload.defaultValue(), meta: {version: ForkName.bellatrix}},
   },
 };

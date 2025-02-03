@@ -1,21 +1,26 @@
-import {
-  bellatrix,
-  Slot,
-  Root,
-  BLSPubkey,
-  deneb,
-  Wei,
-  SignedBeaconBlockOrContents,
-  SignedBlindedBeaconBlock,
-  ExecutionPayloadHeader,
-} from "@lodestar/types";
-import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {WireFormat} from "@lodestar/api";
+import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
-import {getClient, ApiClient as BuilderApi} from "@lodestar/api/builder";
-import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
+import {ForkExecution, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {
+  BLSPubkey,
+  Epoch,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
 import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {ValidatorRegistration, ValidatorRegistrationCache} from "./cache.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
@@ -37,14 +42,39 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   timeout: 12000,
 };
 
+/**
+ * Expected error if builder does not provide a bid. Most of the time, this
+ * is due to `min-bid` setting on the mev-boost side but in rare cases could
+ * also happen if there are no bids from any of the connected relayers.
+ */
+export class NoBidReceived extends Error {
+  constructor() {
+    super("No bid received");
+  }
+}
+
+/**
+ * Duration given to the builder to provide a `SignedBuilderBid` before the deadline
+ * is reached, aborting the external builder flow in favor of the local build process.
+ */
+const BUILDER_PROPOSAL_DELAY_TOLERANCE = 1000;
+
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
   readonly config: ChainForkConfig;
+  readonly registrations: ValidatorRegistrationCache;
   readonly issueLocalFcUWithFeeRecipient?: string;
   // Builder needs to be explicity enabled using updateStatus
   status = false;
   faultInspectionWindow: number;
   allowedFaults: number;
+
+  /**
+   * Determine if SSZ is supported by requesting an SSZ encoded response in the `getHeader` request.
+   * The builder responding with a SSZ serialized `SignedBuilderBid` indicates support to handle the
+   * `SignedBlindedBeaconBlock` as SSZ serialized bytes instead of JSON when calling `submitBlindedBlock`.
+   */
+  private sszSupported = false;
 
   constructor(
     opts: ExecutionBuilderHttpOpts,
@@ -62,10 +92,11 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
           headers: opts.userAgent ? {"User-Agent": opts.userAgent} : undefined,
         },
       },
-      {config, metrics: metrics?.builderHttpClient}
+      {config, metrics: metrics?.builderHttpClient, logger}
     );
     logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
     this.config = config;
+    this.registrations = new ValidatorRegistrationCache();
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
     /**
@@ -101,8 +132,17 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     }
   }
 
-  async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
+  async registerValidator(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
     (await this.api.registerValidator({registrations})).assertOk();
+
+    for (const registration of registrations) {
+      this.registrations.add(epoch, registration.message);
+    }
+    this.registrations.prune(epoch);
+  }
+
+  getValidatorRegistration(pubkey: BLSPubkey): ValidatorRegistration | undefined {
+    return this.registrations.get(pubkey);
   }
 
   async getHeader(
@@ -114,22 +154,35 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionRequests?: electra.ExecutionRequests;
   }> {
-    const signedBuilderBid = (await this.api.getHeader({slot, parentHash, proposerPubkey})).value();
+    const res = await this.api.getHeader(
+      {slot, parentHash, proposerPubkey},
+      {timeoutMs: BUILDER_PROPOSAL_DELAY_TOLERANCE}
+    );
+    const signedBuilderBid = res.value();
 
     if (!signedBuilderBid) {
-      throw Error("No bid received");
+      throw new NoBidReceived();
     }
+
+    this.sszSupported = res.wireFormat() === WireFormat.ssz;
 
     const {header, value: executionPayloadValue} = signedBuilderBid.message;
     const {blobKzgCommitments} = signedBuilderBid.message as deneb.BuilderBid;
-    return {header, executionPayloadValue, blobKzgCommitments};
+    const {executionRequests} = signedBuilderBid.message as electra.BuilderBid;
+    return {header, executionPayloadValue, blobKzgCommitments, executionRequests};
   }
 
-  async submitBlindedBlock(signedBlindedBlock: SignedBlindedBeaconBlock): Promise<SignedBeaconBlockOrContents> {
-    const data = (await this.api.submitBlindedBlock({signedBlindedBlock}, {retries: 2})).value();
+  async submitBlindedBlock(
+    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
+  ): Promise<SignedBeaconBlockOrContents> {
+    const res = await this.api.submitBlindedBlock(
+      {signedBlindedBlock},
+      {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+    );
 
-    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);
+    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(res.value());
 
     // for the sake of timely proposals we can skip matching the payload with payloadHeader
     // if the roots (transactions, withdrawals) don't match, this will likely lead to a block with
@@ -137,6 +190,6 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     // probably need diagonis if this block turns out to be invalid because of some bug
     //
     const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
-    return reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
+    return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
   }
 }

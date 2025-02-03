@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-This section of the documentation will cover common questions and encounters often asked by users and developers.
+This section of the documentation will cover common questions and common encounters by users and developers.
 
 ## Tooling
 

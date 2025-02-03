@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateDeneb} from "../types.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
+import {CachedBeaconStateDeneb} from "../types.js";
 import {CachedBeaconStateCapella} from "../types.js";
 
 /**
@@ -34,6 +34,7 @@ export function upgradeStateToDeneb(stateCapella: CachedBeaconStateCapella): Cac
 
   stateDeneb.commit();
   // Clear cache to ensure the cache of capella fields is not used by new deneb fields
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateDeneb["clearCache"]();
 
   return stateDeneb;

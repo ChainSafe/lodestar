@@ -18,7 +18,6 @@ export type BLSFieldElement = ValueOf<typeof ssz.BLSFieldElement>;
 
 export type BlobIdentifier = ValueOf<typeof ssz.BlobIdentifier>;
 export type BlobSidecarsByRangeRequest = ValueOf<typeof ssz.BlobSidecarsByRangeRequest>;
-export type BlobSidecarsByRootRequest = ValueOf<typeof ssz.BlobSidecarsByRootRequest>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
@@ -51,3 +50,7 @@ export type ProducedBlobSidecars = Omit<BlobSidecars, "signedBlockHeader" | "kzg
 export type BlockContents = ValueOf<typeof ssz.BlockContents>;
 export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
 export type Contents = Omit<BlockContents, "block">;
+export type BlobAndProof = {
+  blob: Blob;
+  proof: KZGProof;
+};

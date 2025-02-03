@@ -1,6 +1,6 @@
 import {WireFormat, defaultInit} from "@lodestar/api";
-import {defaultOptions} from "@lodestar/validator";
 import {CliCommandOptions} from "@lodestar/utils";
+import {defaultOptions} from "@lodestar/validator";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {ensure0xPrefix} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
@@ -195,7 +195,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     string: true,
     coerce: (urls: string[]): string[] =>
       // Parse ["url1,url2"] to ["url1", "url2"]
-      urls.map((item) => item.split(",")).flat(1),
+      urls.flatMap((item) => item.split(",")),
     alias: ["server"], // for backwards compatibility
   },
 
@@ -352,8 +352,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
       pubkeys
-        .map((item) => item.split(","))
-        .flat(1)
+        .flatMap((item) => item.split(","))
         .map(ensure0xPrefix),
     group: "externalSigner",
   },

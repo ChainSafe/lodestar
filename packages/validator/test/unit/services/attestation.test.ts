@@ -1,20 +1,20 @@
-import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
-import {ssz} from "@lodestar/types";
+import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
-import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
-import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
@@ -22,7 +22,7 @@ vi.mock("../../../src/services/emitter.js");
 vi.mock("../../../src/services/chainHeaderTracker.js");
 vi.mock("../../../src/services/syncingStatusTracker.js");
 
-describe("AttestationService", function () {
+describe("AttestationService", () => {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
   const validatorStore = vi.mocked(new ValidatorStore());
@@ -52,7 +52,6 @@ describe("AttestationService", function () {
     vi.resetAllMocks();
   });
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
 
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
@@ -82,17 +81,20 @@ describe("AttestationService", function () {
           opts
         );
 
-        const attestation = isPostElectra
+        const singleAttestation = isPostElectra
+          ? ssz.electra.SingleAttestation.defaultValue()
+          : ssz.phase0.Attestation.defaultValue();
+        const aggregatedAttestation = isPostElectra
           ? ssz.electra.Attestation.defaultValue()
           : ssz.phase0.Attestation.defaultValue();
-        const aggregate = isPostElectra
+        const aggregateAndProof = isPostElectra
           ? ssz.electra.SignedAggregateAndProof.defaultValue()
           : ssz.phase0.SignedAggregateAndProof.defaultValue();
         const duties: AttDutyAndProof[] = [
           {
             duty: {
               slot: 0,
-              committeeIndex: attestation.data.index,
+              committeeIndex: singleAttestation.data.index,
               committeeLength: 120,
               committeesAtSlot: 120,
               validatorCommitteeIndex: 1,
@@ -116,15 +118,15 @@ describe("AttestationService", function () {
         vi.spyOn(attestationService["dutiesService"], "getDutiesAtSlot").mockImplementation(() => duties);
 
         // Mock beacon's attestation and aggregates endpoints
-        api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: attestation.data}));
+        api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: singleAttestation.data}));
         if (isPostElectra) {
           api.validator.getAggregatedAttestationV2.mockResolvedValue(
-            mockApiResponse({data: attestation, meta: {version: ForkName.electra}})
+            mockApiResponse({data: aggregatedAttestation, meta: {version: ForkName.electra}})
           );
           api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
           api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
         } else {
-          api.validator.getAggregatedAttestation.mockResolvedValue(mockApiResponse({data: attestation}));
+          api.validator.getAggregatedAttestation.mockResolvedValue(mockApiResponse({data: aggregatedAttestation}));
           api.beacon.submitPoolAttestations.mockResolvedValue(mockApiResponse({}));
           api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));
         }
@@ -140,8 +142,8 @@ describe("AttestationService", function () {
         }
 
         // Mock signing service
-        validatorStore.signAttestation.mockResolvedValue(attestation);
-        validatorStore.signAggregateAndProof.mockResolvedValue(aggregate);
+        validatorStore.signAttestation.mockResolvedValue(singleAttestation);
+        validatorStore.signAggregateAndProof.mockResolvedValue(aggregateAndProof);
 
         // Trigger clock onSlot for slot 0
         await clock.tickSlotFns(0, controller.signal);
@@ -171,21 +173,23 @@ describe("AttestationService", function () {
         if (isPostElectra) {
           // Must submit the attestation received through produceAttestationData()
           expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
-          expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [attestation]});
+          expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [singleAttestation]});
 
           // Must submit the aggregate received through getAggregatedAttestationV2() then createAndSignAggregateAndProof()
           expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledOnce();
           expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledWith({
-            signedAggregateAndProofs: [aggregate],
+            signedAggregateAndProofs: [aggregateAndProof],
           });
         } else {
           // Must submit the attestation received through produceAttestationData()
           expect(api.beacon.submitPoolAttestations).toHaveBeenCalledOnce();
-          expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith({signedAttestations: [attestation]});
+          expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith({signedAttestations: [singleAttestation]});
 
           // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
           expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
-          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({signedAggregateAndProofs: [aggregate]});
+          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({
+            signedAggregateAndProofs: [aggregateAndProof],
+          });
         }
       });
     });

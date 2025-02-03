@@ -1,9 +1,9 @@
+import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Attestation, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {Slot, Attestation, electra, phase0, ssz} from "@lodestar/types";
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
 import {assert} from "@lodestar/utils";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0} from "../types.js";
 import {computeEpochAtSlot} from "../util/index.js";
-import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
 import {isValidIndexedAttestation} from "./index.js";
 
 /**
@@ -91,24 +91,39 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
 
     if (committeeIndices.length === 0) {
       throw Error("Attestation should have at least one committee bit set");
-    } else {
-      const lastCommitteeIndex = committeeIndices[committeeIndices.length - 1];
-      if (lastCommitteeIndex >= committeeCount) {
-        throw new Error(
-          `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
-        );
-      }
     }
 
-    // Get total number of attestation participant of every committee specified
-    const participantCount = committeeIndices
-      .map((committeeIndex) => epochCtx.getBeaconCommittee(data.slot, committeeIndex).length)
-      .reduce((acc, committeeSize) => acc + committeeSize, 0);
+    const lastCommitteeIndex = committeeIndices[committeeIndices.length - 1];
+    if (lastCommitteeIndex >= committeeCount) {
+      throw new Error(
+        `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
+      );
+    }
 
+    const validatorsByCommittee = epochCtx.getBeaconCommittees(data.slot, committeeIndices);
+    const aggregationBitsArray = attestationElectra.aggregationBits.toBoolArray();
+
+    // Total number of attestation participants of every committee specified
+    let committeeOffset = 0;
+    for (const committeeValidators of validatorsByCommittee) {
+      const committeeAggregationBits = aggregationBitsArray.slice(
+        committeeOffset,
+        committeeOffset + committeeValidators.length
+      );
+
+      // Assert aggregation bits in this committee have at least one true bit
+      if (committeeAggregationBits.every((bit) => !bit)) {
+        throw new Error("Every committee in aggregation bits must have at least one attester");
+      }
+
+      committeeOffset += committeeValidators.length;
+    }
+
+    // Bitfield length matches total number of participants
     assert.equal(
       attestationElectra.aggregationBits.bitLen,
-      participantCount,
-      `Attestation aggregation bits length does not match total number of committee participant aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${participantCount}`
+      committeeOffset,
+      `Attestation aggregation bits length does not match total number of committee participants aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${committeeOffset}`
     );
   } else {
     if (!(data.index < committeeCount)) {
@@ -133,9 +148,8 @@ export function isTimelyTarget(fork: ForkSeq, inclusionDistance: Slot): boolean 
   // post deneb attestation is valid till end of next epoch for target
   if (fork >= ForkSeq.deneb) {
     return true;
-  } else {
-    return inclusionDistance <= SLOTS_PER_EPOCH;
   }
+  return inclusionDistance <= SLOTS_PER_EPOCH;
 }
 
 export function checkpointToStr(checkpoint: phase0.Checkpoint): string {

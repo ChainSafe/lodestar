@@ -1,6 +1,6 @@
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
-import {Match, AssertionResult, Assertion} from "../../interfaces.js";
-import {inclusionDelayAssertion, expectedMaxInclusionDelay} from "./inclusionDelayAssertion.js";
+import {Assertion, AssertionResult, Match} from "../../interfaces.js";
+import {expectedMaxInclusionDelay, inclusionDelayAssertion} from "./inclusionDelayAssertion.js";
 
 export const expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
 
@@ -32,7 +32,7 @@ export const attestationsCountAssertion: Assertion<"attestationsCount", number, 
 
   async assert({clock, store, epoch, node, dependantStores}) {
     const errors: AssertionResult[] = [];
-    const inclusionDelayStore = dependantStores["inclusionDelay"];
+    const inclusionDelayStore = dependantStores.inclusionDelay;
 
     const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
     const endSlot = clock.getLastSlotOfEpoch(epoch);

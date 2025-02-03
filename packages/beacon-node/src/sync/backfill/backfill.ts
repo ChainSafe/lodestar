@@ -1,22 +1,22 @@
-import {EventEmitter} from "events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
+import {EventEmitter} from "node:events";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {phase0, Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
+import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
-import {Metrics} from "../../metrics/metrics";
-import {byteArrayEquals} from "../../util/bytes.js";
-import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
+import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
 /**
  * Timeout in ms to take a break from reading a backfillBatchSize from db, as just yielding
  * to sync loop gives hardly any.
@@ -262,7 +262,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
     const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
-    return new this(opts, {
+    return new BackfillSync(opts, {
       syncAnchor,
       backfillStartFromSlot,
       backfillRangeWrittenSlot,
@@ -457,6 +457,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               this.status = BackfillSyncStatus.aborted;
               break;
             case BackfillSyncErrorCode.NOT_ANCHORED:
+            // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
             case BackfillSyncErrorCode.NOT_LINEAR:
               // Lets try to jump directly to the parent of this anchorBlock as previous
               // (segment) of blocks could be orphaned/missed
@@ -674,12 +675,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       );
 
     // If possible, read back till anchorBlock > this.prevFinalizedCheckpointBlock
-    let parentBlock,
+    let parentBlock: SignedBeaconBlock | null,
       backCount = 1;
 
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
       backCount !== this.opts.backfillBatchSize &&
+      // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock

@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {MetricsRegisterExtra} from "@lodestar/utils";
 
 export enum MessageSource {
@@ -25,7 +26,6 @@ export type LodestarGitData = {
 /**
  * A collection of metrics used by the validator client
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
@@ -39,6 +39,15 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     .set(gitData, 1);
 
   return {
+    defaultConfiguration: register.gauge<{
+      builderSelection: routes.validator.BuilderSelection;
+      broadcastValidation: routes.beacon.BroadcastValidation;
+    }>({
+      name: "vc_default_configuration",
+      help: "Default validator configuration",
+      labelNames: ["builderSelection", "broadcastValidation"],
+    }),
+
     // Attestation journey:
     // - Wait for block or 1/3, call prepare attestation
     // - Get attestation, sign, call publish

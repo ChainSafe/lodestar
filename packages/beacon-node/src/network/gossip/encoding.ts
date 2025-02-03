@@ -1,13 +1,13 @@
-import {compress, uncompress} from "snappyjs";
-import xxhashFactory from "xxhash-wasm";
-import {Message} from "@libp2p/interface";
 import {digest} from "@chainsafe/as-sha256";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
-import {intToBytes} from "@lodestar/utils";
+import {Message} from "@libp2p/interface";
 import {ForkName} from "@lodestar/params";
+import {intToBytes} from "@lodestar/utils";
+import {compress, uncompress} from "snappyjs";
+import xxhashFactory from "xxhash-wasm";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
-import {getGossipSSZType, GossipTopicCache} from "./topic.js";
+import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 
 // Load WASM
 const xxhash = await xxhashFactory();
@@ -25,9 +25,8 @@ const sharedMsgIdBuf = Buffer.alloc(20);
 export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
     return xxhash.h64Raw(rpcMsg.data, h64Seed).toString(16);
-  } else {
-    return "0000000000000000";
   }
+  return "0000000000000000";
 }
 
 export function msgIdToStrFn(msgId: Uint8Array): string {

@@ -1,43 +1,47 @@
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
-import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/deneb";
+import {strip0xPrefix} from "@lodestar/utils";
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,
   IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
   ReqOpts,
+  parseJsonRpcErrorCode,
 } from "../../eth1/provider/jsonRpcHttpClient.js";
+import {bytesToData, numToQuantity} from "../../eth1/provider/utils.js";
 import {Metrics} from "../../metrics/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 import {
-  ExecutionPayloadStatus,
-  ExecutePayloadResponse,
-  IExecutionEngine,
-  PayloadId,
-  PayloadAttributes,
   BlobsBundle,
-  VersionedHashes,
-  ExecutionEngineState,
-  ClientVersion,
   ClientCode,
+  ClientVersion,
+  ExecutePayloadResponse,
+  ExecutionEngineState,
+  ExecutionPayloadStatus,
+  IExecutionEngine,
+  PayloadAttributes,
+  PayloadId,
+  VersionedHashes,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  parseExecutionPayload,
-  serializeExecutionPayload,
-  serializeVersionedHashes,
-  serializePayloadAttributes,
-  serializeBeaconBlockRoot,
   ExecutionPayloadBody,
   assertReqSizeLimit,
+  deserializeBlobAndProofs,
   deserializeExecutionPayloadBody,
+  parseExecutionPayload,
+  serializeBeaconBlockRoot,
+  serializeExecutionPayload,
   serializeExecutionRequests,
+  serializePayloadAttributes,
+  serializeVersionedHashes,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -111,6 +115,7 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
+  private lastGetBlobsErrorTime = 0;
 
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
@@ -258,9 +263,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     ).catch((e: Error) => {
       if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
         return {status: ExecutionPayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
-      } else {
-        return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
       }
+      return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
     });
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
@@ -379,9 +383,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
-        } else {
-          return null;
         }
+        return null;
 
       case ExecutionPayloadStatus.INVALID:
         throw Error(
@@ -437,7 +440,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.payloadIdCache.prune();
   }
 
-  async getPayloadBodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
+  async getPayloadBodiesByHash(_fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
     const response = await this.rpc.fetchWithRetries<
@@ -448,7 +451,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getPayloadBodiesByRange(
-    fork: ForkName,
+    _fork: ForkName,
     startBlockNumber: number,
     blockCount: number
   ): Promise<(ExecutionPayloadBody | null)[]> {
@@ -463,17 +466,68 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeExecutionPayloadBody);
   }
 
+  async getBlobs(_fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
+    // retry only after a day may be
+    const GETBLOBS_RETRY_TIMEOUT = 256 * 32 * 12;
+    const timeNow = Date.now() / 1000;
+    const timeSinceLastFail = timeNow - this.lastGetBlobsErrorTime;
+    if (timeSinceLastFail < GETBLOBS_RETRY_TIMEOUT) {
+      // do not try getblobs since it might not be available
+      this.logger.debug(
+        `disabled engine_getBlobsV1 api call since last failed < GETBLOBS_RETRY_TIMEOUT=${GETBLOBS_RETRY_TIMEOUT}`,
+        timeSinceLastFail
+      );
+      throw Error(
+        `engine_getBlobsV1 call recently failed timeSinceLastFail=${timeSinceLastFail} < GETBLOBS_RETRY_TIMEOUT=${GETBLOBS_RETRY_TIMEOUT}`
+      );
+    }
+
+    const method = "engine_getBlobsV1";
+    assertReqSizeLimit(versionedHashes.length, 128);
+    const versionedHashesHex = versionedHashes.map(bytesToData);
+    let response = await this.rpc
+      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+        method,
+        params: [versionedHashesHex],
+      })
+      .catch((e) => {
+        if (e instanceof ErrorJsonRpcResponse && parseJsonRpcErrorCode(e.response.error.code) === "Method not found") {
+          this.lastGetBlobsErrorTime = timeNow;
+          this.logger.debug("disabling engine_getBlobsV1 api call since engine responded with method not availeble", {
+            retryTimeout: GETBLOBS_RETRY_TIMEOUT,
+          });
+        }
+        throw e;
+      });
+
+    // handle nethermind buggy response
+    // see: https://discord.com/channels/595666850260713488/1293605631785304088/1298956894274060301
+    if (
+      (response as unknown as {blobsAndProofs: EngineApiRpcReturnTypes[typeof method]}).blobsAndProofs !== undefined
+    ) {
+      response = (response as unknown as {blobsAndProofs: EngineApiRpcReturnTypes[typeof method]}).blobsAndProofs;
+    }
+
+    if (response.length !== versionedHashes.length) {
+      const error = `Invalid engine_getBlobsV1 response length=${response.length} versionedHashes=${versionedHashes.length}`;
+      this.logger.error(error);
+      throw Error(error);
+    }
+
+    return response.map(deserializeBlobAndProofs);
+  }
+
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
     const method = "engine_getClientVersionV1";
 
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [clientVersion]});
+    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]});
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
-      return {code, name: cv.name, version: cv.version, commit: cv.commit};
+      return {code, name: cv.name, version: cv.version, commit: strip0xPrefix(cv.commit)};
     });
 
     if (clientVersions.length === 0) {

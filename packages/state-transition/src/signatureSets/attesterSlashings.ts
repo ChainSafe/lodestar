@@ -1,16 +1,16 @@
-import {SignedBeaconBlock, ssz, AttesterSlashing, IndexedAttestationBigint} from "@lodestar/types";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../util/index.js";
+import {AttesterSlashing, IndexedAttestationBigint, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
+import {ISignatureSet, SignatureSetType, computeSigningRoot, computeStartSlotAtEpoch} from "../util/index.js";
 
 /** Get signature sets from all AttesterSlashing objects in a block */
 export function getAttesterSlashingsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
-  return signedBlock.message.body.attesterSlashings
-    .map((attesterSlashing) => getAttesterSlashingSignatureSets(state, attesterSlashing))
-    .flat(1);
+  return signedBlock.message.body.attesterSlashings.flatMap((attesterSlashing) =>
+    getAttesterSlashingSignatureSets(state, attesterSlashing)
+  );
 }
 
 /** Get signature sets from a single AttesterSlashing object */

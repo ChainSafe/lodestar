@@ -1,9 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
 // - indicesEligibleForActivationQueue: Maxing deposits triggers 512 validator mutations
@@ -53,7 +53,7 @@ describe("phase0 processRegistryUpdates", () => {
   // which will it update validators tree
 
   for (const {id, notTrack, lengths} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processRegistryUpdates - ${vc} ${id}`,
       // WeakRef keeps a strong reference to its constructor value until the event loop ticks.
       // Without this `sleep(0)` all the SubTree(s) created updating the validators registry
@@ -78,7 +78,7 @@ type IndicesLengths = {
  * Create a state that causes `changeRatio` fraction (0,1) of validators to change their effective balance.
  */
 function getRegistryUpdatesTestData(
-  vc: number,
+  _vc: number,
   lengths: IndicesLengths
 ): {
   state: CachedBeaconStateAllForks;

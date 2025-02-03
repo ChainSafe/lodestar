@@ -1,11 +1,11 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {ssz} from "../../../src/index.js";
 import {ValidatorType} from "../../../src/phase0/validator.js";
 
 const ValidatorContainer = new ContainerType(ValidatorType, {typeName: "Validator", jsonCase: "eth2"});
 
-describe("Validator ssz types", function () {
+describe("Validator ssz types", () => {
   it("should serialize to the same value", () => {
     const seedValidator = {
       activationEligibilityEpoch: 10,

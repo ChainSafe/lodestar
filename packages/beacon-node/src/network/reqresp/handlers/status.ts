@@ -1,6 +1,6 @@
+import {ForkName} from "@lodestar/params";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onStatus(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {

@@ -1,10 +1,10 @@
-import {it, expect, describe, beforeAll, afterAll, MockInstance} from "vitest";
-import {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
-import {Endpoint} from "../../src/utils/index.js";
-import {WireFormat} from "../../src/utils/wireFormat.js";
-import {ApplicationMethods, ApplicationResponse, FastifyRoutes} from "../../src/utils/server/index.js";
+import {FastifyInstance} from "fastify";
+import {MockInstance, afterAll, beforeAll, describe, expect, it} from "vitest";
 import {ApiClientMethods, ApiRequestInit, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
+import {Endpoint} from "../../src/utils/index.js";
+import {ApplicationMethods, ApplicationResponse, FastifyRoutes} from "../../src/utils/server/index.js";
+import {WireFormat} from "../../src/utils/wireFormat.js";
 import {getMockApi, getTestServer} from "./utils.js";
 
 export type GenericServerTestCases<Es extends Record<string, Endpoint>> = {

@@ -1,19 +1,19 @@
-import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import {toBufferBE} from "bigint-buffer";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {toHex} from "@lodestar/utils";
+import {toBufferBE} from "bigint-buffer";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {initValidatorStore} from "../../utils/validatorStore.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
+import {initValidatorStore} from "../../utils/validatorStore.js";
 
-describe("BlockDutiesService", function () {
+describe("BlockDutiesService", () => {
   const api = getApiClientStub();
   let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
@@ -30,7 +30,7 @@ describe("BlockDutiesService", function () {
   });
   afterEach(() => controller.abort());
 
-  it("Should fetch and persist block duties", async function () {
+  it("Should fetch and persist block duties", async () => {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     const duties: routes.validator.ProposerDutyList = [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}];
@@ -106,7 +106,7 @@ describe("BlockDutiesService", function () {
     expect(notifyBlockProductionFn.mock.calls[1]).toEqual([1, [pubkeys[1]]]);
   });
 
-  it("Should remove signer from duty", async function () {
+  it("Should remove signer from duty", async () => {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     const duties: routes.validator.ProposerDutyList = [

@@ -1,30 +1,30 @@
 import crypto from "node:crypto";
-import {bellatrix, deneb, RootHex, ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
 import {
+  BLOB_TX_TYPE,
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
-  ForkSeq,
   ForkExecution,
   ForkName,
-  BLOB_TX_TYPE,
+  ForkSeq,
 } from "@lodestar/params";
+import {RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {ckzg} from "../../util/kzg.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {ckzg} from "../../util/kzg.js";
+import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {
+  BlobsBundleRpc,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  deserializePayloadAttributes,
+  ExecutionPayloadBodyRpc,
+  ExecutionPayloadRpc,
   PayloadStatus,
+  deserializePayloadAttributes,
   serializeBlobsBundle,
   serializeExecutionPayload,
-  ExecutionPayloadRpc,
-  BlobsBundleRpc,
-  ExecutionPayloadBodyRpc,
 } from "./types.js";
-import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
@@ -85,7 +85,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     });
 
     this.handlers = {
-      /* eslint-disable @typescript-eslint/naming-convention */
       engine_newPayloadV1: this.notifyNewPayload.bind(this),
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
@@ -100,6 +99,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
+      engine_getBlobsV1: this.getBlobs.bind(this),
     };
   }
 
@@ -150,7 +150,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     const predefinedResponse = this.predefinedPayloadStatuses.get(blockHash);
     if (predefinedResponse) {
       return predefinedResponse;
-    } else if (this.opts.onlyPredefinedResponses) {
+    }
+
+    if (this.opts.onlyPredefinedResponses) {
       throw Error(`No predefined response for blockHash ${blockHash}`);
     }
 
@@ -213,7 +215,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         payloadStatus: predefinedResponse,
         payloadId: null,
       };
-    } else if (this.opts.onlyPredefinedResponses) {
+    }
+
+    if (this.opts.onlyPredefinedResponses) {
       throw Error(`No predefined response for headBlockHash ${headBlockHash}`);
     }
 
@@ -345,14 +349,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     }
 
     // Don't start build process
-    else {
-      // IF the payload is deemed VALID and a build process hasn't been started
-      // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
-      return {
-        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
-        payloadId: null,
-      };
-    }
+    // IF the payload is deemed VALID and a build process hasn't been started
+    // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
+    return {
+      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+      payloadId: null,
+    };
   }
 
   /**
@@ -394,6 +396,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     _clientVersion: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
   ): EngineApiRpcReturnTypes["engine_getClientVersionV1"] {
     return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
+  }
+
+  private getBlobs(
+    versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getBlobsV1"] {
+    return versionedHashes.map((_vh) => null);
   }
 
   private timestampToFork(timestamp: number): ForkExecution {

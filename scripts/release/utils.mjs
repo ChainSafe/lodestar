@@ -50,7 +50,7 @@ export function parseCmdArgs() {
   // optional arg, defaults to HEAD
   try {
     commit = shell(`git log -n 1 --pretty='%h' ${commitArg ?? "HEAD"}`);
-  } catch (e) {
+  } catch (_e) {
     throw Error(`Invalid commit ${commitArg}`);
   }
 
@@ -62,7 +62,7 @@ export function parseCmdArgs() {
   try {
     if (versionObj.includePrerelease) throw Error("Includes pre-release");
     if (semver.clean(versionArg) !== versionMMP) throw Error("No clean major.minor.path version");
-  } catch (e) {
+  } catch (_e) {
     throw Error(`Bad argv[2] semver version '${versionArg}': ${e.message}`);
   }
 
@@ -82,7 +82,7 @@ export function assertCommitExistsInBranch(commit, branch) {
   try {
     // Also, ensure the branch exists first
     headCommit = shell(`git rev-parse refs/heads/${branch}`);
-  } catch (e) {
+  } catch (_e) {
     throw Error(`Branch ${branch} does not exist: ${e.message}`);
   }
 
@@ -95,7 +95,7 @@ export function assertCommitExistsInBranch(commit, branch) {
 
   try {
     shell(`git merge-base --is-ancestor ${commit} ${headCommit}`);
-  } catch (e) {
+  } catch (_e) {
     throw Error(`Commit ${commit} does not belong to branch ${branch}`);
   }
 }
@@ -129,7 +129,7 @@ export async function confirm(message) {
 export function checkBranchExistsLocal(branch) {
   try {
     return shell(`git show-ref refs/heads/${branch}`);
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -156,7 +156,7 @@ export function checkBranchExistsRemote(branch) {
 
     // Return the first part of the first line
     return out.split(/\s+/)[0];
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -169,7 +169,7 @@ export function checkBranchExistsRemote(branch) {
 export function checkTagExistsLocal(tag) {
   try {
     return shell(`git show-ref refs/tags/${tag}`);
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -195,7 +195,7 @@ export function checkTagExistsRemote(tag) {
 
     // Return the first part of the first line
     return out.split(/\s+/)[0];
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -224,7 +224,7 @@ export function readMainPackageJson() {
   let jsonStr;
   try {
     jsonStr = fs.readFileSync(packageJsonPath, "utf8");
-  } catch (e) {
+  } catch (_e) {
     if (e.code === "ENOENT") {
       throw Error(`Must run script from repo root dir, package.json not found at ${packageJsonPath}`);
     } else {

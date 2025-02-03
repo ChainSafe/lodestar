@@ -1,9 +1,9 @@
 import path from "node:path";
-import {describe, it, expect, beforeAll, vi, onTestFinished} from "vitest";
-import {rimraf} from "rimraf";
-import {ApiClient, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
-import {config} from "@lodestar/config/default";
 import {HttpStatusCode} from "@lodestar/api";
+import {ApiClient, DeleteRemoteKeyStatus, ImportRemoteKeyStatus, getClient} from "@lodestar/api/keymanager";
+import {config} from "@lodestar/config/default";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
@@ -20,7 +20,7 @@ async function expectKeys(keymanagerClient: ApiClient, expectedPubkeys: string[]
   );
 }
 
-describe("import remoteKeys from api", function () {
+describe("import remoteKeys from api", () => {
   vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-remoteKeys-test");
@@ -65,7 +65,7 @@ describe("import remoteKeys from api", function () {
     );
   });
 
-  it("run 'validator' check keys are loaded + delete", async function () {
+  it("run 'validator' check keys are loaded + delete", async () => {
     const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();
@@ -86,7 +86,7 @@ describe("import remoteKeys from api", function () {
     await expectKeys(keymanagerClient, [], "Wrong listRemoteKeys after deleting");
   });
 
-  it("reject calls without bearerToken", async function () {
+  it("reject calls without bearerToken", async () => {
     const {stopValidator} = await startValidatorWithKeyManager([], {dataDir});
     onTestFinished(async () => {
       await stopValidator();

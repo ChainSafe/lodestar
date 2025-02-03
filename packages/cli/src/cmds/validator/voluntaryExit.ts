@@ -1,19 +1,19 @@
-import inquirer from "inquirer";
 import {Signature} from "@chainsafe/blst";
+import {ApiClient, getClient} from "@lodestar/api";
+import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
   getCurrentSlot,
 } from "@lodestar/state-transition";
-import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
-import {phase0, ssz, ValidatorIndex, Epoch} from "@lodestar/types";
+import {Epoch, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
-import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
-import {ApiClient, getClient} from "@lodestar/api";
-import {ensure0xPrefix, YargsError, wrapError} from "../../util/index.js";
-import {GlobalArgs} from "../../options/index.js";
+import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
+import inquirer from "inquirer";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {GlobalArgs} from "../../options/index.js";
+import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 
@@ -59,8 +59,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       coerce: (pubkeys: string[]): string[] =>
         // Parse ["0x11,0x22"] to ["0x11", "0x22"]
         pubkeys
-          .map((item) => item.split(","))
-          .flat(1)
+          .flatMap((item) => item.split(","))
           .map(ensure0xPrefix),
     },
 
@@ -151,7 +150,7 @@ async function processVoluntaryExit(
   const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
   const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
-  let signature;
+  let signature: Signature;
   switch (signer.type) {
     case SignerType.Local:
       signature = signer.secretKey.sign(signingRoot);
@@ -192,18 +191,15 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
       const signer = signersByPubkey.get(pubkey);
       if (!signer) {
         throw new YargsError(`Unknown pubkey ${pubkey}`);
-      } else {
-        selectedSigners.push({pubkey, signer});
       }
+      selectedSigners.push({pubkey, signer});
     }
 
     return selectedSigners;
-  } else {
-    return signersWithPubkey;
   }
+  return signersWithPubkey;
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function resolveValidatorIndexes(client: ApiClient, signersToExit: SignerPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 

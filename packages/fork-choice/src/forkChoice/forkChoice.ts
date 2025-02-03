@@ -1,48 +1,59 @@
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
-import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {bellatrix, Slot, ValidatorIndex, phase0, ssz, RootHex, Epoch, Root, BeaconBlock} from "@lodestar/types";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
+import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
+  CachedBeaconStateAllForks,
+  EffectiveBalanceIncrements,
+  ZERO_HASH,
+  computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
-  computeEpochAtSlot,
-  ZERO_HASH,
-  EffectiveBalanceIncrements,
-  CachedBeaconStateAllForks,
-  isExecutionBlockBodyType,
-  isExecutionStateType,
-  isExecutionEnabled,
   getAttesterSlashableIndices,
+  isExecutionBlockBodyType,
+  isExecutionEnabled,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
-import {ChainConfig, ChainForkConfig} from "@lodestar/config";
+import {
+  AttesterSlashing,
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  bellatrix,
+  phase0,
+  ssz,
+} from "@lodestar/types";
+import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
+import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
-  HEX_ZERO_HASH,
-  VoteTracker,
-  ProtoBlock,
-  ExecutionStatus,
-  MaybeValidExecutionStatus,
-  LVHExecResponse,
-  ProtoNode,
   DataAvailabilityStatus,
+  ExecutionStatus,
+  HEX_ZERO_HASH,
+  LVHExecResponse,
+  MaybeValidExecutionStatus,
+  ProtoBlock,
+  ProtoNode,
+  VoteTracker,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
-import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 
-import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
+import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
-  IForkChoice,
-  LatestMessage,
-  QueuedAttestation,
-  PowBlockHex,
-  EpochDifference,
   AncestorResult,
   AncestorStatus,
+  EpochDifference,
   ForkChoiceMetrics,
+  IForkChoice,
+  LatestMessage,
   NotReorgedReason,
+  PowBlockHex,
 } from "./interface.js";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
+import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -91,7 +102,15 @@ export class ForkChoice implements IForkChoice {
    * Attestations that arrived at the current slot and must be queued for later processing.
    * NOT currently tracked in the protoArray
    */
-  private readonly queuedAttestations = new Set<QueuedAttestation>();
+  private readonly queuedAttestations: MapDef<Slot, MapDef<RootHex, Set<ValidatorIndex>>> = new MapDef(
+    () => new MapDef(() => new Set())
+  );
+
+  /**
+   * It's inconsistent to count number of queued attestations at different intervals of slot.
+   * Instead of that, we count number of queued attestations at the previous slot.
+   */
+  private queuedAttestationsPreviousSlot = 0;
 
   // Note: as of Jun 2022 Lodestar metrics show that 100% of the times updateHead() is called, synced = false.
   // Because we are processing attestations from gossip, recomputing scores is always necessary
@@ -130,7 +149,7 @@ export class ForkChoice implements IForkChoice {
   getMetrics(): ForkChoiceMetrics {
     return {
       votes: this.votes.length,
-      queuedAttestations: this.queuedAttestations.size,
+      queuedAttestations: this.queuedAttestationsPreviousSlot,
       validatedAttestationDatas: this.validatedAttestationDatas.size,
       balancesLength: this.balances.length,
       nodes: this.protoArray.nodes.length,
@@ -198,6 +217,7 @@ export class ForkChoice implements IForkChoice {
         return {head, isHeadTimely, notReorgedReason};
       }
       case UpdateHeadOpt.GetCanonicialHead:
+        return {head: canonicialHeadBlock};
       default:
         return {head: canonicialHeadBlock};
     }
@@ -413,7 +433,8 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    return (this.head = headNode);
+    this.head = headNode;
+    return this.head;
   }
 
   /**
@@ -677,7 +698,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -714,12 +735,13 @@ export class ForkChoice implements IForkChoice {
       // Attestations can only affect the fork choice of subsequent slots.
       // Delay consideration in the fork choice until their slot is in the past.
       // ```
-      this.queuedAttestations.add({
-        slot: slot,
-        attestingIndices: attestation.attestingIndices,
-        blockRoot: blockRootHex,
-        targetEpoch,
-      });
+      const byRoot = this.queuedAttestations.getOrDefault(slot);
+      const validatorIndices = byRoot.getOrDefault(blockRootHex);
+      for (const validatorIndex of attestation.attestingIndices) {
+        if (!this.fcStore.equivocatingIndices.has(validatorIndex)) {
+          validatorIndices.add(validatorIndex);
+        }
+      }
     }
   }
 
@@ -728,7 +750,7 @@ export class ForkChoice implements IForkChoice {
    * We already call is_slashable_attestation_data() and is_valid_indexed_attestation
    * in state transition so no need to do it again
    */
-  onAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): void {
+  onAttesterSlashing(attesterSlashing: AttesterSlashing): void {
     // TODO: we already call in in state-transition, find a way not to recompute it again
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     for (const validatorIndex of intersectingIndices) {
@@ -749,6 +771,11 @@ export class ForkChoice implements IForkChoice {
 
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
+   * This should only be called once per slot because:
+   *   - calling this multiple times in the same slot does not update `votes`
+   *     - new attestations in the current slot must stay in the queue
+   *     - new attestations in the old slots are applied to the `votes` already
+   *   - also side effect of this function is `validatedAttestationDatas` reseted
    */
   updateTime(currentSlot: Slot): void {
     if (this.fcStore.currentSlot >= currentSlot) return;
@@ -758,6 +785,7 @@ export class ForkChoice implements IForkChoice {
       this.onTick(previousSlot + 1);
     }
 
+    this.queuedAttestationsPreviousSlot = 0;
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
     this.validatedAttestationDatas = new Set();
@@ -1183,7 +1211,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#validate_on_attestation
    */
   private validateOnAttestation(
-    indexedAttestation: phase0.IndexedAttestation,
+    indexedAttestation: IndexedAttestation,
     slot: Slot,
     blockRootHex: string,
     targetEpoch: Epoch,
@@ -1232,7 +1260,9 @@ export class ForkChoice implements IForkChoice {
           currentEpoch: epochNow,
         },
       });
-    } else if (!forceImport && targetEpoch + 1 < epochNow) {
+    }
+
+    if (!forceImport && targetEpoch + 1 < epochNow) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
@@ -1350,15 +1380,23 @@ export class ForkChoice implements IForkChoice {
    */
   private processAttestationQueue(): void {
     const currentSlot = this.fcStore.currentSlot;
-    for (const attestation of this.queuedAttestations.values()) {
-      // Delay consideration in the fork choice until their slot is in the past.
-      if (attestation.slot < currentSlot) {
-        this.queuedAttestations.delete(attestation);
-        const {blockRoot, targetEpoch} = attestation;
-        const blockRootHex = blockRoot;
-        for (const validatorIndex of attestation.attestingIndices) {
-          this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+    for (const [slot, byRoot] of this.queuedAttestations.entries()) {
+      const targetEpoch = computeEpochAtSlot(slot);
+      if (slot < currentSlot) {
+        this.queuedAttestations.delete(slot);
+        for (const [blockRoot, validatorIndices] of byRoot.entries()) {
+          const blockRootHex = blockRoot;
+          for (const validatorIndex of validatorIndices) {
+            // equivocatingIndices was checked in onAttestation
+            this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+          }
+
+          if (slot === currentSlot - 1) {
+            this.queuedAttestationsPreviousSlot += validatorIndices.size;
+          }
         }
+      } else {
+        break;
       }
     }
   }
@@ -1509,7 +1547,9 @@ export function assertValidTerminalPowBlock(
       throw Error(
         `Invalid terminal POW block: total difficulty not reached expected >= ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlock.totalDifficulty}`
       );
-    } else if (!isParentTotalDifficultyValid) {
+    }
+
+    if (!isParentTotalDifficultyValid) {
       throw Error(
         `Invalid terminal POW block parent: expected < ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlockParent.totalDifficulty}`
       );

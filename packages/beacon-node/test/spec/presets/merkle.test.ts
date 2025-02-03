@@ -1,17 +1,15 @@
 import path from "node:path";
-import {expect} from "vitest";
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {InputType} from "@lodestar/spec-test-util";
-import {verifyMerkleBranch} from "@lodestar/utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
+import {InputType} from "@lodestar/spec-test-util";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {verifyMerkleBranch} from "@lodestar/utils";
+import {expect} from "vitest";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
   return {
@@ -47,7 +45,7 @@ const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
       }),
       timeout: 10000,
       getExpected: (testCase) => testCase.proof,
-      expectFunc: (testCase, expected, actual) => {
+      expectFunc: (_testCase, expected, actual) => {
         expect(actual).toEqualWithMessage(expected, "incorrect proof");
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts

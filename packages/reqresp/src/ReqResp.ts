@@ -1,21 +1,21 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
-import type {Libp2p} from "libp2p";
 import {Logger, MetricsRegister} from "@lodestar/utils";
-import {getMetrics, Metrics} from "./metrics.js";
-import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
+import type {Libp2p} from "libp2p";
+import {Metrics, getMetrics} from "./metrics.js";
+import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
+import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {
   DialOnlyProtocol,
   Encoding,
   MixedProtocol,
-  ReqRespRateLimiterOpts,
   Protocol,
   ProtocolDescriptor,
+  ReqRespRateLimiterOpts,
   ResponseIncoming,
 } from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
-import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 
 type ProtocolID = string;
 
@@ -92,19 +92,20 @@ export class ReqResp {
    */
   async registerProtocol(protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
+    const {handler: _handler, inboundRateLimits, ...rest} = protocol;
+
+    if (inboundRateLimits) {
+      // Rate limits can change across hard forks and must always be updated
+      this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
+    }
 
     // libp2p will throw if handler for protocol is already registered, allow to overwrite behavior
     if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
       return;
     }
 
-    const {handler: _handler, inboundRateLimits, ...rest} = protocol;
     this.registerDialOnlyProtocol(rest);
     this.dialOnlyProtocols.set(protocolID, false);
-
-    if (inboundRateLimits) {
-      this.rateLimiter.initRateLimits(protocolID, inboundRateLimits);
-    }
 
     return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
   }

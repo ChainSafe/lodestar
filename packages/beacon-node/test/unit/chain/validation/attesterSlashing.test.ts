@@ -1,10 +1,10 @@
-import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
-import {generateCachedState} from "../../../utils/state.js";
-import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing.js";
+import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError.js";
+import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateCachedState} from "../../../utils/state.js";
 
 describe("GossipMessageValidator", () => {
   let chainStub: MockedBeaconChain;

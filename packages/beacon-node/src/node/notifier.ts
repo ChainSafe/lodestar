@@ -1,12 +1,12 @@
 import {BeaconConfig} from "@lodestar/config";
-import {Epoch} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
-import {ErrorAborted, Logger, sleep, prettyBytes, prettyBytesShort} from "@lodestar/utils";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {ExecutionEngineState} from "../execution/index.js";
+import {Epoch} from "@lodestar/types";
+import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
+import {ExecutionEngineState} from "../execution/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";
 import {prettyTimeDiffSec} from "../util/time.js";
@@ -54,12 +54,12 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const clockSlot = chain.clock.currentSlot;
       const clockEpoch = computeEpochAtSlot(clockSlot);
 
-      if (
-        clockEpoch >= config.BELLATRIX_FORK_EPOCH &&
-        computeStartSlotAtEpoch(clockEpoch) === clockSlot &&
-        chain.executionEngine.state === ExecutionEngineState.OFFLINE
-      ) {
-        logger.warn("Execution client is offline");
+      if (clockEpoch >= config.BELLATRIX_FORK_EPOCH && computeStartSlotAtEpoch(clockEpoch) === clockSlot) {
+        if (chain.executionEngine.state === ExecutionEngineState.OFFLINE) {
+          logger.warn("Execution client is offline");
+        } else if (chain.executionEngine.state === ExecutionEngineState.AUTH_FAILED) {
+          logger.error("Execution client authentication failed. Verify if the JWT secret matches on both clients");
+        }
       }
 
       const headInfo = chain.forkChoice.getHead();
@@ -92,7 +92,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         const timestampTDD = tdTimeSeries.computeY0Point();
         // It is possible to get ttd estimate with an error at imminent merge
         const secToTTD = Math.max(Math.floor(timestampTDD - Date.now() / 1000), 0);
-        const timeLeft = isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
+        const timeLeft = Number.isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
 
         logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
       }
@@ -104,7 +104,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
           const slotsPerSecond = Math.max(headSlotTimeSeries.computeLinearSpeed(), 0);
           const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
-          const timeLeft = isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
+          const timeLeft = Number.isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
           // Syncing - time left - speed - head - finalized - clock - peers
           nodeState = [
             "Syncing",
@@ -148,9 +148,8 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   } catch (e) {
     if (e instanceof ErrorAborted) {
       return; // Ok
-    } else {
-      logger.error("Node notifier error", {}, e as Error);
     }
+    logger.error("Node notifier error", {}, e as Error);
   }
 }
 
@@ -167,10 +166,9 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   if (isFirstTime) {
     // at the 1st time we may miss middle of the current clock slot
     return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
-  } else {
-    // after the 1st time always wait until middle of next clock slot
-    return msToNextSlot + msPerHalfSlot;
   }
+  // after the 1st time always wait until middle of next clock slot
+  return msToNextSlot + msPerHalfSlot;
 }
 
 function getHeadExecutionInfo(
@@ -181,26 +179,25 @@ function getHeadExecutionInfo(
 ): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
-  } else {
-    const executionStatusStr = headInfo.executionStatus.toLowerCase();
-
-    // Add execution status to notifier only if head is on/post bellatrix
-    if (isExecutionCachedStateType(headState)) {
-      if (isMergeTransitionComplete(headState)) {
-        const executionPayloadHashInfo =
-          headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
-        const executionPayloadNumberInfo =
-          headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-        return [
-          `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
-            executionPayloadHashInfo
-          )})`,
-        ];
-      } else {
-        return [`exec-block: ${executionStatusStr}`];
-      }
-    } else {
-      return [];
-    }
   }
+
+  const executionStatusStr = headInfo.executionStatus.toLowerCase();
+
+  // Add execution status to notifier only if head is on/post bellatrix
+  if (isExecutionCachedStateType(headState)) {
+    if (isMergeTransitionComplete(headState)) {
+      const executionPayloadHashInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+      const executionPayloadNumberInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
+      return [
+        `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+          executionPayloadHashInfo
+        )})`,
+      ];
+    }
+    return [`exec-block: ${executionStatusStr}`];
+  }
+
+  return [];
 }

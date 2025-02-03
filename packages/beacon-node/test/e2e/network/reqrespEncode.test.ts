@@ -1,26 +1,26 @@
-import {describe, it, afterEach, expect} from "vitest";
-import all from "it-all";
-import {Libp2p, createLibp2p} from "libp2p";
-import {tcp} from "@libp2p/tcp";
-import {mplex} from "@libp2p/mplex";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {noise} from "@chainsafe/libp2p-noise";
-import {ssz} from "@lodestar/types";
+import {mplex} from "@libp2p/mplex";
+import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
+import all from "it-all";
+import {Libp2p, createLibp2p} from "libp2p";
+import {afterEach, describe, expect, it} from "vitest";
+import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {
   NetworkEventBus,
   PeerRpcScoreStore,
   ReqRespBeaconNode,
   ReqRespBeaconNodeModules,
 } from "../../../src/network/index.js";
-import {PeersData} from "../../../src/network/peers/peersData.js";
-import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {MetadataController} from "../../../src/network/metadata.js";
-import {testLogger} from "../../utils/logger.js";
+import {PeersData} from "../../../src/network/peers/peersData.js";
 import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
+import {testLogger} from "../../utils/logger.js";
 
 /* eslint-disable require-yield */
 
@@ -35,7 +35,6 @@ describe("reqresp encoder", () => {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function getLibp2p() {
     const listen = `/ip4/127.0.0.1/tcp/${port++}`;
     const libp2p = await createLibp2p({
@@ -50,11 +49,11 @@ describe("reqresp encoder", () => {
     return {libp2p, multiaddr: multiaddr(`${listen}/p2p/${libp2p.peerId.toString()}`)};
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function getReqResp(getHandler?: GetReqRespHandlerFn) {
     const {libp2p, multiaddr} = await getLibp2p();
 
     const getHandlerNoop: GetReqRespHandlerFn = () =>
+      // biome-ignore lint/correctness/useYield: No need for yield in test context
       async function* <T>(): AsyncIterable<T> {
         throw Error("not implemented");
       };
@@ -76,7 +75,6 @@ describe("reqresp encoder", () => {
     return {libp2p, multiaddr, reqresp: new ReqRespBeaconNode(modules)};
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function dialProtocol({
     dialer,
     toMultiaddr,

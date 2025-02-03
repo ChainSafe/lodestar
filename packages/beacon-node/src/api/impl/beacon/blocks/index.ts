@@ -1,39 +1,40 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
+import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   reconstructFullBlockOrContents,
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
-import {sleep, fromHex, toRootHex} from "@lodestar/utils";
 import {
-  deneb,
-  isSignedBlockContents,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  WithOptionalBytes,
+  deneb,
+  isSignedBlockContents,
 } from "@lodestar/types";
+import {fromHex, sleep, toRootHex} from "@lodestar/utils";
 import {
-  BlockSource,
-  getBlockInput,
-  ImportBlockOpts,
-  BlockInput,
   BlobsSource,
+  BlockInput,
   BlockInputDataBlobs,
+  BlockSource,
+  ImportBlockOpts,
+  getBlockInput,
 } from "../../../../chain/blocks/types.js";
-import {promiseAllMaybeAsync} from "../../../../util/promises.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
-import {computeBlobSidecars} from "../../../../util/blobs.js";
-import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
-import {OpSource} from "../../../../metrics/validatorMonitor.js";
-import {NetworkEvent} from "../../../../network/index.js";
-import {ApiModules} from "../../types.js";
-import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
+import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
+import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {OpSource} from "../../../../metrics/validatorMonitor.js";
+import {NetworkEvent} from "../../../../network/index.js";
+import {computeBlobSidecars} from "../../../../util/blobs.js";
+import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {promiseAllMaybeAsync} from "../../../../util/promises.js";
+import {ApiModules} from "../../types.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
@@ -61,7 +62,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockOrContents, broadcastValidation},
-    context,
+    _context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -74,20 +75,12 @@ export function getBeaconBlockApi({
         fork: config.getForkName(signedBlock.message.slot),
         blobs: blobSidecars,
         blobsSource: BlobsSource.api,
-        blobsBytes: blobSidecars.map(() => null),
       } as BlockInputDataBlobs;
-      blockForImport = getBlockInput.availableData(
-        config,
-        signedBlock,
-        BlockSource.api,
-        // don't bundle any bytes for block and blobs
-        null,
-        blockData
-      );
+      blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
-      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api, context?.sszBytes ?? null);
+      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
     }
 
     // check what validations have been requested before broadcasting and publishing the block
@@ -176,9 +169,8 @@ export function getBeaconBlockApi({
           const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
           if (chain.opts.broadcastValidationStrictness === "error") {
             throw Error(message);
-          } else {
-            chain.logger.warn(message, valLogMeta);
           }
+          chain.logger.warn(message, valLogMeta);
         }
         break;
       }
@@ -193,9 +185,8 @@ export function getBeaconBlockApi({
         const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
         if (chain.opts.broadcastValidationStrictness === "error") {
           throw Error(message);
-        } else {
-          chain.logger.warn(message, valLogMeta);
         }
+        chain.logger.warn(message, valLogMeta);
       }
     }
 
@@ -208,6 +199,8 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
+    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+
     // TODO: Validate block
     metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
     chain.logger.info("Publishing block", valLogMeta);
@@ -216,23 +209,25 @@ export function getBeaconBlockApi({
       // specification is very clear that this is the desired behaviour.
       //
       // i) Publish blobs and block before importing so that network can see them asap
-      // ii) publish blobs first because
-      //     a) by the times nodes see block, they might decide to pull blobs
-      //     b) they might require more hops to reach recipients in peerDAS kind of setup where
-      //        blobs might need to hop between nodes because of partial subnet subscription
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
+      // ii) publish block first because
+      //     a) as soon as node sees block they can start processing it while blobs arrive
+      //     b) getting block first allows nodes to use getBlobs from local ELs and save
+      //        import latency and hopefully bandwidth
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
+      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
-        chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
-          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
-              blockInput: blockForImport,
-              peer: IDENTITY_PEER_ID,
-            });
-          }
-          throw e;
-        }),
+        chain
+          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .catch((e) => {
+            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+              network.events.emit(NetworkEvent.unknownBlockParent, {
+                blockInput: blockForImport,
+                peer: IDENTITY_PEER_ID,
+              });
+            }
+            throw e;
+          }),
     ];
     await promiseAllMaybeAsync(publishPromises);
   };
@@ -258,25 +253,28 @@ export function getBeaconBlockApi({
       chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const contents = executionPayload
-        ? chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null
+        ? (chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null)
         : null;
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, opts);
-    } else {
-      const source = ProducedBlockSource.builder;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
-
-      const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
-
-      // the full block is published by relay and it's possible that the block is already known to us
-      // by gossip
-      //
-      // see: https://github.com/ChainSafe/lodestar/issues/5404
-      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
     }
+
+    const source = ProducedBlockSource.builder;
+    chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
+
+    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+      data: signedBlindedBlock,
+      bytes: context?.sszBytes,
+    });
+
+    // the full block is published by relay and it's possible that the block is already known to us
+    // by gossip
+    //
+    // see: https://github.com/ChainSafe/lodestar/issues/5404
+    chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+    return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
   };
 
   return {
@@ -507,7 +505,7 @@ export function getBeaconBlockApi({
 
 async function reconstructBuilderBlockOrContents(
   chain: ApiModules["chain"],
-  signedBlindedBlock: SignedBlindedBeaconBlock
+  signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
 ): Promise<SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {

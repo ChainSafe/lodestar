@@ -1,14 +1,14 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-import {
-  beforeProcessEpoch,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAllForks,
-  EpochTransitionCache,
-} from "../../../src/index.js";
 import {processSlashings} from "../../../src/epoch/processSlashings.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  EpochTransitionCache,
+  beforeProcessEpoch,
+} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
 // - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same
@@ -29,7 +29,7 @@ describe("phase0 processSlashings", () => {
   // which will it update validators tree
 
   for (const {id, indicesToSlashLen} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processSlashings - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow

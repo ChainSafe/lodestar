@@ -1,22 +1,23 @@
+import {routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  computeEpochAtSlot,
-  isExecutionStateType,
-  computeTimeAtSlot,
+  CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
-  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeTimeAtSlot,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
+import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
-import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
+import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
+import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
@@ -77,7 +78,9 @@ export class PrepareNextSlotScheduler {
       await sleep(slotMs - slotMs / SCHEDULER_LOOKAHEAD_FACTOR, this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead();
+      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead(
+        ForkchoiceCaller.prepareNextSlot
+      );
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -111,7 +114,12 @@ export class PrepareNextSlotScheduler {
         // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
         // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
         // for other slots dontTransferCached=true because we don't run state transition on this state
-        {dontTransferCache: !isEpochTransition},
+        //
+        // Shuffling calculation will be done asynchronously when passing asyncShufflingCalculation=true.  Shuffling will be queued in
+        // beforeProcessEpoch and should theoretically be ready immediately after the synchronous epoch transition finished and the
+        // event loop is free.  In long periods of non-finality too many forks will cause the shufflingCache to throw an error for
+        // too many queued shufflings so only run async during normal epoch transition. See issue ChainSafe/lodestar#7244
+        {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true},
         RegenCaller.precomputeEpoch
       );
 

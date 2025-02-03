@@ -1,10 +1,10 @@
-import {itBench} from "@dapplion/benchmark";
-import {duplexPair} from "it-pair/duplex";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {pipe} from "it-pipe";
-import drain from "it-drain";
-import {defaultLogger} from "@libp2p/logger";
+import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
+import {defaultLogger} from "@libp2p/logger";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import drain from "it-drain";
+import {duplexPair} from "it-pair/duplex";
+import {pipe} from "it-pipe";
 import {Uint8ArrayList} from "uint8arraylist";
 
 describe("network / noise / sendData", () => {
@@ -21,7 +21,7 @@ describe("network / noise / sendData", () => {
     2 ** 14,
     2 ** 16,
   ]) {
-    itBench({
+    bench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
       beforeEach: async () => {
         const peerA = await createSecp256k1PeerId();

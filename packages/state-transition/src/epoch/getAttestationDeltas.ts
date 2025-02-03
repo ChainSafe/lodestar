@@ -1,4 +1,3 @@
-import {bigIntSqrt, bnToNum} from "@lodestar/utils";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -6,10 +5,11 @@ import {
   MIN_EPOCHS_TO_INACTIVITY_PENALTY,
   PROPOSER_REWARD_QUOTIENT,
 } from "@lodestar/params";
+import {bigIntSqrt, bnToNum} from "@lodestar/utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../constants/index.js";
-import {newZeroedArray} from "../util/index.js";
-import {EpochTransitionCache, CachedBeaconStatePhase0} from "../types.js";
+import {CachedBeaconStatePhase0, EpochTransitionCache} from "../types.js";
 import {hasMarkers} from "../util/attesterStatus.js";
+import {newZeroedArray} from "../util/index.js";
 
 /**
  * Redefine constants in attesterStatus to improve performance

@@ -1,18 +1,18 @@
-import {BLSSignature, phase0, Slot, ssz, Attestation, SignedAggregateAndProof} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
-import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {IClock, LoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
+import {ForkPreElectra, ForkSeq} from "@lodestar/params";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
+import {BLSSignature, SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
+import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
-import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
-import {groupAttDutiesByCommitteeIndex} from "./utils.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc} from "../util/index.js";
+import {AttDutyAndProof, AttestationDutiesService} from "./attestationDuties.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
-import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
+import {groupAttDutiesByCommitteeIndex} from "./utils.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 export type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
@@ -193,7 +193,7 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: Attestation[] = [];
+    const signedAttestations: SingleAttestation[] = [];
     const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
     const isPostElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
@@ -239,7 +239,11 @@ export class AttestationService {
       if (isPostElectra) {
         (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
       } else {
-        (await this.api.beacon.submitPoolAttestations({signedAttestations})).assertOk();
+        (
+          await this.api.beacon.submitPoolAttestations({
+            signedAttestations: signedAttestations as SingleAttestation<ForkPreElectra>[],
+          })
+        ).assertOk();
       }
       this.logger.info("Published attestations", {
         ...logCtx,

@@ -1,5 +1,3 @@
-import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -7,6 +5,8 @@ import {
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
+import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
+import {intDiv} from "@lodestar/utils";
 import {BeaconStateAllForks, CachedBeaconStateElectra, EpochCache} from "../types.js";
 import {hasCompoundingWithdrawalCredential} from "./electra.js";
 
@@ -45,9 +45,8 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
 export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, activeValidatorCount: number): number {
   if (fork >= ForkSeq.deneb) {
     return Math.min(config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, getChurnLimit(config, activeValidatorCount));
-  } else {
-    return getChurnLimit(config, activeValidatorCount);
   }
+  return getChurnLimit(config, activeValidatorCount);
 }
 
 export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
@@ -79,22 +78,17 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
   // Compounding withdrawal credential only available since Electra
   if (hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
     return MAX_EFFECTIVE_BALANCE_ELECTRA;
-  } else {
-    return MIN_ACTIVATION_BALANCE;
   }
-}
-
-export function getActiveBalance(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
-  const validatorMaxEffectiveBalance = getMaxEffectiveBalance(
-    state.validators.getReadonly(validatorIndex).withdrawalCredentials
-  );
-
-  return Math.min(state.balances.get(validatorIndex), validatorMaxEffectiveBalance);
+  return MIN_ACTIVATION_BALANCE;
 }
 
 export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
-  return state.pendingPartialWithdrawals
-    .getAllReadonly()
-    .filter((item) => item.index === validatorIndex)
-    .reduce((total, item) => total + Number(item.amount), 0);
+  let total = 0;
+  for (let i = 0; i < state.pendingPartialWithdrawals.length; i++) {
+    const item = state.pendingPartialWithdrawals.get(i);
+    if (item.validatorIndex === validatorIndex) {
+      total += Number(item.amount);
+    }
+  }
+  return total;
 }

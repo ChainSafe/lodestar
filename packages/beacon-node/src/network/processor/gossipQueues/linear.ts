@@ -1,5 +1,5 @@
 import {LinkedList} from "../../../util/array.js";
-import {LinearGossipQueueOpts, DropType, GossipQueue, QueueType} from "./types.js";
+import {DropType, GossipQueue, LinearGossipQueueOpts, QueueType} from "./types.js";
 
 // Having a drop ratio of 1 will empty the queue which is too severe
 // Worse case drop 95% of the queue
@@ -71,13 +71,13 @@ export class LinearGossipQueue<T> implements GossipQueue<T> {
     // overload, need to drop more items
     if (this.opts.dropOpts.type === DropType.count) {
       return this.dropByCount(this.opts.dropOpts.count);
-    } else {
-      this.recentDrop = true;
-      const droppedCount = this.dropByRatio(this._dropRatio);
-      // increase drop ratio the next time queue is full
-      this._dropRatio = Math.min(MAX_DROP_RATIO, this._dropRatio + this.opts.dropOpts.step);
-      return droppedCount;
     }
+
+    this.recentDrop = true;
+    const droppedCount = this.dropByRatio(this._dropRatio);
+    // increase drop ratio the next time queue is full
+    this._dropRatio = Math.min(MAX_DROP_RATIO, this._dropRatio + this.opts.dropOpts.step);
+    return droppedCount;
   }
 
   next(): T | null {

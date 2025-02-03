@@ -80,7 +80,6 @@ export class EpochClock {
   }
 
   async waitForStartOfSlot(slot: number, silent = false): Promise<this> {
-    // eslint-disable-next-line no-console
     if (!silent) console.log("Waiting for start of slot", {target: slot, current: this.currentSlot});
     const slotTime = this.getSlotTime(slot) * MS_IN_SEC - Date.now();
     await sleep(slotTime, this.signal);

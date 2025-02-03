@@ -1,9 +1,9 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {VERSIONED_HASH_VERSION_KZG, KZG_COMMITMENT_GINDEX0, ForkName, ForkAll} from "@lodestar/params";
-import {deneb, ssz, BeaconBlockBody, SignedBeaconBlock, SSZTypesFor} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkAll, ForkName, KZG_COMMITMENT_GINDEX0, VERSIONED_HASH_VERSION_KZG} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 
 type VersionHash = Uint8Array;
 

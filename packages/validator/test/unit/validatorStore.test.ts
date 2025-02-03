@@ -1,17 +1,17 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {toBufferBE} from "bigint-buffer";
-import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {bellatrix} from "@lodestar/types";
-import {routes} from "@lodestar/api";
+import {toBufferBE} from "bigint-buffer";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 import {ValidatorStore} from "../../src/services/validatorStore.js";
+import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
-import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";
 
-describe("ValidatorStore", function () {
+describe("ValidatorStore", () => {
   const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
@@ -26,7 +26,7 @@ describe("ValidatorStore", function () {
           strictFeeRecipientCheck: true,
           feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           builder: {
-            gasLimit: 30000000,
+            gasLimit: 36000000,
             selection: routes.validator.BuilderSelection.ExecutionOnly,
           },
         },
@@ -48,7 +48,7 @@ describe("ValidatorStore", function () {
     vi.resetAllMocks();
   });
 
-  it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async function () {
+  it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async () => {
     //pubkeys[0] values
     expect(validatorStore.getGraffiti(toHexString(pubkeys[0]))).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].graffiti

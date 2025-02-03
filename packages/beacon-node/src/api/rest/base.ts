@@ -1,9 +1,9 @@
-import {parse as parseQueryString} from "qs";
-import {FastifyInstance, FastifyRequest, fastify, errorCodes} from "fastify";
-import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
+import {fastifyCors} from "@fastify/cors";
 import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
+import {FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
+import {parse as parseQueryString} from "qs";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";

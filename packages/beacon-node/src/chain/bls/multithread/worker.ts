@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import worker from "node:worker_threads";
-import {expose} from "@chainsafe/threads/worker";
 import {PublicKey} from "@chainsafe/blst";
-import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch.js";
-import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types.js";
+import {expose} from "@chainsafe/threads/worker";
+import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -75,7 +75,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
           // Re-verify all sigs
           nonBatchableSets.push(...batchableChunk);
         }
-      } catch (e) {
+      } catch (_e) {
         // TODO: Ignore this error expecting that the same error will happen when re-verifying the set individually
         //       It's not ideal but '@chainsafe/blst' may throw errors on some conditions
         batchRetries++;

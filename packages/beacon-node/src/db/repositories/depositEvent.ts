@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, ssz} from "@lodestar/types";
 import {Db, Repository} from "@lodestar/db";
+import {phase0, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**

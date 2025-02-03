@@ -1,10 +1,10 @@
 import {ChainConfig} from "./chainConfig/index.js";
-import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
-import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
-import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
-import {holeskyChainConfig} from "./chainConfig/networks/holesky.js";
 import {chiadoChainConfig} from "./chainConfig/networks/chiado.js";
 import {ephemeryChainConfig} from "./chainConfig/networks/ephemery.js";
+import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
+import {holeskyChainConfig} from "./chainConfig/networks/holesky.js";
+import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
+import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
 export {
   mainnetChainConfig,

@@ -1,12 +1,12 @@
 import {SecretKey, aggregateSignatures} from "@chainsafe/blst";
 import {getClient} from "@lodestar/api";
-import {AttesterSlashing, phase0, ssz} from "@lodestar/types";
+import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {CliCommand, toPubkeyHex} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
-import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
+import {AttesterSlashing, phase0, ssz} from "@lodestar/types";
+import {CliCommand, toPubkeyHex} from "@lodestar/utils";
+import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 /* eslint-disable no-console */
 
@@ -52,7 +52,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   const slot = BigInt(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
-  if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
+  if (Number.isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
   if (batchSize <= 0) throw Error(`batchSize must be > 0: ${batchSize}`);
   if (batchSize > MAX_VALIDATORS_PER_COMMITTEE) throw Error("batchSize must be < MAX_VALIDATORS_PER_COMMITTEE");
 

@@ -1,13 +1,12 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ELBlock} from "../types.js";
-import {verifyBlock} from "../utils/verification.js";
 import {
   getErrorResponseForRequestWithFailedVerification,
   getResponseForRequest,
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
+import {verifyBlock} from "../utils/verification.js";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_getBlockByNumber: ELVerifiedRequestHandler<
   [block: string | number, hydrated: boolean],
   ELBlock

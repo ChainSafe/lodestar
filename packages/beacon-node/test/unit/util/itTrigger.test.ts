@@ -1,5 +1,5 @@
 import all from "it-all";
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {ItTrigger} from "../../../src/util/itTrigger.js";
 
 describe("util / itTrigger", () => {

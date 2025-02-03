@@ -1,14 +1,12 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-import {IEth1Provider} from "../../../src/index.js";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1ProviderState, EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
+import {IEth1Provider} from "../../../src/index.js";
 import {testLogger} from "../../utils/logger.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 describe("eth1 / Eth1MergeBlockTracker", () => {
   const logger = testLogger();
@@ -18,9 +16,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   let controller: AbortController;
   beforeEach(() => {
     controller = new AbortController();
-  });
-  afterEach(() => controller.abort());
-  beforeEach(() => {
+
     config = {
       // Set time units to 0 to make the test as fast as possible
       SECONDS_PER_ETH1_BLOCK: 0,
@@ -30,6 +26,8 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       TERMINAL_BLOCK_HASH: ZERO_HASH,
     } as Partial<ChainConfig> as ChainConfig;
   });
+
+  afterEach(() => controller.abort());
 
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {
     config.TERMINAL_BLOCK_HASH = Buffer.alloc(32, 1);
@@ -117,9 +115,8 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         if (blockNumber === "latest") {
           if (latestBlockPointer >= blocks.length) {
             throw Error("Fetched too many blocks");
-          } else {
-            return blocks[latestBlockPointer++];
           }
+          return blocks[latestBlockPointer++];
         }
         return blocks[blockNumber];
       },

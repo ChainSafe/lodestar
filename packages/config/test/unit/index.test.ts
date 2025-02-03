@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {config, chainConfig} from "../../src/default.js";
+import {describe, expect, it} from "vitest";
+import {chainConfig, config} from "../../src/default.js";
 import {createForkConfig} from "../../src/index.js";
 
 describe("forks", () => {
@@ -31,7 +31,6 @@ describe("forks", () => {
   });
 
   it("correctly handle pre-genesis", () => {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const postMergeTestnet = createForkConfig({...chainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0});
     expect(postMergeTestnet.getForkName(-1)).toBe(ForkName.bellatrix);
   });

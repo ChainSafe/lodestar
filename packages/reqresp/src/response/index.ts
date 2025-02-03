@@ -1,15 +1,15 @@
-import {pipe} from "it-pipe";
 import {PeerId, Stream} from "@libp2p/interface";
-import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
-import {prettyPrintPeerId} from "../utils/index.js";
-import {Protocol, ReqRespRequest} from "../types.js";
+import {pipe} from "it-pipe";
+import {Uint8ArrayList} from "uint8arraylist";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
-import {RequestError, RequestErrorCode} from "../request/errors.js";
-import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {Metrics} from "../metrics.js";
+import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
+import {RequestError, RequestErrorCode} from "../request/errors.js";
+import {Protocol, ReqRespRequest} from "../types.js";
+import {prettyPrintPeerId} from "../utils/index.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
@@ -76,10 +76,9 @@ export async function handleRequest({
           signal
         ).catch((e: unknown) => {
           if (e instanceof TimeoutError) {
-            throw e; // Let outter catch {} re-type the error as SERVER_ERROR
-          } else {
-            throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
+            throw e; // Let outter catch (_e) {} re-type the error as SERVER_ERROR
           }
+          throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
         });
 
         logger.debug("Req  received", logCtx);
@@ -134,8 +133,7 @@ export async function handleRequest({
   if (responseError !== null) {
     logger.verbose("Resp error", logCtx, responseError);
     throw responseError;
-  } else {
-    // NOTE: Only log once per request to verbose, intermediate steps to debug
-    logger.verbose("Resp done", logCtx);
   }
+  // NOTE: Only log once per request to verbose, intermediate steps to debug
+  logger.verbose("Resp done", logCtx);
 }

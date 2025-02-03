@@ -1,25 +1,26 @@
-import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
+import {routes} from "@lodestar/api";
+import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
 import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
+  RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
-  RootCache,
 } from "@lodestar/state-transition";
-import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
+import {BeaconBlock, altair, capella, ssz} from "@lodestar/types";
 import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {toCheckpointHex} from "../stateCache/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
+import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {toCheckpointHex} from "../stateCache/index.js";
+import {AttestationImportOpt, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
@@ -208,7 +209,7 @@ export async function importBlock(
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();
-  const newHead = this.recomputeForkChoiceHead();
+  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {

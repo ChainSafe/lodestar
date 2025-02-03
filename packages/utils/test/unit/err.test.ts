@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest";
-import {Err, isErr, mapOkResults, mapOkResultsAsync, Result} from "../../src/err.js";
+import {describe, expect, it} from "vitest";
+import {Err, Result, isErr, mapOkResults, mapOkResultsAsync} from "../../src/err.js";
 
 describe("Result Err", () => {
   describe("isErr works with any type", () => {
@@ -60,7 +60,7 @@ describe("Result Err", () => {
       try {
         await mapOkResultsAsync([], async () => [0]);
         throw Error("did not throw");
-      } catch (e) {
+      } catch (_e) {
         // Ok
       }
     });

@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import {SecretKey} from "@chainsafe/blst";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SignerLocal, SignerType} from "@lodestar/validator";
+import {SecretKey} from "@chainsafe/blst";
 import {LogLevel, Logger} from "@lodestar/utils";
+import {SignerLocal, SignerType} from "@lodestar/validator";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
+import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 import {LocalKeystoreDefinition} from "./interface.js";
 import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "./keystoreCache.js";
-import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 
 export type KeystoreDecryptOptions = {
   ignoreLockFile?: boolean;
@@ -51,7 +51,7 @@ export async function decryptKeystoreDefinitions(
       opts.logger.debug("Loaded keystores via keystore cache");
 
       return signers;
-    } catch {
+    } catch (_e) {
       // Some error loading the cache, ignore and invalidate cache
       await clearKeystoreCache(opts.cacheFilePath);
     }

@@ -1,7 +1,7 @@
+import {getVoluntaryExitSignatureSet, isValidVoluntaryExit} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {isValidVoluntaryExit, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
-import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors/index.js";
+import {GossipAction, VoluntaryExitError, VoluntaryExitErrorCode} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiVoluntaryExit(
@@ -43,7 +43,7 @@ async function validateVoluntaryExit(
 
   // [REJECT] All of the conditions within process_voluntary_exit pass validation.
   // verifySignature = false, verified in batch below
-  if (!isValidVoluntaryExit(state, voluntaryExit, false)) {
+  if (!isValidVoluntaryExit(chain.config.getForkSeq(state.slot), state, voluntaryExit, false)) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID,
     });

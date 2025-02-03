@@ -1,6 +1,5 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
+import {LogData, LogHandler, LogLevel, Logger} from "@lodestar/utils";
 import {LEVEL, MESSAGE} from "triple-beam";
-import {LogLevel, Logger, LogHandler, LogData} from "@lodestar/utils";
 
 export {LogLevel, LEVEL, MESSAGE};
 export type {Logger, LogHandler, LogData};
@@ -15,7 +14,6 @@ export const logLevelNum: {[K in LogLevel]: number} = {
   [LogLevel.trace]: 5,
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const LogLevels = Object.values(LogLevel);
 
 export type LogFormat = "human" | "json";

@@ -1,12 +1,11 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {verifyAccount, verifyCode} from "../utils/verification.js";
 import {
   getErrorResponseForRequestWithFailedVerification,
   getResponseForRequest,
   getVerificationFailedMessage,
 } from "../utils/json_rpc.js";
+import {verifyAccount, verifyCode} from "../utils/verification.js";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_getCode: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
   rpc,
   payload,

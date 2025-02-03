@@ -70,7 +70,7 @@ export function parseAcceptHeader(accept?: string, supported = SUPPORTED_MEDIA_T
         }
 
         const qvalue = +weight.replace("q=", "");
-        if (isNaN(qvalue) || qvalue > 1 || qvalue <= 0) {
+        if (Number.isNaN(qvalue) || qvalue > 1 || qvalue <= 0) {
           // If we can't convert the qvalue to a valid number, move on
           return best;
         }

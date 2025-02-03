@@ -1,12 +1,12 @@
-import {itBench} from "@dapplion/benchmark";
-import {ssz} from "@lodestar/types";
+import {bench, describe} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {ForkSeq} from "@lodestar/params";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
+import {ssz} from "@lodestar/types";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
-import {numValidators} from "../util.js";
-import {StateEpoch} from "../types.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {createCachedBeaconStateTest} from "../../utils/state.js";
+import {StateEpoch} from "../types.js";
+import {numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to $VALIDATOR_COUNT, to iterate over all balances. Then cost is proportional to the amount
 // of validators whose effectiveBalance changed. Worst case is a massive network leak or a big slashing event which
@@ -30,7 +30,7 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
   // which will it update validators tree
 
   for (const {id, changeRatio} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processEffectiveBalanceUpdates - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow

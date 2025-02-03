@@ -35,7 +35,7 @@ function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
       attDataRootHex: toHexString(crypto.randomBytes(32)),
       subnet: i,
     } as unknown as AttestationDataCacheEntry;
-    seenAttestationDatas.add(slot, key, attDataCacheEntry);
+    seenAttestationDatas.add(slot, i, key, attDataCacheEntry);
   }
   return seenAttestationDatas;
 }
@@ -53,7 +53,6 @@ function testRunnerMemoryBpi(testCases: {getInstance: (bytes: number) => unknown
       sampleEvery: 5,
     });
 
-    // eslint-disable-next-line no-console
     console.log(`${id.padEnd(longestId)} - ${bpi.toFixed(1)} bytes / instance`);
   }
 }

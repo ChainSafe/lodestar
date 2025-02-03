@@ -1,11 +1,9 @@
 import {ChainConfig, chainConfigToJson} from "@lodestar/config";
-import {activePreset, BeaconPreset, presetToJson} from "@lodestar/params";
+import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
 
 type ConfigWithPreset = ChainConfig & BeaconPreset;
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 /**
  * Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.
@@ -138,6 +136,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // Networking (non-critical as those do not affect consensus)
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    BLOB_SIDECAR_SUBNET_COUNT: false,
+    BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
+    MAX_REQUEST_BLOB_SIDECARS: false,
+    MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
 
     // # Phase0Preset
     /////////////////
@@ -218,9 +220,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // # DenebPreset
     /////////////////
     FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
-    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
 
     // ELECTRA
     MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,
@@ -228,15 +230,17 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
     MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
     MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: electraForkRelevant,
+    MAX_PENDING_DEPOSITS_PER_EPOCH: electraForkRelevant,
     MAX_EFFECTIVE_BALANCE_ELECTRA: electraForkRelevant,
     MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: electraForkRelevant,
     MIN_ACTIVATION_BALANCE: electraForkRelevant,
-    PENDING_BALANCE_DEPOSITS_LIMIT: electraForkRelevant,
+    PENDING_DEPOSITS_LIMIT: electraForkRelevant,
     PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
     PENDING_CONSOLIDATIONS_LIMIT: electraForkRelevant,
     MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: electraForkRelevant,
     WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
+    MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
   };
 }

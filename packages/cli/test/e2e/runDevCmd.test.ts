@@ -1,10 +1,10 @@
-import {describe, it, vi, onTestFinished} from "vitest";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {retry} from "@lodestar/utils";
 import {spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
+import {retry} from "@lodestar/utils";
+import {describe, it, onTestFinished, vi} from "vitest";
 
-describe("Run dev command", function () {
+describe("Run dev command", () => {
   vi.setConfig({testTimeout: 30_000});
 
   it("Run dev command with no --dataDir until beacon api is listening", async () => {

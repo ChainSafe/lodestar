@@ -1,11 +1,10 @@
-import {describe, it, expect} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 
+import {BlockInput, BlockInputType, GossipedInputType} from "../../../../src/chain/blocks/types.js";
 import {SeenGossipBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
-import {BlockInputType, GossipedInputType, BlockInput} from "../../../../src/chain/blocks/types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 describe("SeenGossipBlockInput", () => {
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
@@ -110,7 +109,6 @@ describe("SeenGossipBlockInput", () => {
               {
                 type: GossipedInputType.block,
                 signedBlock,
-                blockBytes: null,
               },
               null
             );
@@ -132,7 +130,6 @@ describe("SeenGossipBlockInput", () => {
               {
                 type: GossipedInputType.blob,
                 blobSidecar,
-                blobBytes: null,
               },
               null
             );

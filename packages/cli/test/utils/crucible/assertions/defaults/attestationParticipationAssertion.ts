@@ -1,7 +1,7 @@
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {isActiveValidator} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
-import {Match, AssertionResult, Assertion} from "../../interfaces.js";
+import {Assertion, AssertionResult, Match} from "../../interfaces.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;

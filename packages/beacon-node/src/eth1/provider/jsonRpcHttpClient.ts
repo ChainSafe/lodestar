@@ -1,7 +1,7 @@
-import {EventEmitter} from "events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
+import {EventEmitter} from "node:events";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {IJson, RpcPayload} from "../interface.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
 
@@ -268,7 +268,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         };
 
         const token = encodeJwtToken(jwtClaim, this.jwtSecret);
-        headers["Authorization"] = `Bearer ${token}`;
+        headers.Authorization = `Bearer ${token}`;
       }
 
       const res = await fetch(url, {
@@ -296,12 +296,10 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         // controller will abort on both parent signal abort + timeout of this specific request
         if (this.opts?.signal?.aborted) {
           throw new ErrorAborted("request");
-        } else {
-          throw new TimeoutError("request");
         }
-      } else {
-        throw e;
+        throw new TimeoutError("request");
       }
+      throw e;
     } finally {
       timer?.();
       this.metrics?.activeRequests.dec({routeId}, 1);
@@ -315,11 +313,11 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 function parseRpcResponse<R, P>(res: RpcResponse<R>, payload: RpcPayload<P>): R {
   if (res.result !== undefined) {
     return res.result;
-  } else if (res.error !== undefined) {
-    throw new ErrorJsonRpcResponse(res, payload.method);
-  } else {
-    throw Error(`Invalid JSON RPC response, no result or error property: ${jsonSerializeTry(res)}`);
   }
+  if (res.error !== undefined) {
+    throw new ErrorJsonRpcResponse(res, payload.method);
+  }
+  throw Error(`Invalid JSON RPC response, no result or error property: ${jsonSerializeTry(res)}`);
 }
 
 /**
@@ -374,7 +372,7 @@ export class HttpRpcError extends Error {
 /**
  * JSON RPC spec errors https://www.jsonrpc.org/specification#response_object
  */
-function parseJsonRpcErrorCode(code: number): string {
+export function parseJsonRpcErrorCode(code: number): string {
   if (code === -32700) return "Parse request error";
   if (code === -32600) return "Invalid request object";
   if (code === -32601) return "Method not found";

@@ -1,5 +1,5 @@
 export function isValidHttpUrl(urlStr: string): boolean {
-  let url;
+  let url: URL;
   try {
     url = new URL(urlStr);
 

@@ -15,7 +15,7 @@ export type LightclientEmitterEvents = {
 
 export type LightclientEmitter = MittEmitter<LightclientEmitterEvents>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type MittEmitter<T extends Record<string, (...args: any[]) => void>> = {
   on<K extends keyof T>(type: K, handler: T[K]): void;
   off<K extends keyof T>(type: K, handler: T[K]): void;

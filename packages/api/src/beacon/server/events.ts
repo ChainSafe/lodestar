@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
-import {Endpoints, getDefinitions, eventTypes, getEventSerdes} from "../routes/events.js";
+import {Endpoints, eventTypes, getDefinitions, getEventSerdes} from "../routes/events.js";
 
 export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
   const eventSerdes = getEventSerdes(config);
@@ -23,9 +23,9 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
         try {
           // Add injected headers from other plugins. This is required for fastify-cors for example
           // From: https://github.com/NodeFactoryIo/fastify-sse-v2/blob/b1686a979fbf655fb9936c0560294a0c094734d4/src/plugin.ts
-          Object.entries(res.getHeaders()).forEach(([key, value]) => {
+          for (const [key, value] of Object.entries(res.getHeaders())) {
             if (value !== undefined) res.raw.setHeader(key, value);
-          });
+          }
 
           res.raw.setHeader("Content-Type", "text/event-stream");
           res.raw.setHeader("Cache-Control", "no-cache,no-transform");

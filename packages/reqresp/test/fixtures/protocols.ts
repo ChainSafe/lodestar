@@ -1,11 +1,10 @@
-import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
+import {ContainerType, ListBasicType, UintNumberType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {ContextBytesType, DialOnlyProtocol, Encoding, ProtocolHandler, Protocol} from "../../src/types.js";
+import {ssz} from "@lodestar/types";
+import {ContextBytesType, DialOnlyProtocol, Encoding, Protocol, ProtocolHandler} from "../../src/types.js";
 import {getEmptyHandler} from "./messages.js";
 import {beaconConfig} from "./messages.js";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const NumToStrReq = new ContainerType(
   {
     value: new UintNumberType(4),
@@ -15,7 +14,6 @@ const NumToStrReq = new ContainerType(
 
 export type NumToStrReqType = ValueOf<typeof NumToStrReq>;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const NumToStrResp = new ContainerType(
   {
     value: new ListBasicType(new UintNumberType(1), 4),
