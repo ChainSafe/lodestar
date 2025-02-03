@@ -1,14 +1,14 @@
 import path from "node:path";
-import {ModuleThread, Thread, spawn, Worker} from "@chainsafe/threads";
+import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
+import {DiffLayers} from "./diffLayers.js";
 import {
   HistoricalStateRegenInitModules,
   HistoricalStateRegenModules,
   HistoricalStateWorkerApi,
   HistoricalStateWorkerData,
 } from "./types.js";
-import {DiffLayers} from "./diffLayers.js";
 
 // Worker constructor consider the path relative to the current working directory
 const WORKER_DIR = process.env.NODE_ENV === "test" ? "../../../lib/chain/historicalState" : "./";

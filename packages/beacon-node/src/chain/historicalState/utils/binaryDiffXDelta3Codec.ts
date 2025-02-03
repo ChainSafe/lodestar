@@ -1,8 +1,8 @@
-import {encodeSync, decodeSync} from "@chainsafe/xdelta3-node";
+import {decodeSync, encodeSync} from "@chainsafe/xdelta3-node";
 import {IBinaryDiffCodec} from "../types.js";
 
 export class BinaryDiffXDelta3Codec implements IBinaryDiffCodec {
-  private isInitialized: boolean = false;
+  private isInitialized = false;
 
   async init(): Promise<void> {
     this.isInitialized = true;

@@ -1,5 +1,5 @@
-import {describe, it, expect, beforeEach} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {beforeEach, describe, expect, it} from "vitest";
 import {DiffLayers} from "../../../../src/chain/historicalState/diffLayers.js";
 import {StateArchiveStrategy} from "../../../../src/chain/historicalState/types.js";
 

@@ -8,13 +8,10 @@ import {BeaconDb} from "../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {JobFnQueue} from "../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../util/queue/options.js";
-import {
-  HistoricalStateRegenMetrics,
-  HistoricalStateWorkerApi,
-  HistoricalStateWorkerData,
-} from "./types.js";
-import { DiffLayers } from "./diffLayers.js";
-import { getHistoricalState, putHistoricalState } from "./historicalState.js";
+import {DiffLayers} from "./diffLayers.js";
+import {getHistoricalState, putHistoricalState} from "./historicalState.js";
+import {getMetrics} from "./metrics.js";
+import {HistoricalStateRegenMetrics, HistoricalStateWorkerApi, HistoricalStateWorkerData} from "./types.js";
 
 // most of this setup copied from networkCoreWorker.ts
 
@@ -98,9 +95,9 @@ const api: HistoricalStateWorkerApi = {
 
       historicalStateRegenMetrics?.regenSuccessCount.inc();
       return result;
-    } else {
-      return null;
     }
+
+    return null;
   },
   async storeHistoricalState(slot, stateBytes) {
     return putHistoricalState({slot, stateBytes}, {db, logger, diffLayers, metrics: historicalStateRegenMetrics});

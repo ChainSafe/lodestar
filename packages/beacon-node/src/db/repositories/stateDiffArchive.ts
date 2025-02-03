@@ -9,7 +9,7 @@ export class StateDiffArchiveRepository extends Repository<Slot, Uint8Array> {
   constructor(config: ChainForkConfig, db: Db) {
     // TODO: Create and use use proper SSZ type for diff object
     // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny:
     const type = ssz.phase0.BeaconState as any;
     const bucket = Bucket.allForks_stateDiffArchive;
 

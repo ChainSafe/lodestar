@@ -1,14 +1,14 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {Slot} from "@lodestar/types";
-import {Logger} from "@lodestar/logger";
 import {BeaconConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/logger";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {formatBytes} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/interface.js";
-import {HistoricalStateRegenMetrics, IBinaryDiffCodec, StateArchiveStrategy} from "./types.js";
-import {replayBlocks} from "./utils/blockReplay.js";
 import {DiffLayers} from "./diffLayers.js";
+import {HistoricalStateRegenMetrics, IBinaryDiffCodec, StateArchiveStrategy} from "./types.js";
 import {BinaryDiffXDelta3Codec} from "./utils/binaryDiffXDelta3Codec.js";
+import {replayBlocks} from "./utils/blockReplay.js";
 import {getDiffState} from "./utils/diff.js";
 
 export const codec: IBinaryDiffCodec = new BinaryDiffXDelta3Codec();

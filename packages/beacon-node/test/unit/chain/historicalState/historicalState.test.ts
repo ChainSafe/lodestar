@@ -1,12 +1,12 @@
-import {describe, it, beforeEach, vi, expect} from "vitest";
-import {when} from "vitest-when";
 import {Logger} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getLastStoredState, codec} from "../../../../src/chain/historicalState/historicalState.js";
+import {beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {DiffLayers} from "../../../../src/chain/historicalState/diffLayers.js";
-import {getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
-import {getMockedLogger} from "../../../mocks/loggerMock.js";
+import {codec, getLastStoredState} from "../../../../src/chain/historicalState/historicalState.js";
 import {IBeaconDb} from "../../../../src/db/interface.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
+import {getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
 
 describe("historicalState", () => {
   let db: IBeaconDb;

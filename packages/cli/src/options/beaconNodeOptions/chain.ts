@@ -55,8 +55,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxSkipSlots: args["chain.maxSkipSlots"],
     trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
-    emitPayloadAttributes: args["emitPayloadAttributes"],
-    broadcastValidationStrictness: args["broadcastValidationStrictness"],
+    emitPayloadAttributes: args.emitPayloadAttributes,
+    broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,

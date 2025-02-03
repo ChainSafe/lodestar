@@ -7,6 +7,7 @@ import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 import {ArchiverOpts, StateArchiveMode, StateArchiveStrategy} from "./interface.js";
+import {DifferentialStateArchiveStrategy} from "./strategies/diffStateArchiveStrategy.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 
 export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
@@ -33,10 +34,24 @@ export class Archiver {
     opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
-    if (opts.stateArchiveMode === StateArchiveMode.Frequency) {
-      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
-    } else {
-      throw new Error(`State archive strategy "${opts.stateArchiveMode}" currently not supported.`);
+    const {regen, bufferPool, historicalStateRegen} = chain;
+    switch (opts.stateArchiveMode) {
+      case StateArchiveMode.Frequency:
+        this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(
+          {
+            regen,
+            db,
+            logger,
+            bufferPool,
+          },
+          opts
+        );
+        break;
+      case StateArchiveMode.Differential:
+        this.statesArchiverStrategy = new DifferentialStateArchiveStrategy({historicalStateRegen, regen, logger});
+        break;
+      default:
+        throw new Error(`State archive strategy "${opts.stateArchiveMode}" currently not supported.`);
     }
 
     this.stateArchiveMode = opts.stateArchiveMode;

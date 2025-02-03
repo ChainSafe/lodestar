@@ -38,6 +38,7 @@ import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {IHistoricalStateRegen} from "./historicalState/types.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
@@ -48,7 +49,6 @@ import {ReprocessController} from "./reprocess.js";
 import {AttestationsRewards} from "./rewards/attestationsRewards.js";
 import {BlockRewards} from "./rewards/blockRewards.js";
 import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
-import {IHistoricalStateRegen} from "./historicalState/types.js";
 import {
   SeenAggregators,
   SeenAttesters,

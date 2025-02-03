@@ -1,5 +1,5 @@
-import {Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Slot} from "@lodestar/types";
 import {StateArchiveStrategy} from "./types.js";
 
 /*
@@ -96,17 +96,17 @@ export class DiffLayers {
     if (layer === 0) {
       if (slot % this.snapshotEverySlot === 0) {
         return slot;
-      } else {
-        return Math.max(0, slot - (slot % this.snapshotEverySlot));
       }
+
+      return Math.max(0, slot - (slot % this.snapshotEverySlot));
     }
 
     const diffEverySlot = this.diffEverySlot[layer - 1];
 
     if (slot % diffEverySlot === 0) {
       return slot;
-    } else {
-      return Math.max(0, slot - (slot % diffEverySlot));
     }
+
+    return Math.max(0, slot - (slot % diffEverySlot));
   }
 }

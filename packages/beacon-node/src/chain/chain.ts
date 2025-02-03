@@ -57,7 +57,7 @@ import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {HistoricalStateRegen, IHistoricalStateRegen} from "./historicalState/index.js";
+import {DiffLayers, HistoricalStateRegen, IHistoricalStateRegen} from "./historicalState/index.js";
 import {
   BlockHash,
   CommonBlockBody,
@@ -346,9 +346,7 @@ export class BeaconChain implements IBeaconChain {
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
-
-    // TODO: Decouple DiffLayers from archiver
-    this.archiver = new Archiver(db, this, new DiffLayers(), logger, signal, opts);
+    this.archiver = new Archiver(db, this, logger, signal, opts);
     this.serializedCache = new SerializedCache();
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests

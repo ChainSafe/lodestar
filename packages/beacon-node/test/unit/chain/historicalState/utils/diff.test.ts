@@ -1,12 +1,12 @@
-import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
-import {when} from "vitest-when";
 import {Logger} from "@lodestar/logger";
-import {DiffLayers, IBeaconDb} from "../../../../../src/index.js";
-import {getMockedBeaconDb} from "../../../../mocks/mockedBeaconDb.js";
-import {getMockedLogger} from "../../../../mocks/loggerMock.js";
-import {getDiffState} from "../../../../../src/chain/historicalState/utils/diff.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {IBinaryDiffCodec} from "../../../../../src/chain/historicalState/types.js";
 import {BinaryDiffXDelta3Codec} from "../../../../../src/chain/historicalState/utils/binaryDiffXDelta3Codec.js";
+import {getDiffState} from "../../../../../src/chain/historicalState/utils/diff.js";
+import {DiffLayers, IBeaconDb} from "../../../../../src/index.js";
+import {getMockedLogger} from "../../../../mocks/loggerMock.js";
+import {getMockedBeaconDb} from "../../../../mocks/mockedBeaconDb.js";
 
 describe("historicalState/util", () => {
   let db: IBeaconDb;

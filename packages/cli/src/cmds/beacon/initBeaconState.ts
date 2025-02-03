@@ -1,31 +1,31 @@
-import {ssz} from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {formatBytes, Logger} from "@lodestar/utils";
 import {
-  isWithinWeakSubjectivityPeriod,
-  ensureWithinWeakSubjectivityPeriod,
-  BeaconStateAllForks,
-  loadState,
-  loadStateAndValidators,
-} from "@lodestar/state-transition";
-import {
+  DiffLayers,
   IBeaconDb,
   IBeaconNodeOptions,
   checkAndPersistAnchorState,
-  getStateTypeFromBytes,
   getLastStoredState,
-  DiffLayers,
+  getStateTypeFromBytes,
   initStateFromEth1,
 } from "@lodestar/beacon-node";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {
+  BeaconStateAllForks,
+  ensureWithinWeakSubjectivityPeriod,
+  isWithinWeakSubjectivityPeriod,
+  loadState,
+  loadStateAndValidators,
+} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {downloadOrLoadFile, wrapFnError} from "../../util/index.js";
-import {defaultNetwork, GlobalArgs} from "../../options/globalOptions.js";
+import {Logger, formatBytes} from "@lodestar/utils";
 import {
   fetchWeakSubjectivityState,
   getCheckpointFromArg,
   getCheckpointFromState,
   getGenesisFileUrl,
 } from "../../networks/index.js";
+import {GlobalArgs, defaultNetwork} from "../../options/globalOptions.js";
+import {downloadOrLoadFile, wrapFnError} from "../../util/index.js";
 import {BeaconArgs} from "./options.js";
 
 type StateWithBytes = {state: BeaconStateAllForks; stateBytes: Uint8Array};

@@ -55,6 +55,7 @@ export async function getNetworkForTest(
       disablePrepareNextSlot: true,
       minSameMessageSignatureSetsToBatch: 32,
       stateArchiveMode: StateArchiveMode.Frequency,
+      archiveStateEpochFrequency: 1024,
     },
     {
       config: beaconConfig,

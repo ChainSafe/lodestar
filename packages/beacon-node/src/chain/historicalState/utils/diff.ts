@@ -1,10 +1,10 @@
-import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/logger";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {formatBytes} from "@lodestar/utils";
-import {HistoricalStateRegenMetrics, IBinaryDiffCodec, RegenErrorType} from "../types.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {DiffLayers} from "../diffLayers.js";
+import {HistoricalStateRegenMetrics, IBinaryDiffCodec, RegenErrorType} from "../types.js";
 import {getSnapshotStateWithFallback} from "./snapshot.js";
 
 export async function replayStateDiffs(

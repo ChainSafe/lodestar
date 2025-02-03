@@ -15,12 +15,12 @@ import {
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateSnapshotArchiveRepository,
-  VoluntaryExitRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
+  VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 import {StateDiffArchiveRepository} from "./repositories/stateDiffArchive.js";
+import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 /**
  * The DB service manages the data layer of the beacon chain

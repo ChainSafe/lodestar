@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {itBench} from "@dapplion/benchmark";
-import {BinaryDiffVCDiffCodec} from "../../../../../src/chain/historicalState/utils/binaryDiffVCDiffCodec.js";
+import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {IBinaryDiffCodec} from "../../../../../src/chain/historicalState/index.js";
+import {BinaryDiffXDelta3Codec} from "../../../../../src/chain/historicalState/utils/binaryDiffXDelta3Codec.js";
 
 describe("BinaryDiffVCDiffCodec", () => {
   let originalState: Uint8Array;
@@ -10,10 +10,10 @@ describe("BinaryDiffVCDiffCodec", () => {
   let codec: IBinaryDiffCodec;
   let diff: Uint8Array;
 
-  before(async function () {
-    this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
+  setBenchOpts({timeoutBench: 2 * 60 * 1000});
 
-    codec = new BinaryDiffVCDiffCodec();
+  beforeAll(async () => {
+    codec = new BinaryDiffXDelta3Codec();
     await codec.init();
 
     originalState = Buffer.from(
@@ -27,14 +27,14 @@ describe("BinaryDiffVCDiffCodec", () => {
     diff = codec.compute(originalState, changedState);
   });
 
-  itBench({
+  bench({
     id: "compute",
     fn: () => {
       codec.compute(originalState, changedState);
     },
   });
 
-  itBench({
+  bench({
     id: "apply",
     fn: () => {
       codec.apply(originalState, diff);

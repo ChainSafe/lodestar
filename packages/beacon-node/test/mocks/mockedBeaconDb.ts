@@ -12,8 +12,8 @@ import {
   DepositEventRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
-  StateSnapshotArchiveRepository,
   StateDiffArchiveRepository,
+  StateSnapshotArchiveRepository,
   VoluntaryExitRepository,
 } from "../../src/db/repositories/index.js";
 

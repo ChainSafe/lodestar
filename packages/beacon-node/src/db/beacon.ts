@@ -17,12 +17,12 @@ import {
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateSnapshotArchiveRepository,
-  VoluntaryExitRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
+  VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 import {StateDiffArchiveRepository} from "./repositories/stateDiffArchive.js";
+import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;
