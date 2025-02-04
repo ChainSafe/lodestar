@@ -8,7 +8,7 @@ To run a blockchain client and establish consensus we need latest headers and fo
 
 ## Solution
 
-To overcome the storage problem for the archive nodes we implemented following algorithm to store and fetch the historical sates.
+To overcome the storage problem for the archive nodes, we implemented the following algorithm to store and fetch the historical states.
 
 **Approach**
 
