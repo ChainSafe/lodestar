@@ -105,8 +105,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1MergeBlockTracker.startPollingMergeBlock();
   }
 
-  isPollingEth1Data(): boolean | undefined {
-    return this.eth1DepositDataTracker?.isPollingEth1Data();
+  isPollingEth1Data(): boolean {
+    return this.eth1DepositDataTracker?.isPollingEth1Data() ?? false;
   }
 
   stopPollingEth1Data(): void {
