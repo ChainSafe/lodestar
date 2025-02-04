@@ -54,7 +54,7 @@ export async function getNetworkForTest(
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
       minSameMessageSignatureSetsToBatch: 32,
-      stateArchiveMode: StateArchiveMode.Frequency,
+      archiveMode: StateArchiveMode.Frequency,
       archiveStateEpochFrequency: 1024,
     },
     {

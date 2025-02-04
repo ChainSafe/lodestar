@@ -84,7 +84,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
           minSameMessageSignatureSetsToBatch: 32,
-          stateArchiveMode: StateArchiveMode.Frequency,
+          archiveMode: StateArchiveMode.Frequency,
           archiveStateEpochFrequency: 1024,
         },
         {

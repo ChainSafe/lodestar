@@ -3,7 +3,7 @@ export {
   initStateFromDb,
   initStateFromEth1,
   getLastStoredState,
-  DiffLayers,
+  DifferentialLayers,
 } from "./chain/index.js";
 export {BeaconDb, type IBeaconDb} from "./db/index.js";
 export {Eth1Provider, type IEth1Provider} from "./eth1/index.js";
@@ -27,3 +27,4 @@ export type {RestApiServerOpts, RestApiServerModules, RestApiServerMetrics} from
 
 // Export type util for CLI - TEMP move to lodestar-types eventually
 export {getStateTypeFromBytes, getStateSlotFromBytes} from "./util/multifork.js";
+export * from "./interface.js";

@@ -39,6 +39,7 @@ import {
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {LoggerNode} from "@lodestar/logger/node";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -49,7 +50,7 @@ import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {Archiver} from "./archiver/archiver.js";
+import {ArchiveStore} from "./archiveStore/index.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -57,7 +58,6 @@ import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {DiffLayers, HistoricalStateRegen, IHistoricalStateRegen} from "./historicalState/index.js";
 import {
   BlockHash,
   CommonBlockBody,
@@ -131,7 +131,6 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly historicalStateRegen?: IHistoricalStateRegen;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -169,12 +168,12 @@ export class BeaconChain implements IBeaconChain {
   readonly producedBlindedBlockRoot = new Set<RootHex>();
 
   readonly serializedCache: SerializedCache;
+  readonly archiveStore: ArchiveStore;
 
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  private readonly archiver: Archiver;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -191,7 +190,6 @@ export class BeaconChain implements IBeaconChain {
       eth1,
       executionEngine,
       executionBuilder,
-      historicalStateRegen,
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
@@ -204,7 +202,6 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
-      historicalStateRegen?: IHistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -219,7 +216,6 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    this.historicalStateRegen = historicalStateRegen;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -346,7 +342,7 @@ export class BeaconChain implements IBeaconChain {
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
-    this.archiver = new Archiver(db, this, logger, signal, opts);
+    this.archiveStore = new ArchiveStore({db, chain: this, logger: logger as LoggerNode, metrics}, opts, signal);
     this.serializedCache = new SerializedCache();
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
@@ -367,6 +363,7 @@ export class BeaconChain implements IBeaconChain {
 
   async close(): Promise<void> {
     this.abortController.abort();
+    await this.archiveStore.close();
     await this.bls.close();
   }
 
@@ -404,12 +401,13 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
+    await this.archiveStore.start();
     await this.opPool.fromPersisted(this.db);
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
-    await this.archiver.persistToDisk();
+    await this.archiveStore.persistToDisk();
     await this.opPool.toPersisted(this.db);
   }
 
@@ -496,7 +494,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // request for finalized state using historical state regen
-    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
+    const stateSerialized = await this.archiveStore.getHistoricalState(slot);
     if (!stateSerialized) {
       return null;
     }
