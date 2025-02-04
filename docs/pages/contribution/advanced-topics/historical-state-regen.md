@@ -1,10 +1,10 @@
 ---
-title: Understanding Historical Sate Regeneration
+title: Understanding Historical State Regeneration
 ---
 
-# Understanding Historical Sate Regeneration
+# Understanding Historical State Regeneration
 
-To run a blockchain client and establish consensus we need latest headers and forkchoice data. This operation does not require to historical data, specially after the epochs which are finalized. Storing the full state information for the finalized slots increase the storage requirement a lot and not suitable for running the node for long time.
+To run a blockchain client and establish consensus we need latest headers and fork choice data. This operation does not require access to historical data, especially after the epochs which are finalized. Storing the full state information for the finalized slots increase the storage requirement a lot and not suitable for running the node for long time.
 
 ## Solution
 
@@ -12,7 +12,7 @@ To overcome the storage problem for the archive nodes we implemented following a
 
 **Approach**
 
-Assume we have following chain represents the state object every slot, with following diff layer configurations `1,2,3,5`. With assumption that we have 8 slots each epoch, The following configuration for layers implies:
+Assume we have following chain represents the state object every slot, with following diff layer configurations `1,2,3,5`. With assumption that we have 8 slots each epoch, the following configuration for layers implies:
 
 1. We store the snapshot every 5th epoch.
 2. We take diff every epoch, every 2nd epoch and every 3rd epoch.
@@ -31,13 +31,13 @@ These are the rules we follow:
 Let's take few scenarios:
 
 1. For slot `0` all layers collide, so we use the lowest layer which is the snapshot layer. So for the slot `0` we store and fetch the snapshot.
-2. For slots (0-7) within first epoch we there is no intermediary layer, so we read the snapshot from slot `0`.
+2. For slots (0-7) within the first epoch, there is no intermediary layer, so we read the snapshot from slot `0`.
 3. For slots (8-15) the path we follow is `8 -> 0`. e.g. For slot `12`, we apply diff from slot `8` on snapshot from slot `0`. Then we replay blocks from 9-12.
-4. For slot `18` the shortest path to nearest snapshot is `16 -> 0` and rest will follow same as above.
+4. For slot `18` the shortest path to nearest snapshot is `16 -> 0` and the rest will follow same as above.
 5. For slot `34` the path we follow `32 -> 24 -> 0`.
 6. For slot `41` path for the nearest snapshot slot is just one layer directly at slot `40`.
 
-As you can see with this approach we can find a shorter paths with smaller number of diffs to apply, which generate the nearest full state and reduce the number of blocks we have to replay to reach to actual slot.
+As you can see with this approach we can find shorter paths with smaller number of diffs to apply, which generate the nearest full state and reduce the number of blocks we have to replay to reach the actual slot.
 
 **Constants**
 
@@ -60,7 +60,7 @@ T_{full} &= \text{Time to take full backup}\\
 T_{diff} &= \text{Time to take differential backup}\\
 T_{replay} &= \text{Time to replay a block}\\
 R_{full} &= \text{Time to restore full backup}\\
-R_{diff} &= \text{Tiem to restore differential backup}\\
+R_{diff} &= \text{Time to restore differential backup}\\
 G_{max} &= \text{Max gap between backups (usually the snapshot gap)}\\
 G_{min} &= \text{Minimum gap between backups (usually the top layer gap)}\\
 w_{s} &= \text{Weight for total storage}\\
@@ -70,7 +70,7 @@ n &= \text{Number of differential layers}\\
 \end{align*}
 $$
 
-As there are lot of parameters in the system and we don't have accurate values for these so we started few possible estimates. Also as the chain is ever growing data structure the value for `F` is not finite. We decided to do this estimation based on 30 days time period and `mainnet` parameters.
+As there are lot of parameters in the system and we don't have accurate values for these so we started few possible estimates. Also as the chain is a ever growing data structure, the value for `F` is not finite. We decided to do this estimation based on 30 days time period and `mainnet` parameters.
 
 Based on these assumptions and system we decided for the following constants.
 
