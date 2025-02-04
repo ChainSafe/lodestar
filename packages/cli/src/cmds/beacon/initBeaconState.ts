@@ -1,5 +1,5 @@
 import {
-  DiffLayers,
+  DifferentialLayers,
   IBeaconDb,
   IBeaconNodeOptions,
   checkAndPersistAnchorState,
@@ -104,7 +104,7 @@ export async function initBeaconState(
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
   //   i)  used directly as the anchor state
   //   ii) used during verification of a weak subjectivity state,
-  const {stateBytes, slot: lastDbSlot} = await getLastStoredState({db, diffLayers: new DiffLayers(), logger});
+  const {stateBytes, slot: lastDbSlot} = await getLastStoredState({db, diffLayers: new DifferentialLayers(), logger});
   let lastDbState: BeaconStateAllForks | null = null;
   let lastDbValidatorsBytes: Uint8Array | null = null;
   let lastDbStateWithBytes: StateWithBytes | null = null;
