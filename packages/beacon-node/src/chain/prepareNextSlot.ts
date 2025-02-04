@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkExecution, ForkSeq, isForkPostFocil, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
@@ -190,9 +190,11 @@ export class PrepareNextSlotScheduler {
             feeRecipient,
           });
 
-          this.schedulePayloadInclusionListUpdate(payloadId, clockSlot).catch((e) => {
-            this.logger.error("Failed to update payload with inclusion list", {payloadId, prepareSlot}, e);
-          });
+          if (isForkPostFocil(fork)) {
+            this.schedulePayloadInclusionListUpdate(payloadId, clockSlot).catch((e) => {
+              this.logger.error("Failed to update payload with inclusion list", {payloadId, prepareSlot}, e);
+            });
+          }
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
