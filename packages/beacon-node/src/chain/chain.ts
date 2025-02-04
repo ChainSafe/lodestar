@@ -342,7 +342,7 @@ export class BeaconChain implements IBeaconChain {
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
-    this.archiveStore = new ArchiveStore({db, chain: this, logger: logger as LoggerNode, metrics}, opts, signal);
+    this.archiveStore = new ArchiveStore({db, chain: this, logger: logger as LoggerNode, metrics, regen: this.regen}, opts, signal);
     this.serializedCache = new SerializedCache();
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests

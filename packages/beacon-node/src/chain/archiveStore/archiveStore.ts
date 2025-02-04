@@ -8,6 +8,9 @@ import {ArchiveMode, ArchiveStoreOpts} from "./interface.js";
 import {BlockArchiveObserver} from "./observers/blockArchiveObserver.js";
 import {FrequentStateArchiveObserver} from "./observers/frequentStateArchiveObserver.js";
 import {HistoricalStateService} from "./services/historicalStateService.js";
+import { PruneLiveStateObserver } from "./observers/pruneLiveStateObserver.js";
+import { IStateRegenerator } from "../regen/interface.js";
+import { DifferentialStateArchiveObserver } from "./observers/differentialStateArchiveObserver.js";
 
 const unutilizedHistoryServiceError = new Error("Historical State Service is not yet started.");
 
@@ -17,6 +20,7 @@ export type ArchiveStoreModules = {
   db: IBeaconDb;
   lightClientServer?: LightClientServer;
   metrics: Metrics | null;
+  regen: IStateRegenerator;
 };
 
 export class ArchiveStore {
@@ -36,7 +40,7 @@ export class ArchiveStore {
         clock: modules.chain.clock,
         logger: modules.logger,
         lightClientServer: modules.lightClientServer,
-        metrics: modules.metrics,
+        metrics: modules.metrics,        
       },
       opts,
       signal
@@ -46,6 +50,20 @@ export class ArchiveStore {
     signal.addEventListener("abort", () => {
       blockArchiveObserver.unsubscribe(modules.chain.emitter);
     });
+
+    const pruneLiveStateObserver = new PruneLiveStateObserver(
+      {
+        forkChoice: modules.chain.forkChoice,
+        logger: modules.logger,
+        metrics: modules.metrics,
+        regen: modules.regen,
+      },
+    );
+    pruneLiveStateObserver.subscribe(modules.chain.emitter);
+    signal.addEventListener("abort", () => {
+      pruneLiveStateObserver.unsubscribe(modules.chain.emitter);
+    });
+
 
     if (opts.archiveMode === ArchiveMode.Frequency) {
       const frequentStateArchiveObserver = new FrequentStateArchiveObserver(
@@ -65,6 +83,30 @@ export class ArchiveStore {
       frequentStateArchiveObserver.subscribe(modules.chain.emitter);
       signal.addEventListener("abort", () => {
         frequentStateArchiveObserver.unsubscribe(modules.chain.emitter);
+      });
+    }
+
+    if (opts.archiveMode === ArchiveMode.Differential) {
+      const differentialStateArchiveObserver = new DifferentialStateArchiveObserver(
+        {
+          forkChoice: modules.chain.forkChoice,
+          db: modules.db,
+          logger: modules.logger,
+          regen: modules.chain.regen,
+          getAnchorStateLatestBlockSlot() {
+            return modules.chain.anchorStateLatestBlockSlot;
+          },
+          metrics: modules.metrics,
+          config: modules.chain.config,
+          clock: modules.chain.clock,
+          historicalStateService: this.historicalStateService,
+        },
+        opts,
+        signal
+      );
+      differentialStateArchiveObserver.subscribe(modules.chain.emitter);
+      signal.addEventListener("abort", () => {
+        differentialStateArchiveObserver.unsubscribe(modules.chain.emitter);
       });
     }
   }

@@ -52,26 +52,15 @@ export class FrequentStateArchiveObserver extends LodestarQueueObserver<[Checkpo
   subscribe(emitter: ChainEventEmitter): void {
     if (this.opts.disableArchiveOnCheckpoint) return;
 
-    emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
     emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized);
   }
 
   unsubscribe(emitter: ChainEventEmitter): void {
-    emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
     emitter.off(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized);
   }
 
   private async onForkChoiceFinalized(checkpoint: CheckpointWithHex): Promise<void> {
     this.processLater(checkpoint);
-  }
-
-  private async onCheckpoint(_checkpoint: Checkpoint, _state: CachedBeaconStateAllForks): Promise<void> {
-    const headStateRoot = this.modules.forkChoice.getHead().stateRoot;
-    this.modules.regen.pruneOnCheckpoint(
-      this.modules.forkChoice.getFinalizedCheckpoint().epoch,
-      this.modules.forkChoice.getJustifiedCheckpoint().epoch,
-      headStateRoot
-    );
   }
 
   /**

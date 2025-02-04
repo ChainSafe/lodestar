@@ -29,7 +29,7 @@ export class DifferentialStateArchiveObserver extends LodestarQueueObserver<[Che
       regen: IStateRegenerator;
       getAnchorStateLatestBlockSlot: () => Slot;
       metrics: Metrics | null;
-      historicalStateService: HistoricalStateServiceApi;
+      historicalStateService?: HistoricalStateServiceApi;
     },
     private opts: ArchiveStoreOpts,
     signal: AbortSignal
@@ -48,26 +48,15 @@ export class DifferentialStateArchiveObserver extends LodestarQueueObserver<[Che
   subscribe(emitter: ChainEventEmitter): void {
     if (this.opts.disableArchiveOnCheckpoint) return;
 
-    emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
     emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized);
   }
 
   unsubscribe(emitter: ChainEventEmitter): void {
-    emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
     emitter.off(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized);
   }
 
   private async onForkChoiceFinalized(checkpoint: CheckpointWithHex): Promise<void> {
     this.processLater(checkpoint);
-  }
-
-  private async onCheckpoint(_checkpoint: Checkpoint, _state: CachedBeaconStateAllForks): Promise<void> {
-    const headStateRoot = this.modules.forkChoice.getHead().stateRoot;
-    this.modules.regen.pruneOnCheckpoint(
-      this.modules.forkChoice.getFinalizedCheckpoint().epoch,
-      this.modules.forkChoice.getJustifiedCheckpoint().epoch,
-      headStateRoot
-    );
   }
 
   protected async processQueueItem(finalized: CheckpointWithHex): Promise<void> {
@@ -90,13 +79,13 @@ export class DifferentialStateArchiveObserver extends LodestarQueueObserver<[Che
       }
 
       if (Array.isArray(state) && state.constructor === Uint8Array) {
-        return this.modules.historicalStateService.storeHistoricalState(
+        return this.modules.historicalStateService?.storeHistoricalState(
           computeStartSlotAtEpoch(finalized.epoch),
           state
         );
       }
 
-      await this.modules.historicalStateService.storeHistoricalState(
+      await this.modules.historicalStateService?.storeHistoricalState(
         (state as CachedBeaconStateAllForks).slot,
         (state as CachedBeaconStateAllForks).serialize()
       );
