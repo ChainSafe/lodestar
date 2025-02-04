@@ -30,7 +30,7 @@ export abstract class LodestarQueueObserver<QParams extends unknown[], QReturn> 
     metrics,
   }: {maxQueueLength: number; signal: AbortSignal; metrics: Metrics | null}) {
     this.metrics = metrics;
-    this.jobQueue = new JobItemQueue<QParams, QReturn>(this.processQueueItem, {
+    this.jobQueue = new JobItemQueue<QParams, QReturn>(this.processQueueItem.bind(this), {
       maxLength: maxQueueLength,
       signal,
     });

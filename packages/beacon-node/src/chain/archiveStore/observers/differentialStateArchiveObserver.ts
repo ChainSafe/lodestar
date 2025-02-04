@@ -48,7 +48,7 @@ export class DifferentialStateArchiveObserver extends LodestarQueueObserver<[Che
   subscribe(emitter: ChainEventEmitter): void {
     if (this.opts.disableArchiveOnCheckpoint) return;
 
-    emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized);
+    emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
   }
 
   unsubscribe(emitter: ChainEventEmitter): void {

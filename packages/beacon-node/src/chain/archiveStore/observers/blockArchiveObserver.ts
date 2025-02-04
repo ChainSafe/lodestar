@@ -31,7 +31,7 @@ export class BlockArchiveObserver extends LodestarQueueObserver<[CheckpointWithH
   subscribe(emitter: ChainEventEmitter): void {
     if (this.opts.disableArchiveOnCheckpoint) return;
 
-    emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized);
+    emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
   }
 
   unsubscribe(emitter: ChainEventEmitter): void {

@@ -52,7 +52,7 @@ export class FrequentStateArchiveObserver extends LodestarQueueObserver<[Checkpo
   subscribe(emitter: ChainEventEmitter): void {
     if (this.opts.disableArchiveOnCheckpoint) return;
 
-    emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized);
+    emitter.on(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
   }
 
   unsubscribe(emitter: ChainEventEmitter): void {

@@ -19,7 +19,7 @@ export class PruneLiveStateObserver implements LodestarObserver {
   }
 
   subscribe(emitter: ChainEventEmitter): void {
-    emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
+    emitter.on(ChainEvent.checkpoint, this.onCheckpoint.bind(this));
   }
 
   unsubscribe(emitter: ChainEventEmitter): void {
