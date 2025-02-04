@@ -554,12 +554,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return deserializeInclusionList(response);
   }
 
-  async updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<void> {
+  async updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<PayloadId | null> {
     const method = "engine_updatePayloadWithInclusionListV1";
-    await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+    const result = await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
       method,
       params: [payloadId, inclusionList.transactions.map(bytesToData)],
     });
+    return result !== "0x" ? payloadId : null
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

@@ -140,7 +140,7 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getInclusionListV1: InclusionListRpc;
 
-  engine_updatePayloadWithInclusionListV1: void;
+  engine_updatePayloadWithInclusionListV1: QUANTITY | null;
 };
 
 type ExecutionPayloadRpcWithValue = {
