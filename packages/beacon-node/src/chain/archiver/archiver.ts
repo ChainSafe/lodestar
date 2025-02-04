@@ -7,6 +7,7 @@ import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 import {ArchiverOpts, StateArchiveMode, StateArchiveStrategy} from "./interface.js";
+import {pruneHistory} from "./pruneHistory.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 
 export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
@@ -30,7 +31,7 @@ export class Archiver {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     signal: AbortSignal,
-    opts: ArchiverOpts,
+    private readonly opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
     if (opts.stateArchiveMode === StateArchiveMode.Frequency) {
@@ -72,7 +73,8 @@ export class Archiver {
   };
 
   private onCheckpoint = (): void => {
-    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
+    const head = this.chain.forkChoice.getHead();
+    const headStateRoot = head.stateRoot;
     this.chain.regen.pruneOnCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
       this.chain.forkChoice.getJustifiedCheckpoint().epoch,
@@ -82,6 +84,14 @@ export class Archiver {
     this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
       this.logger.error("Error during state archive", {stateArchiveMode: this.stateArchiveMode}, err);
     });
+
+    if (this.opts.pruneHistory) {
+      pruneHistory(this.db, this.logger, this.metrics, head.finalizedEpoch, this.chain.clock.currentEpoch).catch(
+        (err) => {
+          this.logger.error("Error pruning history", {}, err);
+        }
+      );
+    }
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {

@@ -242,5 +242,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
     MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
+
+    // Network
+    MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
   };
 }
