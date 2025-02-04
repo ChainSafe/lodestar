@@ -558,7 +558,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const method = "engine_updatePayloadWithInclusionListV1";
     await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
       method,
-      params: [payloadId, {transactions: inclusionList.transactions.map(bytesToData)}],
+      params: [payloadId, inclusionList.transactions.map(bytesToData)],
     });
   }
 

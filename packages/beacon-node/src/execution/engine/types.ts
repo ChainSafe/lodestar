@@ -239,10 +239,9 @@ export interface BlobsBundleRpc {
   proofs: DATA[]; // some ELs could also provide proofs, each 48 bytes
 }
 
-type InclusionListRpc = {
-  /** Array of DATA - Array of transaction objects */
-  transactions: DATA[];
-};
+/** Array of DATA - Array of transaction objects */
+type InclusionListRpc = DATA[];
+
 
 export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {
@@ -580,13 +579,11 @@ export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndP
 }
 
 export function serializeInclusionList(data: bellatrix.Transactions): InclusionListRpc {
-  return {
-    transactions: data.map((tran) => bytesToData(tran)),
-  };
+  return data.map((tran) => bytesToData(tran));
 }
 
 export function deserializeInclusionList(data: InclusionListRpc): bellatrix.Transactions {
-  return data.transactions.map((tran) => dataToBytes(tran, null));
+  return data.map((tran) => dataToBytes(tran, null));
 }
 
 export function assertReqSizeLimit(blockHashesReqCount: number, count: number): void {
