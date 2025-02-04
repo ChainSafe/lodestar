@@ -44,7 +44,7 @@ export async function replayBlocks(
     db,
     pubkey2index,
     metrics,
-  }: {config: BeaconConfig; db: IBeaconDb; pubkey2index: PubkeyIndexMap; metrics?: HistoricalStateMetrics}
+  }: {config: BeaconConfig; db: IBeaconDb; pubkey2index: PubkeyIndexMap; metrics: HistoricalStateMetrics | null}
 ): Promise<Uint8Array> {
   if (lastFullSlot + 1 !== toSlot) {
     throw new Error(`Invalid full state slot to regen historical sate. expected=${toSlot - 1} actual=${lastFullSlot}`);

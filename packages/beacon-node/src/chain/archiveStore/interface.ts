@@ -1,6 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 import {BeaconStateTransitionMetrics} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {LodestarService} from "../../interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -97,6 +98,15 @@ export enum DifferentialArchiveStrategy {
   Diff = "diff",
   BlockReplay = "blockReplay",
 }
+
+export type DifferentialStateOperation = {
+  snapshotSlot: Slot;
+  diffSlots: Slot[];
+  blockReplay?: {
+    fromSlot: Slot;
+    tillSlot: Slot;
+  };
+};
 
 export interface IBinaryDiffCodec {
   init(): Promise<void>;

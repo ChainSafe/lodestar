@@ -87,9 +87,13 @@ const api: LodestarServiceWorker<HistoricalStateServiceApi> = {
   async getHistoricalState(slot) {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
-    const stateBytes = await queue.push<Uint8Array | null>(() =>
-      getHistoricalState({slot}, {config, db, pubkey2index, logger, diffLayers, metrics: historicalStateRegenMetrics})
-    );
+    const stateBytes = await queue.push<Uint8Array | null>(async () => {
+      const res = await getHistoricalState(
+        {slot},
+        {config, db, pubkey2index, logger, diffLayers, metrics: historicalStateRegenMetrics ?? null}
+      );
+      return res.stateBytes;
+    });
 
     if (stateBytes) {
       const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
@@ -101,7 +105,10 @@ const api: LodestarServiceWorker<HistoricalStateServiceApi> = {
     return null;
   },
   async storeHistoricalState(slot, stateBytes) {
-    return putHistoricalState({slot, stateBytes}, {db, logger, diffLayers, metrics: historicalStateRegenMetrics});
+    return putHistoricalState(
+      {slot, stateBytes},
+      {db, logger, diffLayers, metrics: historicalStateRegenMetrics ?? null}
+    );
   },
 };
 

@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {DifferentialArchiveStrategy} from "../interface.js";
+import {DifferentialArchiveStrategy, DifferentialStateOperation} from "../interface.js";
 
 /**
  * Computed over dev machine with performance tests a diff patch take ~325us
@@ -75,7 +75,7 @@ export class DifferentialLayers {
     return DifferentialArchiveStrategy.BlockReplay;
   }
 
-  getArchiveLayers(slot: Slot): Slot[] {
+  getOperation(slot: Slot): DifferentialStateOperation {
     const path: Slot[] = [];
     let lastSlot: number | undefined = undefined;
 
@@ -86,7 +86,27 @@ export class DifferentialLayers {
         path.push(newSlot);
       }
     }
-    return [...new Set(path)];
+    const layers = [...new Set(path)];
+    const snapshotSlot = layers[0];
+    const diffSlots = layers.slice(1);
+    const lastDiffSlot = diffSlots[diffSlots.length - 1];
+
+    if (slot === lastDiffSlot || slot === snapshotSlot) {
+      return {
+        snapshotSlot,
+        diffSlots,
+        blockReplay: undefined,
+      };
+    }
+
+    return {
+      snapshotSlot,
+      diffSlots,
+      blockReplay: {
+        fromSlot: lastDiffSlot ? lastDiffSlot + 1 : snapshotSlot + 1,
+        tillSlot: slot,
+      },
+    };
   }
 
   getLastSlotForLayer(slot: Slot, layer: number): Slot {

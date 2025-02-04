@@ -59,27 +59,27 @@ describe("DifferentialLayers", () => {
     });
   });
 
-  describe("getArchiveLayers", () => {
+  describe("getOperation", () => {
     it("should return one layer for genesis slot", () => {
-      expect(diffLayers.getArchiveLayers(0)).toEqual([0]);
+      expect(diffLayers.getOperation(0)).toEqual({snapshotSlot: 0, diffSlots: []});
     });
 
     // Please see following [doc](../../../../docs/pages/contribution/advance-topics/historical-state-regen.md) for understanding of these fixtures
     it.each([
-      {slot: 2, path: [0]},
-      {slot: 7, path: [0]},
-      {slot: 8, path: [0, 8]},
-      {slot: 10, path: [0, 8]},
-      {slot: 18, path: [0, 16]},
-      {slot: 22, path: [0, 16]},
-      {slot: 25, path: [0, 24]},
-      {slot: 31, path: [0, 24]},
-      {slot: 33, path: [0, 24, 32]},
-      {slot: 38, path: [0, 24, 32]},
-      {slot: 40, path: [40]},
-      {slot: 42, path: [40]},
-    ])("should return valid layers for slot $slot", ({slot, path}) => {
-      expect(diffLayers.getArchiveLayers(slot)).toEqual(path);
+      {slot: 2, operation: {snapshotSlot: 0, diffSlots: [], blockReplay: {fromSlot: 1, toSlot: 2}}},
+      {slot: 7, operation: {snapshotSlot: 0, diffSlots: [], blockReplay: {fromSlot: 1, toSlot: 7}}},
+      {slot: 8, operation: {snapshotSlot: 0, diffSlots: [8]}},
+      {slot: 10, operation: {snapshotSlot: 0, diffSlots: [8], blockReplay: {fromSlot: 9, toSlot: 10}}},
+      {slot: 18, operation: {snapshotSlot: 0, diffSlots: [16], blockReplay: {fromSlot: 17, toSlot: 18}}},
+      {slot: 22, operation: {snapshotSlot: 0, diffSlots: [16], blockReplay: {fromSlot: 17, toSlot: 22}}},
+      {slot: 25, operation: {snapshotSlot: 0, diffSlots: [24], blockReplay: {fromSlot: 25, toSlot: 25}}},
+      {slot: 31, operation: {snapshotSlot: 0, diffSlots: [24], blockReplay: {fromSlot: 25, toSlot: 31}}},
+      {slot: 33, operation: {snapshotSlot: 0, diffSlots: [24, 32], blockReplay: {fromSlot: 33, toSlot: 33}}},
+      {slot: 38, operation: {snapshotSlot: 0, diffSlots: [24, 32], blockReplay: {fromSlot: 33, toSlot: 38}}},
+      {slot: 40, operation: {snapshotSlot: 40, diffSlots: []}},
+      {slot: 42, operation: {snapshotSlot: 40, diffSlots: [], blockReplay: {fromSlot: 41, toSlot: 42}}},
+    ])("should return valid layers for slot $slot", ({slot, operation}) => {
+      expect(diffLayers.getOperation(slot)).toEqual(operation);
     });
   });
 });
