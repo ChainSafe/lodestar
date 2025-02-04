@@ -12,6 +12,13 @@ import {DifferentialLayers} from "./differentialLayers.js";
 
 export const codec: IBinaryDiffCodec = new XDelta3Codec();
 
+type CommonModules = {
+  db: IBeaconDb;
+  logger: Logger;
+  diffLayers: DifferentialLayers;
+  metrics?: HistoricalStateMetrics;
+};
+
 export async function getHistoricalState(
   {slot}: {slot: Slot},
   {
@@ -21,13 +28,9 @@ export async function getHistoricalState(
     metrics,
     diffLayers,
     pubkey2index,
-  }: {
-    config: BeaconConfig;
-    db: IBeaconDb;
+  }: CommonModules & {
     pubkey2index: PubkeyIndexMap;
-    logger: Logger;
-    diffLayers: DifferentialLayers;
-    metrics?: HistoricalStateMetrics;
+    config: BeaconConfig;
   }
 ): Promise<Uint8Array | null> {
   const regenTimer = metrics?.regenTime.startTimer();
@@ -77,17 +80,7 @@ export async function getHistoricalState(
 
 export async function putHistoricalState(
   {slot, stateBytes}: {slot: Slot; stateBytes: Uint8Array},
-  {
-    db,
-    logger,
-    metrics,
-    diffLayers,
-  }: {
-    db: IBeaconDb;
-    logger: Logger;
-    metrics?: HistoricalStateMetrics;
-    diffLayers: DifferentialLayers;
-  }
+  {db, logger, metrics, diffLayers}: CommonModules
 ): Promise<void> {
   const epoch = computeEpochAtSlot(slot);
   const strategy = diffLayers.getArchiveStrategy(slot);
@@ -141,12 +134,7 @@ export async function getLastStoredState({
   diffLayers,
   metrics,
   logger,
-}: {
-  db: IBeaconDb;
-  diffLayers: DifferentialLayers;
-  metrics?: HistoricalStateMetrics;
-  logger?: Logger;
-}): Promise<{stateBytes: Uint8Array | null; slot: Slot | null}> {
+}: CommonModules): Promise<{stateBytes: Uint8Array | null; slot: Slot | null}> {
   const lastStoredDiffSlot = await db.stateDiffArchive.lastKey();
   const lastStoredSnapshotSlot = await db.stateSnapshotArchive.lastKey();
 
@@ -238,11 +226,7 @@ export async function getDiffState(
     logger,
     diffLayers,
     codec,
-  }: {
-    db: IBeaconDb;
-    metrics?: HistoricalStateMetrics;
-    logger?: Logger;
-    diffLayers: DifferentialLayers;
+  }: CommonModules & {
     codec: IBinaryDiffCodec;
   }
 ): Promise<{diffStateBytes: Uint8Array | null; diffSlots: Slot[]}> {
