@@ -1,11 +1,11 @@
-import { IForkChoice } from "@lodestar/fork-choice";
-import { CachedBeaconStateAllForks } from "@lodestar/state-transition";
-import { Checkpoint } from "@lodestar/types/lib/phase0/types.js";
-import { Logger } from "@lodestar/utils";
-import { LodestarObserver } from "../../../interface.js";
-import { Metrics } from "../../../metrics/metrics.js";
-import { ChainEvent, ChainEventEmitter } from "../../emitter.js";
-import { IStateRegenerator } from "../../regen/interface.js";
+import {IForkChoice} from "@lodestar/fork-choice";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Checkpoint} from "@lodestar/types/lib/phase0/types.js";
+import {Logger} from "@lodestar/utils";
+import {LodestarObserver} from "../../../interface.js";
+import {Metrics} from "../../../metrics/metrics.js";
+import {ChainEvent, ChainEventEmitter} from "../../emitter.js";
+import {IStateRegenerator} from "../../regen/interface.js";
 
 export class PruneLiveStateObserver implements LodestarObserver {
   constructor(
@@ -14,9 +14,8 @@ export class PruneLiveStateObserver implements LodestarObserver {
       forkChoice: IForkChoice;
       regen: IStateRegenerator;
       metrics: Metrics | null;
-    },
-  ) {
-  }
+    }
+  ) {}
 
   subscribe(emitter: ChainEventEmitter): void {
     emitter.on(ChainEvent.checkpoint, this.onCheckpoint.bind(this));

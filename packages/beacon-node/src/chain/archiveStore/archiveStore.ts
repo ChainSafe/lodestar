@@ -4,13 +4,13 @@ import {IBeaconDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IBeaconChain} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
+import {IStateRegenerator} from "../regen/interface.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./interface.js";
 import {BlockArchiveObserver} from "./observers/blockArchiveObserver.js";
+import {DifferentialStateArchiveObserver} from "./observers/differentialStateArchiveObserver.js";
 import {FrequentStateArchiveObserver} from "./observers/frequentStateArchiveObserver.js";
+import {PruneLiveStateObserver} from "./observers/pruneLiveStateObserver.js";
 import {HistoricalStateService} from "./services/historicalStateService.js";
-import { PruneLiveStateObserver } from "./observers/pruneLiveStateObserver.js";
-import { IStateRegenerator } from "../regen/interface.js";
-import { DifferentialStateArchiveObserver } from "./observers/differentialStateArchiveObserver.js";
 
 const unutilizedHistoryServiceError = new Error("Historical State Service is not yet started.");
 
@@ -40,7 +40,7 @@ export class ArchiveStore {
         clock: modules.chain.clock,
         logger: modules.logger,
         lightClientServer: modules.lightClientServer,
-        metrics: modules.metrics,        
+        metrics: modules.metrics,
       },
       opts,
       signal
@@ -51,19 +51,16 @@ export class ArchiveStore {
       blockArchiveObserver.unsubscribe(modules.chain.emitter);
     });
 
-    const pruneLiveStateObserver = new PruneLiveStateObserver(
-      {
-        forkChoice: modules.chain.forkChoice,
-        logger: modules.logger,
-        metrics: modules.metrics,
-        regen: modules.regen,
-      },
-    );
+    const pruneLiveStateObserver = new PruneLiveStateObserver({
+      forkChoice: modules.chain.forkChoice,
+      logger: modules.logger,
+      metrics: modules.metrics,
+      regen: modules.regen,
+    });
     pruneLiveStateObserver.subscribe(modules.chain.emitter);
     signal.addEventListener("abort", () => {
       pruneLiveStateObserver.unsubscribe(modules.chain.emitter);
     });
-
 
     if (opts.archiveMode === ArchiveMode.Frequency) {
       const frequentStateArchiveObserver = new FrequentStateArchiveObserver(
