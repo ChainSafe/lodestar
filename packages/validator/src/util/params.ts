@@ -135,6 +135,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
@@ -242,8 +243,5 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
     MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
-
-    // Network
-    MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
   };
 }

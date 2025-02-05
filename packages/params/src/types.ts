@@ -95,9 +95,6 @@ export type BeaconPreset = {
   PENDING_CONSOLIDATIONS_LIMIT: number;
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: number;
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: number;
-
-  // Network
-  MIN_EPOCHS_FOR_BLOCK_REQUESTS: number;
 };
 
 /**
@@ -198,9 +195,6 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   PENDING_CONSOLIDATIONS_LIMIT: "number",
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: "number",
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: "number",
-
-  // Network
-  MIN_EPOCHS_FOR_BLOCK_REQUESTS: "number",
 };
 
 type BeaconPresetTypes = {

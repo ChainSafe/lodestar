@@ -195,6 +195,7 @@ export class BeaconNode {
       // prune ALL stale data before starting
       logger.info("Pruning historical data");
       await pruneHistory(
+        config,
         db,
         logger,
         metrics,

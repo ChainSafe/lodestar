@@ -94,6 +94,8 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // [customized] `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 272)
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: 272,
 
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)

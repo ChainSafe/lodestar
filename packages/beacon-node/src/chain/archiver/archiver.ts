@@ -100,7 +100,14 @@ export class Archiver {
         this.archiveBlobEpochs
       );
       if (this.opts.pruneHistory) {
-        await pruneHistory(this.db, this.logger, this.metrics, finalizedEpoch, this.chain.clock.currentEpoch);
+        await pruneHistory(
+          this.chain.config,
+          this.db,
+          this.logger,
+          this.metrics,
+          finalizedEpoch,
+          this.chain.clock.currentEpoch
+        );
       }
 
       this.prevFinalized = finalized;

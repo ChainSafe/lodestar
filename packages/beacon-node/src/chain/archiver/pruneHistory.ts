@@ -1,5 +1,4 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {MIN_EPOCHS_FOR_BLOCK_REQUESTS} from "@lodestar/params";
+import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -22,6 +21,7 @@ const MAX_BLOCKS_TO_DELETE = 4096;
 const MAX_STATES_TO_DELETE = 256;
 
 export async function pruneHistory(
+  config: ChainConfig,
   db: IBeaconDb,
   logger: Logger,
   metrics: Metrics | null | undefined,
@@ -30,9 +30,10 @@ export async function pruneHistory(
   maxBlocksToDelete = MAX_BLOCKS_TO_DELETE,
   maxStatesToDelete = MAX_STATES_TO_DELETE
 ): Promise<void> {
-  // prune from 0 to blockCutoffEpoch, up to a limit
   const blockCutoffEpoch = Math.min(
-    Math.max(currentEpoch - MIN_EPOCHS_FOR_BLOCK_REQUESTS, 0), // set by config, with underflow protection
+    // set by config, with underflow protection
+    Math.max(currentEpoch - config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, 0),
+    // ensure that during (extremely lol) long periods of non-finality we don't delete unfinalized epoch data
     finalizedEpoch
   );
   const blockCutoffSlot = computeStartSlotAtEpoch(blockCutoffEpoch);

@@ -71,6 +71,7 @@ export type ChainConfig = {
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
 
   // Networking
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: number;
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
   BLOB_SIDECAR_SUBNET_COUNT: number;
   MAX_BLOBS_PER_BLOCK: number;
@@ -141,6 +142,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
 
   // Networking
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: "number",
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
   MAX_BLOBS_PER_BLOCK: "number",
