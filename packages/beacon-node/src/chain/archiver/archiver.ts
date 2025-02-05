@@ -73,8 +73,7 @@ export class Archiver {
   };
 
   private onCheckpoint = (): void => {
-    const head = this.chain.forkChoice.getHead();
-    const headStateRoot = head.stateRoot;
+    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
     this.chain.regen.pruneOnCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
       this.chain.forkChoice.getJustifiedCheckpoint().epoch,
@@ -84,14 +83,6 @@ export class Archiver {
     this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
       this.logger.error("Error during state archive", {stateArchiveMode: this.stateArchiveMode}, err);
     });
-
-    if (this.opts.pruneHistory) {
-      pruneHistory(this.db, this.logger, this.metrics, head.finalizedEpoch, this.chain.clock.currentEpoch).catch(
-        (err) => {
-          this.logger.error("Error pruning history", {}, err);
-        }
-      );
-    }
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
@@ -108,6 +99,10 @@ export class Archiver {
         this.chain.clock.currentEpoch,
         this.archiveBlobEpochs
       );
+      if (this.opts.pruneHistory) {
+        await pruneHistory(this.db, this.logger, this.metrics, finalizedEpoch, this.chain.clock.currentEpoch);
+      }
+
       this.prevFinalized = finalized;
 
       await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);

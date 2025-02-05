@@ -26,7 +26,9 @@ export async function pruneHistory(
   logger: Logger,
   metrics: Metrics | null | undefined,
   finalizedEpoch: Epoch,
-  currentEpoch: Epoch
+  currentEpoch: Epoch,
+  maxBlocksToDelete = MAX_BLOCKS_TO_DELETE,
+  maxStatesToDelete = MAX_STATES_TO_DELETE
 ): Promise<void> {
   // prune from 0 to cutoffEpoch, up to a limit (MAX_BLOCKS/STATES_TO_DELETE)
   const cutoffEpoch = Math.min(
@@ -43,8 +45,8 @@ export async function pruneHistory(
 
   const step0 = metrics?.pruneHistory.fetchKeys.startTimer();
   const [blocks, states] = await Promise.all([
-    db.blockArchive.keys({gte: 0, lte: cutoffSlot, limit: MAX_BLOCKS_TO_DELETE}),
-    db.stateArchive.keys({gte: 0, lte: cutoffEpoch, limit: MAX_STATES_TO_DELETE}),
+    db.blockArchive.keys({gte: 0, lte: cutoffSlot, limit: maxBlocksToDelete}),
+    db.stateArchive.keys({gte: 0, lte: cutoffEpoch, limit: maxStatesToDelete}),
   ]);
   step0?.();
 
