@@ -257,8 +257,11 @@ export class PrepareNextSlotScheduler {
    * Schedule task to update payload with inclusion list transactions that gathered up to `PROPOSER_INCLUSION_LIST_CUT_OFF`
    */
   async schedulePayloadInclusionListUpdate(payloadId: PayloadId, clockSlot: Slot): Promise<void> {
+    // TODO FOCIL: Hard-coding sleepTime to 500ms for testing purpose. Revert it back after done testing
+    // const sleepTime = Math.max(0.5, (this.config.PROPOSER_INCLUSION_LIST_CUT_OFF - this.chain.clock.secFromSlot(clockSlot)) * 1000);
+    const sleepTime = 0.5 * 1000;
     await sleep(
-      Math.max(0, (this.config.PROPOSER_INCLUSION_LIST_CUT_OFF - this.chain.clock.secFromSlot(clockSlot)) * 1000),
+      sleepTime,
       this.signal
     );
 
