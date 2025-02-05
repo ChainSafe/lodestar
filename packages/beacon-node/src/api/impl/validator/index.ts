@@ -41,6 +41,7 @@ import {
   ValidatorIndex,
   Wei,
   bellatrix,
+  focil,
   getValidatorStatus,
   isBlindedBeaconBlock,
   isBlockContents,
@@ -82,6 +83,7 @@ import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
+import { getBlockResponse } from "../beacon/blocks/utils.js";
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -1013,17 +1015,22 @@ export function getValidatorApi(
       const headState = chain.getAttesterHeadState();
       const headSlot = headState.slot;
       const headBlockRootHex = chain.forkChoice.getAttesterHead().blockRoot;
-      const headBlockRoot = fromHex(headBlockRootHex);
 
-      const beaconBlockRoot =
+      const beaconBlockRootHex =
         slot >= headSlot
           ? // When attesting to the head slot or later, always use the head of the chain.
-            headBlockRoot
+          headBlockRootHex
           : // Permit attesting to slots *prior* to the current head. This is desirable when
             // the VC and BN are out-of-sync due to time issues or overloading.
-            getBlockRootAtSlot(headState, slot);
+            toHex(getBlockRootAtSlot(headState, slot));
 
-      const ilTransactions = await chain.executionEngine.getInclusionList(toRootHex(beaconBlockRoot));
+      
+      const block = (await getBlockResponse(chain, beaconBlockRootHex)).block;
+      const executionPayload = (block as focil.SignedBeaconBlock).message.body.executionPayload;
+      const blockHash = toHex(executionPayload.blockHash);
+      logger.debug("produce inclusion list", {blockHash});
+
+      const ilTransactions = await chain.executionEngine.getInclusionList(blockHash);
 
       return {
         data: ilTransactions,
