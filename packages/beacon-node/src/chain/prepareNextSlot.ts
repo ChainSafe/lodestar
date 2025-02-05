@@ -249,8 +249,6 @@ export class PrepareNextSlotScheduler {
           await this.chain.notifyForkchoiceUpdate();
         }
       }
-
-
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
