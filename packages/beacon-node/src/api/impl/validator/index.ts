@@ -1008,6 +1008,11 @@ export function getValidatorApi(
     async produceInclusionList({slot}) {
       notWhileSyncing();
 
+      const fork = chain.config.getForkName(slot);
+      if (!isForkPostFocil(fork)) {
+        throw new ApiError(400, `Producing inclusion list for pre-focil slot: ${slot}`);
+      }
+
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
@@ -1274,6 +1279,11 @@ export function getValidatorApi(
         throw new ApiError(400, "No validator to get inclusion list committee duties");
       }
 
+      const fork = chain.config.getForkName(computeStartSlotAtEpoch(epoch));
+      if (!isForkPostFocil(fork)) {
+        throw new ApiError(400, `Requesting pre-focil inclusion list committeee duties epoch: ${epoch}`);
+      }
+
       // May request for an epoch that's in the future
       await waitForNextClosestEpoch();
 
@@ -1506,12 +1516,17 @@ export function getValidatorApi(
       notWhileSyncing();
 
       // TODO FOCIL: Add error handling
+      const slot = signedInclusionList.message.slot;
+      const fork = chain.config.getForkName(slot);
+      if (!isForkPostFocil(fork)) {
+        throw new ApiError(400, `Publishing pre-focil inclusion list slot: ${slot}`);
+      }
 
       await validateApiInclusionList(chain, signedInclusionList);
 
       chain.inclusionListPool.add(signedInclusionList);
 
-      const secFromSlot = chain.clock.secFromSlot(signedInclusionList.message.slot, Date.now() / 1000);
+      const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
       chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {

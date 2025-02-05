@@ -7,10 +7,13 @@ import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
+import { ChainForkConfig } from "@lodestar/config";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 // TODO FOCIL: Do we need 2 epochs like attestations?
 const HISTORICAL_DUTIES_EPOCHS = 2;
+
+const EIP7805_FORK_LOOKAHEAD_EPOCHS = 1;
 
 type InclusionListDuty = routes.validator.InclusionListDuty;
 // To assist with readability
@@ -31,6 +34,7 @@ export class InclusionListDutiesService {
   private readonly pendingDependentRootByEpoch = new Map<Epoch, RootHex>();
 
   constructor(
+    private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
     private clock: IClock,
@@ -93,6 +97,11 @@ export class InclusionListDutiesService {
   };
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
+    // Before focil fork (+ lookahead) no need to check duties
+    if (epoch < this.config.EIP7805_FORK_EPOCH - EIP7805_FORK_LOOKAHEAD_EPOCHS) {
+      return;
+    }
+
     await Promise.all([
       // Run pollInclusionListCommittee immediately for all known local indices
       this.pollInclusionListCommittee(epoch, this.validatorStore.getAllLocalIndices()).catch((e: Error) => {

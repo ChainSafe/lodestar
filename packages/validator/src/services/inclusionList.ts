@@ -2,13 +2,13 @@ import {ApiClient} from "@lodestar/api";
 import {InclusionListDutyList} from "@lodestar/api/lib/beacon/routes/validator.js";
 import {Slot, bellatrix, focil} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {Metrics} from "../metrics.js";
 import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 import {InclusionListDutiesService} from "./inclusionListDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
+import { ChainForkConfig } from "@lodestar/config";
 
 /**
  * Service that sets up and handles validator inclusion list duties.
@@ -17,6 +17,7 @@ export class InclusionListService {
   private readonly dutiesService: InclusionListDutiesService;
 
   constructor(
+    private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
     private readonly clock: IClock,
@@ -26,6 +27,7 @@ export class InclusionListService {
     syncingStatusTracker: SyncingStatusTracker
   ) {
     this.dutiesService = new InclusionListDutiesService(
+      config,
       logger,
       api,
       clock,
