@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra, ZERO_HASH_HEX} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -49,6 +49,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {isQueueErrorAborted} from "../util/queue/errors.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {Archiver} from "./archiver/archiver.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
@@ -812,6 +813,38 @@ export class BeaconChain implements IBeaconChain {
       throw e;
     } finally {
       timer?.();
+    }
+  }
+
+  async notifyForkchoiceUpdate(): Promise<void> {
+    /**
+     * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
+     * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
+     * So we must check that:
+     * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
+     * - `headBlockHash !== ZERO_HASH` -> Pre TTD
+     */
+    const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    /**
+     * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
+     * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
+     * zero block hash (pre TTD)
+     */
+    const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    if (headBlockHash !== ZERO_HASH_HEX) {
+      try {
+        await this.executionEngine.notifyForkchoiceUpdate(
+          this.config.getForkName(this.forkChoice.getHead().slot),
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash
+        );
+      } catch (e) {
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e as Error);
+        }
+      }
     }
   }
 
