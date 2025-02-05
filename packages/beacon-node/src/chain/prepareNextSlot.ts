@@ -24,6 +24,11 @@ import {RegenCaller} from "./regen/index.js";
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
 
+// this parameter has been tested for a long time in lighthouse
+// see https://github.com/sigp/lighthouse/blob/v6.0.1/beacon_node/beacon_chain/src/state_advance_timer.rs#L147
+/* With 12s slot time, this will run 500ms before the next slot */
+export const FORK_CHOICE_LOOKAHEAD_FACTOR = 24;
+
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
 
@@ -124,9 +129,9 @@ export class PrepareNextSlotScheduler {
         RegenCaller.precomputeEpoch
       );
 
+      const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
+      const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
       if (isExecutionStateType(prepareState)) {
-        const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
-        const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         let updatedPrepareState = prepareState;
         let updatedHeadRoot = headRoot;
 
@@ -170,6 +175,7 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
+          // this will also issue fcu call to the EL
           await prepareExecutionPayload(
             this.chain,
             this.logger,
@@ -202,6 +208,7 @@ export class PrepareNextSlotScheduler {
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
       } else {
+        // before bellatrix
         this.computeStateHashTreeRoot(prepareState, isEpochTransition);
       }
 
@@ -228,6 +235,22 @@ export class PrepareNextSlotScheduler {
 
         precomputeEpochTransitionTimer?.();
       }
+
+      // Update EL with fcu 23/24s of the way through the slot (11.5s on mainnet)
+      // this accounts for super late blocks, there is no motivation to update the EL sooner anyway
+      if (isExecutionStateType(prepareState)) {
+        const secFromClockSlot = this.chain.clock.secFromSlot(clockSlot);
+        const secToPrepareSlot = Math.max(this.config.SECONDS_PER_SLOT - secFromClockSlot, 0);
+        const forkchoiceOffset = this.config.SECONDS_PER_SLOT / FORK_CHOICE_LOOKAHEAD_FACTOR;
+        await sleep(secToPrepareSlot - forkchoiceOffset, this.signal);
+
+        // if we're proposer, we already issue fcu when building block in prepareExecutionPayload() call above
+        if (!feeRecipient) {
+          await this.chain.notifyForkchoiceUpdate();
+        }
+      }
+
+
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);

@@ -9,12 +9,10 @@ import {
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {BeaconBlock, altair, capella, ssz} from "@lodestar/types";
-import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
-import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -65,7 +63,6 @@ export async function importBlock(
   const blockRootHex = toRootHex(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(blockSlot);
-  const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
@@ -210,7 +207,6 @@ export async function importBlock(
 
   const oldHead = this.forkChoice.getHead();
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
-  const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
@@ -291,45 +287,11 @@ export async function importBlock(
   }
 
   // 6. Queue notifyForkchoiceUpdate to engine api
-  //
-  // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change in response to an onBlock event
-  // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
-  // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
-  // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
-  if (
-    !this.opts.disableImportExecutionFcU &&
-    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch)
-  ) {
-    /**
-     * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
-     * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
-     * So we must check that:
-     * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
-     * - `headBlockHash !== ZERO_HASH` -> Pre TTD
-     */
-    const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    /**
-     * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
-     * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
-     * zero block hash (pre TTD)
-     */
-    const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    if (headBlockHash !== ZERO_HASH_HEX) {
-      this.executionEngine
-        .notifyForkchoiceUpdate(
-          this.config.getForkName(this.forkChoice.getHead().slot),
-          headBlockHash,
-          safeBlockHash,
-          finalizedBlockHash
-        )
-        .catch((e) => {
-          if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-            this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-          }
-        });
-    }
-  }
+  // This is delayed to 4s before the next slot in PrepareNextSlotScheduler
+  // We should not be rush notifying EL, lighthouse even do it 500ms before the next slot
+  // If this block turns out to be a weak head and we're the next proposer, calling fcu with
+  // this block too early could cause the EL to ignore the next fcu call to build block with reorg data.
+  // see https://github.com/ChainSafe/lodestar/issues/7235
 
   if (!isStateValidatorsNodesPopulated(postState)) {
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
