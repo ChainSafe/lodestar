@@ -57,7 +57,7 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
 
   // [IGNORE] The inclusion_list_committee for slot message.slot on the current branch corresponds to message.inclusion_list_committee_root, as determined by hash_tree_root(inclusion_list_committee) == message.inclusion_list_committee_root.
   const inclusionListCommitteeRootFromShuffling = shuffling.inclusionListCommitteeRoots[slot % SLOTS_PER_EPOCH];
-  if (inclusionListCommitteeRoot !== inclusionListCommitteeRootFromShuffling) {
+  if (Buffer.compare(inclusionListCommitteeRoot, inclusionListCommitteeRootFromShuffling) !== 0) {
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT,
       received: inclusionListCommitteeRoot,
