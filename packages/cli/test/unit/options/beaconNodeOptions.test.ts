@@ -143,6 +143,7 @@ describe("options / beaconNodeOptions", () => {
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
         archiveStateEpochFrequency: 1024,
+        pruneHistory: true,
         emitPayloadAttributes: false,
         trustedSetup: "",
         minSameMessageSignatureSetsToBatch: 32,
