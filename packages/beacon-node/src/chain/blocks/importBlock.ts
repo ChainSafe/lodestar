@@ -287,10 +287,9 @@ export async function importBlock(
   }
 
   // 6. Queue notifyForkchoiceUpdate to engine api
-  // This is delayed to 4s before the next slot in PrepareNextSlotScheduler
-  // We should not be rush notifying EL, lighthouse even do it 500ms before the next slot
-  // If this block turns out to be a weak head and we're the next proposer, calling fcu with
-  // this block too early could cause the EL to ignore the next fcu call to build block with reorg data.
+  // This is delayed to 500ms before the next slot in PrepareNextSlotScheduler (the same to lighthouse)
+  // We should not be rush notifying EL, because if this block turns out to be a weak head and we're the next proposer,
+  // calling fcu with this block too early causes the EL to ignore the next fcu call to build block with reorg data.
   // see https://github.com/ChainSafe/lodestar/issues/7235
 
   if (!isStateValidatorsNodesPopulated(postState)) {
