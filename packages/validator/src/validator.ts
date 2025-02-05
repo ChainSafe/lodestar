@@ -22,6 +22,7 @@ import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slas
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Clock, IClock} from "./util/clock.js";
 import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
+import { InclusionListService } from "./services/inclusionList.js";
 
 export type ValidatorModules = {
   opts: ValidatorOptions;
@@ -31,6 +32,7 @@ export type ValidatorModules = {
   blockProposingService: BlockProposingService;
   attestationService: AttestationService;
   syncCommitteeService: SyncCommitteeService;
+  inclusionListService: InclusionListService;
   config: BeaconConfig;
   api: ApiClient;
   clock: IClock;
@@ -86,6 +88,7 @@ export class Validator {
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
+  private readonly inclusionListService: InclusionListService;
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
   private readonly clock: IClock;
@@ -104,6 +107,7 @@ export class Validator {
     blockProposingService,
     attestationService,
     syncCommitteeService,
+    inclusionListService,
     config,
     api,
     clock,
@@ -120,6 +124,7 @@ export class Validator {
     this.blockProposingService = blockProposingService;
     this.attestationService = attestationService;
     this.syncCommitteeService = syncCommitteeService;
+    this.inclusionListService = inclusionListService;
     this.config = config;
     this.api = api;
     this.clock = clock;
@@ -264,6 +269,17 @@ export class Validator {
       }
     );
 
+    const inclusionListService = new InclusionListService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeaderTracker,
+      syncingStatusTracker,
+    );
+
+
     return new Validator({
       opts,
       genesis,
@@ -272,6 +288,7 @@ export class Validator {
       blockProposingService,
       attestationService,
       syncCommitteeService,
+      inclusionListService,
       config,
       api,
       clock,
@@ -339,6 +356,7 @@ export class Validator {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
+    // this.inclusionListService.removeDutiesForKey(pubkey); TODO FOCIL: implement removeDutiesForKey for IL
   }
 
   /**
