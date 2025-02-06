@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {callFnWhenAwait, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
@@ -193,16 +193,20 @@ export class BeaconNode {
 
     if (opts.chain.pruneHistory) {
       // prune ALL stale data before starting
-      logger.info("Pruning historical data");
-      await pruneHistory(
-        config,
-        db,
-        logger,
-        metrics,
-        anchorState.finalizedCheckpoint.epoch,
-        clock.currentEpoch,
-        Infinity,
-        Infinity
+      await callFnWhenAwait(
+        pruneHistory(
+          config,
+          db,
+          logger,
+          metrics,
+          anchorState.finalizedCheckpoint.epoch,
+          clock.currentEpoch,
+          Infinity,
+          Infinity
+        ),
+        () => logger.info("Pruning historical data..."),
+        30_000,
+        signal
       );
     }
 
