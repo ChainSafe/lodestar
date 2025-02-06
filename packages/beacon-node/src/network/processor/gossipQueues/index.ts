@@ -1,5 +1,5 @@
 import {mapValues} from "@lodestar/utils";
-import {getGossipAttestationIndex} from "../../../util/sszBytes.js";
+import {getBeaconAttestationGossipIndex} from "../../../util/sszBytes.js";
 import {BatchGossipType, GossipType, SequentialGossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";
 import {IndexedGossipQueueMinSize} from "./indexed.js";
@@ -72,8 +72,7 @@ const indexedGossipQueueOpts: {
     // this topic may cause node to be overload and drop 100% of lower priority queues
     maxLength: 24576,
     indexFn: (item: PendingGossipsubMessage) => {
-      // Note indexFn is fork agnostic despite changes introduced in Electra
-      return getGossipAttestationIndex(item.msg.data);
+      return getBeaconAttestationGossipIndex(item.topic.fork, item.msg.data);
     },
     minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
     maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,

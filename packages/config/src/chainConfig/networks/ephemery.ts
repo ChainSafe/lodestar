@@ -37,6 +37,9 @@ const baseChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x5000101b"),
   DENEB_FORK_EPOCH: 5,
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x6000101b"),
+  ELECTRA_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------

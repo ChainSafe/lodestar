@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {toHexString} from "../../src/bytes.js";
 import {toHex as browserToHex, toRootHex as browserToRootHex} from "../../src/bytes/browser.js";
 import {toHex, toRootHex} from "../../src/bytes/nodejs.js";
@@ -7,7 +7,7 @@ describe("bytes utils", () => {
   const runsFactor = 1000;
   const blockRoot = new Uint8Array(Array.from({length: 32}, (_, i) => i));
 
-  itBench({
+  bench({
     id: "nodejs block root to RootHex using toHex",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -17,7 +17,7 @@ describe("bytes utils", () => {
     runsFactor,
   });
 
-  itBench({
+  bench({
     id: "nodejs block root to RootHex using toRootHex",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -27,7 +27,7 @@ describe("bytes utils", () => {
     runsFactor,
   });
 
-  itBench({
+  bench({
     id: "browser block root to RootHex using the deprecated toHexString",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -37,7 +37,7 @@ describe("bytes utils", () => {
     runsFactor,
   });
 
-  itBench({
+  bench({
     id: "browser block root to RootHex using toHex",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -47,7 +47,7 @@ describe("bytes utils", () => {
     runsFactor,
   });
 
-  itBench({
+  bench({
     id: "browser block root to RootHex using toRootHex",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {

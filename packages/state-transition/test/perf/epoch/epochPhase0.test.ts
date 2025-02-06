@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {processEpoch} from "../../../src/epoch/index.js";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
@@ -17,7 +17,7 @@ import {
   beforeProcessEpoch,
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
-import {LazyValue, beforeValue} from "../../utils/beforeValueMocha.js";
+import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {getNetworkCachedState} from "../../utils/testFileCache.js";
 import {phase0State} from "../params.js";
 import {StateEpoch} from "../types.js";
@@ -37,7 +37,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
     return state;
   }, 300_000);
 
-  itBench({
+  bench({
     id: `phase0 processEpoch - ${stateId}`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => {
@@ -78,7 +78,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   // processHistoricalRootsUpdate        | 0.000 ms/op |
   // processParticipationRecordUpdates   | 0.000 ms/op |
 
-  itBench({
+  bench({
     id: `${stateId} - phase0 beforeProcessEpoch`,
     fn: () => {
       beforeProcessEpoch(stateOg.value);
@@ -86,28 +86,28 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   });
 
   // Very cheap 187.21 us/op and unstable, skip in CI
-  itBench({
+  bench({
     id: `${stateId} - phase0 processJustificationAndFinalization`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processJustificationAndFinalization(state, cache.value),
   });
 
   // Very expensive 976.40 ms/op good target to optimize
-  itBench({
+  bench({
     id: `${stateId} - phase0 processRewardsAndPenalties`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
     fn: (state) => processRewardsAndPenalties(state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 17.715 us/op
-  itBench({
+  bench({
     id: `${stateId} - phase0 processRegistryUpdates`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processRegistryUpdates(ForkSeq.phase0, state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
-  itBench({
+  bench({
     id: `${stateId} - phase0 processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
     fn: (state) => {
@@ -115,13 +115,13 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - phase0 processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processEth1DataReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - phase0 processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => {
@@ -129,31 +129,31 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - phase0 processSlashingsReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processSlashingsReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - phase0 processRandaoMixesReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processRandaoMixesReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - phase0 processHistoricalRootsUpdate`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processHistoricalRootsUpdate(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - phase0 processParticipationRecordUpdates`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
     fn: (state) => processParticipationRecordUpdates(state),
   });
 
-  itBench<StateEpoch, StateEpoch>({
+  bench<StateEpoch, StateEpoch>({
     id: `${stateId} - phase0 afterProcessEpoch`,
     // Compute a state and cache after running processEpoch() since those values are mutated
     before: () => {

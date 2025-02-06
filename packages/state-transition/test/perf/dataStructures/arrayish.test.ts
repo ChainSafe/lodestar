@@ -1,5 +1,5 @@
+import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {LeafNode, Tree, toGindex, zeroNode} from "@chainsafe/persistent-merkle-tree";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
 // Understand the cost of each array-ish data structure to:
 // - Get one element
@@ -52,35 +52,34 @@ describe("Tree (persistent-merkle-tree)", () => {
   const n2 = LeafNode.fromRoot(Buffer.alloc(32, 2));
   let tree: Tree;
 
-  before(function () {
-    this.timeout(120_000);
+  beforeAll(() => {
     tree = getTree(d, n);
-  });
+  }, 120_000);
 
-  itBench({id: `Tree ${d} ${n} create`, timeoutBench: 120_000}, () => {
+  bench({id: `Tree ${d} ${n} create`, timeoutBench: 120_000}, () => {
     getTree(d, n);
   });
 
-  itBench({id: `Tree ${d} ${n} get(${ih})`, runsFactor}, () => {
+  bench({id: `Tree ${d} ${n} get(${ih})`, runsFactor}, () => {
     for (let i = 0; i < runsFactor; i++) tree.getNode(gih);
   });
 
-  itBench({id: `Tree ${d} ${n} set(${ih})`, runsFactor}, () => {
+  bench({id: `Tree ${d} ${n} set(${ih})`, runsFactor}, () => {
     for (let i = 0; i < runsFactor; i++) tree.setNode(gih, n2);
   });
 
-  itBench(`Tree ${d} ${n} toArray()`, () => {
+  bench(`Tree ${d} ${n} toArray()`, () => {
     Array.from(tree.iterateNodesAtDepth(d, 0, n));
   });
 
-  itBench(`Tree ${d} ${n} iterate all - toArray() + loop`, () => {
+  bench(`Tree ${d} ${n} iterate all - toArray() + loop`, () => {
     const treeArr = Array.from(tree.iterateNodesAtDepth(d, 0, n));
     for (let i = 0; i < n; i++) {
       treeArr[i];
     }
   });
 
-  itBench(`Tree ${d} ${n} iterate all - get(i)`, () => {
+  bench(`Tree ${d} ${n} iterate all - get(i)`, () => {
     const startIndex = BigInt(2 ** d);
     for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {
       tree.getNode(startIndex + i);
@@ -104,27 +103,27 @@ describe("Array", () => {
 
   let arr: number[];
 
-  before(() => {
+  beforeAll(() => {
     arr = createArray(n);
   });
 
-  itBench(`Array ${n} create`, () => {
+  bench(`Array ${n} create`, () => {
     createArray(n);
   });
 
-  itBench(`Array ${n} clone - spread`, () => {
+  bench(`Array ${n} clone - spread`, () => {
     [...arr];
   });
 
-  itBench({id: `Array ${n} get(${ih})`, runsFactor}, () => {
+  bench({id: `Array ${n} get(${ih})`, runsFactor}, () => {
     for (let i = 0; i < runsFactor; i++) arr[ih - 1];
   });
 
-  itBench({id: `Array ${n} set(${ih})`, runsFactor}, () => {
+  bench({id: `Array ${n} set(${ih})`, runsFactor}, () => {
     for (let i = 0; i < runsFactor; i++) arr[ih - 1] = 10000000;
   });
 
-  itBench(`Array ${n} iterate all - loop`, () => {
+  bench(`Array ${n} iterate all - loop`, () => {
     for (let i = 0; i < n; i++) {
       arr[i];
     }

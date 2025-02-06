@@ -1,9 +1,8 @@
+import {bench, describe} from "@chainsafe/benchmark";
 import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../src/index.js";
 
-describe.skip("bit opts", function () {
-  this.timeout(0);
-
-  it("Benchmark bitshift", () => {
+describe.skip("bit opts", () => {
+  bench("Benchmark bitshift", () => {
     const validators = 200_000; // Prater validators
     const orOptsPerRun = 5; // in getAttestationDeltas()
     const opsRun = 1e8; // Big number to benchmark

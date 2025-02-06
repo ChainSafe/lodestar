@@ -112,7 +112,6 @@ async function maybeValidateBlobs(
         chain.config,
         blockInput.block,
         blockInput.source,
-        blockInput.blockBytes,
         blobsData
       );
       return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: availableBlockInput};

@@ -32,11 +32,17 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {
+  IExecutionBuilder,
+  IExecutionEngine,
+  PayloadAttributes,
+  PayloadId,
+  getExpectedGasLimit,
+} from "../../execution/index.js";
 import {fromGraffitiBuffer} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
@@ -222,6 +228,39 @@ export async function produceBlockBody<T extends BlockType>(
         prepType,
         fetchedTime,
       });
+
+      const targetGasLimit = this.executionBuilder.getValidatorRegistration(proposerPubKey)?.gasLimit;
+      if (!targetGasLimit) {
+        // This should only happen if cache was cleared due to restart of beacon node
+        this.logger.warn("Failed to get validator registration, could not check header gas limit", {
+          slot: blockSlot,
+          proposerIndex,
+          proposerPubKey: toPubkeyHex(proposerPubKey),
+        });
+      } else {
+        const headerGasLimit = builderRes.header.gasLimit;
+        const parentGasLimit = (currentState as CachedBeaconStateBellatrix).latestExecutionPayloadHeader.gasLimit;
+        const expectedGasLimit = getExpectedGasLimit(parentGasLimit, targetGasLimit);
+
+        const lowerBound = Math.min(parentGasLimit, expectedGasLimit);
+        const upperBound = Math.max(parentGasLimit, expectedGasLimit);
+
+        if (headerGasLimit < lowerBound || headerGasLimit > upperBound) {
+          throw Error(
+            `Header gas limit ${headerGasLimit} is outside of acceptable range [${lowerBound}, ${upperBound}]`
+          );
+        }
+
+        if (headerGasLimit !== expectedGasLimit) {
+          this.logger.warn("Header gas limit does not match expected value", {
+            slot: blockSlot,
+            headerGasLimit,
+            expectedGasLimit,
+            parentGasLimit,
+            targetGasLimit,
+          });
+        }
+      }
 
       if (ForkSeq[fork] >= ForkSeq.deneb) {
         const {blobKzgCommitments} = builderRes;

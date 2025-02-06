@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 import {VoteTracker} from "../../../src/protoArray/interface.js";
@@ -13,16 +13,18 @@ describe("computeDeltas", () => {
   // 2 first numbers are respective to number of validators in goerli, mainnet as of Aug 2023
   const numValidators = [500_000, 750_000, 1_400_000, 2_100_000];
   for (const numValidator of numValidators) {
-    before(function () {
-      this.timeout(2 * 60 * 1000);
-      oldBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
-      newBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
+    beforeAll(
+      () => {
+        oldBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
+        newBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
 
-      for (let i = 0; i < numValidator; i++) {
-        oldBalances[i] = 32;
-        newBalances[i] = 32;
-      }
-    });
+        for (let i = 0; i < numValidator; i++) {
+          oldBalances[i] = 32;
+          newBalances[i] = 32;
+        }
+      },
+      2 * 60 * 1000
+    );
 
     setBenchOpts({
       minMs: 30 * 1000,
@@ -30,7 +32,7 @@ describe("computeDeltas", () => {
     });
 
     for (const numProtoNode of [oneHourProtoNodes, fourHourProtoNodes, oneDayProtoNodes]) {
-      itBench({
+      bench({
         id: `computeDeltas ${numValidator} validators ${numProtoNode} proto nodes`,
         beforeEach: () => {
           const votes: VoteTracker[] = [];

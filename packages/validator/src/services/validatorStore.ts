@@ -13,7 +13,6 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   ForkSeq,
-  MAX_COMMITTEES_PER_SLOT,
 } from "@lodestar/params";
 import {
   ZERO_HASH,
@@ -35,6 +34,7 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
+  SingleAttestation,
   Slot,
   ValidatorIndex,
   altair,
@@ -505,7 +505,7 @@ export class ValidatorStore {
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<Attestation> {
+  ): Promise<SingleAttestation> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -539,10 +539,10 @@ export class ValidatorStore {
 
     if (this.config.getForkSeq(signingSlot) >= ForkSeq.electra) {
       return {
-        aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
+        committeeIndex: duty.committeeIndex,
+        attesterIndex: duty.validatorIndex,
         data: attestationData,
         signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-        committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
       };
     }
 

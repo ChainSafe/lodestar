@@ -20,7 +20,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v3.0.0-alpha.6";
+const version = "v3.0.0-alpha.9";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
@@ -75,13 +75,7 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-const ignoredTopics = [
-  /*
-   https://github.com/ChainSafe/lodestar/issues/6470
-   topic block_gossip not implemented
-   */
-  "block_gossip",
-];
+const ignoredTopics: string[] = [];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:

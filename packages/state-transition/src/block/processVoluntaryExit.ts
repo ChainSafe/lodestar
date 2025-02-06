@@ -1,5 +1,5 @@
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
+import {ValidatorIndex, phase0} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
@@ -16,11 +16,7 @@ export function processVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  const isValidExit =
-    fork >= ForkSeq.electra
-      ? isValidVoluntaryExitElectra(state as CachedBeaconStateElectra, signedVoluntaryExit, verifySignature)
-      : isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature);
-  if (!isValidExit) {
+  if (!isValidVoluntaryExit(fork, state, signedVoluntaryExit, verifySignature)) {
     throw Error(`Invalid voluntary exit at forkSeq=${fork}`);
   }
 
@@ -29,6 +25,7 @@ export function processVoluntaryExit(
 }
 
 export function isValidVoluntaryExit(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
@@ -47,20 +44,12 @@ export function isValidVoluntaryExit(
     currentEpoch >= voluntaryExit.epoch &&
     // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
+    (fork >= ForkSeq.electra
+      ? // only exit validator if it has no pending withdrawals in the queue
+        getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) === 0
+      : // there are no pending withdrawals in previous forks
+        true) &&
     // verify signature
     (!verifySignature || verifyVoluntaryExitSignature(state, signedVoluntaryExit))
   );
-}
-
-function isValidVoluntaryExitElectra(
-  state: CachedBeaconStateElectra,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit,
-  verifySignature = true
-): boolean {
-  // only exit validator if it has no pending withdrawals in the queue (post-Electra only)
-  if (getPendingBalanceToWithdraw(state, signedVoluntaryExit.message.validatorIndex) === 0) {
-    return isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature);
-  }
-
-  return false;
 }

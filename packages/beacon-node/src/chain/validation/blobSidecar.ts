@@ -1,5 +1,10 @@
 import {ChainConfig} from "@lodestar/config";
-import {KZG_COMMITMENT_INCLUSION_PROOF_DEPTH, KZG_COMMITMENT_SUBTREE_INDEX0} from "@lodestar/params";
+import {
+  ForkName,
+  KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
+  KZG_COMMITMENT_SUBTREE_INDEX0,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
@@ -12,6 +17,7 @@ import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlobSidecar(
+  fork: ForkName,
   chain: IBeaconChain,
   blobSidecar: deneb.BlobSidecar,
   subnet: SubnetID
@@ -19,16 +25,17 @@ export async function validateGossipBlobSidecar(
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
   // [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `blob_sidecar.index < MAX_BLOBS_PER_BLOCK`.
-  if (blobSidecar.index >= chain.config.MAX_BLOBS_PER_BLOCK) {
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(fork);
+  if (blobSidecar.index >= maxBlobsPerBlock) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INDEX_TOO_LARGE,
       blobIdx: blobSidecar.index,
-      maxBlobsPerBlock: chain.config.MAX_BLOBS_PER_BLOCK,
+      maxBlobsPerBlock,
     });
   }
 
   // [REJECT] The sidecar is for the correct subnet -- i.e. `compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id`.
-  if (computeSubnetForBlobSidecar(blobSidecar.index, chain.config) !== subnet) {
+  if (computeSubnetForBlobSidecar(fork, chain.config, blobSidecar.index) !== subnet) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INVALID_INDEX,
       blobIdx: blobSidecar.index,
@@ -236,6 +243,8 @@ function validateInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
   );
 }
 
-function computeSubnetForBlobSidecar(blobIndex: BlobIndex, config: ChainConfig): SubnetID {
-  return blobIndex % config.BLOB_SIDECAR_SUBNET_COUNT;
+function computeSubnetForBlobSidecar(fork: ForkName, config: ChainConfig, blobIndex: BlobIndex): SubnetID {
+  return (
+    blobIndex % (isForkPostElectra(fork) ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA : config.BLOB_SIDECAR_SUBNET_COUNT)
+  );
 }

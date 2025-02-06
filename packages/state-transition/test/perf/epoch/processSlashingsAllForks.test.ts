@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {processSlashings} from "../../../src/epoch/processSlashings.js";
 import {
@@ -29,7 +29,7 @@ describe("phase0 processSlashings", () => {
   // which will it update validators tree
 
   for (const {id, indicesToSlashLen} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processSlashings - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow

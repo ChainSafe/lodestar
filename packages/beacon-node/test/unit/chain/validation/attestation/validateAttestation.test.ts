@@ -341,7 +341,7 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.phase0, gossipAttestation)).toEqual(
+    expect(getSeenAttDataKeyFromGossipAttestation(gossipAttestation)).toEqual(
       getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.phase0, aggregateAndProofBytes)
     );
   });
@@ -363,7 +363,7 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.electra.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.electra, gossipAttestation)).toEqual(
+    expect(getSeenAttDataKeyFromGossipAttestation(gossipAttestation)).toEqual(
       getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.electra, aggregateAndProofBytes)
     );
   });

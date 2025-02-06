@@ -1,6 +1,6 @@
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {PublicKey} from "@chainsafe/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {Index2PubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
@@ -21,9 +21,7 @@ import {generatePerfTestCachedStateAltair} from "../../util.js";
  *    ✔ migrate state 1500000 validators, 1700 modified, 1000 new          0.3642085 ops/s    2.745680  s/op        -         20 runs   60.1 s
  *    ✔ migrate state 1500000 validators, 3400 modified, 2000 new          0.3344296 ops/s    2.990166  s/op        -         19 runs   62.4 s
  */
-describe("loadState", function () {
-  this.timeout(0);
-
+describe("loadState", () => {
   setBenchOpts({
     minMs: 60_000,
   });
@@ -41,7 +39,7 @@ describe("loadState", function () {
     {seedValidators: 1_500_000, numModifiedValidators: 3400, numNewValidators: 2000},
   ];
   for (const {seedValidators, numModifiedValidators, numNewValidators} of testCases) {
-    itBench({
+    bench({
       id: `migrate state ${seedValidators} validators, ${numModifiedValidators} modified, ${numNewValidators} new`,
       before: () => {
         const seedState = generatePerfTestCachedStateAltair({vc: seedValidators, goBackOneSlot: false});

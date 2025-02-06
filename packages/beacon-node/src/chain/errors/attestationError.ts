@@ -135,6 +135,10 @@ export enum AttestationErrorCode {
    * Electra: Invalid attestationData index: is non-zero
    */
   NON_ZERO_ATTESTATION_DATA_INDEX = "ATTESTATION_ERROR_NON_ZERO_ATTESTATION_DATA_INDEX",
+  /**
+   * Electra: Attester not in committee
+   */
+  ATTESTER_NOT_IN_COMMITTEE = "ATTESTATION_ERROR_ATTESTER_NOT_IN_COMMITTEE",
 }
 
 export type AttestationErrorType =
@@ -170,7 +174,8 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES}
   | {code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS; headBlockSlot: Slot; attestationSlot: Slot}
   | {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET}
-  | {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX};
+  | {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX}
+  | {code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {

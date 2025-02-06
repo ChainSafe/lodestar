@@ -1,7 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
+  BeaconStateElectra,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
@@ -214,6 +215,10 @@ export class PrepareNextSlotScheduler {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
         this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
+
+        // Check if we can stop polling eth1 data
+        this.stopEth1Polling();
+
         this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
           nextEpoch,
           headSlot,
@@ -239,5 +244,28 @@ export class PrepareNextSlotScheduler {
     });
     state.hashTreeRoot();
     hashTreeRootTimer?.();
+  }
+
+  /**
+   * Stop eth1 data polling after eth1_deposit_index has reached deposit_requests_start_index in Electra as described in EIP-6110
+   */
+  stopEth1Polling(): void {
+    // Only continue if eth1 is still polling and finalized checkpoint is in Electra. State regen is expensive
+    if (this.chain.eth1.isPollingEth1Data()) {
+      const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
+      const checkpointFork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
+
+      if (isForkPostElectra(checkpointFork)) {
+        const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
+
+        if (
+          finalizedState !== undefined &&
+          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
+        ) {
+          // Signal eth1 to stop polling eth1Data
+          this.chain.eth1.stopPollingEth1Data();
+        }
+      }
+    }
   }
 }

@@ -156,7 +156,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
     // Overwrite placeholder requestData from main thread with correct sequenceNumber
     if (method === ReqRespMethod.Ping) {
-      requestData = requestSszTypeByMethod(this.config)[ReqRespMethod.Ping].serialize(
+      requestData = requestSszTypeByMethod(ForkName.phase0, this.config)[ReqRespMethod.Ping].serialize(
         this.metadataController.seqNumber
       );
     }
@@ -207,7 +207,8 @@ export class ReqRespBeaconNode extends ReqResp {
     versions: number[],
     request: Req
   ): AsyncIterable<ResponseIncoming> {
-    const requestType = requestSszTypeByMethod(this.config)[method];
+    const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
+    const requestType = requestSszTypeByMethod(fork, this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
     return this.sendRequestWithoutEncoding(peerId, method, versions, requestData);
   }
@@ -218,42 +219,48 @@ export class ReqRespBeaconNode extends ReqResp {
    */
   private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
-      [protocols.Ping(this.config), this.onPing.bind(this)],
-      [protocols.Status(this.config), this.onStatus.bind(this)],
-      [protocols.Goodbye(this.config), this.onGoodbye.bind(this)],
+      [protocols.Ping(fork, this.config), this.onPing.bind(this)],
+      [protocols.Status(fork, this.config), this.onStatus.bind(this)],
+      [protocols.Goodbye(fork, this.config), this.onGoodbye.bind(this)],
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      [protocols.MetadataV2(this.config), this.onMetadata.bind(this)],
-      [protocols.BeaconBlocksByRangeV2(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
-      [protocols.BeaconBlocksByRootV2(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
+      [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)],
+      [protocols.BeaconBlocksByRangeV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
+      [protocols.BeaconBlocksByRootV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
 
     if (ForkSeq[fork] < ForkSeq.altair) {
       // Unregister V1 topics at the fork boundary, so only declare for pre-altair
       protocolsAtFork.push(
-        [protocols.Metadata(this.config), this.onMetadata.bind(this)],
-        [protocols.BeaconBlocksByRange(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
-        [protocols.BeaconBlocksByRoot(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)]
+        [protocols.Metadata(fork, this.config), this.onMetadata.bind(this)],
+        [protocols.BeaconBlocksByRange(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
+        [protocols.BeaconBlocksByRoot(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)]
       );
     }
 
     if (ForkSeq[fork] >= ForkSeq.altair && !this.disableLightClientServer) {
       // Should be okay to enable before altair, but for consistency only enable afterwards
       protocolsAtFork.push(
-        [protocols.LightClientBootstrap(this.config), this.getHandler(ReqRespMethod.LightClientBootstrap)],
-        [protocols.LightClientFinalityUpdate(this.config), this.getHandler(ReqRespMethod.LightClientFinalityUpdate)],
+        [protocols.LightClientBootstrap(fork, this.config), this.getHandler(ReqRespMethod.LightClientBootstrap)],
         [
-          protocols.LightClientOptimisticUpdate(this.config),
+          protocols.LightClientFinalityUpdate(fork, this.config),
+          this.getHandler(ReqRespMethod.LightClientFinalityUpdate),
+        ],
+        [
+          protocols.LightClientOptimisticUpdate(fork, this.config),
           this.getHandler(ReqRespMethod.LightClientOptimisticUpdate),
         ],
-        [protocols.LightClientUpdatesByRange(this.config), this.getHandler(ReqRespMethod.LightClientUpdatesByRange)]
+        [
+          protocols.LightClientUpdatesByRange(fork, this.config),
+          this.getHandler(ReqRespMethod.LightClientUpdatesByRange),
+        ]
       );
     }
 
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       protocolsAtFork.push(
-        [protocols.BlobSidecarsByRoot(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
-        [protocols.BlobSidecarsByRange(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
+        [protocols.BlobSidecarsByRoot(fork, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
+        [protocols.BlobSidecarsByRange(fork, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
       );
     }
 

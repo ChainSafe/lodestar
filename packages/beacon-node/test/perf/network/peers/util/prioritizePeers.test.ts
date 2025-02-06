@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -10,7 +10,7 @@ import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 describe("prioritizePeers", () => {
   const seedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[] = [];
 
-  before(async () => {
+  beforeAll(async () => {
     for (let i = 0; i < defaultNetworkOptions.maxPeers; i++) {
       const peer = await createSecp256k1PeerId();
       peer.toString = () => `peer-${i}`;
@@ -82,7 +82,7 @@ describe("prioritizePeers", () => {
     attnetPercentage,
     syncnetPercentage,
   } of testCases) {
-    itBench({
+    bench({
       id: `prioritizePeers score ${lowestScore}:${highestScore} att ${requestedAttnets.count}-${attnetPercentage} sync ${requestedSyncNets.count}-${syncnetPercentage}`,
       beforeEach: () => {
         /**

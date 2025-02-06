@@ -105,6 +105,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1MergeBlockTracker.startPollingMergeBlock();
   }
 
+  isPollingEth1Data(): boolean {
+    return this.eth1DepositDataTracker?.isPollingEth1Data() ?? false;
+  }
+
   stopPollingEth1Data(): void {
     this.eth1DepositDataTracker?.stopPollingEth1Data();
   }
@@ -137,6 +141,10 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
 
   getTDProgress(): TDProgress | null {
     return null;
+  }
+
+  isPollingEth1Data(): boolean {
+    return false;
   }
 
   startPollingMergeBlock(): void {

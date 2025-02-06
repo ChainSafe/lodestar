@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {LinkedList} from "../../../src/util/array.js";
 
 /**
@@ -13,7 +13,7 @@ describe("LinkedList vs Regular Array", () => {
   const arrayLengths = [16_000, 24_000];
 
   for (const length of arrayLengths) {
-    itBench({
+    bench({
       id: `array of ${length} items push then shift`,
       beforeEach: () => Array.from({length}, (_, i) => i),
       fn: (arr) => {
@@ -25,7 +25,7 @@ describe("LinkedList vs Regular Array", () => {
       runsFactor: 1000,
     });
 
-    itBench({
+    bench({
       id: `LinkedList of ${length} items push then shift`,
       beforeEach: () => {
         const linkedList = new LinkedList<number>();
@@ -41,7 +41,7 @@ describe("LinkedList vs Regular Array", () => {
       runsFactor: 1000,
     });
 
-    itBench({
+    bench({
       id: `array of ${length} items push then pop`,
       beforeEach: () => Array.from({length}, (_, i) => i),
       fn: (arr) => {
@@ -53,7 +53,7 @@ describe("LinkedList vs Regular Array", () => {
       runsFactor: 1000,
     });
 
-    itBench({
+    bench({
       id: `LinkedList of ${length} items push then pop`,
       beforeEach: () => {
         const linkedList = new LinkedList<number>();

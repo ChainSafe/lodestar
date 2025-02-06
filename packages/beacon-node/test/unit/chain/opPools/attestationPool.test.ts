@@ -1,7 +1,7 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {GENESIS_SLOT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {electra, phase0, ssz} from "@lodestar/types";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
@@ -24,20 +24,32 @@ describe("AttestationPool", () => {
   const clockStub = getMockedClock();
   vi.spyOn(clockStub, "secFromSlot").mockReturnValue(0);
 
+  const committeeValidatorIndex = 0;
+  const committeeSize = 128;
+
   const cutOffSecFromSlot = (2 / 3) * config.SECONDS_PER_SLOT;
 
   // Mock attestations
-  const electraAttestationData = {
+  const electraAttestationData: phase0.AttestationData = {
     ...ssz.phase0.AttestationData.defaultValue(),
     slot: config.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH,
   };
-  const electraAttestation = {
-    ...ssz.electra.Attestation.defaultValue(),
+  const electraSingleAttestation: electra.SingleAttestation = {
+    ...ssz.electra.SingleAttestation.defaultValue(),
     data: electraAttestationData,
     signature: validSignature,
   };
-  const phase0AttestationData = {...ssz.phase0.AttestationData.defaultValue(), slot: GENESIS_SLOT};
-  const phase0Attestation = {
+  const electraAttestation: electra.Attestation = {
+    aggregationBits: BitArray.fromSingleBit(committeeSize, committeeValidatorIndex),
+    data: electraAttestationData,
+    signature: validSignature,
+    committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, electraSingleAttestation.committeeIndex),
+  };
+  const phase0AttestationData: phase0.AttestationData = {
+    ...ssz.phase0.AttestationData.defaultValue(),
+    slot: GENESIS_SLOT,
+  };
+  const phase0Attestation: phase0.Attestation = {
     ...ssz.phase0.Attestation.defaultValue(),
     data: phase0AttestationData,
     signature: validSignature,
@@ -51,8 +63,14 @@ describe("AttestationPool", () => {
 
   it("add correct electra attestation", () => {
     const committeeIndex = 0;
-    const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraAttestation.data));
-    const outcome = pool.add(committeeIndex, electraAttestation, attDataRootHex);
+    const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraSingleAttestation.data));
+    const outcome = pool.add(
+      committeeIndex,
+      electraSingleAttestation,
+      attDataRootHex,
+      committeeValidatorIndex,
+      committeeSize
+    );
 
     expect(outcome).equal(InsertOutcome.NewData);
     expect(pool.getAggregate(electraAttestationData.slot, committeeIndex, attDataRootHex)).toEqual(electraAttestation);
@@ -61,7 +79,7 @@ describe("AttestationPool", () => {
   it("add correct phase0 attestation", () => {
     const committeeIndex = null;
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(phase0Attestation.data));
-    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex);
+    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, committeeValidatorIndex, committeeSize);
 
     expect(outcome).equal(InsertOutcome.NewData);
     expect(pool.getAggregate(phase0AttestationData.slot, committeeIndex, attDataRootHex)).toEqual(phase0Attestation);
@@ -72,16 +90,18 @@ describe("AttestationPool", () => {
 
   it("add electra attestation without committee index", () => {
     const committeeIndex = null;
-    const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraAttestation.data));
+    const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraSingleAttestation.data));
 
-    expect(() => pool.add(committeeIndex, electraAttestation, attDataRootHex)).toThrow();
+    expect(() =>
+      pool.add(committeeIndex, electraSingleAttestation, attDataRootHex, committeeValidatorIndex, committeeSize)
+    ).toThrow();
     expect(pool.getAggregate(electraAttestationData.slot, committeeIndex, attDataRootHex)).toBeNull();
   });
 
   it("add phase0 attestation with committee index", () => {
     const committeeIndex = 0;
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(phase0Attestation.data));
-    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex);
+    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, committeeValidatorIndex, committeeSize);
 
     expect(outcome).equal(InsertOutcome.NewData);
     expect(pool.getAggregate(phase0AttestationData.slot, committeeIndex, attDataRootHex)).toEqual(phase0Attestation);
@@ -92,14 +112,14 @@ describe("AttestationPool", () => {
 
   it("add electra attestation with phase0 slot", () => {
     const electraAttestationDataWithPhase0Slot = {...ssz.phase0.AttestationData.defaultValue(), slot: GENESIS_SLOT};
-    const attestation = {
-      ...ssz.electra.Attestation.defaultValue(),
+    const singleAttestation = {
+      ...ssz.electra.SingleAttestation.defaultValue(),
       data: electraAttestationDataWithPhase0Slot,
       signature: validSignature,
     };
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraAttestationDataWithPhase0Slot));
 
-    expect(() => pool.add(0, attestation, attDataRootHex)).toThrow();
+    expect(() => pool.add(0, singleAttestation, attDataRootHex, committeeValidatorIndex, committeeSize)).toThrow();
   });
 
   it("add phase0 attestation with electra slot", () => {
@@ -114,6 +134,6 @@ describe("AttestationPool", () => {
     };
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(phase0AttestationDataWithElectraSlot));
 
-    expect(() => pool.add(0, attestation, attDataRootHex)).toThrow();
+    expect(() => pool.add(0, attestation, attDataRootHex, committeeValidatorIndex, committeeSize)).toThrow();
   });
 });

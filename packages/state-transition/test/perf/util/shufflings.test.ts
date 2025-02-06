@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {
@@ -15,16 +15,15 @@ describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;
   let nextEpoch: Epoch;
 
-  before(function () {
-    this.timeout(60 * 1000);
+  beforeAll(() => {
     state = generatePerfTestCachedStatePhase0();
     nextEpoch = computeEpochAtSlot(state.slot) + 1;
 
     // Sanity check to ensure numValidators doesn't go stale
     if (state.validators.length !== numValidators) throw Error("constant numValidators is wrong");
-  });
+  }, 60 * 1000);
 
-  itBench({
+  bench({
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
       const epochSeed = getSeed(state, state.epochCtx.epoch, DOMAIN_BEACON_PROPOSER);
@@ -33,7 +32,7 @@ describe("epoch shufflings", () => {
     },
   });
 
-  itBench({
+  bench({
     id: `computeEpochShuffling - vc ${numValidators}`,
     fn: () => {
       const {nextActiveIndices} = state.epochCtx;
@@ -41,7 +40,7 @@ describe("epoch shufflings", () => {
     },
   });
 
-  itBench({
+  bench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
       const fork = state.config.getForkSeq(state.slot);

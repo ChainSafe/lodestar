@@ -56,7 +56,8 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.exitBalanceToConsume = BigInt(0);
 
   const validatorsArr = stateElectraView.validators.getAllReadonly();
-  const exitEpochs: Epoch[] = [];
+  const currentEpochPre = stateDeneb.epochCtx.epoch;
+  let earliestExitEpoch = computeActivationExitEpoch(currentEpochPre);
 
   // [EIP-7251]: add validators that are not yet active to pending balance deposits
   const preActivation: ValidatorIndex[] = [];
@@ -65,17 +66,12 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
     if (activationEpoch === FAR_FUTURE_EPOCH) {
       preActivation.push(validatorIndex);
     }
-    if (exitEpoch !== FAR_FUTURE_EPOCH) {
-      exitEpochs.push(exitEpoch);
+    if (exitEpoch !== FAR_FUTURE_EPOCH && exitEpoch > earliestExitEpoch) {
+      earliestExitEpoch = exitEpoch;
     }
   }
 
-  const currentEpochPre = stateDeneb.epochCtx.epoch;
-
-  if (exitEpochs.length === 0) {
-    exitEpochs.push(currentEpochPre);
-  }
-  stateElectraView.earliestExitEpoch = Math.max(...exitEpochs) + 1;
+  stateElectraView.earliestExitEpoch = earliestExitEpoch + 1;
   stateElectraView.consolidationBalanceToConsume = BigInt(0);
   stateElectraView.earliestConsolidationEpoch = computeActivationExitEpoch(currentEpochPre);
   // TODO-electra: can we improve this?

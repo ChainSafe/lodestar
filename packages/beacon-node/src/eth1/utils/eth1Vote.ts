@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
+import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {BeaconStateAllForks, BeaconStateElectra, computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
@@ -15,6 +15,14 @@ export async function getEth1VotesToConsider(
   state: BeaconStateAllForks,
   eth1DataGetter: Eth1DataGetter
 ): Promise<phase0.Eth1Data[]> {
+  const fork = config.getForkName(state.slot);
+  if (isForkPostElectra(fork)) {
+    const {eth1DepositIndex, depositRequestsStartIndex} = state as BeaconStateElectra;
+    if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
+      return state.eth1DataVotes.getAllReadonly();
+    }
+  }
+
   const periodStart = votingPeriodStartTime(config, state);
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
 

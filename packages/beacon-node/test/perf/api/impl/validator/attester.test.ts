@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 import {linspace} from "../../../../../src/util/numpy.js";
@@ -20,15 +20,14 @@ import {linspace} from "../../../../../src/util/numpy.js";
 describe("api / impl / validator", () => {
   let state: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
-  before(function () {
-    this.timeout(60 * 1000);
+  beforeAll(() => {
     state = generatePerfTestCachedStatePhase0();
   });
 
   const reqCounts = process.env.CI ? [1000] : [1, 100, 1000];
 
   for (const reqCount of reqCounts) {
-    itBench({
+    bench({
       id: `getPubkeys - index2pubkey - req ${reqCount} vs - ${numValidators} vc`,
       noThreshold: true,
       fn: () => {
@@ -42,7 +41,7 @@ describe("api / impl / validator", () => {
 
   // 7.17 ms / op (1000)
   for (const reqCount of reqCounts) {
-    itBench({
+    bench({
       id: `getPubkeys - validatorsArr - req ${reqCount} vs - ${numValidators} vc`,
       // Only track regressions for 1000 in CI to ensure performance does not degrade
       noThreshold: reqCount < 1000,

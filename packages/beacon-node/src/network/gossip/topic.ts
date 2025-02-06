@@ -5,8 +5,9 @@ import {
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkLightClient,
+  isForkPostElectra,
 } from "@lodestar/params";
-import {Attestation, ssz, sszTypesFor} from "@lodestar/types";
+import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {DEFAULT_ENCODING} from "./constants.js";
@@ -87,7 +88,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.beacon_aggregate_and_proof:
       return sszTypesFor(topic.fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return sszTypesFor(topic.fork).Attestation;
+      return sszTypesFor(topic.fork).SingleAttestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
@@ -124,11 +125,27 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 }
 
 /**
+ * @deprecated
  * Deserialize a gossip serialized data into an Attestation object.
+ * No longer used post-electra. Use `sszDeserializeSingleAttestation` instead
  */
 export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   try {
     return sszTypesFor(fork).Attestation.deserialize(serializedData);
+  } catch (_e) {
+    throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
+  }
+}
+
+/**
+ * Deserialize a gossip seralized data into an SingleAttestation object.
+ */
+export function sszDeserializeSingleAttestation(fork: ForkName, serializedData: Uint8Array): SingleAttestation {
+  try {
+    if (isForkPostElectra(fork)) {
+      return sszTypesFor(fork).SingleAttestation.deserialize(serializedData);
+    }
+    return sszTypesFor(fork).Attestation.deserialize(serializedData) as SingleAttestation;
   } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
@@ -213,7 +230,11 @@ export function getCoreTopicsAtFork(
 
   // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    for (let subnet = 0; subnet < config.BLOB_SIDECAR_SUBNET_COUNT; subnet++) {
+    const subnetCount = isForkPostElectra(fork)
+      ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA
+      : config.BLOB_SIDECAR_SUBNET_COUNT;
+
+    for (let subnet = 0; subnet < subnetCount; subnet++) {
       topics.push({type: GossipType.blob_sidecar, subnet});
     }
   }

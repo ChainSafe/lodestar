@@ -43,7 +43,7 @@ async function validateVoluntaryExit(
 
   // [REJECT] All of the conditions within process_voluntary_exit pass validation.
   // verifySignature = false, verified in batch below
-  if (!isValidVoluntaryExit(state, voluntaryExit, false)) {
+  if (!isValidVoluntaryExit(chain.config.getForkSeq(state.slot), state, voluntaryExit, false)) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID,
     });
