@@ -205,7 +205,6 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.archiveStateEpochFrequency": {
-    hidden: true,
     description: "Minimum number of epochs between archived states",
     default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
