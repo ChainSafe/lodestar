@@ -35,7 +35,7 @@ export const holeskyChainConfig: ChainConfig = {
   DENEB_FORK_EPOCH: 29696,
   // Electra
   ELECTRA_FORK_VERSION: b("0x06017000"),
-  ELECTRA_FORK_EPOCH: 113152,
+  ELECTRA_FORK_EPOCH: 115968,
 
   // # 28,000,000,000 Gwei to ensure quicker ejection
   EJECTION_BALANCE: 28000000000,

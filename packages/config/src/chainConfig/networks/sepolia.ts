@@ -35,7 +35,7 @@ export const sepoliaChainConfig: ChainConfig = {
   DENEB_FORK_EPOCH: 132608,
   // Electra
   ELECTRA_FORK_VERSION: b("0x90000074"),
-  ELECTRA_FORK_EPOCH: 219392,
+  ELECTRA_FORK_EPOCH: 222464,
 
   // Deposit contract
   // ---------------------------------------------------------------
