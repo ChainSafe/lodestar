@@ -1,7 +1,8 @@
+import {bench, describe} from "@chainsafe/benchmark";
 import {compileRouteUrlFormatter} from "../../src/utils/urlFormat.js";
 
 describe("route parse", () => {
-  it.skip("Benchmark compileRouteUrlFormatter", () => {
+  bench.skip("Benchmark compileRouteUrlFormatter", () => {
     const path = "/eth/v1/validator/:name/attester/:epoch";
     const args = {epoch: 5, name: "HEAD"};
 

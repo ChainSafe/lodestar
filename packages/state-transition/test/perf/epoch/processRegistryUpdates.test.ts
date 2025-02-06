@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
 import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
@@ -53,7 +53,7 @@ describe("phase0 processRegistryUpdates", () => {
   // which will it update validators tree
 
   for (const {id, notTrack, lengths} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processRegistryUpdates - ${vc} ${id}`,
       // WeakRef keeps a strong reference to its constructor value until the event loop ticks.
       // Without this `sleep(0)` all the SubTree(s) created updating the validators registry

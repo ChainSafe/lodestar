@@ -4,7 +4,7 @@ import {
   createAggregateSignatureSetFromComponents,
   isAggregatorFromCommitteeLength,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, phase0, ssz} from "@lodestar/types";
+import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -178,15 +178,11 @@ async function validateAggregateAndProof(
   }
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
 
-  const indexedAttestationContent: IndexedAttestation = {
+  const indexedAttestation: IndexedAttestation = {
     attestingIndices,
     data: attData,
     signature: aggregate.signature,
   };
-  const indexedAttestation =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? (indexedAttestationContent as electra.IndexedAttestation)
-      : (indexedAttestationContent as phase0.IndexedAttestation);
 
   // TODO: Check this before regen
   // [REJECT] The attestation has participants -- that is,

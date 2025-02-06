@@ -126,7 +126,7 @@ function verifyBlocksSanityChecks(
 ): {relevantBlocks: SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
-    blocks.map((block) => getBlockInput.preData(config, block, BlockSource.byRange, null)),
+    blocks.map((block) => getBlockInput.preData(config, block, BlockSource.byRange)),
     opts
   );
   return {

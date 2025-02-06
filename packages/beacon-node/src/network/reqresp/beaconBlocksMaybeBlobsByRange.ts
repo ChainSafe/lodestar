@@ -33,7 +33,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Note: Assumes all blocks in the same epoch
   if (config.getForkSeq(startSlot) < ForkSeq.deneb) {
     const blocks = await network.sendBeaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.preData(config, block.data, BlockSource.byRange, block.bytes));
+    return blocks.map((block) => getBlockInput.preData(config, block.data, BlockSource.byRange));
   }
 
   // From Deneb
@@ -49,7 +49,7 @@ export async function beaconBlocksMaybeBlobsByRange(
 
   // Data is out of range, only request blocks
   const blocks = await network.sendBeaconBlocksByRange(peerId, request);
-  return blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange, block.bytes));
+  return blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange));
 }
 
 // Assumes that the blobs are in the same sequence as blocks, doesn't require block to be sorted
@@ -74,7 +74,7 @@ export function matchBlockWithBlobs(
   for (let i = 0; i < allBlocks.length; i++) {
     const block = allBlocks[i];
     if (config.getForkSeq(block.data.message.slot) < ForkSeq.deneb) {
-      blockInputs.push(getBlockInput.preData(config, block.data, blockSource, block.bytes));
+      blockInputs.push(getBlockInput.preData(config, block.data, blockSource));
     } else {
       const blobSidecars: deneb.BlobSidecar[] = [];
 
@@ -100,11 +100,10 @@ export function matchBlockWithBlobs(
         fork: config.getForkName(block.data.message.slot),
         blobs: blobSidecars,
         blobsSource,
-        blobsBytes: Array.from({length: blobKzgCommitmentsLen}, () => null),
       } as BlockInputDataBlobs;
 
       // TODO DENEB: instead of null, pass payload in bytes
-      blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, null, blockData));
+      blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, blockData));
     }
   }
 

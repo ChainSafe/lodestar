@@ -223,14 +223,13 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, null, {
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, {
                     fork: ForkName.deneb,
                     blobs: blobSidecars,
-                    blobsBytes: [null],
                     blobsSource: BlobsSource.gossip,
                   });
                 } else {
-                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip, null);
+                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip);
                 }
 
                 await chain.processBlock(blockImport, {

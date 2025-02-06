@@ -1,5 +1,5 @@
+import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
-import {itBench} from "@dapplion/benchmark";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {defaultLogger} from "@libp2p/logger";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
@@ -22,7 +22,7 @@ describe("network / noise / sendData", () => {
     2 ** 14,
     2 ** 16,
   ]) {
-    itBench({
+    bench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
       beforeEach: async () => {
         const privateKeyA = await generateKeyPair("secp256k1");

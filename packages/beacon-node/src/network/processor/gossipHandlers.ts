@@ -115,14 +115,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
-    blockBytes: Uint8Array,
     fork: ForkName,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
-    const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const blockShortHex = prettyBytes(blockRootHex);
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
@@ -132,7 +132,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       {
         type: GossipedInputType.block,
         signedBlock,
-        blockBytes,
       },
       metrics
     );
@@ -140,7 +139,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // blockInput can't be returned null, improve by enforcing via return types
     if (blockInput.block === null) {
       throw Error(
-        `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockHex} slot=${slot}`
+        `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockShortHex} slot=${slot}`
       );
     }
     const blockInputMeta =
@@ -148,7 +147,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     const logCtx = {
       slot: slot,
-      root: blockHex,
+      root: blockShortHex,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
@@ -169,12 +168,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
 
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
+
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
-          logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
+          logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 
@@ -189,7 +190,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconBlob(
     blobSidecar: deneb.BlobSidecar,
-    blobBytes: Uint8Array,
     subnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
@@ -208,7 +208,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       {
         type: GossipedInputType.blob,
         blobSidecar,
-        blobBytes,
       },
       metrics
     );
@@ -348,13 +347,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
-      const blockInput = await validateBeaconBlock(
-        signedBlock,
-        serializedData,
-        topic.fork,
-        peerIdStr,
-        seenTimestampSec
-      );
+      const blockInput = await validateBeaconBlock(signedBlock, topic.fork, peerIdStr, seenTimestampSec);
+      chain.serializedCache.set(signedBlock, serializedData);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
@@ -372,13 +366,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
-      const blockInput = await validateBeaconBlob(
-        blobSidecar,
-        serializedData,
-        topic.subnet,
-        peerIdStr,
-        seenTimestampSec
-      );
+      const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
       if (blockInput.block !== null) {
         // we can just queue up the blockInput in the processor, but block gossip handler would have already
         // queued it up.
@@ -470,13 +458,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       topic,
     }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
       const {serializedData} = gossipData;
+      const {fork} = topic;
       const attesterSlashing = sszDeserialize(topic, serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler
 
       try {
-        chain.opPool.insertAttesterSlashing(attesterSlashing);
+        chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
         chain.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);

@@ -68,12 +68,21 @@ export function getBeaconPoolApi({
     },
 
     async getPoolAttesterSlashings() {
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getPoolAttesterSlashingsV2 to retrieve pool attester slashings for post-electra fork=${fork}`
+        );
+      }
+
       return {data: chain.opPool.getAllAttesterSlashings()};
     },
 
     async getPoolAttesterSlashingsV2() {
-      // TODO Electra: Determine fork based on data returned by api
-      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: ForkName.phase0}};
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
+      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: fork}};
     },
 
     async getPoolProposerSlashings() {
@@ -162,14 +171,14 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashings({attesterSlashing}) {
-      await validateApiAttesterSlashing(chain, attesterSlashing);
-      chain.opPool.insertAttesterSlashing(attesterSlashing);
-      await network.publishAttesterSlashing(attesterSlashing);
+      await this.submitPoolAttesterSlashingsV2({attesterSlashing});
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
-      // TODO Electra: Refactor submitPoolAttesterSlashings and submitPoolAttesterSlashingsV2
-      await this.submitPoolAttesterSlashings({attesterSlashing});
+      await validateApiAttesterSlashing(chain, attesterSlashing);
+      const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+      chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+      await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {

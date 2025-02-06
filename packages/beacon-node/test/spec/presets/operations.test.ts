@@ -11,7 +11,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {altair, bellatrix, capella, electra, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {AttesterSlashing, altair, bellatrix, capella, electra, phase0, ssz, sszTypesFor} from "@lodestar/types";
 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
@@ -41,7 +41,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processAttestations(fork, state, [testCase.attestation]);
   },
 
-  attester_slashing: (state, testCase: BaseSpecTest & {attester_slashing: phase0.AttesterSlashing}) => {
+  attester_slashing: (state, testCase: BaseSpecTest & {attester_slashing: AttesterSlashing}) => {
     const fork = state.config.getForkSeq(state.slot);
     blockFns.processAttesterSlashing(fork, state, testCase.attester_slashing, shouldVerify(testCase));
   },

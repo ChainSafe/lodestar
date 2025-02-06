@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ForkChoice, ProtoBlock} from "../../../src/index.js";
 import {Opts, initializeForkChoice} from "./util.js";
@@ -26,7 +26,7 @@ describe("forkchoice updateHead", () => {
   }
 
   function runUpdateHeadBenchmark(opts: Opts): void {
-    itBench({
+    bench({
       id: `forkChoice updateHead vc ${opts.initialValidatorCount} bc ${opts.initialBlockCount} eq ${opts.initialEquivocatedCount}`,
       before: () => {
         const forkChoice = initializeForkChoice(opts);

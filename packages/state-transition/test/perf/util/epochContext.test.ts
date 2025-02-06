@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
@@ -13,14 +13,13 @@ describe("epochCtx.getCommitteeAssignments", () => {
   let state: CachedBeaconStateAllForks;
   let epoch: Epoch;
 
-  before(function () {
-    this.timeout(60 * 1000);
+  beforeAll(() => {
     state = generatePerfTestCachedStatePhase0();
     epoch = computeEpochAtSlot(state.slot);
 
     // Sanity check to ensure numValidators doesn't go stale
     if (state.validators.length !== numValidators) throw Error("constant numValidators is wrong");
-  });
+  }, 60 * 1000);
 
   // the new way of getting attester duties
   for (const reqCount of [1, 100, 1000]) {
@@ -29,7 +28,7 @@ describe("epochCtx.getCommitteeAssignments", () => {
     const indexMult = Math.floor(validatorCount / reqCount);
     const indices = Array.from({length: reqCount}, (_, i) => i * indexMult);
 
-    itBench({
+    bench({
       id: `getCommitteeAssignments - req ${reqCount} vs - ${validatorCount} vc`,
       // Only run for 1000 in CI to ensure performance does not degrade
       noThreshold: reqCount < 1000,

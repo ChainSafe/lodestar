@@ -4,6 +4,7 @@ import {RootHex, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {pruneSetToMax, toRootHex} from "@lodestar/utils";
 
 import {Metrics} from "../../metrics/index.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {
   BlobsSource,
   BlockInput,
@@ -22,13 +23,12 @@ export enum BlockInputAvailabilitySource {
 }
 
 type GossipedBlockInput =
-  | {type: GossipedInputType.block; signedBlock: SignedBeaconBlock; blockBytes: Uint8Array | null}
-  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null};
+  | {type: GossipedInputType.block; signedBlock: SignedBeaconBlock}
+  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar};
 
 type BlockInputCacheType = {
   fork: ForkName;
   block?: SignedBeaconBlock;
-  blockBytes?: Uint8Array | null;
   cachedData?: CachedData;
   // block promise and its callback cached for delayed resolution
   blockInputPromise: Promise<BlockInput>;
@@ -77,16 +77,15 @@ export class SeenGossipBlockInput {
     let fork: ForkName;
 
     if (gossipedInput.type === GossipedInputType.block) {
-      const {signedBlock, blockBytes} = gossipedInput;
+      const {signedBlock} = gossipedInput;
       fork = config.getForkName(signedBlock.message.slot);
 
       blockHex = toRootHex(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message));
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
 
       blockCache.block = signedBlock;
-      blockCache.blockBytes = blockBytes;
     } else {
-      const {blobSidecar, blobBytes} = gossipedInput;
+      const {blobSidecar} = gossipedInput;
       const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
       fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
 
@@ -94,23 +93,19 @@ export class SeenGossipBlockInput {
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
-      blockCache.cachedData?.blobsCache.set(blobSidecar.index, {
-        blobSidecar,
-        // easily splice out the unsigned message as blob is a fixed length type
-        blobBytes: blobBytes?.slice(0, BLOBSIDECAR_FIXED_SIZE) ?? null,
-      });
+      blockCache.cachedData?.blobsCache.set(blobSidecar.index, blobSidecar);
     }
 
     if (!this.blockInputCache.has(blockHex)) {
       this.blockInputCache.set(blockHex, blockCache);
     }
 
-    const {block: signedBlock, blockBytes, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
+    const {block: signedBlock, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
 
     if (signedBlock !== undefined) {
       if (!isForkBlobs(fork)) {
         return {
-          blockInput: getBlockInput.preData(config, signedBlock, BlockSource.gossip, blockBytes ?? null),
+          blockInput: getBlockInput.preData(config, signedBlock, BlockSource.gossip),
           blockInputMeta: {pending: null, haveBlobs: 0, expectedBlobs: 0},
         };
       }
@@ -136,13 +131,7 @@ export class SeenGossipBlockInput {
         const blockData = {...allBlobs, blobsSource: BlobsSource.gossip, fork: cachedData.fork};
         resolveAvailability(blockData);
         metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const blockInput = getBlockInput.availableData(
-          config,
-          signedBlock,
-          BlockSource.gossip,
-          blockBytes ?? null,
-          blockData
-        );
+        const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
 
         resolveBlockInput(blockInput);
         return {
@@ -151,13 +140,7 @@ export class SeenGossipBlockInput {
         };
       }
 
-      const blockInput = getBlockInput.dataPromise(
-        config,
-        signedBlock,
-        BlockSource.gossip,
-        blockBytes ?? null,
-        cachedData
-      );
+      const blockInput = getBlockInput.dataPromise(config, signedBlock, BlockSource.gossip, cachedData);
 
       resolveBlockInput(blockInput);
       return {

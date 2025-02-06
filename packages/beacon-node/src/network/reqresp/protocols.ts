@@ -1,4 +1,5 @@
 import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
@@ -100,13 +101,13 @@ type ProtocolSummary = {
 };
 
 function toProtocol(protocol: ProtocolSummary) {
-  return (config: BeaconConfig): ProtocolNoHandler => ({
+  return (fork: ForkName, config: BeaconConfig): ProtocolNoHandler => ({
     method: protocol.method,
     version: protocol.version,
     encoding: Encoding.SSZ_SNAPPY,
     contextBytes: toContextBytes(protocol.contextBytesType, config),
-    inboundRateLimits: rateLimitQuotas(config)[protocol.method],
-    requestSizes: requestSszTypeByMethod(config)[protocol.method],
+    inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
+    requestSizes: requestSszTypeByMethod(fork, config)[protocol.method],
     responseSizes: (fork) => responseSszTypeByMethod[protocol.method](fork, protocol.version),
   });
 }

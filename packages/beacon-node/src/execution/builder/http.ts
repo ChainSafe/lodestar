@@ -54,10 +54,16 @@ export class NoBidReceived extends Error {
 }
 
 /**
+ * Additional duration to account for potential event loop lag which causes
+ * builder blocks to be rejected even though the response was sent in time.
+ */
+const EVENT_LOOP_LAG_BUFFER = 250;
+
+/**
  * Duration given to the builder to provide a `SignedBuilderBid` before the deadline
  * is reached, aborting the external builder flow in favor of the local build process.
  */
-const BUILDER_PROPOSAL_DELAY_TOLERANCE = 1000;
+const BUILDER_PROPOSAL_DELAY_TOLERANCE = 1000 + EVENT_LOOP_LAG_BUFFER;
 
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;

@@ -1,7 +1,9 @@
+import {beforeAll} from "@chainsafe/benchmark";
+
 export type LazyValue<T> = {value: T};
 
 /**
- * Register a callback to compute a value in the before() block of mocha tests
+ * Register a callback to compute a value in the before() block of benchmark tests
  * ```ts
  * const state = beforeValue(() => getState())
  * it("test", () => {
@@ -12,10 +14,9 @@ export type LazyValue<T> = {value: T};
 export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): LazyValue<T> {
   let value: T = null as unknown as T;
 
-  before(async function () {
-    this.timeout(timeout ?? 300_000);
+  beforeAll(async () => {
     value = await fn();
-  });
+  }, timeout ?? 300_000);
 
   return new Proxy<{value: T}>(
     {value},

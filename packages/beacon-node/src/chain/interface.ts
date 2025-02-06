@@ -31,6 +31,7 @@ import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
+import {SerializedCache} from "../util/serializedCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
@@ -128,6 +129,9 @@ export interface IBeaconChain {
   readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
+  // Cache for serialized objects
+  readonly serializedCache: SerializedCache;
+
   readonly opts: IChainOptions;
 
   /** Stop beacon chain processing */

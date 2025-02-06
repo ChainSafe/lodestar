@@ -9,6 +9,7 @@ import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
+  AttesterSlashing,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -375,7 +376,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number> {
+  async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
     const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
@@ -528,7 +529,7 @@ export class Network implements INetwork {
     request: Req
   ): AsyncIterable<ResponseIncoming> {
     const fork = this.config.getForkName(this.clock.currentSlot);
-    const requestType = requestSszTypeByMethod(this.config, fork)[method];
+    const requestType = requestSszTypeByMethod(fork, this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker
