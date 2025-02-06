@@ -249,16 +249,18 @@ export class PrepareNextSlotScheduler {
    * Stop eth1 data polling after eth1DepositIndex has reached depositRequestsStartIndex in Electra as described in EIP-6110
    */
   stopEth1Polling(): void {
-    // Only continue if eth1 is still polling. State regen is expensive
-    if (this.chain.eth1.isPollingEth1Data()) {
+    const clockSlot = this.chain.clock.currentSlot;
+    const clockFork = this.config.getForkName(clockSlot);
+    // Only continue if eth1 is still polling and clock is in Electra. State regen is expensive
+    if (this.chain.eth1.isPollingEth1Data() && isForkPostElectra(clockFork)) {
       const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
-      const fork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
+      const checkpointFork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
 
-      if (isForkPostElectra(fork)) {
+      if (isForkPostElectra(checkpointFork)) {
         const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
         if (
           finalizedState !== undefined &&
-          finalizedState.eth1DepositIndex >= (finalizedState as BeaconStateElectra).depositRequestsStartIndex
+          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
         ) {
           // Signal eth1 to stop polling eth1Data
           this.chain.eth1.stopPollingEth1Data();

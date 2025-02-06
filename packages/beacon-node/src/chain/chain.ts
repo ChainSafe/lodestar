@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -350,6 +350,13 @@ export class BeaconChain implements IBeaconChain {
     this.serializedCache = new SerializedCache();
 
     this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
+
+    // Stop polling eth1 data if anchor state is in Electra
+    const anchorStateFork = this.config.getForkName(cachedState.slot);
+    if (isForkPostElectra(anchorStateFork)) {
+      this.eth1.stopPollingEth1Data();
+    }
+
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
