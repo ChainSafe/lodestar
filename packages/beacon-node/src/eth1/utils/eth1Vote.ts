@@ -15,7 +15,7 @@ export async function getEth1VotesToConsider(
   state: BeaconStateAllForks,
   eth1DataGetter: Eth1DataGetter
 ): Promise<phase0.Eth1Data[]> {
-  const fork = config.getForkInfo(state.slot).name;
+  const fork = config.getForkName(state.slot);
   if (isForkPostElectra(fork)) {
     const {eth1DepositIndex, depositRequestsStartIndex} = state as BeaconStateElectra;
     if (eth1DepositIndex === Number(depositRequestsStartIndex)) {

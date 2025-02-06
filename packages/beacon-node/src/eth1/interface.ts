@@ -63,7 +63,7 @@ export interface IEth1ForBlockProduction {
    */
   startPollingMergeBlock(): void;
 
-  isPollingEth1Data(): boolean | undefined;
+  isPollingEth1Data(): boolean;
 
   /**
    * Should stop polling eth1Data after a Electra block is finalized AND deposit_requests_start_index is reached

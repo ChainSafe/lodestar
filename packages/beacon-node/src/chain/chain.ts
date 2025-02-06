@@ -6,6 +6,7 @@ import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadO
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateElectra,
   CachedBeaconStateAllForks,
   EffectiveBalanceIncrements,
   EpochShuffling,
@@ -351,10 +352,13 @@ export class BeaconChain implements IBeaconChain {
 
     this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
 
-    // Stop polling eth1 data if anchor state is in Electra
-    const anchorStateFork = this.config.getForkName(cachedState.slot);
+    // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
+    const anchorStateFork = this.config.getForkName(anchorState.slot);
     if (isForkPostElectra(anchorStateFork)) {
-      this.eth1.stopPollingEth1Data();
+      const {eth1DepositIndex, depositRequestsStartIndex} = anchorState as BeaconStateElectra;
+      if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
+        this.eth1.stopPollingEth1Data();
+      }
     }
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests

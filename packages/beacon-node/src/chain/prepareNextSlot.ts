@@ -6,9 +6,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
-  computeEndSlotAtEpoch,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   computeTimeAtSlot,
   isExecutionStateType,
 } from "@lodestar/state-transition";
@@ -217,7 +215,12 @@ export class PrepareNextSlotScheduler {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
         this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
-        this.stopEth1Polling();
+
+        if (isForkPostElectra(this.config.getForkName(clockSlot))) {
+          // Check if we can stop polling eth1 data
+          this.stopEth1Polling();
+        }
+
         this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
           nextEpoch,
           headSlot,
@@ -246,25 +249,20 @@ export class PrepareNextSlotScheduler {
   }
 
   /**
-   * Stop eth1 data polling after eth1DepositIndex has reached depositRequestsStartIndex in Electra as described in EIP-6110
+   * Stop eth1 data polling after eth1_deposit_index has reached deposit_requests_start_index in Electra as described in EIP-6110
    */
   stopEth1Polling(): void {
-    const clockSlot = this.chain.clock.currentSlot;
-    const clockFork = this.config.getForkName(clockSlot);
-    // Only continue if eth1 is still polling and clock is in Electra. State regen is expensive
-    if (this.chain.eth1.isPollingEth1Data() && isForkPostElectra(clockFork)) {
+    // Only continue if eth1 is still polling. State regen is expensive
+    if (this.chain.eth1.isPollingEth1Data()) {
       const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
-      const checkpointFork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
+      const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
 
-      if (isForkPostElectra(checkpointFork)) {
-        const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
-        if (
-          finalizedState !== undefined &&
-          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
-        ) {
-          // Signal eth1 to stop polling eth1Data
-          this.chain.eth1.stopPollingEth1Data();
-        }
+      if (
+        finalizedState !== undefined &&
+        finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
+      ) {
+        // Signal eth1 to stop polling eth1Data
+        this.chain.eth1.stopPollingEth1Data();
       }
     }
   }

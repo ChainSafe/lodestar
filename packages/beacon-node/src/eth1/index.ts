@@ -143,8 +143,8 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
     return null;
   }
 
-  isPollingEth1Data(): boolean | undefined {
-    return;
+  isPollingEth1Data(): boolean {
+    return false;
   }
 
   startPollingMergeBlock(): void {
