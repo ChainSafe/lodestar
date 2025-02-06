@@ -5,30 +5,13 @@ import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/index.js";
 
-/**
- * The maximum number of blocks to delete in a single batch
- *
- * Too much and the main thread will block
- */
-// TODO tune these with metrics/data
-const MAX_BLOCKS_TO_DELETE = 4096;
-
-/**
- * The maximum number of states to delete in a single batch
- *
- * Too much and the main thread will block
- */
-const MAX_STATES_TO_DELETE = 256;
-
 export async function pruneHistory(
   config: ChainConfig,
   db: IBeaconDb,
   logger: Logger,
   metrics: Metrics | null | undefined,
   finalizedEpoch: Epoch,
-  currentEpoch: Epoch,
-  maxBlocksToDelete = MAX_BLOCKS_TO_DELETE,
-  maxStatesToDelete = MAX_STATES_TO_DELETE
+  currentEpoch: Epoch
 ): Promise<void> {
   const blockCutoffEpoch = Math.min(
     // set by config, with underflow protection
@@ -46,8 +29,8 @@ export async function pruneHistory(
 
   const step0 = metrics?.pruneHistory.fetchKeys.startTimer();
   const [blocks, states] = await Promise.all([
-    db.blockArchive.keys({gte: 0, lt: blockCutoffSlot, limit: maxBlocksToDelete}),
-    db.stateArchive.keys({gte: 0, lt: finalizedEpoch, limit: maxStatesToDelete}),
+    db.blockArchive.keys({gte: 0, lt: blockCutoffSlot}),
+    db.stateArchive.keys({gte: 0, lt: finalizedEpoch}),
   ]);
   step0?.();
 
