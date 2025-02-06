@@ -193,6 +193,7 @@ export class BeaconNode {
 
     if (opts.chain.pruneHistory) {
       // prune ALL stale data before starting
+      logger.info("Pruning historical data");
       await callFnWhenAwait(
         pruneHistory(
           config,
@@ -204,7 +205,7 @@ export class BeaconNode {
           Infinity,
           Infinity
         ),
-        () => logger.info("Pruning historical data..."),
+        () => logger.info("Still pruning historical data, please wait..."),
         30_000,
         signal
       );
