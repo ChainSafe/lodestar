@@ -270,6 +270,7 @@ export class Validator {
     );
 
     const inclusionListService = new InclusionListService(
+      config,
       loggerVc,
       api,
       clock,
