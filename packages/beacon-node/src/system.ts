@@ -52,7 +52,7 @@ export abstract class ChainObserver extends ObserverHandlers {
     }
 
     if (signal) {
-      signal.addEventListener("abort", () => this.unsubscribe());
+      signal.addEventListener("abort", () => this.unsubscribe(), {once: true});
     }
   }
 
