@@ -1,6 +1,6 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiveStore/archiver.js";
+import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiveStore/archiveStore.js";
 import {ArchiverOpts} from "./archiveStore/interface.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
@@ -9,7 +9,7 @@ import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fi
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
 export {StateArchiveMode} from "./archiveStore/interface.js";
-export {DEFAULT_STATE_ARCHIVE_MODE} from "./archiveStore/archiver.js";
+export {DEFAULT_STATE_ARCHIVE_MODE} from "./archiveStore/archiveStore.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
