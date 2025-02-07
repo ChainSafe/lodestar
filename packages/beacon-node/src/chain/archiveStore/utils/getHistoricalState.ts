@@ -8,8 +8,9 @@ import {
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
-import {IBeaconDb} from "../../db/index.js";
-import {HistoricalStateRegenMetrics, RegenErrorType} from "./types.js";
+import {IBeaconDb} from "../../../db/index.js";
+import {RegenErrorType} from "../interface.js";
+import {HistoricalStateMetrics} from "../metrics.js";
 
 /**
  * Populate a PubkeyIndexMap with any new entries based on a BeaconState
@@ -63,7 +64,7 @@ export async function getHistoricalState(
   config: BeaconConfig,
   db: IBeaconDb,
   pubkey2index: PubkeyIndexMap,
-  metrics?: HistoricalStateRegenMetrics
+  metrics?: HistoricalStateMetrics
 ): Promise<Uint8Array> {
   const regenTimer = metrics?.regenTime.startTimer();
 

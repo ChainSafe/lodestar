@@ -119,4 +119,5 @@ export const defaultChainOptions: IChainOptions = {
   nHistoricalStatesFileDataStore: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  archiveDbPath: "",
 };

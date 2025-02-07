@@ -40,6 +40,7 @@ import {
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {LoggerNode} from "@lodestar/logger/node";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -58,7 +59,6 @@ import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {HistoricalStateRegen} from "./historicalState/index.js";
 import {
   BlockHash,
   CommonBlockBody,
@@ -132,7 +132,6 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly historicalStateRegen?: HistoricalStateRegen;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -170,12 +169,13 @@ export class BeaconChain implements IBeaconChain {
   readonly producedBlindedBlockRoot = new Set<RootHex>();
 
   readonly serializedCache: SerializedCache;
+  readonly archiveStore: ArchiveStore;
 
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  private readonly archiveStore: ArchiveStore;
+
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -192,7 +192,6 @@ export class BeaconChain implements IBeaconChain {
       eth1,
       executionEngine,
       executionBuilder,
-      historicalStateRegen,
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
@@ -205,7 +204,6 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
-      historicalStateRegen?: HistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -220,7 +218,6 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    this.historicalStateRegen = historicalStateRegen;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -350,7 +347,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.serializedCache = new SerializedCache();
 
-    this.archiveStore = new ArchiveStore(db, this, logger, signal, opts, metrics);
+    this.archiveStore = new ArchiveStore(db, this, logger as LoggerNode, signal, opts, metrics);
 
     // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
     const anchorStateFork = this.config.getForkName(anchorState.slot);
@@ -379,6 +376,7 @@ export class BeaconChain implements IBeaconChain {
 
   async close(): Promise<void> {
     this.abortController.abort();
+    await this.archiveStore.stop();
     await this.bls.close();
   }
 
@@ -417,6 +415,7 @@ export class BeaconChain implements IBeaconChain {
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
     await this.opPool.fromPersisted(this.db);
+    await this.archiveStore.start();
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
@@ -508,7 +507,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // request for finalized state using historical state regen
-    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
+    const stateSerialized = await this.archiveStore.getHistoricalState(slot);
     if (!stateSerialized) {
       return null;
     }

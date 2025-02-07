@@ -11,7 +11,6 @@ import {sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
-import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
@@ -195,41 +194,32 @@ export class BeaconNode {
         )
       : null;
 
-    const historicalStateRegen = await HistoricalStateRegen.init({
-      opts: {
-        genesisTime: anchorState.genesisTime,
-        dbLocation: opts.db.name,
-      },
-      config,
-      metrics,
-      logger: logger.child({module: LoggerModule.chain}),
-      signal,
-    });
-
-    const chain = new BeaconChain(opts.chain, {
-      config,
-      db,
-      logger: logger.child({module: LoggerModule.chain}),
-      processShutdownCallback,
-      metrics,
-      anchorState,
-      eth1: initializeEth1ForBlockProduction(opts.eth1, {
+    const chain = new BeaconChain(
+      {...opts.chain, archiveDbPath: opts.db.name},
+      {
         config,
         db,
+        logger: logger.child({module: LoggerModule.chain}),
+        processShutdownCallback,
         metrics,
-        logger: logger.child({module: LoggerModule.eth1}),
-        signal,
-      }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {
-        metrics,
-        signal,
-        logger: logger.child({module: LoggerModule.execution}),
-      }),
-      executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
-        : undefined,
-      historicalStateRegen,
-    });
+        anchorState,
+        eth1: initializeEth1ForBlockProduction(opts.eth1, {
+          config,
+          db,
+          metrics,
+          logger: logger.child({module: LoggerModule.eth1}),
+          signal,
+        }),
+        executionEngine: initializeExecutionEngine(opts.executionEngine, {
+          metrics,
+          signal,
+          logger: logger.child({module: LoggerModule.execution}),
+        }),
+        executionBuilder: opts.executionBuilder.enabled
+          ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
+          : undefined,
+      }
+    );
 
     // Load persisted data from disk to in-memory caches
     await chain.loadFromDisk();
@@ -287,7 +277,7 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), historicalStateRegen.scrapeMetrics()]),
+          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;

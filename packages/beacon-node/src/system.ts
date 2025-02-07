@@ -1,3 +1,4 @@
+import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {Logger} from "@lodestar/logger";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./chain/emitter.js";
 import {JobItemQueue} from "./util/queue/itemQueue.js";
@@ -42,13 +43,19 @@ export abstract class ChainObserver extends ObserverHandlers {
     for (const handlerName of handlerNames) {
       const handler = this[handlerName];
       if (handler) {
-        this.logger.verbose("subscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+        this.logger.verbose("subscribing chain event", {
+          observer: this.constructor.name,
+          event: handlersEventMap[handlerName],
+        });
 
         const boundedHandler = handler.bind(this);
         emitter.addListener(handlersEventMap[handlerName], boundedHandler);
 
         this.cleanupHandlers.push(() => {
-          this.logger.verbose("unsubscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+          this.logger.verbose("unsubscribing chain event", {
+            observer: this.constructor.name,
+            event: handlersEventMap[handlerName],
+          });
           emitter.removeListener(handlersEventMap[handlerName], boundedHandler);
         });
       }
@@ -92,14 +99,23 @@ export abstract class QueueObserver extends ChainObserver {
     for (const handlerName of handlerNames) {
       if (this[handlerName]) {
         const eventHandler = (...args: unknown[]) => {
-          this.logger.verbose("pushing event to queue", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+          this.logger.verbose("pushing event to queue", {
+            observer: this.constructor.name,
+            event: handlersEventMap[handlerName],
+          });
           this.jobQueue.push(handlerName, args);
         };
-        this.logger.verbose("subscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+        this.logger.verbose("subscribing chain event", {
+          observer: this.constructor.name,
+          event: handlersEventMap[handlerName],
+        });
         emitter.addListener(handlersEventMap[handlerName], eventHandler);
 
         this.cleanupHandlers.push(() => {
-          this.logger.verbose("unsubscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+          this.logger.verbose("unsubscribing chain event", {
+            observer: this.constructor.name,
+            event: handlersEventMap[handlerName],
+          });
           emitter.removeListener(handlersEventMap[handlerName], eventHandler);
         });
       }
@@ -109,4 +125,70 @@ export abstract class QueueObserver extends ChainObserver {
       signal.addEventListener("abort", () => this.unsubscribe());
     }
   }
+}
+
+// biome-ignore lint/suspicious/noExplicitAny:
+// biome-ignore lint/complexity/noBannedTypes:
+export type WorkerServiceApi<T extends {[methodName: string]: (...args: any) => any} = {}> = T & {
+  scrapeMetrics: () => Promise<string>;
+  close(): Promise<void>;
+};
+
+export type WorkerService<A extends WorkerServiceApi> = Omit<A, "close"> & {
+  start(): Promise<void>;
+  stop(): Promise<void>;
+};
+
+export type WorkerServiceData = Record<string, unknown>;
+
+export function createWorkerService<A extends WorkerServiceApi, T extends WorkerServiceData>(
+  workerPath: string,
+  workerData: T,
+  opts?: {
+    timeout?: number;
+  }
+): WorkerService<A> {
+  const worker = new Worker(workerPath, {
+    workerData,
+  } as ConstructorParameters<typeof Worker>[1]);
+
+  let thread: ModuleThread<A> | null = null;
+
+  const service = {
+    async start() {
+      thread = (await spawn<A>(worker, opts)) as ModuleThread<A>;
+    },
+    async stop(): Promise<void> {
+      if (thread) await Thread.terminate(thread);
+    },
+    async scrapeMetrics(): Promise<string> {
+      if (!thread) return "";
+
+      return thread.scrapeMetrics();
+    },
+  };
+
+  // Return a Proxy that will forward property access to either our service
+  // object (for start/stop/scrapeMetrics) or to the thread once available.
+  return new Proxy(service, {
+    get(target, prop, receiver) {
+      // If the property exists on our service object, use it.
+      if (prop in target) {
+        return Reflect.get(target, prop, receiver);
+      }
+      // Otherwise, assume it belongs to the thread.
+      // If the thread is not ready, throw an error.
+      if (!thread) {
+        throw new Error(`service is not started yet. Cannot access property: ${String(prop)}`);
+      }
+      const value = thread[prop as keyof ModuleThread<A>];
+      // If the accessed property is a function, bind it to the thread.
+      if (typeof value === "function") {
+        return (...args: unknown[]) => {
+          return (value as (...args: unknown[]) => void).apply(thread, args);
+        };
+      }
+      return value;
+    },
+  }) as WorkerService<A>;
 }

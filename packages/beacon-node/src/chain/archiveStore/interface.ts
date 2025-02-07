@@ -1,6 +1,5 @@
-import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {RootHex} from "@lodestar/types";
-import {Metrics} from "../../metrics/metrics.js";
+import {LoggerNodeOpts} from "@lodestar/logger/node";
+import {WorkerServiceApi} from "../../system.js";
 
 export enum ArchiveMode {
   Frequency = "frequency",
@@ -23,6 +22,7 @@ export interface StatesArchiverOpts {
 export type ArchiverOpts = StatesArchiverOpts & {
   disableArchiveOnCheckpoint?: boolean;
   archiveBlobEpochs?: number;
+  archiveDbPath?: string;
 };
 
 export type ProposalStats = {
@@ -39,3 +39,24 @@ export type FinalizedStats = {
   finalizedFoundCheckpointsInStateCache: number;
   finalizedAttachedValidatorsCount: number;
 };
+
+export type HistoricalStateApi = WorkerServiceApi<{
+  getHistoricalState(slot: number): Promise<Uint8Array>;
+}>;
+
+export type HistoricalStateWorkerData = {
+  chainConfigJson: Record<string, string>;
+  genesisValidatorsRoot: Uint8Array;
+  genesisTime: number;
+  maxConcurrency: number;
+  maxLength: number;
+  archiveDbPath: string;
+  metricsEnabled: boolean;
+  loggerOpts: LoggerNodeOpts;
+};
+
+export enum RegenErrorType {
+  loadState = "load_state",
+  invalidStateRoot = "invalid_state_root",
+  blockProcessing = "block_processing",
+}
