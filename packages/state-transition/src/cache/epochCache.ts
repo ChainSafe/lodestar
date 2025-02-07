@@ -20,6 +20,7 @@ import {
   IndexedAttestation,
   RootHex,
   Slot,
+  SubnetID,
   SyncPeriod,
   ValidatorIndex,
   electra,
@@ -49,6 +50,7 @@ import {
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
+import {EpochTransitionCache} from "./epochTransitionCache.js";
 import {Index2PubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "./stateCache.js";
 import {
@@ -605,14 +607,7 @@ export class EpochCache {
    * Steps for afterProcessEpoch
    * 1) update previous/current/next values of cached items
    */
-  afterProcessEpoch(
-    state: CachedBeaconStateAllForks,
-    epochTransitionCache: {
-      nextShufflingDecisionRoot: RootHex;
-      nextShufflingActiveIndices: Uint32Array;
-      nextEpochTotalActiveBalanceByIncrement: number;
-    }
-  ): void {
+  afterProcessEpoch(state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache): void {
     // Because the slot was incremented before entering this function the "next epoch" is actually the "current epoch"
     // in this context but that is not actually true because the state transition happens in the last 4 seconds of the
     // epoch. For the context of this function "upcoming epoch" is used to denote the epoch that will begin after this
@@ -657,28 +652,35 @@ export class EpochCache {
     this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
     if (this.shufflingCache) {
-      this.nextShuffling = null;
-      // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
-      // the build is done on a worker thread it will be calculated immediately after the epoch transition
-      // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
-      // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
-      // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
-      // is not ready yet as the transition must not be asynchronous.
-      this.shufflingCache
-        .get(epochAfterUpcoming, this.nextDecisionRoot)
-        .then((shuffling) => {
-          if (!shuffling) {
-            throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
-          }
-          this.nextShuffling = shuffling;
-        })
-        .catch((err) => {
-          this.shufflingCache?.logger?.error(
-            "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
-            {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
-            err
-          );
+      if (!epochTransitionCache.asyncShufflingCalculation) {
+        this.nextShuffling = this.shufflingCache.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
+          state,
+          activeIndices: this.nextActiveIndices,
         });
+      } else {
+        this.nextShuffling = null;
+        // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
+        // the build is done on a worker thread it will be calculated immediately after the epoch transition
+        // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
+        // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
+        // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
+        // is not ready yet as the transition must not be asynchronous.
+        this.shufflingCache
+          .get(epochAfterUpcoming, this.nextDecisionRoot)
+          .then((shuffling) => {
+            if (!shuffling) {
+              throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
+            }
+            this.nextShuffling = shuffling;
+          })
+          .catch((err) => {
+            this.shufflingCache?.logger?.error(
+              "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
+              {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
+              err
+            );
+          });
+      }
     } else {
       // Only for testing. shufflingCache should always be available in prod
       this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
@@ -747,13 +749,13 @@ export class EpochCache {
    * Return the beacon committee at slot for index.
    */
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
-    return this.getBeaconCommittees(slot, [index]);
+    return this.getBeaconCommittees(slot, [index])[0];
   }
 
   /**
-   * Return a single Uint32Array representing concatted committees of indices
+   * Return a Uint32Array[] representing committees of indices
    */
-  getBeaconCommittees(slot: Slot, indices: CommitteeIndex[]): Uint32Array {
+  getBeaconCommittees(slot: Slot, indices: CommitteeIndex[]): Uint32Array[] {
     if (indices.length === 0) {
       throw new Error("Attempt to get committees without providing CommitteeIndex");
     }
@@ -772,22 +774,7 @@ export class EpochCache {
       committees.push(slotCommittees[index]);
     }
 
-    // Early return if only one index
-    if (committees.length === 1) {
-      return committees[0];
-    }
-
-    // Create a new Uint32Array to flatten `committees`
-    const totalLength = committees.reduce((acc, curr) => acc + curr.length, 0);
-    const result = new Uint32Array(totalLength);
-
-    let offset = 0;
-    for (const committee of committees) {
-      result.set(committee, offset);
-      offset += committee.length;
-    }
-
-    return result;
+    return committees;
   }
 
   getCommitteeCountPerSlot(epoch: Epoch): number {
@@ -797,7 +784,7 @@ export class EpochCache {
   /**
    * Compute the correct subnet for a slot/committee index
    */
-  computeSubnetForSlot(slot: number, committeeIndex: number): number {
+  computeSubnetForSlot(slot: number, committeeIndex: number): SubnetID {
     const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
     const committeesPerSlot = this.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
     const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
@@ -910,9 +897,19 @@ export class EpochCache {
     // TODO Electra: resolve the naming conflicts
     const committeeIndices = committeeBits.getTrueBitIndexes();
 
-    const validatorIndices = this.getBeaconCommittees(data.slot, committeeIndices);
+    const validatorsByCommittee = this.getBeaconCommittees(data.slot, committeeIndices);
 
-    return aggregationBits.intersectValues(validatorIndices);
+    // Create a new Uint32Array to flatten `validatorsByCommittee`
+    const totalLength = validatorsByCommittee.reduce((acc, curr) => acc + curr.length, 0);
+    const committeeValidators = new Uint32Array(totalLength);
+
+    let offset = 0;
+    for (const committee of validatorsByCommittee) {
+      committeeValidators.set(committee, offset);
+      offset += committee.length;
+    }
+
+    return aggregationBits.intersectValues(committeeValidators);
   }
 
   getCommitteeAssignments(

@@ -255,14 +255,6 @@
         }
       }
     },
-    // Dependencies still using mocha
-    {
-      "include": ["packages/**/test/perf/**/*.test.ts", "packages/state-transition/test/utils/beforeValueMocha.ts"],
-      "javascript": {
-        // These are used by mocha
-        "globals": ["describe", "it", "before", "after"]
-      }
-    },
     {
       "include": [
         // These files are using mix cases e.g. `engine_newPayloadV4`

@@ -102,10 +102,10 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * Post this time, race execution and builder to pick whatever resolves first
  *
  * Empirically the builder block resolves in ~1.5+ seconds, and execution should resolve <1 sec.
- * So lowering the cutoff to 2 sec from 3 seconds to publish faster for successful proposal
- * as proposals post 4 seconds into the slot seems to be not being included
+ * So lowering the cutoff to 2.5 sec from 3 seconds to publish faster for successful proposal
+ * as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
+const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_500;
 /** Overall timeout for execution and block production apis */
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
@@ -124,7 +124,7 @@ type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedB
 );
 
 /**
- * Engine block selection reasons tracked in metrics
+ * Engine block selection reasons tracked in metrics / logs
  */
 export enum EngineBlockSelectionReason {
   BuilderDisabled = "builder_disabled",
@@ -138,7 +138,7 @@ export enum EngineBlockSelectionReason {
 }
 
 /**
- * Builder block selection reasons tracked in metrics
+ * Builder block selection reasons tracked in metrics / logs
  */
 export enum BuilderBlockSelectionReason {
   EngineDisabled = "engine_disabled",
@@ -695,32 +695,46 @@ export function getValidatorApi(
       throw Error("Builder and engine both failed to produce the block within timeout");
     }
 
-    if (engine.status === "rejected" && isEngineEnabled) {
-      logger.warn(
-        "Engine failed to produce the block",
-        {
-          ...loggerContext,
-          durationMs: engine.durationMs,
-        },
-        engine.reason
-      );
-    }
-
-    if (builder.status === "rejected" && isBuilderEnabled) {
-      if (builder.reason instanceof NoBidReceived) {
-        logger.info("Builder did not provide a bid", {
-          ...loggerContext,
-          durationMs: builder.durationMs,
-        });
-      } else {
+    if (isEngineEnabled) {
+      if (engine.status === "rejected") {
         logger.warn(
-          "Builder failed to produce the block",
+          "Engine failed to produce the block",
           {
             ...loggerContext,
-            durationMs: builder.durationMs,
+            durationMs: engine.durationMs,
           },
-          builder.reason
+          engine.reason
         );
+      } else if (engine.status === "pending") {
+        logger.warn("Engine failed to produce the block within cutoff time", {
+          ...loggerContext,
+          cutoffMs,
+        });
+      }
+    }
+
+    if (isBuilderEnabled) {
+      if (builder.status === "rejected") {
+        if (builder.reason instanceof NoBidReceived) {
+          logger.info("Builder did not provide a bid", {
+            ...loggerContext,
+            durationMs: builder.durationMs,
+          });
+        } else {
+          logger.warn(
+            "Builder failed to produce the block",
+            {
+              ...loggerContext,
+              durationMs: builder.durationMs,
+            },
+            builder.reason
+          );
+        }
+      } else if (builder.status === "pending") {
+        logger.warn("Builder failed to produce the block within cutoff time", {
+          ...loggerContext,
+          cutoffMs,
+        });
       }
     }
 
@@ -748,7 +762,15 @@ export function getValidatorApi(
     }
 
     if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
+      const reason =
+        isEngineEnabled === false
+          ? BuilderBlockSelectionReason.EngineDisabled
+          : engine.status === "pending"
+            ? BuilderBlockSelectionReason.EnginePending
+            : BuilderBlockSelectionReason.EngineError;
+
       logger.info("Selected builder block: no engine block produced", {
+        reason,
         ...loggerContext,
         durationMs: builder.durationMs,
         ...getBlockValueLogInfo(builder.value),
@@ -756,19 +778,26 @@ export function getValidatorApi(
 
       metrics?.blockProductionSelectionResults.inc({
         source: ProducedBlockSource.builder,
-        reason:
-          isEngineEnabled === false
-            ? BuilderBlockSelectionReason.EngineDisabled
-            : engine.status === "pending"
-              ? BuilderBlockSelectionReason.EnginePending
-              : BuilderBlockSelectionReason.EngineError,
+        reason,
       });
 
       return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
     }
 
     if (engine.status === "fulfilled" && builder.status !== "fulfilled") {
+      const reason =
+        isBuilderEnabled === false
+          ? EngineBlockSelectionReason.BuilderDisabled
+          : builder.status === "pending"
+            ? EngineBlockSelectionReason.BuilderPending
+            : builder.reason instanceof NoBidReceived
+              ? EngineBlockSelectionReason.BuilderNoBid
+              : builder.reason instanceof TimeoutError
+                ? EngineBlockSelectionReason.BuilderTimeout
+                : EngineBlockSelectionReason.BuilderError;
+
       logger.info("Selected engine block: no builder block produced", {
+        reason,
         ...loggerContext,
         durationMs: engine.durationMs,
         ...getBlockValueLogInfo(engine.value),
@@ -776,16 +805,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSelectionResults.inc({
         source: ProducedBlockSource.engine,
-        reason:
-          isBuilderEnabled === false
-            ? EngineBlockSelectionReason.BuilderDisabled
-            : builder.status === "pending"
-              ? EngineBlockSelectionReason.BuilderPending
-              : builder.reason instanceof NoBidReceived
-                ? EngineBlockSelectionReason.BuilderNoBid
-                : builder.reason instanceof TimeoutError
-                  ? EngineBlockSelectionReason.BuilderTimeout
-                  : EngineBlockSelectionReason.BuilderError,
+        reason,
       });
 
       return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
@@ -803,6 +823,7 @@ export function getValidatorApi(
       metrics?.blockProductionSelectionResults.inc(result);
 
       logger.info(`Selected ${executionPayloadSource} block`, {
+        reason: result.reason,
         ...loggerContext,
         engineDurationMs: engine.durationMs,
         ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
@@ -1503,7 +1524,7 @@ export function getValidatorApi(
         );
       });
 
-      await chain.executionBuilder.registerValidator(filteredRegistrations);
+      await chain.executionBuilder.registerValidator(currentEpoch, filteredRegistrations);
 
       logger.debug("Forwarded validator registrations to connected builder", {
         epoch: currentEpoch,

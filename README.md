@@ -70,9 +70,9 @@ Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://gi
 
 ## Meetings
 
-Weekly contributor meetings are public and announced on Discord. Feel free to check out our meeting notes and documents on [HackMD](https://hackmd.io/@wemeetagain/rJTEOdqPS/%2FXBzvaQgMTyyMJuToWAEDjw). Post-September 2021, meeting notes can be found on the [Lodestar Wiki Page](https://github.com/ChainSafe/lodestar/wiki).
+Weekly contributor meetings are posted under [Discussions](https://github.com/ChainSafe/lodestar/discussions) and topics are welcomed by any participant in the relevant meeting thread. Feel free to check out our meeting notes and documents on [HackMD](https://hackmd.io/@wemeetagain/rJTEOdqPS/%2FXBzvaQgMTyyMJuToWAEDjw). Post-September 2021, meeting notes can be found on the [Lodestar Wiki Page](https://github.com/ChainSafe/lodestar/wiki).
 
 ## Donations
 
 We are a local group of Toronto open-source developers. As such, all of our open-source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
-If you want to donate, you can send us ETH at the following address: `lodestar.chainsafe.eth`
+If you want to donate, you can find the ETH address under "Sponsor this project" on this repository.

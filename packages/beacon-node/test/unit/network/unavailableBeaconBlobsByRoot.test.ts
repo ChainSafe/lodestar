@@ -174,10 +174,9 @@ describe("unavailableBeaconBlobsByRoot", () => {
     const blockData = {
       fork: ForkName.deneb as ForkBlobs,
       blobs: allBlobs,
-      blobsBytes: [null, null, null, null, null],
       blobsSource: BlobsSource.byRoot,
     };
-    const resolvedBlobs = getBlockInput.availableData(config, signedBlock, BlockSource.byRoot, null, blockData);
+    const resolvedBlobs = getBlockInput.availableData(config, signedBlock, BlockSource.byRoot, blockData);
 
     const engineReqIdentifiers = [...blobscommitmentsandproofs.blobVersionedHashes];
     // versionedHashes: 1,2,4
@@ -191,7 +190,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
 type BlockInputCacheType = {
   fork: ForkName;
   block?: SignedBeaconBlock;
-  blockBytes?: Uint8Array | null;
   cachedData?: CachedData;
   // block promise and its callback cached for delayed resolution
   blockInputPromise: Promise<BlockInput>;

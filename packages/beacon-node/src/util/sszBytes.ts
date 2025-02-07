@@ -5,8 +5,9 @@ import {
   ForkName,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
+  isForkPostElectra,
 } from "@lodestar/params";
-import {BLSSignature, RootHex, Slot} from "@lodestar/types";
+import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations
@@ -26,6 +27,12 @@ export type CommitteeBitsBase64 = string;
 //   data: AttestationData - target data - 128
 //   signature: BLSSignature - 96
 //   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT]
+// electra
+// class SingleAttestation(Container):
+//   committeeIndex: CommitteeIndex - data 8
+//   attesterIndex: ValidatorIndex - data 8
+//   data: AttestationData - data 128
+//   signature: BLSSignature - data 96
 //
 // for all forks
 // class AttestationData(Container): 128 bytes fixed size
@@ -39,10 +46,18 @@ const VARIABLE_FIELD_OFFSET = 4;
 const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
 const ROOT_SIZE = 32;
 const SLOT_SIZE = 8;
+const COMMITTEE_INDEX_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
 // MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
 const COMMITTEE_BITS_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
+const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
+const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
+const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
+const SINGLE_ATTESTATION_ATTESTER_INDEX_OFFSET = 8;
+const SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8 + 8;
+const SINGLE_ATTESTATION_SIGNATURE_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE;
+const SINGLE_ATTESTATION_SIZE = SINGLE_ATTESTATION_SIGNATURE_OFFSET + SIGNATURE_SIZE;
 
 // shared Buffers to convert bytes to hex/base64
 const blockRootBuf = Buffer.alloc(ROOT_SIZE);
@@ -91,21 +106,40 @@ export function getAttDataFromAttestationSerialized(data: Uint8Array): AttDataBa
 }
 
 /**
- * Alias of `getAttDataFromAttestationSerialized` specifically for batch handling indexing in gossip queue
+ * Extract AttDataBase64 from `beacon_attestation` gossip message serialized bytes.
+ * This is used for GossipQueue.
  */
-export function getGossipAttestationIndex(data: Uint8Array): AttDataBase64 | null {
-  return getAttDataFromAttestationSerialized(data);
+export function getBeaconAttestationGossipIndex(fork: ForkName, data: Uint8Array): AttDataBase64 | null {
+  return ForkSeq[fork] >= ForkSeq.electra
+    ? getAttDataFromSingleAttestationSerialized(data)
+    : getAttDataFromAttestationSerialized(data);
+}
+
+/**
+ * Extract slot from `beacon_attestation` gossip message serialized bytes.
+ */
+export function getSlotFromBeaconAttestationSerialized(fork: ForkName, data: Uint8Array): Slot | null {
+  return ForkSeq[fork] >= ForkSeq.electra
+    ? getSlotFromSingleAttestationSerialized(data)
+    : getSlotFromAttestationSerialized(data);
+}
+
+/**
+ * Extract block root from `beacon_attestation` gossip message serialized bytes.
+ */
+export function getBlockRootFromBeaconAttestationSerialized(fork: ForkName, data: Uint8Array): BlockRootHex | null {
+  return ForkSeq[fork] >= ForkSeq.electra
+    ? getBlockRootFromSingleAttestationSerialized(data)
+    : getBlockRootFromAttestationSerialized(data);
 }
 
 /**
  * Extract aggregation bits from attestation serialized bytes.
  * Return null if data is not long enough to extract aggregation bits.
+ * Pre-electra attestation only
  */
-export function getAggregationBitsFromAttestationSerialized(fork: ForkName, data: Uint8Array): BitArray | null {
-  const aggregationBitsStartIndex =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE
-      : VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
+export function getAggregationBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
+  const aggregationBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
 
   if (data.length < aggregationBitsStartIndex) {
     return null;
@@ -130,18 +164,93 @@ export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSign
 }
 
 /**
- * Extract committee bits from Electra attestation serialized bytes.
- * Return null if data is not long enough to extract committee bits.
+ * Extract slot from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract slot.
  */
-export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): CommitteeBitsBase64 | null {
-  const committeeBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
-
-  if (data.length < committeeBitsStartIndex + COMMITTEE_BITS_SIZE) {
+export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot | null {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }
 
-  committeeBitsDataBuf.set(data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_SIZE));
-  return committeeBitsDataBuf.toString("base64");
+  return getSlotFromOffset(data, SINGLE_ATTESTATION_SLOT_OFFSET);
+}
+
+/**
+ * Extract committee index from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract slot.
+ */
+export function getCommitteeIndexFromSingleAttestationSerialized(
+  fork: ForkName,
+  data: Uint8Array
+): CommitteeIndex | null {
+  if (isForkPostElectra(fork)) {
+    if (data.length !== SINGLE_ATTESTATION_SIZE) {
+      return null;
+    }
+
+    return getIndexFromOffset(data, SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET);
+  }
+
+  if (data.length < VARIABLE_FIELD_OFFSET + SLOT_SIZE + COMMITTEE_INDEX_SIZE) {
+    return null;
+  }
+
+  return getIndexFromOffset(data, VARIABLE_FIELD_OFFSET + SLOT_SIZE);
+}
+
+/**
+ * Extract attester index from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract index.
+ */
+export function getAttesterIndexFromSingleAttestationSerialized(data: Uint8Array): ValidatorIndex | null {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  return getIndexFromOffset(data, SINGLE_ATTESTATION_ATTESTER_INDEX_OFFSET);
+}
+
+/**
+ * Extract block root from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract block root.
+ */
+export function getBlockRootFromSingleAttestationSerialized(data: Uint8Array): BlockRootHex | null {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  blockRootBuf.set(
+    data.subarray(SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE)
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+/**
+ * Extract attestation data base64 from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract attestation data.
+ */
+export function getAttDataFromSingleAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  // base64 is a bit efficient than hex
+  attDataBuf.set(
+    data.subarray(SINGLE_ATTESTATION_ATTDATA_OFFSET, SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE)
+  );
+  return attDataBuf.toString("base64");
+}
+
+/**
+ * Extract signature from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract signature.
+ */
+export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): BLSSignature | null {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  return data.subarray(SINGLE_ATTESTATION_SIGNATURE_OFFSET, SINGLE_ATTESTATION_SIGNATURE_OFFSET + SIGNATURE_SIZE);
 }
 
 //
@@ -293,6 +402,13 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
  */
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
   return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
+}
+
+/**
+ * Alias of `getSlotFromOffset` for readability
+ */
+function getIndexFromOffset(data: Uint8Array, offset: number): (ValidatorIndex | CommitteeIndex) | null {
+  return getSlotFromOffset(data, offset);
 }
 
 /**

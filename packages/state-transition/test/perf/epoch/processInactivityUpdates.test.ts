@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
 import {StateAltairEpoch} from "../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
@@ -38,7 +38,7 @@ describe("altair processInactivityUpdates", () => {
   ];
 
   for (const {id, isInInactivityLeak, flagFactors, factorWithPositive} of testCases) {
-    itBench<StateAltairEpoch, StateAltairEpoch>({
+    bench<StateAltairEpoch, StateAltairEpoch>({
       id: `altair processInactivityUpdates - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {

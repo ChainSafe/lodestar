@@ -1,3 +1,4 @@
+import {SubnetID} from "@lodestar/types";
 import {RegistryMetricCreator} from "../../metrics/utils/registryMetricCreator.js";
 import {SubnetType} from "../metadata.js";
 import {DiscoveredPeerStatus} from "../peers/discover.js";
@@ -194,14 +195,14 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_attnets_service_committee_subscriptions_total",
         help: "Count of committee subscriptions",
       }),
-      subscriptionsCommitteeMeshPeers: register.histogram<{subnet: number}>({
+      subscriptionsCommitteeMeshPeers: register.histogram<{subnet: SubnetID}>({
         name: "lodestar_attnets_service_committee_subscriptions_mesh_peers",
         help: "Histogram of mesh peers per committee subscription",
         labelNames: ["subnet"],
         // Dlow = 6, D = 8, DHi = 12 plus 2 more buckets
         buckets: [0, 4, 6, 8, 12],
       }),
-      subscriptionsCommitteeTimeToStableMesh: register.histogram<{subnet: number}>({
+      subscriptionsCommitteeTimeToStableMesh: register.histogram<{subnet: SubnetID}>({
         name: "lodestar_attnets_service_committee_subscriptions_time_to_stable_mesh_seconds",
         help: "Histogram of time until committee subscription is considered healthy (>= 6 mesh peers)",
         labelNames: ["subnet"],
@@ -216,12 +217,12 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_attnets_service_long_lived_subscriptions_total",
         help: "Count of long lived subscriptions",
       }),
-      subscribeSubnets: register.gauge<{subnet: number; src: SubnetSource}>({
+      subscribeSubnets: register.gauge<{subnet: SubnetID; src: SubnetSource}>({
         name: "lodestar_attnets_service_subscribe_subnets_total",
         help: "Count of subscribe_subnets calls",
         labelNames: ["subnet", "src"],
       }),
-      unsubscribeSubnets: register.gauge<{subnet: number; src: SubnetSource}>({
+      unsubscribeSubnets: register.gauge<{subnet: SubnetID; src: SubnetSource}>({
         name: "lodestar_attnets_service_unsubscribe_subnets_total",
         help: "Count of unsubscribe_subnets calls",
         labelNames: ["subnet", "src"],
@@ -237,12 +238,12 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_syncnets_service_committee_subscriptions_total",
         help: "Count of syncnet committee subscriptions",
       }),
-      subscribeSubnets: register.gauge<{subnet: number}>({
+      subscribeSubnets: register.gauge<{subnet: SubnetID}>({
         name: "lodestar_syncnets_service_subscribe_subnets_total",
         help: "Count of syncnet subscribe_subnets calls",
         labelNames: ["subnet"],
       }),
-      unsubscribeSubnets: register.gauge<{subnet: number}>({
+      unsubscribeSubnets: register.gauge<{subnet: SubnetID}>({
         name: "lodestar_syncnets_service_unsubscribe_subnets_total",
         help: "Count of syncnet unsubscribe_subnets calls",
         labelNames: ["subnet"],

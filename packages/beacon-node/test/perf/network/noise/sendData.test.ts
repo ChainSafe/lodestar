@@ -1,5 +1,5 @@
+import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
-import {itBench} from "@dapplion/benchmark";
 import {defaultLogger} from "@libp2p/logger";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import drain from "it-drain";
@@ -21,7 +21,7 @@ describe("network / noise / sendData", () => {
     2 ** 14,
     2 ** 16,
   ]) {
-    itBench({
+    bench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
       beforeEach: async () => {
         const peerA = await createSecp256k1PeerId();

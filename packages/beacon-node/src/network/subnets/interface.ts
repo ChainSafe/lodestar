@@ -1,12 +1,12 @@
 import {ForkName} from "@lodestar/params";
-import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
+import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {GossipTopic} from "../gossip/interface.js";
 import {RequestedSubnet} from "../peers/utils/index.js";
 
 /** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
 export type CommitteeSubscription = {
   validatorIndex: ValidatorIndex;
-  subnet: number;
+  subnet: SubnetID;
   slot: Slot;
   isAggregator: boolean;
 };
@@ -20,7 +20,7 @@ export type SubnetsService = {
 };
 
 export interface IAttnetsService extends SubnetsService {
-  shouldProcess(subnet: number, slot: Slot): boolean;
+  shouldProcess(subnet: SubnetID, slot: Slot): boolean;
 }
 
 export type RandBetweenFn = (min: number, max: number) => number;

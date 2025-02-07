@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 
 /*
 July 14, 2024
@@ -15,7 +15,7 @@ July 14, 2024
 
 describe("array", () => {
   const N = 1_000_000;
-  itBench({
+  bench({
     id: `Array.fill - length ${N}`,
     fn: () => {
       new Array(N).fill(0);
@@ -24,7 +24,7 @@ describe("array", () => {
       }
     },
   });
-  itBench({
+  bench({
     id: `Array push - length ${N}`,
     fn: () => {
       const arr: boolean[] = [];
@@ -33,7 +33,7 @@ describe("array", () => {
       }
     },
   });
-  itBench({
+  bench({
     id: "Array.get",
     runsFactor: N,
     beforeEach: () => {
@@ -45,7 +45,7 @@ describe("array", () => {
       }
     },
   });
-  itBench({
+  bench({
     id: "Uint8Array.get",
     runsFactor: N,
     beforeEach: () => {

@@ -10,7 +10,7 @@ import {
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, altair, deneb} from "@lodestar/types";
+import {BeaconBlock, RootHex, SubnetID, altair, deneb} from "@lodestar/types";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
@@ -52,7 +52,7 @@ export type ValidatorMonitor = {
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
     indexedAttestation: IndexedAttestation,
-    subnet: number,
+    subnet: SubnetID,
     sentPeers: number
   ): void;
   onPoolSubmitAggregatedAttestation(
@@ -305,6 +305,11 @@ export function createValidatorMonitor(
       }
       lastRegisteredStatusEpoch = currentEpoch;
       const previousEpoch = currentEpoch - 1;
+
+      // There won't be any validator activity in epoch -1
+      if (previousEpoch === -1) {
+        return;
+      }
 
       for (const [index, monitoredValidator] of validators.entries()) {
         // We subtract two from the state of the epoch that generated these summaries.

@@ -88,7 +88,6 @@ export class Eth1DepositDataTracker {
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
-    // TODO Electra: fix scenario where node starts post-Electra and `stopPolling` will always be false
     this.stopPolling = false;
 
     this.forcedEth1DataVote = opts.forcedEth1DataVote
@@ -118,7 +117,10 @@ export class Eth1DepositDataTracker {
     }
   }
 
-  // TODO Electra: Figure out how an elegant way to stop eth1data polling
+  isPollingEth1Data(): boolean {
+    return !this.stopPolling;
+  }
+
   stopPollingEth1Data(): void {
     this.stopPolling = true;
   }

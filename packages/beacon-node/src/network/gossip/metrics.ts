@@ -1,4 +1,5 @@
 import {ForkName} from "@lodestar/params";
+import {SubnetID} from "@lodestar/types";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {GossipType} from "./interface.js";
 
@@ -33,7 +34,7 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
         help: "Number of connected mesh peers per beacon attestation subnet",
         labelNames: ["subnet", "fork"],
       }),
-      peersBySyncCommitteeSubnet: register.gauge<{subnet: number; fork: ForkName}>({
+      peersBySyncCommitteeSubnet: register.gauge<{subnet: SubnetID; fork: ForkName}>({
         name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet_count",
         help: "Number of connected mesh peers per sync committee subnet",
         labelNames: ["subnet", "fork"],
@@ -50,7 +51,7 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
         help: "Number of connected topic peers per beacon attestation subnet",
         labelNames: ["subnet", "fork"],
       }),
-      peersBySyncCommitteeSubnet: register.gauge<{subnet: number; fork: ForkName}>({
+      peersBySyncCommitteeSubnet: register.gauge<{subnet: SubnetID; fork: ForkName}>({
         name: "lodestar_gossip_topic_peers_by_sync_committee_subnet_count",
         help: "Number of connected topic peers per sync committee subnet",
         labelNames: ["subnet", "fork"],

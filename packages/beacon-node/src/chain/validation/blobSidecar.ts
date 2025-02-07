@@ -1,6 +1,12 @@
-import {KZG_COMMITMENT_INCLUSION_PROOF_DEPTH, KZG_COMMITMENT_SUBTREE_INDEX0} from "@lodestar/params";
+import {ChainConfig} from "@lodestar/config";
+import {
+  ForkName,
+  KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
+  KZG_COMMITMENT_SUBTREE_INDEX0,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
-import {Root, Slot, deneb, ssz} from "@lodestar/types";
+import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -11,18 +17,29 @@ import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlobSidecar(
+  fork: ForkName,
   chain: IBeaconChain,
   blobSidecar: deneb.BlobSidecar,
-  gossipIndex: number
+  subnet: SubnetID
 ): Promise<void> {
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
-  // [REJECT] The sidecar is for the correct topic -- i.e. sidecar.index matches the topic {index}.
-  if (blobSidecar.index !== gossipIndex) {
+  // [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `blob_sidecar.index < MAX_BLOBS_PER_BLOCK`.
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(fork);
+  if (blobSidecar.index >= maxBlobsPerBlock) {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.INDEX_TOO_LARGE,
+      blobIdx: blobSidecar.index,
+      maxBlobsPerBlock,
+    });
+  }
+
+  // [REJECT] The sidecar is for the correct subnet -- i.e. `compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id`.
+  if (computeSubnetForBlobSidecar(fork, chain.config, blobSidecar.index) !== subnet) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INVALID_INDEX,
       blobIdx: blobSidecar.index,
-      gossipIndex,
+      subnet,
     });
   }
 
@@ -223,5 +240,11 @@ function validateInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
     KZG_COMMITMENT_SUBTREE_INDEX0 + blobSidecar.index,
     blobSidecar.signedBlockHeader.message.bodyRoot
+  );
+}
+
+function computeSubnetForBlobSidecar(fork: ForkName, config: ChainConfig, blobIndex: BlobIndex): SubnetID {
+  return (
+    blobIndex % (isForkPostElectra(fork) ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA : config.BLOB_SIDECAR_SUBNET_COUNT)
   );
 }

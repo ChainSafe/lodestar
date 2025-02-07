@@ -34,8 +34,10 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
       break;
     }
     // Move active balance to target. Excess balance is withdrawable.
-    const maxEffectiveBalance = getMaxEffectiveBalance(state.validators.getReadonly(sourceIndex).withdrawalCredentials);
-    const sourceEffectiveBalance = Math.min(state.balances.get(sourceIndex), maxEffectiveBalance);
+    const sourceEffectiveBalance = Math.min(
+      state.balances.get(sourceIndex),
+      state.validators.getReadonly(sourceIndex).effectiveBalance
+    );
     decreaseBalance(state, sourceIndex, sourceEffectiveBalance);
     increaseBalance(state, targetIndex, sourceEffectiveBalance);
     if (cachedBalances) {

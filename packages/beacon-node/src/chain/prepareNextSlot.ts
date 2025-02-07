@@ -1,7 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
+  BeaconStateElectra,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
@@ -114,7 +115,12 @@ export class PrepareNextSlotScheduler {
         // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
         // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
         // for other slots dontTransferCached=true because we don't run state transition on this state
-        {dontTransferCache: !isEpochTransition},
+        //
+        // Shuffling calculation will be done asynchronously when passing asyncShufflingCalculation=true.  Shuffling will be queued in
+        // beforeProcessEpoch and should theoretically be ready immediately after the synchronous epoch transition finished and the
+        // event loop is free.  In long periods of non-finality too many forks will cause the shufflingCache to throw an error for
+        // too many queued shufflings so only run async during normal epoch transition. See issue ChainSafe/lodestar#7244
+        {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true},
         RegenCaller.precomputeEpoch
       );
 
@@ -209,6 +215,10 @@ export class PrepareNextSlotScheduler {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
         this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
+
+        // Check if we can stop polling eth1 data
+        this.stopEth1Polling();
+
         this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
           nextEpoch,
           headSlot,
@@ -234,5 +244,28 @@ export class PrepareNextSlotScheduler {
     });
     state.hashTreeRoot();
     hashTreeRootTimer?.();
+  }
+
+  /**
+   * Stop eth1 data polling after eth1_deposit_index has reached deposit_requests_start_index in Electra as described in EIP-6110
+   */
+  stopEth1Polling(): void {
+    // Only continue if eth1 is still polling and finalized checkpoint is in Electra. State regen is expensive
+    if (this.chain.eth1.isPollingEth1Data()) {
+      const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
+      const checkpointFork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
+
+      if (isForkPostElectra(checkpointFork)) {
+        const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
+
+        if (
+          finalizedState !== undefined &&
+          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
+        ) {
+          // Signal eth1 to stop polling eth1Data
+          this.chain.eth1.stopPollingEth1Data();
+        }
+      }
+    }
   }
 }

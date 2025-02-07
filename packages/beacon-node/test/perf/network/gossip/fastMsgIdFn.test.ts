@@ -1,6 +1,6 @@
 import {randomBytes} from "node:crypto";
 import {digest} from "@chainsafe/as-sha256";
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import xxhashFactory from "xxhash-wasm";
 
 const hasher = await xxhashFactory();
@@ -13,21 +13,21 @@ describe("network / gossip / fastMsgIdFn", () => {
   for (const msgLen of [200, 1000, 10000]) {
     const msgData = randomBytes(msgLen);
 
-    itBench({
+    bench({
       id: `fastMsgIdFn sha256 / ${msgLen} bytes`,
       fn: () => {
         Buffer.from(digest(msgData)).subarray(0, 8).toString("hex");
       },
     });
 
-    itBench({
+    bench({
       id: `fastMsgIdFn h32 xxhash / ${msgLen} bytes`,
       fn: () => {
         hasher.h32Raw(msgData, h32Seed);
       },
     });
 
-    itBench({
+    bench({
       id: `fastMsgIdFn h64 xxhash / ${msgLen} bytes`,
       fn: () => {
         hasher.h64Raw(msgData, h64Seed).toString(16);

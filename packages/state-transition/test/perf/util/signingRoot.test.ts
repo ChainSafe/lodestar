@@ -1,6 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {phase0, ssz} from "@lodestar/types";
 import {computeSigningRoot} from "../../../src/util/signingRoot.js";
 
@@ -37,7 +37,7 @@ describe("computeSigningRoot", () => {
 
   const bytes = type.serialize(seedObject);
   const domain = new Uint8Array(32);
-  itBench({
+  bench({
     id: "computeSigningRoot for AttestationData",
     fn: () => {
       for (let i = 0; i < 1000; i++) {
@@ -47,7 +47,7 @@ describe("computeSigningRoot", () => {
     runsFactor: 1000,
   });
 
-  itBench({
+  bench({
     id: "hash AttestationData serialized data then Buffer.toString(base64)",
     fn: () => {
       for (let i = 0; i < 1000; i++) {
@@ -58,7 +58,7 @@ describe("computeSigningRoot", () => {
     runsFactor: 1000,
   });
 
-  itBench({
+  bench({
     id: "toHexString serialized data",
     fn: () => {
       for (let i = 0; i < 1000; i++) {
@@ -69,7 +69,7 @@ describe("computeSigningRoot", () => {
     runsFactor: 1000,
   });
 
-  itBench({
+  bench({
     id: "Buffer.toString(base64)",
     fn: () => {
       for (let i = 0; i < 1000; i++) {

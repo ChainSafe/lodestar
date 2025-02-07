@@ -13,7 +13,19 @@ import {
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
-import {BeaconBlock, Epoch, Root, RootHex, Slot, ValidatorIndex, bellatrix, phase0, ssz} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  bellatrix,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
@@ -686,7 +698,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -738,7 +750,7 @@ export class ForkChoice implements IForkChoice {
    * We already call is_slashable_attestation_data() and is_valid_indexed_attestation
    * in state transition so no need to do it again
    */
-  onAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): void {
+  onAttesterSlashing(attesterSlashing: AttesterSlashing): void {
     // TODO: we already call in in state-transition, find a way not to recompute it again
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     for (const validatorIndex of intersectingIndices) {
@@ -1199,7 +1211,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#validate_on_attestation
    */
   private validateOnAttestation(
-    indexedAttestation: phase0.IndexedAttestation,
+    indexedAttestation: IndexedAttestation,
     slot: Slot,
     blockRootHex: string,
     targetEpoch: Epoch,

@@ -26,7 +26,7 @@ describe("ValidatorStore", () => {
           strictFeeRecipientCheck: true,
           feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           builder: {
-            gasLimit: 30000000,
+            gasLimit: 36000000,
             selection: routes.validator.BuilderSelection.ExecutionOnly,
           },
         },

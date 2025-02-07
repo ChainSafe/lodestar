@@ -40,7 +40,7 @@ Click on the `Open dedicated DevTools for Node` link to open the node specific w
 
 ![Memory Tab](/images/heap-dumps/memory-tab.png)
 
-Load the profile by either right clicking on the left pane or by clicking the `Load` button at the bottom.
+Load the profile by either right-clicking on the left pane or by clicking the `Load` button at the bottom.
 
 ![Load Profile](/images/heap-dumps/load-profile.png)
 
@@ -70,7 +70,7 @@ Having a good understanding of the codebase will help to narrow down where to lo
 
 _**note: collecting a native heap dump is only supported on linux, analysis can be done from linux or Mac**_
 
-There are several tools that can be used to do native heap dump analysis. The most common are [`massif`](https://valgrind.org/docs/manual/ms-manual.html) from the [`Valgrind`](https://valgrind.org/) suite, google's [`gperftools`](https://github.com/gperftools/gperftools) and `heaptrack` from [KDE](https://community.kde.org/Main_Page). Of the three, `heaptrack` is the most user friendly tool, and it is specifically designed for the task. It is much faster than `Valgrind`, easier to integrate than `gperftools` and also includes a gui for result analysis. Often times there are also memory allocations that are not related to memory leaks, and tools like `Valgrind` and `gperftools` become less useful. This is why `heaptrack` is the recommended tool for heap dump analysis on Lodestar.
+There are several tools that can be used to do native heap dump analysis. The most common are [`massif`](https://valgrind.org/docs/manual/ms-manual.html) from the [`Valgrind`](https://valgrind.org/) suite, google's [`gperftools`](https://github.com/gperftools/gperftools) and `heaptrack` from [KDE](https://community.kde.org/Main_Page). Of the three, `heaptrack` is the most user-friendly tool, and it is specifically designed for the task. It is much faster than `Valgrind`, easier to integrate than `gperftools` and also includes a gui for result analysis. Often times there are also memory allocations that are not related to memory leaks, and tools like `Valgrind` and `gperftools` become less useful. This is why `heaptrack` is the recommended tool for heap dump analysis on Lodestar.
 
 There are a few things that will make the results with `heaptrack` far better. The most important is using debug builds of all libraries included in a binary, including the application itself. This will make the results usable. Not to say that they will be useless without debug symbols but it will be kinda tough to optimize functions without knowing the function names nor the file and line numbers.
 

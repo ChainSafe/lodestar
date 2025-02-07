@@ -1,5 +1,5 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ForkName, ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
@@ -18,6 +18,7 @@ export function processExecutionPayload(
   externalData: Omit<BlockExternalData, "dataAvailableStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
+  const forkName = ForkName[ForkSeq[fork] as ForkName];
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {
@@ -47,10 +48,11 @@ export function processExecutionPayload(
     throw Error(`Invalid timestamp ${payload.timestamp} genesisTime=${state.genesisTime} slot=${state.slot}`);
   }
 
-  if (fork >= ForkSeq.deneb) {
+  if (isForkBlobs(forkName)) {
+    const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(forkName);
     const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
-    if (blobKzgCommitmentsLen > MAX_BLOBS_PER_BLOCK) {
-      throw Error(`blobKzgCommitmentsLen exceeds limit=${MAX_BLOBS_PER_BLOCK}`);
+    if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+      throw Error(`blobKzgCommitmentsLen exceeds limit=${maxBlobsPerBlock}`);
     }
   }
 

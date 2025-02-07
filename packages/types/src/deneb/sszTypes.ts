@@ -6,7 +6,6 @@ import {
   HISTORICAL_ROOTS_LIMIT,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  MAX_REQUEST_BLOB_SIDECARS,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
@@ -61,8 +60,6 @@ export const BlobIdentifier = new ContainerType(
   },
   {typeName: "BlobIdentifier", jsonCase: "eth2"}
 );
-
-export const BlobSidecarsByRootRequest = new ListCompositeType(BlobIdentifier, MAX_REQUEST_BLOB_SIDECARS);
 
 // Beacon Chain types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers

@@ -3,7 +3,7 @@
 # Should ONLY run on CI/GA for releases, installing `jq` for Ubuntu latest
 sudo apt install jq # sudo without password on ubuntu-latest
 
-# Using the lodestar-cli packacke to reference against
+# Using the lodestar-cli package to reference against
 declare PACKAGE="@chainsafe/lodestar"
 
 # Using `npm view -j` to get all available versions as JSON

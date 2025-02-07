@@ -17,7 +17,7 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.blob_sidecar]: [
       {
-        topic: {type: GossipType.blob_sidecar, index: 1, fork: ForkName.deneb, encoding},
+        topic: {type: GossipType.blob_sidecar, subnet: 1, fork: ForkName.deneb, encoding},
         topicStr: "/eth2/46acb19a/blob_sidecar_1/ssz_snappy",
       },
     ],

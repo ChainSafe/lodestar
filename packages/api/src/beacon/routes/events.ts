@@ -14,6 +14,7 @@ import {
   UintNum64,
   altair,
   capella,
+  electra,
   phase0,
   ssz,
   sszTypesFor,
@@ -47,10 +48,14 @@ export enum EventType {
    * Both dependent roots use the genesis block root in the case of underflow.
    */
   head = "head",
-  /** The node has received a valid block (from P2P or API) */
+  /** The node has received a block (from P2P or API) that is successfully imported on the fork-choice `on_block` handler */
   block = "block",
+  /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
+  blockGossip = "block_gossip",
   /** The node has received a valid attestation (from P2P or API) */
   attestation = "attestation",
+  /** The node has received a valid SingleAttestation (from P2P or API) */
+  singleAttestation = "single_attestation",
   /** The node has received a valid voluntary exit (from P2P or API) */
   voluntaryExit = "voluntary_exit",
   /** The node has received a valid proposer slashing (from P2P or API) */
@@ -78,7 +83,9 @@ export enum EventType {
 export const eventTypes: {[K in EventType]: K} = {
   [EventType.head]: EventType.head,
   [EventType.block]: EventType.block,
+  [EventType.blockGossip]: EventType.blockGossip,
   [EventType.attestation]: EventType.attestation,
+  [EventType.singleAttestation]: EventType.singleAttestation,
   [EventType.voluntaryExit]: EventType.voluntaryExit,
   [EventType.proposerSlashing]: EventType.proposerSlashing,
   [EventType.attesterSlashing]: EventType.attesterSlashing,
@@ -107,7 +114,12 @@ export type EventData = {
     block: RootHex;
     executionOptimistic: boolean;
   };
+  [EventType.blockGossip]: {
+    slot: Slot;
+    block: RootHex;
+  };
   [EventType.attestation]: Attestation;
+  [EventType.singleAttestation]: electra.SingleAttestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
   [EventType.proposerSlashing]: phase0.ProposerSlashing;
   [EventType.attesterSlashing]: AttesterSlashing;
@@ -226,6 +238,13 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       {jsonCase: "eth2"}
     ),
+    [EventType.blockGossip]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        block: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
 
     [EventType.attestation]: {
       toJson: (attestation) => {
@@ -237,6 +256,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         return sszTypesFor(fork).Attestation.fromJson(attestation);
       },
     },
+    [EventType.singleAttestation]: ssz.electra.SingleAttestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
     [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
     [EventType.attesterSlashing]: {

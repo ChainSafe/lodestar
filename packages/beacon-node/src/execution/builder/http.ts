@@ -6,6 +6,7 @@ import {ForkExecution, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {
   BLSPubkey,
+  Epoch,
   ExecutionPayloadHeader,
   Root,
   SignedBeaconBlockOrContents,
@@ -19,6 +20,7 @@ import {
 } from "@lodestar/types";
 import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {ValidatorRegistration, ValidatorRegistrationCache} from "./cache.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
@@ -52,14 +54,21 @@ export class NoBidReceived extends Error {
 }
 
 /**
+ * Additional duration to account for potential event loop lag which causes
+ * builder blocks to be rejected even though the response was sent in time.
+ */
+const EVENT_LOOP_LAG_BUFFER = 250;
+
+/**
  * Duration given to the builder to provide a `SignedBuilderBid` before the deadline
  * is reached, aborting the external builder flow in favor of the local build process.
  */
-const BUILDER_PROPOSAL_DELAY_TOLERANCE = 1000;
+const BUILDER_PROPOSAL_DELAY_TOLERANCE = 1000 + EVENT_LOOP_LAG_BUFFER;
 
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
   readonly config: ChainForkConfig;
+  readonly registrations: ValidatorRegistrationCache;
   readonly issueLocalFcUWithFeeRecipient?: string;
   // Builder needs to be explicity enabled using updateStatus
   status = false;
@@ -93,6 +102,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     );
     logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
     this.config = config;
+    this.registrations = new ValidatorRegistrationCache();
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
     /**
@@ -128,8 +138,17 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     }
   }
 
-  async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
+  async registerValidator(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
     (await this.api.registerValidator({registrations})).assertOk();
+
+    for (const registration of registrations) {
+      this.registrations.add(epoch, registration.message);
+    }
+    this.registrations.prune(epoch);
+  }
+
+  getValidatorRegistration(pubkey: BLSPubkey): ValidatorRegistration | undefined {
+    return this.registrations.get(pubkey);
   }
 
   async getHeader(

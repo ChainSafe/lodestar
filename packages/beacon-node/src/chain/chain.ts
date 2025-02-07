@@ -3,9 +3,10 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateElectra,
   CachedBeaconStateAllForks,
   EffectiveBalanceIncrements,
   EpochShuffling,
@@ -48,6 +49,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {SerializedCache} from "../util/serializedCache.js";
 import {Archiver} from "./archiver/archiver.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
@@ -166,6 +168,8 @@ export class BeaconChain implements IBeaconChain {
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
+
+  readonly serializedCache: SerializedCache;
 
   readonly opts: IChainOptions;
 
@@ -344,7 +348,19 @@ export class BeaconChain implements IBeaconChain {
     this.bls = bls;
     this.emitter = emitter;
 
+    this.serializedCache = new SerializedCache();
+
     this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
+
+    // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
+    const anchorStateFork = this.config.getForkName(anchorState.slot);
+    if (isForkPostElectra(anchorStateFork)) {
+      const {eth1DepositIndex, depositRequestsStartIndex} = anchorState as BeaconStateElectra;
+      if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
+        this.eth1.stopPollingEth1Data();
+      }
+    }
+
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -1138,16 +1154,6 @@ export class BeaconChain implements IBeaconChain {
     if (headState === null) {
       this.logger.verbose("Head state is null");
     }
-
-    // TODO-Electra: Deprecating eth1Data poll requires a check on a finalized checkpoint state.
-    // Will resolve this later
-    // if (cpEpoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity)) {
-    //   // finalizedState can be safely casted to Electra state since cp is already post-Electra
-    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositRequestsStartIndex) {
-    //     // Signal eth1 to stop polling eth1Data
-    //     this.eth1.stopPollingEth1Data();
-    //   }
-    // }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {

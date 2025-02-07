@@ -1,8 +1,9 @@
+import {ForkName} from "@lodestar/params";
 import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
-  getBlockRootFromAttestationSerialized,
+  getBlockRootFromBeaconAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
-  getSlotFromAttestationSerialized,
+  getSlotFromBeaconAttestationSerialized,
   getSlotFromBlobSidecarSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
@@ -16,9 +17,9 @@ import {ExtractSlotRootFns} from "./types.js";
  */
 export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
   return {
-    [GossipType.beacon_attestation]: (data: Uint8Array): SlotRootHex | null => {
-      const slot = getSlotFromAttestationSerialized(data);
-      const root = getBlockRootFromAttestationSerialized(data);
+    [GossipType.beacon_attestation]: (data: Uint8Array, fork: ForkName): SlotRootHex | null => {
+      const slot = getSlotFromBeaconAttestationSerialized(fork, data);
+      const root = getBlockRootFromBeaconAttestationSerialized(fork, data);
 
       if (slot === null || root === null) {
         return null;

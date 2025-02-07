@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Root, Slot, SubcommitteeIndex, altair} from "@lodestar/types";
+import {Root, Slot, SubcommitteeIndex, SubnetID, altair} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -26,7 +26,6 @@ type ContributionFast = Omit<altair.SyncCommitteeContribution, "aggregationBits"
 
 /** Hex string of `contribution.beaconBlockRoot` */
 type BlockRootHex = string;
-type Subnet = SubcommitteeIndex;
 
 /**
  * Preaggregate SyncCommitteeMessage into SyncCommitteeContribution
@@ -40,8 +39,8 @@ export class SyncCommitteeMessagePool {
    * */
   private readonly contributionsByRootBySubnetBySlot = new MapDef<
     Slot,
-    MapDef<Subnet, Map<BlockRootHex, ContributionFast>>
-  >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
+    MapDef<SubnetID, Map<BlockRootHex, ContributionFast>>
+  >(() => new MapDef<SubnetID, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
   private lowestPermissibleSlot = 0;
 
   constructor(
@@ -62,7 +61,7 @@ export class SyncCommitteeMessagePool {
   }
 
   // TODO: indexInSubcommittee: number should be indicesInSyncCommittee
-  add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
+  add(subnet: SubnetID, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;
     const rootHex = toRootHex(beaconBlockRoot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -146,7 +145,7 @@ function aggregateSignatureInto(
  * Format `signature` into an efficient `contribution` to add more signatures in with aggregateSignatureInto()
  */
 function signatureToAggregate(
-  subnet: number,
+  subnet: SubnetID,
   signature: altair.SyncCommitteeMessage,
   indexInSubcommittee: number
 ): ContributionFast {

@@ -1,13 +1,13 @@
-import {ForkDigestContext} from "@lodestar/config";
+import {ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
-  MAX_BLOBS_PER_BLOCK,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkLightClient,
+  isForkPostElectra,
 } from "@lodestar/params";
-import {Attestation, ssz, sszTypesFor} from "@lodestar/types";
+import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {DEFAULT_ENCODING} from "./constants.js";
@@ -74,7 +74,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee:
       return `${topic.type}_${topic.subnet}`;
     case GossipType.blob_sidecar:
-      return `${topic.type}_${topic.index}`;
+      return `${topic.type}_${topic.subnet}`;
   }
 }
 
@@ -88,7 +88,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.beacon_aggregate_and_proof:
       return sszTypesFor(topic.fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return sszTypesFor(topic.fork).Attestation;
+      return sszTypesFor(topic.fork).SingleAttestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
@@ -125,11 +125,27 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 }
 
 /**
+ * @deprecated
  * Deserialize a gossip serialized data into an Attestation object.
+ * No longer used post-electra. Use `sszDeserializeSingleAttestation` instead
  */
 export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
   try {
     return sszTypesFor(fork).Attestation.deserialize(serializedData);
+  } catch (_e) {
+    throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
+  }
+}
+
+/**
+ * Deserialize a gossip seralized data into an SingleAttestation object.
+ */
+export function sszDeserializeSingleAttestation(fork: ForkName, serializedData: Uint8Array): SingleAttestation {
+  try {
+    if (isForkPostElectra(fork)) {
+      return sszTypesFor(fork).SingleAttestation.deserialize(serializedData);
+    }
+    return sszTypesFor(fork).Attestation.deserialize(serializedData) as SingleAttestation;
   } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
@@ -182,10 +198,10 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
     }
 
     if (gossipTypeStr.startsWith(GossipType.blob_sidecar)) {
-      const indexStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the index
-      const index = parseInt(indexStr, 10);
-      if (Number.isNaN(index)) throw Error(`index ${indexStr} is not a number`);
-      return {type: GossipType.blob_sidecar, index, fork, encoding};
+      const subnetStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
+      const subnet = parseInt(subnetStr, 10);
+      if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
+      return {type: GossipType.blob_sidecar, subnet, fork, encoding};
     }
 
     throw Error(`Unknown gossip type ${gossipTypeStr}`);
@@ -199,6 +215,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
  * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
  */
 export function getCoreTopicsAtFork(
+  config: ChainConfig,
   fork: ForkName,
   opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
@@ -211,10 +228,14 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
-  // After Deneb also track blob_sidecar_{index}
+  // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    for (let index = 0; index < MAX_BLOBS_PER_BLOCK; index++) {
-      topics.push({type: GossipType.blob_sidecar, index});
+    const subnetCount = isForkPostElectra(fork)
+      ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA
+      : config.BLOB_SIDECAR_SUBNET_COUNT;
+
+    for (let subnet = 0; subnet < subnetCount; subnet++) {
+      topics.push({type: GossipType.blob_sidecar, subnet});
     }
   }
 

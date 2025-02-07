@@ -35,7 +35,7 @@ function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
       attDataRootHex: toHexString(crypto.randomBytes(32)),
       subnet: i,
     } as unknown as AttestationDataCacheEntry;
-    seenAttestationDatas.add(slot, key, attDataCacheEntry);
+    seenAttestationDatas.add(slot, i, key, attDataCacheEntry);
   }
   return seenAttestationDatas;
 }

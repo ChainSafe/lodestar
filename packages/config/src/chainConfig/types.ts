@@ -72,6 +72,12 @@ export type ChainConfig = {
 
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
+  BLOB_SIDECAR_SUBNET_COUNT: number;
+  MAX_BLOBS_PER_BLOCK: number;
+  MAX_REQUEST_BLOB_SIDECARS: number;
+  BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: number;
+  MAX_BLOBS_PER_BLOCK_ELECTRA: number;
+  MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -136,6 +142,12 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
+  BLOB_SIDECAR_SUBNET_COUNT: "number",
+  MAX_BLOBS_PER_BLOCK: "number",
+  MAX_REQUEST_BLOB_SIDECARS: "number",
+  BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: "number",
+  MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
+  MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
 };
 
 /** Allows values in a Spec file */

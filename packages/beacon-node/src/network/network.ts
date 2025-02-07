@@ -4,10 +4,11 @@ import {PeerId} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
+  AttesterSlashing,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -15,7 +16,9 @@ import {
   Root,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SingleAttestation,
   SlotRootHex,
+  SubnetID,
   WithBytes,
   altair,
   capella,
@@ -28,6 +31,7 @@ import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
+import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForks} from "./forks.js";
@@ -295,7 +299,7 @@ export class Network implements INetwork {
     return this.subscribedToCoreTopics;
   }
 
-  shouldAggregate(subnet: number, slot: number): boolean {
+  shouldAggregate(subnet: SubnetID, slot: number): boolean {
     return this.aggregatorTracker.shouldAggregate(subnet, slot);
   }
 
@@ -311,9 +315,9 @@ export class Network implements INetwork {
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
     const slot = blobSidecar.signedBlockHeader.message.slot;
     const fork = this.config.getForkName(slot);
-    const index = blobSidecar.index;
+    const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, index}, blobSidecar, {
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, subnet}, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
   }
@@ -327,7 +331,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
+  async publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
     return this.publishGossip<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
@@ -370,7 +374,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number> {
+  async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
     const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
@@ -378,7 +382,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<number> {
+  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number> {
     const fork = this.config.getForkName(signature.slot);
     return this.publishGossip<GossipType.sync_committee>({type: GossipType.sync_committee, fork, subnet}, signature, {
       ignoreDuplicatePublishError: true,
@@ -499,18 +503,16 @@ export class Network implements INetwork {
     peerId: PeerIdStr,
     request: deneb.BlobSidecarsByRangeRequest
   ): Promise<deneb.BlobSidecar[]> {
+    const fork = this.config.getForkName(request.startSlot);
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * MAX_BLOBS_PER_BLOCK,
+      request.count * this.config.getMaxBlobsPerBlock(fork),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
 
-  async sendBlobSidecarsByRoot(
-    peerId: PeerIdStr,
-    request: deneb.BlobSidecarsByRootRequest
-  ): Promise<deneb.BlobSidecar[]> {
+  async sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
@@ -524,7 +526,8 @@ export class Network implements INetwork {
     versions: number[],
     request: Req
   ): AsyncIterable<ResponseIncoming> {
-    const requestType = requestSszTypeByMethod[method];
+    const fork = this.config.getForkName(this.clock.currentSlot);
+    const requestType = requestSszTypeByMethod(fork, this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker

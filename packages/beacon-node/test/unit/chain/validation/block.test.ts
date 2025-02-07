@@ -1,6 +1,6 @@
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkBlobs, ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
@@ -20,12 +20,15 @@ describe("gossip block validation", () => {
   let job: SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
-  const block = ssz.phase0.BeaconBlock.defaultValue();
+  const block = ssz.deneb.BeaconBlock.defaultValue();
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
   const maxSkipSlots = 10;
 
   beforeEach(() => {
+    // Fill up with kzg commitments
+    block.body.blobKzgCommitments = Array.from({length: config.MAX_BLOBS_PER_BLOCK}, () => new Uint8Array([0]));
+
     chain = getMockedBeaconChain();
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
@@ -184,9 +187,47 @@ describe("gossip block validation", () => {
     regen.getPreState.mockResolvedValue(state);
     // BLS signature verifier returns valid
     verifySignature.mockResolvedValue(true);
-    // Force proposer shuffling cache to return wrong value
+    // Force proposer shuffling cache to return correct value
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
     await validateGossipBlock(config, chain, job, ForkName.phase0);
+  });
+
+  it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    // Regen returns some state
+    const state = generateCachedState();
+    regen.getPreState.mockResolvedValue(state);
+    // BLS signature verifier returns valid
+    verifySignature.mockResolvedValue(true);
+    // Force proposer shuffling cache to return correct value
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex + 1);
+    // Add one extra kzg commitment in the block so it goes over the limit
+    (job as SignedBeaconBlock<ForkBlobs>).message.body.blobKzgCommitments.push(new Uint8Array([0]));
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.deneb),
+      BlockErrorCode.TOO_MANY_KZG_COMMITMENTS
+    );
+  });
+
+  it("deneb - valid", async () => {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    // Regen returns some state
+    const state = generateCachedState();
+    regen.getPreState.mockResolvedValue(state);
+    // BLS signature verifier returns valid
+    verifySignature.mockResolvedValue(true);
+    // Force proposer shuffling cache to return correct value
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    // Keep number of kzg commitments as is so it stays within the limit
+
+    await validateGossipBlock(config, chain, job, ForkName.deneb);
   });
 });
