@@ -6,10 +6,10 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {archiveBlocks} from "./archiveBlocks.js";
-import {ArchiverOpts, StateArchiveMode, StateArchiveStrategy} from "./interface.js";
+import {ArchiverOpts, ArchiveMode, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 
-export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
+export const DEFAULT_STATE_ARCHIVE_MODE = ArchiveMode.Frequency;
 
 export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
@@ -18,7 +18,7 @@ export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
  * periodically.
  */
 export class ArchiveStore {
-  private stateArchiveMode: StateArchiveMode;
+  private archiveMode: ArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private prevFinalized: CheckpointWithHex;
@@ -33,13 +33,13 @@ export class ArchiveStore {
     opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
-    if (opts.stateArchiveMode === StateArchiveMode.Frequency) {
+    if (opts.archiveMode === ArchiveMode.Frequency) {
       this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
     } else {
-      throw new Error(`State archive strategy "${opts.stateArchiveMode}" currently not supported.`);
+      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
     }
 
-    this.stateArchiveMode = opts.stateArchiveMode;
+    this.archiveMode = opts.archiveMode;
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -80,7 +80,7 @@ export class ArchiveStore {
     );
 
     this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {stateArchiveMode: this.stateArchiveMode}, err);
+      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
     });
   };
 
