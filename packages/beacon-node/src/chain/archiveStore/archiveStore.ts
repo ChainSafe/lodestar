@@ -5,14 +5,11 @@ import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
-import {archiveBlocks} from "./archiveBlocks.js";
-import {ArchiverOpts, ArchiveMode, StateArchiveStrategy} from "./interface.js";
+import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
+import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
+import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
+import {PruneHotStateObserver} from "./observers/pruneHotStateObserver.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
-import { PruneHotStateObserver } from "./observers/pruneHotStateObserver.js";
-
-export const DEFAULT_STATE_ARCHIVE_MODE = ArchiveMode.Frequency;
-
-export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -51,13 +48,28 @@ export class ArchiveStore {
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
 
-      const pruneHotStateObserver = new PruneHotStateObserver({forkChoice: this.chain.forkChoice, regen: this.chain.regen});
-      pruneHotStateObserver.subscribe(this.chain.emitter);
+      const pruneHotStateObserver = new PruneHotStateObserver({
+        forkChoice: this.chain.forkChoice,
+        regen: this.chain.regen,
+      });
+      pruneHotStateObserver.subscribe(this.chain.emitter, signal);
+
+      const archiveBlocksObserver = new ArchiveBlocksObserver(
+        {
+          forkChoice: this.chain.forkChoice,
+          clock: this.chain.clock,
+          config: this.chain.config,
+          lightClientServer: this.chain.lightClientServer,
+          db: this.db,
+          logger: this.logger,
+        },
+        {archiveBlobEpochs: this.archiveBlobEpochs, signal}
+      );
+      archiveBlocksObserver.subscribe(this.chain.emitter, signal);
 
       signal.addEventListener(
         "abort",
         () => {
-          pruneHotStateObserver.unsubscribe();
           this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
         },
         {once: true}
@@ -78,16 +90,6 @@ export class ArchiveStore {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
-      await archiveBlocks(
-        this.chain.config,
-        this.db,
-        this.chain.forkChoice,
-        this.chain.lightClientServer,
-        this.logger,
-        finalized,
-        this.chain.clock.currentEpoch,
-        this.archiveBlobEpochs
-      );
       this.prevFinalized = finalized;
 
       await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);

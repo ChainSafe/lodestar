@@ -1,11 +1,11 @@
-import { CachedBeaconStateAllForks } from "@lodestar/state-transition";
-import { Checkpoint } from "@lodestar/types/lib/phase0/types.js";
-import { ChainObserver } from "../../../system.js";
-import { IForkChoice } from "@lodestar/fork-choice";
-import { IStateRegenerator } from "../../regen/interface.js";
+import {IForkChoice} from "@lodestar/fork-choice";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Checkpoint} from "@lodestar/types/lib/phase0/types.js";
+import {ChainObserver} from "../../../system.js";
+import {IStateRegenerator} from "../../regen/interface.js";
 
 export class PruneHotStateObserver extends ChainObserver {
-  constructor(private modules: {forkChoice: IForkChoice, regen: IStateRegenerator}){
+  constructor(private modules: {forkChoice: IForkChoice; regen: IStateRegenerator}) {
     super();
   }
 
@@ -16,6 +16,5 @@ export class PruneHotStateObserver extends ChainObserver {
       this.modules.forkChoice.getJustifiedCheckpoint().epoch,
       headStateRoot
     );
-
   }
 }

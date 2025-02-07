@@ -1,5 +1,5 @@
 import {ApiOptions, defaultApiOptions} from "../api/options.js";
-import {DEFAULT_STATE_ARCHIVE_MODE, IChainOptions, ArchiveMode, defaultChainOptions} from "../chain/options.js";
+import {ArchiveMode, DEFAULT_STATE_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
 import {Eth1Options, defaultEth1Options} from "../eth1/options.js";
 import {
