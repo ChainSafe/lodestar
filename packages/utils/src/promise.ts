@@ -19,9 +19,12 @@ export async function callFnWhenAwait<T>(
     }
   };
 
-  const t = await Promise.race([p, logFn()]);
-  done = true;
-  return t as T;
+  const race = Promise.race([p, logFn()]);
+  race.finally(() => {
+    done = true;
+  });
+
+  return (await race) as T;
 }
 
 export type PromiseResult<T> = {
