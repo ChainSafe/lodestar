@@ -1,6 +1,6 @@
 import {randomBytes} from "node:crypto";
+import {bench, describe} from "@chainsafe/benchmark";
 import snappyWasm from "@chainsafe/snappy-wasm";
-import {itBench} from "@dapplion/benchmark";
 import * as snappy from "snappy";
 import * as snappyjs from "snappyjs";
 
@@ -85,7 +85,7 @@ describe("network / gossip / snappy", () => {
       const uncompressed = randomBytes(msgLen);
       const RUNS_FACTOR = 1000;
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - compress - snappyjs`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -95,7 +95,7 @@ describe("network / gossip / snappy", () => {
         },
       });
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - compress - snappy`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -105,7 +105,7 @@ describe("network / gossip / snappy", () => {
         },
       });
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - compress - snappy-wasm`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -115,7 +115,7 @@ describe("network / gossip / snappy", () => {
         },
       });
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - compress - snappy-wasm - prealloc`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -136,7 +136,7 @@ describe("network / gossip / snappy", () => {
       const compressed = snappyjs.compress(uncompressed);
       const RUNS_FACTOR = 1000;
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - uncompress - snappyjs`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -146,7 +146,7 @@ describe("network / gossip / snappy", () => {
         },
       });
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - uncompress - snappy`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -156,7 +156,7 @@ describe("network / gossip / snappy", () => {
         },
       });
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - uncompress - snappy-wasm`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -166,7 +166,7 @@ describe("network / gossip / snappy", () => {
         },
       });
 
-      itBench({
+      bench({
         id: `${msgLen} bytes - uncompress - snappy-wasm - prealloc`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
