@@ -1,3 +1,4 @@
+import { Logger } from "@lodestar/logger";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./chain/emitter.js";
 import {JobItemQueue} from "./util/queue/itemQueue.js";
 
@@ -7,6 +8,11 @@ export type CleanupHandler = () => void;
 // But the event name enums are not consistent, some are using `_` and some
 // Are using `:` so why not easy to manipulate the names to create correct type
 abstract class ObserverHandlers {
+  protected logger: Logger;
+  constructor({logger}: {logger: Logger}) {
+    this.logger = logger;
+  }
+
   onCheckpoint?(
     ...args: Parameters<IChainEvents[ChainEvent.checkpoint]>
   ): ReturnType<IChainEvents[ChainEvent.checkpoint]>;
@@ -63,8 +69,9 @@ export abstract class ChainObserver extends ObserverHandlers {
 export abstract class QueueObserver extends ChainObserver {
   protected jobQueue: JobItemQueue<[HandlerNames, unknown[]], void>;
 
-  constructor({maxQueueLength, signal}: {maxQueueLength: number; signal: AbortSignal}) {
-    super();
+  constructor({maxQueueLength, signal, logger}: {maxQueueLength: number; signal: AbortSignal, logger: Logger}) {
+    super({logger});
+    
     this.jobQueue = new JobItemQueue(
       async (handler, args) => {
         const eventHandler = this[handler];

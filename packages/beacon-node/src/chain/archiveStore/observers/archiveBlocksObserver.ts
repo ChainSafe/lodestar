@@ -20,7 +20,7 @@ export class ArchiveBlocksObserver extends QueueObserver {
     },
     protected opts: {signal: AbortSignal; archiveBlobEpochs?: number}
   ) {
-    super({maxQueueLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN, signal: opts.signal});
+    super({maxQueueLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN, signal: opts.signal, logger: modules.logger});
   }
 
   async onForkChoiceFinalized(finalized: CheckpointWithHex): Promise<void> {

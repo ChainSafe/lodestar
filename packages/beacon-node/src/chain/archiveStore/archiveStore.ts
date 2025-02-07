@@ -51,6 +51,7 @@ export class ArchiveStore {
       const pruneHotStateObserver = new PruneHotStateObserver({
         forkChoice: this.chain.forkChoice,
         regen: this.chain.regen,
+        logger: this.logger,
       });
       pruneHotStateObserver.subscribe(this.chain.emitter, signal);
 
