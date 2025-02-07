@@ -50,7 +50,7 @@ import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {Archiver} from "./archiver/archiver.js";
+import {Archiver} from "./archiveStore/archiver.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
