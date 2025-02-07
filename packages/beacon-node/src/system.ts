@@ -1,4 +1,4 @@
-import { Logger } from "@lodestar/logger";
+import {Logger} from "@lodestar/logger";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./chain/emitter.js";
 import {JobItemQueue} from "./util/queue/itemQueue.js";
 
@@ -69,9 +69,9 @@ export abstract class ChainObserver extends ObserverHandlers {
 export abstract class QueueObserver extends ChainObserver {
   protected jobQueue: JobItemQueue<[HandlerNames, unknown[]], void>;
 
-  constructor({maxQueueLength, signal, logger}: {maxQueueLength: number; signal: AbortSignal, logger: Logger}) {
+  constructor({maxQueueLength, signal, logger}: {maxQueueLength: number; signal: AbortSignal; logger: Logger}) {
     super({logger});
-    
+
     this.jobQueue = new JobItemQueue(
       async (handler, args) => {
         const eventHandler = this[handler];
