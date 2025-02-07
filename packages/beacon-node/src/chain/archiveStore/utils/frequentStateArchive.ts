@@ -16,11 +16,11 @@ import {serializeState} from "../../serializeState.js";
  */
 export const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
 
-type FrequentArchiveModules = {
+export type FrequentStateArchiveModules = {
   db: IBeaconDb;
   metrics?: Metrics | null;
   logger: Logger;
-  bufferPool: BufferPool;
+  bufferPool: BufferPool | null;
   regen: IStateRegenerator;
 };
 
@@ -37,7 +37,7 @@ type FrequentArchiveModules = {
  * ```
  */
 export async function maybeArchiveState(
-  modules: FrequentArchiveModules,
+  modules: FrequentStateArchiveModules,
   opts: {archiveStateEpochFrequency: number},
   finalized: CheckpointWithHex
 ): Promise<void> {
@@ -80,7 +80,7 @@ export async function maybeArchiveState(
  * Archives finalized states from active bucket to archive bucket.
  * Only the new finalized state is stored to disk
  */
-export async function archiveState(modules: FrequentArchiveModules, finalized: CheckpointWithHex): Promise<void> {
+export async function archiveState(modules: FrequentStateArchiveModules, finalized: CheckpointWithHex): Promise<void> {
   const {db, metrics, logger, regen, bufferPool} = modules;
 
   // starting from Mar 2024, the finalized state could be from disk or in memory

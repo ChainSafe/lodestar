@@ -5,7 +5,7 @@ import {IBeaconDb} from "../../../db/interface.js";
 import {QueueObserver} from "../../../system.js";
 import {IClock} from "../../../util/clock.js";
 import {LightClientServer} from "../../lightClient/index.js";
-import {archiveBlocks} from "../archiveBlocks.js";
+import {archiveBlocks} from "../utils/archiveBlocks.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
 
 export class ArchiveBlocksObserver extends QueueObserver {
