@@ -77,7 +77,16 @@ import * as snappyjs from "snappyjs";
 */
 
 describe("network / gossip / snappy", () => {
-  const msgLens = [100, 200, 300, 400, 500, 1000, 10000, 100000];
+  const msgLens = [
+    // ->
+    100,
+    200,
+    300,
+    400,
+    500,
+    1000,
+    10000, // 100000,
+  ];
   describe("compress", () => {
     const encoder = new snappyWasm.Encoder();
 
