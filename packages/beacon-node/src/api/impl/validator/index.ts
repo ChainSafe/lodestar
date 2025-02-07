@@ -14,6 +14,7 @@ import {
   isForkBlobs,
   isForkExecution,
   isForkPostElectra,
+  isForkPostFocil,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
