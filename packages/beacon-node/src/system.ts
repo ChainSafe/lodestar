@@ -1,6 +1,3 @@
-import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./chain/emitter.js";
 import {JobItemQueue} from "./util/queue/itemQueue.js";
 
@@ -10,9 +7,9 @@ export type CleanupHandler = () => void;
 // But the event name enums are not consistent, some are using `_` and some
 // Are using `:` so why not easy to manipulate the names to create correct type
 abstract class ObserverHandlers {
-  onCheckpoint?: IChainEvents[ChainEvent.checkpoint];
-  onForkChoiceJustified?: IChainEvents[ChainEvent.forkChoiceJustified];
-  onForkChoiceFinalized?: IChainEvents[ChainEvent.forkChoiceFinalized];
+  onCheckpoint?(...args: Parameters<IChainEvents[ChainEvent.checkpoint]>): ReturnType<IChainEvents[ChainEvent.checkpoint]>;
+  onForkChoiceJustified?(...args: Parameters<IChainEvents[ChainEvent.forkChoiceJustified]>): ReturnType<IChainEvents[ChainEvent.forkChoiceJustified]>;
+  onForkChoiceFinalized?(...args: Parameters<IChainEvents[ChainEvent.forkChoiceFinalized]>): ReturnType<IChainEvents[ChainEvent.forkChoiceFinalized]>;
 }
 
 const handlersEventMap = {

@@ -8,6 +8,7 @@ import {IBeaconChain} from "../interface.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 import {ArchiverOpts, ArchiveMode, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
+import { PruneHotStateObserver } from "./observers/pruneHotStateObserver.js";
 
 export const DEFAULT_STATE_ARCHIVE_MODE = ArchiveMode.Frequency;
 
@@ -49,13 +50,15 @@ export class ArchiveStore {
 
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
+
+      const pruneHotStateObserver = new PruneHotStateObserver({forkChoice: this.chain.forkChoice, regen: this.chain.regen});
+      pruneHotStateObserver.subscribe(this.chain.emitter);
 
       signal.addEventListener(
         "abort",
         () => {
+          pruneHotStateObserver.unsubscribe();
           this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
         },
         {once: true}
       );
@@ -69,19 +72,6 @@ export class ArchiveStore {
 
   private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     return this.jobQueue.push(finalized);
-  };
-
-  private onCheckpoint = (): void => {
-    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(
-      this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
-      headStateRoot
-    );
-
-    this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
-    });
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
