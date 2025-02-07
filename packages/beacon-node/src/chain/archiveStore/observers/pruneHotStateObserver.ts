@@ -1,4 +1,4 @@
-import {IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Checkpoint} from "@lodestar/types/lib/phase0/types.js";
 import {ChainObserver} from "../../../system.js";
@@ -16,5 +16,9 @@ export class PruneHotStateObserver extends ChainObserver {
       this.modules.forkChoice.getJustifiedCheckpoint().epoch,
       headStateRoot
     );
+  }
+
+  onForkChoiceFinalized(finalized: CheckpointWithHex): void {
+    this.modules.regen.pruneOnFinalized(finalized.epoch);
   }
 }

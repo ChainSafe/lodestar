@@ -97,8 +97,6 @@ export class ArchiveStore {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
 
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
-
       // tasks rely on extended fork choice
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
       await this.updateBackfillRange(finalized);
