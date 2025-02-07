@@ -114,7 +114,7 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
   fromJson: (val) => ExecutionOptimisticAndVersionType.fromJson(val),
   toHeadersObject: (val) => ({
     [MetaHeader.ExecutionOptimistic]: val.executionOptimistic.toString(),
-    [MetaHeader.Version]: val.version,
+    [MetaHeader.Version]: val.version === ForkName.focil ? ForkName.electra : val.version,
     [HttpHeader.ExposeHeaders]: [MetaHeader.ExecutionOptimistic, MetaHeader.Version].toString(),
   }),
   fromHeaders: (headers) => ({
@@ -144,7 +144,7 @@ export const ExecutionOptimisticFinalizedAndVersionCodec: ResponseMetadataCodec<
     toHeadersObject: (val) => ({
       [MetaHeader.ExecutionOptimistic]: val.executionOptimistic.toString(),
       [MetaHeader.Finalized]: val.finalized.toString(),
-      [MetaHeader.Version]: val.version,
+      [MetaHeader.Version]: val.version === ForkName.focil ? ForkName.electra : val.version,
       [HttpHeader.ExposeHeaders]: [MetaHeader.ExecutionOptimistic, MetaHeader.Finalized, MetaHeader.Version].toString(),
     }),
     fromHeaders: (headers) => ({
