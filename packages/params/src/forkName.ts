@@ -104,7 +104,6 @@ export type ForkWithdrawals = ForkPostCapella;
 export type ForkPreBlobs = ForkPreDeneb;
 export type ForkBlobs = ForkPostDeneb;
 export {
-  forkPostBellatrix as forkExecution,
   forkPostCapella as forkWithdrawals,
   isForkPostCapella as isForkWithdrawals,
   forkPostDeneb as forkBlobs,

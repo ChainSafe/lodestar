@@ -3,7 +3,7 @@ import {
   ForkName,
   forkAll,
   forkBlobs,
-  forkExecution,
+  forkPostBellatrix,
   forkPostAltair,
   forkWithdrawals,
   highestFork,
@@ -15,8 +15,8 @@ describe("forkName", () => {
     expect(forkAll).toMatchSnapshot();
   });
 
-  it("should have valid execution forks", () => {
-    expect(forkExecution).toMatchSnapshot();
+  it("should have valid post bellatrix forks", () => {
+    expect(forkPostBellatrix).toMatchSnapshot();
   });
 
   it("should have valid post altair forks", () => {
