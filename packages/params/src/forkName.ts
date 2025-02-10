@@ -98,7 +98,6 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
  * Aliases exported for compatibility. Types and guards above should be used in
  * places where they are more correct than using the "main feature" from a fork.
  */
-export type ForkPreExecution = ForkPreBellatrix;
 export type ForkExecution = ForkPostBellatrix;
 export type ForkPreWithdrawals = ForkPreCapella;
 export type ForkWithdrawals = ForkPostCapella;

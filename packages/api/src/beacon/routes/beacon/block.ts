@@ -1,6 +1,6 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkPostBellatrix} from "@lodestar/params";
+import {ForkName, ForkPreElectra, ForkPreBellatrix, isForkBlobs, isForkPostBellatrix} from "@lodestar/params";
 import {
   BeaconBlockBody,
   RootHex,
@@ -88,7 +88,7 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    SignedBlindedBeaconBlock | SignedBeaconBlock<ForkPreExecution>,
+    SignedBlindedBeaconBlock | SignedBeaconBlock<ForkPreBellatrix>,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
