@@ -1361,7 +1361,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_prune_history_fetch_keys_time_seconds[$rate_interval])",
+          "expr": "rate(lodestar_prune_history_fetch_keys_time_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "instant": false,
           "legendFormat": "__auto",
@@ -1443,7 +1443,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_prune_history_prune_keys_time_seconds[$rate_interval])",
+          "expr": "rate(lodestar_prune_history_prune_keys_time_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "instant": false,
           "legendFormat": "__auto",
