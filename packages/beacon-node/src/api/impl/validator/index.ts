@@ -4,7 +4,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkBlobs,
-  ForkExecution,
+  ForkPostBellatrix,
   ForkPreBlobs,
   ForkSeq,
   GENESIS_SLOT,
@@ -115,7 +115,7 @@ type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValu
 );
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;
-  version: ForkExecution;
+  version: ForkPostBellatrix;
 };
 
 type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedBlockSource} & (
@@ -872,14 +872,14 @@ export function getValidatorApi(
 
         if (isBlockContents(data)) {
           const {block} = data;
-          const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
+          const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
           return {
             data: blindedBlock,
             meta: {...meta, executionPayloadBlinded: true},
           };
         }
 
-        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
+        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
         return {
           data: blindedBlock,
           meta: {...meta, executionPayloadBlinded: true},
@@ -897,7 +897,7 @@ export function getValidatorApi(
 
       if (isBlockContents(data)) {
         const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkExecution>);
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
         return {data: blindedBlock, meta: {version}};
       }
 
@@ -905,7 +905,7 @@ export function getValidatorApi(
         return {data, meta: {version}};
       }
 
-      const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkExecution>);
+      const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
       return {data: blindedBlock, meta: {version}};
     },
 

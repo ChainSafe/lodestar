@@ -1,7 +1,7 @@
 import {
   ForkAll,
   ForkBlobs,
-  ForkExecution,
+  ForkPostBellatrix,
   ForkPostAltair,
   ForkName,
   ForkPostElectra,
@@ -237,14 +237,15 @@ export type BeaconBlockHeader<F extends ForkAll = ForkAll> = TypesByFork[F]["Bea
 export type SignedBeaconBlockHeader<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBeaconBlockHeader"];
 
 export type BeaconBlock<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlock"];
-export type BlindedBeaconBlock<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BlindedBeaconBlock"];
+export type BlindedBeaconBlock<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["BlindedBeaconBlock"];
 
 export type SignedBeaconBlock<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBeaconBlock"];
-export type SignedBlindedBeaconBlock<F extends ForkExecution = ForkExecution> =
+export type SignedBlindedBeaconBlock<F extends ForkPostBellatrix = ForkPostBellatrix> =
   TypesByFork[F]["SignedBlindedBeaconBlock"];
 
 export type BeaconBlockBody<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlockBody"];
-export type BlindedBeaconBlockBody<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BlindedBeaconBlockBody"];
+export type BlindedBeaconBlockBody<F extends ForkPostBellatrix = ForkPostBellatrix> =
+  TypesByFork[F]["BlindedBeaconBlockBody"];
 
 export type BlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlockContents"];
 export type SignedBlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["SignedBlockContents"];
@@ -258,8 +259,9 @@ export type SignedBeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, 
   | SignedBeaconBlock<FB>
   | SignedBlockContents<FC>;
 
-export type ExecutionPayload<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayload"];
-export type ExecutionPayloadHeader<F extends ForkExecution = ForkExecution> = TypesByFork[F]["ExecutionPayloadHeader"];
+export type ExecutionPayload<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["ExecutionPayload"];
+export type ExecutionPayloadHeader<F extends ForkPostBellatrix = ForkPostBellatrix> =
+  TypesByFork[F]["ExecutionPayloadHeader"];
 export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = TypesByFork[F]["ExecutionRequests"];
 
 export type BlobsBundle<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlobsBundle"];
@@ -282,9 +284,10 @@ export type BeaconState<F extends ForkName = ForkAll> = TypesByFork[F]["BeaconSt
 
 export type Metadata<F extends ForkName = ForkAll> = TypesByFork[F]["Metadata"];
 
-export type BuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BuilderBid"];
-export type SignedBuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SignedBuilderBid"];
-export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
+export type BuilderBid<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["BuilderBid"];
+export type SignedBuilderBid<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["SignedBuilderBid"];
+export type SSEPayloadAttributes<F extends ForkPostBellatrix = ForkPostBellatrix> =
+  TypesByFork[F]["SSEPayloadAttributes"];
 
 export type Attestation<F extends ForkName = ForkAll> = TypesByFork[F]["Attestation"];
 export type SingleAttestation<F extends ForkName = ForkAll> = TypesByFork[F]["SingleAttestation"];

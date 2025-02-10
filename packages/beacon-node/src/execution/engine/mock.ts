@@ -3,7 +3,7 @@ import {
   BLOB_TX_TYPE,
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
-  ForkExecution,
+  ForkPostBellatrix,
   ForkName,
   ForkSeq,
 } from "@lodestar/params";
@@ -404,7 +404,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     return versionedHashes.map((_vh) => null);
   }
 
-  private timestampToFork(timestamp: number): ForkExecution {
+  private timestampToFork(timestamp: number): ForkPostBellatrix {
     if (timestamp > (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
     if (timestamp > (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
     if (timestamp > (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;

@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateElectra,
   CachedBeaconStateAllForks,
@@ -173,7 +173,7 @@ export class PrepareNextSlotScheduler {
           await prepareExecutionPayload(
             this.chain,
             this.logger,
-            fork as ForkExecution, // State is of execution type
+            fork as ForkPostBellatrix, // State is of execution type
             fromHex(updatedHeadRoot),
             safeBlockHash,
             finalizedBlockHash,
@@ -191,7 +191,7 @@ export class PrepareNextSlotScheduler {
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
-          const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
+          const data = await getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
             parentBlockRoot: fromHex(headRoot),

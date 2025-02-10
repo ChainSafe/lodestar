@@ -1,7 +1,7 @@
 import {
   ForkAll,
   ForkBlobs,
-  ForkExecution,
+  ForkPostBellatrix,
   ForkPostAltair,
   ForkName,
   ForkSeq,
@@ -109,7 +109,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F> {
       return sszTypesFor(this.getForkName(slot)) as SSZTypesFor<F>;
     },
-    getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkExecution> {
+    getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkPostBellatrix> {
       const forkName = this.getForkName(slot);
       if (!isForkPostBellatrix(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for post bellatrix fork types`);

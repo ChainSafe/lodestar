@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkBlobs, ForkExecution, ForkName, ForkPreBlobs, ForkSeq} from "@lodestar/params";
+import {ForkBlobs, ForkPostBellatrix, ForkName, ForkPreBlobs, ForkSeq} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -45,7 +45,7 @@ type FullOrBlindedBlockWithContents =
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
-      version: ForkExecution;
+      version: ForkPostBellatrix;
       block: BlindedBeaconBlock;
       contents: null;
       executionPayloadBlinded: true;

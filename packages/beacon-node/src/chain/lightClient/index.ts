@@ -8,7 +8,7 @@ import {
   upgradeLightClientHeader,
 } from "@lodestar/light-client/spec";
 import {
-  ForkExecution,
+  ForkPostBellatrix,
   ForkPostAltair,
   ForkName,
   ForkSeq,
@@ -752,12 +752,12 @@ export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<Fork
     bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair, "BeaconBlockBody">).hashTreeRoot(block.body),
   };
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    const blockBody = block.body as BeaconBlockBody<ForkExecution>;
+    const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix>;
     const execution = executionPayloadToPayloadHeader(ForkSeq[fork], blockBody.executionPayload);
     return {
       beacon,
       execution,
-      executionBranch: getBlockBodyExecutionHeaderProof(fork as ForkExecution, blockBody),
+      executionBranch: getBlockBodyExecutionHeaderProof(fork as ForkPostBellatrix, blockBody),
     } as LightClientHeader;
   }
 
