@@ -1,5 +1,5 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {ForkAll, ForkPostBellatrix, ForkName} from "@lodestar/params";
+import {ForkAll, ForkName, ForkPostBellatrix} from "@lodestar/params";
 import {Epoch, RootHex, SSZTypesFor} from "@lodestar/types";
 import {EpochShuffling} from "../util/epochShuffling.js";
 

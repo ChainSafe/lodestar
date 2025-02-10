@@ -3,8 +3,8 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
   FINALIZED_ROOT_GINDEX,
   FINALIZED_ROOT_GINDEX_ELECTRA,
-  ForkPostBellatrix,
   ForkName,
+  ForkPostBellatrix,
   isForkPostElectra,
 } from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";

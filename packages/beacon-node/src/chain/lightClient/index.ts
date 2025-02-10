@@ -8,9 +8,9 @@ import {
   upgradeLightClientHeader,
 } from "@lodestar/light-client/spec";
 import {
-  ForkPostBellatrix,
-  ForkPostAltair,
   ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
   ForkSeq,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   SYNC_COMMITTEE_SIZE,

@@ -1,4 +1,4 @@
-import {ForkAll, ForkPostDeneb, ForkPostBellatrix, ForkPostAltair, ForkName, ForkSeq} from "@lodestar/params";
+import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkSeq} from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version} from "@lodestar/types";
 
 export type ForkInfo = {

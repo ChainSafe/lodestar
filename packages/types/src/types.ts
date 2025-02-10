@@ -1,9 +1,9 @@
 import {
   ForkAll,
-  ForkPostDeneb,
-  ForkPostBellatrix,
-  ForkPostAltair,
   ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
   ForkPostElectra,
   ForkPreDeneb,
 } from "@lodestar/params";

@@ -3,8 +3,8 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
-  ForkPostDeneb,
   ForkName,
+  ForkPostDeneb,
   isForkPostDeneb,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";

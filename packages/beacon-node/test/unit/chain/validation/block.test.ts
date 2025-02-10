@@ -1,6 +1,6 @@
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkPostDeneb, ForkName} from "@lodestar/params";
+import {ForkName, ForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";

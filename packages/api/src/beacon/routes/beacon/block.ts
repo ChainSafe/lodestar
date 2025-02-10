@@ -1,6 +1,6 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPreElectra, ForkPreBellatrix, isForkPostDeneb, isForkPostBellatrix} from "@lodestar/params";
+import {ForkName, ForkPreBellatrix, ForkPreElectra, isForkPostBellatrix, isForkPostDeneb} from "@lodestar/params";
 import {
   BeaconBlockBody,
   RootHex,

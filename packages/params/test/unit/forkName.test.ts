@@ -2,10 +2,10 @@ import {describe, expect, it} from "vitest";
 import {
   ForkName,
   forkAll,
-  forkPostDeneb,
-  forkPostBellatrix,
   forkPostAltair,
+  forkPostBellatrix,
   forkPostCapella,
+  forkPostDeneb,
   highestFork,
   lowestFork,
 } from "../../src/forkName.js";

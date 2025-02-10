@@ -1,11 +1,11 @@
 import {
-  ForkPostDeneb,
-  ForkPostBellatrix,
-  ForkPostAltair,
   ForkName,
-  isForkPostDeneb,
-  isForkPostBellatrix,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
   isForkPostAltair,
+  isForkPostBellatrix,
+  isForkPostDeneb,
 } from "@lodestar/params";
 import {SSZTypesFor, sszTypesFor} from "@lodestar/types";
 

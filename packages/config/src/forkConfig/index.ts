@@ -1,15 +1,15 @@
 import {
   ForkAll,
-  ForkPostDeneb,
-  ForkPostBellatrix,
-  ForkPostAltair,
   ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
   ForkSeq,
   GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
-  isForkPostDeneb,
-  isForkPostBellatrix,
   isForkPostAltair,
+  isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";

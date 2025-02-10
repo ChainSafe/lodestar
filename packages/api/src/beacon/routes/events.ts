@@ -21,7 +21,7 @@ import {
 } from "@lodestar/types";
 
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {getPostBellatrixForkTypes, getPostAltairForkTypes} from "../../utils/fork.js";
+import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 

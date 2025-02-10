@@ -25,7 +25,7 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
-import {getPostDenebForkTypes, getPostBellatrixForkTypes, toForkName} from "../utils/fork.js";
+import {getPostBellatrixForkTypes, getPostDenebForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";

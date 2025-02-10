@@ -3,8 +3,8 @@ import {
   BLOB_TX_TYPE,
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
-  ForkPostBellatrix,
   ForkName,
+  ForkPostBellatrix,
   ForkSeq,
 } from "@lodestar/params";
 import {RootHex, bellatrix, deneb, ssz} from "@lodestar/types";

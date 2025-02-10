@@ -1,4 +1,4 @@
-import {ForkPostBellatrix, ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconBlockBody,

@@ -3,16 +3,16 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
 import {
-  ForkPostDeneb,
   ForkPostBellatrix,
+  ForkPostDeneb,
   ForkPreDeneb,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostDeneb,
   isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
 } from "@lodestar/params";
 import {
