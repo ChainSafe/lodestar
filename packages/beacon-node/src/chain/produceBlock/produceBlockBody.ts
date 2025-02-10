@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, isForkExecution, isForkLightClient} from "@lodestar/params";
+import {ForkExecution, ForkSeq, isForkExecution, isForkPostAltair} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -169,7 +169,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerSlashings: proposerSlashings.length,
   });
 
-  if (isForkLightClient(fork)) {
+  if (isForkPostAltair(fork)) {
     Object.assign(logMeta, {
       syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
     });

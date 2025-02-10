@@ -9,7 +9,7 @@ import {
   SLOTS_PER_EPOCH,
   isForkBlobs,
   isForkExecution,
-  isForkLightClient,
+  isForkPostAltair,
   isForkPostElectra,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
@@ -118,7 +118,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
       const forkName = this.getForkName(slot);
-      if (!isForkLightClient(forkName)) {
+      if (!isForkPostAltair(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
       }
       return sszTypesFor(forkName);

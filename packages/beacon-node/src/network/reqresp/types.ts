@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
+import {ForkLightClient, ForkName, isForkPostAltair} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
   LightClientBootstrap,
@@ -117,7 +117,7 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
 };
 
 function onlyLightclientFork(fork: ForkName): ForkLightClient {
-  if (isForkLightClient(fork)) {
+  if (isForkPostAltair(fork)) {
     return fork;
   }
   throw Error(`Not a lightclient fork ${fork}`);
