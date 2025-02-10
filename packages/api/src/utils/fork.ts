@@ -1,7 +1,7 @@
 import {
   ForkBlobs,
   ForkExecution,
-  ForkLightClient,
+  ForkPostAltair,
   ForkName,
   isForkBlobs,
   isForkExecution,
@@ -19,7 +19,7 @@ export function toForkName(version: string): ForkName {
   return version as ForkName;
 }
 
-export function getLightClientForkTypes(fork: ForkName): SSZTypesFor<ForkLightClient> {
+export function getLightClientForkTypes(fork: ForkName): SSZTypesFor<ForkPostAltair> {
   if (!isForkPostAltair(fork)) {
     throw Error(`Invalid fork=${fork} for lightclient fork types`);
   }

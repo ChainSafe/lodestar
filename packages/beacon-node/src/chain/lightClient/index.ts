@@ -9,12 +9,12 @@ import {
 } from "@lodestar/light-client/spec";
 import {
   ForkExecution,
-  ForkLightClient,
+  ForkPostAltair,
   ForkName,
   ForkSeq,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   SYNC_COMMITTEE_SIZE,
-  forkLightClient,
+  forkPostAltair,
   highestFork,
   isForkPostElectra,
 } from "@lodestar/params";
@@ -230,7 +230,7 @@ export class LightClientServer {
 
     this.zero = {
       // Assign the hightest fork's default value because it can always be typecasted down to correct fork
-      finalizedHeader: sszTypesFor(highestFork(forkLightClient)).LightClientHeader.defaultValue(),
+      finalizedHeader: sszTypesFor(highestFork(forkPostAltair)).LightClientHeader.defaultValue(),
       // Electra finalityBranch has fixed length of 5 whereas altair has 4. The fifth element will be ignored
       // when serializing as altair LightClientUpdate
       finalityBranch: ssz.electra.LightClientUpdate.fields.finalityBranch.defaultValue(),
@@ -260,7 +260,7 @@ export class LightClientServer {
    * - Use block's syncAggregate
    */
   onImportBlockHead(
-    block: BeaconBlock<ForkLightClient>,
+    block: BeaconBlock<ForkPostAltair>,
     postState: CachedBeaconStateAltair,
     parentBlockSlot: Slot
   ): void {
@@ -391,7 +391,7 @@ export class LightClientServer {
   }
 
   private async persistPostBlockImportData(
-    block: BeaconBlock<ForkLightClient>,
+    block: BeaconBlock<ForkPostAltair>,
     postState: CachedBeaconStateAltair,
     parentBlockSlot: Slot
   ): Promise<void> {
@@ -742,14 +742,14 @@ export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<ForkLightClient>): LightClientHeader {
+export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<ForkPostAltair>): LightClientHeader {
   const blockSlot = block.slot;
   const beacon: phase0.BeaconBlockHeader = {
     slot: blockSlot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: block.stateRoot,
-    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkLightClient, "BeaconBlockBody">).hashTreeRoot(block.body),
+    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair, "BeaconBlockBody">).hashTreeRoot(block.body),
   };
   if (ForkSeq[fork] >= ForkSeq.capella) {
     const blockBody = block.body as BeaconBlockBody<ForkExecution>;

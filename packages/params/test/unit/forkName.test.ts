@@ -4,7 +4,7 @@ import {
   forkAll,
   forkBlobs,
   forkExecution,
-  forkLightClient,
+  forkPostAltair,
   forkWithdrawals,
   highestFork,
   lowestFork,
@@ -19,8 +19,8 @@ describe("forkName", () => {
     expect(forkExecution).toMatchSnapshot();
   });
 
-  it("should have valid lightclient forks", () => {
-    expect(forkLightClient).toMatchSnapshot();
+  it("should have valid post altair forks", () => {
+    expect(forkPostAltair).toMatchSnapshot();
   });
 
   it("should have valid withdrawal forks", () => {

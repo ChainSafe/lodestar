@@ -2,7 +2,7 @@ import {
   ForkAll,
   ForkBlobs,
   ForkExecution,
-  ForkLightClient,
+  ForkPostAltair,
   ForkName,
   ForkPostElectra,
   ForkPreBlobs,
@@ -267,16 +267,16 @@ export type Contents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["Contents
 export type ExecutionPayloadAndBlobsBundle<F extends ForkBlobs = ForkBlobs> =
   TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
 
-export type LightClientHeader<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientHeader"];
-export type LightClientBootstrap<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientBootstrap"];
-export type LightClientUpdate<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientUpdate"];
-export type LightClientFinalityUpdate<F extends ForkLightClient = ForkLightClient> =
+export type LightClientHeader<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientHeader"];
+export type LightClientBootstrap<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientBootstrap"];
+export type LightClientUpdate<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientUpdate"];
+export type LightClientFinalityUpdate<F extends ForkPostAltair = ForkPostAltair> =
   TypesByFork[F]["LightClientFinalityUpdate"];
-export type LightClientOptimisticUpdate<F extends ForkLightClient = ForkLightClient> =
+export type LightClientOptimisticUpdate<F extends ForkPostAltair = ForkPostAltair> =
   TypesByFork[F]["LightClientOptimisticUpdate"];
-export type LightClientStore<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientStore"];
-export type SyncCommittee<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["SyncCommittee"];
-export type SyncAggregate<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["SyncAggregate"];
+export type LightClientStore<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientStore"];
+export type SyncCommittee<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["SyncCommittee"];
+export type SyncAggregate<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["SyncAggregate"];
 
 export type BeaconState<F extends ForkName = ForkAll> = TypesByFork[F]["BeaconState"];
 
