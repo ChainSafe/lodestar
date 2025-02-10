@@ -123,10 +123,10 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return sszTypesFor(forkName);
     },
-    getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
+    getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
       const forkName = this.getForkName(slot);
       if (!isForkPostDeneb(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post deneb fork types`);
       }
       return sszTypesFor(forkName);
     },

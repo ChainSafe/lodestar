@@ -38,7 +38,7 @@ export type ForkConfig = {
   /** Get execution SSZ types by hard-fork*/
   getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkPostBellatrix>;
   /** Get blobs SSZ types by hard-fork*/
-  getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs>;
+  getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkBlobs>;
   /** Get max blobs per block by hard-fork */
   getMaxBlobsPerBlock(fork: ForkName): number;
   /** Get max request blob sidecars by hard-fork */

@@ -25,7 +25,7 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
-import {getBlobsForkTypes, getPostBellatrixForkTypes, toForkName} from "../utils/fork.js";
+import {getPostDenebForkTypes, getPostBellatrixForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
@@ -164,7 +164,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
           return isForkPostDeneb(fork)
-            ? getBlobsForkTypes(fork).ExecutionPayloadAndBlobsBundle
+            ? getPostDenebForkTypes(fork).ExecutionPayloadAndBlobsBundle
             : getPostBellatrixForkTypes(fork).ExecutionPayload;
         }),
         meta: VersionCodec,
