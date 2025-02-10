@@ -116,10 +116,10 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return sszTypesFor(forkName);
     },
-    getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair> {
+    getPostAltairForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair> {
       const forkName = this.getForkName(slot);
       if (!isForkPostAltair(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post altair fork types`);
       }
       return sszTypesFor(forkName);
     },

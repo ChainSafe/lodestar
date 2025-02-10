@@ -35,7 +35,7 @@ export function validateLightClientOptimisticUpdate(
   }
 
   // [IGNORE] The received optimistic_update matches the locally computed one exactly
-  const sszType = config.getLightClientForkTypes(
+  const sszType = config.getPostAltairForkTypes(
     gossipedOptimisticUpdate.attestedHeader.beacon.slot
   ).LightClientOptimisticUpdate;
   if (localOptimisticUpdate === null || !sszType.equals(gossipedOptimisticUpdate, localOptimisticUpdate)) {

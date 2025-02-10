@@ -65,5 +65,5 @@ export function getLightClientHeaderTypeFromBytes(
   const slot = bytesToInt(
     bytes.subarray(SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER, SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER + SLOT_BYTE_COUNT)
   );
-  return config.getLightClientForkTypes(slot).LightClientHeader;
+  return config.getPostAltairForkTypes(slot).LightClientHeader;
 }

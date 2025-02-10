@@ -34,7 +34,7 @@ export type ForkConfig = {
   /** Get SSZ types by hard-fork */
   getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F>;
   /** Get lightclient SSZ types by hard-fork*/
-  getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair>;
+  getPostAltairForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair>;
   /** Get execution SSZ types by hard-fork*/
   getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution>;
   /** Get blobs SSZ types by hard-fork*/

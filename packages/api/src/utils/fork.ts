@@ -19,9 +19,9 @@ export function toForkName(version: string): ForkName {
   return version as ForkName;
 }
 
-export function getLightClientForkTypes(fork: ForkName): SSZTypesFor<ForkPostAltair> {
+export function getPostAltairForkTypes(fork: ForkName): SSZTypesFor<ForkPostAltair> {
   if (!isForkPostAltair(fork)) {
-    throw Error(`Invalid fork=${fork} for lightclient fork types`);
+    throw Error(`Invalid fork=${fork} for post altair fork types`);
   }
 
   return sszTypesFor(fork);
