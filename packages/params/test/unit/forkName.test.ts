@@ -5,7 +5,7 @@ import {
   forkBlobs,
   forkPostBellatrix,
   forkPostAltair,
-  forkWithdrawals,
+  ForkPostCapella,
   highestFork,
   lowestFork,
 } from "../../src/forkName.js";
@@ -23,8 +23,8 @@ describe("forkName", () => {
     expect(forkPostAltair).toMatchSnapshot();
   });
 
-  it("should have valid withdrawal forks", () => {
-    expect(forkWithdrawals).toMatchSnapshot();
+  it("should have valid post capella forks", () => {
+    expect(ForkPostCapella).toMatchSnapshot();
   });
 
   it("should have valid blobs forks", () => {
