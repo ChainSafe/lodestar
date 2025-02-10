@@ -1327,7 +1327,7 @@
           "mode": "scheme",
           "reverse": false,
           "scale": "exponential",
-          "scheme": "Oranges",
+          "scheme": "Magma",
           "steps": 64
         },
         "exemplars": {
@@ -1364,7 +1364,7 @@
           "expr": "rate(lodestar_prune_history_fetch_keys_time_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{le}}",
           "range": true,
           "refId": "A"
         }
@@ -1409,7 +1409,7 @@
           "mode": "scheme",
           "reverse": false,
           "scale": "exponential",
-          "scheme": "Oranges",
+          "scheme": "Magma",
           "steps": 64
         },
         "exemplars": {
@@ -1446,7 +1446,7 @@
           "expr": "rate(lodestar_prune_history_prune_keys_time_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{le}}",
           "range": true,
           "refId": "A"
         }
