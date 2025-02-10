@@ -30,7 +30,7 @@ import {
   WithMeta,
   WithVersion,
 } from "../../utils/codecs.js";
-import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
+import {getPostBellatrixForkTypes, toForkName} from "../../utils/fork.js";
 import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
@@ -713,7 +713,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: WithMeta(
           ({version, executionPayloadBlinded}) =>
             (executionPayloadBlinded
-              ? getExecutionForkTypes(version).BlindedBeaconBlock
+              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock
               : isForkBlobs(version)
                 ? sszTypesFor(version).BlockContents
                 : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
@@ -781,7 +781,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithVersion((fork) => getExecutionForkTypes(fork).BlindedBeaconBlock),
+        data: WithVersion((fork) => getPostBellatrixForkTypes(fork).BlindedBeaconBlock),
         meta: VersionCodec,
       },
     },

@@ -177,7 +177,7 @@ export class ProofProvider {
       return;
     }
 
-    const sszType = this.opts.config.getExecutionForkTypes(lcHeader.beacon.slot).ExecutionPayloadHeader;
+    const sszType = this.opts.config.getPostBellatrixForkTypes(lcHeader.beacon.slot).ExecutionPayloadHeader;
     if (
       isForkWithdrawals(fork) &&
       (!("execution" in lcHeader) || sszType.equals(lcHeader.execution, sszType.defaultValue()))

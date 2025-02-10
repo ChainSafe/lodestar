@@ -79,6 +79,6 @@ export function processExecutionPayload(
   // TODO Deneb: Types are not happy by default. Since it's a generic type going through ViewDU
   // transformation then into all forks compatible probably some weird intersection incompatibility happens
   state.latestExecutionPayloadHeader = state.config
-    .getExecutionForkTypes(state.slot)
+    .getPostBellatrixForkTypes(state.slot)
     .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
 }

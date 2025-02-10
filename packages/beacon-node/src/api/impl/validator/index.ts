@@ -465,7 +465,7 @@ export function getValidatorApi(
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toRootHex(config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
+        root: toRootHex(config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
       });
 
       if (chain.opts.persistProducedBlocks) {

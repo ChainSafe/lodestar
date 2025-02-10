@@ -240,7 +240,7 @@ export function getBeaconBlockApi({
     const slot = signedBlindedBlock.message.slot;
     const blockRoot = toRootHex(
       chain.config
-        .getExecutionForkTypes(signedBlindedBlock.message.slot)
+        .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
 

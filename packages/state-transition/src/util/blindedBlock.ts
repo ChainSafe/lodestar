@@ -26,7 +26,7 @@ export function blindedOrFullBlockHashTreeRoot(
   return isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
       config
-        .getExecutionForkTypes(blindedOrFull.slot)
+        .getPostBellatrixForkTypes(blindedOrFull.slot)
         .BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
       config
@@ -41,7 +41,7 @@ export function blindedOrFullBlockToHeader(
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
       config
-        .getExecutionForkTypes(blindedOrFull.slot)
+        .getPostBellatrixForkTypes(blindedOrFull.slot)
         .BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
       config

@@ -36,7 +36,7 @@ export type ForkConfig = {
   /** Get lightclient SSZ types by hard-fork*/
   getPostAltairForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair>;
   /** Get execution SSZ types by hard-fork*/
-  getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution>;
+  getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkExecution>;
   /** Get blobs SSZ types by hard-fork*/
   getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs>;
   /** Get max blobs per block by hard-fork */

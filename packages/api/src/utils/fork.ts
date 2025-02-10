@@ -27,9 +27,9 @@ export function getPostAltairForkTypes(fork: ForkName): SSZTypesFor<ForkPostAlta
   return sszTypesFor(fork);
 }
 
-export function getExecutionForkTypes(fork: ForkName): SSZTypesFor<ForkExecution> {
+export function getPostBellatrixForkTypes(fork: ForkName): SSZTypesFor<ForkExecution> {
   if (!isForkPostBellatrix(fork)) {
-    throw Error(`Invalid fork=${fork} for execution fork types`);
+    throw Error(`Invalid fork=${fork} for post bellatrix fork types`);
   }
 
   return sszTypesFor(fork);
