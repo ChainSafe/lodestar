@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkBlobs, VALIDATOR_REGISTRY_LIMIT} from "@lodestar/params";
+import {ForkName, VALIDATOR_REGISTRY_LIMIT, isForkBlobs} from "@lodestar/params";
 import {
   BLSPubkey,
   ExecutionPayload,
