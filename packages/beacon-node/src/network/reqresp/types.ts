@@ -109,18 +109,19 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
-  [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientBootstrap,
-  [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientUpdate,
-  [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientFinalityUpdate,
+  [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
+  [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
+  [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
-    sszTypesFor(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
+    sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
 };
 
-function onlyLightclientFork(fork: ForkName): ForkPostAltair {
+// TODO: @matthewkeil perhaps this should move to params/src/forkName with the other guards?
+function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
   if (isForkPostAltair(fork)) {
     return fork;
   }
-  throw Error(`Not a lightclient fork ${fork}`);
+  throw Error(`Not a post altair fork ${fork}`);
 }
 
 export type RequestTypedContainer = {
