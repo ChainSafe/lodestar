@@ -53,35 +53,35 @@ export function lowestFork<F extends ForkName>(forkNames: F[]): F {
 export type ForkAll = ForkName;
 export const forkAll = Object.values(ForkName);
 
-export type ForkPreLightClient = ForkName.phase0;
-export type ForkLightClient = Exclude<ForkName, ForkPreLightClient>;
-export const forkLightClient = exclude(forkAll, [ForkName.phase0]);
-export function isForkLightClient(fork: ForkName): fork is ForkLightClient {
+export type ForkPreAltair = ForkName.phase0;
+export type ForkPostAltair = Exclude<ForkName, ForkPreAltair>;
+export const forkPostAltair = exclude(forkAll, [ForkName.phase0]);
+export function isForkPostAltair(fork: ForkName): fork is ForkPostAltair {
   return fork !== ForkName.phase0;
 }
 
-export type ForkPreExecution = ForkPreLightClient | ForkName.altair;
-export type ForkExecution = Exclude<ForkName, ForkPreExecution>;
-export const forkExecution = exclude(forkAll, [ForkName.phase0, ForkName.altair]);
-export function isForkExecution(fork: ForkName): fork is ForkExecution {
-  return isForkLightClient(fork) && fork !== ForkName.altair;
+export type ForkPreBellatrix = ForkPreAltair | ForkName.altair;
+export type ForkPostBellatrix = Exclude<ForkName, ForkPreBellatrix>;
+export const forkPostBellatrix = exclude(forkAll, [ForkName.phase0, ForkName.altair]);
+export function isForkPostBellatrix(fork: ForkName): fork is ForkPostBellatrix {
+  return isForkPostAltair(fork) && fork !== ForkName.altair;
 }
 
-export type ForkPreWithdrawals = ForkPreExecution | ForkName.bellatrix;
-export type ForkWithdrawals = Exclude<ForkName, ForkPreWithdrawals>;
-export const forkWithdrawals = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix]);
-export function isForkWithdrawals(fork: ForkName): fork is ForkWithdrawals {
-  return isForkExecution(fork) && fork !== ForkName.bellatrix;
+export type ForkPreCapella = ForkPreBellatrix | ForkName.bellatrix;
+export type ForkPostCapella = Exclude<ForkName, ForkPreCapella>;
+export const forkPostCapella = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix]);
+export function isForkPostCapella(fork: ForkName): fork is ForkPostCapella {
+  return isForkPostBellatrix(fork) && fork !== ForkName.bellatrix;
 }
 
-export type ForkPreBlobs = ForkPreWithdrawals | ForkName.capella;
-export type ForkBlobs = Exclude<ForkName, ForkPreBlobs>;
-export const forkBlobs = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix, ForkName.capella]);
-export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
-  return isForkWithdrawals(fork) && fork !== ForkName.capella;
+export type ForkPreDeneb = ForkPreCapella | ForkName.capella;
+export type ForkPostDeneb = Exclude<ForkName, ForkPreDeneb>;
+export const forkPostDeneb = exclude(forkAll, [ForkName.phase0, ForkName.altair, ForkName.bellatrix, ForkName.capella]);
+export function isForkPostDeneb(fork: ForkName): fork is ForkPostDeneb {
+  return isForkPostCapella(fork) && fork !== ForkName.capella;
 }
 
-export type ForkPreElectra = ForkPreBlobs | ForkName.deneb;
+export type ForkPreElectra = ForkPreDeneb | ForkName.deneb;
 export type ForkPostElectra = Exclude<ForkName, ForkPreElectra>;
 export const forkPostElectra = exclude(forkAll, [
   ForkName.phase0,
@@ -91,5 +91,27 @@ export const forkPostElectra = exclude(forkAll, [
   ForkName.deneb,
 ]);
 export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
-  return isForkBlobs(fork) && fork !== ForkName.deneb;
+  return isForkPostDeneb(fork) && fork !== ForkName.deneb;
 }
+
+/**
+ * Aliases exported for compatibility. Types and guards above should be used in
+ * places where they are more correct than using the "main feature" from a fork.
+ */
+export type ForkLightClient = ForkPostAltair;
+export type ForkPreExecution = ForkPreBellatrix;
+export type ForkExecution = ForkPostBellatrix;
+export type ForkPreWithdrawals = ForkPreCapella;
+export type ForkWithdrawals = ForkPostCapella;
+export type ForkPreBlobs = ForkPreDeneb;
+export type ForkBlobs = ForkPostDeneb;
+export {
+  forkPostAltair as forkLightClient,
+  isForkPostAltair as isForkLightClient,
+  forkPostBellatrix as forkExecution,
+  isForkPostBellatrix as isForkExecution,
+  forkPostCapella as forkWithdrawals,
+  isForkPostCapella as isForkWithdrawals,
+  forkPostDeneb as forkBlobs,
+  isForkPostDeneb as isForkBlobs,
+};
