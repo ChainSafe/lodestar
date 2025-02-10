@@ -238,16 +238,14 @@ export class PrepareNextSlotScheduler {
 
       // Update EL with fcu 23/24s of the way through the slot (11.5s on mainnet)
       // this accounts for super late blocks, there is no motivation to update the EL sooner anyway
-      if (isExecutionStateType(prepareState)) {
+      // if we're proposer, we already issue fcu when building block in prepareExecutionPayload() call above
+      if (isExecutionStateType(prepareState) && !feeRecipient) {
         const secFromClockSlot = this.chain.clock.secFromSlot(clockSlot);
         const secToPrepareSlot = Math.max(this.config.SECONDS_PER_SLOT - secFromClockSlot, 0);
         const forkchoiceOffset = this.config.SECONDS_PER_SLOT / FORK_CHOICE_LOOKAHEAD_FACTOR;
         await sleep(secToPrepareSlot - forkchoiceOffset, this.signal);
 
-        // if we're proposer, we already issue fcu when building block in prepareExecutionPayload() call above
-        if (!feeRecipient) {
-          await this.chain.notifyForkchoiceUpdate();
-        }
+        await this.chain.notifyForkchoiceUpdate();
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
