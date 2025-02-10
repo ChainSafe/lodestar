@@ -817,6 +817,10 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async notifyForkchoiceUpdate(): Promise<void> {
+    if (this.opts.disableImportExecutionFcU) {
+      return;
+    }
+
     /**
      * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
      * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
