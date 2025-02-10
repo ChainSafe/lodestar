@@ -4,7 +4,7 @@ import {
   ForkPostAltair,
   ForkName,
   isForkBlobs,
-  isForkExecution,
+  isForkPostBellatrix,
   isForkPostAltair,
 } from "@lodestar/params";
 import {SSZTypesFor, sszTypesFor} from "@lodestar/types";
@@ -28,7 +28,7 @@ export function getPostAltairForkTypes(fork: ForkName): SSZTypesFor<ForkPostAlta
 }
 
 export function getExecutionForkTypes(fork: ForkName): SSZTypesFor<ForkExecution> {
-  if (!isForkExecution(fork)) {
+  if (!isForkPostBellatrix(fork)) {
     throw Error(`Invalid fork=${fork} for execution fork types`);
   }
 

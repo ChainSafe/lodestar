@@ -8,7 +8,7 @@ import {
   GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
   isForkBlobs,
-  isForkExecution,
+  isForkPostBellatrix,
   isForkPostAltair,
   isForkPostElectra,
 } from "@lodestar/params";
@@ -111,7 +111,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution> {
       const forkName = this.getForkName(slot);
-      if (!isForkExecution(forkName)) {
+      if (!isForkPostBellatrix(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
       }
       return sszTypesFor(forkName);

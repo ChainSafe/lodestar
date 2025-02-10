@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, isForkExecution, isForkPostAltair} from "@lodestar/params";
+import {ForkExecution, ForkSeq, isForkPostBellatrix, isForkPostAltair} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -176,7 +176,7 @@ export async function produceBlockBody<T extends BlockType>(
   }
 
   const endExecutionPayload = stepsMetrics?.startTimer();
-  if (isForkExecution(fork)) {
+  if (isForkPostBellatrix(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);

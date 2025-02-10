@@ -1,6 +1,6 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkExecution} from "@lodestar/params";
+import {ForkName, ForkPreElectra, ForkPreExecution, isForkBlobs, isForkPostBellatrix} from "@lodestar/params";
 import {
   BeaconBlockBody,
   RootHex,
@@ -248,7 +248,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: blockIdOnlyReq,
       resp: {
         data: WithVersion((fork) =>
-          isForkExecution(fork) ? ssz[fork].SignedBlindedBeaconBlock : ssz[fork].SignedBeaconBlock
+          isForkPostBellatrix(fork) ? ssz[fork].SignedBlindedBeaconBlock : ssz[fork].SignedBeaconBlock
         ),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },

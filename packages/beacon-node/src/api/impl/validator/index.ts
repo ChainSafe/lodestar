@@ -12,7 +12,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkBlobs,
-  isForkExecution,
+  isForkPostBellatrix,
   isForkPostElectra,
 } from "@lodestar/params";
 import {
@@ -419,7 +419,7 @@ export function getValidatorApi(
       ) = {}
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
-    if (!isForkExecution(version)) {
+    if (!isForkPostBellatrix(version)) {
       throw Error(`Invalid fork=${version} for produceBuilderBlindedBlock`);
     }
 
@@ -526,7 +526,7 @@ export function getValidatorApi(
         commonBlockBody,
       });
       const version = config.getForkName(block.slot);
-      if (strictFeeRecipientCheck && feeRecipient && isForkExecution(version)) {
+      if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
         const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
         if (blockFeeRecipient !== feeRecipient) {
           throw Error(`Invalid feeRecipient set in engine block expected=${feeRecipient} actual=${blockFeeRecipient}`);
@@ -891,7 +891,7 @@ export function getValidatorApi(
 
     async produceBlindedBlock({slot, randaoReveal, graffiti}) {
       const {data, version} = await produceEngineOrBuilderBlock(slot, randaoReveal, graffiti);
-      if (!isForkExecution(version)) {
+      if (!isForkPostBellatrix(version)) {
         throw Error(`Invalid fork=${version} for produceBlindedBlock`);
       }
 
