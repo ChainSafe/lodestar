@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkBlobs, VALIDATOR_REGISTRY_LIMIT} from "@lodestar/params";
 import {
   BLSPubkey,
   ExecutionPayload,
@@ -22,13 +22,13 @@ import {
   EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
-  JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
 import {getBlobsForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
+import {WireFormat} from "../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -38,7 +38,7 @@ import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 // It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
 export type MaybeSignedBuilderBid = SignedBuilderBid | undefined;
 
-const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
+const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1, VALIDATOR_REGISTRY_LIMIT);
 
 export type Endpoints = {
   status: Endpoint<
@@ -90,12 +90,17 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     registerValidator: {
       url: "/eth/v1/builder/validators",
       method: "POST",
-      req: JsonOnlyReq({
+      req: {
         writeReqJson: ({registrations}) => ({body: RegistrationsType.toJson(registrations)}),
         parseReqJson: ({body}) => ({registrations: RegistrationsType.fromJson(body)}),
+        writeReqSsz: ({registrations}) => ({body: RegistrationsType.serialize(registrations)}),
+        parseReqSsz: ({body}) => ({registrations: RegistrationsType.deserialize(body)}),
         schema: {body: Schema.ObjectArray},
-      }),
+      },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
     getHeader: {
       url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}",
