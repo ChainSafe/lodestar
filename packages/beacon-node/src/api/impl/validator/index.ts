@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
 import {
-  ForkBlobs,
+  ForkPostDeneb,
   ForkPostBellatrix,
   ForkPreBlobs,
   ForkSeq,
@@ -111,7 +111,7 @@ const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
   | {data: BeaconBlock<ForkPreBlobs>; version: ForkPreBlobs}
-  | {data: BlockContents; version: ForkBlobs}
+  | {data: BlockContents; version: ForkPostDeneb}
 );
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;

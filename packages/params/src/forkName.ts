@@ -99,5 +99,4 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
  * places where they are more correct than using the "main feature" from a fork.
  */
 export type ForkPreBlobs = ForkPreDeneb;
-export type ForkBlobs = ForkPostDeneb;
 export {forkPostDeneb as forkBlobs};

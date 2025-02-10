@@ -1,6 +1,6 @@
 import {
   ForkAll,
-  ForkBlobs,
+  ForkPostDeneb,
   ForkPostBellatrix,
   ForkPostAltair,
   ForkName,
@@ -247,26 +247,29 @@ export type BeaconBlockBody<F extends ForkAll = ForkAll> = TypesByFork[F]["Beaco
 export type BlindedBeaconBlockBody<F extends ForkPostBellatrix = ForkPostBellatrix> =
   TypesByFork[F]["BlindedBeaconBlockBody"];
 
-export type BlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlockContents"];
-export type SignedBlockContents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["SignedBlockContents"];
-export type SignedOrUnsignedBlockContents<F extends ForkBlobs = ForkBlobs> = BlockContents<F> | SignedBlockContents<F>;
+export type BlockContents<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["BlockContents"];
+export type SignedBlockContents<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["SignedBlockContents"];
+export type SignedOrUnsignedBlockContents<F extends ForkPostDeneb = ForkPostDeneb> =
+  | BlockContents<F>
+  | SignedBlockContents<F>;
 
-export type BeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, FC extends ForkBlobs = ForkBlobs> =
+export type BeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, FC extends ForkPostDeneb = ForkPostDeneb> =
   | BeaconBlock<FB>
   | BlockContents<FC>;
 
-export type SignedBeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, FC extends ForkBlobs = ForkBlobs> =
-  | SignedBeaconBlock<FB>
-  | SignedBlockContents<FC>;
+export type SignedBeaconBlockOrContents<
+  FB extends ForkPreBlobs = ForkPreBlobs,
+  FC extends ForkPostDeneb = ForkPostDeneb,
+> = SignedBeaconBlock<FB> | SignedBlockContents<FC>;
 
 export type ExecutionPayload<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["ExecutionPayload"];
 export type ExecutionPayloadHeader<F extends ForkPostBellatrix = ForkPostBellatrix> =
   TypesByFork[F]["ExecutionPayloadHeader"];
 export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = TypesByFork[F]["ExecutionRequests"];
 
-export type BlobsBundle<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlobsBundle"];
-export type Contents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["Contents"];
-export type ExecutionPayloadAndBlobsBundle<F extends ForkBlobs = ForkBlobs> =
+export type BlobsBundle<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["BlobsBundle"];
+export type Contents<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["Contents"];
+export type ExecutionPayloadAndBlobsBundle<F extends ForkPostDeneb = ForkPostDeneb> =
   TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
 
 export type LightClientHeader<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientHeader"];

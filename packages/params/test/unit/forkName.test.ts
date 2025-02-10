@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import {
   ForkName,
   forkAll,
-  forkBlobs,
+  forkPostDeneb,
   forkPostBellatrix,
   forkPostAltair,
   forkPostCapella,
@@ -27,8 +27,8 @@ describe("forkName", () => {
     expect(forkPostCapella).toMatchSnapshot();
   });
 
-  it("should have valid blobs forks", () => {
-    expect(forkBlobs).toMatchSnapshot();
+  it("should have valid post deneb forks", () => {
+    expect(forkPostDeneb).toMatchSnapshot();
   });
 
   describe("highestFork", () => {

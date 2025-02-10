@@ -1,5 +1,5 @@
 import {
-  ForkBlobs,
+  ForkPostDeneb,
   ForkPostBellatrix,
   ForkPostAltair,
   ForkName,
@@ -35,7 +35,7 @@ export function getPostBellatrixForkTypes(fork: ForkName): SSZTypesFor<ForkPostB
   return sszTypesFor(fork);
 }
 
-export function getPostDenebForkTypes(fork: ForkName): SSZTypesFor<ForkBlobs> {
+export function getPostDenebForkTypes(fork: ForkName): SSZTypesFor<ForkPostDeneb> {
   if (!isForkPostDeneb(fork)) {
     throw Error(`Invalid fork=${fork} for post deneb fork types`);
   }

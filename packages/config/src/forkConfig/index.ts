@@ -1,6 +1,6 @@
 import {
   ForkAll,
-  ForkBlobs,
+  ForkPostDeneb,
   ForkPostBellatrix,
   ForkPostAltair,
   ForkName,
@@ -123,7 +123,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return sszTypesFor(forkName);
     },
-    getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
+    getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb> {
       const forkName = this.getForkName(slot);
       if (!isForkPostDeneb(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for post deneb fork types`);
