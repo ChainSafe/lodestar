@@ -93,9 +93,3 @@ export const forkPostElectra = exclude(forkAll, [
 export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
   return isForkPostDeneb(fork) && fork !== ForkName.deneb;
 }
-
-/**
- * Aliases exported for compatibility. Types and guards above should be used in
- * places where they are more correct than using the "main feature" from a fork.
- */
-export {forkPostDeneb as forkBlobs};
