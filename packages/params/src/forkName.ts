@@ -100,4 +100,4 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
  */
 export type ForkPreBlobs = ForkPreDeneb;
 export type ForkBlobs = ForkPostDeneb;
-export {forkPostDeneb as forkBlobs, isForkPostDeneb as isForkBlobs};
+export {forkPostDeneb as forkBlobs};

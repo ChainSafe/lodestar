@@ -7,7 +7,7 @@ import {
   ForkSeq,
   GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
-  isForkBlobs,
+  isForkPostDeneb,
   isForkPostBellatrix,
   isForkPostAltair,
   isForkPostElectra,
@@ -125,7 +125,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
       const forkName = this.getForkName(slot);
-      if (!isForkBlobs(forkName)) {
+      if (!isForkPostDeneb(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
       }
       return sszTypesFor(forkName);

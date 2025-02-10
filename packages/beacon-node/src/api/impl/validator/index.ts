@@ -11,7 +11,7 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkBlobs,
+  isForkPostDeneb,
   isForkPostBellatrix,
   isForkPostElectra,
 } from "@lodestar/params";
@@ -545,7 +545,7 @@ export function getValidatorApi(
       if (chain.opts.persistProducedBlocks) {
         void chain.persistBlock(block, "produced_engine_block");
       }
-      if (isForkBlobs(version)) {
+      if (isForkPostDeneb(version)) {
         const blockHash = toRootHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
         const contents = chain.producedContentsCache.get(blockHash);
         if (contents === undefined) {

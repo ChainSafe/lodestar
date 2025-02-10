@@ -3,7 +3,7 @@ import {
   ForkPostBellatrix,
   ForkPostAltair,
   ForkName,
-  isForkBlobs,
+  isForkPostDeneb,
   isForkPostBellatrix,
   isForkPostAltair,
 } from "@lodestar/params";
@@ -36,7 +36,7 @@ export function getPostBellatrixForkTypes(fork: ForkName): SSZTypesFor<ForkPostB
 }
 
 export function getBlobsForkTypes(fork: ForkName): SSZTypesFor<ForkBlobs> {
-  if (!isForkBlobs(fork)) {
+  if (!isForkPostDeneb(fork)) {
     throw Error(`Invalid fork=${fork} for blobs fork types`);
   }
 

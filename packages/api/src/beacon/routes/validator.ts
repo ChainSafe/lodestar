@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkBlobs, isForkPostElectra} from "@lodestar/params";
+import {isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
 import {
   Attestation,
   BLSSignature,
@@ -652,7 +652,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: WithVersion(
           (fork) =>
-            (isForkBlobs(fork) ? sszTypesFor(fork).BlockContents : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
+            (isForkPostDeneb(fork)
+              ? sszTypesFor(fork).BlockContents
+              : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
       },
@@ -714,7 +716,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           ({version, executionPayloadBlinded}) =>
             (executionPayloadBlinded
               ? getPostBellatrixForkTypes(version).BlindedBeaconBlock
-              : isForkBlobs(version)
+              : isForkPostDeneb(version)
                 ? sszTypesFor(version).BlockContents
                 : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
         ),

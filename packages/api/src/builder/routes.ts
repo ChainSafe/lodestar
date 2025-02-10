@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {
   BLSPubkey,
   ExecutionPayload,
@@ -163,7 +163,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
-          return isForkBlobs(fork)
+          return isForkPostDeneb(fork)
             ? getBlobsForkTypes(fork).ExecutionPayloadAndBlobsBundle
             : getPostBellatrixForkTypes(fork).ExecutionPayload;
         }),
