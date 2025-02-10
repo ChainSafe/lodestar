@@ -5,7 +5,7 @@ import {
   ForkPostAltair,
   ForkName,
   ForkPostElectra,
-  ForkPreBlobs,
+  ForkPreDeneb,
 } from "@lodestar/params";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
@@ -253,12 +253,12 @@ export type SignedOrUnsignedBlockContents<F extends ForkPostDeneb = ForkPostDene
   | BlockContents<F>
   | SignedBlockContents<F>;
 
-export type BeaconBlockOrContents<FB extends ForkPreBlobs = ForkPreBlobs, FC extends ForkPostDeneb = ForkPostDeneb> =
+export type BeaconBlockOrContents<FB extends ForkPreDeneb = ForkPreDeneb, FC extends ForkPostDeneb = ForkPostDeneb> =
   | BeaconBlock<FB>
   | BlockContents<FC>;
 
 export type SignedBeaconBlockOrContents<
-  FB extends ForkPreBlobs = ForkPreBlobs,
+  FB extends ForkPreDeneb = ForkPreDeneb,
   FC extends ForkPostDeneb = ForkPostDeneb,
 > = SignedBeaconBlock<FB> | SignedBlockContents<FC>;
 

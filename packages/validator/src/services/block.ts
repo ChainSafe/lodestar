@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostBellatrix, ForkName, ForkPreBlobs, ForkSeq} from "@lodestar/params";
+import {ForkPostDeneb, ForkPostBellatrix, ForkName, ForkPreDeneb, ForkSeq} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -28,8 +28,8 @@ import {ValidatorStore} from "./validatorStore.js";
 //  iii) a blinded block post bellatrix
 type FullOrBlindedBlockWithContents =
   | {
-      version: ForkPreBlobs;
-      block: BeaconBlock<ForkPreBlobs>;
+      version: ForkPreDeneb;
+      block: BeaconBlock<ForkPreDeneb>;
       contents: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;

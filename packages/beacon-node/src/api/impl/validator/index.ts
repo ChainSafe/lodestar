@@ -5,7 +5,7 @@ import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkPostDeneb,
   ForkPostBellatrix,
-  ForkPreBlobs,
+  ForkPreDeneb,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
@@ -110,7 +110,7 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_500;
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
-  | {data: BeaconBlock<ForkPreBlobs>; version: ForkPreBlobs}
+  | {data: BeaconBlock<ForkPreDeneb>; version: ForkPreDeneb}
   | {data: BlockContents; version: ForkPostDeneb}
 );
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
