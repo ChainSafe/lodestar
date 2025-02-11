@@ -38,6 +38,7 @@ export type NetworkArgs = {
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
+  "network.targetGroupPeers"?: number;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit"?: number;
@@ -157,6 +158,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
+    targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
   };
 }
 
@@ -403,5 +405,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
     description: "Max size of young generation in megabytes. Defaults to 152mb",
     defaultDescription: String(defaultOptions.network.maxYoungGenerationSizeMb),
+  },
+
+  "network.targetGroupPeers": {
+    type: "number",
+    hidden: true,
+    group: "network",
+    description: "Target number of peers per sampling group",
+    defaultDescription: String(defaultOptions.network.targetGroupPeers),
   },
 };

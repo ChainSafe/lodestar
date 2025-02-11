@@ -3,11 +3,11 @@ import {Connection, PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Metadata, altair, fulu, phase0} from "@lodestar/types";
+import {CustodyIndex, Metadata, fulu, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
-import {getDataColumns} from "../../util/dataColumns.js";
+import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
@@ -20,14 +20,15 @@ import {NodeId, SubnetsService, computeNodeId} from "../subnets/index.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
-import {PeerData, PeersData} from "./peersData.js";
 import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
+import {PeersData, PeerData} from "./peersData.js";
 import {
   assertPeerRelevance,
   getConnectedPeerIds,
   hasSomeConnectedPeer,
   prioritizePeers,
   renderIrrelevantPeerType,
+  PrioritizePeersOpts,
 } from "./utils/index.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
@@ -65,10 +66,6 @@ const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 // to terminal if it deviates significantly from the user's settings
 
 export type PeerManagerOpts = {
-  /** The target number of peers we would like to connect to. */
-  targetPeers: number;
-  /** The maximum number of peers we allow (exceptions for subnet peers) */
-  maxPeers: number;
   /**
    * Delay the 1st query after starting discv5
    * See https://github.com/ChainSafe/lodestar/issues/3423
@@ -83,9 +80,10 @@ export type PeerManagerOpts = {
    */
   connectToDiscv5Bootnodes?: boolean;
   // experimental flags for debugging
+  // TODO-das: remove onlyConnect* flags
   onlyConnectToBiggerDataNodes?: boolean;
   onlyConnectToMinimalCustodyOverlapNodes?: boolean;
-};
+} & PrioritizePeersOpts;
 
 /**
  * ReqResp methods used only be PeerManager, so the main thread never has to call them
@@ -114,6 +112,8 @@ export type PeerManagerModules = {
   statusCache: StatusCache;
 };
 
+export type PeerRequestedSubnetType = SubnetType | "column";
+
 type PeerIdStr = string;
 
 enum RelevantPeerStatus {
@@ -133,6 +133,7 @@ enum RelevantPeerStatus {
 export class PeerManager {
   private nodeId: NodeId;
   private sampleSubnets: number[];
+  private samplingGroups: CustodyIndex[];
   private readonly libp2p: Libp2p;
   private readonly logger: LoggerNode;
   private readonly metrics: NetworkCoreMetrics | null;
@@ -174,6 +175,10 @@ export class PeerManager {
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
     this.sampleSubnets = getDataColumns(
+      this.nodeId,
+      Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
+    );
+    this.samplingGroups = getCustodyGroups(
       this.nodeId,
       Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
     );
@@ -336,14 +341,18 @@ export class PeerManager {
     });
     if (peerData) {
       const oldMetadata = peerData.metadata;
+      const cgc = (metadata as Partial<fulu.Metadata>).cgc ?? this.config.CUSTODY_REQUIREMENT;
+      const nodeId = peerData?.nodeId ?? computeNodeId(peer);
+      const custodyGroups = (oldMetadata == null || oldMetadata.custodyGroups == null || cgc !== oldMetadata.cgc) ? getCustodyGroups(nodeId, cgc) : oldMetadata.custodyGroups;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
         syncnets: (metadata as Partial<fulu.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
         cgc:
           (metadata as Partial<fulu.Metadata>).cgc ??
-          this.discovery?.getCustodyGroupCountForPeer(peer) ??
+          // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
           this.config.CUSTODY_REQUIREMENT,
+        custodyGroups,
       };
       if (oldMetadata === null || oldMetadata.cgc !== peerData.metadata.cgc) {
         void this.requestStatus(peer, this.statusCache.get());
@@ -418,6 +427,8 @@ export class PeerManager {
 
       const peerCustodyGroupCount = custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const dataColumns = getDataColumns(nodeId, peerCustodyGroupCount);
+      // on metadata, we should have custodyGroupss
+      const peerCustodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, peerCustodyGroupCount);
 
       const matchingSubnetsNum = this.sampleSubnets.reduce(
         (acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0),
@@ -434,6 +445,8 @@ export class PeerManager {
         custodyGroupCount,
         hasAllColumns,
         dataColumns: dataColumns.join(" "),
+        matchingSubnetsNum,
+        peerCustodyGroups: peerCustodyGroups.join(" "),
         mySampleSubnets: this.sampleSubnets.join(" "),
         clientAgent,
       });
@@ -533,7 +546,7 @@ export class PeerManager {
       }
     }
 
-    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
+    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, groupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
@@ -541,13 +554,16 @@ export class PeerManager {
           direction: peerData?.direction ?? null,
           attnets: peerData?.metadata?.attnets ?? null,
           syncnets: peerData?.metadata?.syncnets ?? null,
+          custodyGroups: peerData?.metadata?.custodyGroups ?? null,
           score: this.peerRpcScores.getScore(peer),
         };
       }),
       // Collect subnets which we need peers for in the current slot
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
-      this.opts
+      this.samplingGroups,
+      this.opts,
+      this.metrics
     );
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
@@ -572,6 +588,11 @@ export class PeerManager {
       }
     }
 
+    for (const maxPeersToDiscover of groupQueries.values()) {
+      this.metrics?.peersRequestedSubnetsToQuery.inc({type: "column"}, 1);
+      this.metrics?.peersRequestedSubnetsPeerCount.inc({type: "column"}, maxPeersToDiscover);
+    }
+
     // disconnect first to have more slots before we dial new peers
     for (const [reason, peers] of peersToDisconnect) {
       this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
@@ -583,7 +604,8 @@ export class PeerManager {
     if (this.discovery) {
       try {
         this.metrics?.peersRequestedToConnect.inc(peersToConnect);
-        this.discovery.discoverPeers(peersToConnect, queriesMerged);
+        // for PeerDAS, lodestar implements subnet sampling strategy, hence we need to issue columnSubnetQueries to PeerDiscovery
+        this.discovery.discoverPeers(peersToConnect, groupQueries, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
       }
@@ -788,6 +810,7 @@ export class PeerManager {
 
         // TODO: Consider optimizing by doing observe in batch
         metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
+        metrics.peerColumnGroupCount.observe(peerData?.metadata?.cgc ?? 0);
         metrics.peerScoreByClient.observe({client}, this.peerRpcScores.getScore(peerId));
         metrics.peerGossipScoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
         metrics.peerConnectionLength.observe((now - openCnx.timeline.open) / 1000);

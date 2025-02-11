@@ -4,12 +4,12 @@ import type {PeerId, PeerInfo} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {SubnetID} from "@lodestar/types";
-import {ssz} from "@lodestar/types";
+import {CustodyIndex, SubnetID} from "@lodestar/types";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
+import {ColumnIndex} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {getDataColumns} from "../../util/dataColumns.js";
+import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
@@ -19,6 +19,7 @@ import {NodeId, computeNodeId} from "../subnets/interface.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
+import {type GroupQueries } from "./utils/prioritizePeers.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -31,6 +32,7 @@ export type PeerDiscoveryOpts = {
   discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
   // experimental flags for debugging
+  // TODO-das: remove
   onlyConnectToBiggerDataNodes?: boolean;
   onlyConnectToMinimalCustodyOverlapNodes?: boolean;
 };
@@ -63,6 +65,11 @@ export enum DiscoveredPeerStatus {
   no_multiaddrs = "no_multiaddrs",
 }
 
+export enum NotDialReason {
+  not_contain_requested_sampling_groups = "not_contain_requested_sampling_groups",
+  not_contain_requested_attnet_syncnet_subnets = "not_contain_requested_attnet_syncnet_subnets",
+}
+
 type UnixMs = number;
 /**
  * Maintain peersToConnect to avoid having too many topic peers at some point.
@@ -86,7 +93,7 @@ type CachedENR = {
   multiaddrTCP: Multiaddr;
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
-  custodyGroupCount: number;
+  peerCustodyGroups: number[];
 };
 
 /**
@@ -96,6 +103,7 @@ type CachedENR = {
 export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
+  // TODO-das: remove nodeId and sampleSubnets once we remove onlyConnect* flag
   private nodeId: NodeId;
   private sampleSubnets: number[];
   private peerRpcScores: IPeerRpcScoreStore;
@@ -103,20 +111,20 @@ export class PeerDiscovery {
   private logger: LoggerNode;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
-  private peerIdToCustodyGroupCount = new Map<PeerIdStr, number>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, SubnetRequestInfo>> = {
     attnets: new Map(),
     syncnets: new Map(),
   };
+  // map of peerDAS group to max number of peers to connect
+  private groupRequests: Map<number, number>;
 
-  /** The maximum number of peers we allow (exceptions for subnet peers) */
-  private maxPeers: number;
   private discv5StartMs: number;
   private discv5FirstQueryDelayMs: number;
 
   private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
+  // TODO-das: remove the below 2 flags
   private onlyConnectToBiggerDataNodes: boolean | undefined = false;
   private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
@@ -128,6 +136,7 @@ export class PeerDiscovery {
     this.logger = logger;
     this.config = config;
     this.discv5 = discv5;
+    // TODO-das: remove
     this.nodeId = nodeId;
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
@@ -135,8 +144,8 @@ export class PeerDiscovery {
       nodeId,
       Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
     );
+    this.groupRequests = new Map();
 
-    this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;
     this.discv5StartMs = Date.now();
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
@@ -169,6 +178,13 @@ export class PeerDiscovery {
       metrics.discovery.cachedENRsSize.addCollect(() => {
         metrics.discovery.cachedENRsSize.set(this.cachedENRs.size);
         metrics.discovery.peersToConnect.set(this.peersToConnect);
+
+        // PeerDAS metrics
+        const groupsToConnect = Array.from(this.groupRequests.values());
+        const groupPeersToConnect = groupsToConnect.reduce((acc, elem) => acc + elem, 0);
+        metrics.discovery.groupPeersToConnect.set(groupPeersToConnect);
+        metrics.discovery.groupsToConnect.set(groupsToConnect.filter((elem) => elem > 0).length);
+
         for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
           const subnetPeersToConnect = Array.from(this.subnetRequests[type].values()).reduce(
             (acc, {peersToConnect}) => acc + peersToConnect,
@@ -202,7 +218,11 @@ export class PeerDiscovery {
   /**
    * Request to find peers, both on specific subnets and in general
    */
-  discoverPeers(peersToConnect: number, subnetRequests: SubnetDiscvQueryMs[] = []): void {
+  discoverPeers(
+    peersToConnect: number,
+    groupRequests: GroupQueries,
+    subnetRequests: SubnetDiscvQueryMs[] = []
+  ): void {
     const subnetsToDiscoverPeers: SubnetDiscvQueryMs[] = [];
     const cachedENRsToDial = new Map<PeerIdStr, CachedENR>();
     // Iterate in reverse to consider first the most recent ENRs
@@ -228,15 +248,40 @@ export class PeerDiscovery {
 
     this.peersToConnect += peersToConnect;
 
+    // starting from PeerDAS, we need to prioritize column subnet peers first in order to have stable subnet sampling
+    const groupsToDiscover = new Set<CustodyIndex>();
+    let groupPeersToDiscover = 0;
+    group: for (const [group, maxPeersToConnect] of groupRequests) {
+      let cachedENRsInGroup = 0;
+      for (const cachedENR of cachedENRsReverse) {
+        if (cachedENR.peerCustodyGroups.includes(group)) {
+          cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
+
+          if (++cachedENRsInGroup >= maxPeersToConnect) {
+            continue group;
+          }
+        }
+
+        const groupPeersToConnect = Math.max(maxPeersToConnect - cachedENRsInGroup, 0);
+        this.groupRequests.set(group, groupPeersToConnect);
+        groupsToDiscover.add(group);
+        groupPeersToDiscover += groupPeersToConnect;
+      }
+    }
+
     subnet: for (const subnetRequest of subnetRequests) {
       // Get cached ENRs from the discovery service that are in the requested `subnetId`, but not connected yet
       let cachedENRsInSubnet = 0;
-      for (const cachedENR of cachedENRsReverse) {
-        if (cachedENR.subnets[subnetRequest.type][subnetRequest.subnet]) {
-          cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
 
-          if (++cachedENRsInSubnet >= subnetRequest.maxPeersToDiscover) {
-            continue subnet;
+      // only dial attnet/syncnet peers if subnet sampling peers are stable
+      if (groupPeersToDiscover === 0) {
+        for (const cachedENR of cachedENRsReverse) {
+          if (cachedENR.subnets[subnetRequest.type][subnetRequest.subnet]) {
+            cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
+
+            if (++cachedENRsInSubnet >= subnetRequest.maxPeersToDiscover) {
+              continue subnet;
+            }
           }
         }
       }
@@ -284,15 +329,10 @@ export class PeerDiscovery {
       peersToConnect,
       peersAvailableToDial: cachedENRsToDial.size,
       subnetsToDiscover: subnetsToDiscoverPeers.length,
+      groupsToDiscover: Array.from(groupsToDiscover).join(","),
+      groupPeersToDiscover,
       shouldRunFindRandomNodeQuery,
     });
-  }
-
-  /**
-   * Get custody group count for a peer
-   */
-  getCustodyGroupCountForPeer(peer: PeerId): number | undefined {
-    return this.peerIdToCustodyGroupCount.get(peer.toString());
   }
 
   /**
@@ -343,12 +383,8 @@ export class PeerDiscovery {
 
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
-    const custodyGroupCount = this.peerIdToCustodyGroupCount.get(id.toString());
-    if (custodyGroupCount === undefined) {
-      this.logger.warn("onDiscoveredPeer with unknown custodyGroupCount assuming 4", {peerId: id.toString()});
-    }
 
-    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, custodyGroupCount ?? 4);
+    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, undefined);
     this.logger.debug("Discovered peer via libp2p", {peer: prettyPrintPeerId(id), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
@@ -383,13 +419,16 @@ export class PeerDiscovery {
     // never throw and treat too long or too short bitfields as zero-ed
     const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
-    const custodyGroupCount = custodyGroupCountBytes
-      ? bytesToInt(custodyGroupCountBytes, "be")
-      : this.config.CUSTODY_REQUIREMENT;
-    this.peerIdToCustodyGroupCount.set(peerId.toString(), custodyGroupCount);
+    const custodyGroupCount = custodyGroupCountBytes ? bytesToInt(custodyGroupCountBytes, "be") : undefined;
 
-    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets, custodyGroupCount);
-    this.logger.debug("Discovered peer via discv5", {peer: prettyPrintPeerId(peerId), status});
+    const status = this.handleDiscoveredPeer(
+      peerId,
+      multiaddrTCP,
+      attnets,
+      syncnets,
+      custodyGroupCount
+    );
+    this.logger.debug("Discovered peer via discv5", {peer: prettyPrintPeerId(peerId), status, custodySubnetCount: custodyGroupCount});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
@@ -401,7 +440,7 @@ export class PeerDiscovery {
     multiaddrTCP: Multiaddr,
     attnets: boolean[],
     syncnets: boolean[],
-    custodyGroupCount: number
+    custodySubnetCount?: number
   ): DiscoveredPeerStatus {
     const nodeId = computeNodeId(peerId);
     this.logger.warn("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
@@ -431,7 +470,7 @@ export class PeerDiscovery {
         multiaddrTCP,
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
-        custodyGroupCount: custodyGroupCount,
+        peerCustodyGroups: getCustodyGroups(nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT),
       };
 
       // Only dial peer if necessary
@@ -452,8 +491,10 @@ export class PeerDiscovery {
   }
 
   private shouldDialPeer(peer: CachedENR): boolean {
+    // begin onlyConnect* experimental logic
+    // TODO-das: remove
     const nodeId = computeNodeId(peer.peerId);
-    const peerCustodyGroupCount = peer.custodyGroupCount;
+    const peerCustodyGroupCount = peer.peerCustodyGroups.length;
     const peerCustodyColumns = getDataColumns(nodeId, peerCustodyGroupCount);
 
     const matchingSubnetsNum = this.sampleSubnets.reduce(
@@ -475,10 +516,36 @@ export class PeerDiscovery {
     if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {
       return false;
     }
+
     if (this.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
       return false;
     }
+    // end onlyConnect* experimental logic
 
+    // starting from PeerDAS fork, we need to make sure we have stable subnet sampling peers first
+    // given CUSTODY_REQUIREMENT = 4 and 100 peers, we have 400 custody columns from peers
+    // with NUMBER_OF_CUSTODY_GROUPS = 128, we have 400 / 128 = 3.125 peers per column in average
+    // it would not be hard to find TARGET_SUBNET_PEERS(6) peers per SAMPLES_PER_SLOT(8) columns
+    // after some first heartbeats, we should have no more column requested, then go with conditions of prior forks
+    let hasMatchingGroup = false;
+    let groupRequestCount = 0;
+    for (const [group, peersToConnect] of this.groupRequests.entries()) {
+      if (peersToConnect <= 0) {
+        this.groupRequests.delete(group);
+      } else if (peer.peerCustodyGroups.includes(group)) {
+        this.groupRequests.set(group, Math.max(0, peersToConnect - 1));
+        hasMatchingGroup = true;
+        groupRequestCount += peersToConnect;
+      }
+    }
+
+    // if subnet sampling peers are not stable and this peer is not in the requested columns, ignore it
+    if (groupRequestCount > 0 && !hasMatchingGroup) {
+      this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.not_contain_requested_sampling_groups});
+      return false;
+    }
+
+    // logics up to Deneb fork
     for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
       for (const [subnet, {toUnixMs, peersToConnect}] of this.subnetRequests[type].entries()) {
         if (toUnixMs < Date.now() || peersToConnect === 0) {
@@ -504,6 +571,7 @@ export class PeerDiscovery {
       return true;
     }
 
+    this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.not_contain_requested_attnet_syncnet_subnets});
     return false;
   }
 

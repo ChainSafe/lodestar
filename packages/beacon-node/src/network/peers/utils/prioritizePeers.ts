@@ -1,10 +1,11 @@
 import {BitArray} from "@chainsafe/ssz";
 import {Direction, PeerId} from "@libp2p/interface";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {SubnetID, altair, phase0} from "@lodestar/types";
+import {CustodyIndex, SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
+import {NetworkCoreMetrics} from "../../core/metrics.js";
 import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
@@ -39,23 +40,29 @@ const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
 const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
 type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
+/**
+ * A map of column subnet id to maxPeersToDiscover
+ */
+export type GroupQueries = Map<CustodyIndex, number>;
 
 type PeerInfo = {
   id: PeerId;
   direction: Direction | null;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
+  custodyGroups: CustodyIndex[];
   attnetsTrueBitIndices: number[];
   syncnetsTrueBitIndices: number[];
   score: number;
 };
 
-export interface PrioritizePeersOpts {
+export type PrioritizePeersOpts = {
   targetPeers: number;
   maxPeers: number;
+  targetGroupPeers: number;
   outboundPeersRatio?: number;
   targetSubnetPeers?: number;
-}
+};
 
 export enum ExcessPeerDisconnectReason {
   LOW_SCORE = "low_score",
@@ -77,16 +84,20 @@ export function prioritizePeers(
     direction: Direction | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
+    custodyGroups: CustodyIndex[] | null;
     score: number;
   }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  opts: PrioritizePeersOpts
+  samplingGroups: CustodyIndex[],
+  opts: PrioritizePeersOpts,
+  metrics: NetworkCoreMetrics | null
 ): {
   peersToConnect: number;
   peersToDisconnect: Map<ExcessPeerDisconnectReason, PeerId[]>;
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
+  groupQueries: GroupQueries;
 } {
   const {targetPeers, maxPeers} = opts;
 
@@ -100,17 +111,20 @@ export function prioritizePeers(
       direction: peer.direction,
       attnets: peer.attnets ?? attnetsZero,
       syncnets: peer.syncnets ?? syncnetsZero,
+      custodyGroups: peer.custodyGroups ?? [],
       attnetsTrueBitIndices: peer.attnets?.getTrueBitIndexes() ?? [],
       syncnetsTrueBitIndices: peer.syncnets?.getTrueBitIndexes() ?? [],
       score: peer.score,
     })
   );
 
-  const {attnetQueries, syncnetQueries, dutiesByPeer} = requestAttnetPeers(
+  const {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer} = requestSubnetPeers(
     connectedPeers,
     activeAttnets,
     activeSyncnets,
-    opts
+    samplingGroups,
+    opts,
+    metrics
   );
 
   const connectedPeerCount = connectedPeers.length;
@@ -134,20 +148,24 @@ export function prioritizePeers(
     peersToDisconnect,
     attnetQueries,
     syncnetQueries,
+    groupQueries,
   };
 }
 
 /**
- * If more peers are needed in attnets and syncnets, create SubnetDiscvQuery for each subnet
+ * If more peers are needed in attnets and syncnets and column subnets, create SubnetDiscvQuery for each subnet
  */
-function requestAttnetPeers(
+function requestSubnetPeers(
   connectedPeers: PeerInfo[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  opts: PrioritizePeersOpts
+  samplingGroups: CustodyIndex[],
+  opts: PrioritizePeersOpts,
+  metrics: NetworkCoreMetrics | null
 ): {
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
+  groupQueries: GroupQueries;
   dutiesByPeer: Map<PeerInfo, number>;
 } {
   const {targetSubnetPeers = TARGET_SUBNET_PEERS} = opts;
@@ -209,7 +227,27 @@ function requestAttnetPeers(
     }
   }
 
-  return {attnetQueries, syncnetQueries, dutiesByPeer};
+  // column subnets, do we need queries for more peers
+  const targetGroupPeers = opts.targetGroupPeers;
+  const groupQueries: GroupQueries = new Map();
+  const peersPerGroup = new Map<CustodyIndex, number>();
+  for (const peer of connectedPeers) {
+    const {custodyGroups} = peer;
+    for (const group of custodyGroups) {
+      peersPerGroup.set(group, 1 + (peersPerGroup.get(group) ?? 0));
+    }
+  }
+
+  for (const group of samplingGroups) {
+    const peersInGroup = peersPerGroup.get(group) ?? 0;
+    metrics?.peerCountPerSamplingGroup.set({group}, peersInGroup);
+    if (peersInGroup < targetGroupPeers) {
+      // We need more peers
+      groupQueries.set(group, targetGroupPeers - peersInGroup);
+    }
+  }
+
+  return {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer};
 }
 
 /**
