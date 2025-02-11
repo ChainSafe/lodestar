@@ -288,6 +288,7 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.pruneHistory": {
+    hidden: true,
     description: "Prune historical blocks and state",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
