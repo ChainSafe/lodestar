@@ -6,7 +6,7 @@ describe("config / beaconNodeOptions", () => {
   it("Should return goerli options", () => {
     const beaconNodeOptions = new BeaconNodeOptions({});
 
-    // Asserts only part of the data structure to avoid unnecesary duplicate code
+    // Asserts only part of the data structure to avoid unnecessary duplicate code
     const optionsPartial = beaconNodeOptions.getWithDefaults();
     expect(optionsPartial?.api?.rest?.port).toBe(defaultOptions.api.rest.port);
   });
