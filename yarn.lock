@@ -750,11 +750,6 @@
     "@chainsafe/pubkey-index-map-linux-x64-gnu" "2.0.0"
     "@chainsafe/pubkey-index-map-win32-x64-msvc" "2.0.0"
 
-"@chainsafe/snappy-wasm@^0.5.0":
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/snappy-wasm/-/snappy-wasm-0.5.0.tgz#067e534341ef746706e2dbf255bd7604c849be73"
-  integrity sha512-ydXvhr9p+JjvzSSEyi6XExq8pHugFnrk70mk17T6mhDsklPvaXc+8K90G7TJF+u51lxI/fpv7MahrA5ayjFcSA==
-
 "@chainsafe/ssz@^0.11.1":
   version "0.11.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.11.1.tgz#d4aec883af2ec5196ae67b96242c467da20b2476"
