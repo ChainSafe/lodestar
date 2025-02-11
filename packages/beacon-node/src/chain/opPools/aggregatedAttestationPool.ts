@@ -344,7 +344,7 @@ export class AggregatedAttestationPool {
 
           if (
             slotCount > 2 &&
-            consolidations.length >= MAX_ATTESTATIONS_ELECTRA &&
+            consolidations.length >= MAX_ATTESTATIONS_ELECTRA * 2 &&
             notSeenAttestingIndices.size / slotDelta < minScore
           ) {
             // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS_ELECTRA attestations and break the for loop early
@@ -395,11 +395,20 @@ export class AggregatedAttestationPool {
       }
     }
 
-    const sortedConsolidationsByScore = consolidations
-      .sort((a, b) => b.score - a.score)
-      .slice(0, MAX_ATTESTATIONS_ELECTRA);
+    const sortedConsolidationsByScore = consolidations.sort((a, b) => b.score - a.score);
+
     // on chain aggregation is expensive, only do it after all
-    return sortedConsolidationsByScore.map(aggregateConsolidation);
+    const result = [];
+    const seenSignatures: Uint8Array[] = [];
+    for (const consolidation of sortedConsolidationsByScore) {
+      const aggregatedConslidation = aggregateConsolidation(consolidation);
+      if (seenSignatures.includes(aggregatedConslidation.signature)) {
+        continue; // Skipping duplicated aggregates
+      }
+      seenSignatures.push(aggregatedConslidation.signature);
+      result.push(aggregatedConslidation);
+    }
+    return result.slice(0, MAX_ATTESTATIONS_ELECTRA);
   }
 
   /**
