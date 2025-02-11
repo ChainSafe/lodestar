@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, isForkPostFocil, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkExecution, ForkSeq, SLOTS_PER_EPOCH, isForkPostEip7805} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
@@ -190,7 +190,7 @@ export class PrepareNextSlotScheduler {
             feeRecipient,
           });
 
-          if (isForkPostFocil(fork)) {
+          if (isForkPostEip7805(fork)) {
             this.schedulePayloadInclusionListUpdate(payloadId, clockSlot).catch((e) => {
               this.logger.error("Failed to update payload with inclusion list", {payloadId, prepareSlot}, e);
             });
@@ -201,7 +201,7 @@ export class PrepareNextSlotScheduler {
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
-          // TODO FOCIL: do we wanna emit data about inclusion lists here
+          // TODO EIP-7805: do we wanna emit data about inclusion lists here
           const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
@@ -257,13 +257,10 @@ export class PrepareNextSlotScheduler {
    * Schedule task to update payload with inclusion list transactions that gathered up to `PROPOSER_INCLUSION_LIST_CUT_OFF`
    */
   async schedulePayloadInclusionListUpdate(payloadId: PayloadId, clockSlot: Slot): Promise<void> {
-    // TODO FOCIL: Hard-coding sleepTime to 500ms for testing purpose. Revert it back after done testing
+    // TODO EIP-7805: Hard-coding sleepTime to 500ms for testing purpose. Revert it back after done testing
     // const sleepTime = Math.max(0.5, (this.config.PROPOSER_INCLUSION_LIST_CUT_OFF - this.chain.clock.secFromSlot(clockSlot)) * 1000);
     const sleepTime = 0.5 * 1000;
-    await sleep(
-      sleepTime,
-      this.signal
-    );
+    await sleep(sleepTime, this.signal);
 
     await prepareExecutionPayloadInclusionList(this.chain, this.logger, payloadId, clockSlot);
   }

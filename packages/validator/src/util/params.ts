@@ -72,7 +72,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
-  const focilForkRelevant = localConfig.EIP7805_FORK_EPOCH < Infinity;
+  const eip7805ForkRelevant = localConfig.EIP7805_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -108,9 +108,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // electra
     ELECTRA_FORK_VERSION: electraForkRelevant,
     ELECTRA_FORK_EPOCH: electraForkRelevant,
-    // focil
-    EIP7805_FORK_VERSION: focilForkRelevant,
-    EIP7805_FORK_EPOCH: focilForkRelevant,
+    // EIP-7805
+    EIP7805_FORK_VERSION: eip7805ForkRelevant,
+    EIP7805_FORK_EPOCH: eip7805ForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -247,11 +247,11 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
     MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
 
-    // FOCIL
-    ATTESTATION_DEADLINE: focilForkRelevant,
-    PROPOSER_INCLUSION_LIST_CUT_OFF: focilForkRelevant,
-    VIEW_FREEZE_DEADLINE: focilForkRelevant,
-    MAX_REQUEST_INCLUSION_LIST: focilForkRelevant,
-    MAX_BYTES_PER_INCLUSION_LIST: focilForkRelevant,
+    // EIP-7805
+    ATTESTATION_DEADLINE: eip7805ForkRelevant,
+    PROPOSER_INCLUSION_LIST_CUT_OFF: eip7805ForkRelevant,
+    VIEW_FREEZE_DEADLINE: eip7805ForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: eip7805ForkRelevant,
+    MAX_BYTES_PER_INCLUSION_LIST: eip7805ForkRelevant,
   };
 }

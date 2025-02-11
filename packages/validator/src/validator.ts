@@ -13,6 +13,7 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
+import {InclusionListService} from "./services/inclusionList.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
@@ -22,7 +23,6 @@ import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slas
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Clock, IClock} from "./util/clock.js";
 import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
-import { InclusionListService } from "./services/inclusionList.js";
 
 export type ValidatorModules = {
   opts: ValidatorOptions;
@@ -277,9 +277,8 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
-      syncingStatusTracker,
+      syncingStatusTracker
     );
-
 
     return new Validator({
       opts,
@@ -357,7 +356,7 @@ export class Validator {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
-    // this.inclusionListService.removeDutiesForKey(pubkey); TODO FOCIL: implement removeDutiesForKey for IL
+    // this.inclusionListService.removeDutiesForKey(pubkey); TODO EIP-7805: implement removeDutiesForKey for IL
   }
 
   /**

@@ -13,7 +13,7 @@ import {
   Slot,
   altair,
   capella,
-  focil,
+  eip7805,
   phase0,
   ssz,
   sszTypesFor,
@@ -87,7 +87,7 @@ export type SignableMessage =
   | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
   | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
   | {type: SignableMessageType.BLS_TO_EXECUTION_CHANGE; data: capella.BLSToExecutionChange}
-  | {type: SignableMessageType.INCLUSION_LIST; data: focil.InclusionList};
+  | {type: SignableMessageType.INCLUSION_LIST; data: eip7805.InclusionList};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
@@ -280,6 +280,6 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
       return {BLS_TO_EXECUTION_CHANGE: ssz.capella.BLSToExecutionChange.toJson(payload.data)};
 
     case SignableMessageType.INCLUSION_LIST:
-      return {inclusion_list: ssz.focil.InclusionList.toJson(payload.data)};
+      return {inclusion_list: ssz.eip7805.InclusionList.toJson(payload.data)};
   }
 }

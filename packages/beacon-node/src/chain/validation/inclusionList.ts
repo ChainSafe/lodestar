@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, getInclusionListSignatureSet} from "@lodestar/state-transition";
-import {focil} from "@lodestar/types";
+import {eip7805} from "@lodestar/types";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {InclusionListError, InclusionListErrorCode} from "../errors/inclusionList.js";
 import {GossipAction} from "../errors/index.js";
@@ -8,23 +8,23 @@ import {IBeaconChain} from "../index.js";
 
 export async function validateApiInclusionList(
   chain: IBeaconChain,
-  inclusionList: focil.SignedInclusionList
+  inclusionList: eip7805.SignedInclusionList
 ): Promise<void> {
   return validateInclusionList(chain, inclusionList);
 }
 
 export async function validateGossipInclusionList(
   chain: IBeaconChain,
-  inclusionList: focil.SignedInclusionList
+  inclusionList: eip7805.SignedInclusionList
 ): Promise<void> {
   return validateInclusionList(chain, inclusionList);
 }
 
-async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.SignedInclusionList): Promise<void> {
+async function validateInclusionList(chain: IBeaconChain, inclusionList: eip7805.SignedInclusionList): Promise<void> {
   const {slot, validatorIndex, transactions, inclusionListCommitteeRoot} = inclusionList.message;
 
   // [REJECT] The size of message is within upperbound MAX_BYTES_PER_INCLUSION_LIST
-  // TODO FOCIL: spec is outdated, we need to check total size of all transactions
+  // TODO EIP-7805: spec is outdated, we need to check total size of all transactions
   const inclusionListSize = transactions.reduce((total, transaction) => total + transaction.byteLength, 0);
   if (inclusionListSize > chain.config.MAX_BYTES_PER_INCLUSION_LIST) {
     throw new InclusionListError(GossipAction.REJECT, {
@@ -52,7 +52,7 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
   const shuffling = await chain.shufflingCache.get(ilEpoch, shufflingDependentRoot);
 
   if (shuffling === null) {
-    throw new Error("Shuffling not available"); // TODO FOCIL: Handle shuffling cache miss
+    throw new Error("Shuffling not available"); // TODO EIP-7805: Handle shuffling cache miss
   }
 
   // [IGNORE] The inclusion_list_committee for slot message.slot on the current branch corresponds to message.inclusion_list_committee_root, as determined by hash_tree_root(inclusion_list_committee) == message.inclusion_list_committee_root.
@@ -75,7 +75,7 @@ async function validateInclusionList(chain: IBeaconChain, inclusionList: focil.S
     });
   }
 
-  // TODO FOCIL: use a different cache similar to `seenAttesters` here?
+  // TODO EIP-7805: use a different cache similar to `seenAttesters` here?
   // [IGNORE] The message is either the first or second valid message received from the validator with index message.validator_index.
   if (chain.inclusionListPool.seenTwice(slot, validatorIndex)) {
     throw new InclusionListError(GossipAction.IGNORE, {

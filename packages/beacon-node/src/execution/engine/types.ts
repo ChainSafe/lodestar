@@ -242,7 +242,6 @@ export interface BlobsBundleRpc {
 /** Array of DATA - Array of transaction objects */
 type InclusionListRpc = DATA[];
 
-
 export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {
     parentHash: bytesToData(data.parentHash),

@@ -78,7 +78,7 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
       });
-    case ForkName.focil:
+    case ForkName.eip7805:
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,

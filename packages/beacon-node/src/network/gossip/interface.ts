@@ -13,7 +13,7 @@ import {
   altair,
   capella,
   deneb,
-  focil,
+  eip7805,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -99,7 +99,7 @@ export type GossipTypeMap = {
   [GossipType.light_client_finality_update]: LightClientFinalityUpdate;
   [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
-  [GossipType.inclusion_list]: focil.SignedInclusionList;
+  [GossipType.inclusion_list]: eip7805.SignedInclusionList;
 };
 
 export type GossipFnByType = {

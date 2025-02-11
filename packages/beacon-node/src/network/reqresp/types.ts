@@ -12,7 +12,7 @@ import {
   SignedBeaconBlock,
   altair,
   deneb,
-  focil,
+  eip7805,
   phase0,
   ssz,
   sszTypesFor,
@@ -53,7 +53,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
   [ReqRespMethod.LightClientOptimisticUpdate]: null;
-  [ReqRespMethod.InclusionListByCommitteeIndices]: focil.InclusionListByCommitteeIndicesRequest;
+  [ReqRespMethod.InclusionListByCommitteeIndices]: eip7805.InclusionListByCommitteeIndicesRequest;
 };
 
 type ResponseBodyByMethod = {
@@ -70,7 +70,7 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
-  [ReqRespMethod.InclusionListByCommitteeIndices]: focil.SignedInclusionList;
+  [ReqRespMethod.InclusionListByCommitteeIndices]: eip7805.SignedInclusionList;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -93,7 +93,7 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
-  [ReqRespMethod.InclusionListByCommitteeIndices]: ssz.focil.InclusionListByCommitteeIndicesRequest,
+  [ReqRespMethod.InclusionListByCommitteeIndices]: ssz.eip7805.InclusionListByCommitteeIndicesRequest,
 });
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
@@ -120,7 +120,7 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
-  [ReqRespMethod.InclusionListByCommitteeIndices]: () => ssz.focil.SignedInclusionList,
+  [ReqRespMethod.InclusionListByCommitteeIndices]: () => ssz.eip7805.SignedInclusionList,
 };
 
 function onlyLightclientFork(fork: ForkName): ForkLightClient {

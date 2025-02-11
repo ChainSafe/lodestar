@@ -22,7 +22,7 @@ import {
   altair,
   capella,
   deneb,
-  focil,
+  eip7805,
   phase0,
 } from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -414,12 +414,12 @@ export class Network implements INetwork {
     );
   }
 
-  async publishInclusionList(inclusionList: focil.SignedInclusionList): Promise<number> {
+  async publishInclusionList(inclusionList: eip7805.SignedInclusionList): Promise<number> {
     const fork = this.config.getForkName(inclusionList.message.slot);
     return this.publishGossip<GossipType.inclusion_list>(
       {type: GossipType.inclusion_list, fork},
       inclusionList,
-      {ignoreDuplicatePublishError: true} // TODO FOCIL: Double check if we want to ignore duplicate error
+      {ignoreDuplicatePublishError: true} // TODO EIP-7805: Double check if we want to ignore duplicate error
     );
   }
 
@@ -529,11 +529,11 @@ export class Network implements INetwork {
     );
   }
 
-  // TODO FOCIL: add caller to this function
+  // TODO EIP-7805: add caller to this function
   async sendInclusionListByCommitteeIndices(
     peerId: PeerIdStr,
-    request: focil.InclusionListByCommitteeIndicesRequest
-  ): Promise<focil.SignedInclusionList[]> {
+    request: eip7805.InclusionListByCommitteeIndicesRequest
+  ): Promise<eip7805.SignedInclusionList[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.InclusionListByCommitteeIndices, [Version.V1], request),
       this.config.MAX_REQUEST_INCLUSION_LIST,

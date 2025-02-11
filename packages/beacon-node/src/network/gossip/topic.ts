@@ -111,7 +111,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
     case GossipType.inclusion_list:
-      return ssz.focil.SignedInclusionList;
+      return ssz.eip7805.SignedInclusionList;
   }
 }
 
@@ -232,7 +232,7 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
-  if (ForkSeq[fork] >= ForkSeq.focil) {
+  if (ForkSeq[fork] >= ForkSeq.eip7805) {
     topics.push({type: GossipType.inclusion_list});
   }
 

@@ -8,7 +8,7 @@ import {
   ProtoBlock,
   assertValidTerminalPowBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, isForkPostFocil} from "@lodestar/params";
+import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, isForkPostEip7805} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   isExecutionBlockBodyType,
@@ -306,7 +306,7 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
-  const ilTransactions = isForkPostFocil(fork) ? chain.inclusionListPool.getTransactions(currentSlot) : undefined;
+  const ilTransactions = isForkPostEip7805(fork) ? chain.inclusionListPool.getTransactions(currentSlot) : undefined;
 
   const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);

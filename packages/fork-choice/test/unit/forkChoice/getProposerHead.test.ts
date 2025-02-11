@@ -46,7 +46,7 @@ describe("Forkchoice / GetProposerHead", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
-    isFocilEnabled: false,
+    isEip7805Enabled: false,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 
@@ -70,7 +70,7 @@ describe("Forkchoice / GetProposerHead", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
-    isFocilEnabled: false,
+    isEip7805Enabled: false,
 
     weight: 29,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -96,7 +96,7 @@ describe("Forkchoice / GetProposerHead", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
-    isFocilEnabled: false,
+    isEip7805Enabled: false,
     weight: 212, // 240 - 29 + 1
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };

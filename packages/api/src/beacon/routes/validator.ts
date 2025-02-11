@@ -15,7 +15,7 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
-  focil,
+  eip7805,
   phase0,
   ssz,
   sszTypesFor,
@@ -516,7 +516,7 @@ export type Endpoints = {
    */
   publishInclusionList: Endpoint<
     "POST",
-    {signedInclusionList: focil.SignedInclusionList},
+    {signedInclusionList: eip7805.SignedInclusionList},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
@@ -1069,23 +1069,23 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedInclusionList}) => {
           const fork = config.getForkName(signedInclusionList.message.slot);
           return {
-            body: ssz.focil.SignedInclusionList.toJson(signedInclusionList),
+            body: ssz.eip7805.SignedInclusionList.toJson(signedInclusionList),
             headers: {
               [MetaHeader.Version]: fork,
             },
           };
         },
-        parseReqJson: ({body}) => ({signedInclusionList: ssz.focil.SignedInclusionList.fromJson(body)}),
+        parseReqJson: ({body}) => ({signedInclusionList: ssz.eip7805.SignedInclusionList.fromJson(body)}),
         writeReqSsz: ({signedInclusionList}) => {
           const fork = config.getForkName(signedInclusionList.message.slot);
           return {
-            body: ssz.focil.SignedInclusionList.serialize(signedInclusionList),
+            body: ssz.eip7805.SignedInclusionList.serialize(signedInclusionList),
             headers: {
               [MetaHeader.Version]: fork,
             },
           };
         },
-        parseReqSsz: ({body}) => ({signedInclusionList: ssz.focil.SignedInclusionList.deserialize(body)}),
+        parseReqSsz: ({body}) => ({signedInclusionList: ssz.eip7805.SignedInclusionList.deserialize(body)}),
         schema: {
           body: Schema.Object,
           headers: {[MetaHeader.Version]: Schema.String},

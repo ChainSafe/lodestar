@@ -13,8 +13,8 @@ import {
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkBlobs,
   isForkExecution,
+  isForkPostEip7805,
   isForkPostElectra,
-  isForkPostFocil,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -42,7 +42,7 @@ import {
   ValidatorIndex,
   Wei,
   bellatrix,
-  focil,
+  eip7805,
   getValidatorStatus,
   isBlindedBeaconBlock,
   isBlockContents,
@@ -80,11 +80,11 @@ import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBuffer} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
+import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
-import { getBlockResponse } from "../beacon/blocks/utils.js";
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -1010,8 +1010,8 @@ export function getValidatorApi(
       notWhileSyncing();
 
       const fork = chain.config.getForkName(slot);
-      if (!isForkPostFocil(fork)) {
-        throw new ApiError(400, `Producing inclusion list for pre-focil slot: ${slot}`);
+      if (!isForkPostEip7805(fork)) {
+        throw new ApiError(400, `Producing inclusion list for pre-eip7805 slot: ${slot}`);
       }
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -1025,14 +1025,13 @@ export function getValidatorApi(
       const beaconBlockRootHex =
         slot >= headSlot
           ? // When attesting to the head slot or later, always use the head of the chain.
-          headBlockRootHex
+            headBlockRootHex
           : // Permit attesting to slots *prior* to the current head. This is desirable when
             // the VC and BN are out-of-sync due to time issues or overloading.
             toHex(getBlockRootAtSlot(headState, slot));
 
-      
       const block = (await getBlockResponse(chain, beaconBlockRootHex)).block;
-      const executionPayload = (block as focil.SignedBeaconBlock).message.body.executionPayload;
+      const executionPayload = (block as eip7805.SignedBeaconBlock).message.body.executionPayload;
       const blockHash = toHex(executionPayload.blockHash);
       logger.debug("produce inclusion list", {blockHash});
 
@@ -1281,8 +1280,8 @@ export function getValidatorApi(
       }
 
       const fork = chain.config.getForkName(computeStartSlotAtEpoch(epoch));
-      if (!isForkPostFocil(fork)) {
-        throw new ApiError(400, `Requesting pre-focil inclusion list committeee duties epoch: ${epoch}`);
+      if (!isForkPostEip7805(fork)) {
+        throw new ApiError(400, `Requesting pre-eip7805 inclusion list committee duties epoch: ${epoch}`);
       }
 
       // May request for an epoch that's in the future
@@ -1516,11 +1515,11 @@ export function getValidatorApi(
     async publishInclusionList({signedInclusionList}) {
       notWhileSyncing();
 
-      // TODO FOCIL: Add error handling
+      // TODO EIP-7805: Add error handling
       const slot = signedInclusionList.message.slot;
       const fork = chain.config.getForkName(slot);
-      if (!isForkPostFocil(fork)) {
-        throw new ApiError(400, `Publishing pre-focil inclusion list slot: ${slot}`);
+      if (!isForkPostEip7805(fork)) {
+        throw new ApiError(400, `Publishing pre-eip7805 inclusion list slot: ${slot}`);
       }
 
       await validateApiInclusionList(chain, signedInclusionList);

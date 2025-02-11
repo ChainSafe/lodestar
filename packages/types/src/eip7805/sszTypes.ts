@@ -13,7 +13,7 @@ export const InclusionList = new ContainerType(
     slot: Slot,
     validatorIndex: ValidatorIndex,
     inclusionListCommitteeRoot: Root,
-    // TODO FOCIL: the list limit is unreasonable high, on gossip we will reject ILs over 8 Kib but we still
+    // TODO EIP-7805: the list limit is unreasonable high, on gossip we will reject ILs over 8 Kib but we still
     // deserialize before that and load them into memory, hence a sane list limit would be good
     transactions: bellatrixSsz.Transactions,
   },

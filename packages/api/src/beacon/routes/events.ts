@@ -14,8 +14,8 @@ import {
   UintNum64,
   altair,
   capella,
+  eip7805,
   electra,
-  focil,
   phase0,
   ssz,
   sszTypesFor,
@@ -142,7 +142,7 @@ export type EventData = {
   [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
   [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
-  [EventType.inclusionList]: {version: ForkName; data: focil.SignedInclusionList};
+  [EventType.inclusionList]: {version: ForkName; data: eip7805.SignedInclusionList};
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -297,7 +297,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       (fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate
     ),
 
-    [EventType.inclusionList]: WithVersion(() => ssz.focil.SignedInclusionList),
+    [EventType.inclusionList]: WithVersion(() => ssz.eip7805.SignedInclusionList),
   };
 }
 

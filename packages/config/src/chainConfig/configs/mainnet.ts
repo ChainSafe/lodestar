@@ -52,7 +52,7 @@ export const chainConfig: ChainConfig = {
   ELECTRA_FORK_VERSION: b("0x05000000"),
   ELECTRA_FORK_EPOCH: 1000000, // Arbitrary value served as placeholder
 
-  // FOCIL
+  // EIP-7805
   EIP7805_FORK_VERSION: b("0x06000000"),
   EIP7805_FORK_EPOCH: Infinity,
 
@@ -123,7 +123,7 @@ export const chainConfig: ChainConfig = {
   // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
 
-  // Focil
+  // EIP-7805
   // 2**4 (= 16)
   MAX_REQUEST_INCLUSION_LIST: 16,
   // 2**13 (=8192)

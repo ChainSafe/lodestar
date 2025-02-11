@@ -40,7 +40,7 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
-  focil,
+  eip7805,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -693,12 +693,12 @@ export class ValidatorStore {
 
   async signInclusionList(
     duty: routes.validator.InclusionListDuty,
-    inclusionList: focil.InclusionList
-  ): Promise<focil.SignedInclusionList> {
+    inclusionList: eip7805.InclusionList
+  ): Promise<eip7805.SignedInclusionList> {
     this.validateInclusionListDuty(duty, inclusionList);
 
     const domain = this.config.getDomain(inclusionList.slot, DOMAIN_INCLUSION_LIST_COMMITTEE);
-    const signingRoot = computeSigningRoot(ssz.focil.InclusionList, inclusionList, domain);
+    const signingRoot = computeSigningRoot(ssz.eip7805.InclusionList, inclusionList, domain);
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.INCLUSION_LIST,
@@ -843,13 +843,13 @@ export class ValidatorStore {
   /** Prevent signing bad data sent by the Beacon node */
   private validateInclusionListDuty(
     duty: routes.validator.InclusionListDuty,
-    inclusionList: focil.InclusionList
+    inclusionList: eip7805.InclusionList
   ): void {
     if (duty.slot !== inclusionList.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != il.slot ${inclusionList.slot}`);
     }
 
-    // TODO FOCIL: Maybe check if validator index in inclusionListCommitteeRoot?
+    // TODO EIP-7805: Maybe check if validator index in inclusionListCommitteeRoot?
   }
 
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {

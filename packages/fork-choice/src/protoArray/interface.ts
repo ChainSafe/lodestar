@@ -95,8 +95,8 @@ export type ProtoBlock = BlockExtraMeta & {
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
 
-  // Indicate whether focil is enabled
-  isFocilEnabled: boolean;
+  // Indicate whether EIP-7805 is enabled
+  isEip7805Enabled: boolean;
 };
 
 /**

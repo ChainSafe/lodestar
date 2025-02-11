@@ -1,4 +1,5 @@
 import {ApiClient, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
@@ -7,10 +8,9 @@ import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
-import { ChainForkConfig } from "@lodestar/config";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
-// TODO FOCIL: Do we need 2 epochs like attestations?
+// TODO EIP-7805: Do we need 2 epochs like attestations?
 const HISTORICAL_DUTIES_EPOCHS = 2;
 
 const EIP7805_FORK_LOOKAHEAD_EPOCHS = 1;
@@ -97,7 +97,7 @@ export class InclusionListDutiesService {
   };
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
-    // Before focil fork (+ lookahead) no need to check duties
+    // Before EIP-7805 fork (+ lookahead) no need to check duties
     if (epoch < this.config.EIP7805_FORK_EPOCH - EIP7805_FORK_LOOKAHEAD_EPOCHS) {
       return;
     }

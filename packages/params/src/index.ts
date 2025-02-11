@@ -275,5 +275,5 @@ export const DEPOSIT_REQUEST_TYPE = 0x00;
 export const WITHDRAWAL_REQUEST_TYPE = 0x01;
 export const CONSOLIDATION_REQUEST_TYPE = 0x02;
 
-// focil
+// EIP-7805
 export const INCLUSION_LIST_COMMITTEE_SIZE = 16;

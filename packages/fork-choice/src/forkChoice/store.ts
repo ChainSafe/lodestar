@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {Root, RootHex, Slot, ValidatorIndex, focil, phase0} from "@lodestar/types";
+import {Root, RootHex, Slot, ValidatorIndex, eip7805, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
 
@@ -13,8 +13,8 @@ export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 export type JustifiedBalances = EffectiveBalanceIncrements;
 
 export type InclusionListStoreKey = [Slot, Root];
-// TODO FOCIL: Need prune mechanism to these three
-class InclusionListStore extends Map<InclusionListStoreKey, focil.InclusionList[]> {}
+// TODO EIP-7805: Need prune mechanism to these three
+class InclusionListStore extends Map<InclusionListStoreKey, eip7805.InclusionList[]> {}
 class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {}
 class InclusionListCommitteeRootStore extends Set<RootHex> {}
 

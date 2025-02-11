@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, isForkPostFocil} from "@lodestar/params";
+import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, isForkPostEip7805} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   EffectiveBalanceIncrements,
@@ -13,7 +13,18 @@ import {
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
-import {BeaconBlock, Epoch, Root, RootHex, Slot, ValidatorIndex, bellatrix, focil, phase0, ssz} from "@lodestar/types";
+import {
+  BeaconBlock,
+  Epoch,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  bellatrix,
+  eip7805,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
@@ -182,15 +193,15 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Focil: Get attester's head
+   * EIP-7805: Get attester's head
    * See `get_attester_head()`
    */
-  // TODO FOCIL: Can getAttesterHead return unsatisified block when predictProposerHead calls?
+  // TODO EIP-7805: Can getAttesterHead return unsatisified block when predictProposerHead calls?
   getAttesterHead(): ProtoBlock {
     const head = this.getHead();
     const headRoot = head.blockRoot;
 
-    if (!head.isFocilEnabled) {
+    if (!head.isEip7805Enabled) {
       return head;
     }
 
@@ -581,8 +592,8 @@ export class ForkChoice implements IForkChoice {
       this.proposerBoostRoot = blockRootHex;
     }
 
-    // Communicate if focil is enabled
-    const isFocilEnabled = isForkPostFocil(this.config.getForkName(currentSlot));
+    // Communicate if EIP-7805 is enabled
+    const isEip7805Enabled = isForkPostEip7805(this.config.getForkName(currentSlot));
 
     // As per specs, we should be validating here the terminal conditions of
     // the PoW if this were a merge transition block.
@@ -672,7 +683,7 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toRootHex(targetRoot),
       stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
-      isFocilEnabled,
+      isEip7805Enabled,
 
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toRootHex(state.currentJustifiedCheckpoint.root),
@@ -781,7 +792,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(inclusionList: focil.SignedInclusionList, secFromSlot: number): void {
+  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
 
@@ -791,7 +802,7 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    // TODO FOCIL: Remove magic number
+    // TODO EIP-7805: Remove magic number
     const isBeforeFreezeDeadline = slot === currentSlot && secFromSlot < 9; // VIEW_FREEZE_DEADLINE
 
     const equivocators = this.fcStore.inclusionListEquivocators.get([slot, inclusionListCommitteeRoot]);
@@ -808,7 +819,7 @@ export class ForkChoice implements IForkChoice {
     if (validatorInclusionLists.length > 0) {
       const validatorInclusionList = validatorInclusionLists[0];
 
-      // TODO FOCIL: Avoid using JSON.stringify to compare ILs
+      // TODO EIP-7805: Avoid using JSON.stringify to compare ILs
       if (JSON.stringify(validatorInclusionList) !== JSON.stringify(inclusionList.message)) {
         // We have equivocation evidence for `validator_index`, record it as equivocator
         const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();

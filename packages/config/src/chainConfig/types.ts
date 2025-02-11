@@ -41,7 +41,7 @@ export type ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: Uint8Array;
   ELECTRA_FORK_EPOCH: number;
-  // FOCIL
+  // EIP-7805
   EIP7805_FORK_VERSION: Uint8Array;
   EIP7805_FORK_EPOCH: number;
 
@@ -85,7 +85,7 @@ export type ChainConfig = {
   MAX_BLOBS_PER_BLOCK_ELECTRA: number;
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
 
-  // Focil
+  // EIP-7805
   MAX_REQUEST_INCLUSION_LIST: number;
   MAX_BYTES_PER_INCLUSION_LIST: number;
 };
@@ -121,7 +121,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // ELECTRA
   ELECTRA_FORK_VERSION: "bytes",
   ELECTRA_FORK_EPOCH: "number",
-  // FOCIL
+  // EIP-7805
   EIP7805_FORK_VERSION: "bytes",
   EIP7805_FORK_EPOCH: "number",
 
@@ -165,7 +165,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
 
-  // Focil
+  // EIP-7805
   MAX_REQUEST_INCLUSION_LIST: "number",
   MAX_BYTES_PER_INCLUSION_LIST: "number",
 };

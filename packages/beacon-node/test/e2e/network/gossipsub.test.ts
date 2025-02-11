@@ -312,12 +312,12 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       }
     }
 
-    const inclusionList = ssz.focil.SignedInclusionList.defaultValue();
+    const inclusionList = ssz.eip7805.SignedInclusionList.defaultValue();
     inclusionList.message.slot = START_SLOT;
     await netA.publishInclusionList(inclusionList);
 
     const received = await onInclusionListPromise;
-    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.focil.SignedInclusionList.serialize(inclusionList)));
+    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.eip7805.SignedInclusionList.serialize(inclusionList)));
   });
 }
 

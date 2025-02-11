@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
-import {Slot, ValidatorIndex, bellatrix, focil} from "@lodestar/types";
+import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IClock} from "../../util/clock.js";
@@ -10,7 +10,7 @@ import {pruneBySlot} from "./utils.js";
 /**
  *
  */
-const SLOTS_RETAINED = 2; // TODO FOCIL: do we even need to retain previous slot?
+const SLOTS_RETAINED = 2; // TODO EIP-7805: do we even need to retain previous slot?
 
 /**
  * The maximum number of distinct `SignedInclusionList` that will be stored in each slot.
@@ -60,7 +60,7 @@ export class InclusionListPool {
     return count;
   }
 
-  add(inclusionList: focil.SignedInclusionList): InclusionListInsertOutcome {
+  add(inclusionList: eip7805.SignedInclusionList): InclusionListInsertOutcome {
     const {slot, validatorIndex, transactions} = inclusionList.message;
 
     // Reject any inclusion lists that are too old.
@@ -69,7 +69,7 @@ export class InclusionListPool {
     }
 
     // Reject inclusion lists in the current slot but come to this pool very late
-    // TODO FOCIL: review if this is correct
+    // TODO EIP-7805: review if this is correct
     if (this.clock.secFromSlot(slot) > this.config.PROPOSER_INCLUSION_LIST_CUT_OFF) {
       return InclusionListInsertOutcome.Late;
     }

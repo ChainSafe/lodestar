@@ -67,7 +67,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         executionStatus: ExecutionStatus.PreMerge,
 
         timeliness: false,
-        isFocilEnabled: false,
+        isEip7805Enabled: false,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       originalState.slot
@@ -93,7 +93,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           executionPayloadBlockHash: null,
           executionStatus: ExecutionStatus.PreMerge,
           timeliness: false,
-          isFocilEnabled: false,
+          isEip7805Enabled: false,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         },
         slot

@@ -83,8 +83,8 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.inclusion_list]: [
       {
-        topic: {type: GossipType.inclusion_list, fork: ForkName.focil, encoding},
-        // TODO FOCIL: this is not correct
+        topic: {type: GossipType.inclusion_list, fork: ForkName.eip7805, encoding},
+        // TODO EIP-7805: this is not correct
         topicStr: "/eth2/46acb19a/inclusion_list/ssz_snappy",
       },
     ],

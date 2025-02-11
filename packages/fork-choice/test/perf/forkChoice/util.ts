@@ -85,7 +85,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
-      isFocilEnabled: false,
+      isEip7805Enabled: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
 

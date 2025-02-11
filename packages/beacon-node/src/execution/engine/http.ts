@@ -209,7 +209,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.focil
+      ForkSeq[fork] >= ForkSeq.eip7805
         ? "engine_newPayloadV5"
         : ForkSeq[fork] >= ForkSeq.electra
           ? "engine_newPayloadV4"
@@ -221,7 +221,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
-    // TODO FOCIL: Add V5. Current code is ugly with all the nested if
+    // TODO EIP-7805: Add V5. Current code is ugly with all the nested if
     let engineRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {
@@ -249,7 +249,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           ],
           methodOpts: notifyNewPayloadOpts,
         };
-        if (ForkSeq[fork] >= ForkSeq.focil) {
+        if (ForkSeq[fork] >= ForkSeq.eip7805) {
           if (inclusionListTransactions === undefined) {
             throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
           }
@@ -556,11 +556,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   async updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<PayloadId | null> {
     const method = "engine_updatePayloadWithInclusionListV1";
-    const result = await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+    const result = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({
       method,
       params: [payloadId, inclusionList.transactions.map(bytesToData)],
     });
-    return result !== "0x" ? payloadId : null
+    return result !== "0x" ? payloadId : null;
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

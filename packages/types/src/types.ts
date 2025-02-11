@@ -11,8 +11,8 @@ import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
+import {ts as eip7805} from "./eip7805/index.js";
 import {ts as electra} from "./electra/index.js";
-import {ts as focil} from "./focil/index.js";
 import {ts as phase0} from "./phase0/index.js";
 import {Slot} from "./primitive/types.js";
 
@@ -23,7 +23,7 @@ export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
 export {ts as electra} from "./electra/index.js";
-export {ts as focil} from "./focil/index.js";
+export {ts as eip7805} from "./eip7805/index.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
@@ -229,7 +229,7 @@ type TypesByFork = {
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
   };
-  [ForkName.focil]: {
+  [ForkName.eip7805]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: electra.BeaconBlock;

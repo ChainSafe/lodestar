@@ -108,7 +108,7 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
       };
-    case ForkName.focil:
+    case ForkName.eip7805:
       return {
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
