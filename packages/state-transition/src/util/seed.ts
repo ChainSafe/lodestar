@@ -374,8 +374,9 @@ export function getComputeShuffledIndexFn(indexCount: number, seed: Bytes32): Co
   // there are possibly SHUFFLE_ROUND_COUNT (90 for mainnet) values for this cache
   // this cache will always hit after the 1st call
   const pivotByIndex: Map<number, number> = new Map();
-  // there are only 256 possible values of position byte, this cache will hit very soon
-  const sourceByPositionByIndex: Map<number, Map<number, Uint8Array>> = new Map();
+  // given 2M active validators, there are 2 M / 256 = 8k possible positionDiv
+  // it means there are at most 8k different sources for each round
+  const sourceByPositionDivByIndex: Map<number, Map<number, Uint8Array>> = new Map();
 
   return (index): number => {
     assert.lt(index, indexCount, "indexCount must be less than index");
@@ -401,16 +402,16 @@ export function getComputeShuffledIndexFn(indexCount: number, seed: Bytes32): Co
 
       // optimized version of the below naive code
       // const source = digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
-      let sourceByPosition = sourceByPositionByIndex.get(i);
-      if (sourceByPosition == null) {
-        sourceByPosition = new Map<number, Uint8Array>();
-        sourceByPositionByIndex.set(i, sourceByPosition);
+      let sourceByPositionDiv = sourceByPositionDivByIndex.get(i);
+      if (sourceByPositionDiv == null) {
+        sourceByPositionDiv = new Map<number, Uint8Array>();
+        sourceByPositionDivByIndex.set(i, sourceByPositionDiv);
       }
-      const positionByte = Math.floor(position / 256);
-      let source = sourceByPosition.get(positionByte);
+      const positionDiv256 = Math.floor(position / 256);
+      let source = sourceByPositionDiv.get(positionDiv256);
       if (source == null) {
-        source = digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
-        sourceByPosition.set(positionByte, source);
+        source = digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(positionDiv256, 4)]));
+        sourceByPositionDiv.set(positionDiv256, source);
       }
       const byte = source[Math.floor((position % 256) / 8)];
       const bit = (byte >> (position % 8)) % 2;
