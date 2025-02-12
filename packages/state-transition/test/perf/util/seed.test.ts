@@ -74,27 +74,27 @@ describe("getNextSyncCommitteeIndices electra", () => {
 });
 
 describe("computeShuffledIndex", () => {
-  // TODO
-  const vc = 100_000;
   const seed = new Uint8Array(Array.from({length: 32}, (_, i) => i));
 
-  bench({
-    id: `naive computeShuffledIndex ${vc} validators`,
-    fn: () => {
-      for (let i = 0; i < vc; i++) {
-        computeShuffledIndex(i, vc, seed);
-      }
-    },
-  });
+  for (const vc of [100_000, 2_000_000]) {
+    bench({
+      id: `naive computeShuffledIndex ${vc} validators`,
+      fn: () => {
+        for (let i = 0; i < vc; i++) {
+          computeShuffledIndex(i, vc, seed);
+        }
+      },
+    });
 
-  const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
+    const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
 
-  bench({
-    id: `cached computeShuffledIndex ${vc} validators`,
-    fn: () => {
-      for (let i = 0; i < vc; i++) {
-        shuffledIndexFn(i);
-      }
-    },
-  });
+    bench({
+      id: `cached computeShuffledIndex ${vc} validators`,
+      fn: () => {
+        for (let i = 0; i < vc; i++) {
+          shuffledIndexFn(i);
+        }
+      },
+    });
+  }
 });
