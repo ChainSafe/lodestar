@@ -116,7 +116,6 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
 };
 
-// TODO: @matthewkeil perhaps this should move to params/src/forkName with the other guards?
 function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
   if (isForkPostAltair(fork)) {
     return fork;
