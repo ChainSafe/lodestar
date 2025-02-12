@@ -35,6 +35,7 @@ export function computeProposers(
         fork,
         effectiveBalanceIncrements,
         shuffling.activeIndices,
+        // TODO: if we use hashTree, we can precompute the roots for the next n loops
         digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
       )
     );
@@ -44,10 +45,11 @@ export function computeProposers(
 
 /**
  * Return from ``indices`` a random index sampled by effective balance.
+ * This is just to make sure lodestar follows the spec, this is not for production.
  *
  * SLOW CODE - 🐢
  */
-export function computeProposerIndex(
+export function naiveComputeProposerIndex(
   fork: ForkSeq,
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ArrayLike<ValidatorIndex>,
@@ -76,6 +78,87 @@ export function computeProposerIndex(
       i += 1;
     }
   } else {
+    const MAX_RANDOM_BYTE = 2 ** 8 - 1;
+    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
+
+    let i = 0;
+    while (true) {
+      const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
+      const randomByte = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 32), 8, "le")]))[i % 32];
+
+      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+      if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomByte) {
+        return candidateIndex;
+      }
+
+      i += 1;
+    }
+  }
+}
+
+/**
+ * Optimized version of `naiveComputeProposerIndex`.
+ * It shows > 3x speedup according to the perf test.
+ */
+export function computeProposerIndex(
+  fork: ForkSeq,
+  effectiveBalanceIncrements: EffectiveBalanceIncrements,
+  indices: ArrayLike<ValidatorIndex>,
+  seed: Uint8Array
+): ValidatorIndex {
+  if (indices.length === 0) {
+    throw Error("Validator indices must not be empty");
+  }
+
+  if (fork >= ForkSeq.electra) {
+    // electra, see inline comments for the optimization
+    const MAX_RANDOM_VALUE = 2 ** 16 - 1;
+    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
+
+    const shuffledIndexFn = getComputeShuffledIndexFn(indices.length, seed);
+    // this simple cache makes sure we don't have to recompute the shuffled index for the next round of activeValidatorCount
+    const shuffledResult = new Map<number, number>();
+
+    let i = 0;
+    let cachedHash: Uint8Array | null = null;
+    while (true) {
+      // an optimized version of the below naive code
+      // const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
+      const index = i % indices.length;
+      let shuffledIndex = shuffledResult.get(index);
+      if (shuffledIndex == null) {
+        shuffledIndex = shuffledIndexFn(index);
+        shuffledResult.set(index, shuffledIndex);
+      }
+      const candidateIndex = indices[shuffledIndex];
+
+      // compute a new hash every 16 iterations
+      if (i % 16 === 0) {
+        cachedHash = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
+      }
+
+      if (cachedHash == null) {
+        // there is always a cachedHash, handle this to make the compiler happy
+        throw new Error("cachedHash should not be null");
+      }
+
+      const randomBytes = cachedHash;
+      const offset = (i % 16) * 2;
+      // this is equivalent to bytesToInt(randomBytes.subarray(offset, offset + 2));
+      // but it does not get through BigInt
+      const lowByte = randomBytes[offset];
+      const highByte = randomBytes[offset + 1];
+      const randomValue = lowByte + highByte * 256;
+
+      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+      if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
+        return candidateIndex;
+      }
+
+      i += 1;
+    }
+  } else {
+    // preelectra, this function is the same to the naive version
     const MAX_RANDOM_BYTE = 2 ** 8 - 1;
     const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
@@ -163,8 +246,9 @@ export function naiveGetNextSyncCommitteeIndices(
 }
 
 /**
- *
  * Optmized version of `naiveGetNextSyncCommitteeIndices`.
+ *
+ * In the worse case scenario, this could be >1000x speedup according to the perf test.
  */
 export function getNextSyncCommitteeIndices(
   fork: ForkSeq,
@@ -175,6 +259,7 @@ export function getNextSyncCommitteeIndices(
   const syncCommitteeIndices = [];
 
   if (fork >= ForkSeq.electra) {
+    // electra, see inline comments for the optimization
     const MAX_RANDOM_VALUE = 2 ** 16 - 1;
     const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
 

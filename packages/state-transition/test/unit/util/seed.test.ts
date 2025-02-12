@@ -4,10 +4,12 @@ import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
+  computeProposerIndex,
   computeShuffledIndex,
   getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   getRandaoMix,
+  naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/index.js";
 
@@ -35,6 +37,22 @@ describe("getRandaoMix", () => {
 
     const res = getRandaoMix(state, GENESIS_EPOCH + 1);
     expect(toHexString(res)).toBe(toHexString(randaoMix2));
+  });
+});
+
+describe("computeProposerIndex electra", () => {
+  const seed = crypto.randomBytes(32);
+  const vc = 1000;
+  const activeIndices = Array.from({length: vc}, (_, i) => i);
+  const effectiveBalanceIncrements = new Uint16Array(vc);
+  for (let i = 0; i < vc; i++) {
+    effectiveBalanceIncrements[i] = 32 + 32 * (i % 64);
+  }
+
+  it("should be the same to the naive version", () => {
+    const expected = naiveComputeProposerIndex(ForkSeq.electra, effectiveBalanceIncrements, activeIndices, seed);
+    const result = computeProposerIndex(ForkSeq.electra, effectiveBalanceIncrements, activeIndices, seed);
+    expect(result).toBe(expected);
   });
 });
 
