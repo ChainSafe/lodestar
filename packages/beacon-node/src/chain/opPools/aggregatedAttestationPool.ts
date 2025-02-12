@@ -306,7 +306,6 @@ export class AggregatedAttestationPool {
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
 
     const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
-    // Track score of each `AttestationsConsolidation`
     const consolidations = new Map<AttestationsConsolidation, number>();
     let minScore = Number.MAX_SAFE_INTEGER;
     let slotCount = 0;
@@ -394,7 +393,7 @@ export class AggregatedAttestationPool {
         }
       }
     }
-    const sortedConsolidationsByScore = Array.from(consolidations.entries())
+    const sortedConsolidationsByScore = [...consolidations.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([consolidation, _]) => consolidation)
       .slice(0, MAX_ATTESTATIONS_ELECTRA);
