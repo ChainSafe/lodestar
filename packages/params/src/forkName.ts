@@ -99,20 +99,64 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
  * lodestar v2.0.  The types and guards above should be used in all places as
  * they are more correct than using the "main feature" from a fork.
  */
+
+/**
+ * @deprecated
+ */
 export type ForkLightClient = ForkPostAltair;
+/**
+ * @deprecated
+ */
 export type ForkPreExecution = ForkPreBellatrix;
+/**
+ * @deprecated
+ */
 export type ForkExecution = ForkPostBellatrix;
+/**
+ * @deprecated
+ */
 export type ForkPreWithdrawals = ForkPreCapella;
+/**
+ * @deprecated
+ */
 export type ForkWithdrawals = ForkPostCapella;
+/**
+ * @deprecated
+ */
 export type ForkPreBlobs = ForkPreDeneb;
+/**
+ * @deprecated
+ */
 export type ForkBlobs = ForkPostDeneb;
-export {
-  forkPostAltair as forkLightClient,
-  isForkPostAltair as isForkLightClient,
-  forkPostBellatrix as forkExecution,
-  isForkPostBellatrix as isForkExecution,
-  forkPostCapella as forkWithdrawals,
-  isForkPostCapella as isForkWithdrawals,
-  forkPostDeneb as forkBlobs,
-  isForkPostDeneb as isForkBlobs,
-};
+/**
+ * @deprecated
+ */
+export const forkLightClient = forkPostAltair;
+/**
+ * @deprecated
+ */
+export const isForkLightClient = isForkPostAltair;
+/**
+ * @deprecated
+ */
+export const forkExecution = forkPostBellatrix;
+/**
+ * @deprecated
+ */
+export const isForkExecution = isForkPostBellatrix;
+/**
+ * @deprecated
+ */
+export const forkWithdrawals = forkPostCapella;
+/**
+ * @deprecated
+ */
+export const isForkWithdrawals = isForkPostCapella;
+/**
+ * @deprecated
+ */
+export const forkBlobs = forkPostDeneb;
+/**
+ * @deprecated
+ */
+export const isForkBlobs = isForkPostDeneb;
