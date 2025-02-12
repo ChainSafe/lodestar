@@ -94,69 +94,69 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
   return isForkPostDeneb(fork) && fork !== ForkName.deneb;
 }
 
-/**
+/*
  * Aliases only exported for backwards compatibility. This will be removed in
  * lodestar v2.0.  The types and guards above should be used in all places as
  * they are more correct than using the "main feature" from a fork.
  */
 
 /**
- * @deprecated
+ * @deprecated Use `ForkPostAltair` instead.
  */
 export type ForkLightClient = ForkPostAltair;
 /**
- * @deprecated
+ * @deprecated Use `ForkPreBellatrix` instead.
  */
 export type ForkPreExecution = ForkPreBellatrix;
 /**
- * @deprecated
+ * @deprecated Use `ForkPostBellatrix` instead.
  */
 export type ForkExecution = ForkPostBellatrix;
 /**
- * @deprecated
+ * @deprecated Use `ForkPreCapella` instead.
  */
 export type ForkPreWithdrawals = ForkPreCapella;
 /**
- * @deprecated
+ * @deprecated Use `ForkPostCapella` instead.
  */
 export type ForkWithdrawals = ForkPostCapella;
 /**
- * @deprecated
+ * @deprecated Use `ForkPreDeneb` instead.
  */
 export type ForkPreBlobs = ForkPreDeneb;
 /**
- * @deprecated
+ * @deprecated Use `ForkPostDeneb` instead.
  */
 export type ForkBlobs = ForkPostDeneb;
 /**
- * @deprecated
+ * @deprecated Use `forkPostAltair` instead.
  */
 export const forkLightClient = forkPostAltair;
 /**
- * @deprecated
+ * @deprecated Use `isForkPostAltair` instead.
  */
 export const isForkLightClient = isForkPostAltair;
 /**
- * @deprecated
+ * @deprecated Use `forkPostBellatrix` instead.
  */
 export const forkExecution = forkPostBellatrix;
 /**
- * @deprecated
+ * @deprecated Use `isForkPostBellatrix` instead.
  */
 export const isForkExecution = isForkPostBellatrix;
 /**
- * @deprecated
+ * @deprecated Use `forkPostCapella` instead.
  */
 export const forkWithdrawals = forkPostCapella;
 /**
- * @deprecated
+ * @deprecated Use `isForkPostCapella` instead.
  */
 export const isForkWithdrawals = isForkPostCapella;
 /**
- * @deprecated
+ * @deprecated Use `forkPostDeneb` instead.
  */
 export const forkBlobs = forkPostDeneb;
 /**
- * @deprecated
+ * @deprecated Use `isForkPostDeneb` instead.
  */
 export const isForkBlobs = isForkPostDeneb;
