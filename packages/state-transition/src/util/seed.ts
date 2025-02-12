@@ -122,6 +122,7 @@ export function computeProposerIndex(
     let i = 0;
     const cachedHashInput = Buffer.allocUnsafe(32 + 8);
     cachedHashInput.set(seed, 0);
+    cachedHashInput.writeUint32LE(0, 32 + 4);
     let cachedHash: Uint8Array | null = null;
     while (true) {
       // an optimized version of the below naive code
@@ -275,6 +276,7 @@ export function getNextSyncCommitteeIndices(
     let cachedHash: Uint8Array | null = null;
     const cachedHashInput = Buffer.allocUnsafe(32 + 8);
     cachedHashInput.set(seed, 0);
+    cachedHashInput.writeUInt32LE(0, 32 + 4);
     // this simple cache makes sure we don't have to recompute the shuffled index for the next round of activeValidatorCount
     const shuffledResult = new Map<number, number>();
     while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
