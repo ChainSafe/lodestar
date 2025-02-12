@@ -394,7 +394,7 @@ export class AggregatedAttestationPool {
         }
       }
     }
-    const sortedConsolidationsByScore = [...consolidations.entries()]
+    const sortedConsolidationsByScore = Array.from(consolidations.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([consolidation, _]) => consolidation)
       .slice(0, MAX_ATTESTATIONS_ELECTRA);
