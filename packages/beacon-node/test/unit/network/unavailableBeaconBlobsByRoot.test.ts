@@ -178,7 +178,7 @@ describe("unavailableBeaconBlobsByRoot", () => {
     ];
 
     const blockData = {
-      fork: ForkName.deneb as ForkPostDeneb,
+      fork: ForkName.deneb as const,
       blobs: allBlobs,
       blobsSource: BlobsSource.byRoot,
     };
