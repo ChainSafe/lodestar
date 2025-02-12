@@ -21,7 +21,7 @@ export function toForkName(version: string): ForkName {
 
 export function getPostAltairForkTypes(fork: ForkName): SSZTypesFor<ForkPostAltair> {
   if (!isForkPostAltair(fork)) {
-    throw Error(`Invalid fork=${fork} for post altair fork types`);
+    throw Error(`Invalid fork=${fork} for post-altair fork types`);
   }
 
   return sszTypesFor(fork);
@@ -29,7 +29,7 @@ export function getPostAltairForkTypes(fork: ForkName): SSZTypesFor<ForkPostAlta
 
 export function getPostBellatrixForkTypes(fork: ForkName): SSZTypesFor<ForkPostBellatrix> {
   if (!isForkPostBellatrix(fork)) {
-    throw Error(`Invalid fork=${fork} for post bellatrix fork types`);
+    throw Error(`Invalid fork=${fork} for post-bellatrix fork types`);
   }
 
   return sszTypesFor(fork);
@@ -37,7 +37,7 @@ export function getPostBellatrixForkTypes(fork: ForkName): SSZTypesFor<ForkPostB
 
 export function getPostDenebForkTypes(fork: ForkName): SSZTypesFor<ForkPostDeneb> {
   if (!isForkPostDeneb(fork)) {
-    throw Error(`Invalid fork=${fork} for post deneb fork types`);
+    throw Error(`Invalid fork=${fork} for post-deneb fork types`);
   }
 
   return sszTypesFor(fork);

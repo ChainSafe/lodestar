@@ -33,11 +33,11 @@ export type ForkConfig = {
   getForkVersion(slot: Slot): Version;
   /** Get SSZ types by hard-fork */
   getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F>;
-  /** Get lightclient SSZ types by hard-fork*/
+  /** Get post-altair SSZ types by hard-fork*/
   getPostAltairForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair>;
-  /** Get execution SSZ types by hard-fork*/
+  /** Get post-bellatrix SSZ types by hard-fork*/
   getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkPostBellatrix>;
-  /** Get blobs SSZ types by hard-fork*/
+  /** Get post-deneb SSZ types by hard-fork*/
   getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb>;
   /** Get max blobs per block by hard-fork */
   getMaxBlobsPerBlock(fork: ForkName): number;

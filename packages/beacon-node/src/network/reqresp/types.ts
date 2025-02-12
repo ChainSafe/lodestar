@@ -120,7 +120,7 @@ function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
   if (isForkPostAltair(fork)) {
     return fork;
   }
-  throw Error(`Not a post altair fork ${fork}`);
+  throw Error(`Not a post-altair fork ${fork}`);
 }
 
 export type RequestTypedContainer = {

@@ -111,7 +111,7 @@ export class SeenGossipBlockInput {
       }
 
       if (cachedData === undefined || !isForkPostDeneb(cachedData.fork)) {
-        throw Error("Missing or Invalid fork cached Data for post deneb block");
+        throw Error("Missing or Invalid fork cached Data for post-deneb block");
       }
       const {blobsCache, resolveAvailability} = cachedData;
 

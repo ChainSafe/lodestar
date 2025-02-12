@@ -112,21 +112,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkPostBellatrix> {
       const forkName = this.getForkName(slot);
       if (!isForkPostBellatrix(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for post bellatrix fork types`);
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-bellatrix fork types`);
       }
       return sszTypesFor(forkName);
     },
     getPostAltairForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair> {
       const forkName = this.getForkName(slot);
       if (!isForkPostAltair(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for post altair fork types`);
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-altair fork types`);
       }
       return sszTypesFor(forkName);
     },
     getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb> {
       const forkName = this.getForkName(slot);
       if (!isForkPostDeneb(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for post deneb fork types`);
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-deneb fork types`);
       }
       return sszTypesFor(forkName);
     },
