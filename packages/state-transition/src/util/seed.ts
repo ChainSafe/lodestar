@@ -120,6 +120,8 @@ export function computeProposerIndex(
     const shuffledResult = new Map<number, number>();
 
     let i = 0;
+    const cachedHashInput = Buffer.allocUnsafe(32 + 8);
+    cachedHashInput.set(seed, 0);
     let cachedHash: Uint8Array | null = null;
     while (true) {
       // an optimized version of the below naive code
@@ -134,7 +136,8 @@ export function computeProposerIndex(
 
       // compute a new hash every 16 iterations
       if (i % 16 === 0) {
-        cachedHash = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
+        cachedHashInput.writeUint32LE(Math.floor(i / 16), 32);
+        cachedHash = digest(cachedHashInput);
       }
 
       if (cachedHash == null) {
@@ -270,6 +273,8 @@ export function getNextSyncCommitteeIndices(
 
     let i = 0;
     let cachedHash: Uint8Array | null = null;
+    const cachedHashInput = Buffer.allocUnsafe(32 + 8);
+    cachedHashInput.set(seed, 0);
     // this simple cache makes sure we don't have to recompute the shuffled index for the next round of activeValidatorCount
     const shuffledResult = new Map<number, number>();
     while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
@@ -285,7 +290,8 @@ export function getNextSyncCommitteeIndices(
 
       // compute a new hash every 16 iterations
       if (i % 16 === 0) {
-        cachedHash = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
+        cachedHashInput.writeUint32LE(Math.floor(i / 16), 32);
+        cachedHash = digest(cachedHashInput);
       }
 
       if (cachedHash == null) {
@@ -402,7 +408,7 @@ export function getComputeShuffledIndexFn(indexCount: number, seed: Bytes32): Co
         //   bytesToBigInt(digest(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
         // );
         pivotBuffer[32] = i % 256;
-        pivot = Number(bytesToBigInt(digest(pivotBuffer).slice(0, 8)) % BigInt(indexCount));
+        pivot = Number(bytesToBigInt(digest(pivotBuffer).subarray(0, 8)) % BigInt(indexCount));
         pivotByIndex.set(i, pivot);
       }
 
