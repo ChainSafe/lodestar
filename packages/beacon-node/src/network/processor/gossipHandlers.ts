@@ -303,6 +303,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerId: peerIdStr,
         delaySec,
         gossipIndex,
+        columnIndex: dataColumnSidecar.index,
         ...blockInputMeta,
         recvToValLatency,
         recvToValidation,

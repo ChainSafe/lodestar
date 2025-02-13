@@ -282,13 +282,14 @@ export class UnknownBlockSync {
     }
 
     const unknownBlockType = block.unknownBlockType;
-
-    this.logger.verbose("Downloading unknown block", {
+    const logCtx = {
       root: block.blockRootHex,
       pendingBlocks: this.pendingBlocks.size,
       slot: block.blockInput?.block?.message.slot ?? "unknown",
       unknownBlockType,
-    });
+    };
+
+    this.logger.verbose("Downloading unknown block", logCtx);
 
     block.status = PendingBlockStatus.fetching;
 
@@ -296,6 +297,7 @@ export class UnknownBlockSync {
     let connectedPeers: string[];
     if (block.blockInput === null) {
       connectedPeers = allPeers;
+      // we only have block root, and nothing else
       res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
     } else {
       const {cachedData} = block.blockInput;
@@ -523,7 +525,11 @@ export class UnknownBlockSync {
   }
 
   /**
-   * Fetches the parent of a block by root from a set of shuffled peers.
+   * From a set of shuffled peers:
+   *   - fetch the block
+   *   - from deneb, fetch all missing blobs
+   *   - from peerDAS, fetch sampled colmns
+   * TODO: this means we only have block root, and nothing else. Consider to reflect this in the function name
    * Will attempt a max of `MAX_ATTEMPTS_PER_BLOCK` on different peers if connectPeers.length > MAX_ATTEMPTS_PER_BLOCK.
    * Also verifies the received block root + returns the peer that provided the block for future downscoring.
    */
@@ -537,6 +543,7 @@ export class UnknownBlockSync {
     let lastError: Error | null = null;
     let partialDownload = null;
     let fetchedPeerId = null;
+    // TODO: should it be loop through MAX_ATTEMPTS_PER_BLOCK instead?
     for (let i = 0; i < 1; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       if (partialDownload !== null) {
@@ -624,6 +631,9 @@ export class UnknownBlockSync {
   }
 
   /**
+   * We have partial block input:
+   * - we have block but not have all blobs (deneb) or needed columns (fulu)
+   * - we don't have block and have some blobs (deneb) or some columns (fulu)
    * Fetches missing blobs for the blockinput, in future can also pull block is thats also missing
    * along with the blobs (i.e. only some blobs are available)
    */
