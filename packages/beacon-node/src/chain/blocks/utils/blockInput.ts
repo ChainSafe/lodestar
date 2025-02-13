@@ -20,7 +20,14 @@ type PromiseParts<T> = {
   reject: (e: Error) => void;
 };
 
+export enum BlockInputType {
+  PreDeneb = "pre-deneb",
+  Blobs = "blobs",
+  Columns = "columns",
+}
+
 export abstract class BlockInput<T> {
+  type: BlockInputType;
   blockRoot: RootHex;
   protected block?: SignedBeaconBlock;
   protected forkName?: ForkName;
@@ -105,6 +112,7 @@ export abstract class BlockInput<T> {
 }
 
 export class BlockInputPreDeneb extends BlockInput<void> {
+  type: BlockInputType.PreDeneb;
   waitForData(): Promise<void> {
     throw new BlockInputError({code: BlockInputErrorCode.AWAIT_DATA_PRE_DENEB});
   }
@@ -119,7 +127,9 @@ export class BlockInputPreDeneb extends BlockInput<void> {
 //   blob: deneb.BlobSidecar;
 //   source: InputSource;
 // };
+
 export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
+  type: BlockInputType.Blobs;
   protected block: SignedBeaconBlock<ForkBlobs>;
   protected blobsCache: Map<number, deneb.BlobSidecar>;
 
@@ -130,6 +140,16 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
     return BlockInputBlobs({blockRoot, blobSidecar, forkName});
   }
+
+  // TODO: should this get overloaded and check that commitments match the blobs
+  // addBlock(): void {
+  //   super.addBlock()
+  //   for (const blob of this.blobsCache.values()) {
+  //     if (this.block.message.body.blobKzgCommitments[blob.index] !== blob.kzgCommitment) {
+  //       throw new Error()
+  //     }
+  //   }
+  // }
 
   addBlob(config: ChainForkConfig, blobSidecar: deneb.BlobSidecar): void {
     const blockRoot = config
@@ -145,10 +165,6 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
         "Invalid attempted to addBlob"
       );
     }
-    // TODO: not sure if this should throw here.  Saw and note about handling this case but this is newly added
-    // if (this.blobsCache.get(blobSidecar.index)) {
-    //   throw new BlockInputError({code: BlockInputErrorCode.ALREADY_SEEN_BLOB, index: blobSidecar.index});
-    // }
     this.blobsCache.set(blobSidecar.index, blobSidecar);
     if (this.block) {
       const numberOfBlobs = this.blobsCache.size();
@@ -163,6 +179,7 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
           blockRoot,
         });
       }
+      // TODO: should this get checked that the commitment is contained in the block?
       if (numberOfBlobs === numberOfCommitments) {
         this.dataPromise.resolve([...this.blobsCache.values()]);
       }
@@ -184,6 +201,7 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
 //   source: InputSource;
 // };
 export class BlockInputColumns extends BlockInput {
+  type: BlockInputType.Columns;
   protected block: SignedBeaconBlock<ForkPostFulu>;
   protected columnsCache: Map<number, fulu.DataColumnSidecar>;
 
