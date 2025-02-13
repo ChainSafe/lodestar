@@ -323,11 +323,13 @@ export class UnknownBlockSync {
         });
         if (connectedPeers.length > 0) {
           this.logger.debug("Filtered peers to those having relevant columns for downloading data", {
+            ...logCtx,
             allPeers: allPeers.length,
             connectedPeers: connectedPeers.length,
           });
         } else {
           this.logger.debug("Skipping download as no filtered peers having relevant data", {
+            ...logCtx,
             allPeers: allPeers.length,
             connectedPeers: connectedPeers.length,
             neededColumns: neededColumns.join(" "),
