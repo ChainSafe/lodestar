@@ -309,16 +309,19 @@ export class UnknownBlockSync {
           return acc;
         }, [] as number[]);
 
-        connectedPeers = allPeers.filter((peer) => {
-          const peerColumns = this.network.getConnectedPeerCustody(peer);
-          const columns = peerColumns.reduce((acc, elem) => {
-            if (neededColumns.includes(elem)) {
-              acc.push(elem);
-            }
-            return acc;
-          }, [] as number[]);
-          return columns.length > 0;
-        });
+        connectedPeers =
+          neededColumns.length <= 0
+            ? allPeers
+            : allPeers.filter((peer) => {
+                const peerColumns = this.network.getConnectedPeerCustody(peer);
+                const columns = peerColumns.reduce((acc, elem) => {
+                  if (neededColumns.includes(elem)) {
+                    acc.push(elem);
+                  }
+                  return acc;
+                }, [] as number[]);
+                return columns.length > 0;
+              });
         if (connectedPeers.length > 0) {
           this.logger.debug("Filtered peers to those having relevant columns for downloading data", {
             allPeers: allPeers.length,
