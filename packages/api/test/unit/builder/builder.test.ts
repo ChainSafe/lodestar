@@ -10,9 +10,6 @@ describe("builder", () => {
   runGenericServerTest<Endpoints>(
     createChainForkConfig({
       ...defaultChainConfig,
-      ALTAIR_FORK_EPOCH: 0,
-      BELLATRIX_FORK_EPOCH: 0,
-      DENEB_FORK_EPOCH: 0,
       ELECTRA_FORK_EPOCH: 0,
     }),
     getClient,

@@ -24,10 +24,6 @@ const openApiFile: OpenApiFile = {
 const definitions = getDefinitions(
   createChainForkConfig({
     ...defaultChainConfig,
-    ALTAIR_FORK_EPOCH: 0,
-    BELLATRIX_FORK_EPOCH: 0,
-    CAPELLA_FORK_EPOCH: 0,
-    DENEB_FORK_EPOCH: 0,
     ELECTRA_FORK_EPOCH: 0,
   })
 );
