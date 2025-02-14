@@ -58,7 +58,6 @@ export async function beaconBlocksMaybeBlobsByRoot(
     logger?.debug("beaconBlocksMaybeBlobsByRoot response", {slot: block.data.message.slot, peerClient});
   }
 
-  const preDataBlocks = [];
   const blobsDataBlocks = [];
   const dataColumnsDataBlocks = [];
 
@@ -82,8 +81,9 @@ export async function beaconBlocksMaybeBlobsByRoot(
   const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.data.message);
   const fork = config.getForkName(slot);
 
+  let blockInput: BlockInput | null = null;
   if (ForkSeq[fork] < ForkSeq.deneb) {
-    preDataBlocks.push(block);
+    blockInput = getBlockInput.preData(config, block.data, BlockSource.byRoot)
   } else if (fork === ForkName.deneb || fork === ForkName.electra) {
     blobsDataBlocks.push(block);
     const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
@@ -102,8 +102,6 @@ export async function beaconBlocksMaybeBlobsByRoot(
   } else {
     throw Error(`Invalid fork=${fork} in beaconBlocksMaybeBlobsByRoot`);
   }
-
-  let blockInput = getBlockInput.preData(config, block.data, BlockSource.byRoot);
 
   if (blobsDataBlocks.length > 0) {
     // deneb and electra
@@ -219,6 +217,10 @@ export async function beaconBlocksMaybeBlobsByRoot(
       logger?.verbose("beaconBlocksMaybeBlobsByRoot: still missing data columns for block", logCtx);
       blockInput = getBlockInput.dataPromise(config, block.data, BlockSource.byRoot, cachedData);
     }
+  }
+
+  if (blockInput == null) {
+    throw Error("beaconBlocksMaybeBlobsByRoot: blockInput=null");
   }
 
   return {
