@@ -21,12 +21,7 @@ const openApiFile: OpenApiFile = {
   version: RegExp(/.*/),
 };
 
-const definitions = getDefinitions(
-  createChainForkConfig({
-    ...defaultChainConfig,
-    ELECTRA_FORK_EPOCH: 0,
-  })
-);
+const definitions = getDefinitions(createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}));
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testData);
