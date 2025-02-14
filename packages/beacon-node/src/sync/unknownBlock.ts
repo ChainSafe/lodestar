@@ -350,6 +350,11 @@ export class UnknownBlockSync {
 
     if (!res.err) {
       const {blockInput, peerIdStr} = res.result;
+      this.logger.verbose("Downloaded unknown block root", {
+        ...logCtx,
+        peer: peerIdStr,
+        blockInputType: blockInput.type,
+      });
       if (blockInput.type === BlockInputType.dataPromise) {
         // if there were any peers who would have had the missing datacolumns, it would have resulted in err
         block = {

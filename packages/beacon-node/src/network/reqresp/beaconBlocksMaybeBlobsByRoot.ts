@@ -63,6 +63,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
 
   const {custodyConfig} = network;
   const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.sampledColumns;
+  let pendingDataColumns = neededColumns;
   const peerColumns = network.getConnectedPeerCustody(peerId);
 
   // get match
@@ -72,7 +73,6 @@ export async function beaconBlocksMaybeBlobsByRoot(
     }
     return acc;
   }, [] as number[]);
-  let pendingDataColumns = null;
 
   const blobIdentifiers: deneb.BlobIdentifier[] = [];
   const dataColumnIdentifiers: fulu.DataColumnIdentifier[] = [];
@@ -136,17 +136,30 @@ export async function beaconBlocksMaybeBlobsByRoot(
         ? {blocks: partialDownload.blocks.length, pendingDataColumns: partialDownload.pendingDataColumns.join(" ")}
         : {blocks: null, pendingDataColumns: null}),
       dataColumnIdentifiers: dataColumnIdentifiers.map((did) => did.index).join(" "),
+      slot,
       peerClient,
     });
     if (dataColumnIdentifiers.length > 0) {
       dataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
     } else {
       // peer doesn't have columns we need, return. Consumer should try another peer
+      logger?.verbose("beaconBlocksMaybeBlobsByRoot: peer doesn't have columns we need",
+        {
+          slot,
+          peerClient,
+          pendingDataColumns: pendingDataColumns.join(","),
+          partialDownload: partialDownload !== null,
+        });
       if (partialDownload !== null) {
-        logger?.verbose("beaconBlocksMaybeBlobsByRoot: peer doesn't have columns we need", {slot, peerClient});
         return {block: partialDownload.blocks[0], pendingDataColumns};
+      } else {
+        // biome-ignore lint/style/noNonNullAssertion: checked below for validity
+        const cachedData = getEmptyBlockInputCacheEntry(config.getForkName(block.data.message.slot), -1).cachedData!;
+        if (cachedData === undefined) {
+          throw Error("beaconBlocksMaybeBlobsByRoot: Invalid cachedData=undefined from getEmptyBlockInputCacheEntry");
+        }
+        return {block: getBlockInput.dataPromise(config, block.data, BlockSource.byRoot, cachedData), pendingDataColumns};
       }
-      dataColumnSidecars = [];
     }
 
     // the same to matchBlockWithDataColumns() without expecting requested data columns = responded data columns
@@ -194,6 +207,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       slot: slot,
       requestedColumns: columns.join(","),
       respondedColumns: dataColumnSidecars.map((dcs) => dcs.index).join(","),
+      pendingDataColumns: pendingDataColumns.join(","),
       peerClient,
     };
 
