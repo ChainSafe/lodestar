@@ -54,12 +54,11 @@ export async function beaconBlocksMaybeBlobsByRoot(
     ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block}))
     : await network.sendBeaconBlocksByRoot(peerId, [root]);
 
-  if (partialDownload !== null) {
+  if (partialDownload === null) {
     logger?.debug("beaconBlocksMaybeBlobsByRoot response", {slot: block.data.message.slot, peerClient});
+  } else {
+    logger?.debug("beaconBlocksMaybeBlobsByRoot partialDownload", {slot: block.data.message.slot, peerClient});
   }
-
-  const blobsDataBlocks = [];
-  const dataColumnsDataBlocks = [];
 
   const {custodyConfig} = network;
   const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.sampledColumns;
@@ -85,26 +84,14 @@ export async function beaconBlocksMaybeBlobsByRoot(
   if (ForkSeq[fork] < ForkSeq.deneb) {
     blockInput = getBlockInput.preData(config, block.data, BlockSource.byRoot)
   } else if (fork === ForkName.deneb || fork === ForkName.electra) {
-    blobsDataBlocks.push(block);
+    // deneb and electra
     const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
     logger?.debug("beaconBlocksMaybeBlobsByRoot", {blobKzgCommitmentsLen, peerClient});
     for (let index = 0; index < blobKzgCommitmentsLen; index++) {
       // try see if the blob is available locally
       blobIdentifiers.push({blockRoot, index});
     }
-  } else if (fork === ForkName.fulu) {
-    dataColumnsDataBlocks.push(block);
-    const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-    const custodyColumnIndexes = blobKzgCommitmentsLen > 0 ? columns : [];
-    for (const columnIndex of custodyColumnIndexes) {
-      dataColumnIdentifiers.push({blockRoot, index: columnIndex});
-    }
-  } else {
-    throw Error(`Invalid fork=${fork} in beaconBlocksMaybeBlobsByRoot`);
-  }
 
-  if (blobsDataBlocks.length > 0) {
-    // deneb and electra
     let allBlobSidecars: deneb.BlobSidecar[];
     if (blobIdentifiers.length > 0) {
       allBlobSidecars = await network.sendBlobSidecarsByRoot(peerId, blobIdentifiers);
@@ -126,10 +113,28 @@ export async function beaconBlocksMaybeBlobsByRoot(
       throw Error(`Expected exactly one blockInputWithBlobs slot=${slot}`);
     }
     blockInput = blockInputWithBlobs[0];
-  }
-
-  if (dataColumnsDataBlocks.length > 0) {
+  } else if (fork === ForkName.fulu) {
     // fulu
+    const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+    logger?.verbose("beaconBlocksMaybeBlobsByRoot", {blobKzgCommitmentsLen, peerClient, requestedColumns: columns.join(",")});
+
+    if (blobKzgCommitmentsLen === 0) {
+      // no blobs, return empty data columns
+      const blockData = {
+        fork: config.getForkName(slot),
+        dataColumns: [],
+        dataColumnsBytes: [],
+        dataColumnsSource: DataColumnsSource.byRoot,
+      } as BlockInputDataColumns;
+
+      logger?.debug("beaconBlocksMaybeBlobsByRoot: dataColumnsSidecar empty", {slot, peerClient});
+      return {block: getBlockInput.availableData(config, block.data, BlockSource.byRoot, blockData), pendingDataColumns: null};
+    }
+
+    for (const columnIndex of columns) {
+      dataColumnIdentifiers.push({blockRoot, index: columnIndex});
+    }
+
     let dataColumnSidecars: fulu.DataColumnSidecar[];
     logger?.debug("beaconBlocksMaybeBlobsByRoot: dataColumnsSidecars partialDownload", {
       ...(partialDownload
@@ -231,6 +236,8 @@ export async function beaconBlocksMaybeBlobsByRoot(
       logger?.verbose("beaconBlocksMaybeBlobsByRoot: still missing data columns for block", logCtx);
       blockInput = getBlockInput.dataPromise(config, block.data, BlockSource.byRoot, cachedData);
     }
+  } else {
+    throw Error(`Invalid fork=${fork} in beaconBlocksMaybeBlobsByRoot`);
   }
 
   if (blockInput == null) {
@@ -578,7 +585,7 @@ export async function unavailableBeaconBlobsByRootPostFulu(
       fork: cachedData.fork,
       dataColumns: [],
       dataColumnsBytes: [],
-      dataColumnsSource: DataColumnsSource.gossip,
+      dataColumnsSource: DataColumnsSource.byRoot,
     } as BlockInputDataColumns;
 
     resolveAvailability(blockData);
