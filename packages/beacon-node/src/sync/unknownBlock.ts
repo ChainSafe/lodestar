@@ -548,8 +548,7 @@ export class UnknownBlockSync {
     let lastError: Error | null = null;
     let partialDownload = null;
     let fetchedPeerId = null;
-    // TODO: should it be loop through MAX_ATTEMPTS_PER_BLOCK instead?
-    for (let i = 0; i < 1; i++) {
+    for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       if (partialDownload !== null) {
         const [prevBlockInput] = partialDownload.blocks;
