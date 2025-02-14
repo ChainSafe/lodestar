@@ -16,7 +16,7 @@ ajv.addKeyword({
   errors: false,
 });
 
-ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
+ajv.addFormat("hex", /^0x[a-fA-F0-9]*$/);
 
 /**
  * A set of properties that will be ignored during tests execution.
