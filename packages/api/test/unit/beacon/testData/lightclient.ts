@@ -6,19 +6,19 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const root = new Uint8Array(32).fill(1);
 
-const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
+const lightClientUpdate = ssz.electra.LightClientUpdate.defaultValue();
 const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
-const header = ssz.altair.LightClientHeader.defaultValue();
+const header = ssz.deneb.LightClientHeader.defaultValue();
 const signatureSlot = ssz.Slot.defaultValue();
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getLightClientUpdatesByRange: {
     args: {startPeriod: 1, count: 2},
-    res: {data: [lightClientUpdate, lightClientUpdate], meta: {versions: [ForkName.altair, ForkName.altair]}},
+    res: {data: [lightClientUpdate, lightClientUpdate], meta: {versions: [ForkName.electra, ForkName.electra]}},
   },
   getLightClientOptimisticUpdate: {
     args: undefined,
-    res: {data: {syncAggregate, attestedHeader: header, signatureSlot}, meta: {version: ForkName.bellatrix}},
+    res: {data: {syncAggregate, attestedHeader: header, signatureSlot}, meta: {version: ForkName.electra}},
   },
   getLightClientFinalityUpdate: {
     args: undefined,
@@ -30,7 +30,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         finalityBranch: lightClientUpdate.finalityBranch,
         signatureSlot: lightClientUpdate.attestedHeader.beacon.slot + 1,
       },
-      meta: {version: ForkName.bellatrix},
+      meta: {version: ForkName.electra},
     },
   },
   getLightClientBootstrap: {
@@ -39,9 +39,9 @@ export const testData: GenericServerTestCases<Endpoints> = {
       data: {
         header,
         currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
-        currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
+        currentSyncCommitteeBranch: [root, root, root, root, root, root], // Vector(Root, 6)
       },
-      meta: {version: ForkName.bellatrix},
+      meta: {version: ForkName.electra},
     },
   },
   getLightClientCommitteeRoot: {

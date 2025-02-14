@@ -27,7 +27,7 @@ const openApiFile: OpenApiFile = {
   version: RegExp(version),
 };
 
-const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
+const config = createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0});
 
 const definitions = {
   ...routes.beacon.getDefinitions(config),
