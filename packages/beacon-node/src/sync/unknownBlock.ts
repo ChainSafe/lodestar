@@ -583,13 +583,13 @@ export class UnknownBlockSync {
       try {
         const peerClient = this.network.getConnectedPeerClientAgent(peer);
         const {
-          blocks: [blockInput],
+          block: blockInput,
           pendingDataColumns,
         } = await beaconBlocksMaybeBlobsByRoot(
           this.config,
           this.network,
           peer,
-          [blockRoot],
+          blockRoot,
           partialDownload,
           peerClient,
           this.logger
