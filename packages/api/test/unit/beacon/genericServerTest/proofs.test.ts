@@ -8,10 +8,7 @@ import {testData} from "../testData/proofs.js";
 
 describe("beacon / proofs", () => {
   runGenericServerTest<Endpoints>(
-    createChainForkConfig({
-      ...defaultChainConfig,
-      ELECTRA_FORK_EPOCH: 0,
-    }),
+    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
     getClient,
     getRoutes,
     testData
