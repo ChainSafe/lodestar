@@ -67,7 +67,7 @@ import {Epoch, ssz} from "@lodestar/types";
 const epoch: Epoch = ssz.Epoch.defaultValue();
 ```
 
-In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. These are directly available without a namespace and SSZ Types typed to these interfaces can be retrieved by calling `sszTypesFor` function by `ForkName`.
+In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. Those are directly available without a namespace and SSZ Types typed to these interfaces can be retrieved by calling `sszTypesFor` function by `ForkName`.
 
 ```typescript
 import {ForkName, ForkPostAltair} from "@lodestar/params";
