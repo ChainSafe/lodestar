@@ -2,17 +2,40 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkBlobs, ForkName, ForkPostFulu} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, withTimeout} from "@lodestar/utils";
+import {Metrics} from "../../../metrics.js";
 
 /**
  * Represents were input originated. Blocks and Data can come from different
  * sources so each should be labelled individually.
  */
-// export enum InputSource {
-//   gossip = "gossip",
-//   api = "api",
-//   byRange = "req_resp_by_range",
-//   byRoot = "req_resp_by_root",
-// }
+export enum BlockInputSourceType {
+  gossip = "gossip",
+  api = "api",
+  byRange = "req_resp_by_range",
+  byRoot = "req_resp_by_root",
+}
+export enum BlockInputType {
+  PreDeneb = "pre-deneb",
+  Blobs = "blobs",
+  Columns = "columns",
+}
+export type BlockInputCoreProps = {
+  config: ChainForkConfig;
+  metrics?: Metrics;
+  abortSignal?: AbortSignal;
+};
+export type BlockInputSource = {
+  source: BlockInputSource;
+  peerIdStr: string;
+};
+export type CachedBlob = BlockInputSource & {
+  blobSidecar: deneb.BlobSidecar;
+};
+export type CachedColumn = BlockInputSource & {
+  columnSidecar: fulu.DataColumnSidecar;
+};
+export type BlockInputBlobsProps = CachedBlob & {blockRoot: Uint8Array};
+export type BlockInputColumnProps = CachedBlob & {blockRoot: Uint8Array};
 
 type PromiseParts<T> = {
   promise: Promise<T>;
@@ -20,19 +43,14 @@ type PromiseParts<T> = {
   reject: (e: Error) => void;
 };
 
-export enum BlockInputType {
-  PreDeneb = "pre-deneb",
-  Blobs = "blobs",
-  Columns = "columns",
-}
-
 export abstract class BlockInput<T> {
   type: BlockInputType;
-  blockRoot: RootHex;
+  blockRoot: Uint8Array;
   protected block?: SignedBeaconBlock;
   protected forkName?: ForkName;
   protected blockPromise = this.createPromise<SignedBeaconBlock>();
   protected dataPromise = this.createPromise<T>();
+  protected readonly metrics?: Metrics;
 
   // TODO: do we really need this?
   protected abortSignal: AbortSignal;
@@ -43,7 +61,7 @@ export abstract class BlockInput<T> {
     return new BlockInput({blockRoot, block, forkName});
   }
 
-  static createFromBlockRoot(blockRoot: RootHex): BlockInput {
+  static createFromBlockRoot(blockRoot: Uint8Array): BlockInput {
     return new BlockInput({blockRoot});
   }
 
@@ -81,15 +99,25 @@ export abstract class BlockInput<T> {
     return this;
   }
 
+  abstract getMeta(): Record<string, string | number>;
+
   protected constructor({
     blockRoot,
     block,
     forkName,
     abortSignal,
-  }: {blockRoot: RootHex; block?: SignedBeaconBlock; forkName?: ForkName; abortSignal?: AbortSignal}) {
+    metrics,
+  }: {
+    blockRoot: Uint8Array;
+    block?: SignedBeaconBlock;
+    forkName?: ForkName;
+    abortSignal?: AbortSignal;
+    metrics?: Metrics;
+  }) {
     this.blockRoot = blockRoot;
     this.block = block;
     this.forkName = forkName;
+    this.metrics = metrics;
     if (abortSignal) {
       this.abortSignal = abortSignal;
       this.abortSignal.addEventListener("abort", () => this.stop(), {once: true});
@@ -123,22 +151,30 @@ export class BlockInputPreDeneb extends BlockInput<void> {
   }
 }
 
-// export type CachedBlob = {
-//   blob: deneb.BlobSidecar;
-//   source: InputSource;
-// };
+type BlockInputBlobsMeta = {
+  blobsReceived: number;
+  blobsExpected: number;
+};
 
 export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
   type: BlockInputType.Blobs;
   protected block: SignedBeaconBlock<ForkBlobs>;
-  protected blobsCache: Map<number, deneb.BlobSidecar>;
+  protected blobsCache: Map<number, CachedBlob>;
 
-  static createFromBlobSidecar(config: ChainForkConfig, blobSidecar: deneb.BlobSidecar): BlockInput {
+  static createFromBlobSidecar({
+    config,
+    metrics,
+    abortSignal,
+    blockRoot,
+    blobSidecar,
+    source,
+    peerIdStr,
+  }: BlockInputCoreProps & BlockInputBlobsProps): BlockInput {
     const forkName = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
     const blockRoot = config
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-    return BlockInputBlobs({blockRoot, blobSidecar, forkName});
+    return BlockInputBlobs({blockRoot, blobSidecar, forkName, metrics});
   }
 
   // TODO: should this get overloaded and check that commitments match the blobs
@@ -165,6 +201,12 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
         "Invalid attempted to addBlob"
       );
     }
+    // TODO: figure out this condition correctly
+    if (this.blobsCache.hasBlob(blobSidecar)) {
+      // TODO: not sure if this should throw here or maybe collect a metric. Saw a note about
+      //       handling this case but this is newly added
+    } else {
+    }
     this.blobsCache.set(blobSidecar.index, blobSidecar);
     if (this.block) {
       const numberOfBlobs = this.blobsCache.size();
@@ -186,20 +228,22 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     }
   }
 
+  getMeta(): BlockInputBlobsMeta {}
+
   protected constructor({
+    config,
+    metrics,
+    abortSignal,
     blockRoot,
     blobSidecar,
-    forkName,
-  }: {blockRoot: RootHex; blobSidecar: deneb.BlobSidecar; forkName: ForkName}) {
-    super(blockRoot, undefined, forkName);
-    this.blobsCache.set(blobSidecar.index, blobSidecar);
+    source,
+    peerIdStr,
+  }: BlockInputCoreProps & BlockInputBlobsProps) {
+    super({config, metrics, abortSignal, blockRoot});
+    this.blobsCache.set(blobSidecar.index, {blobSidecar, source, peerIdStr});
   }
 }
 
-// export type CachedColumn = {
-//   column: fulu.DataColumnSidecar;
-//   source: InputSource;
-// };
 export class BlockInputColumns extends BlockInput {
   type: BlockInputType.Columns;
   protected block: SignedBeaconBlock<ForkPostFulu>;
@@ -248,11 +292,11 @@ export class BlockInputColumns extends BlockInput {
 }
 
 enum BlockInputErrorCode {
-  MISMATCHED_BLOCK_ROOT = "BLOCK_INPUT_ERROR_MISMATCHED_BLOCK_ROOT",
-  AWAIT_DATA_PRE_DENEB = "BLOCK_INPUT_ERROR_CANNOT_AWAIT_DATA_PRE_DENEB",
-  ALREADY_SEEN_BLOB = "BLOCK_INPUT_ERROR_ALREADY_SEEN_BLOB",
-  TOO_MANY_RECEIVED_BLOBS = "BLOCK_INPUT_ERROR_TOO_MANY_RECEIVED_BLOBS",
-  ALREADY_SEEN_COLUMN = "BLOCK_INPUT_ERROR_ALREADY_SEEN_COLUMN",
+  MISMATCHED_BLOCK_ROOT = "BLOCK_PROCESS_INPUT_ERROR_MISMATCHED_BLOCK_ROOT",
+  AWAIT_DATA_PRE_DENEB = "BLOCK_PROCESS_INPUT_ERROR_CANNOT_AWAIT_DATA_PRE_DENEB",
+  ALREADY_SEEN_BLOB = "BLOCK_PROCESS_INPUT_ERROR_ALREADY_SEEN_BLOB",
+  TOO_MANY_RECEIVED_BLOBS = "BLOCK_PROCESS_INPUT_ERROR_TOO_MANY_RECEIVED_BLOBS",
+  ALREADY_SEEN_COLUMN = "BLOCK_PROCESS_INPUT_ERROR_ALREADY_SEEN_COLUMN",
 }
 
 type BlockInputErrorType =

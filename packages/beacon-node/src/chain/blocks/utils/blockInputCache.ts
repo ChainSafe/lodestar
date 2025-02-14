@@ -2,11 +2,18 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkBlobs, isForkPostFulu} from "@lodestar/params";
 import {deneb, fulu, RootHex, SignedBeaconBlock} from "@lodestar/types";
 import {LodestarError, Logger, toHex} from "@lodestar/utils";
-import {BlockInput, BlockInputBlobs, BlockInputColumns, BlockInputPreDeneb, BlockInputType} from "./blockInput.js";
+import {
+  BlockInput,
+  BlockInputBlobs,
+  BlockInputColumns,
+  BlockInputPreDeneb,
+  BlockInputSource,
+  BlockInputType,
+} from "./blockInput.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {Metrics} from "../../../metrics/metrics.js";
 
-export class SeenBlockInputCache {
+export class BlockInputCache {
   private blockInputs = new Map<RootHex, BlockInput<unknown>>();
 
   constructor(
@@ -16,7 +23,7 @@ export class SeenBlockInputCache {
     private metrics?: Metrics
   ) {}
 
-  getBlockInputByBlock(forkName: ForkName, block: SignedBeaconBlock): BlockInput {
+  getBlockInputByBlock(blockRoot: Uint8Array, block: SignedBeaconBlock): BlockInput {
     const blockRoot = toHex(this.config.getForkTypes(block.message.slot).SignedBeaconBlock.hashTreeRoot(block.message));
     let blockInput = this.blockInputs.get(blockRoot);
     if (blockInput) {
@@ -40,40 +47,48 @@ export class SeenBlockInputCache {
     return blockInput;
   }
 
-  getBlockInputByBlob(forkName: ForkName, blobSidecar: deneb.BlobSidecar): BlockInput {
-    const blockRoot = toHex(
-      this.config
-        .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
-        .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message)
-    );
-
-    let blockInput = this.blockInputs.get(blockRoot) as BlockInputBlobs;
+  getBlockInputByBlob({
+    blockRoot,
+    blobSidecar,
+    source,
+    peerIdStr,
+  }: {
+    blockRoot: Uint8Array;
+    blobSidecar: deneb.BlobSidecar;
+    source: BlockInputSource;
+    peerIdStr: string;
+  }): BlockInputBlobs {
+    const blockHex = toHex(blockRoot);
+    let blockInput = this.blockInputs.get(blockHex) as BlockInputBlobs;
     if (blockInput) {
       if (blockInput.type !== BlockInputType.Blobs) {
-        throw new SeenBlockInputCacheError(
+        throw new BlockInputCacheError(
           {
-            code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+            code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
             cachedType: blockInput.type,
             requestedType: BlockInputType.Blobs,
           },
-          `BlockInputType mismatch for slot=${blobSidecar.signedBlockHeader.message.slot} blockRoot=${blockRoot}`
+          `BlockInputType mismatch for slot=${blobSidecar.signedBlockHeader.message.slot} blockRoot=${blockHex}`
         );
       }
-      if (blockInput.hasBlob(blobSidecar)) {
-        // TODO: not sure if this should throw here or maybe collect a metric. Saw a note about
-        //       handling this case but this is newly added
-      } else {
-        blockInput.addBlob(this.config, blobSidecar);
-      }
+      blockInput.addBlob(this.config, blobSidecar);
     } else {
-      blockInput = BlockInputBlobs.createFromBlobSidecar(this.config, blobSidecar);
-      this.blockInputs.set(blockRoot, blockInput);
+      blockInput = BlockInputBlobs.createFromBlobSidecar({
+        config,
+        metrics,
+        abortSignal,
+        blockRoot,
+        blobSidecar,
+        source,
+        peerIdStr,
+      });
+      this.blockInputs.set(blockHex, blockInput);
     }
 
     return blockInput;
   }
 
-  getBlockInputByColumn(forkName: ForkName, columnSidecar: fulu.DataColumnSidecar): BlockInput {
+  getBlockInputByColumn(forkName: ForkName, columnSidecar: fulu.DataColumnSidecar): BlockInputColumns {
     const blockRoot = toHex(
       this.config
         .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
@@ -83,9 +98,9 @@ export class SeenBlockInputCache {
     let blockInput = this.blockInputs.get(blockRoot) as BlockInputColumns;
     if (blockInput) {
       if (blockInput.type !== BlockInputType.Blobs) {
-        throw new SeenBlockInputCacheError(
+        throw new BlockInputCacheError(
           {
-            code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+            code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
             cachedType: blockInput.type,
             requestedType: BlockInputType.Columns,
           },
@@ -102,14 +117,14 @@ export class SeenBlockInputCache {
   }
 }
 
-enum SeenBlockInputCacheErrorCode {
-  WRONG_BLOCK_INPUT_TYPE = "BLOCK_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
+enum BlockInputCacheErrorCode {
+  WRONG_BLOCK_INPUT_TYPE = "BLOCK_PROCESS_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
 }
 
-type SeenBlockInputCacheErrorType = {
-  code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
+type BlockInputCacheErrorType = {
+  code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
   cachedType: BlockInputType;
   requestedType: BlockInputType;
 };
 
-class SeenBlockInputCacheError extends LodestarError<SeenBlockInputCacheErrorType> {}
+class BlockInputCacheError extends LodestarError<BlockInputCacheErrorType> {}

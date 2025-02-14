@@ -74,6 +74,7 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
+import {BlockInputSourceType} from "../../chain/blocks/utils/blockInput.js";
 
 /**
  * Gossip handler options as part of network options
@@ -206,19 +207,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const slot = blobBlockHeader.slot;
     const fork = config.getForkName(slot);
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
-    const blockHex = prettyBytes(blockRoot);
+    const rootHex = prettyBytes(blockRoot);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
-      config,
-      {
-        type: GossipedInputType.blob,
-        blobSidecar,
-      },
-      metrics
-    );
+    // TODO: look at not adding to cache unless is validated
+    const blockInput = chain.blockInputCache.getBlockInputByBlob({
+      blockRoot,
+      blobSidecar,
+      source: BlockInputSourceType.gossip,
+      peerIdStr,
+    });
 
     try {
       await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
@@ -230,12 +230,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       logger.debug("Received gossip blob", {
         slot: slot,
-        root: blockHex,
+        root: rootHex,
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
         subnet,
-        ...blockInputMeta,
+        ...blockInput.getMeta(),
         recvToValLatency,
         recvToValidation,
         validationTime,
@@ -246,7 +246,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
-          logger.debug("Gossip blob has error", {slot, root: blockHex, code: e.type.code});
+          logger.debug("Gossip blob has error", {slot, root: rootHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 
