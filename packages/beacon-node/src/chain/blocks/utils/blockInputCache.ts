@@ -23,6 +23,15 @@ export class BlockInputCache {
     private metrics?: Metrics
   ) {}
 
+  getBlockInputByRootHex(rootHex: string): BlockInput {
+    let blockInput = this.blockInputs.get(rootHex);
+    if (!blockInput) {
+      blockInput = BlockInputPreDeneb.createFromRootHex(rootHex);
+      this.blockInputs.set(rootHex, blockInput);
+    }
+    return blockInput;
+  }
+
   getBlockInputByBlock(blockRoot: Uint8Array, block: SignedBeaconBlock): BlockInput {
     const blockRoot = toHex(this.config.getForkTypes(block.message.slot).SignedBeaconBlock.hashTreeRoot(block.message));
     let blockInput = this.blockInputs.get(blockRoot);

@@ -43,29 +43,43 @@ type PromiseParts<T> = {
   reject: (e: Error) => void;
 };
 
-export abstract class BlockInput<T> {
+export enum BlockInputStatus {
+  NO_BLOCK_NO_DATA = "no_block_no_data",
+  MO_BLOCK_INCOMPLETE_DATA = "no_block_incomplete_data",
+  MO_BLOCK_COMPLETE_DATA = "no_block_complete_data",
+  HAVE_BLOCK_NO_DATA = "have_block_no_data",
+  HAVE_BLOCK_INCOMPLETE_DATA = "have_block_incomplete_data",
+  COMPLETE = "complete",
+}
+
+export abstract class BlockInput<T = void> {
   type: BlockInputType;
   blockRoot: Uint8Array;
+  rootHex: string;
+  slot?: Slot;
+  parentRootHex?: RootHex;
+  status: BlockInputStatus;
+  forkName?: ForkName;
   protected block?: SignedBeaconBlock;
-  protected forkName?: ForkName;
   protected blockPromise = this.createPromise<SignedBeaconBlock>();
   protected dataPromise = this.createPromise<T>();
+  protected readonly config: ChainForkConfig;
   protected readonly metrics?: Metrics;
 
   // TODO: do we really need this?
   protected abortSignal: AbortSignal;
 
-  static createFromBlock(config: ChainForkConfig, block: SignedBeaconBlock): BlockInput {
+  static createFromBlock(block: SignedBeaconBlock, config: ChainForkConfig, metrics?: Metrics): BlockInput {
     const forkName = config.getForkName(block.message.slot);
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     return new BlockInput({blockRoot, block, forkName});
   }
 
-  static createFromBlockRoot(blockRoot: Uint8Array): BlockInput {
+  static createFromRootHex(blockRoot: Uint8Array): BlockInput {
     return new BlockInput({blockRoot});
   }
 
-  addBlock(config: ChainForkConfig, block: SignedBeaconBlock): void {
+  addBlock(block: SignedBeaconBlock): void {
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     if (blockRoot !== this.blockRoot) {
       throw new BlockInputError(
@@ -80,6 +94,14 @@ export abstract class BlockInput<T> {
     this.forkName = config.getForkName(block.message.slot);
     this.block = block;
     this.blockPromise.resolve(block);
+  }
+
+  needBlock(): boolean {
+    return !this.block;
+  }
+
+  needData(): boolean {
+    return false;
   }
 
   async waitForBlock(timeout: number): Promise<BlockInput> {
@@ -97,6 +119,13 @@ export abstract class BlockInput<T> {
       this.abortSignal
     );
     return this;
+  }
+
+  getLogMetaBasic(): {blockRoot: string; slot: string} {
+    return {
+      blockRoot: this.rootHex,
+      slot: this.slot ?? "unknown",
+    };
   }
 
   abstract getMeta(): Record<string, string | number>;
@@ -149,6 +178,22 @@ export class BlockInputPreDeneb extends BlockInput<void> {
     await this.waitForBlock();
     return this;
   }
+
+  upgradeToBlobs(): BlockInputBlobs {
+    const blockInputBlobs = BlockInputBlobs.createFromRootHex(this.rootHex, this.config, this.metrics);
+    if (this.block) {
+      blockInputBlobs.addBlock(this.block);
+    }
+    return blockInputBlobs;
+  }
+
+  upgradeToColumns(): BlockInputColumns {
+    const blockInputColumns = BlockInputColumns.createFromRootHex(this.rootHex, this.config, this.metrics);
+    if (this.block) {
+      blockInputColumns.addBlock(this.block);
+    }
+    return blockInputColumns;
+  }
 }
 
 type BlockInputBlobsMeta = {
@@ -187,8 +232,8 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
   //   }
   // }
 
-  addBlob(config: ChainForkConfig, blobSidecar: deneb.BlobSidecar): void {
-    const blockRoot = config
+  addBlob(blobSidecar: deneb.BlobSidecar, source: BlockInputSourceType, peerIdStr?: string): void {
+    const blockRoot = this.config
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
     if (blockRoot !== this.blockRoot) {
@@ -197,6 +242,8 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
           code: BlockInputErrorCode.MISMATCHED_BLOCK_ROOT,
           blockInputRoot: this.blockRoot,
           mismatchedRoot: blockRoot,
+          source,
+          peerId: peerIdStr,
         },
         "Invalid attempted to addBlob"
       );
@@ -207,7 +254,7 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
       //       handling this case but this is newly added
     } else {
     }
-    this.blobsCache.set(blobSidecar.index, blobSidecar);
+    this.blobsCache.set(blobSidecar.index, {blobSidecar, source, peerIdStr});
     if (this.block) {
       const numberOfBlobs = this.blobsCache.size();
       const numberOfCommitments = this.block.message.body.blobKzgCommitments.length;
@@ -230,6 +277,8 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
 
   getMeta(): BlockInputBlobsMeta {}
 
+  getNeededBlobIndices(): undefined | number[] {}
+
   protected constructor({
     config,
     metrics,
@@ -247,7 +296,7 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
 export class BlockInputColumns extends BlockInput {
   type: BlockInputType.Columns;
   protected block: SignedBeaconBlock<ForkPostFulu>;
-  protected columnsCache: Map<number, fulu.DataColumnSidecar>;
+  protected columnsCache: Map<number, CachedColumn>;
 
   static createFromColumnSidecar(config: ChainForkConfig, columnSidecar: fulu.DataColumnSidecar): BlockInput {
     const forkName = config.getForkName(columnSidecar.signedBlockHeader.message.slot);
@@ -257,16 +306,18 @@ export class BlockInputColumns extends BlockInput {
     return BlockInputColumns({blockRoot, columnSidecar, forkName});
   }
 
-  addColumnSidecar(config: ChainForkConfig, columnSidecar: fulu.DataColumnSidecar): void {
-    const blockRoot = config
+  addColumnSidecar(columnSidecar: fulu.DataColumnSidecar, source: BlockInputSource, peerIdStr?: string): void {
+    const blockRoot = this.config
       .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
-    if (blockRoot !== this.blockRoot) {
+    if (this.blockRoot !== blockRoot || this.slot !== columnSidecar.signedBlockHeader.message.slot) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISMATCHED_BLOCK_ROOT,
           blockInputRoot: this.blockRoot,
           mismatchedRoot: blockRoot,
+          source,
+          peerId: peerIdStr,
         },
         "Invalid attempted to addColumn"
       );
@@ -275,11 +326,13 @@ export class BlockInputColumns extends BlockInput {
     // if (this.columnsCache.get(columnSidecar.index)) {
     //   throw new BlockInputError({code: BlockInputErrorCode.ALREADY_SEEN_COLUMN, index: columnSidecar.index});
     // }
-    this.columnsCache.set(columnSidecar.index, columnSidecar);
+    this.columnsCache.set(columnSidecar.index, {columnSidecar, source, peerIdStr});
     if (this.block && this.block.message.body.blobKzgCommitments.length === this.columnsCache.size()) {
       this.dataPromise.resolve([...this.columnsCache.values()]);
     }
   }
+
+  getNeededColumnIndices(): number[] {}
 
   protected constructor({
     blockRoot,
@@ -307,6 +360,8 @@ type BlockInputErrorType =
       code: BlockInputErrorCode.MISMATCHED_BLOCK_ROOT;
       blockInputRoot: RootHex;
       mismatchedRoot: RootHex;
+      source?: BlockInputSource;
+      peerId?: string;
     }
   | {
       code: BlockInputErrorCode.ALREADY_SEEN_BLOB;

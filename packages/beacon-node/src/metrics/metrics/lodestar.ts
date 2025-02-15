@@ -19,6 +19,7 @@ import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
+import {BlockInputStatus} from "../../chain/blocks/utils/blockInput.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -550,6 +551,22 @@ export function createLodestarMetrics(
       syncChainHighestTargetSlotCompleted: register.gauge({
         name: "lodestar_sync_chain_highest_target_slot_completed",
         help: "Highest target slot completed by a sync chain",
+      }),
+    },
+
+    syncBlockInput: {
+      requests: register.gauge<{status: BlockInputStatus}>({
+        name: "lodestar_sync_block_input_requests_total",
+        help: "Total number of unknown block events or requests",
+        labelNames: ["status"],
+      }),
+      processedBlocksSuccess: register.gauge({
+        name: "lodestar_sync_block_input_processed_blocks_success_total",
+        help: "Total number of processed blocks successes in BlockInputSync",
+      }),
+      processedBlocksError: register.gauge({
+        name: "lodestar_sync_block_input_processed_blocks_error_total",
+        help: "Total number of processed blocks errors in BlockInputSync",
       }),
     },
 

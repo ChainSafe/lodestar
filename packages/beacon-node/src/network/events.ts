@@ -19,6 +19,9 @@ export enum NetworkEvent {
   unknownBlock = "unknownBlock",
   unknownBlockInput = "unknownBlockInput",
 
+  // Request for sync of block and data
+  blockInput = "blockInput",
+
   // Network processor events
   /** (Network -> App) A gossip message is ready for validation */
   pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
@@ -38,6 +41,7 @@ export type NetworkEventData = {
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
   [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
   [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput | NullBlockInput; peer?: PeerIdStr};
+  [NetworkEvent.blockInput]: {blockInput: BlockInput; peerIdStr?: PeerIdStr};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
