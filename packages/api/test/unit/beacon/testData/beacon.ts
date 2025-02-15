@@ -221,6 +221,20 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false},
     },
   },
+  getPendingDeposits: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.electra.PendingDeposit.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+    },
+  },
+  getPendingPartialWithdrawals: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.electra.PendingPartialWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+    },
+  },
 
   // rewards
 
