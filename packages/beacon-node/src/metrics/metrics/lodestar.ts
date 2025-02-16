@@ -19,7 +19,7 @@ import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
-import {BlockInputStatus} from "../../chain/blocks/utils/blockInput.js";
+import {BlockInputSourceType, BlockInputStatus, BlockInputType} from "../../chain/blocks/utils/blockInput.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -555,8 +555,21 @@ export function createLodestarMetrics(
     },
 
     syncBlockInput: {
-      requests: register.gauge<{status: BlockInputStatus}>({
-        name: "lodestar_sync_block_input_requests_total",
+      pendingBlocks: register.gauge({
+        name: "lodestar_sync_block_input_pending_blocks_size",
+        help: "Current size of UnknownBlockSync pending blocks cache",
+      }),
+      knownBadBlocks: register.gauge({
+        name: "lodestar_sync_block_input_known_bad_blocks_size",
+        help: "Current size of UnknownBlockSync known bad blocks cache",
+      }),
+      onBlockInputSource: register.gauge<{source: BlockInputSourceType}>({
+        name: "lodestar_sync_on_block_input_source_total",
+        help: "Total number of block input events from each source",
+        labelNames: ["source"],
+      }),
+      onBlockInputStatus: register.gauge<{status: BlockInputStatus}>({
+        name: "lodestar_sync_on_block_input_requests_total",
         help: "Total number of unknown block events or requests",
         labelNames: ["status"],
       }),
@@ -568,6 +581,30 @@ export function createLodestarMetrics(
         name: "lodestar_sync_block_input_processed_blocks_error_total",
         help: "Total number of processed blocks errors in BlockInputSync",
       }),
+      block: {
+        fetchBlockRequestCount: register.gauge(),
+        fetchBlockRequestTime: register.histogram(),
+        fetchBlockResponseCount: register.gauge(),
+        fetchBlockErrorCount: register.gauge(),
+      },
+      data: {
+        fetchDataRequestTime: register.histogram(),
+        getBlobsApiRequestCount: register.gauge(),
+        getBlobsApiReturnedCount: register.gauge(),
+        getBlobsApiErrorCount: register.gauge(),
+        fetchDataReqCount: register.gauge<{type: BlockInputType}>({
+          labelNames: ["type"],
+        }),
+        fetchDataRespCount: register.gauge<{type: BlockInputType}>({
+          labelNames: ["type"],
+        }),
+        fetchDataErrorCount: register.gauge<{type: BlockInputType}>({
+          labelNames: ["type"],
+        }),
+        fetchDataRespNotReturnedCount: register.gauge<{type: BlockInputType}>({
+          labelNames: ["type"],
+        }),
+      },
     },
 
     syncUnknownBlock: {

@@ -7,6 +7,7 @@ import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {EventDirection} from "../util/workerEvents.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
+import {BlockInputSourceType} from "../chain/blocks/utils/blockInput.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */
@@ -41,7 +42,7 @@ export type NetworkEventData = {
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
   [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
   [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput | NullBlockInput; peer?: PeerIdStr};
-  [NetworkEvent.blockInput]: {blockInput: BlockInput; peerIdStr?: PeerIdStr};
+  [NetworkEvent.blockInput]: {blockInput: BlockInput; source: BlockInputSourceType; peerIdStr?: PeerIdStr};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;

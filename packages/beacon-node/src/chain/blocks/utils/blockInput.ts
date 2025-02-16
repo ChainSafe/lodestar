@@ -130,7 +130,7 @@ export abstract class BlockInput<T = void> {
     return this;
   }
 
-  getLogMetaBasic(): {blockRoot: string; slot: string} {
+  getLogMeta(): {blockRoot: string; slot: string} {
     return {
       blockRoot: this.rootHex,
       slot: this.slot ?? "unknown",
@@ -205,7 +205,7 @@ export class BlockInputPreDeneb extends BlockInput<void> {
   }
 }
 
-type BlockInputBlobsMeta = {
+type BlockInputBlobsLogMeta = {
   blobsReceived: number;
   blobsExpected: number;
 };
@@ -298,8 +298,6 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     }
   }
 
-  getMeta(): BlockInputBlobsMeta {}
-
   getNeededBlobMeta(): undefined | BlobMeta[] {
     if (!this.block) {
       return undefined;
@@ -319,6 +317,14 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     }
 
     return blobsMeta;
+  }
+
+  getLogMeta(): BlockInput["getLogMeta"] & BlockInputBlobsLogMeta {
+    return {
+      ...super.getLogMeta(),
+      blobsExpected: `${this.block?.message.body.blobKzgCommitments.length}`,
+      blobsReceived: this.blobsCache.size(),
+    };
   }
 
   protected constructor({
