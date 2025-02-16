@@ -25,8 +25,6 @@ import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/for
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(
   {

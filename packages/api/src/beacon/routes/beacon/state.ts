@@ -9,8 +9,6 @@ import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 import {RootResponse, RootResponseType} from "./block.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 export type StateId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 
 export type StateArgs = {
