@@ -3,6 +3,7 @@ import {ForkBlobs, ForkName, ForkPostFulu} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, withTimeout} from "@lodestar/utils";
 import {Metrics} from "../../../metrics.js";
+import {kzgCommitmentToVersionedHash, VersionHash} from "../../../util/blobs.js";
 
 /**
  * Represents were input originated. Blocks and Data can come from different
@@ -11,6 +12,7 @@ import {Metrics} from "../../../metrics.js";
 export enum BlockInputSourceType {
   gossip = "gossip",
   api = "api",
+  engine = "engine",
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
 }
@@ -79,6 +81,13 @@ export abstract class BlockInput<T = void> {
     return new BlockInput({blockRoot});
   }
 
+  getBlock(): SignedBeaconBlock {
+    if (!this.block) {
+      throw new BlockInputError({code: BlockInputErrorCode.NO_BLOCK_TO_GET});
+    }
+    return this.block;
+  }
+
   addBlock(block: SignedBeaconBlock): void {
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     if (blockRoot !== this.blockRoot) {
@@ -104,7 +113,7 @@ export abstract class BlockInput<T = void> {
     return false;
   }
 
-  async waitForBlock(timeout: number): Promise<BlockInput> {
+  async waitForBlock(timeout: number): Promise<SignedBeaconBlock> {
     return withTimeout(() => this.blockPromise.promise, timeout, this.abortSignal);
   }
 
@@ -201,9 +210,15 @@ type BlockInputBlobsMeta = {
   blobsExpected: number;
 };
 
+export type BlobMeta = {
+  index: number;
+  blockRoot: Uint8Array;
+  versionHash: VersionHash;
+};
+
 export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
   type: BlockInputType.Blobs;
-  protected block: SignedBeaconBlock<ForkBlobs>;
+  protected block?: SignedBeaconBlock<ForkBlobs>;
   protected blobsCache: Map<number, CachedBlob>;
 
   static createFromBlobSidecar({
@@ -231,6 +246,14 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
   //     }
   //   }
   // }
+
+  getBlock(): SignedBeaconBlock<ForkBlobs> {
+    return super.getBlock();
+  }
+
+  async waitForBlock(timeout: number): Promise<SignedBeaconBlock<ForkBlobs>> {
+    return super.waitForBlock(timeout);
+  }
 
   addBlob(blobSidecar: deneb.BlobSidecar, source: BlockInputSourceType, peerIdStr?: string): void {
     const blockRoot = this.config
@@ -277,7 +300,26 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
 
   getMeta(): BlockInputBlobsMeta {}
 
-  getNeededBlobIndices(): undefined | number[] {}
+  getNeededBlobMeta(): undefined | BlobMeta[] {
+    if (!this.block) {
+      return undefined;
+    }
+
+    const commitments = this.block.message.body.blobKzgCommitments;
+
+    const blobsMeta: BlobMeta[] = [];
+    for (let index = 0; index < commitments.length; index++) {
+      if (!this.blobsCache.has(index)) {
+        blobsMeta.push({
+          index,
+          blockRoot: this.blockRoot,
+          versionHash: kzgCommitmentToVersionedHash(commitments[index]),
+        });
+      }
+    }
+
+    return blobsMeta;
+  }
 
   protected constructor({
     config,
@@ -345,16 +387,20 @@ export class BlockInputColumns extends BlockInput {
 }
 
 enum BlockInputErrorCode {
-  MISMATCHED_BLOCK_ROOT = "BLOCK_PROCESS_INPUT_ERROR_MISMATCHED_BLOCK_ROOT",
-  AWAIT_DATA_PRE_DENEB = "BLOCK_PROCESS_INPUT_ERROR_CANNOT_AWAIT_DATA_PRE_DENEB",
-  ALREADY_SEEN_BLOB = "BLOCK_PROCESS_INPUT_ERROR_ALREADY_SEEN_BLOB",
-  TOO_MANY_RECEIVED_BLOBS = "BLOCK_PROCESS_INPUT_ERROR_TOO_MANY_RECEIVED_BLOBS",
-  ALREADY_SEEN_COLUMN = "BLOCK_PROCESS_INPUT_ERROR_ALREADY_SEEN_COLUMN",
+  MISMATCHED_BLOCK_ROOT = "BLOCK_INPUT_ERROR_MISMATCHED_BLOCK_ROOT",
+  AWAIT_DATA_PRE_DENEB = "BLOCK_INPUT_ERROR_CANNOT_AWAIT_DATA_PRE_DENEB",
+  ALREADY_SEEN_BLOB = "BLOCK_INPUT_ERROR_ALREADY_SEEN_BLOB",
+  TOO_MANY_RECEIVED_BLOBS = "BLOCK_INPUT_ERROR_TOO_MANY_RECEIVED_BLOBS",
+  ALREADY_SEEN_COLUMN = "BLOCK_INPUT_ERROR_ALREADY_SEEN_COLUMN",
+  NO_BLOCK_TO_GET = "BLOCK_INPUT_NO_BLOCK_TO_GET",
 }
 
 type BlockInputErrorType =
   | {
       code: BlockInputErrorCode.AWAIT_DATA_PRE_DENEB;
+    }
+  | {
+      code: BlockInputErrorCode.NO_BLOCK_TO_GET;
     }
   | {
       code: BlockInputErrorCode.MISMATCHED_BLOCK_ROOT;

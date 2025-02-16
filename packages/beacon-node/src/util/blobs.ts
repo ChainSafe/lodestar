@@ -14,7 +14,7 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
 import {ckzg} from "./kzg.js";
 
-type VersionHash = Uint8Array;
+export type VersionHash = Uint8Array;
 
 export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment): VersionHash {
   const hash = sha256Digest(kzgCommitment);
