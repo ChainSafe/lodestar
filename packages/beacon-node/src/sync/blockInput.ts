@@ -462,6 +462,9 @@ export class BlockInputSync {
         this.fetchBlock(block, peerIdStr)
           .then(() => {})
           .catch((err) => {
+            block.status = PendingBlockInputStatus.pending;
+            this.metrics?.syncBlockInput.block.fetchBlockErrorCount.inc();
+
             this.logger.error(
               "BlockInputSync.fetchBlock error",
               {
@@ -470,7 +473,6 @@ export class BlockInputSync {
               },
               err
             );
-            this.metrics?.syncBlockInput.block.fetchBlockErrorCount.inc();
           })
           .finally(() => {
             timer?.();
@@ -485,6 +487,9 @@ export class BlockInputSync {
         this.fetchData(block, peerIdStr)
           .then(() => {})
           .catch((err) => {
+            block.status = PendingBlockInputStatus.pending;
+            this.metrics?.syncBlockInput.data.fetchDataErrorCount.inc();
+
             this.logger.error(
               "BlockInputSync.fetchData error",
               {
@@ -493,7 +498,6 @@ export class BlockInputSync {
               },
               err
             );
-            this.metrics?.syncBlockInput.data.fetchDataErrorCount.inc();
           })
           .finally(() => {
             timer?.();
@@ -503,9 +507,20 @@ export class BlockInputSync {
 
     await Promise.all(resolutions);
 
-    if (!(block.blockInput.needBlock() || block.blockInput.needData())) {
-      block.status = PendingBlockInputStatus.downloaded;
+    if (block.status === PendingBlockInputStatus.pending && block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
+      this.logger.debug(
+        `Ignoring fetch for blockInput after ${MAX_ATTEMPTS_PER_BLOCK} attempts`,
+        block.blockInput.getLogMeta()
+      );
+      // this.removeAndDownscoreAllDescendants(block);
     }
+
+    // BlockInput is incomplete
+    if (block.blockInput.needBlock() || block.blockInput.needData()) {
+      return;
+    }
+
+    block.status = PendingBlockInputStatus.downloaded;
   }
 
   private async fetchBlock(block: PendingBlockInput, peerIdStr: PeerIdStr): Promise<void> {
@@ -541,10 +556,10 @@ export class BlockInputSync {
       });
     }
 
-    let neededBlobIdentifier = blockInput.getNeededBlobMeta();
+    let neededBlobIdentifier = blockInput.getMissingBlobIndices();
     if (!neededBlobIdentifier) {
       await blockInput.waitForBlock();
-      neededBlobIdentifier = blockInput.getNeededBlobMeta() as BlobMeta[];
+      neededBlobIdentifier = blockInput.getMissingBlobIndices() as BlobMeta[];
     }
 
     const blobsAndProofs = await this.chain.executionEngine.getBlobs(
@@ -581,22 +596,21 @@ export class BlockInputSync {
     neededBlobIdentifier = neededBlobIdentifier.filter((req) => req !== null);
 
     const blobs = await this.network.sendBlobSidecarsByRoot(peerIdStr, neededBlobIdentifier);
+    for (const blob of blobs) {
+      blockInput.addBlob(blob);
+    }
+
     if (blobs.length !== neededBlobIdentifier.length) {
-      this.logger.error(
-        "Not all blobs requested were received",
-        {},
-        new BlockInputSyncError({
+      throw new BlockInputSyncError(
+        {
           code: BlockInputSyncErrorCode.INCOMPLETE_DATA_FETCH,
           peerId: peerIdStr,
           blockRoot: blockInput.rootHex,
           requested: neededBlobIdentifier.length,
           received: blobs.length,
-        })
+        },
+        "Not all blobs requested were received"
       );
-    }
-
-    for (const blob of blobs) {
-      blockInput.addBlob(blob);
     }
   }
 

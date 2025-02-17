@@ -1,9 +1,16 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkBlobs, ForkName, ForkPostFulu} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {LodestarError, withTimeout} from "@lodestar/utils";
+import {LodestarError, Logger, withTimeout} from "@lodestar/utils";
 import {Metrics} from "../../../metrics.js";
 import {kzgCommitmentToVersionedHash, VersionHash} from "../../../util/blobs.js";
+import {CustodyConfig} from "../../../util/dataColumns.js";
+
+type PromiseParts<T> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (e: Error) => void;
+};
 
 /**
  * Represents were input originated. Blocks and Data can come from different
@@ -21,6 +28,25 @@ export enum BlockInputType {
   Blobs = "blobs",
   Columns = "columns",
 }
+export enum BlockInputStatus {
+  NO_BLOCK_NO_DATA = "no_block_no_data",
+  MO_BLOCK_INCOMPLETE_DATA = "no_block_incomplete_data",
+  MO_BLOCK_COMPLETE_DATA = "no_block_complete_data",
+  HAVE_BLOCK_NO_DATA = "have_block_no_data",
+  HAVE_BLOCK_INCOMPLETE_DATA = "have_block_incomplete_data",
+  COMPLETE = "complete",
+}
+
+type BlockInputLogMeta = {
+  blockRoot: RootHex;
+  slot: Slot | string;
+};
+type BlockInputDataLogMeta = BlockInputLogMeta & {
+  type: BlockInputType;
+  expected: number;
+  received: number;
+};
+
 export type BlockInputCoreProps = {
   config: ChainForkConfig;
   metrics?: Metrics;
@@ -39,20 +65,18 @@ export type CachedColumn = BlockInputSource & {
 export type BlockInputBlobsProps = CachedBlob & {blockRoot: Uint8Array};
 export type BlockInputColumnProps = CachedBlob & {blockRoot: Uint8Array};
 
-type PromiseParts<T> = {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-  reject: (e: Error) => void;
+export type CreateBlockInputCoreProps = {
+  config: ChainForkConfig;
+  logger: Logger;
+  metrics?: Metrics;
+  abortSignal?: AbortSignal;
+  source?: BlockInputSourceType;
+  peerIdStr?: string;
 };
-
-export enum BlockInputStatus {
-  NO_BLOCK_NO_DATA = "no_block_no_data",
-  MO_BLOCK_INCOMPLETE_DATA = "no_block_incomplete_data",
-  MO_BLOCK_COMPLETE_DATA = "no_block_complete_data",
-  HAVE_BLOCK_NO_DATA = "have_block_no_data",
-  HAVE_BLOCK_INCOMPLETE_DATA = "have_block_incomplete_data",
-  COMPLETE = "complete",
-}
+export type CreateBlockInputBlockRootProps = CreateBlockInputCoreProps & {blockRoot: Uint8Array};
+export type CreateBlockInputBlockProps = CreateBlockInputCoreProps & {block: SignedBeaconBlock};
+export type CreateBlockInputBlobProps = CreateBlockInputCoreProps & {blobSidecar: deneb.BlobSidecar};
+export type CreateBlockInputColumnProps = CreateBlockInputCoreProps & {columnSidecar: fulu.DataColumnSidecar};
 
 export abstract class BlockInput<T = void> {
   type: BlockInputType;
@@ -71,13 +95,13 @@ export abstract class BlockInput<T = void> {
   // TODO: do we really need this?
   protected abortSignal: AbortSignal;
 
-  static createFromBlock(block: SignedBeaconBlock, config: ChainForkConfig, metrics?: Metrics): BlockInput {
+  static createFromBlock({config, block}: CreateBlockInputBlockProps): BlockInput {
     const forkName = config.getForkName(block.message.slot);
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     return new BlockInput({blockRoot, block, forkName});
   }
 
-  static createFromRootHex(blockRoot: Uint8Array): BlockInput {
+  static createFromRootHex({blockRoot}: CreateBlockInputBlockRootProps): BlockInput {
     return new BlockInput({blockRoot});
   }
 
@@ -205,14 +229,12 @@ export class BlockInputPreDeneb extends BlockInput<void> {
   }
 }
 
-type BlockInputBlobsLogMeta = {
-  blobsReceived: number;
-  blobsExpected: number;
+type MissingData = {
+  blockRoot: Uint8Array;
+  index: number;
 };
 
-export type BlobMeta = {
-  index: number;
-  blockRoot: Uint8Array;
+type MissingBlob = MissingData & {
   versionHash: VersionHash;
 };
 
@@ -298,14 +320,14 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     }
   }
 
-  getNeededBlobMeta(): undefined | BlobMeta[] {
+  getMissingBlobIndices(): undefined | MissingBlob[] {
     if (!this.block) {
       return undefined;
     }
 
     const commitments = this.block.message.body.blobKzgCommitments;
 
-    const blobsMeta: BlobMeta[] = [];
+    const blobsMeta: MissingBlob[] = [];
     for (let index = 0; index < commitments.length; index++) {
       if (!this.blobsCache.has(index)) {
         blobsMeta.push({
@@ -319,11 +341,12 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     return blobsMeta;
   }
 
-  getLogMeta(): BlockInput["getLogMeta"] & BlockInputBlobsLogMeta {
+  getLogMeta(): BlockInputDataLogMeta {
     return {
       ...super.getLogMeta(),
-      blobsExpected: `${this.block?.message.body.blobKzgCommitments.length}`,
-      blobsReceived: this.blobsCache.size(),
+      type: BlockInputType.Blobs,
+      expected: `${this.block?.message.body.blobKzgCommitments.length}`,
+      received: this.blobsCache.size(),
     };
   }
 
@@ -343,6 +366,7 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
 
 export class BlockInputColumns extends BlockInput {
   type: BlockInputType.Columns;
+  custodyConfig: CustodyConfig;
   protected block: SignedBeaconBlock<ForkPostFulu>;
   protected columnsCache: Map<number, CachedColumn>;
 
@@ -353,6 +377,8 @@ export class BlockInputColumns extends BlockInput {
       .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
     return BlockInputColumns({blockRoot, columnSidecar, forkName});
   }
+
+  static createFromBlock({}: BlockInputColumnProps): BlockInput {}
 
   addColumnSidecar(columnSidecar: fulu.DataColumnSidecar, source: BlockInputSource, peerIdStr?: string): void {
     const blockRoot = this.config
@@ -380,7 +406,32 @@ export class BlockInputColumns extends BlockInput {
     }
   }
 
-  getNeededColumnIndices(): number[] {}
+  needData(): boolean {
+    return this.getMissingColumnIndices().length;
+  }
+
+  getMissingColumnIndices(): MissingData[] {
+    const needed: MissingData[] = [];
+    for (const index of this.columnsCache.keys()) {
+      if (!this.custodyConfig.sampledColumns.includes(index)) {
+        needed.push({index, blockRoot: this.rootHex});
+      }
+    }
+    return needed;
+  }
+
+  getCustodyColumns = this.makeColumnsGetter("custody").bind(this);
+
+  getSampledColumns = this.makeColumnsGetter("sampled").bind(this);
+
+  getLogMeta(): BlockInputDataLogMeta {
+    return {
+      ...super.getLogMeta(),
+      type: BlockInputType.Columns,
+      expected: this.custodyConfig.sampledColumns.length,
+      received: this.columnsCache.size(),
+    };
+  }
 
   protected constructor({
     blockRoot,
@@ -389,6 +440,30 @@ export class BlockInputColumns extends BlockInput {
   }: {blockRoot: RootHex; columnSidecar: deneb.BlobSidecar; forkName: ForkName}) {
     super(blockRoot, undefined, forkName);
     this.columnsCache.set(columnSidecar.index, columnSidecar);
+  }
+
+  private makeColumnsGetter(type: "custody" | "sampled"): (throwError?: boolean) => fulu.DataColumnSidecars {
+    return (throwError = true) => {
+      const requested: fulu.DataColumnSidecars = [];
+      const missing: number[] = [];
+      for (const index of this.custodyConfig[`${type}Columns`]) {
+        if (this.columnsCache.has(index)) {
+          requested.push(index);
+        } else {
+          missing.push(missing);
+        }
+      }
+      if (missing.length && throwError) {
+        throw new BlockInputError(
+          {
+            code: BlockInputErrorCode.INCOMPLETE_DATA,
+            ...this.getLogMeta(),
+          },
+          `Missing ${type} columns=[ ${missing.concat(", ")} ]`
+        );
+      }
+      return requested;
+    };
   }
 }
 
@@ -399,6 +474,7 @@ enum BlockInputErrorCode {
   TOO_MANY_RECEIVED_BLOBS = "BLOCK_INPUT_ERROR_TOO_MANY_RECEIVED_BLOBS",
   ALREADY_SEEN_COLUMN = "BLOCK_INPUT_ERROR_ALREADY_SEEN_COLUMN",
   NO_BLOCK_TO_GET = "BLOCK_INPUT_NO_BLOCK_TO_GET",
+  INCOMPLETE_DATA = "BLOCK_INPUT_INCOMPLETE_DATA",
 }
 
 type BlockInputErrorType =
@@ -429,6 +505,14 @@ type BlockInputErrorType =
       numberOfBlobs: number;
       slot: Slot;
       blockRoot: RootHex;
+    }
+  | {
+      code: BlockInputErrorCode.INCOMPLETE_DATA;
+      blockRoot: RootHex;
+      slot: Slot;
+      type: BlockInputType;
+      expected: number;
+      received: number;
     };
 
 class BlockInputError extends LodestarError<BlockInputErrorType> {}

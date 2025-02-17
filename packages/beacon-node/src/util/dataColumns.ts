@@ -6,19 +6,36 @@ import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {NodeId} from "../network/subnets/index.js";
 
+const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / NUMBER_OF_CUSTODY_GROUPS);
+
 export type CustodyConfig = {
-  custodyColumnsIndex: Uint8Array;
-  custodyColumnsLen: number;
+  // DataColumnSidecar.index for columns the node custodies
   custodyColumns: ColumnIndex[];
+
+  /**
+   * "bit array" for indices of the columns that are in custody
+   *
+   * Given custodyColumns = [2, 4, 6, 8] then custodyColumnsIndex =
+   * Uint8Array<0, 0, 1, 0, 2, 0, 3, 0, 4, 0......>
+   */
+  custodyColumnsIndex: Uint8Array;
+
+  // TODO: why is this needed?
+  // expected length of the custodyColumns array
+  custodyColumnsLen: number;
+
+  /**
+   * A node advertising CGC must download a minimum of the samplings size `sampledColumns.length`
+   * to consider sampling being successful
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#custody-sampling
+   */
   sampledColumns: ColumnIndex[];
 };
 
 export function getCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
-  const custodyColumns = getDataColumns(nodeId, Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT));
-  const sampledColumns = getDataColumns(
-    nodeId,
-    Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
-  );
+  const numberOfCustodyGroups = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
+  const custodyColumns = getDataColumns(nodeId, numberOfCustodyGroups);
+  const sampledColumns = getDataColumns(nodeId, Math.max(custodyColumns, config.SAMPLES_PER_SLOT));
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
   return {...custodyMeta, custodyColumns, sampledColumns};
 }
@@ -49,7 +66,6 @@ export function computeColumnsForCustodyGroup(custodyGroup: CustodyIndex): Colum
   if (custodyGroup > NUMBER_OF_CUSTODY_GROUPS) {
     custodyGroup = NUMBER_OF_CUSTODY_GROUPS;
   }
-  const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / NUMBER_OF_CUSTODY_GROUPS);
   const columnIndexes = [];
   for (let i = 0; i < columnsPerCustodyGroup; i++) {
     columnIndexes.push(NUMBER_OF_CUSTODY_GROUPS * i + custodyGroup);
