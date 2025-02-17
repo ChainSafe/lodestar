@@ -48,7 +48,7 @@ import {Metrics} from "../metrics/index.js";
 import {NodeId} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
-import {getCustodyConfig} from "../util/dataColumns.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
@@ -122,6 +122,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
+  readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly bufferPool: BufferPool | null;
@@ -186,8 +187,8 @@ export class BeaconChain implements IBeaconChain {
   constructor(
     opts: IChainOptions,
     {
-      nodeId,
       config,
+      custodyConfig,
       db,
       logger,
       processShutdownCallback,
@@ -199,8 +200,8 @@ export class BeaconChain implements IBeaconChain {
       executionBuilder,
       historicalStateRegen,
     }: {
-      nodeId: NodeId;
       config: BeaconConfig;
+      custodyConfig: CustodyConfig;
       db: IBeaconDb;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
@@ -216,6 +217,7 @@ export class BeaconChain implements IBeaconChain {
   ) {
     this.opts = opts;
     this.config = config;
+    this.custodyConfig = custodyConfig;
     this.db = db;
     this.logger = logger;
     this.processShutdownCallback = processShutdownCallback;
@@ -253,8 +255,8 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
-    const custodyConfig = getCustodyConfig(nodeId, config);
     this.seenGossipBlockInput = new SeenGossipBlockInput(custodyConfig);
+    this.blockInputCache = new BlockInputCache(config, custodyConfig, logger, metrics);
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();

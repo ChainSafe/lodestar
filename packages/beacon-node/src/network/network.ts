@@ -32,7 +32,7 @@ import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {CustodyConfig, getCustodyConfig} from "../util/dataColumns.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
@@ -67,11 +67,13 @@ type NetworkModules = {
   aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
   core: INetworkCore;
+  custodyConfig: CustodyConfig;
 };
 
 export type NetworkInitModules = {
   opts: NetworkOptions;
   config: BeaconConfig;
+  custodyConfig: CustodyConfig;
   peerId: PeerId;
   nodeId: NodeId;
   peerStoreDir?: string;
@@ -120,7 +122,7 @@ export class Network implements INetwork {
     this.peerId = modules.peerId;
     this.nodeId = modules.nodeId;
     this.config = modules.config;
-    this.custodyConfig = getCustodyConfig(modules.nodeId, modules.config);
+    this.custodyConfig = modules.custodyConfig;
     this.logger = modules.logger;
     this.chain = modules.chain;
     this.clock = modules.chain.clock;
@@ -144,6 +146,7 @@ export class Network implements INetwork {
   static async init({
     opts,
     config,
+    custodyConfig,
     logger,
     metrics,
     chain,
@@ -208,6 +211,7 @@ export class Network implements INetwork {
       peerId,
       nodeId,
       config,
+      custodyConfig,
       logger,
       chain,
       networkEventBus: events,

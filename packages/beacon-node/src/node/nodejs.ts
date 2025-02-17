@@ -27,6 +27,7 @@ import {Clock} from "../util/clock.js";
 import {initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
+import {getCustodyConfig} from "../util/dataColumns.js";
 
 export * from "./options.js";
 
@@ -224,8 +225,10 @@ export class BeaconNode {
       signal,
     });
 
+    const custodyConfig = getCustodyConfig(nodeId, config);
+
     const chain = new BeaconChain(opts.chain, {
-      nodeId,
+      custodyConfig,
       config,
       clock,
       db,
@@ -259,6 +262,7 @@ export class BeaconNode {
     const network = await Network.init({
       opts: opts.network,
       config,
+      custodyConfig,
       logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,
