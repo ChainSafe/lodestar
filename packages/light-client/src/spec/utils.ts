@@ -141,7 +141,7 @@ export function upgradeLightClientHeader(
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
 
-    case ForkName.peerdas:
+    case ForkName.fulu:
       throw Error("Not Implemented");
   }
   return upgradedHeader;

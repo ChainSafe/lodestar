@@ -10,8 +10,8 @@ import {
   BeaconStateCapella,
   BeaconStateDeneb,
   BeaconStateElectra,
-  BeaconStateFulu,
   BeaconStateExecutions,
+  BeaconStateFulu,
   BeaconStatePhase0,
 } from "./types.js";
 

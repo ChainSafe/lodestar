@@ -16,6 +16,7 @@ import {
   upgradeStateToDeneb,
   upgradeStateToElectra,
 } from "./slot/index.js";
+import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -26,7 +27,6 @@ import {
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
-import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 
 // Multifork capable state transition
 
