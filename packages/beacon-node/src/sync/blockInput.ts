@@ -7,7 +7,7 @@ import {
   isForkPostFulu,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {Root, RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
+import {ColumnIndex, Root, RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {LodestarError, Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
@@ -36,6 +36,8 @@ import {SyncOptions} from "./options.js";
 import {UnknownAndAncestorBlocks} from "./interface.js";
 import {computeInclusionProof} from "../util/blobs.js";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {shuffle} from "../util/shuffle.js";
+import {PeerCustody} from "../util/dataColumns.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -148,6 +150,7 @@ enum BlockInputSyncErrorCode {
   INVALID_FORK = "BLOCK_INPUT_SYNC_INVALID_FORK",
   INCOMPLETE_DATA_FETCH = "BLOCK_INPUT_SYNC_INCOMPLETE_DATA_FETCH",
   FETCH_ERROR = "BLOCK_INPUT_SYNC_FETCH_ERROR",
+  MAX_ATTEMPTS_PER_BLOCK = "BLOCK_INPUT_SYNC_MAX_ATTEMPTS_PER_BLOCK",
 }
 type BlockInputSyncErrorType =
   | {
@@ -176,6 +179,11 @@ type BlockInputSyncErrorType =
   | {
       code: BlockInputSyncErrorCode.FETCH_ERROR;
       peerId: string;
+      blockRoot: RootHex;
+      slot: Slot | string;
+    }
+  | {
+      code: BlockInputSyncErrorCode.MAX_ATTEMPTS_PER_BLOCK;
       blockRoot: RootHex;
       slot: Slot | string;
     };
@@ -446,20 +454,19 @@ export class BlockInputSync {
     block.status = PendingBlockInputStatus.fetching;
 
     // If the node loses all peers with pending unknown blocks, the sync will stall
-    const connectedPeers = this.network.getConnectedPeers();
+    let connectedPeers = this.network.getConnectedPeers();
     if (connectedPeers.length === 0) {
       this.logger.debug("No connected peers, skipping blockInput search");
       return;
     }
-
+    connectedPeers = shuffle(connectedPeers);
     block.downloadAttempts++;
 
     const resolutions: Promise<void>[] = [];
     if (block.blockInput.needBlock()) {
-      const peerIdStr = "";
       const timer = this.metrics?.syncBlockInput.block.fetchBlockRequestTime.startTimer();
       resolutions.push(
-        this.fetchBlock(block, peerIdStr)
+        this.fetchBlock(block, connectedPeers)
           .then(() => {})
           .catch((err) => {
             block.status = PendingBlockInputStatus.pending;
@@ -481,10 +488,9 @@ export class BlockInputSync {
     }
 
     if (block.blockInput.needData()) {
-      const peerIdStr = "";
       const timer = this.metrics?.syncBlockInput.data.fetchDataRequestTime.startTimer();
       resolutions.push(
-        this.fetchData(block, peerIdStr)
+        this.fetchData(block, connectedPeers)
           .then(() => {})
           .catch((err) => {
             block.status = PendingBlockInputStatus.pending;
@@ -523,14 +529,32 @@ export class BlockInputSync {
     block.status = PendingBlockInputStatus.downloaded;
   }
 
-  private async fetchBlock(block: PendingBlockInput, peerIdStr: PeerIdStr): Promise<void> {
-    this.metrics?.syncBlockInput.block.fetchBlockRequestCount.inc();
-    const response = await this.network.sendBeaconBlocksByRoot(peerIdStr, [block.blockInput.rootHex]);
-    this.metrics?.syncBlockInput.block.fetchBlockResponseCount.inc();
-    block.blockInput.addBlock(response[0].data);
+  private async fetchBlock(block: PendingBlockInput, connectedPeers: string[]): Promise<void> {
+    let attempt = 0;
+    for (const peerIdStr of connectedPeers) {
+      if (attempt >= MAX_ATTEMPTS_PER_BLOCK) {
+        throw new BlockInputSyncError({
+          code: BlockInputSyncErrorCode.MAX_ATTEMPTS_PER_BLOCK,
+          blockRoot: block.blockInput.rootHex,
+          slot: block.blockInput.slot,
+        });
+      }
+
+      this.metrics?.syncBlockInput.block.fetchBlockRequestCount.inc();
+      try {
+        const [fetched] = await this.network.sendBeaconBlocksByRoot(peerIdStr, [block.blockInput.rootHex]);
+        this.metrics?.syncBlockInput.block.fetchBlockResponseCount.inc();
+        block.blockInput.addBlock(fetched.data);
+      } catch (err) {
+        if (err as Error) {
+        }
+      }
+
+      attempt++;
+    }
   }
 
-  private async fetchData(pendingBlockInput: PendingBlockInput, peerIdStr: PeerIdStr): Promise<void> {
+  private async fetchData(pendingBlockInput: PendingBlockInput, connectedPeers: string[]): Promise<void> {
     if (isForkBlobs(pendingBlockInput.blockInput.forkName)) {
       return this.fetchBlobs(pendingBlockInput, peerIdStr);
     }
@@ -546,7 +570,7 @@ export class BlockInputSync {
     });
   }
 
-  private async fetchBlobs(pendingBlockInput: PendingBlockInput, peerIdStr: PeerIdStr): Promise<void> {
+  private async fetchBlobs(pendingBlockInput: PendingBlockInput, connectedPeers: string[]): Promise<void> {
     const blockInput = pendingBlockInput.blockInput as BlockInputBlobs;
     if (blockInput.type !== BlockInputType.Blobs) {
       throw new BlockInputSyncError("Attempting to fetch blobs for an invalid fork", {
@@ -614,7 +638,38 @@ export class BlockInputSync {
     }
   }
 
-  private async fetchColumns(pendingBlockInput: PendingBlockInput, peerIdStr: PeerIdStr): Promise<void> {
+  /**
+   * Attempt to fetch the columns in the most efficient way possible.  Given the following requirement:
+   * missingColumns = [2, 4, 6, 8, 10, 12, 14]
+   *
+   * We want to first pull from the peer that has the most overlap with what is needed via what
+   * getPeersWithBestCustody(missingColumns) returns:
+   * [
+   *    {peerIdStr: 0x1234, columns: [2, 6, 10, 12]},
+   *    {peerIdStr: 0x2345, columns: [4, 6, 8, 14]},
+   *    {peerIdStr: 0x3456, columns: [2, 4, 6]},
+   *    {peerIdStr: 0x4567, columns: [6, 14]},
+   *    {peerIdStr: 0x5678, columns: [10]},
+   * ]
+   *
+   * Loop through those peers to get a connection and valid response.  Assume 0x1234 serves a valid but
+   * partial response of columns [2, 6, 10].  Assume that peer has not yet seen column 12 so cannot serve
+   * it.
+   *
+   * The next call to blockInput.getMissingColumnIndices returns:
+   * missingColumns = [4, 8, 12, 14]
+   *
+   * the next call to getPeersWithBestCustody(missingColumns) returns:
+   * [
+   *    {peerIdStr: 0x2345, columns: [4, 8, 14]},
+   *    {peerIdStr: 0x3456, columns: [2, 4]},
+   *    {peerIdStr: 0x4567, columns: [6, 14]},
+   *    {peerIdStr: 0x1234, columns: [12]},
+   * ]
+   *
+   * Loops through in this fashion until either max attempts per peer or all the columns were received
+   */
+  private async fetchColumns(pendingBlockInput: PendingBlockInput): Promise<void> {
     const blockInput = pendingBlockInput.blockInput as BlockInputColumns;
     if (blockInput.type !== BlockInputType.Columns) {
       throw new BlockInputSyncError("Attempting to fetch columns for an invalid fork", {
@@ -624,13 +679,67 @@ export class BlockInputSync {
       });
     }
 
+    let attempts = 0;
+    // the the missing indices for columns that we need
+    let missingColumns = blockInput.getMissingColumnIndices();
+    // loop while we are missing columns or until we reach the max number of attempts for this round
+    // MAX_FETCHES_PER_SYNC_ATTEMPT should be set at, or below, MAX_REQUEST_BLOCKS_DENEB so we don't
+    // get rate limited/baned by our peers
+    while (missingColumns.length && attempts < MAX_FETCHES_PER_SYNC_ATTEMPT) {
+      attempts++;
+      // always attempt to pull from a peer that has the most number of columns that we need
+      const sorted = this.getPeersWithBestCustody(missingColumns);
+      for (const {peerIdStr, columns} of sorted) {
+        try {
+          this.fetchColumn(blockInput, columns, peerIdStr);
+        } catch {
+          break;
+        }
+      }
+      missingColumns = blockInput.getMissingColumnIndices();
+    }
+  }
+
+  private getPeersWithBestCustody(missingColumns: ColumnIndex[]): {peerIdStr: string; columns: ColumnIndex[]}[] {
+    const peers = new Map<string, number[]>();
+    for (const columnIndex of missingColumns) {
+      const peersWithCustody = this.network.getPeersWithCustody(columnIndex);
+      for (const {peerIdStr} of peersWithCustody) {
+        let custody = peers.get(peerIdStr);
+        if (!custody) custody = [];
+        custody.push(columnIndex);
+        peers.set(peerIdStr, custody);
+      }
+    }
+
+    return Array.from(peers.entries())
+      .map(([peerIdStr, columns]) => ({peerIdStr, columns}))
+      .sort((a, b) => a.columns.length - b.columns.length);
+  }
+
+  private async fetchColumn(
+    blockInput: BlockInputColumns,
+    requestedColumns: ColumnIndex[],
+    peerIdStr: PeerIdStr
+  ): Promise<boolean> {
     const columns = await this.network.sendDataColumnSidecarsByRoot(
       peerIdStr,
-      blockInput.getNeededColumnIndices().map((index) => ({index, blockRoot: blockInput.blockRoot}))
+      requestedColumns.map((index) => ({index, blockRoot: blockInput.blockRoot}))
     );
 
     for (const column of columns) {
       blockInput.addColumnSidecar(column);
+    }
+
+    if (columns.length !== requestedColumns.length) {
+      const indexesReceived = columns.map(({index}) => index);
+      const missingColumns = requestedColumns.filter((index) => !indexesReceived.includes(index));
+      this.logger.debug("Peer did not respond with all data in BlockInputSync.fetchColumns", {
+        peerIdStr,
+        missingColumns,
+        requested: requestedColumns.length,
+        received: columns.length,
+      });
     }
   }
 }

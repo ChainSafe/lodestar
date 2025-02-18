@@ -32,6 +32,11 @@ export type CustodyConfig = {
   sampledColumns: ColumnIndex[];
 };
 
+export type PeerCustody = {
+  peerIdStr: string;
+  clientAgent: string;
+};
+
 export function getCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
   const numberOfCustodyGroups = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
   const custodyColumns = getDataColumns(nodeId, numberOfCustodyGroups);

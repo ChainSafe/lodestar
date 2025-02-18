@@ -16,6 +16,7 @@ import {
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import {
   AttesterSlashing,
+  ColumnIndex,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -33,7 +34,7 @@ import {
 } from "@lodestar/types";
 import type {Datastore} from "interface-datastore";
 import {Libp2p as ILibp2p} from "libp2p";
-import {CustodyConfig} from "../util/dataColumns.js";
+import {CustodyConfig, PeerCustody} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCorePublic} from "./core/types.js";
@@ -63,6 +64,7 @@ export interface INetwork extends INetworkCorePublic {
 
   getConnectedPeers(): PeerIdStr[];
   getConnectedPeerCustody(peerId: PeerIdStr): number[];
+  getPeersWithCustody(column: ColumnIndex[]): PeerCustody[];
   getConnectedPeerClientAgent(peerId: PeerIdStr): string;
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;

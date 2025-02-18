@@ -32,7 +32,7 @@ import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {CustodyConfig} from "../util/dataColumns.js";
+import {CustodyConfig, PeerCustody} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
@@ -115,6 +115,7 @@ export class Network implements INetwork {
 
   private subscribedToCoreTopics = false;
   private connectedPeers = new Map<PeerIdStr, ColumnIndex[]>();
+  private columnCustody = new Map<ColumnIndex, Map<PeerIdStr, string>>();
   private connectedPeerClients = new Map<PeerIdStr, string>();
   private regossipBlsChangesPromise: Promise<void> | null = null;
 
@@ -141,6 +142,10 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
       this.onLightClientOptimisticUpdate(data)
     );
+
+    for (let index = 0; index < NUMBER_OF_COLUMNS; index++) {
+      this.columnCustody.set(index, new Set<string>());
+    }
   }
 
   static async init({
@@ -280,6 +285,16 @@ export class Network implements INetwork {
   // REST API queries
   getConnectedPeers(): PeerIdStr[] {
     return Array.from(this.connectedPeers.keys());
+  }
+
+  getPeersWithCustody(column: ColumnIndex): PeerCustody[] {
+    const custody = this.columnCustody.get(column);
+    if (!custody) return [];
+    const peers: PeerCustody[] = [];
+    for (const [peerIdStr, clientAgent] of custody.entries()) {
+      peers.push({peerIdStr, clientAgent});
+    }
+    return peers;
   }
 
   // TODO: @matthewkeil check if this needs to be updated for custody groups
@@ -704,11 +719,26 @@ export class Network implements INetwork {
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     this.logger.warn("onPeerConnected", {peer: data.peer, dataColumns: data.dataColumns.join(" ")});
-    this.connectedPeers.set(data.peer, data.dataColumns);
     this.connectedPeerClients.set(data.peer, data.clientAgent);
+    this.connectedPeers.set(data.peer, data.dataColumns);
+    for (const index of data.dataColumns) {
+      let custody = this.columnCustody.get(index);
+      if (!custody) custody = new Map();
+      this.columnCustody.set(index, custody.set(data.peer, data.clientAgent));
+    }
   };
 
   private onPeerDisconnected = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
+    const columns = this.connectedPeers.get(data.peer);
+    for (const column of columns) {
+      let custody = this.columnCustody.get(column);
+      if (!custody) custody = new Map();
+      custody.delete(data.peer);
+      if (custody.size() === 0) {
+        this.logger.warn(`No remaining peers with custody of column=${column}`);
+      }
+      this.columnCustody.set(column, custody);
+    }
     this.connectedPeers.delete(data.peer);
   };
 }
