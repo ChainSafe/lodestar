@@ -27,8 +27,6 @@ import {
 } from "../../../utils/metadata.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 export const BlockHeaderResponseType = new ContainerType({
   root: ssz.Root,
   canonical: ssz.Boolean,

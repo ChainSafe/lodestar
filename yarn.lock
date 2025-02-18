@@ -12410,10 +12410,10 @@ typedarray@^0.0.6:
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==
 
-typescript-docs-verifier@^2.5.0:
-  version "2.5.0"
-  resolved "https://registry.yarnpkg.com/typescript-docs-verifier/-/typescript-docs-verifier-2.5.0.tgz#5a39c89b492aca31100b20affd477913daa82f7d"
-  integrity sha512-h+1fW9LEJi5Q8fMZxdpVoXjGQohx7CAYTylF5JWmmj6IM0J21HgII1vpLAX/Q5B+jlIg8V7v7sGfwBI7LIG4oA==
+typescript-docs-verifier@^2.5.3:
+  version "2.5.3"
+  resolved "https://registry.yarnpkg.com/typescript-docs-verifier/-/typescript-docs-verifier-2.5.3.tgz#2fcb393cdae955a2c86bf272008cf6f7fb3d1fbf"
+  integrity sha512-fATV69QQZzIQWDGfUzo2USUcUTK0hPqTm7XZuyHf4QOkZUshnkwDk8TEk2IxaIlHxKjbM+5RtyDgxCtKYycjXA==
   dependencies:
     chalk "^4.1.2"
     fs-extra "^10.0.0"
