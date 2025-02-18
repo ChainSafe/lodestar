@@ -9,8 +9,6 @@ import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {BlockArgs} from "./block.js";
 import {ValidatorId} from "./state.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 const BlockRewardsType = new ContainerType(
   {
     /** Proposer of the block, the proposer index who receives these rewards */

@@ -23,8 +23,6 @@ import {getPostAltairForkTypes, toForkName} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 export const HashListType = new ListCompositeType(ssz.Root, 10000);
 export type HashList = ValueOf<typeof HashListType>;
 
