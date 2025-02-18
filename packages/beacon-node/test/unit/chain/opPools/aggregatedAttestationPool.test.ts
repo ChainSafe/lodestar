@@ -223,7 +223,7 @@ describe("AggregatedAttestationPool - Electra", () => {
   });
 
   it("Multiple attestations with same attestation data different committee", () => {
-    // Attestation from committtee 0
+    // Attestation from committee 0
     const committeeBits0 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0);
 
     const attestation0: Attestation<ForkPostElectra> = {
@@ -232,7 +232,7 @@ describe("AggregatedAttestationPool - Electra", () => {
       committeeBits: committeeBits0,
     };
 
-    // Attestation from committtee 1
+    // Attestation from committee 1
     const committeeBits1 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 1);
 
     const attestation1: Attestation<ForkPostElectra> = {
@@ -240,7 +240,7 @@ describe("AggregatedAttestationPool - Electra", () => {
       aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
       committeeBits: committeeBits1,
     };
-    // Attestation from committtee 2
+    // Attestation from committee 2
     const committeeBits2 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 2);
 
     const attestation2: Attestation<ForkPostElectra> = {
@@ -249,7 +249,7 @@ describe("AggregatedAttestationPool - Electra", () => {
       committeeBits: committeeBits2,
     };
 
-    // Attestation from committtee 3
+    // Attestation from committee 3
     const committeeBits3 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 3);
 
     const attestation3: Attestation<ForkPostElectra> = {
@@ -260,11 +260,11 @@ describe("AggregatedAttestationPool - Electra", () => {
 
     pool.add(attestation0, attDataRootHex, attestation0.aggregationBits.getTrueBitIndexes().length, committees[0]);
 
-    pool.add(attestation1, attDataRootHex, attestation0.aggregationBits.getTrueBitIndexes().length, committees[1]);
+    pool.add(attestation1, attDataRootHex, attestation1.aggregationBits.getTrueBitIndexes().length, committees[1]);
 
-    pool.add(attestation2, attDataRootHex, attestation0.aggregationBits.getTrueBitIndexes().length, committees[2]);
+    pool.add(attestation2, attDataRootHex, attestation2.aggregationBits.getTrueBitIndexes().length, committees[2]);
 
-    pool.add(attestation3, attDataRootHex, attestation0.aggregationBits.getTrueBitIndexes().length, committees[3]);
+    pool.add(attestation3, attDataRootHex, attestation3.aggregationBits.getTrueBitIndexes().length, committees[3]);
 
     forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
     forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
