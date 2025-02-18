@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
+import {ForkPostBellatrix, SLOTS_PER_HISTORICAL_ROOT, isForkPostBellatrix, isForkPostElectra} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -240,7 +240,7 @@ export function getBeaconBlockApi({
     const slot = signedBlindedBlock.message.slot;
     const blockRoot = toRootHex(
       chain.config
-        .getExecutionForkTypes(signedBlindedBlock.message.slot)
+        .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
 
@@ -392,8 +392,8 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       return {
-        data: isForkExecution(fork)
-          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkExecution>)
+        data: isForkPostBellatrix(fork)
+          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix>)
           : block,
         meta: {
           executionOptimistic,

@@ -1,15 +1,15 @@
 import {
   ForkAll,
-  ForkBlobs,
-  ForkExecution,
-  ForkLightClient,
   ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
   ForkSeq,
   GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
-  isForkBlobs,
-  isForkExecution,
-  isForkLightClient,
+  isForkPostAltair,
+  isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
@@ -109,24 +109,24 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F> {
       return sszTypesFor(this.getForkName(slot)) as SSZTypesFor<F>;
     },
-    getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution> {
+    getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkPostBellatrix> {
       const forkName = this.getForkName(slot);
-      if (!isForkExecution(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
+      if (!isForkPostBellatrix(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-bellatrix fork types`);
       }
       return sszTypesFor(forkName);
     },
-    getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
+    getPostAltairForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair> {
       const forkName = this.getForkName(slot);
-      if (!isForkLightClient(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
+      if (!isForkPostAltair(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-altair fork types`);
       }
       return sszTypesFor(forkName);
     },
-    getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
+    getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb> {
       const forkName = this.getForkName(slot);
-      if (!isForkBlobs(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
+      if (!isForkPostDeneb(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-deneb fork types`);
       }
       return sszTypesFor(forkName);
     },

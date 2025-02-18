@@ -16,8 +16,6 @@ import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 export type SyncChainDebugState = {
   targetRoot: string | null;
   targetSlot: number | null;

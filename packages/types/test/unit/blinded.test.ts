@@ -1,4 +1,4 @@
-import {ForkName, isForkExecution} from "@lodestar/params";
+import {ForkName, isForkPostBellatrix} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {ssz} from "../../src/index.js";
 
@@ -11,7 +11,7 @@ describe("blinded data structures", () => {
 
     for (const {a, b} of blindedTypes) {
       for (const fork of Object.keys(ssz.sszTypesFor) as ForkName[]) {
-        if (!isForkExecution(fork)) {
+        if (!isForkPostBellatrix(fork)) {
           continue;
         }
 

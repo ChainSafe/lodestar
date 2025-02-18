@@ -34,7 +34,7 @@ export function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The received finality_update matches the locally computed one exactly
-  const sszType = config.getLightClientForkTypes(
+  const sszType = config.getPostAltairForkTypes(
     gossipedFinalityUpdate.attestedHeader.beacon.slot
   ).LightClientFinalityUpdate;
   if (localFinalityUpdate === null || !sszType.equals(gossipedFinalityUpdate, localFinalityUpdate)) {

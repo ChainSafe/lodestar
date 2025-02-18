@@ -287,6 +287,11 @@ export const PendingPartialWithdrawal = new ContainerType(
   {typeName: "PendingPartialWithdrawal", jsonCase: "eth2"}
 );
 
+export const PendingPartialWithdrawals = new ListCompositeType(
+  PendingPartialWithdrawal,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT
+);
+
 export const PendingConsolidation = new ContainerType(
   {
     sourceIndex: ValidatorIndex,
@@ -294,6 +299,8 @@ export const PendingConsolidation = new ContainerType(
   },
   {typeName: "PendingConsolidation", jsonCase: "eth2"}
 );
+
+export const PendingConsolidations = new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT);
 
 // In EIP-7251, we spread deneb fields as new fields are appended at the end
 export const BeaconState = new ContainerType(
@@ -345,8 +352,8 @@ export const BeaconState = new ContainerType(
     consolidationBalanceToConsume: Gwei, // New in ELECTRA:EIP7251
     earliestConsolidationEpoch: Epoch, // New in ELECTRA:EIP7251
     pendingDeposits: PendingDeposits, // New in ELECTRA:EIP7251
-    pendingPartialWithdrawals: new ListCompositeType(PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // New in ELECTRA:EIP7251
-    pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // New in ELECTRA:EIP7251
+    pendingPartialWithdrawals: PendingPartialWithdrawals, // New in ELECTRA:EIP7251
+    pendingConsolidations: PendingConsolidations, // New in ELECTRA:EIP7251
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

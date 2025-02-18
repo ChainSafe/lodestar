@@ -2,7 +2,7 @@ import {WireFormat} from "@lodestar/api";
 import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
-import {ForkExecution, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPostBellatrix, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -152,7 +152,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async getHeader(
-    _fork: ForkExecution,
+    _fork: ForkPostBellatrix,
     slot: Slot,
     parentHash: Root,
     proposerPubkey: BLSPubkey
