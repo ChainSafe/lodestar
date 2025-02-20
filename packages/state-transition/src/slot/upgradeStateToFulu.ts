@@ -3,13 +3,13 @@ import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateElectra, CachedBeaconStateFulu} from "../types.js";
 
 /**
- * Upgrade a state from Capella to Deneb.
+ * Upgrade a state from Electra to Fulu.
  */
 export function upgradeStateToFulu(stateElectra: CachedBeaconStateElectra): CachedBeaconStateFulu {
   const {config} = stateElectra;
 
   const stateElectraNode = ssz.electra.BeaconState.commitViewDU(stateElectra);
-  const stateFuluView = ssz.electra.BeaconState.getViewDU(stateElectraNode);
+  const stateFuluView = ssz.fulu.BeaconState.getViewDU(stateElectraNode);
 
   const stateFulu = getCachedBeaconState(stateFuluView, stateElectra);
 
@@ -21,8 +21,6 @@ export function upgradeStateToFulu(stateElectra: CachedBeaconStateElectra): Cach
 
   stateFulu.commit();
   // Clear cache to ensure the cache of capella fields is not used by new deneb fields
-  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
-  stateFulu["clearCache"]();
 
   return stateFulu;
 }
