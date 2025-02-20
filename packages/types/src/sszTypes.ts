@@ -6,6 +6,7 @@ import {ssz as capella} from "./capella/index.js";
 import {ssz as deneb} from "./deneb/index.js";
 import {ssz as electra} from "./electra/index.js";
 import {ssz as phase0} from "./phase0/index.js";
+import {fulu} from "../lib/sszTypes.js";
 
 export * from "./primitive/sszTypes.js";
 export {phase0, altair, bellatrix, capella, deneb, electra, electra as fulu};
@@ -21,7 +22,7 @@ const typesByFork = {
   [ForkName.capella]: {...phase0, ...altair, ...bellatrix, ...capella},
   [ForkName.deneb]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb},
   [ForkName.electra]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
-  [ForkName.fulu]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
+  [ForkName.fulu]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra, ...fulu},
 };
 
 /**
