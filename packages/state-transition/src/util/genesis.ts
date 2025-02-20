@@ -320,6 +320,16 @@ export function initializeBeaconStateFromEth1(
     stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
   }
 
+  if (fork >= ForkSeq.fulu) {
+    const stateFulu = state as CompositeViewDU<typeof ssz.fulu.BeaconState>;
+    stateFulu.fork.previousVersion = config.FULU_FORK_VERSION;
+    stateFulu.fork.currentVersion = config.FULU_FORK_VERSION;
+    stateFulu.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
+      ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
+    stateFulu.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+  }
+
   state.commit();
 
   return state;
