@@ -327,7 +327,6 @@ export function initializeBeaconStateFromEth1(
     stateFulu.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
       ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
-    stateFulu.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
   }
 
   state.commit();
