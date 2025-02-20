@@ -42,7 +42,10 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
 
   // Check each key for better debuggability
   for (const key of Object.keys(remotePreset) as (keyof BeaconPreset)[]) {
-    expect(filteredLocalPreset[key]).toBe(remotePreset[key]);
+    const localValue = filteredLocalPreset[key];
+    const remoteValue = remotePreset[key];
+
+    expect(localValue).toBeWithMessage(remoteValue, `${key} does not match ${localValue} != ${remoteValue}`);
   }
 
   expect(filteredLocalPreset).toEqual(remotePreset);
