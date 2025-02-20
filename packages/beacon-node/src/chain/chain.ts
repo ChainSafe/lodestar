@@ -873,6 +873,36 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  /**
+   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
+   * persist preState, postState and block for further investigation.
+   */
+  async persistInvalidStateRoot(
+    preState: CachedBeaconStateAllForks,
+    postState: CachedBeaconStateAllForks,
+    block: SignedBeaconBlock
+  ): Promise<void> {
+    const blockSlot = block.message.slot;
+    const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
+    const postStateRoot = postState.hashTreeRoot();
+    const suffix = `slot_${blockSlot}_invalid_state_root_${toRootHex(postStateRoot)}`;
+    await Promise.all([
+      this.persistSszObject("SignedBeaconBlock", blockType.serialize(block), blockType.hashTreeRoot(block), suffix),
+      this.persistSszObject(
+        `preState_${preState.type.typeName}_${preState.slot}`,
+        preState.serialize(),
+        preState.hashTreeRoot(),
+        suffix
+      ),
+      this.persistSszObject(
+        `postState_${postState.type.typeName}_${postState.slot}`,
+        postState.serialize(),
+        postState.hashTreeRoot(),
+        suffix
+      ),
+    ]);
+  }
+
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
