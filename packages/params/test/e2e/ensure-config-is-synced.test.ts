@@ -50,12 +50,14 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {
   const downloadedParams = await Promise.all(
-    Object.values(ForkName).map((forkName) =>
-      axios({
-        url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
-        timeout: 30 * 1000,
-      }).then((response) => loadConfigYaml(response.data))
-    )
+    Object.values(ForkName).map((forkName) => {
+      if (forkName !== ForkName.fulu) {
+        return axios({
+          url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
+          timeout: 30 * 1000,
+        }).then((response) => loadConfigYaml(response.data));
+      }
+    })
   );
 
   // Merge all the fetched yamls for the different forks
