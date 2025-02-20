@@ -40,4 +40,7 @@ export const chiadoChainConfig: ChainConfig = {
   // Electra
   ELECTRA_FORK_VERSION: b("0x0500006f"),
   ELECTRA_FORK_EPOCH: Infinity,
+  // Fulu
+  FULU_FORK_VERSION: b("0x0600006f"),
+  FULU_FORK_EPOCH: Infinity,
 };
