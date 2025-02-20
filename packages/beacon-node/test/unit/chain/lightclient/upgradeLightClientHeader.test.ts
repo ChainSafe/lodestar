@@ -39,7 +39,7 @@ describe("UpgradeLightClientHeader", () => {
       capella: 25,
       deneb: 33,
       electra: 41,
-      fulu: 0,
+      fulu: 54,
     };
   });
 
