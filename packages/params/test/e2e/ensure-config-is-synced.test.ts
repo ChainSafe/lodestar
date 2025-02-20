@@ -55,7 +55,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const downloadedParams = await Promise.all(
     Object.values(ForkName)
       .map((forkName) => {
-        // TODO Fulu: remove this
+        // TODO Fulu: check against remote presets
         if (forkName !== ForkName.fulu) {
           return axios({
             url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
