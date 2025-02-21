@@ -196,6 +196,8 @@ export type ImportBlockOpts = {
   seenTimestampSec?: number;
   /** Set to true if persist block right at verification time */
   eagerPersistBlock?: boolean;
+  /** Set to true if we want to delay fcu call until when preparing next slot */
+  delayFcu?: boolean;
 };
 
 /**

@@ -292,9 +292,8 @@ export async function importBlock(
   // calling fcu with this block too early causes the EL to ignore the next fcu call to build block with reorg data.
   // see https://github.com/ChainSafe/lodestar/issues/7235
 
-  if (opts.seenTimestampSec == null) {
-    // during syncing time, we still want to notify EL asap
-    // error is catch and logged in notifyForkchoiceUpdate()
+  // the only time we want to delay fcu is when we receive a block from gossip
+  if (!opts?.delayFcu) {
     void this.notifyForkchoiceUpdate();
   }
 
