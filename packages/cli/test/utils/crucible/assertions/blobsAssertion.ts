@@ -12,6 +12,7 @@ export function createBlobsAssertion(
   nodes: NodePair[],
   {sendBlobsAtSlot, validateBlobsAt}: {sendBlobsAtSlot: number; validateBlobsAt: number}
 ): Assertion<string, Uint8Array[]> {
+  let nonce = 0;
   return {
     id: `blobs-${nodes.map((n) => n.id).join("-")}`,
     match: ({slot}) => {
@@ -28,7 +29,8 @@ export function createBlobsAssertion(
       // slot starts from 1, so we add up 1
       if (slot <= numberOfBlobs + 1 && node.id === "node-1") {
         const {blobs, kzgCommitments, blobVersionedHashes, kzgProofs} = generateBlobsForTransaction(1);
-        const nonce = await node.execution.provider?.eth.getTransactionCount(EL_GENESIS_ACCOUNT);
+        // since the delay_fcu flag, calling to get nonce here will cause duplicate
+        // const nonce = await node.execution.provider?.eth.getTransactionCount(EL_GENESIS_ACCOUNT);
         const tx = BlobsEIP4844Transaction.fromTxData({
           chainId: `0x${SIM_ENV_CHAIN_ID.toString(16)}`,
           to: `0x${randomBytes(20).toString("hex")}`,
@@ -45,7 +47,7 @@ export function createBlobsAssertion(
         });
         const signedTx = tx.sign(fromHex(`0x${EL_GENESIS_SECRET_KEY}`));
         await node.execution.provider?.extended.sendRawTransaction(toHex(signedTx.serialize()));
-
+        nonce++;
         sentBlobs.push(...blobs.map((b) => fromHex(b)));
       }
 
