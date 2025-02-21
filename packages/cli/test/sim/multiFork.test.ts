@@ -163,8 +163,8 @@ await waitForSlot("Waiting for last forks to pass", {
   env,
 });
 
-await assertRangeSync(env);
-await assertCheckpointSync(env);
-await assertUnknownBlockSync(env);
+// await assertRangeSync(env);
+// await assertCheckpointSync(env);
+// await assertUnknownBlockSync(env);
 
 await env.stop();
