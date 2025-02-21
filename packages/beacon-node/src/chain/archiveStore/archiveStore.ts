@@ -8,7 +8,7 @@ import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
 import {FrequentStateArchiveObserver} from "./observers/frequentStateArchvieObserver.js";
 import {PruneHotStateObserver} from "./observers/pruneHotStateObserver.js";
-import { archiveState } from "./utils/frequentStateArchive.js";
+import {archiveState} from "./utils/frequentStateArchive.js";
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -31,7 +31,7 @@ export class ArchiveStore {
     this.archiveMode = opts.archiveMode;
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
-    
+
     if (!opts.disableArchiveOnCheckpoint) {
       const pruneHotStateObserver = new PruneHotStateObserver({
         forkChoice: this.chain.forkChoice,
@@ -81,6 +81,15 @@ export class ArchiveStore {
 
   /** Archive latest finalized state */
   async persistToDisk(): Promise<void> {
-    return archiveState({bufferPool: this.chain.bufferPool, db: this.db, logger: this.logger, regen: this.chain.regen, metrics: this.metrics}, this.chain.forkChoice.getFinalizedCheckpoint());
+    return archiveState(
+      {
+        bufferPool: this.chain.bufferPool,
+        db: this.db,
+        logger: this.logger,
+        regen: this.chain.regen,
+        metrics: this.metrics,
+      },
+      this.chain.forkChoice.getFinalizedCheckpoint()
+    );
   }
 }

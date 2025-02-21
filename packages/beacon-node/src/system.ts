@@ -42,13 +42,19 @@ export abstract class ChainObserver extends ObserverHandlers {
     for (const handlerName of handlerNames) {
       const handler = this[handlerName];
       if (handler) {
-        this.logger.verbose("subscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+        this.logger.verbose("subscribing chain event", {
+          observer: this.constructor.name,
+          event: handlersEventMap[handlerName],
+        });
 
         const boundedHandler = handler.bind(this);
         emitter.addListener(handlersEventMap[handlerName], boundedHandler);
 
         this.cleanupHandlers.push(() => {
-          this.logger.verbose("unsubscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+          this.logger.verbose("unsubscribing chain event", {
+            observer: this.constructor.name,
+            event: handlersEventMap[handlerName],
+          });
           emitter.removeListener(handlersEventMap[handlerName], boundedHandler);
         });
       }
@@ -92,14 +98,23 @@ export abstract class QueueObserver extends ChainObserver {
     for (const handlerName of handlerNames) {
       if (this[handlerName]) {
         const eventHandler = (...args: unknown[]) => {
-          this.logger.verbose("pushing event to queue", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+          this.logger.verbose("pushing event to queue", {
+            observer: this.constructor.name,
+            event: handlersEventMap[handlerName],
+          });
           this.jobQueue.push(handlerName, args);
         };
-        this.logger.verbose("subscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+        this.logger.verbose("subscribing chain event", {
+          observer: this.constructor.name,
+          event: handlersEventMap[handlerName],
+        });
         emitter.addListener(handlersEventMap[handlerName], eventHandler);
 
         this.cleanupHandlers.push(() => {
-          this.logger.verbose("unsubscribing chain event", {observer: this.constructor.name, event: handlersEventMap[handlerName]});
+          this.logger.verbose("unsubscribing chain event", {
+            observer: this.constructor.name,
+            event: handlersEventMap[handlerName],
+          });
           emitter.removeListener(handlersEventMap[handlerName], eventHandler);
         });
       }
