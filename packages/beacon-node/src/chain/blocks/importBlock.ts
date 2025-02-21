@@ -292,6 +292,11 @@ export async function importBlock(
   // calling fcu with this block too early causes the EL to ignore the next fcu call to build block with reorg data.
   // see https://github.com/ChainSafe/lodestar/issues/7235
 
+  // the only time we want to delay fcu is when we receive a block from gossip
+  if (!opts?.delayFcu) {
+    void this.notifyForkchoiceUpdate();
+  }
+
   if (!isStateValidatorsNodesPopulated(postState)) {
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
