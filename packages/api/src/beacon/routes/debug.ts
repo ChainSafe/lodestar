@@ -19,8 +19,6 @@ import {Endpoint, RouteDefinitions} from "../../utils/types.js";
 import {WireFormat} from "../../utils/wireFormat.js";
 import {StateArgs} from "./beacon/state.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 const stringType = new StringType();
 const ProtoNodeType = new ContainerType(
   {

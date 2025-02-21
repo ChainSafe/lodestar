@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
+import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
   LightClientBootstrap,
@@ -109,18 +109,18 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
-  [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientBootstrap,
-  [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientUpdate,
-  [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyLightclientFork(fork)).LightClientFinalityUpdate,
+  [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
+  [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
+  [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
-    sszTypesFor(onlyLightclientFork(fork)).LightClientOptimisticUpdate,
+    sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
 };
 
-function onlyLightclientFork(fork: ForkName): ForkLightClient {
-  if (isForkLightClient(fork)) {
+function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
+  if (isForkPostAltair(fork)) {
     return fork;
   }
-  throw Error(`Not a lightclient fork ${fork}`);
+  throw Error(`Not a post-altair fork ${fork}`);
 }
 
 export type RequestTypedContainer = {

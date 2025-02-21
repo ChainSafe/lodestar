@@ -706,7 +706,9 @@ export class BeaconChain implements IBeaconChain {
     const bodyRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
-        : this.config.getExecutionForkTypes(slot).BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
+        : this.config
+            .getPostBellatrixForkTypes(slot)
+            .BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
     this.logger.debug("Computing block post state from the produced body", {
       slot,
       bodyRoot: toRootHex(bodyRoot),
@@ -726,7 +728,7 @@ export class BeaconChain implements IBeaconChain {
     const blockRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
-        : this.config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
+        : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toRootHex(blockRoot);
 
     // track the produced block for consensus broadcast validations
@@ -863,7 +865,7 @@ export class BeaconChain implements IBeaconChain {
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
-      const sszType = this.config.getExecutionForkTypes(slot).BlindedBeaconBlock;
+      const sszType = this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock;
       void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
     } else {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;

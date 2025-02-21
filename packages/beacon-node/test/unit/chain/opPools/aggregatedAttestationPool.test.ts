@@ -4,13 +4,15 @@ import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   FAR_FUTURE_EPOCH,
   ForkName,
+  ForkPostElectra,
   MAX_COMMITTEES_PER_SLOT,
   MAX_EFFECTIVE_BALANCE,
+  MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
-import {phase0, ssz} from "@lodestar/types";
+import {Attestation, phase0, ssz} from "@lodestar/types";
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   AggregatedAttestationPool,
@@ -25,7 +27,7 @@ import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {renderBitArray} from "../../../utils/render.js";
-import {generateCachedAltairState} from "../../../utils/state.js";
+import {generateCachedAltairState, generateCachedElectraState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 import {generateValidators} from "../../../utils/validator.js";
 
@@ -34,7 +36,7 @@ const validSignature = fromHexString(
   "0xb2afb700f6c561ce5e1b4fedaec9d7c06b822d38c720cf588adfda748860a940adf51634b6788f298c552de40183b5a203b2bbe8b7dd147f0bb5bc97080a12efbb631c8888cb31a99cc4706eb3711865b8ea818c10126e4d818b542e9dbf9ae8"
 );
 
-describe("AggregatedAttestationPool", () => {
+describe("AggregatedAttestationPool - Altair", () => {
   let pool: AggregatedAttestationPool;
   const fork = ForkName.altair;
   const config = createChainForkConfig({
@@ -155,6 +157,127 @@ describe("AggregatedAttestationPool", () => {
     expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
     // "forkchoice should be called to check pivot block"
     expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AggregatedAttestationPool - Electra", () => {
+  let pool: AggregatedAttestationPool;
+  const fork = ForkName.electra;
+  const electraForkEpoch = 2020;
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: electraForkEpoch,
+  });
+  const currentEpoch = electraForkEpoch + 10;
+  const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
+
+  const committeeIndices = [0, 1, 2, 3];
+  const attestation = ssz.electra.Attestation.defaultValue();
+  attestation.data.slot = currentSlot;
+  attestation.data.index = 0; // Must be zero post-electra
+  attestation.data.target.epoch = currentEpoch;
+  attestation.signature = validSignature;
+  const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
+
+  const validatorOpts = {
+    activationEpoch: 0,
+    effectiveBalance: MAX_EFFECTIVE_BALANCE,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+    exitEpoch: FAR_FUTURE_EPOCH,
+  };
+  // this makes a committee length of 4
+  const vc = 1024;
+  const committeeLength = 32;
+  const validators = generateValidators(vc, validatorOpts);
+  const originalState = generateCachedElectraState({slot: currentSlot + 1, validators}, electraForkEpoch);
+  expect(originalState.epochCtx.getCommitteeCountPerSlot(currentEpoch)).toEqual(committeeIndices.length);
+
+  const committees = originalState.epochCtx.getBeaconCommittees(currentSlot, committeeIndices);
+
+  const epochParticipation = newFilledArray(vc, 0b000);
+  for (const committee of committees) {
+    expect(committee.length).toEqual(committeeLength);
+  }
+
+  (originalState as CachedBeaconStateElectra).previousEpochParticipation =
+    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
+  (originalState as CachedBeaconStateElectra).currentEpochParticipation =
+    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
+  originalState.commit();
+  let electraState: CachedBeaconStateAllForks;
+
+  let forkchoiceStub: MockedForkChoice;
+
+  beforeEach(() => {
+    pool = new AggregatedAttestationPool(config);
+    electraState = originalState.clone();
+    forkchoiceStub = getMockedForkChoice();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("Multiple attestations with same attestation data different committee", () => {
+    // Attestation from committee 0
+    const committeeBits0 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0);
+
+    const attestation0: Attestation<ForkPostElectra> = {
+      ...attestation,
+      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
+      committeeBits: committeeBits0,
+    };
+
+    // Attestation from committee 1
+    const committeeBits1 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 1);
+
+    const attestation1: Attestation<ForkPostElectra> = {
+      ...attestation,
+      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
+      committeeBits: committeeBits1,
+    };
+    // Attestation from committee 2
+    const committeeBits2 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 2);
+
+    const attestation2: Attestation<ForkPostElectra> = {
+      ...attestation,
+      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
+      committeeBits: committeeBits2,
+    };
+
+    // Attestation from committee 3
+    const committeeBits3 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 3);
+
+    const attestation3: Attestation<ForkPostElectra> = {
+      ...attestation,
+      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
+      committeeBits: committeeBits3,
+    };
+
+    pool.add(attestation0, attDataRootHex, attestation0.aggregationBits.getTrueBitIndexes().length, committees[0]);
+
+    pool.add(attestation1, attDataRootHex, attestation1.aggregationBits.getTrueBitIndexes().length, committees[1]);
+
+    pool.add(attestation2, attDataRootHex, attestation2.aggregationBits.getTrueBitIndexes().length, committees[2]);
+
+    pool.add(attestation3, attDataRootHex, attestation3.aggregationBits.getTrueBitIndexes().length, committees[3]);
+
+    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+    forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
+
+    const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, electraState);
+
+    expect(blockAttestations.length).toBe(1); // Expect attestations from committee 0, 1, 2 and 3 to be aggregated into one
+    expect((blockAttestations[0] as Attestation<ForkPostElectra>).committeeBits.getTrueBitIndexes()).toStrictEqual(
+      committeeIndices
+    );
+    expect((blockAttestations[0] as Attestation<ForkPostElectra>).aggregationBits.bitLen).toStrictEqual(
+      committeeLength * 4
+    );
   });
 });
 
@@ -375,7 +498,6 @@ describe("aggregateConsolidation", () => {
         byCommittee: new Map(),
         attData: attData,
         totalNotSeenCount: 0,
-        score: 0,
       };
       // to simplify, instead of signing the signingRoot, just sign the attData root
       const sigArr = skArr.map((sk) => sk.sign(ssz.phase0.AttestationData.hashTreeRoot(attData)));

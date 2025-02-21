@@ -8,12 +8,7 @@ import {testData} from "./testData.js";
 
 describe("builder", () => {
   runGenericServerTest<Endpoints>(
-    createChainForkConfig({
-      ...defaultChainConfig,
-      ALTAIR_FORK_EPOCH: 0,
-      BELLATRIX_FORK_EPOCH: 0,
-      DENEB_FORK_EPOCH: 0,
-    }),
+    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
     getClient,
     getRoutes,
     testData

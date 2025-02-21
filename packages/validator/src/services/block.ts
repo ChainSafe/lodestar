@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkBlobs, ForkExecution, ForkName, ForkPreBlobs, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPostDeneb, ForkPreDeneb, ForkSeq} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -28,15 +28,15 @@ import {ValidatorStore} from "./validatorStore.js";
 //  iii) a blinded block post bellatrix
 type FullOrBlindedBlockWithContents =
   | {
-      version: ForkPreBlobs;
-      block: BeaconBlock<ForkPreBlobs>;
+      version: ForkPreDeneb;
+      block: BeaconBlock<ForkPreDeneb>;
       contents: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
-      version: ForkBlobs;
-      block: BeaconBlock<ForkBlobs>;
+      version: ForkPostDeneb;
+      block: BeaconBlock<ForkPostDeneb>;
       contents: {
         kzgProofs: deneb.KZGProofs;
         blobs: deneb.Blobs;
@@ -45,7 +45,7 @@ type FullOrBlindedBlockWithContents =
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
-      version: ForkExecution;
+      version: ForkPostBellatrix;
       block: BlindedBeaconBlock;
       contents: null;
       executionPayloadBlinded: true;
@@ -194,7 +194,7 @@ export class BlockProposingService {
       } else {
         (
           await this.api.beacon.publishBlockV2({
-            signedBlockOrContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkBlobs>},
+            signedBlockOrContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>},
             ...opts,
           })
         ).assertOk();

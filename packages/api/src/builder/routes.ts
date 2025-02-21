@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {
   BLSPubkey,
   ExecutionPayload,
@@ -25,12 +25,10 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
-import {getBlobsForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
+import {getPostBellatrixForkTypes, getPostDenebForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 // Mev-boost might not return any data if there are no bids from builders or min-bid threshold was not reached.
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
@@ -115,7 +113,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: WithVersion<MaybeSignedBuilderBid, VersionMeta>(
-          (fork: ForkName) => getExecutionForkTypes(fork).SignedBuilderBid
+          (fork: ForkName) => getPostBellatrixForkTypes(fork).SignedBuilderBid
         ),
         meta: VersionCodec,
       },
@@ -127,7 +125,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedBlindedBlock}) => {
           const fork = config.getForkName(signedBlindedBlock.data.message.slot);
           return {
-            body: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock.data),
+            body: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock.data),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -136,7 +134,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: {data: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body)},
+            signedBlindedBlock: {data: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body)},
           };
         },
         writeReqSsz: ({signedBlindedBlock}) => {
@@ -144,7 +142,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           return {
             body:
               signedBlindedBlock.bytes ??
-              getExecutionForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock.data),
+              getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock.data),
             headers: {
               [MetaHeader.Version]: fork,
             },
@@ -153,7 +151,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: {data: getExecutionForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body)},
+            signedBlindedBlock: {data: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body)},
           };
         },
         schema: {
@@ -163,9 +161,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
-          return isForkBlobs(fork)
-            ? getBlobsForkTypes(fork).ExecutionPayloadAndBlobsBundle
-            : getExecutionForkTypes(fork).ExecutionPayload;
+          return isForkPostDeneb(fork)
+            ? getPostDenebForkTypes(fork).ExecutionPayloadAndBlobsBundle
+            : getPostBellatrixForkTypes(fork).ExecutionPayload;
         }),
         meta: VersionCodec,
       },

@@ -1,6 +1,12 @@
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkBlobs, ForkName, isForkBlobs} from "@lodestar/params";
+import {
+  BYTES_PER_FIELD_ELEMENT,
+  FIELD_ELEMENTS_PER_BLOB,
+  ForkName,
+  ForkPostDeneb,
+  isForkPostDeneb,
+} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {beforeAll, describe, expect, it, vi} from "vitest";
@@ -172,7 +178,7 @@ describe("unavailableBeaconBlobsByRoot", () => {
     ];
 
     const blockData = {
-      fork: ForkName.deneb as ForkBlobs,
+      fork: ForkName.deneb as const,
       blobs: allBlobs,
       blobsSource: BlobsSource.byRoot,
     };
@@ -206,7 +212,7 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
   if (resolveBlockInput === null) {
     throw Error("Promise Constructor was not executed immediately");
   }
-  if (!isForkBlobs(fork)) {
+  if (!isForkPostDeneb(fork)) {
     return {fork, blockInputPromise, resolveBlockInput};
   }
 

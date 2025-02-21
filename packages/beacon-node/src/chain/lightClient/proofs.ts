@@ -3,8 +3,8 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
   FINALIZED_ROOT_GINDEX,
   FINALIZED_ROOT_GINDEX_ELECTRA,
-  ForkExecution,
   ForkName,
+  ForkPostBellatrix,
   isForkPostElectra,
 } from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
@@ -78,9 +78,9 @@ export function getFinalizedRootProof(state: CachedBeaconStateAllForks): Uint8Ar
 }
 
 export function getBlockBodyExecutionHeaderProof(
-  fork: ForkExecution,
-  body: BeaconBlockBody<ForkExecution>
+  fork: ForkPostBellatrix,
+  body: BeaconBlockBody<ForkPostBellatrix>
 ): Uint8Array[] {
-  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkExecution, "BeaconBlockBody">).toView(body);
+  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostBellatrix, "BeaconBlockBody">).toView(body);
   return new Tree(bodyView.node).getSingleProof(BigInt(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX));
 }

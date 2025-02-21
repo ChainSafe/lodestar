@@ -20,14 +20,14 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v3.0.0-alpha.9";
+const version = "v3.0.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
 
-const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
+const config = createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0});
 
 const definitions = {
   ...routes.beacon.getDefinitions(config),

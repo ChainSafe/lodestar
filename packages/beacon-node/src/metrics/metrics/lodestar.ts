@@ -1804,5 +1804,24 @@ export function createLodestarMetrics(
         buckets: [0.0001, 0.001, 0.01, 0.1, 1],
       }),
     },
+
+    pruneHistory: {
+      pruneCount: register.gauge({
+        name: "lodestar_prune_history_prune_count_total",
+        help: "Total count of prune operations",
+      }),
+
+      fetchKeys: register.histogram({
+        name: "lodestar_prune_history_fetch_keys_time_seconds",
+        help: "Time to fetch keys in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
+      }),
+
+      pruneKeys: register.histogram({
+        name: "lodestar_prune_history_prune_keys_time_seconds",
+        help: "Time to prune keys in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
+      }),
+    },
   };
 }

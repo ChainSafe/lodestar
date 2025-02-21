@@ -2,7 +2,7 @@ import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkName, ForkSeq, isForkBlobs} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -61,7 +61,7 @@ const forkChoiceTest =
   (fork) => {
     return {
       testFunction: async (testcase) => {
-        if (isForkBlobs(fork)) {
+        if (isForkPostDeneb(fork)) {
           await initCKZG();
           loadEthereumTrustedSetup();
         }

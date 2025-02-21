@@ -11,7 +11,13 @@ describe("callFnWhenAwait util", () => {
     vi.clearAllTimers();
   });
 
-  it("should call function while awaing for promise", async () => {
+  it("should return the resolved value of promise", async () => {
+    const p = new Promise<string>((resolve) => resolve("done"));
+    const value = await callFnWhenAwait(p, vi.fn(), 1000);
+    expect(value).toBe("done");
+  });
+
+  it("should call function while awaiting for promise", async () => {
     const p = new Promise<string>((resolve) => setTimeout(() => resolve("done"), 5 * 1000));
     const stub = vi.fn();
     const result = await Promise.all([callFnWhenAwait(p, stub, 2 * 1000), vi.advanceTimersByTimeAsync(5000)]);
