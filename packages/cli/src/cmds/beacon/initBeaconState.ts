@@ -104,7 +104,9 @@ export async function initBeaconState(
   //   i)  used directly as the anchor state
   //   ii) used to load and verify a weak subjectivity state,
   const lastDbSlot = await db.stateArchive.lastKey();
-  const stateBytes = lastDbSlot !== null ? await db.stateArchive.getBinary(lastDbSlot) : null;
+  let stateBytes = lastDbSlot !== null ? await db.stateArchive.getBinary(lastDbSlot) : null;
+  // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
+  stateBytes = stateBytes ? new Uint8Array(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength) : null;
   let lastDbState: BeaconStateAllForks | null = null;
   let lastDbValidatorsBytes: Uint8Array | null = null;
   let lastDbStateWithBytes: StateWithBytes | null = null;
@@ -181,7 +183,9 @@ export async function initBeaconState(
 
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
   if (genesisStateFile && !args.forceGenesis) {
-    const stateBytes = await downloadOrLoadFile(genesisStateFile);
+    let stateBytes = await downloadOrLoadFile(genesisStateFile);
+    // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
+    stateBytes = new Uint8Array(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
