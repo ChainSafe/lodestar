@@ -19,7 +19,7 @@ import {
   EmptyRequestCodec,
   WithVersion,
 } from "../../utils/codecs.js";
-import {getLightClientForkTypes, toForkName} from "../../utils/fork.js";
+import {getPostAltairForkTypes, toForkName} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
 
@@ -117,7 +117,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           toJson: (data, meta) => {
             const json: unknown[] = [];
             for (const [i, update] of data.entries()) {
-              json.push(getLightClientForkTypes(meta.versions[i]).LightClientUpdate.toJson(update));
+              json.push(getPostAltairForkTypes(meta.versions[i]).LightClientUpdate.toJson(update));
             }
             return json;
           },
@@ -126,7 +126,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             const value: LightClientUpdate[] = [];
             for (let i = 0; i < updates.length; i++) {
               const version = meta.versions[i];
-              value.push(getLightClientForkTypes(version).LightClientUpdate.fromJson(updates[i]));
+              value.push(getPostAltairForkTypes(version).LightClientUpdate.fromJson(updates[i]));
             }
             return value;
           },
@@ -135,7 +135,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             for (const [i, update] of data.entries()) {
               const version = meta.versions[i];
               const forkDigest = cachedBeaconConfig().forkName2ForkDigest(version);
-              const serialized = getLightClientForkTypes(version).LightClientUpdate.serialize(update);
+              const serialized = getPostAltairForkTypes(version).LightClientUpdate.serialize(update);
               const length = ssz.UintNum64.serialize(4 + serialized.length);
               chunks.push(length, forkDigest, serialized);
             }
@@ -149,7 +149,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
               const forkDigest = ssz.ForkDigest.deserialize(data.subarray(offset + 8, offset + 12));
               const version = cachedBeaconConfig().forkDigest2ForkName(forkDigest);
               updates.push(
-                getLightClientForkTypes(version).LightClientUpdate.deserialize(
+                getPostAltairForkTypes(version).LightClientUpdate.deserialize(
                   data.subarray(offset + 12, offset + 8 + length)
                 )
               );
@@ -198,7 +198,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: WithVersion((fork) => getLightClientForkTypes(fork).LightClientOptimisticUpdate),
+        data: WithVersion((fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate),
         meta: VersionCodec,
       },
     },
@@ -207,7 +207,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: WithVersion((fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate),
+        data: WithVersion((fork) => getPostAltairForkTypes(fork).LightClientFinalityUpdate),
         meta: VersionCodec,
       },
     },
@@ -220,7 +220,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {params: {block_root: Schema.StringRequired}},
       },
       resp: {
-        data: WithVersion((fork) => getLightClientForkTypes(fork).LightClientBootstrap),
+        data: WithVersion((fork) => getPostAltairForkTypes(fork).LightClientBootstrap),
         meta: VersionCodec,
       },
     },

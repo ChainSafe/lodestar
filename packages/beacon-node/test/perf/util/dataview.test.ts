@@ -1,9 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 
 describe("dataview", () => {
   const data = Uint8Array.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
 
-  itBench({
+  bench({
     id: "getUint32 - dataview",
     beforeEach: () => {
       return 0;
@@ -14,7 +14,7 @@ describe("dataview", () => {
     },
   });
 
-  itBench({
+  bench({
     id: "getUint32 - manual",
     beforeEach: () => {
       return 0;

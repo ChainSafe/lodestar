@@ -1,8 +1,8 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostElectra} from "@lodestar/params";
-import {Attestation, RootHex, Slot, isElectraAttestation} from "@lodestar/types";
+import {MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
+import {Attestation, RootHex, SingleAttestation, Slot, isElectraSingleAttestation} from "@lodestar/types";
 import {assert, MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -105,7 +105,13 @@ export class AttestationPool {
    * - Valid committeeIndex
    * - Valid data
    */
-  add(committeeIndex: CommitteeIndex, attestation: Attestation, attDataRootHex: RootHex): InsertOutcome {
+  add(
+    committeeIndex: CommitteeIndex,
+    attestation: SingleAttestation,
+    attDataRootHex: RootHex,
+    committeeValidatorIndex: number,
+    committeeSize: number
+  ): InsertOutcome {
     const slot = attestation.data.slot;
     const fork = this.config.getForkName(slot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -129,9 +135,9 @@ export class AttestationPool {
     if (isForkPostElectra(fork)) {
       // Electra only: this should not happen because attestation should be validated before reaching this
       assert.notNull(committeeIndex, "Committee index should not be null in attestation pool post-electra");
-      assert.true(isElectraAttestation(attestation), "Attestation should be type electra.Attestation");
+      assert.true(isElectraSingleAttestation(attestation), "Attestation should be type electra.SingleAttestation");
     } else {
-      assert.true(!isElectraAttestation(attestation), "Attestation should be type phase0.Attestation");
+      assert.true(!isElectraSingleAttestation(attestation), "Attestation should be type phase0.Attestation");
       committeeIndex = null; // For pre-electra, committee index info is encoded in attDataRootIndex
     }
 
@@ -144,10 +150,10 @@ export class AttestationPool {
     const aggregate = aggregateByIndex.get(committeeIndex);
     if (aggregate) {
       // Aggregate mutating
-      return aggregateAttestationInto(aggregate, attestation);
+      return aggregateAttestationInto(aggregate, attestation, committeeValidatorIndex);
     }
     // Create new aggregate
-    aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation));
+    aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation, committeeValidatorIndex, committeeSize));
     return InsertOutcome.NewData;
   }
 
@@ -216,8 +222,18 @@ export class AttestationPool {
 /**
  * Aggregate a new attestation into `aggregate` mutating it
  */
-function aggregateAttestationInto(aggregate: AggregateFast, attestation: Attestation): InsertOutcome {
-  const bitIndex = attestation.aggregationBits.getSingleTrueBit();
+function aggregateAttestationInto(
+  aggregate: AggregateFast,
+  attestation: SingleAttestation,
+  committeeValidatorIndex: number
+): InsertOutcome {
+  let bitIndex: number | null;
+
+  if (isElectraSingleAttestation(attestation)) {
+    bitIndex = committeeValidatorIndex;
+  } else {
+    bitIndex = attestation.aggregationBits.getSingleTrueBit();
+  }
 
   // Should never happen, attestations are verified against this exact condition before
   assert.notNull(bitIndex, "Invalid attestation in pool, not exactly one bit set");
@@ -234,13 +250,16 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: Attesta
 /**
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
-function attestationToAggregate(attestation: Attestation): AggregateFast {
-  if (isElectraAttestation(attestation)) {
+function attestationToAggregate(
+  attestation: SingleAttestation,
+  committeeValidatorIndex: number,
+  committeeSize: number
+): AggregateFast {
+  if (isElectraSingleAttestation(attestation)) {
     return {
       data: attestation.data,
-      // clone because it will be mutated
-      aggregationBits: attestation.aggregationBits.clone(),
-      committeeBits: attestation.committeeBits,
+      aggregationBits: BitArray.fromSingleBit(committeeSize, committeeValidatorIndex),
+      committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, attestation.committeeIndex),
       signature: signatureFromBytesNoCheck(attestation.signature),
     };
   }

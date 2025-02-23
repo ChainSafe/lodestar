@@ -21,10 +21,9 @@ import * as ephemery from "./ephemery.js";
 import * as gnosis from "./gnosis.js";
 import * as holesky from "./holesky.js";
 import * as mainnet from "./mainnet.js";
-import * as mekong from "./mekong.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery" | "mekong";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
@@ -32,7 +31,6 @@ export const networkNames: NetworkName[] = [
   "holesky",
   "chiado",
   "ephemery",
-  "mekong",
 
   // Leave always as last network. The order matters for the --help printout
   "dev",
@@ -72,8 +70,6 @@ export function getNetworkData(network: NetworkName): {
       return chiado;
     case "ephemery":
       return ephemery;
-    case "mekong":
-      return mekong;
     default:
       throw Error(`Network not supported: ${network}`);
   }

@@ -20,6 +20,7 @@ import {
   IndexedAttestation,
   RootHex,
   Slot,
+  SubnetID,
   SyncPeriod,
   ValidatorIndex,
   electra,
@@ -748,13 +749,13 @@ export class EpochCache {
    * Return the beacon committee at slot for index.
    */
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
-    return this.getBeaconCommittees(slot, [index]);
+    return this.getBeaconCommittees(slot, [index])[0];
   }
 
   /**
-   * Return a single Uint32Array representing concatted committees of indices
+   * Return a Uint32Array[] representing committees of indices
    */
-  getBeaconCommittees(slot: Slot, indices: CommitteeIndex[]): Uint32Array {
+  getBeaconCommittees(slot: Slot, indices: CommitteeIndex[]): Uint32Array[] {
     if (indices.length === 0) {
       throw new Error("Attempt to get committees without providing CommitteeIndex");
     }
@@ -773,22 +774,7 @@ export class EpochCache {
       committees.push(slotCommittees[index]);
     }
 
-    // Early return if only one index
-    if (committees.length === 1) {
-      return committees[0];
-    }
-
-    // Create a new Uint32Array to flatten `committees`
-    const totalLength = committees.reduce((acc, curr) => acc + curr.length, 0);
-    const result = new Uint32Array(totalLength);
-
-    let offset = 0;
-    for (const committee of committees) {
-      result.set(committee, offset);
-      offset += committee.length;
-    }
-
-    return result;
+    return committees;
   }
 
   getCommitteeCountPerSlot(epoch: Epoch): number {
@@ -798,7 +784,7 @@ export class EpochCache {
   /**
    * Compute the correct subnet for a slot/committee index
    */
-  computeSubnetForSlot(slot: number, committeeIndex: number): number {
+  computeSubnetForSlot(slot: number, committeeIndex: number): SubnetID {
     const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
     const committeesPerSlot = this.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
     const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
@@ -911,9 +897,19 @@ export class EpochCache {
     // TODO Electra: resolve the naming conflicts
     const committeeIndices = committeeBits.getTrueBitIndexes();
 
-    const validatorIndices = this.getBeaconCommittees(data.slot, committeeIndices);
+    const validatorsByCommittee = this.getBeaconCommittees(data.slot, committeeIndices);
 
-    return aggregationBits.intersectValues(validatorIndices);
+    // Create a new Uint32Array to flatten `validatorsByCommittee`
+    const totalLength = validatorsByCommittee.reduce((acc, curr) => acc + curr.length, 0);
+    const committeeValidators = new Uint32Array(totalLength);
+
+    let offset = 0;
+    for (const committee of validatorsByCommittee) {
+      committeeValidators.set(committee, offset);
+      offset += committee.length;
+    }
+
+    return aggregationBits.intersectValues(committeeValidators);
   }
 
   getCommitteeAssignments(

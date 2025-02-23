@@ -50,7 +50,6 @@ export type AttestationsConsolidation = {
   byCommittee: Map<CommitteeIndex, AttestationNonParticipant>;
   attData: phase0.AttestationData;
   totalNotSeenCount: number;
-  score: number;
 };
 
 /**
@@ -307,7 +306,8 @@ export class AggregatedAttestationPool {
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
 
     const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
-    const consolidations: AttestationsConsolidation[] = [];
+    // Track score of each `AttestationsConsolidation`
+    const consolidations = new Map<AttestationsConsolidation, number>();
     let minScore = Number.MAX_SAFE_INTEGER;
     let slotCount = 0;
     slot: for (const slot of slots) {
@@ -344,7 +344,7 @@ export class AggregatedAttestationPool {
 
           if (
             slotCount > 2 &&
-            consolidations.length >= MAX_ATTESTATIONS_ELECTRA &&
+            consolidations.size >= MAX_ATTESTATIONS_ELECTRA &&
             notSeenAttestingIndices.size / slotDelta < minScore
           ) {
             // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS_ELECTRA attestations and break the for loop early
@@ -373,8 +373,6 @@ export class AggregatedAttestationPool {
                 byCommittee: new Map(),
                 attData: attestationNonParticipation.attestation.data,
                 totalNotSeenCount: 0,
-                // only update score after we have full data
-                score: 0,
               };
             }
             sameAttDataCons[i].byCommittee.set(committeeIndex, attestationNonParticipation);
@@ -385,19 +383,22 @@ export class AggregatedAttestationPool {
             if (score < minScore) {
               minScore = score;
             }
-            consolidations.push({...consolidation, score});
+
+            consolidations.set(consolidation, score);
+
             // Stop accumulating attestations there are enough that may have good scoring
-            if (consolidations.length >= MAX_ATTESTATIONS_ELECTRA * 2) {
+            if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
               break slot;
             }
           }
         }
       }
     }
-
-    const sortedConsolidationsByScore = consolidations
-      .sort((a, b) => b.score - a.score)
+    const sortedConsolidationsByScore = Array.from(consolidations.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([consolidation, _]) => consolidation)
       .slice(0, MAX_ATTESTATIONS_ELECTRA);
+
     // on chain aggregation is expensive, only do it after all
     return sortedConsolidationsByScore.map(aggregateConsolidation);
   }

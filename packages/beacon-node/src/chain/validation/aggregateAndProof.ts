@@ -4,7 +4,7 @@ import {
   createAggregateSignatureSetFromComponents,
   isAggregatorFromCommitteeLength,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, phase0, ssz} from "@lodestar/types";
+import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -71,9 +71,6 @@ async function validateAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
-  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, seenAttDataKey) : null;
-
   let attIndex: number | null;
   if (ForkSeq[fork] >= ForkSeq.electra) {
     attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
@@ -88,6 +85,9 @@ async function validateAggregateAndProof(
   } else {
     attIndex = attData.index;
   }
+
+  const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
+  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, attIndex, seenAttDataKey) : null;
 
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
@@ -178,15 +178,11 @@ async function validateAggregateAndProof(
   }
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
 
-  const indexedAttestationContent: IndexedAttestation = {
+  const indexedAttestation: IndexedAttestation = {
     attestingIndices,
     data: attData,
     signature: aggregate.signature,
   };
-  const indexedAttestation =
-    ForkSeq[fork] >= ForkSeq.electra
-      ? (indexedAttestationContent as electra.IndexedAttestation)
-      : (indexedAttestationContent as phase0.IndexedAttestation);
 
   // TODO: Check this before regen
   // [REJECT] The attestation has participants -- that is,

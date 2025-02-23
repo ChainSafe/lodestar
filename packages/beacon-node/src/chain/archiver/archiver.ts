@@ -7,6 +7,7 @@ import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 import {ArchiverOpts, StateArchiveMode, StateArchiveStrategy} from "./interface.js";
+import {pruneHistory} from "./pruneHistory.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 
 export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
@@ -30,7 +31,7 @@ export class Archiver {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     signal: AbortSignal,
-    opts: ArchiverOpts,
+    private readonly opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
     if (opts.stateArchiveMode === StateArchiveMode.Frequency) {
@@ -98,6 +99,17 @@ export class Archiver {
         this.chain.clock.currentEpoch,
         this.archiveBlobEpochs
       );
+      if (this.opts.pruneHistory) {
+        await pruneHistory(
+          this.chain.config,
+          this.db,
+          this.logger,
+          this.metrics,
+          finalizedEpoch,
+          this.chain.clock.currentEpoch
+        );
+      }
+
       this.prevFinalized = finalized;
 
       await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);

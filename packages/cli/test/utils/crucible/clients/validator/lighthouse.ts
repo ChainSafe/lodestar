@@ -65,7 +65,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
           );
         }
         await writeFile(path.join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(forkConfig)));
-        await writeFile(path.join(rootDir, "deploy_block.txt"), "0");
+        await writeFile(path.join(rootDir, "deposit_contract_block.txt"), "0");
       },
       cli: {
         command: binaryPath,

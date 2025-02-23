@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
+import {bench, describe} from "@chainsafe/benchmark";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
 import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
@@ -34,7 +34,7 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
       const runsFactor = length > 16384 ? 100 : 1000;
       const bytes = stateBytes.subarray(0, length);
       const bytes2 = bytes.slice();
-      itBench({
+      bench({
         id: `byteArrayEquals ${length}`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
@@ -44,7 +44,7 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
         runsFactor,
       });
 
-      itBench({
+      bench({
         id: `Buffer.compare ${length}`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
@@ -62,7 +62,7 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
       const bytes = stateBytes.subarray(0, length);
       const bytes2 = bytes.slice();
       bytes2[bytes2.length - 1] = bytes2[bytes2.length - 1] + 1;
-      itBench({
+      bench({
         id: `byteArrayEquals ${length} - diff last byte`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
@@ -72,7 +72,7 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
         runsFactor,
       });
 
-      itBench({
+      bench({
         id: `Buffer.compare ${length} - diff last byte`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
@@ -90,7 +90,7 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
       const bytes = crypto.randomBytes(length);
       const bytes2 = crypto.randomBytes(length);
 
-      itBench({
+      bench({
         id: `byteArrayEquals ${length} - random bytes`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
@@ -100,7 +100,7 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
         runsFactor,
       });
 
-      itBench({
+      bench({
         id: `Buffer.compare ${length} - random bytes`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {

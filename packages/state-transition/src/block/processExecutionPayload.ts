@@ -1,5 +1,5 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
@@ -18,6 +18,7 @@ export function processExecutionPayload(
   externalData: Omit<BlockExternalData, "dataAvailableStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
+  const forkName = ForkName[ForkSeq[fork] as ForkName];
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {
@@ -47,10 +48,11 @@ export function processExecutionPayload(
     throw Error(`Invalid timestamp ${payload.timestamp} genesisTime=${state.genesisTime} slot=${state.slot}`);
   }
 
-  if (fork >= ForkSeq.deneb) {
+  if (isForkPostDeneb(forkName)) {
+    const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(forkName);
     const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
-    if (blobKzgCommitmentsLen > state.config.MAX_BLOBS_PER_BLOCK) {
-      throw Error(`blobKzgCommitmentsLen exceeds limit=${state.config.MAX_BLOBS_PER_BLOCK}`);
+    if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+      throw Error(`blobKzgCommitmentsLen exceeds limit=${maxBlobsPerBlock}`);
     }
   }
 
@@ -77,6 +79,6 @@ export function processExecutionPayload(
   // TODO Deneb: Types are not happy by default. Since it's a generic type going through ViewDU
   // transformation then into all forks compatible probably some weird intersection incompatibility happens
   state.latestExecutionPayloadHeader = state.config
-    .getExecutionForkTypes(state.slot)
+    .getPostBellatrixForkTypes(state.slot)
     .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
 }

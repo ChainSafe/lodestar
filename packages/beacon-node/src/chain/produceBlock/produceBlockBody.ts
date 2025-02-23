@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, isForkExecution, isForkLightClient} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -32,11 +32,17 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {
+  IExecutionBuilder,
+  IExecutionEngine,
+  PayloadAttributes,
+  PayloadId,
+  getExpectedGasLimit,
+} from "../../execution/index.js";
 import {fromGraffitiBuffer} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
@@ -163,14 +169,14 @@ export async function produceBlockBody<T extends BlockType>(
     proposerSlashings: proposerSlashings.length,
   });
 
-  if (isForkLightClient(fork)) {
+  if (isForkPostAltair(fork)) {
     Object.assign(logMeta, {
       syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
     });
   }
 
   const endExecutionPayload = stepsMetrics?.startTimer();
-  if (isForkExecution(fork)) {
+  if (isForkPostBellatrix(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -223,6 +229,39 @@ export async function produceBlockBody<T extends BlockType>(
         fetchedTime,
       });
 
+      const targetGasLimit = this.executionBuilder.getValidatorRegistration(proposerPubKey)?.gasLimit;
+      if (!targetGasLimit) {
+        // This should only happen if cache was cleared due to restart of beacon node
+        this.logger.warn("Failed to get validator registration, could not check header gas limit", {
+          slot: blockSlot,
+          proposerIndex,
+          proposerPubKey: toPubkeyHex(proposerPubKey),
+        });
+      } else {
+        const headerGasLimit = builderRes.header.gasLimit;
+        const parentGasLimit = (currentState as CachedBeaconStateBellatrix).latestExecutionPayloadHeader.gasLimit;
+        const expectedGasLimit = getExpectedGasLimit(parentGasLimit, targetGasLimit);
+
+        const lowerBound = Math.min(parentGasLimit, expectedGasLimit);
+        const upperBound = Math.max(parentGasLimit, expectedGasLimit);
+
+        if (headerGasLimit < lowerBound || headerGasLimit > upperBound) {
+          throw Error(
+            `Header gas limit ${headerGasLimit} is outside of acceptable range [${lowerBound}, ${upperBound}]`
+          );
+        }
+
+        if (headerGasLimit !== expectedGasLimit) {
+          this.logger.warn("Header gas limit does not match expected value", {
+            slot: blockSlot,
+            headerGasLimit,
+            expectedGasLimit,
+            parentGasLimit,
+            targetGasLimit,
+          });
+        }
+      }
+
       if (ForkSeq[fork] >= ForkSeq.deneb) {
         const {blobKzgCommitments} = builderRes;
         if (blobKzgCommitments === undefined) {
@@ -264,7 +303,7 @@ export async function produceBlockBody<T extends BlockType>(
         );
 
         if (prepareRes.isPremerge) {
-          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
+          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload =
             sszTypesFor(fork).ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
@@ -285,7 +324,7 @@ export async function produceBlockBody<T extends BlockType>(
           const {executionPayload, blobsBundle, executionRequests} = engineRes;
           shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
-          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload = executionPayload;
+          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
           executionPayloadValue = engineRes.executionPayloadValue;
           Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
 
@@ -340,7 +379,7 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
+          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload =
             sszTypesFor(fork).ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
@@ -392,7 +431,7 @@ export async function prepareExecutionPayload(
     config: ChainForkConfig;
   },
   logger: Logger,
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   parentBlockRoot: Root,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
@@ -470,7 +509,7 @@ async function prepareExecutionPayloadHeader(
     executionBuilder?: IExecutionBuilder;
     config: ChainForkConfig;
   },
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
@@ -527,7 +566,7 @@ export async function getExecutionPayloadParentHash(
 }
 
 export async function getPayloadAttributesForSSE(
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   chain: {
     eth1: IEth1ForBlockProduction;
     config: ChainForkConfig;
@@ -565,7 +604,7 @@ export async function getPayloadAttributesForSSE(
 }
 
 function preparePayloadAttributes(
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
   },

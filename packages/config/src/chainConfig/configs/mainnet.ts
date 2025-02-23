@@ -97,6 +97,8 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 33024, ~5 months)
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024,
 
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
@@ -109,6 +111,10 @@ export const chainConfig: ChainConfig = {
   // Electra
   // 2**8 * 10**9 (= 256,000,000,000)
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,
-  // 2*7 * 10**9 (= 128,000,000,000)
+  // 2**7 * 10**9 (= 128,000,000,000)
   MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
+  BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: 9,
+  MAX_BLOBS_PER_BLOCK_ELECTRA: 9,
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
+  MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
 };

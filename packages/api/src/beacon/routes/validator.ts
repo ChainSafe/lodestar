@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkBlobs, isForkPostElectra} from "@lodestar/params";
+import {isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
 import {
   Attestation,
   BLSSignature,
@@ -30,7 +30,7 @@ import {
   WithMeta,
   WithVersion,
 } from "../../utils/codecs.js";
-import {getExecutionForkTypes, toForkName} from "../../utils/fork.js";
+import {getPostBellatrixForkTypes, toForkName} from "../../utils/fork.js";
 import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
@@ -652,7 +652,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: WithVersion(
           (fork) =>
-            (isForkBlobs(fork) ? sszTypesFor(fork).BlockContents : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
+            (isForkPostDeneb(fork)
+              ? sszTypesFor(fork).BlockContents
+              : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
         ),
         meta: VersionCodec,
       },
@@ -713,8 +715,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: WithMeta(
           ({version, executionPayloadBlinded}) =>
             (executionPayloadBlinded
-              ? getExecutionForkTypes(version).BlindedBeaconBlock
-              : isForkBlobs(version)
+              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock
+              : isForkPostDeneb(version)
                 ? sszTypesFor(version).BlockContents
                 : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
         ),
@@ -781,7 +783,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithVersion((fork) => getExecutionForkTypes(fork).BlindedBeaconBlock),
+        data: WithVersion((fork) => getPostBellatrixForkTypes(fork).BlindedBeaconBlock),
         meta: VersionCodec,
       },
     },

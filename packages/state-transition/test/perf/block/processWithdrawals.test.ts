@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {CachedBeaconStateCapella} from "../../../src/index.js";
@@ -54,7 +54,7 @@ describe("getExpectedWithdrawals", () => {
       .filter((str) => str)
       .join(",");
 
-    itBench<CachedBeaconStateCapella, CachedBeaconStateCapella>({
+    bench<CachedBeaconStateCapella, CachedBeaconStateCapella>({
       id: `getExpectedWithdrawals ${vc} ${caseID}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {

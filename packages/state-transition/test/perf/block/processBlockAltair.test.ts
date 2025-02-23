@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -106,7 +106,7 @@ describe("altair processBlock", () => {
 
   for (const {id, opts} of testCases) {
     for (const hashState of [false, true]) {
-      itBench<StateBlock, StateBlock>({
+      bench<StateBlock, StateBlock>({
         id: `altair processBlock - ${perfStateId} ${id}` + (hashState ? " hashState" : ""),
         before: () => {
           const state = generatePerfTestCachedStateAltair();

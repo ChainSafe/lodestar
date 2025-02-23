@@ -247,7 +247,7 @@ export class NetworkProcessor {
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
     // check block root of Attestation and SignedAggregateAndProof messages
     if (extractBlockSlotRootFn) {
-      const slotRoot = extractBlockSlotRootFn(message.msg.data);
+      const slotRoot = extractBlockSlotRootFn(message.msg.data, message.topic.fork);
       // if slotRoot is null, it means the msg.data is invalid
       // in that case message will be rejected when deserializing data in later phase (gossipValidatorFn)
       if (slotRoot) {

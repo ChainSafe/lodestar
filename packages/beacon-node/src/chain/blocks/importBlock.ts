@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
-import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPostAltair, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   RootCache,
@@ -279,7 +279,7 @@ export async function importBlock(
       callInNextEventLoop(() => {
         try {
           this.lightClientServer?.onImportBlockHead(
-            block.message as BeaconBlock<ForkLightClient>,
+            block.message as BeaconBlock<ForkPostAltair>,
             postState as CachedBeaconStateAltair,
             parentBlockSlot
           );

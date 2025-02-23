@@ -3,13 +3,13 @@ import {
   getAttesterSlashableIndices,
   getAttesterSlashingSignatureSets,
 } from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
+import {AttesterSlashing} from "@lodestar/types";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 
 export async function validateApiAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: phase0.AttesterSlashing // TODO Electra: Handle electra.AttesterSlashing
+  attesterSlashing: AttesterSlashing
 ): Promise<void> {
   const prioritizeBls = true;
   return validateAttesterSlashing(chain, attesterSlashing, prioritizeBls);
@@ -17,14 +17,14 @@ export async function validateApiAttesterSlashing(
 
 export async function validateGossipAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: phase0.AttesterSlashing
+  attesterSlashing: AttesterSlashing
 ): Promise<void> {
   return validateAttesterSlashing(chain, attesterSlashing);
 }
 
 export async function validateAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: phase0.AttesterSlashing,
+  attesterSlashing: AttesterSlashing,
   prioritizeBls = false
 ): Promise<void> {
   // [IGNORE] At least one index in the intersection of the attesting indices of each attestation has not yet been seen

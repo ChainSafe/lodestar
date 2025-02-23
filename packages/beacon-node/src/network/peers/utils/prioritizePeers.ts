@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {Direction, PeerId} from "@libp2p/interface";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair, phase0} from "@lodestar/types";
+import {SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
@@ -38,7 +38,7 @@ const OUTBOUND_PEERS_RATIO = 0.1;
 const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
 const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
-type SubnetDiscvQuery = {subnet: number; toSlot: number; maxPeersToDiscover: number};
+type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
 
 type PeerInfo = {
   id: PeerId;
@@ -412,8 +412,8 @@ export function sortPeersToPrune(connectedPeers: PeerInfo[], dutiesByPeer: Map<P
  * Find subnet that has the most peers and > TARGET_SUBNET_PEERS, return null if peers are not grouped
  * to any subnets.
  */
-function findMaxPeersSubnet(subnetToPeers: Map<number, PeerInfo[]>, targetSubnetPeers: number): number | null {
-  let maxPeersSubnet: number | null = null;
+function findMaxPeersSubnet(subnetToPeers: Map<number, PeerInfo[]>, targetSubnetPeers: number): SubnetID | null {
+  let maxPeersSubnet: SubnetID | null = null;
   let maxPeerCountPerSubnet = -1;
 
   for (const [subnet, peers] of subnetToPeers) {

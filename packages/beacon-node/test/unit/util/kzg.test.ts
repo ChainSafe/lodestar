@@ -45,6 +45,7 @@ describe("C-KZG", () => {
     afterEachCallbacks.push(() => chain.close());
 
     const slot = 0;
+    const fork = config.getForkName(slot);
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
 
@@ -65,7 +66,7 @@ describe("C-KZG", () => {
 
     for (const blobSidecar of blobSidecars) {
       try {
-        await validateGossipBlobSidecar(chain, blobSidecar, blobSidecar.index);
+        await validateGossipBlobSidecar(fork, chain, blobSidecar, blobSidecar.index);
       } catch (_e) {
         // We expect some error from here
         // console.log(error);

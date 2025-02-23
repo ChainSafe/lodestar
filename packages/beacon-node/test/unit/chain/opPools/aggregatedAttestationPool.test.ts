@@ -375,7 +375,6 @@ describe("aggregateConsolidation", () => {
         byCommittee: new Map(),
         attData: attData,
         totalNotSeenCount: 0,
-        score: 0,
       };
       // to simplify, instead of signing the signingRoot, just sign the attData root
       const sigArr = skArr.map((sk) => sk.sign(ssz.phase0.AttestationData.hashTreeRoot(attData)));

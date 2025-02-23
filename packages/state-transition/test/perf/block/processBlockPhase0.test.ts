@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -98,7 +98,7 @@ describe("phase0 processBlock", () => {
   ];
 
   for (const {id, opts} of testCases) {
-    itBench<StateBlock, StateBlock>({
+    bench<StateBlock, StateBlock>({
       id: `phase0 processBlock - ${perfStateId} ${id}`,
       before: () => {
         const state = generatePerfTestCachedStatePhase0();

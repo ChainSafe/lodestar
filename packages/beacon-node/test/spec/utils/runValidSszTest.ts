@@ -37,7 +37,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
   const testDataJson = wrapErr(() => type.toJson(testDataValue), "type.toJson()");
 
   function assertBytes(bytes: Uint8Array, msg: string): void {
-    expect(toHexString(bytes)).to.equal(testDataSerializedStr, `Wrong serialized - ${msg}`);
+    expect(toHexString(bytes)).toEqualWithMessage(testDataSerializedStr, `Wrong serialized - ${msg}`);
   }
 
   function assertValue(value: unknown, msg: string): void {
@@ -45,23 +45,23 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
   }
 
   function assertRoot(root: Uint8Array, msg: string): void {
-    expect(toHexString(root)).to.equal(testDataRootHex, `Wrong root - ${msg}`);
+    expect(toHexString(root)).toEqualWithMessage(testDataRootHex, `Wrong root - ${msg}`);
   }
 
   function assertNode(node: Node, msg: string): void {
-    expect(toHexString(node.root)).to.equal(testDataRootHex, `Wrong node - ${msg}`);
+    expect(toHexString(node.root)).toEqualWithMessage(testDataRootHex, `Wrong node - ${msg}`);
   }
 
   {
     // value - equals
     const isEqual = wrapErr(() => type.equals(testDataValue, testDataValue), "type.equals()");
-    expect(isEqual).to.equal(true, "Value is not equal to itself");
+    expect(isEqual).toEqualWithMessage(true, "Value is not equal to itself");
   }
 
   {
     // value - clone
     const isEqual = wrapErr(() => type.equals(type.clone(testDataValue), testDataValue), "type.clone()");
-    expect(isEqual).to.equal(true, "Cloned value is not equal to itself");
+    expect(isEqual).toEqualWithMessage(true, "Cloned value is not equal to itself");
   }
 
   // value -> bytes - serialize()

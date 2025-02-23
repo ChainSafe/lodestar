@@ -120,13 +120,13 @@ export class Clock implements IClock {
       if (msFromGenesis >= 0) {
         return milliSecondsPerSlot - (msFromGenesis % milliSecondsPerSlot);
       }
-      return Math.abs(msFromGenesis % milliSecondsPerSlot);
+      return Math.abs(msFromGenesis) % milliSecondsPerSlot;
     }
     const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
     if (msFromGenesis >= 0) {
       return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
     }
-    return Math.abs(msFromGenesis % milliSecondsPerEpoch);
+    return Math.abs(msFromGenesis) % milliSecondsPerEpoch;
   }
 }
 

@@ -174,7 +174,7 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
 
   return isValidMerkleBranch(
     config
-      .getExecutionForkTypes(header.beacon.slot)
+      .getPostBellatrixForkTypes(header.beacon.slot)
       .ExecutionPayloadHeader.hashTreeRoot((header as LightClientHeader<ForkName.capella>).execution),
     (header as LightClientHeader<ForkName.capella>).executionBranch,
     EXECUTION_PAYLOAD_DEPTH,

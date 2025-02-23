@@ -4,6 +4,7 @@ import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
@@ -319,7 +320,7 @@ export class Eth2Gossipsub extends GossipSub {
  * Left pad subnets to two characters. Assumes ATTESTATION_SUBNET_COUNT < 99
  * Otherwise grafana sorts the mesh peers chart as: [1,11,12,13,...]
  */
-function attSubnetLabel(subnet: number): string {
+function attSubnetLabel(subnet: SubnetID): string {
   if (subnet > 9) return String(subnet);
 
   return `0${subnet}`;

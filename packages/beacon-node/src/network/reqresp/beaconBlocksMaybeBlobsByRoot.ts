@@ -82,17 +82,15 @@ export async function unavailableBeaconBlobsByRoot(
   // resolve the block if thats unavailable
   let block: SignedBeaconBlock,
     blobsCache: NullBlockInput["cachedData"]["blobsCache"],
-    blockBytes: Uint8Array | null,
     resolveAvailability: NullBlockInput["cachedData"]["resolveAvailability"],
     cachedData: NullBlockInput["cachedData"];
   if (unavailableBlockInput.block === null) {
     const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHex(unavailableBlockInput.blockRootHex)]);
     block = allBlocks[0].data;
-    blockBytes = allBlocks[0].bytes;
     cachedData = unavailableBlockInput.cachedData;
     ({blobsCache, resolveAvailability} = cachedData);
   } else {
-    ({block, cachedData, blockBytes} = unavailableBlockInput);
+    ({block, cachedData} = unavailableBlockInput);
     ({blobsCache, resolveAvailability} = cachedData);
   }
 
@@ -104,9 +102,9 @@ export async function unavailableBeaconBlobsByRoot(
 
   const blockTriedBefore = blockInputsRetryTrackerCache?.has(blockRootHex) === true;
   if (blockTriedBefore) {
-    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsReTried.inc();
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsReTriedBlobsPull.inc();
   } else {
-    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTried.inc();
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTriedBlobsPull.inc();
     blockInputsRetryTrackerCache?.add(blockRootHex);
   }
 
@@ -137,7 +135,7 @@ export async function unavailableBeaconBlobsByRoot(
           const {blob, proof: kzgProof} = catchedBlobAndProof;
           const kzgCommitmentInclusionProof = computeInclusionProof(fork, block.message.body, index);
           const blobSidecar = {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-          blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
+          blobsCache.set(blobSidecar.index, blobSidecar);
         }
       } else if (blockTriedBefore) {
         // only retry it from network
@@ -152,6 +150,9 @@ export async function unavailableBeaconBlobsByRoot(
     }
   }
 
+  if (engineReqIdentifiers.length > 0) {
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTriedGetBlobs.inc();
+  }
   const versionedHashes = engineReqIdentifiers.map((bi) => bi.versionedHash);
   metrics?.blockInputFetchStats.dataPromiseBlobsEngineGetBlobsApiRequests.inc(versionedHashes.length);
 
@@ -178,10 +179,10 @@ export async function unavailableBeaconBlobsByRoot(
         // add them in cache so that its reflected in all the blockInputs that carry this
         // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
         // verifyBlocksDataAvailability
-        blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
+        blobsCache.set(blobSidecar.index, blobSidecar);
       } else {
         metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailable.inc();
-        metrics?.blockInputFetchStats.dataPromiseBlobsDeplayedGossipAvailableSavedGetBlobsCompute.inc();
+        metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailableSavedGetBlobsCompute.inc();
       }
     }
     // may be blobsidecar arrived in the timespan of making the request
@@ -241,7 +242,7 @@ export async function unavailableBeaconBlobsByRoot(
   // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
   // verifyBlocksDataAvailability
   for (const blobSidecar of networkResBlobSidecars) {
-    blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
+    blobsCache.set(blobSidecar.index, blobSidecar);
   }
 
   // check and see if all blobs are now available and in that case resolve availability
@@ -255,13 +256,19 @@ export async function unavailableBeaconBlobsByRoot(
   resolveAvailability(blockData);
   metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
 
-  metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
+  metrics?.blockInputFetchStats.totalDataPromiseBlockInputsResolvedAvailable.inc();
   if (getBlobsUseful) {
     metrics?.blockInputFetchStats.totalDataPromiseBlockInputsAvailableUsingGetBlobs.inc();
+    if (networkReqIdentifiers.length === 0) {
+      metrics?.blockInputFetchStats.totalDataPromiseBlockInputsAvailableFromGetBlobs.inc();
+    }
+  }
+  if (networkResBlobSidecars.length > 0) {
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp.inc();
   }
   if (blockTriedBefore) {
     metrics?.blockInputFetchStats.totalDataPromiseBlockInputsRetriedAvailableFromNetwork.inc();
   }
 
-  return getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
+  return getBlockInput.availableData(config, block, BlockSource.byRoot, blockData);
 }

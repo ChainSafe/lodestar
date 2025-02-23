@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {SubnetID, ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
@@ -309,7 +309,7 @@ describe("validateAttestation", () => {
   async function expectGossipError(
     chain: IBeaconChain,
     attestationOrBytes: GossipAttestation,
-    subnet: number,
+    subnet: SubnetID,
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
@@ -341,7 +341,7 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.phase0, gossipAttestation)).toEqual(
+    expect(getSeenAttDataKeyFromGossipAttestation(gossipAttestation)).toEqual(
       getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.phase0, aggregateAndProofBytes)
     );
   });
@@ -363,7 +363,7 @@ describe("getSeenAttDataKey", () => {
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = blockRoot;
     const aggregateAndProofBytes = ssz.electra.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-    expect(getSeenAttDataKeyFromGossipAttestation(ForkName.electra, gossipAttestation)).toEqual(
+    expect(getSeenAttDataKeyFromGossipAttestation(gossipAttestation)).toEqual(
       getSeenAttDataKeyFromSignedAggregateAndProof(ForkName.electra, aggregateAndProofBytes)
     );
   });

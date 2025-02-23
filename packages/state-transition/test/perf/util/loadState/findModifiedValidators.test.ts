@@ -1,8 +1,8 @@
+import assert from "node:assert";
+import {bench, describe} from "@chainsafe/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-import {expect} from "chai";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {VALIDATOR_BYTES_SIZE} from "../../../../src/util/sszBytes.js";
 import {generateState} from "../../../utils/state.js";
@@ -27,8 +27,7 @@ import {generateValidators} from "../../../utils/validator.js";
  *    - Method 3 - compare validator ViewDU to Uint8Array: 3x slower
  *      ✔ compare ViewDU to Uint8Array                                       0.7791557 ops/s    1.283441  s/op        -         12 runs   16.8 s
  */
-describe("find modified validators by different ways", function () {
-  this.timeout(0);
+describe("find modified validators by different ways", () => {
   // To get state bytes from any persisted state, do this:
   // const stateBytes = new Uint8Array(fs.readFileSync(path.join(folder, "mainnet_state_7335296.ssz")));
   // const stateType = ssz.capella.BeaconState;
@@ -60,7 +59,8 @@ describe("find modified validators by different ways", function () {
         expectedModifiedValidators.length === 0
           ? "no difference"
           : expectedModifiedValidators.length + " modified validators";
-      itBench({
+
+      bench({
         id: `${prefix} - ${testCaseName}`,
         beforeEach: () => {
           const clonedState = state.clone();
@@ -75,7 +75,10 @@ describe("find modified validators by different ways", function () {
           const validatorsBytes2 = clonedState.validators.serialize();
           const modifiedValidators: number[] = [];
           findModifiedValidators(validatorsBytes, validatorsBytes2, modifiedValidators);
-          expect(modifiedValidators.sort((a, b) => a - b)).to.be.deep.equal(expectedModifiedValidators);
+          assert.deepEqual(
+            modifiedValidators.sort((a, b) => a - b),
+            expectedModifiedValidators
+          );
         },
       });
     }
@@ -83,7 +86,7 @@ describe("find modified validators by different ways", function () {
 
   describe("deserialize validators then compare validator ViewDUs", () => {
     const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
-    itBench("compare ViewDUs", () => {
+    bench("compare ViewDUs", () => {
       const numValidator = state.validators.length;
       const validators = stateType.fields.validators.deserializeToViewDU(validatorsBytes);
       for (let i = 0; i < numValidator; i++) {
@@ -96,7 +99,7 @@ describe("find modified validators by different ways", function () {
 
   describe("serialize each validator then compare Uin8Array", () => {
     const validators = state.validators.getAllReadonly();
-    itBench("compare each validator Uint8Array", () => {
+    bench("compare each validator Uint8Array", () => {
       for (let i = 0; i < state.validators.length; i++) {
         const validatorBytes = ssz.phase0.Validator.serialize(validators[i]);
         if (
@@ -115,7 +118,7 @@ describe("find modified validators by different ways", function () {
   });
 
   describe("compare validator ViewDU to Uint8Array", () => {
-    itBench("compare ViewDU to Uint8Array", () => {
+    bench("compare ViewDU to Uint8Array", () => {
       const numValidator = state.validators.length;
       for (let i = 0; i < numValidator; i++) {
         const diff = validatorDiff(

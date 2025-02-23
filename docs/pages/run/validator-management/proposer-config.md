@@ -15,7 +15,7 @@ proposer_config:
     strict_fee_recipient_check: false
     fee_recipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     builder:
-      gas_limit: "30000000"
+      gas_limit: "36000000"
       selection: "executionalways"
       boost_factor: "0"
   "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d":
@@ -29,7 +29,7 @@ default_config:
   strict_fee_recipient_check: true
   fee_recipient: "0xcccccccccccccccccccccccccccccccccccccccc"
   builder:
-    gas_limit: "30000000"
+    gas_limit: "36000000"
     selection: "default"
     boost_factor: "90"
 ```

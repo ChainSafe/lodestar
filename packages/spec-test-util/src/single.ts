@@ -87,7 +87,7 @@ const defaultOptions: SpecTestOptions<any, any> = {
   getExpected: (testCase) => testCase,
   shouldError: () => false,
   shouldSkip: () => false,
-  expectFunc: (_testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
+  expectFunc: (_testCase, expected, actual) => expect(actual).toEqual(expected),
   timeout: 10 * 60 * 1000,
 };
 

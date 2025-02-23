@@ -1,5 +1,6 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
@@ -35,6 +36,10 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
+
+  if (hasher.name !== "as-sha256") {
+    throw Error(`Loaded incorrect hasher ${hasher.name}, expected as-sha256`);
+  }
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
