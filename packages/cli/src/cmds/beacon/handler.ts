@@ -38,7 +38,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
 
   if (hasher.name !== "as-sha256") {
-    throw Error(`Loaded incorrect hasher ${hasher.name}, expected as-sha256`);
+    logger.warn("Use of hasher other than as-sha256", {hasher: hasher.name});
   }
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
