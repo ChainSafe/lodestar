@@ -185,7 +185,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.unknownParent, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -247,7 +247,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
           logger.debug("Gossip blob has error", {slot, root: rootHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.unknownParent, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -316,7 +316,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === DataColumnSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
           logger.debug("Gossip dataColumn has error", {slot, root: blockHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.unknownParent, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
         }
 
         if (e.action === GossipAction.REJECT) {
