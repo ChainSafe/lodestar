@@ -10,7 +10,8 @@
       "${configDir}/node_modules/@types",
       "${configDir}/types"
     ],
-    "noCheck": false,
+    // Enable it when upgrade `vite-plugin-dts` 
+    // "noCheck": false,
     "noEmit": true,
     // To be used in the test fixtures
     "resolveJsonModule": true,
