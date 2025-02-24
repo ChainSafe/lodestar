@@ -133,6 +133,14 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
 
     this.options.logger.error(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
+    for (const error of errors) {
+      this.options.logger.error(
+        `@@@ ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
+          .map(([k, v]) => `${k}=${v as string}`)
+          .join(" ")}`
+      );
+    }
+
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
