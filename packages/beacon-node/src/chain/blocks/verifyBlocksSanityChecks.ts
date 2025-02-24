@@ -5,7 +5,8 @@ import {Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {ImportBlockOpts} from "./types.js";
+import {BlockInput} from "./utils/blockInput.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -21,14 +22,14 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  */
 export function verifyBlocksSanityChecks(
   chain: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig},
-  blocks: BlockInput[],
+  blockInputs: BlockInput[],
   opts: ImportBlockOpts
 ): {
   relevantBlocks: BlockInput[];
   parentSlots: Slot[];
   parentBlock: ProtoBlock | null;
 } {
-  if (blocks.length === 0) {
+  if (blockInputs.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -36,9 +37,9 @@ export function verifyBlocksSanityChecks(
   const parentSlots: Slot[] = [];
   let parentBlock: ProtoBlock | null = null;
 
-  for (const blockInput of blocks) {
-    const {block} = blockInput;
-    const blockSlot = block.message.slot;
+  for (const blockInput of blockInputs) {
+    const block = blockInput.getBlock();
+    const blockSlot = blockInput.getSlot();
 
     // Not genesis block
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
@@ -62,10 +63,10 @@ export function verifyBlocksSanityChecks(
     let parentBlockSlot: Slot;
 
     if (relevantBlocks.length > 0) {
-      parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].block.message.slot;
+      parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].getSlot();
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
-      const parentRoot = toRootHex(block.message.parentRoot);
+      const parentRoot = blockInput.getParentRootHex();
       parentBlock = chain.forkChoice.getBlockHex(parentRoot);
       if (!parentBlock) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
@@ -82,13 +83,12 @@ export function verifyBlocksSanityChecks(
 
     // Not already known
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
-    const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
-    if (chain.forkChoice.hasBlockHex(blockHash)) {
+    if (chain.forkChoice.hasBlockHex(blockInput.rootHex)) {
       if (opts.ignoreIfKnown) {
         continue;
       }
 
-      throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
+      throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.rootHex});
     }
 
     // Block is relevant
