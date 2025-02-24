@@ -56,7 +56,7 @@ import {Archiver} from "./archiver/archiver.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {BlockInput} from "./blocks/types.js";
+import {BlockInput} from "./blocks/utils/blockInput.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
