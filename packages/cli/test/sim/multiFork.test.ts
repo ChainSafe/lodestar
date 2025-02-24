@@ -137,7 +137,6 @@ env.tracker.register(
   })
 );
 
-
 // since delayFcu flag when importing block, lodestar will not send fcu to EL right after it import a block
 // instead lodestar does it when preparing for the next slot
 // env.tracker.register(
