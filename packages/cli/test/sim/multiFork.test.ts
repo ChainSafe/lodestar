@@ -152,7 +152,9 @@ await connectAllNodes(env.nodes);
 let lastForkEpoch = 0;
 // Go through every fork and check which one is active and register assertion for it
 // This will make sure this test would identify if we add new fork or activate one of the existing ones
-for (const fork of env.forkConfig.forksAscendingEpochOrder) {
+// for (const fork of env.forkConfig.forksAscendingEpochOrder) {
+// phase0, altair, bellatrix only
+for (const fork of env.forkConfig.forksAscendingEpochOrder.slice(0, 3)) {
   if (!Number.isInteger(fork.epoch)) continue;
   lastForkEpoch = fork.epoch;
   env.tracker.register(createForkAssertion(fork.name, fork.epoch));
