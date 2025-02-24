@@ -137,12 +137,15 @@ env.tracker.register(
   })
 );
 
-env.tracker.register(
-  createExecutionHeadAssertion({
-    // Second last slot of second bellatrix epoch
-    checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
-  })
-);
+
+// since delayFcu flag when importing block, lodestar will not send fcu to EL right after it import a block
+// instead lodestar does it when preparing for the next slot
+// env.tracker.register(
+//   createExecutionHeadAssertion({
+//     // Second last slot of second bellatrix epoch
+//     checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
+//   })
+// );
 
 env.tracker.register(createWithdrawalAssertions(env.nodes[0].id));
 
