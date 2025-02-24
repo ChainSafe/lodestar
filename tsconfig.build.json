@@ -34,6 +34,14 @@
     "skipLibCheck": true,
 
     // Output relative to each package
-    "outDir": "${configDir}/lib"
+    "outDir": "${configDir}/lib",
+    
+    // Required to run benchmark command from root directory
+    "typeRoots": [
+      "node_modules/@types",
+      "./types",
+      "${configDir}/node_modules/@types",
+      "${configDir}/types"
+    ],
   }
 }

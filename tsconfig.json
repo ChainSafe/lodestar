@@ -3,13 +3,6 @@
   "compilerOptions": {
     "emitDeclarationOnly": false,
     "incremental": false,
-    // Required to run benchmark command from root directory
-    "typeRoots": [
-      "node_modules/@types",
-      "./types",
-      "${configDir}/node_modules/@types",
-      "${configDir}/types"
-    ],
     // Enable it when upgrade `vite-plugin-dts` 
     // "noCheck": false,
     "noEmit": true,
