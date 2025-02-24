@@ -103,7 +103,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
 
   // To print a tree a single test you are debugging do
   //
-  // $ RENDER_TREE=true ONLY_ID="4 arrays" ../../node_modules/.bin/vitest --run test/unit/byType/vector/valid.test.ts
+  // $ RENDER_TREE=true ONLY_ID="4 arrays" ../../node_modules/.bin/vitest run test/unit/byType/vector/valid.test.ts
   //
   // '1000' => '0x0000000000000000000000000000000000000000000000000000000000000000',
   // '1001' => '0x0000000000000000000000000000000000000000000000000000000000000000',
