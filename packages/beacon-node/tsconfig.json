@@ -1,4 +1,8 @@
 {
   "extends": "../../tsconfig.json",
-  "exclude": ["../../node_modules/it-pipe"]
+  "exclude": ["../../node_modules/it-pipe"],
+  "include": ["src"],
+  "compilerOptions": {
+    "outDir": "lib"
+  }
 }

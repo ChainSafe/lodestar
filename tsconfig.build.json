@@ -1,5 +1,4 @@
 {
-  "include": ["${configDir}/src"],
   "compilerOptions": {
     "target": "es2021",
     "lib": ["es2021", "dom"],
@@ -32,9 +31,6 @@
     // TODO: Investigate following errors:
     // - Cannot find module 'rollup/parseAst' or its corresponding type declarations
     "skipLibCheck": true,
-
-    // Output relative to each package
-    "outDir": "${configDir}/lib",
     
     // Required to run benchmark command from root directory
     "typeRoots": [
