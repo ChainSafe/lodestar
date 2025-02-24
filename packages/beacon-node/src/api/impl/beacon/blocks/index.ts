@@ -3,7 +3,9 @@ import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkName,
   ForkPostBellatrix,
+  NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
+  isForkBlobs,
   isForkPostBellatrix,
   isForkPostElectra,
   isForkPostFulu,
@@ -36,6 +38,15 @@ import {
   ImportBlockOpts,
   getBlockInput,
 } from "../../../../chain/blocks/types.js";
+import {
+  BlockInput as BlockInputNew,
+  BlockInputBlobs as BlockInputBlobsNew,
+  BlockInputColumns as BlockInputColumnsNew,
+  BlockInputType,
+  BlockInputSourceType,
+  isBlockInputBlobs,
+  isBlockInputColumns,
+} from "../../../../chain/blocks/utils/blockInput.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
@@ -77,66 +88,64 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
-    let blockForImport: BlockInput,
-      signedBlock: SignedBeaconBlock,
-      blobSidecars: deneb.BlobSidecars,
-      dataColumnSidecars: fulu.DataColumnSidecars;
 
-    if (isSignedBlockContents(signedBlockOrContents)) {
-      ({signedBlock} = signedBlockOrContents);
-      const fork = config.getForkName(signedBlock.message.slot);
-      let blockData: BlockInputAvailableData;
-      if (isForkPostFulu(fork)) {
-        dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, signedBlockOrContents);
-        blockData = {
-          fork,
-          dataColumnsLen: dataColumnSidecars.length,
-          // dataColumnsIndex is a 1 based index of ith column present in dataColumns[custodyColumns[i-1]]
-          dataColumnsIndex: new Uint8Array(Array.from({length: dataColumnSidecars.length}, (_, j) => 1 + j)),
-          dataColumns: dataColumnSidecars,
-          dataColumnsBytes: dataColumnSidecars.map(() => null),
-          dataColumnsSource: DataColumnsSource.api,
-        } as BlockInputDataColumns;
-        blobSidecars = [];
-      } else if (fork === ForkName.deneb || fork === ForkName.electra) {
-        blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
-        blockData = {
-          fork,
-          blobs: blobSidecars,
-          blobsSource: BlobsSource.api,
-        } as BlockInputBlobs;
-        dataColumnSidecars = [];
-      } else {
-        throw Error(`Invalid data fork=${fork} for publish`);
-      }
-
-      blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
+    let blockInput: BlockInputNew;
+    if (!isSignedBlockContents(signedBlockOrContents)) {
+      const blockRoot = this.config
+        .getForkTypes(signedBlockOrContents.message.slot)
+        .SignedBeaconBlock.hashTreeRoot(signedBlockOrContents.message);
+      blockInput = chain.blockInputCache.getBlockInputByBlock({blockRoot, block: signedBlockOrContents});
     } else {
-      signedBlock = signedBlockOrContents;
-      blobSidecars = [];
-      dataColumnSidecars = [];
-      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
+      const blockRoot = this.config
+        .getForkTypes(signedBlockOrContents.signedBlock.message.slot)
+        .SignedBeaconBlock.hashTreeRoot(signedBlockOrContents.signedBlock.message);
+      blockInput = chain.blockInputCache.getBlockInputByBlock({blockRoot, block: signedBlockOrContents.signedBlock});
+      switch (blockInput.type) {
+        case BlockInputType.PreDeneb:
+          throw new Error("SignedBlockContents were sent to publishBlockV2 but BlockInput is PreDeneb");
+        case BlockInputType.Blobs:
+          // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
+          //                     computeBlobSidecars to SignedBlockContents and get rid of the third
+          for (const blobSidecar of computeBlobSidecars(
+            config,
+            signedBlockOrContents.signedBlock,
+            signedBlockOrContents
+          )) {
+            (blockInput as BlockInputBlobsNew).addBlob(blobSidecar, BlockInputSourceType.api);
+          }
+          break;
+        case BlockInputType.Columns:
+          // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
+          //                     computeDataColumnSidecars to SignedBlockContents and get rid of the third
+          for (const columnSidecar of computeDataColumnSidecars(
+            config,
+            signedBlockOrContents.signedBlock,
+            signedBlockOrContents
+          )) {
+            (blockInput as BlockInputColumnsNew).addColumnSidecar(columnSidecar, BlockInputSourceType.api);
+          }
+          break;
+      }
     }
 
-    // check what validations have been requested before broadcasting and publishing the block
-    // TODO: add validation time to metrics
-    broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
-    // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
-    // state transition to produce the stateRoot
-    const slot = signedBlock.message.slot;
-    const fork = config.getForkName(slot);
-    const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+    const slot = blockInput.getSlot();
+    const forkName = blockInput.getForkName();
+    const signedBlock = blockInput.getBlock();
+    const blockLocallyProduced =
+      chain.producedBlockRoot.has(blockInput.rootHex) || chain.producedBlindedBlockRoot.has(blockInput.rootHex);
     // bodyRoot should be the same to produced block
     const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
-    const blockLocallyProduced =
-      chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
-    const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
-
+    const valLogMeta = {slot, blockRoot: blockInput.rootHex, bodyRoot, broadcastValidation, blockLocallyProduced};
     switch (broadcastValidation) {
+      case routes.beacon.BroadcastValidation.none: {
+        chain.logger.debug("Skipping broadcast validation", valLogMeta);
+        break;
+      }
+
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
           try {
-            await validateGossipBlock(config, chain, signedBlock, fork);
+            await validateGossipBlock(config, chain, signedBlock, forkName);
           } catch (error) {
             if (error instanceof BlockGossipError && error.type.code === BlockErrorCode.ALREADY_KNOWN) {
               chain.logger.debug("Ignoring known block during publishing", valLogMeta);
@@ -164,9 +173,12 @@ export function getBeaconBlockApi({
         if (!blockLocallyProduced) {
           const parentBlock = chain.forkChoice.getBlock(signedBlock.message.parentRoot);
           if (parentBlock === null) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
-              blockInput: blockForImport,
-              peer: IDENTITY_PEER_ID,
+            // TODO (@matthewkeil) why do we try to sync the unknown parent?  How did the block get built and published
+            //      to the API if its parent is unknown?  Seems like this is an invalid case or if its valid should
+            //      the block be stored and published once its ancestry is known?
+            network.events.emit(NetworkEvent.unknownParent, {
+              blockInput: blockInput,
+              source: BlockInputSourceType.api,
             });
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -180,7 +192,7 @@ export function getBeaconBlockApi({
           }
 
           try {
-            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], {
+            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockInput], {
               ...opts,
               verifyOnly: true,
               skipVerifyBlockSignatures: true,
@@ -210,11 +222,6 @@ export function getBeaconBlockApi({
         break;
       }
 
-      case routes.beacon.BroadcastValidation.none: {
-        chain.logger.debug("Skipping broadcast validation", valLogMeta);
-        break;
-      }
-
       default: {
         // error or log warning we do not support this validation
         const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
@@ -227,44 +234,60 @@ export function getBeaconBlockApi({
 
     // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
     // REST request promise without any extra infrastructure.
-    const msToBlockSlot =
-      computeTimeAtSlot(config, blockForImport.block.message.slot, chain.genesisTime) * 1000 - Date.now();
+    const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
     if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
       // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
       await sleep(msToBlockSlot);
     }
 
-    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockInput.rootHex});
 
     // TODO: Validate block
-    metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
     chain.logger.info("Publishing block", valLogMeta);
-    const publishPromises = [
-      // Send the block, regardless of whether or not it is valid. The API
-      // specification is very clear that this is the desired behaviour.
-      //
-      // i) Publish blobs and block before importing so that network can see them asap
-      // ii) publish blobs first because
-      //     a) by the times nodes see block, they might decide to pull blobs
-      //     b) they might require more hops to reach recipients in peerDAS kind of setup where
-      //        blobs might need to hop between nodes because of partial subnet subscription
-      () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
-      ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
+    // Send the block, regardless of whether or not it is valid. The API
+    // specification is very clear that this is the desired behavior.
+    //
+    // i) Publish blobs and block before importing so that network can see them asap
+    // ii) publish blobs first because
+    //     a) by the times nodes see block, they might decide to pull blobs
+    //     b) they might require more hops to reach recipients in peerDAS kind of setup where
+    //        blobs might need to hop between nodes because of partial subnet subscription
+    const publishPromises: Array<() => Promise<unknown>> = [];
+    if (isBlockInputBlobs(blockInput)) {
+      publishPromises.push(...blockInput.getBlobs().map((blobSidecar) => network.publishBlobSidecar(blobSidecar)));
+    } else if (isBlockInputColumns(blockInput)) {
+      const dataColumnSidecars = blockInput.getAllColumns();
+      // TODO (@matthewkeil) not sure if this check is necessary because they should have all been added above.... hmmm
+      // if (dataColumnSidecars !== NUMBER_OF_COLUMNS) {
+      //   chain.logger.warn(
+      //     `Attempting to publish ${NUMBER_OF_COLUMNS} columns but ${NUMBER_OF_COLUMNS - dataColumnSidecars.length} are missing`
+      //   );
+      // }
+      publishPromises.push(
+        ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar))
+      );
+    }
+    publishPromises.push(
+      () => network.publishBeaconBlock(signedBlock),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
-          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .processBlock(blockInput, {...opts, eagerPersistBlock: false})
           .catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              network.events.emit(NetworkEvent.unknownBlockParent, {
-                blockInput: blockForImport,
-                peer: IDENTITY_PEER_ID,
+              // TODO (@matthewkeil) why do we try to sync the unknown parent?  How did the block get built and published
+              //      to the API if its parent is unknown?  Seems like this is an invalid case or if its valid should
+              //      the block be stored and published once its ancestry is known?
+              network.events.emit(NetworkEvent.unknownParent, {
+                blockInput: blockInput,
+                source: BlockInputSourceType.api,
               });
             }
             throw e;
-          }),
-    ];
+          })
+    );
+
     await promiseAllMaybeAsync(publishPromises);
   };
 

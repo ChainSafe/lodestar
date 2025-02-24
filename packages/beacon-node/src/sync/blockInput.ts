@@ -39,6 +39,14 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {shuffle} from "../util/shuffle.js";
 import {PeerCustody} from "../util/dataColumns.js";
 
+/**
+ * MAX_FETCHES_PER_SYNC_ATTEMPT should be set at, or below, MAX_REQUEST_BLOCKS_DENEB so we don't
+ * get rate limited/baned by our peers. Setting at 2 allows for two retries on each PendingBlockInput
+ * 2 attempts * 2 retries = 4 peer requests per ReqResp method
+ */
+const MAX_FETCHES_PER_SYNC_ATTEMPT = 2;
+const MAX_RETRIES_PER_PENDING_BLOCK_INPUT = 2;
+
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
@@ -225,6 +233,7 @@ export class BlockInputSync {
     if (!this.subscribedToNetworkEvents) {
       this.logger.verbose("BlockInputSync enabled.");
       this.network.events.on(NetworkEvent.blockInput, this.onBlockInput);
+      this.network.events.on(NetworkEvent.unknownParent, this.onUnknownParent);
       this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
       this.subscribedToNetworkEvents = true;
     }
@@ -233,6 +242,7 @@ export class BlockInputSync {
   unsubscribeFromNetwork(): void {
     this.logger.verbose("BlockInputSync disabled.");
     this.network.events.off(NetworkEvent.blockInput, this.onBlockInput);
+    this.network.events.off(NetworkEvent.unknownParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     this.subscribedToNetworkEvents = false;
   }
@@ -256,6 +266,22 @@ export class BlockInputSync {
       this.metrics?.syncBlockInput.onBlockInputSource.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling blockInput event", {}, e as Error);
+    }
+  };
+
+  private onUnknownParent = (data: NetworkEventData[NetworkEvent.unknownParent]): void => {
+    try {
+      const {blockInput, source, peerIdStr} = data;
+      const parentRootHex = blockInput.getParentRootHex();
+      const parentBlockInput = this.chain.blockInputCache.getBlockInputByRootHex({rootHex: parentRootHex});
+      const pendingBlockInput = this.addBlockInput(parentBlockInput, peerIdStr);
+      const pendingParentBlockInput = this.addBlockInput(blockInput, peerIdStr);
+      this.triggerUnknownBlockSearch();
+      this.metrics?.syncBlockInput.onBlockInputStatus.inc({status: pendingBlockInput.status});
+      this.metrics?.syncBlockInput.onBlockInputStatus.inc({status: pendingParentBlockInput.status});
+      this.metrics?.syncBlockInput.onBlockInputSource.inc({source: source}, 2);
+    } catch (e) {
+      this.logger.debug("Error handling unknownParent event", {}, e as Error);
     }
   };
 
@@ -683,20 +709,18 @@ export class BlockInputSync {
     // the the missing indices for columns that we need
     let missingColumns = blockInput.getMissingColumnIndices();
     // loop while we are missing columns or until we reach the max number of attempts for this round
-    // MAX_FETCHES_PER_SYNC_ATTEMPT should be set at, or below, MAX_REQUEST_BLOCKS_DENEB so we don't
-    // get rate limited/baned by our peers
     while (missingColumns.length && attempts < MAX_FETCHES_PER_SYNC_ATTEMPT) {
       attempts++;
       // always attempt to pull from a peer that has the most number of columns that we need
       const sorted = this.getPeersWithBestCustody(missingColumns);
       for (const {peerIdStr, columns} of sorted) {
         try {
-          this.fetchColumn(blockInput, columns, peerIdStr);
+          await this.fetchColumn(blockInput, columns, peerIdStr);
+          missingColumns = blockInput.getMissingColumnIndices();
         } catch {
           break;
         }
       }
-      missingColumns = blockInput.getMissingColumnIndices();
     }
   }
 

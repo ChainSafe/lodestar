@@ -22,6 +22,8 @@ export enum NetworkEvent {
 
   // Request for sync of block and data
   blockInput = "blockInput",
+  // block submitted for publish but parent was not in fork-choice
+  unknownParent = "unknownParent",
 
   // Network processor events
   /** (Network -> App) A gossip message is ready for validation */
@@ -43,6 +45,7 @@ export type NetworkEventData = {
   [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
   [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput | NullBlockInput; peer?: PeerIdStr};
   [NetworkEvent.blockInput]: {blockInput: BlockInput; source: BlockInputSourceType; peerIdStr?: PeerIdStr};
+  [NetworkEvent.unknownParent]: {blockInput: BlockInput; source: BlockInputSourceType; peerIdStr?: PeerIdStr};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
@@ -58,6 +61,8 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.unknownBlockParent]: EventDirection.workerToMain,
   [NetworkEvent.unknownBlock]: EventDirection.workerToMain,
   [NetworkEvent.unknownBlockInput]: EventDirection.workerToMain,
+  [NetworkEvent.blockInput]: EventDirection.workerToMain,
+  [NetworkEvent.unknownParent]: EventDirection.workerToMain,
   [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
   [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
 };
