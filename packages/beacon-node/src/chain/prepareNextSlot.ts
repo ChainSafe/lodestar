@@ -243,7 +243,7 @@ export class PrepareNextSlotScheduler {
         const secFromClockSlot = this.chain.clock.secFromSlot(clockSlot);
         const secToPrepareSlot = Math.max(this.config.SECONDS_PER_SLOT - secFromClockSlot, 0);
         const forkchoiceOffset = this.config.SECONDS_PER_SLOT / FORK_CHOICE_LOOKAHEAD_FACTOR;
-        await sleep(secToPrepareSlot - forkchoiceOffset, this.signal);
+        await sleep((secToPrepareSlot - forkchoiceOffset) * 1000, this.signal);
 
         await this.chain.notifyForkchoiceUpdate();
       }
