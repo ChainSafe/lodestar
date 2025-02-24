@@ -11,7 +11,8 @@ import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {ImportBlockOpts} from "./types.js";
+import {BlockInput} from "./utils/blockInput.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -23,7 +24,7 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
-  blocks: BlockInput[],
+  blockInputs: BlockInput[],
   dataAvailabilityStatuses: DataAvailableStatus[],
   logger: Logger,
   metrics: Metrics | null,
@@ -34,9 +35,9 @@ export async function verifyBlocksStateTransitionOnly(
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
-  for (let i = 0; i < blocks.length; i++) {
+  for (let i = 0; i < blockInputs.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const {block} = blocks[i];
+    const block = blockInputs[i].getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailableStatus = dataAvailabilityStatuses[i];
 
@@ -90,14 +91,14 @@ export async function verifyBlocksStateTransitionOnly(
     }
 
     // this avoids keeping our node busy processing blocks
-    if (i < blocks.length - 1) {
+    if (i < blockInputs.length - 1) {
       await nextEventLoop();
     }
   }
 
   const verifyStateTime = Date.now();
-  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const slot = blocks[0].block.message.slot;
+  if (blockInputs.length === 1 && opts.seenTimestampSec !== undefined) {
+    const slot = blockInputs[0].getSlot();
     const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 
