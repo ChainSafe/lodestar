@@ -1,10 +1,18 @@
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {fulu, ssz} from "@lodestar/types";
+import {fulu, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {toHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {BlockInput, BlockInputDataColumns, BlockInputType} from "./types.js";
+import {BlockInput, isBlockInputBlobs, isBlockInputColumns} from "./utils/blockInput.js";
+import {BlobSidecarsWrapper} from "../../db/repositories/blobSidecars.js";
+import {DataColumnSidecarsWrapper} from "../../db/repositories/dataColumnSidecars.js";
 
+function calculateDataColumnsSize(columnLength: number): number {
+  return (
+    ssz.fulu.DataColumnSidecar.minSize +
+    columnLength * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize)
+  );
+}
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
  * Else the node will be in an inconsistent state that can lead to being stuck.
@@ -12,95 +20,71 @@ import {BlockInput, BlockInputDataColumns, BlockInputType} from "./types.js";
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
  */
-export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockInput[]): Promise<void> {
+export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: BlockInput[]): Promise<void> {
   const fnPromises: Promise<void>[] = [];
 
-  for (const blockInput of blocksInput) {
-    const {block} = blockInput;
-    const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toRootHex(blockRoot);
-    const blockBytes = this.serializedCache.get(block);
-    if (blockBytes) {
-      // skip serializing data if we already have it
-      this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-      fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
-    } else {
-      this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-      fnPromises.push(this.db.block.add(block));
-    }
+  for (const blockInput of blocksInputs) {
+    const block = blockInput.getBlock();
+    const slot = blockInput.getSlot();
+    const {blockRoot, rootHex} = blockInput;
+    fnPromises.push(this.db.block.add(block));
     this.logger.debug("Persist block to hot DB", {
-      slot: block.message.slot,
-      root: blockRootHex,
+      slot,
+      root: rootHex,
     });
 
-    if (blockInput.type === BlockInputType.availableData || blockInput.type === BlockInputType.dataPromise) {
-      const blockData =
-        blockInput.type === BlockInputType.availableData
-          ? blockInput.blockData
-          : await blockInput.cachedData.availabilityPromise;
+    // TODO: this conditions should not ever be hit. double check all callers to write to db
+    if (blockInput.needData()) {
+      await blockInput.waitForData();
+    }
 
-      // NOTE: Old data is pruned on archive
-      if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
-        const blobSidecars = blockData.blobs;
-        fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
-        this.logger.debug("Persisted blobSidecars to hot DB", {
-          blobsLen: blobSidecars.length,
-          slot: block.message.slot,
-          root: blockRootHex,
-        });
-      } else {
-        const {custodyConfig} = this.seenGossipBlockInput;
-        const {custodyColumnsLen, custodyColumnsIndex, custodyColumns} = custodyConfig;
-        const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-        let dataColumnsLen: number;
-        let dataColumnsIndex: Uint8Array;
-        if (blobsLen === 0) {
-          dataColumnsLen = 0;
-          dataColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
-        } else {
-          dataColumnsLen = custodyColumnsLen;
-          dataColumnsIndex = custodyColumnsIndex;
-        }
-
-        const blockDataColumns = (blockData as BlockInputDataColumns).dataColumns;
-        const dataColumnSidecars = blockDataColumns.filter((dataColumnSidecar) =>
-          custodyColumns.includes(dataColumnSidecar.index)
-        );
-        if (dataColumnSidecars.length !== dataColumnsLen) {
-          throw Error(
-            `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
-          );
-        }
-
-        const dataColumnsSize =
-          ssz.fulu.DataColumnSidecar.minSize +
-          blobsLen * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
-        const slot = block.message.slot;
-        const writeData = {
-          blockRoot,
-          slot,
-          dataColumnsLen,
-          dataColumnsSize,
-          dataColumnsIndex,
-          dataColumnSidecars,
-        };
-        fnPromises.push(this.db.dataColumnSidecars.add(writeData));
-
-        this.logger.debug("Persisted dataColumnSidecars to hot DB", {
-          dataColumnsSize,
-          dataColumnsLen,
-          dataColumnSidecars: dataColumnSidecars.length,
-          slot: block.message.slot,
-          root: blockRootHex,
-        });
-      }
+    // NOTE: Old data is pruned on archive
+    if (isBlockInputBlobs(blockInput)) {
+      const blobSidecars = blockInput.getBlobs();
+      fnPromises.push(
+        this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}).then(() =>
+          this.logger.debug("Persisted blobSidecars to hot DB", {
+            blobsLen: blobSidecars.length,
+            slot: block.message.slot,
+            root: rootHex,
+          })
+        )
+      );
+    } else if (isBlockInputColumns(blockInput)) {
+      const columnSidecars = blockInput.getCustodyColumns();
+      const dataColumnIndex = blockInput.getCustodyIndex();
+      const columnLength = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
+      const dataColumnsSize = calculateDataColumnsSize(columnLength);
+      // TODO: (@matthewkeil) this is calculated differently in removal below. Rectify with @g11tech
+      // const dataColumnsSize =
+      //   ssz.fulu.DataColumnSidecar.minSize +
+      //   columnLength * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+      fnPromises.push(
+        this.db.dataColumnSidecars
+          .add({
+            blockRoot,
+            slot,
+            dataColumnsLen: columnSidecars.length,
+            dataColumnsSize,
+            dataColumnIndex,
+            columnSidecars,
+          })
+          .then(() =>
+            this.logger.debug("Persisted dataColumnSidecars to hot DB", {
+              slot,
+              rootHex,
+              numberOfColumns: columnSidecars.length,
+              dataColumnsSize,
+            })
+          )
+      );
     }
   }
 
   await Promise.all(fnPromises);
-  this.logger.debug("Persisted blocksInput to db", {
-    blocksInput: blocksInput.length,
-    slots: blocksInput.map((blockInput) => blockInput.block.message.slot).join(" "),
+  this.logger.debug("Persisted blocksInputs to db", {
+    slots: blocksInputs.map((blockInput) => `[ ${blockInput.getSlot().join(", ")} ]`),
+    numberOfBlocksInputs: blocksInputs.length,
   });
 }
 
@@ -108,51 +92,35 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
  * Prunes eagerly persisted block inputs only if not known to the fork-choice
  */
 export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, blockInputs: BlockInput[]): Promise<void> {
-  const blockToRemove = [];
-  const blobsToRemove = [];
-  const dataColumnsToRemove = [];
+  const blockToRemove: SignedBeaconBlock[] = [];
+  const blobsToRemove: BlobSidecarsWrapper[] = [];
+  const dataColumnsToRemove: DataColumnSidecarsWrapper[] = [];
 
   for (const blockInput of blockInputs) {
-    const {block, type} = blockInput;
-    const slot = block.message.slot;
-    const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toHex(blockRoot);
-    if (!this.forkChoice.hasBlockHex(blockRootHex)) {
+    const block = blockInput.getBlock();
+    const slot = blockInput.getSlot();
+    const {blockRoot, rootHex} = blockInput;
+    if (!this.forkChoice.hasBlockHex(rootHex)) {
       blockToRemove.push(block);
 
-      if (type === BlockInputType.availableData) {
-        const {blockData} = blockInput;
-        if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
-          const blobSidecars = blockData.blobs;
-          blobsToRemove.push({blockRoot, slot, blobSidecars});
-        } else {
-          const {custodyConfig} = this.seenGossipBlockInput;
-          const {
-            custodyColumnsLen: dataColumnsLen,
-            custodyColumnsIndex: dataColumnsIndex,
-            custodyColumns,
-          } = custodyConfig;
-          const dataColumnSidecars = (blockData as BlockInputDataColumns).dataColumns.filter((dataColumnSidecar) =>
-            custodyColumns.includes(dataColumnSidecar.index)
-          );
-          if (dataColumnSidecars.length !== dataColumnsLen) {
-            throw Error(
-              `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
-            );
-          }
-
-          const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-          const dataColumnsSize = ssz.fulu.Cell.fixedSize * blobsLen;
-
-          dataColumnsToRemove.push({
-            blockRoot,
-            slot,
-            dataColumnsLen,
-            dataColumnsSize,
-            dataColumnsIndex,
-            dataColumnSidecars,
-          });
-        }
+      if (isBlockInputBlobs(blockInput)) {
+        blobsToRemove.push({blockRoot, slot, blobSidecars: blockInput.getBlobs()});
+      } else if (isBlockInputColumns(blockInput)) {
+        const dataColumnSidecars = blockInput.getCustodyColumns();
+        const dataColumnsIndex = blockInput.getCustodyIndex();
+        const columnLength = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
+        const dataColumnsSize = calculateDataColumnsSize(columnLength);
+        // TODO: (@matthewkeil) this is calculated differently in insertion above. Rectify with @g11tech
+        // const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
+        // const dataColumnsSize = ssz.fulu.Cell.fixedSize * blobsLen;
+        dataColumnsToRemove.push({
+          blockRoot,
+          slot,
+          dataColumnsLen: dataColumnSidecars.length,
+          dataColumnsSize,
+          dataColumnsIndex,
+          dataColumnSidecars,
+        });
       }
     }
   }
