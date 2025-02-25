@@ -22,7 +22,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
-export {ts as electra} from "./electra/index.js";
+export {ts as electra, ts as fulu} from "./electra/index.js";
 export {ts as eip7805} from "./eip7805/index.js";
 
 /** Common non-spec type to represent roots as strings */
@@ -192,6 +192,44 @@ type TypesByFork = {
     SignedAggregateAndProof: phase0.SignedAggregateAndProof;
   };
   [ForkName.electra]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: electra.BeaconBlock;
+    BeaconBlockBody: electra.BeaconBlockBody;
+    BeaconState: electra.BeaconState;
+    SignedBeaconBlock: electra.SignedBeaconBlock;
+    Metadata: altair.Metadata;
+    LightClientHeader: deneb.LightClientHeader;
+    LightClientBootstrap: electra.LightClientBootstrap;
+    LightClientUpdate: electra.LightClientUpdate;
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
+    LightClientStore: electra.LightClientStore;
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
+    ExecutionPayload: deneb.ExecutionPayload;
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
+    BuilderBid: electra.BuilderBid;
+    SignedBuilderBid: electra.SignedBuilderBid;
+    SSEPayloadAttributes: electra.SSEPayloadAttributes;
+    BlockContents: electra.BlockContents;
+    SignedBlockContents: electra.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: deneb.BlobsBundle;
+    Contents: deneb.Contents;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.SingleAttestation;
+    Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
+    ExecutionRequests: electra.ExecutionRequests;
+  };
+  [ForkName.fulu]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: electra.BeaconBlock;

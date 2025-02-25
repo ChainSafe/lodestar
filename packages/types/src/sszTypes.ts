@@ -5,11 +5,11 @@ import {ssz as bellatrix} from "./bellatrix/index.js";
 import {ssz as capella} from "./capella/index.js";
 import {ssz as deneb} from "./deneb/index.js";
 import {ssz as eip7805} from "./eip7805/index.js";
-import {ssz as electra} from "./electra/index.js";
+import {ssz as electra, ssz as fulu} from "./electra/index.js";
 import {ssz as phase0} from "./phase0/index.js";
 
 export * from "./primitive/sszTypes.js";
-export {phase0, altair, bellatrix, capella, deneb, electra, eip7805};
+export {phase0, altair, bellatrix, capella, deneb, electra, fulu, eip7805};
 
 /**
  * Index the ssz types that differ by fork
@@ -22,7 +22,8 @@ const typesByFork = {
   [ForkName.capella]: {...phase0, ...altair, ...bellatrix, ...capella},
   [ForkName.deneb]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb},
   [ForkName.electra]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
-  [ForkName.eip7805]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra, ...eip7805},
+  [ForkName.fulu]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra, ...fulu},
+  [ForkName.eip7805]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra, ...fulu, ...eip7805},
 };
 
 /**
