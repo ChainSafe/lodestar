@@ -290,7 +290,7 @@ export function getBeaconStateApi({
 
       return {
         data: {
-          validators: syncCommitteeCache.validatorIndices,
+          validators: new Array(...syncCommitteeCache.validatorIndices),
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },
