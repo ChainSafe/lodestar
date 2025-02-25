@@ -396,7 +396,7 @@ export async function processSlotsToNearestCheckpoint(
       const latestBlockHex = toRootHex(cp.root);
       try {
         const persistCount = await checkpointStateCache.processState(latestBlockHex, checkpointState);
-        logger?.verbose("processSlotsToNearestCheckpoint calls checkpointStateCache to process checkpoint state", {
+        logger?.verbose("pruning checkpointStateCache during processSlotsToNearestCheckpoint", {
           root: latestBlockHex,
           epoch: cp.epoch,
           persistCount,
