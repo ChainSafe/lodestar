@@ -39,6 +39,11 @@ export function verifyBlocksSanityChecks(
   for (const blockInput of blocks) {
     const {block} = blockInput;
     const blockSlot = block.message.slot;
+    const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+
+    if (blockHash === "0x2db899881ed8546476d0b92c6aa9110bea9a4cd0dbeb5519eb0ea69575f1f359") {
+      throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
+    }
 
     // Not genesis block
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
@@ -82,7 +87,6 @@ export function verifyBlocksSanityChecks(
 
     // Not already known
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
-    const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
     if (chain.forkChoice.hasBlockHex(blockHash)) {
       if (opts.ignoreIfKnown) {
         continue;
