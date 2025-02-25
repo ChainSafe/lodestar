@@ -6,6 +6,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
+import {IChainOptions} from "../options.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -20,7 +21,7 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig},
+  chain: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig; opts: IChainOptions},
   blocks: BlockInput[],
   opts: ImportBlockOpts
 ): {
@@ -41,7 +42,8 @@ export function verifyBlocksSanityChecks(
     const blockSlot = block.message.slot;
     const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
 
-    if (blockHash === "0x2db899881ed8546476d0b92c6aa9110bea9a4cd0dbeb5519eb0ea69575f1f359") {
+    if (chain.opts.blacklistedBlocks?.includes(blockHash)) {
+      // if (blockHash === "0x2db899881ed8546476d0b92c6aa9110bea9a4cd0dbeb5519eb0ea69575f1f359") {
       throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
     }
 
