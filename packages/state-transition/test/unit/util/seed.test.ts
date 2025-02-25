@@ -89,7 +89,7 @@ describe("electra getNextSyncCommitteeIndices", () => {
         effectiveBalanceIncrements
       );
       const result = getNextSyncCommitteeIndices(fork, state, activeValidatorIndices, effectiveBalanceIncrements);
-      expect(result).toEqual(expected);
+      expect(result).toEqual(new Uint32Array(expected));
     });
   }
 });
