@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import {DEFAULT_STATE_ARCHIVE_MODE, IBeaconNodeOptions, StateArchiveMode, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
+import {ensure0xPrefix} from "../../util/format.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -118,9 +119,7 @@ export const options: CliCommandOptions<ChainArgs> = {
       blocks
         .flatMap((hex) => hex.split(","))
         .map((hex) => hex.trim())
-        .map((hex) => {
-          return hex.startsWith("0x") ? hex : `0x${hex}`;
-        }),
+        .map(ensure0xPrefix),
   },
 
   "chain.disableBlsBatchVerify": {
