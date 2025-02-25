@@ -1,8 +1,8 @@
+import {digest} from "@chainsafe/as-sha256";
 import {
   computeProposerIndex as nativeComputeProposerIndex,
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
 } from "@chainsafe/swap-or-not-shuffle";
-import {digest} from "@chainsafe/as-sha256";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
