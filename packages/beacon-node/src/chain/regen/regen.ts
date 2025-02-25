@@ -395,7 +395,12 @@ export async function processSlotsToNearestCheckpoint(
       // cannot use getBlockRootAtSlot() because nextEpochSlot = postState
       const latestBlockHex = toRootHex(cp.root);
       try {
-        await checkpointStateCache.processState(latestBlockHex, checkpointState);
+        const persistCount = await checkpointStateCache.processState(latestBlockHex, checkpointState);
+        logger?.verbose("processSlotsToNearestCheckpoint calls checkpointStateCache to process checkpoint state", {
+          root: latestBlockHex,
+          epoch: cp.epoch,
+          persistCount,
+        });
       } catch (e) {
         logger?.debug(
           "CheckpointStateCache failed to process checkpoint state",
