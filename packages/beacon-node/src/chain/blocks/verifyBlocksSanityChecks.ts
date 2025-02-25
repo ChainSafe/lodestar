@@ -5,8 +5,8 @@ import {Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
 import {IChainOptions} from "../options.js";
+import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.

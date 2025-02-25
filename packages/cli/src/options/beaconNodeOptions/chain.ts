@@ -1,7 +1,6 @@
 import * as path from "node:path";
 import {DEFAULT_STATE_ARCHIVE_MODE, IBeaconNodeOptions, StateArchiveMode, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
-import {ensure0xPrefix} from "../../util";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -115,7 +114,13 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Common separated list of 0x prefixed root hex's for blocks that should not be allowed through processing",
     group: "chain",
-    coerce: (blocks: string[]): string[] => blocks.flatMap((hex) => hex.split(",")).map(ensure0xPrefix),
+    coerce: (blocks: string[]): string[] =>
+      blocks
+        .flatMap((hex) => hex.split(","))
+        .map((hex) => hex.trim())
+        .map((hex) => {
+          return hex.startsWith("0x") ? hex : `0x${hex}`;
+        }),
   },
 
   "chain.disableBlsBatchVerify": {
