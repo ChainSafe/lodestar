@@ -474,6 +474,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
     const persistEpochs = sortedEpochs.slice(0, sortedEpochs.length - this.maxEpochsInMemory);
     for (const lowestEpoch of persistEpochs) {
+      if (state.slot < computeStartSlotAtEpoch(lowestEpoch)) {
+        // there is no checkpoint states of epochs newer than this state
+        // otherwise get "Can only get block root in the past" error from getBlockRootAtSlot() api below
+        // see https://github.com/ChainSafe/lodestar/issues/7495
+        break;
+      }
       // usually there is only 0 or 1 epoch to persist in this loop
       persistCount += await this.processPastEpoch(blockRootHex, state, lowestEpoch);
     }
