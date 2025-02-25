@@ -43,7 +43,6 @@ export function verifyBlocksSanityChecks(
     const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
 
     if (chain.opts.blacklistedBlocks?.includes(blockHash)) {
-      // if (blockHash === "0x2db899881ed8546476d0b92c6aa9110bea9a4cd0dbeb5519eb0ea69575f1f359") {
       throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
     }
 
