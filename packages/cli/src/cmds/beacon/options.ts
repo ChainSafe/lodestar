@@ -74,6 +74,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
       "Force syncing from checkpoint state even if db state is within weak subjectivity period. This helps to avoid long sync times after node has been offline for a while.",
     type: "boolean",
     group: "weak subjectivity",
+    default: true,
   },
 
   ignoreWeakSubjectivityCheck: {
