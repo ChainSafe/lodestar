@@ -49,7 +49,7 @@ export const selfSlashAttester: CliCommand<SelfSlashArgs, Record<never, never>, 
 export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<void> {
   const sksAll = deriveSecretKeys(args);
 
-  const slot = BigInt(args.slot); // Throws if not valid
+  const slot = Number(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
   if (Number.isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
@@ -102,31 +102,31 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
     // Trigers a double vote, same target epoch different data (beaconBlockRoot)
     // TODO: Allow to create double-votes
-    const data1: phase0.AttestationDataBigint = {
+    const data1: phase0.AttestationData = {
       slot,
-      index: BigInt(0),
+      index: 0,
       beaconBlockRoot: rootA,
-      source: {epoch: BigInt(0), root: rootA},
-      target: {epoch: BigInt(0), root: rootB},
+      source: {epoch: 0, root: rootA},
+      target: {epoch: 0, root: rootB},
     };
-    const data2: phase0.AttestationDataBigint = {
+    const data2: phase0.AttestationData = {
       slot,
-      index: BigInt(0),
+      index: 0,
       beaconBlockRoot: rootB,
-      source: {epoch: BigInt(0), root: rootA},
-      target: {epoch: BigInt(0), root: rootB},
+      source: {epoch: 0, root: rootA},
+      target: {epoch: 0, root: rootB},
     };
 
     const attesterSlashing: AttesterSlashing = {
       attestation1: {
         attestingIndices,
         data: data1,
-        signature: signAttestationDataBigint(config, sks, data1),
+        signature: signAttestationData(config, sks, data1),
       },
       attestation2: {
         attestingIndices,
         data: data2,
-        signature: signAttestationDataBigint(config, sks, data2),
+        signature: signAttestationData(config, sks, data2),
       },
     };
 
@@ -138,14 +138,14 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   }
 }
 
-function signAttestationDataBigint(
+function signAttestationData(
   config: BeaconConfig,
   sks: SecretKey[],
-  data: phase0.AttestationDataBigint
+  data: phase0.AttestationData
 ): Uint8Array {
-  const slot = Number(data.slot as bigint);
+  const slot = Number(data.slot);
   const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_ATTESTER);
-  const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBigint, data, proposerDomain);
+  const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, data, proposerDomain);
 
   const sigs = sks.map((sk) => sk.sign(signingRoot));
   return aggregateSignatures(sigs).toBytes();
