@@ -64,7 +64,7 @@
     "@chainsafe/persistent-ts": "^1.0.0",
     "@chainsafe/pubkey-index-map": "2.0.0",
     "@chainsafe/ssz": "^1.0.2",
-    "@chainsafe/swap-or-not-shuffle": "^1.2.0",
+    "@chainsafe/swap-or-not-shuffle": "^1.2.1",
     "@lodestar/config": "^1.27.1",
     "@lodestar/params": "^1.27.1",
     "@lodestar/types": "^1.27.1",

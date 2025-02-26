@@ -766,59 +766,59 @@
     "@chainsafe/as-sha256" "1.0.0"
     "@chainsafe/persistent-merkle-tree" "1.0.1"
 
-"@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-darwin-arm64/-/swap-or-not-shuffle-darwin-arm64-1.2.0.tgz#689713ea60fdc898fced40872592dd0bfe1db524"
-  integrity sha512-5zf8yEcwCz1SGZZxHjoi5HOIaInma1XW+xesryW9NB6arFX0qBJL0gJ9V+fUL8wk5uDhpTb5b9+AL2XJF23qAw==
+"@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-darwin-arm64/-/swap-or-not-shuffle-darwin-arm64-1.2.1.tgz#c32bc6283b7b2276a90e6eccc38d2606e05eba38"
+  integrity sha512-kTewLZe1KqMAJ1gHfagOxo0BI4kTcMOAkGJ7pRLFM5ZkL2P7sh3/4ixnjdbtMkO207vMZEZL3fxJSSs14kg9Kg==
 
-"@chainsafe/swap-or-not-shuffle-darwin-x64@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-darwin-x64/-/swap-or-not-shuffle-darwin-x64-1.2.0.tgz#81a9c0deb921a43446424abb8c2386a401a20a32"
-  integrity sha512-L/mD3SFPn/7LddMueCgRrO49ay1fpGhQMdbyp728dIEI71SOeJBc4Dzw3KGpeBFYIZD+k5qk0HzGVLpgiXmD2Q==
+"@chainsafe/swap-or-not-shuffle-darwin-x64@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-darwin-x64/-/swap-or-not-shuffle-darwin-x64-1.2.1.tgz#2e2bde10df6fe9c6c18f9cff0ed3bb4102fd6afc"
+  integrity sha512-B/f/peQqOLW5Tqib5CqanAlQgoeib75FNszzHwRBwHdRY5ThOcBbARvOtef39zU5lYjj4j3iWobpD7G70kQyUw==
 
-"@chainsafe/swap-or-not-shuffle-linux-arm64-gnu@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-arm64-gnu/-/swap-or-not-shuffle-linux-arm64-gnu-1.2.0.tgz#ef295a6875c8c8afe8bc8e6e22c345a789bc35d9"
-  integrity sha512-rQ/MiSVvskMwRUsCSXKvdm1Csb8XOpMO5Vysnpyb9/QFpVzaeiZAtGbM7j/tqHKyz4M3dwVYqxKIGgil4tS7ZQ==
+"@chainsafe/swap-or-not-shuffle-linux-arm64-gnu@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-arm64-gnu/-/swap-or-not-shuffle-linux-arm64-gnu-1.2.1.tgz#769f0ecd91a71996b845813672100880c00e493c"
+  integrity sha512-sDpuUuo3rStvHMQgLxH1UkkUbo8rcjDI70Fq3xzbNMhfjlrP0+sJistlFJtDpWmKsFk/sgje3PzVU9G3KFXzXA==
 
-"@chainsafe/swap-or-not-shuffle-linux-arm64-musl@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-arm64-musl/-/swap-or-not-shuffle-linux-arm64-musl-1.2.0.tgz#1d4e0a02a595592812ec98de9b0590b28c36140a"
-  integrity sha512-sR52v7TT3Izn7DitRc7IJqczmEPFUYWaI/PzWtNJh3Irv6ikNW8VslByFolFmA1yyAF+zua/wbi2nXpsZ2Slvw==
+"@chainsafe/swap-or-not-shuffle-linux-arm64-musl@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-arm64-musl/-/swap-or-not-shuffle-linux-arm64-musl-1.2.1.tgz#7d09ee6eca411d5e897794073e26516f2894ebaf"
+  integrity sha512-FFmpDF2dRhhOCT3WBYOoQW9wqhJMfx7iULskBe5cjowVQ15U1TQJ6tC+hPpouUMt3/pKz9tIS9dNWTUuo7kpQg==
 
-"@chainsafe/swap-or-not-shuffle-linux-x64-gnu@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-x64-gnu/-/swap-or-not-shuffle-linux-x64-gnu-1.2.0.tgz#b7bcd50f542f9bf8b38b0f07c79225a0e8316089"
-  integrity sha512-Yu9RfzxZPkVyGgMJk3dBFrxf5eIx2ZBbNF2sYs+9EZRw/kz3AoH7RryzYhQ5riEDwFy15bz0n/LN6DBgto1zRw==
+"@chainsafe/swap-or-not-shuffle-linux-x64-gnu@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-x64-gnu/-/swap-or-not-shuffle-linux-x64-gnu-1.2.1.tgz#8c54b7b8fcb9ed6c87f8ce9dd53900d2d4abc298"
+  integrity sha512-nGXEnFCqRmCS7ATV7QQ7b7aKHcyET9XEpJylq0sljnkuNRwoQXFUYPMYTn4TMI6g3vgZt/AVK9RdCxp68JKwGQ==
 
-"@chainsafe/swap-or-not-shuffle-linux-x64-musl@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-x64-musl/-/swap-or-not-shuffle-linux-x64-musl-1.2.0.tgz#4a68d3f52000057f7c009b982ceceda01169cb9e"
-  integrity sha512-YSzGO9j1FJRTvNowpr1T5W7m/BTVsUDOC7j3ddSGhMdJFrXJTAVklYEGZDb+sH+ifQ7QJk7vX6CdDXnC9Pe0rg==
+"@chainsafe/swap-or-not-shuffle-linux-x64-musl@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-linux-x64-musl/-/swap-or-not-shuffle-linux-x64-musl-1.2.1.tgz#17d02514059388db9fb2a72edd6653648e1e4543"
+  integrity sha512-VMQxE/EZjco4damGrJkkCQ2Y2WYgJcTR/ardTnSctM1/xxwUD1wQr7YW2TQsECfK3UZcW2W6gG7iqWfJgMdGSw==
 
-"@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-win32-arm64-msvc/-/swap-or-not-shuffle-win32-arm64-msvc-1.2.0.tgz#ae939dcab430d80418369deadc4468507ff88fd0"
-  integrity sha512-VnTpRwFHuJ6251EpNVhUPcfkPCwAykYLIVij3ADINmzeScQBprXyS5iuDm0+vWbJtaD7RkJomWihKD7lx8/Lvg==
+"@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-win32-arm64-msvc/-/swap-or-not-shuffle-win32-arm64-msvc-1.2.1.tgz#684d523e7dd1f4ebbf1bee191605259fae2717f8"
+  integrity sha512-qV+ps6KSoR8blc3gMse1BOBUGcCtptnMYoqTMwFCIx9LGaeSo3vKu5XBQDwHIfAW73bZ+PHb5YUqkRgtWBiEUw==
 
-"@chainsafe/swap-or-not-shuffle-win32-x64-msvc@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-win32-x64-msvc/-/swap-or-not-shuffle-win32-x64-msvc-1.2.0.tgz#ddcdea145467ec4558123140b58f55c5c9d53cc4"
-  integrity sha512-YOjTVvKo1l5R1iGKIpMCtu4cBvrIX/fgfsQTHBbC4YUPc+nb+3ncKF3ApSsAC2tNy1Qzz1RLvWbkcE1oWAe5dw==
+"@chainsafe/swap-or-not-shuffle-win32-x64-msvc@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle-win32-x64-msvc/-/swap-or-not-shuffle-win32-x64-msvc-1.2.1.tgz#508320f5adb3cf90b9ce0e45487c3be7cd2755dd"
+  integrity sha512-hsDN4O6PPpF4rEA1tMngMJAOrWTGAu8TAqdEwgdP+U25o8UVlz8W2N9697AMGRnnArN2BgYS0zCeUR9kuZ2XEQ==
 
-"@chainsafe/swap-or-not-shuffle@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle/-/swap-or-not-shuffle-1.2.0.tgz#07f88fd137f0eee10266eddb47c91be46c20f254"
-  integrity sha512-IHrwTGrGLqcLjeFIoI9fiCUQQoaPIlXDxtb/IhRUOLMeLyyOgncQ6VxW4MGrhDYSHnKRBUHqXuuIZ6SM4oBJOQ==
+"@chainsafe/swap-or-not-shuffle@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/swap-or-not-shuffle/-/swap-or-not-shuffle-1.2.1.tgz#51021bdc77a2476daf56c66a7d8a645012b1f58c"
+  integrity sha512-H8YdEoXXv2Hw17gDWGOJEya4LHlBbpChJP3jDQRfIk9hhwr0c/zbBemBRmjADowZhArL+ymkO+j5hGaYySjdpw==
   optionalDependencies:
-    "@chainsafe/swap-or-not-shuffle-darwin-arm64" "1.2.0"
-    "@chainsafe/swap-or-not-shuffle-darwin-x64" "1.2.0"
-    "@chainsafe/swap-or-not-shuffle-linux-arm64-gnu" "1.2.0"
-    "@chainsafe/swap-or-not-shuffle-linux-arm64-musl" "1.2.0"
-    "@chainsafe/swap-or-not-shuffle-linux-x64-gnu" "1.2.0"
-    "@chainsafe/swap-or-not-shuffle-linux-x64-musl" "1.2.0"
-    "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "1.2.0"
-    "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "1.2.0"
+    "@chainsafe/swap-or-not-shuffle-darwin-arm64" "1.2.1"
+    "@chainsafe/swap-or-not-shuffle-darwin-x64" "1.2.1"
+    "@chainsafe/swap-or-not-shuffle-linux-arm64-gnu" "1.2.1"
+    "@chainsafe/swap-or-not-shuffle-linux-arm64-musl" "1.2.1"
+    "@chainsafe/swap-or-not-shuffle-linux-x64-gnu" "1.2.1"
+    "@chainsafe/swap-or-not-shuffle-linux-x64-musl" "1.2.1"
+    "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "1.2.1"
+    "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "1.2.1"
 
 "@chainsafe/threads@^1.11.1":
   version "1.11.1"
