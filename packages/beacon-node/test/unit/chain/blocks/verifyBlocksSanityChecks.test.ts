@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {beforeEach, describe, expect, it} from "vitest";
 import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
@@ -12,11 +12,12 @@ import {IClock} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
+import {IChainOptions} from "../../../../src/chain/options.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let clock: ClockStopped;
-  let modules: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};
+  let modules: Parameters<typeof verifyBlocksImportSanityChecks>[0];
   let block: SignedBeaconBlock;
   const currentSlot = 1;
 
@@ -27,7 +28,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     forkChoice = getMockedBeaconChain().forkChoice;
     forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
     clock = new ClockStopped(currentSlot);
-    modules = {config, forkChoice, clock} as {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};
+    modules = {config, forkChoice, clock, opts: {}, blacklistedBlocks: new Set()};
     // On first call, parentRoot is known
     forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
   });
