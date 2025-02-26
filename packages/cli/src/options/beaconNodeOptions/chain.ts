@@ -113,7 +113,7 @@ export const options: CliCommandOptions<ChainArgs> = {
     hidden: true,
     type: "array",
     description:
-      "Common separated list of 0x prefixed root hex's for blocks that should not be allowed through processing",
+      "Comma-separated list of 0x-prefixed root hex's for blocks that should not be allowed through processing",
     group: "chain",
     coerce: (blocks: string[]): string[] =>
       blocks
