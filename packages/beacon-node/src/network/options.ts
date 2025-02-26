@@ -42,4 +42,5 @@ export const defaultNetworkOptions: NetworkOptions = {
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // This will enable the light client server by default
   disableLightClientServer: false,
+  connectToDiscv5Bootnodes: true,
 };
