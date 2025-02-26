@@ -104,6 +104,7 @@ export class PeerDiscovery {
   private discv5FirstQueryDelayMs: number;
 
   private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
+  private bootEnrs: string[] = [];
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
     const {libp2p, peerRpcScores, metrics, logger, config} = modules;
@@ -129,7 +130,7 @@ export class PeerDiscovery {
       this.logger.verbose("PeerDiscovery: number of bootEnrs", {bootEnrs: numBootEnrs});
     }
 
-    if (this.connectToDiscv5BootnodesOnStart) {
+    // if (this.connectToDiscv5BootnodesOnStart) {
       // In devnet scenarios, especially, we want more control over which peers we connect to.
       // Only dial the discv5.bootEnrs if the option
       // network.connectToDiscv5Bootnodes has been set to true.
@@ -138,7 +139,8 @@ export class PeerDiscovery {
           this.logger.error("error onDiscoveredENR bootENR", {}, e)
         );
       }
-    }
+      this.bootEnrs = opts.discv5.bootEnrs;
+    // }
 
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
@@ -178,6 +180,17 @@ export class PeerDiscovery {
    * Request to find peers, both on specific subnets and in general
    */
   discoverPeers(peersToConnect: number, subnetRequests: SubnetDiscvQueryMs[] = []): void {
+    // if (this.connectToDiscv5BootnodesOnStart) {
+      // In devnet scenarios, especially, we want more control over which peers we connect to.
+      // Only dial the discv5.bootEnrs if the option
+      // network.connectToDiscv5Bootnodes has been set to true.
+      for (const bootENR of this.bootEnrs) {
+        this.onDiscoveredENR(ENR.decodeTxt(bootENR)).catch((e) =>
+          this.logger.error("error onDiscoveredENR bootENR", {}, e)
+        );
+      }
+    // }
+
     const subnetsToDiscoverPeers: SubnetDiscvQueryMs[] = [];
     const cachedENRsToDial = new Map<PeerIdStr, CachedENR>();
     // Iterate in reverse to consider first the most recent ENRs
