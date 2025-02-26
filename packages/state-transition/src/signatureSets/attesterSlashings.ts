@@ -2,6 +2,7 @@ import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {AttesterSlashing, IndexedAttestationBigint, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ISignatureSet, SignatureSetType, computeSigningRoot, computeStartSlotAtEpoch} from "../util/index.js";
+import { getIndexedAttestationSignatureSet } from "./indexedAttestation.js";
 
 /** Get signature sets from all AttesterSlashing objects in a block */
 export function getAttesterSlashingsSignatureSets(
@@ -19,7 +20,7 @@ export function getAttesterSlashingSignatureSets(
   attesterSlashing: AttesterSlashing
 ): ISignatureSet[] {
   return [attesterSlashing.attestation1, attesterSlashing.attestation2].map((attestation) =>
-    getIndexedAttestationBigintSignatureSet(state, attestation)
+    getIndexedAttestationSignatureSet(state, attestation)
   );
 }
 

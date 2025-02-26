@@ -3,7 +3,7 @@ import {AttesterSlashing} from "@lodestar/types";
 
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
-import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
+import {isValidIndexedAttestation, isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
 import {slashValidator} from "./slashValidator.js";
 
 /**
@@ -53,7 +53,7 @@ export function assertValidAttesterSlashing(
   // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
   // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
-    if (!isValidIndexedAttestationBigint(state, attestation, verifySignatures)) {
+    if (!isValidIndexedAttestation(state, attestation, verifySignatures)) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }
   }
