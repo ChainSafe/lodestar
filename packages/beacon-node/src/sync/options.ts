@@ -41,5 +41,5 @@ export const defaultSyncOptions: SyncOptions = {
   disableProcessAsChainSegment: false,
   /** By default skip the backfill sync */
   backfillBatchSize: 0,
-  slotImportTolerance: SLOTS_PER_EPOCH * 100,
+  slotImportTolerance: SLOTS_PER_EPOCH * 4,
 };
