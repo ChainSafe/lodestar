@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkBlobs, isForkPostFulu} from "@lodestar/params";
-import {deneb, fulu, RootHex, SignedBeaconBlock} from "@lodestar/types";
+import {deneb, fulu, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {LodestarError, Logger, toHex} from "@lodestar/utils";
 import {
   BlockInput,
@@ -8,6 +8,7 @@ import {
   BlockInputColumns,
   BlockInputPreDeneb,
   BlockInputSource,
+  BlockInputSourceType,
   BlockInputType,
 } from "./blockInput.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
@@ -23,23 +24,48 @@ export class BlockInputCache {
     private metrics?: Metrics
   ) {}
 
-  getBlockInputByRootHex(rootHex: string): BlockInput {
+  getBlockInputByRootHex({rootHex, slot}: {rootHex: string; slot?: Slot}): BlockInput {
     let blockInput = this.blockInputs.get(rootHex);
     if (!blockInput) {
-      blockInput = BlockInputPreDeneb.createFromRootHex(rootHex);
+      if (slot) {
+        const forkName = this.config.getForkName(slot);
+        if (isForkBlobs(forkName)) {
+          blockInput = BlockInputBlobs.createFromRootHex({rootHex, slot, forkName});
+        } else if (isForkPostFulu(forkName)) {
+          blockInput = BlockInputColumns.createFromRootHex({rootHex, slot, forkName});
+        } else {
+          blockInput = BlockInputPreDeneb.createFromRootHex({rootHex, slot, forkName});
+        }
+      } else {
+        blockInput = BlockInputPreDeneb.createFromRootHex({rootHex});
+      }
       this.blockInputs.set(rootHex, blockInput);
+    } else if (slot) {
+      const blockSlot = blockInput.getSlot(false);
+      if (!blockSlot) {
+        blockInput.setSlot(slot);
+      } else if (blockSlot !== slot) {
+        throw new BlockInputCacheError({
+          code: BlockInputCacheErrorCode.SLOT_MISMATCH,
+          blockInputSlot: blockInput.slot,
+          slot,
+        });
+      }
     }
     return blockInput;
   }
 
-  getBlockInputByBlock(blockRoot: Uint8Array, block: SignedBeaconBlock): BlockInput {
-    const blockRoot = toHex(this.config.getForkTypes(block.message.slot).SignedBeaconBlock.hashTreeRoot(block.message));
-    let blockInput = this.blockInputs.get(blockRoot);
+  getBlockInputByBlock(block: SignedBeaconBlock, source: BlockInputSourceType, peerIdStr?: string): BlockInput {
+    const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const rootHex = toHex(blockRoot);
+    const forkName = this.config.getForkName(block.message.slot);
+
+    let blockInput = this.blockInputs.get(rootHex);
     if (blockInput) {
-      if (blockInput.hasBlock()) {
-        // TODO: add a metric here
+      if (!blockInput.hasBlock()) {
+        blockInput.addBlock({rootHex, blockRoot, block, forkName, source, peerIdStr});
       } else {
-        blockInput.addBlock(block);
+        // TODO: add a metric here
       }
       return blockInput;
     }
@@ -49,24 +75,17 @@ export class BlockInputCache {
     } else if (isForkPostFulu(forkName)) {
       blockInput = BlockInputColumns.createFromBlock(this.config, block);
     } else {
-      blockInput = BlockInputPreDeneb.createFromBlock(this.config, block);
+      blockInput = BlockInputPreDeneb.createFromBlock({block, blockRoot, rootHex, forkName, source, peerIdStr});
     }
 
     this.blockInputs.set(blockRoot, blockInput);
     return blockInput;
   }
 
-  getBlockInputByBlob({
-    blockRoot,
-    blobSidecar,
-    source,
-    peerIdStr,
-  }: {
-    blockRoot: Uint8Array;
-    blobSidecar: deneb.BlobSidecar;
-    source: BlockInputSource;
-    peerIdStr: string;
-  }): BlockInputBlobs {
+  getBlockInputByBlob(blobSidecar: deneb.BlobSidecar, source: BlockInputSource, peerIdStr?: string): BlockInputBlobs {
+    const blockRoot = this.config
+      .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
+      .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
     const blockHex = toHex(blockRoot);
     let blockInput = this.blockInputs.get(blockHex) as BlockInputBlobs;
     if (blockInput) {
@@ -97,7 +116,11 @@ export class BlockInputCache {
     return blockInput;
   }
 
-  getBlockInputByColumn(forkName: ForkName, columnSidecar: fulu.DataColumnSidecar): BlockInputColumns {
+  getBlockInputByColumn(
+    columnSidecar: fulu.DataColumnSidecar,
+    source: BlockInputSource,
+    peerIdStr?: string
+  ): BlockInputColumns {
     const blockRoot = toHex(
       this.config
         .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
@@ -124,16 +147,74 @@ export class BlockInputCache {
 
     return blockInput;
   }
+
+  /**
+   * Removes block from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
+   * not yet have any data associated for that rootHex then the blockInput will be pruned from the cache.
+   */
+  removeBlockFromBlockInput(blockInput: BlockInput): void {
+    blockInput.removeBlock();
+    if (!blockInput.hasData()) {
+      this.blockInputs.delete(blockInput.rootHex);
+    }
+  }
+
+  /**
+   * Removes blob from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
+   * not yet have a block or any data associated for that rootHex then the blockInput will be pruned from the cache.
+   */
+  removeBlobsFromBlockInput(blockInput: BlockInput, blobIndices: number[]): void {
+    for (const index of blobIndices) {
+      blockInput.removeBlob(index);
+    }
+    if (!(blockInput.hasData() && blockInput.hasBlock())) {
+      this.blockInputs.delete(blockInput.rootHex);
+    }
+  }
+
+  /**
+   * Removes blob from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
+   * not yet have a block or any data associated for that rootHex then the blockInput will be pruned from the cache.
+   */
+  removeColumnsFromBlockInput(blockInput: BlockInput, columnIndices: number[]): void {
+    for (const index of columnIndices) {
+      blockInput.removeColumn(index);
+    }
+    if (!(blockInput.hasData() && blockInput.hasBlock())) {
+      this.blockInputs.delete(blockInput.rootHex);
+    }
+  }
+
+  /**
+   * Removes blockInput and all ancestor BlockInputs from cache.  Best to use this only when removing
+   * successfully processed blocks. If just a bad block or data object is received use `removeInvalidBlock`,
+   * `removeInvalidBlob` or `removeInvalidColumn` instead.
+   */
+  prune(blockInput: BlockInput): void {
+    let nextBlockInput: BlockInput | undefined = blockInput;
+    while (nextBlockInput) {
+      const parentRootHex = nextBlockInput.getParentRootHex();
+      this.blockInputs.delete(nextBlockInput.rootHex);
+      nextBlockInput = this.blockInputs.get(parentRootHex);
+    }
+  }
 }
 
 enum BlockInputCacheErrorCode {
   WRONG_BLOCK_INPUT_TYPE = "BLOCK_PROCESS_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
+  SLOT_MISMATCH = "BLOCK_PROCESS_INPUT_CACHE_ERROR_SLOT_MISMATCH",
 }
 
-type BlockInputCacheErrorType = {
-  code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
-  cachedType: BlockInputType;
-  requestedType: BlockInputType;
-};
+type BlockInputCacheErrorType =
+  | {
+      code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
+      cachedType: BlockInputType;
+      requestedType: BlockInputType;
+    }
+  | {
+      code: BlockInputCacheErrorCode.SLOT_MISMATCH;
+      blockInputSlot: Slot;
+      slot: Slot | string;
+    };
 
 class BlockInputCacheError extends LodestarError<BlockInputCacheErrorType> {}

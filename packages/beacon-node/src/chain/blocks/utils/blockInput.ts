@@ -1,10 +1,12 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkBlobs, ForkName, ForkPostFulu} from "@lodestar/params";
+import {ForkBlobs, ForkName, ForkPostDeneb, ForkPostFulu, ForkPreDeneb, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {LodestarError, Logger, withTimeout} from "@lodestar/utils";
-import {Metrics} from "../../../metrics.js";
+import {fromHex, LodestarError, Logger, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {kzgCommitmentToVersionedHash, VersionHash} from "../../../util/blobs.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
+import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, MaybeValidExecutionStatus} from "@lodestar/fork-choice";
+import {PeerIdStr} from "../../../util/peerId.js";
+import {Metrics} from "../../../metrics/metrics.js";
 
 type PromiseParts<T> = {
   promise: Promise<T>;
@@ -28,14 +30,19 @@ export enum BlockInputType {
   Blobs = "blobs",
   Columns = "columns",
 }
-export enum BlockInputStatus {
-  NO_BLOCK_NO_DATA = "no_block_no_data",
-  MO_BLOCK_INCOMPLETE_DATA = "no_block_incomplete_data",
-  MO_BLOCK_COMPLETE_DATA = "no_block_complete_data",
-  HAVE_BLOCK_NO_DATA = "have_block_no_data",
-  HAVE_BLOCK_INCOMPLETE_DATA = "have_block_incomplete_data",
-  COMPLETE = "complete",
+export enum BlockInputDataStatus {
+  NoData = "no_data",
+  IncompleteData = "incomplete_data",
+  CompleteData = "complete_data",
 }
+type MissingData = {
+  blockRoot: Uint8Array;
+  index: number;
+};
+
+type MissingBlob = MissingData & {
+  versionHash: VersionHash;
+};
 
 type BlockInputLogMeta = {
   blockRoot: RootHex;
@@ -47,74 +54,163 @@ type BlockInputDataLogMeta = BlockInputLogMeta & {
   received: number;
 };
 
-export type BlockInputCoreProps = {
-  config: ChainForkConfig;
-  metrics?: Metrics;
-  abortSignal?: AbortSignal;
-};
-export type BlockInputSource = {
-  source: BlockInputSource;
-  peerIdStr: string;
-};
-export type CachedBlob = BlockInputSource & {
-  blobSidecar: deneb.BlobSidecar;
-};
-export type CachedColumn = BlockInputSource & {
-  columnSidecar: fulu.DataColumnSidecar;
-};
-export type BlockInputBlobsProps = CachedBlob & {blockRoot: Uint8Array};
-export type BlockInputColumnProps = CachedBlob & {blockRoot: Uint8Array};
+// export type BlockInputCoreProps = {
+//   metrics?: Metrics;
+//   abortSignal?: AbortSignal;
+// };
+// export type BlockInputSource = {
+//   source: BlockInputSourceType;
+//   peerIdStr: string;
+// };
+// export type CachedBlob = BlockInputSource & {
+//   blobSidecar: deneb.BlobSidecar;
+// };
+// export type CachedColumn = BlockInputSource & {
+//   columnSidecar: fulu.DataColumnSidecar;
+// };
+// export type BlockInputBlobsProps = CachedBlob & {blockRoot: Uint8Array};
+// export type BlockInputColumnProps = CachedBlob & {blockRoot: Uint8Array};
 
-export type CreateBlockInputCoreProps = {
-  config: ChainForkConfig;
-  logger: Logger;
+// export type CreateBlockInputCoreProps = {
+//   logger: Logger;
+//   metrics?: Metrics;
+//   abortSignal?: AbortSignal;
+//   source: BlockInputSourceType;
+//   peerIdStr?: string;
+// };
+// type BlockInputConstructorCoreProps = Omit<CreateBlockInputCoreProps, "abortSignal" | "source" | "peerIdStr"> & {
+//   blockRoot: Uint8Array;
+//   rootHex: string;
+//   forkName: ForkName;
+// };
+// type BlockInputPreDenebConstructorProps = BlockInputConstructorCoreProps & {
+//   block?: SignedBeaconBlock<ForkPreDeneb>;
+// };
+// type BlockInputBlobsConstructorProps = BlockInputConstructorCoreProps & {
+//   block?: SignedBeaconBlock<ForkBlobs>;
+//   blobSidecar?: deneb.BlobSidecar;
+// };
+// type BlockInputColumnsConstructorProps = BlockInputConstructorCoreProps & {
+//   block?: SignedBeaconBlock<ForkPostFulu>;
+//   columnSidecar?: fulu.DataColumnSidecar;
+// };
+
+// export type CreateBlockInputBlockRootProps = {blockRoot: Uint8Array; slot?: Slot};
+// export type CreateBlockInputBlockProps<T> = CreateBlockInputCoreProps & {block: SignedBeaconBlock<T>};
+// export type CreateBlockInputBlobProps = CreateBlockInputCoreProps & {blobSidecar: deneb.BlobSidecar};
+// export type CreateBlockInputColumnProps = CreateBlockInputCoreProps & {columnSidecar: fulu.DataColumnSidecar};
+
+type CoreBlockInputProps = {
+  logger?: Logger;
   metrics?: Metrics;
-  abortSignal?: AbortSignal;
-  source?: BlockInputSourceType;
+};
+type CreateFromRootHexProps = CoreBlockInputProps & {
+  rootHex: string;
+  slot?: Slot;
+  forkName?: ForkName;
+};
+type AddBlockProps = {
+  block: SignedBeaconBlock;
+  blockRoot: Uint8Array;
+  rootHex: string;
+  forkName: ForkName;
+  source: BlockInputSourceType;
+  peerIdStr?: PeerIdStr;
+};
+type CreateFromBlockProps = CoreBlockInputProps & AddBlockProps;
+type BlockInputConstructorProps = CreateFromRootHexProps & Partial<CreateFromBlockProps>;
+
+// type AddBlobProps = {};
+type BlockInputBlobsConstructorProps = BlockInputConstructorProps & {blobSidecar: deneb.BlobSidecar};
+// type AddColumnProps = {};
+type BlockInputColumnsConstructorProps = BlockInputConstructorProps & {columnSidecar: fulu.DataColumnSidecar};
+
+type CreateFromBlobProps = BlockInputConstructorProps & {blobSidecar: deneb.BlobSidecar};
+type CreateFromColumnProps = BlockInputConstructorProps & {columnSidecar: fulu.DataColumnSidecar};
+
+type BlockWithSource<T> = {
+  block: T;
+  source: BlockInputSourceType;
   peerIdStr?: string;
 };
-export type CreateBlockInputBlockRootProps = CreateBlockInputCoreProps & {blockRoot: Uint8Array};
-export type CreateBlockInputBlockProps = CreateBlockInputCoreProps & {block: SignedBeaconBlock};
-export type CreateBlockInputBlobProps = CreateBlockInputCoreProps & {blobSidecar: deneb.BlobSidecar};
-export type CreateBlockInputColumnProps = CreateBlockInputCoreProps & {columnSidecar: fulu.DataColumnSidecar};
 
-export abstract class BlockInput<T = void> {
+type AddBlockProps<T> = BlockWithSource<T> & {
+  blockRoot: Uint8Array;
+  rootHex: string;
+};
+
+export abstract class BlockInput<BlockType = SignedBeaconBlock<ForkPreDeneb>, DataType = void> {
   type: BlockInputType;
   blockRoot: Uint8Array;
   rootHex: string;
-  slot?: Slot;
-  parentRootHex?: RootHex;
-  status: BlockInputStatus;
-  forkName?: ForkName;
-  protected block?: SignedBeaconBlock;
-  protected blockPromise = this.createPromise<SignedBeaconBlock>();
-  protected dataPromise = this.createPromise<T>();
-  protected readonly config: ChainForkConfig;
+  dataAvailability: DataAvailabilityStatus;
+  protected slot?: Slot;
+  protected forkName?: ForkName;
+  protected parentRootHex?: RootHex;
+  protected dataStatus: BlockInputDataStatus = BlockInputDataStatus.NoData;
+  protected blockWithSource?: BlockWithSource<BlockType>;
+  protected blockPromise = this.createPromise<BlockType>();
+  protected dataPromise = this.createPromise<DataType>();
+  protected readonly logger?: Logger;
   protected readonly metrics?: Metrics;
 
-  // TODO: do we really need this?
-  protected abortSignal: AbortSignal;
-
-  static createFromBlock({config, block}: CreateBlockInputBlockProps): BlockInput {
-    const forkName = config.getForkName(block.message.slot);
-    const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    return new BlockInput({blockRoot, block, forkName});
+  get prettyRootHex(): string {
+    return prettyBytes(this.rootHex);
   }
 
-  static createFromRootHex({blockRoot}: CreateBlockInputBlockRootProps): BlockInput {
-    return new BlockInput({blockRoot});
+  static createFromRootHex(props: CreateFromRootHexProps): BlockInput {
+    return new BlockInput(props);
   }
 
-  getBlock(): SignedBeaconBlock {
-    if (!this.block) {
+  static createFromBlock(props: CreateFromBlockProps): BlockInput {
+    return new BlockInput(props);
+  }
+
+  getLogMeta(): {blockRoot: string; slot: string} {
+    return {
+      blockRoot: this.prettyRootHex,
+      slot: this.slot ?? "unknown",
+    };
+  }
+
+  getForkName(): ForkName {
+    if (!this.forkName) {
+      throw new BlockInputError({code: BlockInputErrorCode.NO_FORK_NAME_TO_GET});
+    }
+    return this.forkName;
+  }
+
+  getSlot<T extends boolean = true, R extends T extends true ? Slot : Slot | undefined>(shouldError: T = true): R {
+    if (shouldError && !this.slot) {
+      throw new BlockInputError({code: BlockInputErrorCode.NO_SLOT_TO_GET});
+    }
+    return this.slot;
+  }
+
+  setSlot(slot: Slot): void {
+    this.slot = slot;
+  }
+
+  getParentRootHex(): string {
+    if (!this.parentRootHex) {
+      throw new BlockInputError({code: BlockInputErrorCode.NO_PARENT_ROOT_HEX_TO_GET});
+    }
+    return this.parentRootHex;
+  }
+
+  hasBlock(): boolean {
+    return !!this.blockWithSource;
+  }
+
+  getBlock(): BlockType {
+    if (!this.blockWithSource) {
       throw new BlockInputError({code: BlockInputErrorCode.NO_BLOCK_TO_GET});
     }
-    return this.block;
+    return this.blockWithSource.block;
   }
 
-  addBlock(block: SignedBeaconBlock): void {
-    const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    if (blockRoot !== this.blockRoot) {
+  addBlock({rootHex, blockRoot, block, forkName, source, peerIdStr}: AddBlockProps): void {
+    if (rootHex !== this.rootHex) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISMATCHED_BLOCK_ROOT,
@@ -124,65 +220,109 @@ export abstract class BlockInput<T = void> {
         "Invalid attempted to addBlock"
       );
     }
-    this.forkName = config.getForkName(block.message.slot);
-    this.block = block;
+
+    if (!forkName) {
+      throw new BlockInputError({code: BlockInputErrorCode.MISSING_FORK_NAME, rootHex});
+    }
+    this.forkName = forkName;
+
+    if (!source) {
+      throw new BlockInputError({code: BlockInputErrorCode.MISSING_SOURCE, rootHex});
+    }
+    this.blockWithSource = {
+      block,
+      source,
+      peerIdStr,
+    };
+    this.slot = block.message.slot;
+    this.parentRootHex = toHex(block.message.parentRoot);
+
     this.blockPromise.resolve(block);
   }
 
-  needBlock(): boolean {
-    return !this.block;
+  /**
+   * Removes the block from the blockInput
+   *
+   * NOTE: It is best to run BlockInputCache.removeInvalidBlock instead of removeBlock
+   * directly. That will also prune empty BlockInputs from the cache
+   */
+  removeBlock(): void {
+    if (this.blockWithSource) {
+      this.blockWithSource = undefined;
+    }
+  }
+
+  hasData(): boolean {
+    return (
+      this.dataStatus === BlockInputDataStatus.IncompleteData || this.dataStatus === BlockInputDataStatus.CompleteData
+    );
   }
 
   needData(): boolean {
-    return false;
+    return this.dataAvailability === DataAvailabilityStatus.OutOfRange
+      ? false
+      : this.dataStatus !== BlockInputDataStatus.CompleteData;
   }
 
-  async waitForBlock(timeout: number): Promise<SignedBeaconBlock> {
-    return withTimeout(() => this.blockPromise.promise, timeout, this.abortSignal);
+  isComplete(): boolean {
+    return !this.needData() && this.hasBlock();
   }
 
-  async waitForData(timeout: number): Promise<T> {
-    return withTimeout(() => this.dataPromise.promise, timeout, this.abortSignal);
+  /**
+   * Removes a blob from the blockInput
+   *
+   * NOTE: It is best to run BlockInputCache.removeInvalidBlob instead of removeBlob
+   * directly. That will also prune empty BlockInput from the cache
+   */
+  removeBlob(_blobSidecar: deneb.BlobSidecar): void {
+    throw new BlockInputError({
+      code: BlockInputErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
+      actualType: this.type,
+      expectedType: BlockInputType.Blobs,
+    });
   }
 
-  async waitForBlockAndData(timeout: number): Promise<BlockInput> {
-    await withTimeout(
-      () => Promise.all([this.blockPromise.promise, this.dataPromise.promise]),
-      timeout,
-      this.abortSignal
-    );
+  /**
+   * Removes the block from the blockInput
+   *
+   * NOTE: It is best to run BlockInputCache.removeInvalidBlock instead of removeBlock
+   * directly. That will also prune empty BlockInputs from the cache
+   */
+  removeColumn(_columnSidecar: fulu.DataColumnSidecar): void {
+    throw new BlockInputError({
+      code: BlockInputErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
+      actualType: this.type,
+      expectedType: BlockInputType.Columns,
+    });
+  }
+
+  async waitForBlock(timeout: number, abortSignal?: AbortSignal): Promise<BlockType> {
+    const signal = abortSignal ? abortSignal : new AbortController().signal;
+    return withTimeout(() => this.blockPromise.promise, timeout, signal);
+  }
+
+  async waitForData(timeout: number, abortSignal?: AbortSignal): Promise<DataType> {
+    const signal = abortSignal ? abortSignal : new AbortController().signal;
+    return withTimeout(() => this.dataPromise.promise, timeout, signal);
+  }
+
+  async waitForBlockAndData(timeout: number, abortSignal?: AbortSignal): Promise<BlockInput> {
+    const signal = abortSignal ? abortSignal : new AbortController().signal;
+    await withTimeout(() => Promise.all([this.blockPromise.promise, this.dataPromise.promise]), timeout, signal);
     return this;
   }
 
-  getLogMeta(): {blockRoot: string; slot: string} {
-    return {
-      blockRoot: this.rootHex,
-      slot: this.slot ?? "unknown",
-    };
-  }
-
-  abstract getMeta(): Record<string, string | number>;
-
-  protected constructor({
-    blockRoot,
-    block,
-    forkName,
-    abortSignal,
-    metrics,
-  }: {
-    blockRoot: Uint8Array;
-    block?: SignedBeaconBlock;
-    forkName?: ForkName;
-    abortSignal?: AbortSignal;
-    metrics?: Metrics;
-  }) {
-    this.blockRoot = blockRoot;
-    this.block = block;
+  protected constructor(props: BlockInputConstructorProps) {
+    const {rootHex, blockRoot, slot, forkName, logger, metrics, block} = props;
+    this.rootHex = rootHex;
+    this.blockRoot = blockRoot ? blockRoot : fromHex(rootHex);
+    this.slot = slot;
     this.forkName = forkName;
+    this.logger = logger;
     this.metrics = metrics;
-    if (abortSignal) {
-      this.abortSignal = abortSignal;
-      this.abortSignal.addEventListener("abort", () => this.stop(), {once: true});
+
+    if (block) {
+      this.addBlock(props as AddBlockProps);
     }
   }
 
@@ -201,64 +341,71 @@ export abstract class BlockInput<T = void> {
   }
 }
 
-export class BlockInputPreDeneb extends BlockInput<void> {
+export class BlockInputPreDeneb extends BlockInput {
   type: BlockInputType.PreDeneb;
-  waitForData(): Promise<void> {
-    throw new BlockInputError({code: BlockInputErrorCode.AWAIT_DATA_PRE_DENEB});
+  dataAvailability = DataAvailabilityStatus.PreData;
+  protected dataStatus = BlockInputDataStatus.NoData;
+
+  waitForData(_timeout: number, _abortSignal?: AbortSignal) {
+    return this.dataPromise.promise;
+    // TODO: should this throw?
+    // throw new BlockInputError({code: BlockInputErrorCode.AWAIT_DATA_PRE_DENEB});
   }
 
-  async waitForBlockAndData(): Promise<BlockInput> {
-    await this.waitForBlock();
+  async waitForBlockAndData(timeout: number, abortSignal?: AbortSignal): Promise<BlockInput> {
+    await this.waitForBlock(timeout, abortSignal);
     return this;
   }
 
+  // TODO: figure out this upgrade path for unknown block syncs
   upgradeToBlobs(): BlockInputBlobs {
-    const blockInputBlobs = BlockInputBlobs.createFromRootHex(this.rootHex, this.config, this.metrics);
-    if (this.block) {
-      blockInputBlobs.addBlock(this.block);
+    const blockInputBlobs = BlockInputBlobs.createFromRootHex(this.rootHex, this.metrics);
+    if (this.blockWithSource) {
+      blockInputBlobs.addBlock(this.blockWithSource);
     }
     return blockInputBlobs;
   }
 
+  // TODO: figure out this upgrade path for unknown block syncs
   upgradeToColumns(): BlockInputColumns {
-    const blockInputColumns = BlockInputColumns.createFromRootHex(this.rootHex, this.config, this.metrics);
-    if (this.block) {
-      blockInputColumns.addBlock(this.block);
+    const blockInputColumns = BlockInputColumns.createFromRootHex(this.rootHex, this.metrics);
+    if (this.blockWithSource) {
+      blockInputColumns.addBlock(this.blockWithSource);
     }
     return blockInputColumns;
   }
+
+  constructor(props: BlockInputConstructorProps) {
+    super(props);
+    this.dataPromise.resolve(void);
+  }
 }
 
-type MissingData = {
-  blockRoot: Uint8Array;
-  index: number;
-};
-
-type MissingBlob = MissingData & {
-  versionHash: VersionHash;
-};
-
-export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
+export class BlockInputBlobs extends BlockInput<SignedBeaconBlock<ForkBlobs>, deneb.BlobSidecars> {
   type: BlockInputType.Blobs;
-  protected block?: SignedBeaconBlock<ForkBlobs>;
   protected blobsCache: Map<number, CachedBlob>;
 
+  static createFromBlock(props: CreateFromBlockProps): BlockInputBlobs {
+    return new BlockInputBlobs(props);
+  }
+
   static createFromBlobSidecar({
-    config,
     metrics,
     abortSignal,
     blockRoot,
     blobSidecar,
     source,
     peerIdStr,
-  }: BlockInputCoreProps & BlockInputBlobsProps): BlockInput {
-    const forkName = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
-    const blockRoot = config
-      .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
-      .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
+  }: CreateFromBlobProps): BlockInputBlobs {
     return BlockInputBlobs({blockRoot, blobSidecar, forkName, metrics});
   }
 
+  protected constructor(props: BlockInputBlobsConstructorProps) {
+    super(props);
+    if (props.blobSidecar) {
+      this.addBlob(props.blobSidecar, props.source, props.peerIdStr);
+    }
+  }
   // TODO: should this get overloaded and check that commitments match the blobs
   // addBlock(): void {
   //   super.addBlock()
@@ -269,18 +416,15 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
   //   }
   // }
 
-  getBlock(): SignedBeaconBlock<ForkBlobs> {
-    return super.getBlock();
-  }
-
   async waitForBlock(timeout: number): Promise<SignedBeaconBlock<ForkBlobs>> {
     return super.waitForBlock(timeout);
   }
 
+  addBlock(): void {
+    this.blockWithSource = {};
+  }
+
   addBlob(blobSidecar: deneb.BlobSidecar, source: BlockInputSourceType, peerIdStr?: string): void {
-    const blockRoot = this.config
-      .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
-      .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
     if (blockRoot !== this.blockRoot) {
       throw new BlockInputError(
         {
@@ -300,16 +444,16 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     } else {
     }
     this.blobsCache.set(blobSidecar.index, {blobSidecar, source, peerIdStr});
-    if (this.block) {
+    if (this.blockWithSource) {
       const numberOfBlobs = this.blobsCache.size();
-      const numberOfCommitments = this.block.message.body.blobKzgCommitments.length;
+      const numberOfCommitments = this.blockWithSource.message.body.blobKzgCommitments.length;
       if (numberOfBlobs > numberOfCommitments) {
         // Should loop though commitments to figure out which index doesn't match block commitments?
         throw new BlockInputError({
           code: BlockInputErrorCode.TOO_MANY_RECEIVED_BLOBS,
           numberOfCommitments,
           numberOfBlobs,
-          slot: this.block.message.slot,
+          slot: this.blockWithSource.message.slot,
           blockRoot,
         });
       }
@@ -320,12 +464,24 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     }
   }
 
+  /**
+   * Removes a blob from the blockInput
+   *
+   * NOTE: It is best to run BlockInputCache.removeInvalidBlock instead of removeBlock
+   * directly. That will also prune empty BlockInputs from the cache
+   */
+  removeBlob(blobIndex: number): void {
+    this.blobsCache.delete(blobIndex);
+  }
+
+  getBlobs(): deneb.BlobSidecars {}
+
   getMissingBlobIndices(): undefined | MissingBlob[] {
-    if (!this.block) {
+    if (!this.blockWithSource) {
       return undefined;
     }
 
-    const commitments = this.block.message.body.blobKzgCommitments;
+    const commitments = this.blockWithSource.message.body.blobKzgCommitments;
 
     const blobsMeta: MissingBlob[] = [];
     for (let index = 0; index < commitments.length; index++) {
@@ -344,14 +500,13 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
   getLogMeta(): BlockInputDataLogMeta {
     return {
       ...super.getLogMeta(),
-      type: BlockInputType.Blobs,
-      expected: `${this.block?.message.body.blobKzgCommitments.length}`,
+      dataType: BlockInputType.Blobs,
+      expected: `${this.blockWithSource?.block.message.body.blobKzgCommitments.length}`,
       received: this.blobsCache.size(),
     };
   }
 
   protected constructor({
-    config,
     metrics,
     abortSignal,
     blockRoot,
@@ -359,7 +514,7 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
     source,
     peerIdStr,
   }: BlockInputCoreProps & BlockInputBlobsProps) {
-    super({config, metrics, abortSignal, blockRoot});
+    super({metrics, abortSignal, blockRoot});
     this.blobsCache.set(blobSidecar.index, {blobSidecar, source, peerIdStr});
   }
 }
@@ -367,23 +522,16 @@ export class BlockInputBlobs extends BlockInput<deneb.BlobSidecars> {
 export class BlockInputColumns extends BlockInput {
   type: BlockInputType.Columns;
   custodyConfig: CustodyConfig;
-  protected block: SignedBeaconBlock<ForkPostFulu>;
+  protected blockWithSource: SignedBeaconBlock<ForkPostFulu>;
   protected columnsCache: Map<number, CachedColumn>;
 
-  static createFromColumnSidecar(config: ChainForkConfig, columnSidecar: fulu.DataColumnSidecar): BlockInput {
-    const forkName = config.getForkName(columnSidecar.signedBlockHeader.message.slot);
-    const blockRoot = config
-      .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
-      .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
+  static createFromBlock({}: CreateFromBlockProps): BlockInputColumns {}
+
+  static createFromColumnSidecar({}: CreateFromColumnProps): BlockInputColumns {
     return BlockInputColumns({blockRoot, columnSidecar, forkName});
   }
 
-  static createFromBlock({}: BlockInputColumnProps): BlockInput {}
-
-  addColumnSidecar(columnSidecar: fulu.DataColumnSidecar, source: BlockInputSource, peerIdStr?: string): void {
-    const blockRoot = this.config
-      .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
-      .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
+  addColumnSidecar(columnSidecar: fulu.DataColumnSidecar, source: BlockInputSourceType, peerIdStr?: string): void {
     if (this.blockRoot !== blockRoot || this.slot !== columnSidecar.signedBlockHeader.message.slot) {
       throw new BlockInputError(
         {
@@ -401,7 +549,10 @@ export class BlockInputColumns extends BlockInput {
     //   throw new BlockInputError({code: BlockInputErrorCode.ALREADY_SEEN_COLUMN, index: columnSidecar.index});
     // }
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, peerIdStr});
-    if (this.block && this.block.message.body.blobKzgCommitments.length === this.columnsCache.size()) {
+    if (
+      this.blockWithSource &&
+      this.blockWithSource.message.body.blobKzgCommitments.length === this.columnsCache.size()
+    ) {
       this.dataPromise.resolve([...this.columnsCache.values()]);
     }
   }
@@ -420,6 +571,14 @@ export class BlockInputColumns extends BlockInput {
     return needed;
   }
 
+  getAllColumns(): fulu.DataColumnSidecars {
+    return [...this.columnsCache.values()].map(({columnSidecar}) => columnSidecar);
+  }
+
+  getCustodyIndex(): Uint8Array {
+    return this.custodyConfig.custodyColumnsIndex;
+  }
+
   getCustodyColumns = this.makeColumnsGetter("custody").bind(this);
 
   getSampledColumns = this.makeColumnsGetter("sampled").bind(this);
@@ -427,7 +586,7 @@ export class BlockInputColumns extends BlockInput {
   getLogMeta(): BlockInputDataLogMeta {
     return {
       ...super.getLogMeta(),
-      type: BlockInputType.Columns,
+      dataType: BlockInputType.Columns,
       expected: this.custodyConfig.sampledColumns.length,
       received: this.columnsCache.size(),
     };
@@ -447,10 +606,11 @@ export class BlockInputColumns extends BlockInput {
       const requested: fulu.DataColumnSidecars = [];
       const missing: number[] = [];
       for (const index of this.custodyConfig[`${type}Columns`]) {
-        if (this.columnsCache.has(index)) {
-          requested.push(index);
+        const cachedColumn = this.columnsCache.get(index);
+        if (cachedColumn) {
+          requested.push(cachedColumn.columnSidecar);
         } else {
-          missing.push(missing);
+          missing.push(index);
         }
       }
       if (missing.length && throwError) {
@@ -467,6 +627,36 @@ export class BlockInputColumns extends BlockInput {
   }
 }
 
+export function isBlockInputPreDeneb(blockInput: BlockInput): blockInput is BlockInputPreDeneb {
+  return blockInput.type === BlockInputType.PreDeneb;
+}
+
+export function isBlockInputBlobs(blockInput: BlockInput): blockInput is BlockInputBlobs {
+  return blockInput.type === BlockInputType.Blobs;
+}
+
+export function isBlockInputColumns(blockInput: BlockInput): blockInput is BlockInputColumns {
+  return blockInput.type === BlockInputType.Columns;
+}
+
+/**
+ * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import
+ */
+export type FullyVerifiedBlock = {
+  blockInput: BlockInput;
+  postState: CachedBeaconStateAllForks;
+  parentBlockSlot: Slot;
+  proposerBalanceDelta: number;
+  /**
+   * If the execution payload couldnt be verified because of EL syncing status,
+   * used in optimistic sync or for merge block
+   */
+  executionStatus: MaybeValidExecutionStatus;
+  dataAvailabilityStatus: DataAvailabilityStatus;
+  /** Seen timestamp seconds */
+  seenTimestampSec: number;
+};
+
 enum BlockInputErrorCode {
   MISMATCHED_BLOCK_ROOT = "BLOCK_INPUT_ERROR_MISMATCHED_BLOCK_ROOT",
   AWAIT_DATA_PRE_DENEB = "BLOCK_INPUT_ERROR_CANNOT_AWAIT_DATA_PRE_DENEB",
@@ -474,21 +664,32 @@ enum BlockInputErrorCode {
   TOO_MANY_RECEIVED_BLOBS = "BLOCK_INPUT_ERROR_TOO_MANY_RECEIVED_BLOBS",
   ALREADY_SEEN_COLUMN = "BLOCK_INPUT_ERROR_ALREADY_SEEN_COLUMN",
   NO_BLOCK_TO_GET = "BLOCK_INPUT_NO_BLOCK_TO_GET",
+  NO_FORK_NAME_TO_GET = "BLOCK_INPUT_NO_FORK_NAME_TO_GET",
+  NO_SLOT_TO_GET = "BLOCK_INPUT_NO_SLOT_TO_GET",
+  NO_PARENT_ROOT_HEX_TO_GET = "BLOCK_INPUT_NO_PARENT_ROOT_HEX_TO_GET",
   INCOMPLETE_DATA = "BLOCK_INPUT_INCOMPLETE_DATA",
+  MISMATCH_BLOCK_INPUT_TYPE = "BLOCK_INPUT_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
+  MISSING_SOURCE = "BLOCK_INPUT_ERROR_MISSING_SOURCE",
+  MISSING_FORK_NAME = "BLOCK_INPUT_ERROR_MISSING_FORK_NAME",
 }
 
 type BlockInputErrorType =
   | {
-      code: BlockInputErrorCode.AWAIT_DATA_PRE_DENEB;
+      code:
+        | BlockInputErrorCode.AWAIT_DATA_PRE_DENEB
+        | BlockInputErrorCode.NO_BLOCK_TO_GET
+        | BlockInputErrorCode.NO_SLOT_TO_GET
+        | BlockInputErrorCode.NO_PARENT_ROOT_HEX_TO_GET;
     }
   | {
-      code: BlockInputErrorCode.NO_BLOCK_TO_GET;
+      code: BlockInputErrorCode.MISSING_SOURCE | BlockInputErrorCode.MISSING_FORK_NAME;
+      rootHex: string;
     }
   | {
       code: BlockInputErrorCode.MISMATCHED_BLOCK_ROOT;
       blockInputRoot: RootHex;
       mismatchedRoot: RootHex;
-      source?: BlockInputSource;
+      source?: BlockInputSourceType;
       peerId?: string;
     }
   | {
@@ -513,6 +714,11 @@ type BlockInputErrorType =
       type: BlockInputType;
       expected: number;
       received: number;
+    }
+  | {
+      code: BlockInputErrorCode.MISMATCH_BLOCK_INPUT_TYPE;
+      actualType: BlockInputType;
+      expectedType: BlockInputType;
     };
 
 class BlockInputError extends LodestarError<BlockInputErrorType> {}
