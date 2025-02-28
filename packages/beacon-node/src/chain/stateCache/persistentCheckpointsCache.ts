@@ -61,7 +61,7 @@ export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
  * During nft state of Holesky in Feb 2025, lodestar stores ~250MB per epoch and it's not sustainable to keep all states on disk.
  * It's not likely to have reorgs that go back to 10 epochs ago, so we only keep 10 epochs on disk.
  */
-export const DEFAULT_MAX_CP_STATE_ON_DISK = 10;
+export const DEFAULT_MAX_CP_STATE_ON_DISK = 100;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
