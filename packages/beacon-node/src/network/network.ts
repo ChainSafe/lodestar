@@ -15,9 +15,11 @@ import {
   LightClientOptimisticUpdate,
   LightClientUpdate,
   Root,
+  RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
+  Slot,
   SlotRootHex,
   SubnetID,
   WithBytes,
@@ -55,6 +57,7 @@ import {
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription, NodeId} from "./subnets/index.js";
 import {isPublishToZeroPeersError} from "./util.js";
+import {BlockInputSourceType} from "../chain/blocks/utils/blockInput.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -274,8 +277,8 @@ export class Network implements INetwork {
     return this.core.reStatusPeers(peers);
   }
 
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void {
-    this.networkProcessor.searchUnknownSlotRoot(slotRoot, peer);
+  searchUnknownSlotRoot(slot: Slot, root: RootHex, source: BlockInputSourceType, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownSlotRoot(slot, root, source, peer);
   }
 
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {

@@ -81,6 +81,7 @@ import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
+import {BlockInputSourceType} from "../../../chain/blocks/utils/blockInput.js";
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -978,7 +979,7 @@ export function getValidatorApi(
       // see https://github.com/ChainSafe/lodestar/issues/5063
       if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
         const rootHex = toRootHex(beaconBlockRoot);
-        network.searchUnknownSlotRoot({slot, root: rootHex});
+        network.searchUnknownSlotRoot(slot, rootHex, BlockInputSourceType.api);
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
         await chain.waitForBlock(slot, rootHex);
       }
@@ -1306,7 +1307,8 @@ export function getValidatorApi(
               network,
               chain,
               slot,
-              beaconBlockRoot
+              beaconBlockRoot,
+              BlockInputSourceType.api
             );
 
             chain.aggregatedAttestationPool.add(

@@ -790,7 +790,8 @@ export async function validateGossipFnRetryUnknownRoot<T>(
   network: INetwork,
   chain: IBeaconChain,
   slot: Slot,
-  blockRoot: Root
+  blockRoot: Root,
+  source: BlockInputSourceType
 ): Promise<T> {
   let unknownBlockRootRetries = 0;
   while (true) {
@@ -804,7 +805,7 @@ export async function validateGossipFnRetryUnknownRoot<T>(
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
           const rootHex = toRootHex(blockRoot);
-          network.searchUnknownSlotRoot({slot, root: rootHex});
+          network.searchUnknownSlotRoot(slot, rootHex, source);
         }
 
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {

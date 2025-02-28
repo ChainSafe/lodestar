@@ -23,6 +23,7 @@ import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryEx
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
+import {BlockInputSourceType} from "../../../../chain/blocks/utils/blockInput.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -115,7 +116,14 @@ export function getBeaconPoolApi({
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, committeeValidatorIndex, committeeSize} =
-              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+              await validateGossipFnRetryUnknownRoot(
+                validateFn,
+                network,
+                chain,
+                slot,
+                beaconBlockRoot,
+                BlockInputSourceType.api
+              );
 
             if (network.shouldAggregate(subnet, slot)) {
               const insertOutcome = chain.attestationPool.add(

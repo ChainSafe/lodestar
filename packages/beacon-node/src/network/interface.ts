@@ -19,6 +19,7 @@ import {
   ColumnIndex,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
+  RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
@@ -43,6 +44,7 @@ import {GossipType} from "./gossip/interface.js";
 import {PeerAction} from "./peers/index.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {NodeId} from "./subnets/interface.js";
+import {BlockInputSourceType} from "../chain/blocks/utils/blockInput.js";
 
 export type WithOptionalBytes<T> = {data: T; bytes?: Uint8Array | null};
 
@@ -71,7 +73,7 @@ export interface INetwork extends INetworkCorePublic {
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: SubnetID, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
+  searchUnknownSlotRoot(slot: Slot, root: RootHex, source: BlockInputSourceType, peer?: PeerIdStr): void;
   // ReqResp
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,
