@@ -375,7 +375,7 @@ export class Network implements INetwork {
   }
 
   async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
-    const fork = this.config.getForkName(attesterSlashing.attestation1.data.slot);
+    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing

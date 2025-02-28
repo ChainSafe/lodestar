@@ -323,8 +323,8 @@ export const AttesterSlashing = new ContainerType(
     // In state transition, AttesterSlashing attestations are only partially validated. Their slot and epoch could
     // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
     // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
-    attestation1: IndexedAttestation,
-    attestation2: IndexedAttestation,
+    attestation1: IndexedAttestationBigint,
+    attestation2: IndexedAttestationBigint,
   },
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
 );

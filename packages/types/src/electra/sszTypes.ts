@@ -100,8 +100,8 @@ export const IndexedAttestationBigint = new ContainerType(
 
 export const AttesterSlashing = new ContainerType(
   {
-    attestation1: IndexedAttestation, // Modified in ELECTRA
-    attestation2: IndexedAttestation, // Modified in ELECTRA
+    attestation1: IndexedAttestationBigint, // Modified in ELECTRA
+    attestation2: IndexedAttestationBigint, // Modified in ELECTRA
   },
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
 );
