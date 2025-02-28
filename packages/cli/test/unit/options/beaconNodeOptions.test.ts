@@ -43,6 +43,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
+      "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.stateArchiveMode": StateArchiveMode.Frequency,
       emitPayloadAttributes: false,
 
@@ -153,6 +154,7 @@ describe("options / beaconNodeOptions", () => {
         nHistoricalStatesFileDataStore: true,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
+        maxCPStateEpochsOnDisk: 1000,
       },
       eth1: {
         enabled: true,
