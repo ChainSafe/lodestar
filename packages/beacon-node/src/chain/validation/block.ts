@@ -14,15 +14,17 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
+import {BlockInput} from "../blocks/utils/blockInput.js";
 
 export async function validateGossipBlock(
   config: ChainForkConfig,
   chain: IBeaconChain,
-  signedBlock: SignedBeaconBlock,
-  fork: ForkName
+  blockInput: BlockInput,
+  signedBlock: SignedBeaconBlock
 ): Promise<void> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
+  const forkName = blockInput.getForkName();
 
   // [IGNORE] The block is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) -- i.e.validate
   // that signed_beacon_block.message.slot <= current_slot (a client MAY queue future blocks for processing at the
@@ -54,9 +56,8 @@ export async function validateGossipBlock(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
-  if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
+  if (chain.forkChoice.getBlockHex(blockInput.rootHex) !== null) {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, rootHex: blockInput.rootHex});
   }
 
   // No need to check for badBlock
@@ -70,7 +71,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-  const parentRoot = toRootHex(block.parentRoot);
+  const parentRoot = blockInput.getParentRootHex();
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
@@ -111,9 +112,9 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
-  if (isForkPostDeneb(fork)) {
+  if (isForkPostDeneb(forkName)) {
     const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
-    const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(fork);
+    const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(forkName);
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
@@ -137,8 +138,10 @@ export async function validateGossipBlock(
   // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
-  if (fork === ForkName.bellatrix) {
-    if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
+  if (forkName === ForkName.bellatrix) {
+    if (!isExecutionBlockBodyType(block.body)) {
+      throw Error("Not merge block type");
+    }
     const executionPayload = block.body.executionPayload;
     if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);

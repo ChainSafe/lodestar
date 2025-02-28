@@ -16,18 +16,18 @@ import {IBeaconChain} from "../interface.js";
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSideCar: fulu.DataColumnSidecar,
-  gossipIndex: number
+  columnIndex: number
 ): Promise<void> {
   const dataColumnSlot = dataColumnSideCar.signedBlockHeader.message.slot;
 
   if (
     dataColumnSideCar.index > NUMBER_OF_COLUMNS ||
-    dataColumnSideCar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT !== gossipIndex
+    dataColumnSideCar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT !== columnIndex
   ) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
       columnIndex: dataColumnSideCar.index,
-      gossipIndex,
+      gossipIndex: columnIndex,
     });
   }
 
