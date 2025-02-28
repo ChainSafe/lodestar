@@ -3,6 +3,7 @@ import {Direction, PeerId} from "@libp2p/interface";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+import {P} from "vitest/dist/reporters-B7ebVMkT.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {RequestedSubnet} from "./subnetMap.js";
@@ -40,9 +41,40 @@ const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
 type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
 
+enum StatusScore {
+  /** The peer is far behind our chain */
+  FAR_BEHIND = -2,
+  /** The peer is close to our chain */
+  CLOSE_TO_US = -1,
+  /** The peer is far ahead of chain */
+  FAR_AHEAD = 0,
+}
+
+function computeStatusScore(ours: phase0.Status, theirs: phase0.Status | null, opts: PrioritizePeersOpts): StatusScore {
+  if (theirs === null) {
+    return StatusScore.CLOSE_TO_US;
+  }
+
+  if (theirs.finalizedEpoch > ours.finalizedEpoch) {
+    return StatusScore.FAR_AHEAD;
+  }
+
+  if (theirs.headSlot > ours.headSlot + opts.starvationThresholdSlots) {
+    return StatusScore.FAR_AHEAD;
+  }
+
+  // It seems dangerous to downscore peers that are far behind.
+  // if (ours.headSlot > theirs.headSlot + opts.starvationThresholdSlots) {
+  //   return StatusScore.FAR_BEHIND;
+  // }
+
+  return StatusScore.CLOSE_TO_US;
+}
+
 type PeerInfo = {
   id: PeerId;
   direction: Direction | null;
+  statusScore: StatusScore;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
   attnetsTrueBitIndices: number[];
@@ -53,6 +85,10 @@ type PeerInfo = {
 export interface PrioritizePeersOpts {
   targetPeers: number;
   maxPeers: number;
+  status: phase0.Status;
+  starved: boolean;
+  starvationPruneRatio: number;
+  starvationThresholdSlots: number;
   outboundPeersRatio?: number;
   targetSubnetPeers?: number;
 }
@@ -67,6 +103,7 @@ export enum ExcessPeerDisconnectReason {
 /**
  * Prioritize which peers to disconect and which to connect. Conditions:
  * - Reach `targetPeers`
+ *   - If we're starved for data, prune additional peers
  * - Don't exceed `maxPeers`
  * - Ensure there are enough peers per active subnet
  * - Prioritize peers with good score
@@ -75,6 +112,7 @@ export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
     direction: Direction | null;
+    status: phase0.Status | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
     score: number;
@@ -98,6 +136,7 @@ export function prioritizePeers(
     (peer): PeerInfo => ({
       id: peer.id,
       direction: peer.direction,
+      statusScore: computeStatusScore(opts.status, peer.status, opts),
       attnets: peer.attnets ?? attnetsZero,
       syncnets: peer.syncnets ?? syncnetsZero,
       attnetsTrueBitIndices: peer.attnets?.getTrueBitIndexes() ?? [],
@@ -254,6 +293,11 @@ function pruneExcessPeers(
         return false;
       }
 
+      // Peers far ahead when we're starved for data are not eligible for pruning
+      if (opts.starved && peer.statusScore === StatusScore.FAR_AHEAD) {
+        return false;
+      }
+
       // outbound peers up to OUTBOUND_PEER_RATIO sorted by highest score and not eligible for pruning
       if (peer.direction === "outbound") {
         if (outboundPeers - outboundPeersEligibleForPruning > outboundPeersTarget) {
@@ -269,7 +313,9 @@ function pruneExcessPeers(
   let peersToDisconnectCount = 0;
   const noLongLivedSubnetPeersToDisconnect: PeerId[] = [];
 
-  const peersToDisconnectTarget = connectedPeerCount - targetPeers;
+  const peersToDisconnectTarget =
+    // if we're starved for data, prune additional peers
+    connectedPeerCount - targetPeers + (opts.starved ? targetPeers * opts.starvationPruneRatio : 0);
 
   // 1. Lodestar prefers disconnecting peers that does not have long lived subnets
   // See https://github.com/ChainSafe/lodestar/issues/3940
@@ -396,6 +442,10 @@ export function sortPeersToPrune(connectedPeers: PeerInfo[], dutiesByPeer: Map<P
     const dutiedSubnet1 = dutiesByPeer.get(p1) ?? 0;
     const dutiedSubnet2 = dutiesByPeer.get(p2) ?? 0;
     if (dutiedSubnet1 === dutiedSubnet2) {
+      const statusScore = p1.statusScore - p2.statusScore;
+      if (statusScore !== 0) {
+        return statusScore;
+      }
       const [longLivedSubnets1, longLivedSubnets2] = [p1, p2].map(
         (p) => p.attnetsTrueBitIndices.length + p.syncnetsTrueBitIndices.length
       );
