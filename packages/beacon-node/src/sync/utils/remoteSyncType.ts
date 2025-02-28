@@ -137,7 +137,10 @@ export function getRangeSyncTarget(
     // earlier finalized chain from reaching here).
     // startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
     // for holesky-rescue, we don't want to sync from finalizedEpoch which is too far away (115967)
-    startEpoch: computeEpochAtSlot(local.headSlot),
+    // at start up if headSlot is not at the start of an epoch, we should sync from the next epoch
+    // otherwise get BLOCK_ERROR_PARENT_UNKNOWN
+    // that's not great when node is synced but UnknownBlockSync should help us
+    startEpoch: local.headSlot % 32 === 0 ? computeEpochAtSlot(local.headSlot) : computeEpochAtSlot(local.headSlot) + 1,
     target: {
       slot: remote.headSlot,
       root: remote.headRoot,
