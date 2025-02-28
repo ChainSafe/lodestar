@@ -167,19 +167,19 @@ export async function initBeaconState(
     isFinalized = false;
     if (args.checkpointState) {
       // local file checkpoint state specified via wssCheckpoint could be loaded here
-      logger.info("Loading local checkpoint state from file", {path: args.checkpointState});
+      logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
       localCpState = await downloadOrLoadFile(args.checkpointState);
-      logger.info("Loaded local checkpoint state from file", {path: args.checkpointState});
+      logger.info("Found local checkpoint state from file", {path: args.checkpointState});
     } else if (args.wssCheckpoint) {
       // local db checkpoint state specified via wssCheckpoint could be loaded here
       const wssCheckpoint = getCheckpointFromArg(args.wssCheckpoint);
       const persistedCpKey = checkpointToDatastoreKey(wssCheckpoint);
-      logger.verbose("Loading local checkpoint state from db", {checkpoint: args.wssCheckpoint});
+      logger.verbose("Finding local checkpoint state from db", {checkpoint: args.wssCheckpoint});
       localCpState = await db.checkpointState.getBinary(persistedCpKey);
       if (localCpState === null) {
         logger.verbose("Checkpoint state not found in db", {checkpoint: args.wssCheckpoint});
       } else {
-        logger.info("Loaded local checkpoint state from db", {checkpoint: args.wssCheckpoint});
+        logger.info("Found local checkpoint state from db", {checkpoint: args.wssCheckpoint});
       }
     }
 
@@ -196,6 +196,8 @@ export async function initBeaconState(
         db,
         logger
       );
+
+      logger.info("Loaded checkpoint state", {slot: stateAndCp.anchorState.slot});
 
       return {...stateAndCp, isFinalized};
     }
