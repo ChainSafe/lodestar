@@ -17,8 +17,10 @@ import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
-  /** Keep max n states in memory, persist the rest to disk */
+  /** Keep max n state epochs in memory, persist the rest to disk */
   maxCPStateEpochsInMemory?: number;
+  /** Keep max n state epochs on disk */
+  maxCPStateEpochsOnDisk?: number;
 };
 
 type PersistentCheckpointStateCacheModules = {
@@ -60,6 +62,12 @@ export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
 
 // TODO GLOAS: re-evaluate this timing
 const PROCESS_CHECKPOINT_STATES_BPS = 6667;
+
+/**
+ * During nft state of Holesky in Feb 2025, lodestar stores ~250MB per epoch and it's not sustainable to keep all states on disk.
+ * It's not likely to have reorgs that go back to 10 epochs ago, so we only keep 10 epochs on disk.
+ */
+export const DEFAULT_MAX_CP_STATE_ON_DISK = 10;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
@@ -104,6 +112,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
+  private readonly maxEpochsOnDisk: number;
   private readonly datastore: CPStateDatastore;
   private readonly blockStateCache: BlockStateCache;
   private readonly bufferPool?: BufferPool | null;
@@ -139,10 +148,16 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.logger = logger;
     this.clock = clock;
     this.signal = signal;
+
     if (opts.maxCPStateEpochsInMemory !== undefined && opts.maxCPStateEpochsInMemory < 0) {
       throw new Error("maxEpochsInMemory must be >= 0");
     }
+    if (opts.maxCPStateEpochsOnDisk !== undefined && opts.maxCPStateEpochsOnDisk < 0) {
+      throw new Error("maxCPStateEpochsOnDisk must be >= 0");
+    }
+
     this.maxEpochsInMemory = opts.maxCPStateEpochsInMemory ?? DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY;
+    this.maxEpochsOnDisk = opts.maxCPStateEpochsOnDisk ?? DEFAULT_MAX_CP_STATE_ON_DISK;
     // Specify different datastore for testing
     this.datastore = datastore;
     this.blockStateCache = blockStateCache;
@@ -324,6 +339,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.logger.verbose("Added checkpoint state to memory", {epoch: cp.epoch, rootHex: cpHex.rootHex});
     }
     this.epochIndex.getOrDefault(cp.epoch).add(cpHex.rootHex);
+    this.prunePersistedStates();
   }
 
   /**
@@ -766,11 +782,36 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.cache.delete(key);
     }
     this.epochIndex.delete(epoch);
-    this.logger.verbose("Pruned finalized checkpoints states for epoch", {
+    this.logger.verbose("Pruned checkpoints state for epoch", {
       epoch,
       persistCount,
       rootHexes: Array.from(rootHexes).join(","),
     });
+  }
+
+  /**
+   * Prune persisted checkpoint states from disk.
+   * Note that this should handle all possible errors and not throw.
+   */
+  private prunePersistedStates(): void {
+    //                epochsOnDisk                                   epochsInMemory
+    // |----------------------------------------------------------|----------------------|
+    const maxTrackedEpochs = this.maxEpochsOnDisk + this.maxEpochsInMemory;
+    if (this.epochIndex.size <= maxTrackedEpochs) {
+      return;
+    }
+
+    const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
+    const pruneEpochs = sortedEpochs.slice(0, sortedEpochs.length - maxTrackedEpochs);
+    for (const epoch of pruneEpochs) {
+      this.deleteAllEpochItems(epoch).catch((e) =>
+        this.logger.debug(
+          "Error delete all epoch items",
+          {epoch, maxCPStateEpochsOnDisk: this.maxEpochsOnDisk, maxEpochsInMemory: this.maxEpochsInMemory},
+          e as Error
+        )
+      );
+    }
   }
 
   /**
