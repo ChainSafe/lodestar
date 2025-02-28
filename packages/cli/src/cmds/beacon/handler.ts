@@ -70,7 +70,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   // BeaconNode setup
   try {
-    const {anchorState, wsCheckpoint} = await initBeaconState(
+    const {anchorState, isFinalized, wsCheckpoint} = await initBeaconState(
       options,
       args,
       config,
@@ -88,6 +88,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerId,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
+      isAnchorStateFinalized: isFinalized,
       wsCheckpoint,
     });
 

@@ -54,6 +54,7 @@ export type BeaconNodeInitModules = {
   peerId: PeerId;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
+  isAnchorStateFinalized: boolean;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 };
@@ -151,6 +152,7 @@ export class BeaconNode {
     peerId,
     peerStoreDir,
     anchorState,
+    isAnchorStateFinalized,
     wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
@@ -229,6 +231,7 @@ export class BeaconNode {
       processShutdownCallback,
       metrics,
       anchorState,
+      isAnchorStateFinalized,
       eth1: initializeEth1ForBlockProduction(opts.eth1, {
         config,
         db,

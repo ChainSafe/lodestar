@@ -190,6 +190,7 @@ export class BeaconChain implements IBeaconChain {
       clock,
       metrics,
       anchorState,
+      isAnchorStateFinalized,
       eth1,
       executionEngine,
       executionBuilder,
@@ -203,6 +204,7 @@ export class BeaconChain implements IBeaconChain {
       clock?: IClock;
       metrics: Metrics | null;
       anchorState: BeaconStateAllForks;
+      isAnchorStateFinalized: boolean;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
@@ -322,6 +324,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       clock.currentSlot,
       cachedState,
+      isAnchorStateFinalized,
       opts,
       this.justifiedBalancesGetter.bind(this),
       logger

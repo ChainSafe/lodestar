@@ -40,19 +40,20 @@ export function initializeForkChoice(
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
+  isFinalizedState: boolean,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
-  const finalizedCheckpoint = {...checkpoint};
+  const finalizedCheckpoint = isFinalizedState ? {...checkpoint} : state.finalizedCheckpoint;
   const justifiedCheckpoint = {
-    ...checkpoint,
+    ...finalizedCheckpoint,
     // If not genesis epoch, justified checkpoint epoch must be set to finalized checkpoint epoch + 1
     // So that we don't allow the chain to initially justify with a block that isn't also finalizing the anchor state.
     // If that happens, we will create an invalid head state,
     // with the head not matching the fork choice justified and finalized epochs.
-    epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
+    epoch: finalizedCheckpoint.epoch === 0 ? finalizedCheckpoint.epoch : finalizedCheckpoint.epoch + 1,
   };
 
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
