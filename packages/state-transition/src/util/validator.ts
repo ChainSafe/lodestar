@@ -29,7 +29,7 @@ export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch):
  *
  * NAIVE - SLOW CODE 🐢
  */
-export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
+export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epoch): Uint32Array {
   const indices: ValidatorIndex[] = [];
 
   const validatorsArr = state.validators.getAllReadonlyValues();
@@ -39,7 +39,7 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
     }
   }
 
-  return indices;
+  return new Uint32Array(indices);
 }
 
 export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, activeValidatorCount: number): number {

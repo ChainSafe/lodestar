@@ -22,13 +22,16 @@ import {getNextSyncCommitteeIndices} from "./seed.js";
 export function getNextSyncCommittee(
   fork: ForkSeq,
   state: BeaconStateAllForks,
-  activeValidatorIndices: ArrayLike<ValidatorIndex>,
+  activeValidatorIndices: Uint32Array,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
-): {indices: ValidatorIndex[]; syncCommittee: altair.SyncCommittee} {
+): {indices: Uint32Array; syncCommittee: altair.SyncCommittee} {
   const indices = getNextSyncCommitteeIndices(fork, state, activeValidatorIndices, effectiveBalanceIncrements);
 
   // Using the index2pubkey cache is slower because it needs the serialized pubkey.
-  const pubkeys = indices.map((index) => state.validators.getReadonly(index).pubkey);
+  const pubkeys = [];
+  for (const index of indices) {
+    pubkeys.push(state.validators.getReadonly(index).pubkey);
+  }
 
   return {
     indices,

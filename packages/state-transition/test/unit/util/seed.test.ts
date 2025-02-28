@@ -40,20 +40,22 @@ describe("getRandaoMix", () => {
   });
 });
 
-describe("computeProposerIndex electra", () => {
+describe("computeProposerIndex", () => {
   const seed = crypto.randomBytes(32);
   const vc = 1000;
-  const activeIndices = Array.from({length: vc}, (_, i) => i);
+  const activeIndices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
   const effectiveBalanceIncrements = new Uint16Array(vc);
   for (let i = 0; i < vc; i++) {
     effectiveBalanceIncrements[i] = 32 + 32 * (i % 64);
   }
 
-  it("should be the same to the naive version", () => {
-    const expected = naiveComputeProposerIndex(ForkSeq.electra, effectiveBalanceIncrements, activeIndices, seed);
-    const result = computeProposerIndex(ForkSeq.electra, effectiveBalanceIncrements, activeIndices, seed);
-    expect(result).toBe(expected);
-  });
+  for (const fork of [ForkSeq.phase0, ForkSeq.electra]) {
+    it(`should be the same to the naive version - ${ForkSeq[fork]}`, () => {
+      const expected = naiveComputeProposerIndex(fork, effectiveBalanceIncrements, activeIndices, seed);
+      const result = computeProposerIndex(fork, effectiveBalanceIncrements, activeIndices, seed);
+      expect(result).toBe(expected);
+    });
+  }
 });
 
 describe("computeShuffledIndex", () => {
@@ -72,27 +74,24 @@ describe("electra getNextSyncCommitteeIndices", () => {
   const vc = 1000;
   const validators = generateValidators(vc);
   const state = generateState({validators});
-  const activeValidatorIndices = Array.from({length: vc}, (_, i) => i);
+  const activeValidatorIndices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
   const effectiveBalanceIncrements = new Uint16Array(vc);
   for (let i = 0; i < vc; i++) {
     effectiveBalanceIncrements[i] = 32 + 32 * (i % 64);
   }
 
-  it("should return the same result as naiveGetNextSyncCommitteeIndices", () => {
-    const expected = naiveGetNextSyncCommitteeIndices(
-      ForkSeq.electra,
-      state,
-      activeValidatorIndices,
-      effectiveBalanceIncrements
-    );
-    const result = getNextSyncCommitteeIndices(
-      ForkSeq.electra,
-      state,
-      activeValidatorIndices,
-      effectiveBalanceIncrements
-    );
-    expect(result).toEqual(expected);
-  });
+  for (const fork of [ForkSeq.phase0, ForkSeq.electra]) {
+    it(`should be the same to the naive version - ${ForkSeq[fork]}`, () => {
+      const expected = naiveGetNextSyncCommitteeIndices(
+        fork,
+        state,
+        activeValidatorIndices,
+        effectiveBalanceIncrements
+      );
+      const result = getNextSyncCommitteeIndices(fork, state, activeValidatorIndices, effectiveBalanceIncrements);
+      expect(result).toEqual(new Uint32Array(expected));
+    });
+  }
 });
 
 describe("number from 2 bytes bytesToInt", () => {
