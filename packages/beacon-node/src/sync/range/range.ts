@@ -120,6 +120,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       startEpoch,
       targetSlot: target.slot,
       targetRoot: toRootHex(target.root),
+      localHeadSlot: localStatus.headSlot,
     });
 
     // If the peer existed in any other chain, remove it.
