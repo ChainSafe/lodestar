@@ -2,6 +2,7 @@ import {
   IBeaconDb,
   IBeaconNodeOptions,
   checkAndPersistAnchorState,
+  checkpointToDatastoreKey,
   getStateTypeFromBytes,
   initStateFromEth1,
 } from "@lodestar/beacon-node";
@@ -151,19 +152,40 @@ export async function initBeaconState(
   }
 
   // See if we can sync state using checkpoint sync args or else start from genesis
-  if (args.checkpointState) {
-    return readWSState(
-      lastDbStateWithBytes,
-      lastDbValidatorsBytes,
-      {
-        checkpointState: args.checkpointState,
-        wssCheckpoint: args.wssCheckpoint,
-        ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck,
-      },
-      chainForkConfig,
-      db,
-      logger
-    );
+  if (args.checkpointState || args.wssCheckpoint) {
+    let localCpState: Uint8Array | null = null;
+    if (args.checkpointState) {
+      // local file checkpoint state specified via wssCheckpoint could be loaded here
+      logger.info("Loading local checkpoint state from file", {path: args.checkpointState});
+      localCpState = await downloadOrLoadFile(args.checkpointState);
+      logger.info("Loaded local checkpoint state from file", {path: args.checkpointState});
+    } else if (args.wssCheckpoint) {
+      // local db checkpoint state specified via wssCheckpoint could be loaded here
+      const wssCheckpoint = getCheckpointFromArg(args.wssCheckpoint);
+      const persistedCpKey = checkpointToDatastoreKey(wssCheckpoint);
+      logger.verbose("Loading local checkpoint state from db", {checkpoint: args.wssCheckpoint});
+      localCpState = await db.checkpointState.getBinary(persistedCpKey);
+      if (localCpState === null) {
+        logger.verbose("Checkpoint state not found in db", {checkpoint: args.wssCheckpoint});
+      } else {
+        logger.info("Loaded local checkpoint state from db", {checkpoint: args.wssCheckpoint});
+      }
+    }
+
+    if (localCpState !== null) {
+      return readWSState(
+        lastDbStateWithBytes,
+        lastDbValidatorsBytes,
+        {
+          checkpointState: localCpState,
+          wssCheckpoint: args.wssCheckpoint,
+          ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck,
+        },
+        chainForkConfig,
+        db,
+        logger
+      );
+    }
   }
 
   if (args.checkpointSyncUrl) {
@@ -204,7 +226,7 @@ export async function initBeaconState(
 async function readWSState(
   lastDbStateBytes: StateWithBytes | null,
   lastDbValidatorsBytes: Uint8Array | null,
-  wssOpts: {checkpointState: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
+  wssOpts: {checkpointState: Uint8Array; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
@@ -212,10 +234,10 @@ async function readWSState(
   // weak subjectivity sync from a provided state file:
   // if a weak subjectivity checkpoint has been provided, it is used for additional verification
   // otherwise, the state itself is used for verification (not bad, because the trusted state has been explicitly provided)
-  const {checkpointState, wssCheckpoint, ignoreWeakSubjectivityCheck} = wssOpts;
+  const {wssCheckpoint, ignoreWeakSubjectivityCheck} = wssOpts;
   const lastDbState = lastDbStateBytes?.state ?? null;
 
-  const stateBytes = await downloadOrLoadFile(checkpointState);
+  const stateBytes = wssOpts.checkpointState;
   let wsState: BeaconStateAllForks;
   if (lastDbState && lastDbValidatorsBytes) {
     // use lastDbState to load wsState if possible to share the same state tree
