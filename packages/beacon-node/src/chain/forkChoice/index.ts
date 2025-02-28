@@ -46,14 +46,17 @@ export function initializeForkChoice(
   logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
-  const finalizedCheckpoint = isFinalizedState ? {...checkpoint} : state.finalizedCheckpoint;
+  // in case of non-finalized anchor state, finalized checkpoint must not be itself
+  const finalizedCheckpoint = isFinalizedState ? {...checkpoint} : state.finalizedCheckpoint.toValue();
+
+  // in case of non-finalized anchor state, we assume justified checkpoint is itself to grow the protoarray from there
   const justifiedCheckpoint = {
-    ...finalizedCheckpoint,
+    ...checkpoint,
     // If not genesis epoch, justified checkpoint epoch must be set to finalized checkpoint epoch + 1
     // So that we don't allow the chain to initially justify with a block that isn't also finalizing the anchor state.
     // If that happens, we will create an invalid head state,
     // with the head not matching the fork choice justified and finalized epochs.
-    epoch: finalizedCheckpoint.epoch === 0 ? finalizedCheckpoint.epoch : finalizedCheckpoint.epoch + 1,
+    epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
   };
 
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
