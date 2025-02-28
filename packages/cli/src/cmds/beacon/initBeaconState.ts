@@ -36,6 +36,7 @@ async function initAndVerifyWeakSubjectivityState(
   logger: Logger,
   dbStateBytes: StateWithBytes,
   wsStateBytes: StateWithBytes,
+  isWsStateFinalized: boolean,
   wsCheckpoint: Checkpoint,
   opts: {ignoreWeakSubjectivityCheck?: boolean} = {}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
@@ -72,10 +73,12 @@ async function initAndVerifyWeakSubjectivityState(
     throw wssCheck.err;
   }
 
-  await checkAndPersistAnchorState(config, db, logger, anchorState.state, anchorState.stateBytes, {
-    isWithinWeakSubjectivityPeriod,
-    isCheckpointState,
-  });
+  if (isWsStateFinalized) {
+    await checkAndPersistAnchorState(config, db, logger, anchorState.state, anchorState.stateBytes, {
+      isWithinWeakSubjectivityPeriod,
+      isCheckpointState,
+    });
+  }
 
   // Return the latest anchorState but still return original wsCheckpoint to validate in backfill
   return {anchorState: anchorState.state, wsCheckpoint};
@@ -235,6 +238,9 @@ export async function initBeaconState(
   return {anchorState, isFinalized};
 }
 
+/**
+ * Starting from Feb 2025, reading a user provided state or local checkpoint state is consider non-finalized.
+ */
 async function readWSState(
   lastDbStateBytes: StateWithBytes | null,
   lastDbValidatorsBytes: Uint8Array | null,
@@ -261,7 +267,8 @@ async function readWSState(
   const wsStateBytes = {state: wsState, stateBytes};
   const store = lastDbStateBytes ?? wsStateBytes;
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
-  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateBytes, checkpoint, {
+  const isFinalized = false;
+  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateBytes, isFinalized, checkpoint, {
     ignoreWeakSubjectivityCheck,
   });
 }
@@ -297,7 +304,9 @@ async function fetchWSStateFromBeaconApi(
   const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const wsStateWithBytes = {state: wsState, stateBytes: wsStateBytes};
   const store = lastDbStateBytes ?? wsStateWithBytes;
-  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateWithBytes, wsCheckpoint, {
+  // a fetched ws state is trusted to be finalized
+  const isFinalized = true;
+  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateWithBytes, isFinalized, wsCheckpoint, {
     ignoreWeakSubjectivityCheck: wssOpts.ignoreWeakSubjectivityCheck,
   });
 }
