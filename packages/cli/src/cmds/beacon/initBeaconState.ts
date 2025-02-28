@@ -89,6 +89,10 @@ async function initAndVerifyWeakSubjectivityState(
  * 2. restore from db
  * 3. restore from genesis state (possibly downloaded via URL)
  * 4. create genesis state from eth1
+ *
+ * The returned anchorState could be finalized or not.
+ * - if we load from a local checkpoint state, or local file, it is supposed to be not finalized
+ * - it's finalized if from archived db, checkpointSyncUrl
  */
 export async function initBeaconState(
   options: IBeaconNodeOptions,
@@ -97,7 +101,7 @@ export async function initBeaconState(
   db: IBeaconDb,
   logger: Logger,
   signal: AbortSignal
-): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
+): Promise<{anchorState: BeaconStateAllForks; isFinalized: boolean ; wsCheckpoint?: Checkpoint}> {
   if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl)) {
     throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
   }
@@ -118,6 +122,9 @@ export async function initBeaconState(
     lastDbValidatorsBytes = validatorsBytes;
     lastDbStateWithBytes = {state, stateBytes: stateBytes};
   }
+
+  // by default, we only load finalized state
+  let isFinalized = true;
 
   if (lastDbState) {
     const config = createBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
@@ -146,7 +153,7 @@ export async function initBeaconState(
           isWithinWeakSubjectivityPeriod: wssCheck,
           isCheckpointState: false,
         });
-        return {anchorState: lastDbState};
+        return {anchorState: lastDbState, isFinalized};
       }
     }
   }
@@ -154,6 +161,7 @@ export async function initBeaconState(
   // See if we can sync state using checkpoint sync args or else start from genesis
   if (args.checkpointState || args.wssCheckpoint) {
     let localCpState: Uint8Array | null = null;
+    isFinalized = false;
     if (args.checkpointState) {
       // local file checkpoint state specified via wssCheckpoint could be loaded here
       logger.info("Loading local checkpoint state from file", {path: args.checkpointState});
@@ -173,7 +181,7 @@ export async function initBeaconState(
     }
 
     if (localCpState !== null) {
-      return readWSState(
+      const stateAndCp = await readWSState(
         lastDbStateWithBytes,
         lastDbValidatorsBytes,
         {
@@ -185,11 +193,13 @@ export async function initBeaconState(
         db,
         logger
       );
+
+      return {...stateAndCp, isFinalized};
     }
   }
 
   if (args.checkpointSyncUrl) {
-    return fetchWSStateFromBeaconApi(
+    const stateAndCp = await fetchWSStateFromBeaconApi(
       lastDbStateWithBytes,
       lastDbValidatorsBytes,
       {
@@ -201,6 +211,8 @@ export async function initBeaconState(
       db,
       logger
     );
+
+    return {...stateAndCp, isFinalized};
   }
 
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
@@ -215,12 +227,12 @@ export async function initBeaconState(
       isWithinWeakSubjectivityPeriod: wssCheck,
       isCheckpointState: true,
     });
-    return {anchorState};
+    return {anchorState , isFinalized};
   }
 
   // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
   const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
-  return {anchorState};
+  return {anchorState, isFinalized};
 }
 
 async function readWSState(
