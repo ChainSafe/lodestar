@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkBlobs, isForkPostFulu} from "@lodestar/params";
-import {deneb, fulu, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {ForkName, isForkPostDeneb, isForkBlobs, isForkPostFulu} from "@lodestar/params";
+import {deneb, Epoch, fulu, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {LodestarError, Logger, toHex} from "@lodestar/utils";
 import {
   BlockInput,
@@ -10,12 +10,38 @@ import {
   BlockInputSource,
   BlockInputSourceType,
   BlockInputType,
+  isBlockInputBlobs,
+  isBlockInputColumns,
 } from "./blockInput.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {Metrics} from "../../../metrics/metrics.js";
+import {BeaconChain} from "../../chain.js";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus} from "@lodestar/fork-choice";
 
+type BlockInputByRootHex = {
+  rootHex: string;
+  slot?: Slot;
+  currentEpoch?: Epoch;
+};
+type BlockInputByBlock = {
+  block: SignedBeaconBlock;
+  source: BlockInputSourceType;
+  peerIdStr?: string;
+  dataAvailability?: DataAvailabilityStatus;
+};
+type BlockInputByBlob = {
+  blobSidecar: deneb.BlobSidecar;
+  source: BlockInputSource;
+  peerIdStr?: string;
+};
+type BlockInputByColumn = {
+  columnSidecar: fulu.DataColumnSidecar;
+  source: BlockInputSource;
+  peerIdStr?: string;
+};
 export class BlockInputCache {
-  private blockInputs = new Map<RootHex, BlockInput<unknown>>();
+  private blockInputs = new Map<RootHex, BlockInput>();
 
   constructor(
     private config: ChainForkConfig,
@@ -24,7 +50,7 @@ export class BlockInputCache {
     private metrics?: Metrics
   ) {}
 
-  getBlockInputByRootHex({rootHex, slot}: {rootHex: string; slot?: Slot}): BlockInput {
+  getBlockInputByRootHex({rootHex, slot}: BlockInputByRootHex): BlockInput {
     let blockInput = this.blockInputs.get(rootHex);
     if (!blockInput) {
       if (slot) {
@@ -55,15 +81,23 @@ export class BlockInputCache {
     return blockInput;
   }
 
-  getBlockInputByBlock(block: SignedBeaconBlock, source: BlockInputSourceType, peerIdStr?: string): BlockInput {
+  getBlockInputByBlock({block, source, peerIdStr, dataAvailability}: BlockInputByBlock): BlockInput {
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const rootHex = toHex(blockRoot);
     const forkName = this.config.getForkName(block.message.slot);
+    // let dataAvailability: DataAvailabilityStatus | undefined;
+
+    // if (currentEpoch !== undefined && isForkPostDeneb(forkName)) {
+    //   const blockEpoch = computeEpochAtSlot(block.message.slot);
+    //   if (blockEpoch >= currentEpoch - this.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
+    //     dataAvailability = DataAvailabilityStatus.OutOfRange;
+    //   }
+    // }
 
     let blockInput = this.blockInputs.get(rootHex);
     if (blockInput) {
       if (!blockInput.hasBlock()) {
-        blockInput.addBlock({rootHex, blockRoot, block, forkName, source, peerIdStr});
+        blockInput.addBlock({rootHex, blockRoot, block, forkName, source, peerIdStr, dataAvailability});
       } else {
         // TODO: add a metric here
       }
@@ -71,79 +105,133 @@ export class BlockInputCache {
     }
 
     if (isForkBlobs(forkName)) {
-      blockInput = BlockInputBlobs.createFromBlock(this.config, block);
+      blockInput = BlockInputBlobs.createFromBlock({
+        block,
+        blockRoot,
+        rootHex,
+        forkName,
+        source,
+        peerIdStr,
+        dataAvailability,
+        logger: this.logger,
+        metrics: this.metrics,
+      });
     } else if (isForkPostFulu(forkName)) {
-      blockInput = BlockInputColumns.createFromBlock(this.config, block);
+      blockInput = BlockInputColumns.createFromBlock({
+        block,
+        blockRoot,
+        rootHex,
+        forkName,
+        source,
+        peerIdStr,
+        dataAvailability,
+        logger: this.logger,
+        metrics: this.metrics,
+      });
     } else {
-      blockInput = BlockInputPreDeneb.createFromBlock({block, blockRoot, rootHex, forkName, source, peerIdStr});
+      blockInput = BlockInputPreDeneb.createFromBlock({
+        block,
+        blockRoot,
+        rootHex,
+        forkName,
+        source,
+        peerIdStr,
+        dataAvailability,
+        logger: this.logger,
+        metrics: this.metrics,
+      });
     }
 
     this.blockInputs.set(blockRoot, blockInput);
     return blockInput;
   }
 
-  getBlockInputByBlob(blobSidecar: deneb.BlobSidecar, source: BlockInputSource, peerIdStr?: string): BlockInputBlobs {
+  getBlockInputByBlob({blobSidecar, source, peerIdStr}: BlockInputByBlob): BlockInputBlobs {
     const blockRoot = this.config
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-    const blockHex = toHex(blockRoot);
-    let blockInput = this.blockInputs.get(blockHex) as BlockInputBlobs;
+    const rootHex = toHex(blockRoot);
+
+    let blockInput = this.blockInputs.get(rootHex) as BlockInputBlobs;
     if (blockInput) {
-      if (blockInput.type !== BlockInputType.Blobs) {
+      if (!isBlockInputBlobs(blockInput)) {
         throw new BlockInputCacheError(
           {
             code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
             cachedType: blockInput.type,
             requestedType: BlockInputType.Blobs,
           },
-          `BlockInputType mismatch for slot=${blobSidecar.signedBlockHeader.message.slot} blockRoot=${blockHex}`
+          `BlockInputType mismatch for blobIndex=${blobSidecar.index} slot=${blobSidecar.signedBlockHeader.message.slot} blockRoot=${rootHex}`
         );
       }
-      blockInput.addBlob(this.config, blobSidecar);
-    } else {
-      blockInput = BlockInputBlobs.createFromBlobSidecar({
-        config,
-        metrics,
-        abortSignal,
-        blockRoot,
-        blobSidecar,
-        source,
-        peerIdStr,
-      });
-      this.blockInputs.set(blockHex, blockInput);
+
+      if (!blockInput.hasBlobSidecar(blobSidecar.index)) {
+        blockInput.addBlobSidecar({rootHex, blobSidecar, source, peerIdStr});
+      } else {
+        // TODO: not sure if this should throw here or maybe collect a metric. Saw a note about
+        //       handling this case but this is newly added
+        //
+        // TODO: add metrics here for duplicate blob
+      }
+
+      return blockInput;
     }
+
+    blockInput = BlockInputBlobs.createFromBlobSidecar({
+      blockRoot,
+      rootHex,
+      forkName: this.config.getForkName(blobSidecar.signedBlockHeader.message.slot),
+      blobSidecar,
+      source,
+      peerIdStr,
+      logger: this.logger,
+      metrics: this.metrics,
+    });
+    this.blockInputs.set(rootHex, blockInput);
 
     return blockInput;
   }
 
-  getBlockInputByColumn(
-    columnSidecar: fulu.DataColumnSidecar,
-    source: BlockInputSource,
-    peerIdStr?: string
-  ): BlockInputColumns {
-    const blockRoot = toHex(
-      this.config
-        .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
-        .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message)
-    );
+  getBlockInputByColumn({columnSidecar, source, peerIdStr}: BlockInputByColumn): BlockInputColumns {
+    const blockRoot = this.config
+      .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
+      .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
+    const rootHex = toHex(blockRoot);
 
     let blockInput = this.blockInputs.get(blockRoot) as BlockInputColumns;
     if (blockInput) {
-      if (blockInput.type !== BlockInputType.Blobs) {
+      if (!isBlockInputColumns(blockInput)) {
         throw new BlockInputCacheError(
           {
             code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
             cachedType: blockInput.type,
             requestedType: BlockInputType.Columns,
           },
-          `BlockInputType mismatch for slot=${columnSidecar.signedBlockHeader.message.slot} blockRoot=${blockRoot}`
+          `BlockInputType mismatch for columnIndex=${columnSidecar.index} slot=${columnSidecar.signedBlockHeader.message.slot} blockRoot=${blockRoot}`
         );
       }
-      blockInput.addColumnSidecar(this.config, columnSidecar);
-    } else {
-      blockInput = BlockInputColumns.createFromColumnSidecar(this.config, columnSidecar);
-      this.blockInputs.set(blockRoot, blockInput);
+      if (!blockInput.hasColumn(columnSidecar.index)) {
+        blockInput.addColumnSidecar({rootHex, columnSidecar, source, peerIdStr});
+      } else {
+        // TODO: not sure if this should throw here or maybe collect a metric. Saw a note about
+        //       handling this case but this is newly added
+        //
+        // TODO: add metrics here for duplicate column
+      }
+      return blockInput;
     }
+
+    blockInput = BlockInputColumns.createFromColumnSidecar({
+      blockRoot,
+      rootHex,
+      forkName: this.config.getForkName(columnSidecar.signedBlockHeader.message.slot),,
+      columnSidecar,
+      source,
+      peerIdStr,
+      logger: this.logger,
+      metrics: this.metrics,
+    });
+    this.blockInputs.set(rootHex, blockInput);
 
     return blockInput;
   }
@@ -165,7 +253,7 @@ export class BlockInputCache {
    */
   removeBlobsFromBlockInput(blockInput: BlockInput, blobIndices: number[]): void {
     for (const index of blobIndices) {
-      blockInput.removeBlob(index);
+      blockInput.removeBlobSidecar(index);
     }
     if (!(blockInput.hasData() && blockInput.hasBlock())) {
       this.blockInputs.delete(blockInput.rootHex);

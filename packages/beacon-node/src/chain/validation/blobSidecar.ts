@@ -192,26 +192,33 @@ export function validateBlobSidecars(
     // Verify the blob slot and root matches
     const blobs = [];
     const proofs = [];
+
     for (let index = 0; index < blobSidecars.length; index++) {
       const blobSidecar = blobSidecars[index];
-      const blobBlockHeader = blobSidecar.signedBlockHeader.message;
-      const blobBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
-      if (
-        blobBlockHeader.slot !== blockSlot ||
-        !byteArrayEquals(blobBlockRoot, blockRoot) ||
-        blobSidecar.index !== index ||
-        !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
-      ) {
-        throw new Error(
-          `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toRootHex(blobBlockRoot)} index=${
-            blobSidecar.index
-          } for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} index=${index}`
-        );
-      }
+      // TODO: (@matthewkeil) This check                                                    et deleted
+      // const blobBlockHeader = blobSidecar.signedBlockHeader.message;
+      // const blobBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
+      // if (
+      //   blobBlockHeader.slot !== blockSlot ||
+      //   !byteArrayEquals(blobBlockRoot, blockRoot) ||
+      //   blobSidecar.index !== index ||
+      //   !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
+      // ) {
+      //   throw new Error(
+      //     `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toRootHex(blobBlockRoot)} index=${
+      //       blobSidecar.index
+      //     } for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} index=${index}`
+      //   );
+      // }
       blobs.push(blobSidecar.blob);
       proofs.push(blobSidecar.kzgProof);
     }
 
+    // TODO: (@matthewkeil) Should the proof check also get handled when the blob is added to the BlockInput?
+    // TODO: (@matthewkeil) This is getting called twice??  Once in gossip for each blob and once in block
+    //       processing for the batch of proofs (but uses the commitments from the block).  This should not
+    //       be necessary because the commitments are bytewise checked to match in the block and sidecar on
+    //       import to the BlockInput
     if (!opts.skipProofsCheck) {
       validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
     }
