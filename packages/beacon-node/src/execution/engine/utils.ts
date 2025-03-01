@@ -56,7 +56,6 @@ export const HTTP_FATAL_ERROR_CODES = ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN"]
 export const HTTP_CONNECTION_ERROR_CODES = ["ECONNRESET", "ECONNABORTED"];
 
 function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutionPayloadStatus): ExecutionEngineState {
-  // TODO Opt
   switch (payloadStatus) {
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.VALID:
