@@ -35,6 +35,7 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsInMemory"?: number;
 
   "chain.pruneHistory"?: boolean;
+  "chain.disableOptimisticSync"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -71,6 +72,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     pruneHistory: args["chain.pruneHistory"],
+    disableOptimisticSync: args["chain.disableOptimisticSync"],
   };
 }
 
@@ -292,6 +294,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Prune historical blocks and state",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
+    group: "chain",
+  },
+
+  "chain.disableOptimisticSync": {
+    hidden: true,
+    description: "Will not import beacon blocks when execution client is syncing if true",
+    type: "boolean",
+    default: defaultOptions.chain.disableOptimisticSync,
     group: "chain",
   },
 };

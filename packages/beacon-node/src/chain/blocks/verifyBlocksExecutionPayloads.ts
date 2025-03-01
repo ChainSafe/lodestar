@@ -145,6 +145,8 @@ export async function verifyBlocksExecutionPayload(
 
   const currentSlot = chain.clock.currentSlot;
   const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
+  // In the case optimisic sync is disabled, it does not matter what `isOptimisticallySafe` is since we will reject
+  // any syncing blocks in `verifyBlockExecutionPayload`.
   let isOptimisticallySafe =
     parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
     lastBlock.message.slot + safeSlotsToImportOptimistically < currentSlot;
@@ -343,6 +345,15 @@ export async function verifyBlockExecutionPayload(
     // Accepted and Syncing have the same treatment, as final validation of block is pending
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.SYNCING: {
+      if (opts.disableOptimisticSync) {
+        // Optimistic sync is disabled, skip importing this block
+        const execError = new BlockError(block, {
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: ExecutionPayloadStatus.OPTIMISTIC_SYNC_DISABLED,
+          errorMessage: `attempt to import ${execResult.status} payload when optimistic sync is disabled`,
+        });
+        return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
+      }
       // Check if the entire segment was deemed safe or, this block specifically itself if not in
       // the safeSlotsToImportOptimistically window of current slot, then we can import else
       // we need to throw and not import his block
