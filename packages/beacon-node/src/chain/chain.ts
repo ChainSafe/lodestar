@@ -757,7 +757,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/validator.md#sidecar
    * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobSidecars:
    *   return BlobSidecars(
    *       beacon_block_root=hash_tree_root(block),
