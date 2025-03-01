@@ -235,7 +235,6 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
-  // TODO: find callers of this and pass in BlockInputSourceType
   searchUnknownSlotRoot(slot: Slot, rootHex: RootHex, source: BlockInputSourceType, peer?: PeerIdStr): void {
     if (this.chain.seenBlock(rootHex) || this.unknownRootsBySlot.getOrDefault(slot).has(rootHex)) {
       return;
