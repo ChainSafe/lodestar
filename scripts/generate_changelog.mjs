@@ -102,7 +102,7 @@ for (const commitHash of commitHashes.trim().split("\n")) {
   // Sort commits by type and scope
   // - assign each commit to section based on type
   // - group commits by scope within each section
-  if (sections[type] != null) {
+  if (sections[type] !== undefined) {
     if (scope) {
       if (sections[type].commitsByScope[scope] == null) {
         sections[type].commitsByScope[scope] = [];
