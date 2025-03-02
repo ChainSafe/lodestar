@@ -540,6 +540,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const maxEpoch = Math.max(...Array.from(this.epochIndex.keys()));
     const reloadedCpSlot = computeStartSlotAtEpoch(reloadedCp.epoch);
     let firstState: CachedBeaconStateAllForks | null = null;
+    const logCtx = {cpEpoch: reloadedCp.epoch, cpRoot: reloadedCp.rootHex};
+
     // no need to check epochs before `maxEpoch - this.maxEpochsInMemory + 1` before they are all persisted
     for (let epoch = maxEpoch - this.maxEpochsInMemory + 1; epoch <= maxEpoch; epoch++) {
       // if there's at least 1 state in memory in an epoch, just return the 1st one
@@ -560,19 +562,26 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             firstState = state;
           }
 
-          // amongst states of the same epoch, choose the one with the same view of reloadedCp
-          if (
-            reloadedCpSlot < state.slot &&
-            toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
-          ) {
-            return state;
+          try {
+            // amongst states of the same epoch, choose the one with the same view of reloadedCp
+            if (
+              reloadedCpSlot < state.slot &&
+              toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
+            ) {
+              this.logger.verbose("Reload: use block state as seed state", {stateSlot: state.slot, ...logCtx});
+              return state;
+            }
+          } catch (e) {
+            // getBlockRootAtSlot may throw error
+            this.logger.debug("Error finding seed state to reload", {epoch, root: rootHex, ...logCtx}, e as Error);
           }
         }
       }
     }
 
+    // fallback to using the default seed state from block state cache
     const seedBlockState = this.blockStateCache.getSeedState();
-    this.logger.verbose("Reload: use block state as seed state", {slot: seedBlockState.slot});
+    this.logger.verbose("Reload: use default block state as seed state", {stateSlot: seedBlockState.slot, ...logCtx});
     return seedBlockState;
   }
 
