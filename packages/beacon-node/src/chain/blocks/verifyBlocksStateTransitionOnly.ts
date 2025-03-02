@@ -25,7 +25,6 @@ import {BlockInput} from "./utils/blockInput.js";
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blockInputs: BlockInput[],
-  dataAvailabilityStatuses: DataAvailableStatus[],
   logger: Logger,
   metrics: Metrics | null,
   signal: AbortSignal,
@@ -37,9 +36,8 @@ export async function verifyBlocksStateTransitionOnly(
 
   for (let i = 0; i < blockInputs.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const block = blockInputs[i].getBlock();
+    const {block} = blockInputs[i].getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
-    const dataAvailableStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
@@ -51,7 +49,10 @@ export async function verifyBlocksStateTransitionOnly(
         // NOTE: Assume valid for now while sending payload to execution engine in parallel
         // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
         executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailableStatus,
+        // hack availability for state transition eval as availability is separately determined
+        // TODO: (@matthewkeil) this is not safe. There are two DataAvailableStatus enums!!! Don't use
+        //       the one on the BlockInput!!!  Also note the hack above
+        dataAvailableStatus: DataAvailableStatus.available,
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature
