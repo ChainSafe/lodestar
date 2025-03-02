@@ -38,7 +38,7 @@ export function verifyBlocksSanityChecks(
   let parentBlock: ProtoBlock | null = null;
 
   for (const blockInput of blockInputs) {
-    const block = blockInput.getBlock();
+    const {block} = blockInput.getBlock();
     const blockSlot = blockInput.getSlot();
 
     // Not genesis block
