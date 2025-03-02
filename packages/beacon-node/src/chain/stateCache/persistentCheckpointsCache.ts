@@ -568,12 +568,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
               reloadedCpSlot < state.slot &&
               toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
             ) {
-              this.logger.verbose("Reload: use block state as seed state", {stateSlot: state.slot, ...logCtx});
+              this.logger.verbose("Reload: use cp state as seed state", {stateSlot: state.slot, ...logCtx});
               return state;
             }
           } catch (e) {
             // getBlockRootAtSlot may throw error
-            this.logger.debug("Error finding seed state to reload", {epoch, root: rootHex, ...logCtx}, e as Error);
+            this.logger.debug("Error finding cp state to reload", {epoch, root: rootHex, ...logCtx}, e as Error);
           }
         }
       }
