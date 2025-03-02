@@ -1,5 +1,5 @@
-import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {fulu, SignedBeaconBlock, ssz} from "@lodestar/types";
+import {ForkName, ForkPostFulu, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {deneb, fulu, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {toHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
@@ -7,12 +7,13 @@ import {BlockInput, isBlockInputBlobs, isBlockInputColumns} from "./utils/blockI
 import {BlobSidecarsWrapper} from "../../db/repositories/blobSidecars.js";
 import {DataColumnSidecarsWrapper} from "../../db/repositories/dataColumnSidecars.js";
 
-function calculateDataColumnsSize(columnLength: number): number {
-  return (
-    ssz.fulu.DataColumnSidecar.minSize +
-    columnLength * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize)
-  );
-}
+// function calculateDataColumnsSize(columnLength: number): number {
+//   return (
+//     ssz.fulu.DataColumnSidecar.minSize +
+//     columnLength * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize)
+//   );
+// }
+
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
  * Else the node will be in an inconsistent state that can lead to being stuck.
@@ -24,7 +25,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
   const fnPromises: Promise<void>[] = [];
 
   for (const blockInput of blocksInputs) {
-    const block = blockInput.getBlock();
+    const {block} = blockInput.getBlock();
     const slot = blockInput.getSlot();
     const {blockRoot, rootHex} = blockInput;
     fnPromises.push(this.db.block.add(block));
@@ -34,18 +35,18 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
     });
 
     // TODO: this conditions should not ever be hit. double check all callers to write to db
-    if (blockInput.needData()) {
-      await blockInput.waitForData();
+    if (blockInput.isComplete()) {
+      await blockInput.waitForBlockAndData();
     }
 
     // NOTE: Old data is pruned on archive
     if (isBlockInputBlobs(blockInput)) {
-      const blobSidecars = blockInput.getBlobs();
+      const blobSidecars: deneb.BlobSidecars = [...blockInput.getAllBlobs()].map(({blobSidecar}) => blobSidecar);
       fnPromises.push(
-        this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}).then(() =>
+        this.db.blobSidecars.add({blockRoot, slot, blobSidecars}).then(() =>
           this.logger.debug("Persisted blobSidecars to hot DB", {
             blobsLen: blobSidecars.length,
-            slot: block.message.slot,
+            slot,
             root: rootHex,
           })
         )
@@ -53,12 +54,12 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
     } else if (isBlockInputColumns(blockInput)) {
       const columnSidecars = blockInput.getCustodyColumns();
       const dataColumnIndex = blockInput.getCustodyIndex();
-      const columnLength = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-      const dataColumnsSize = calculateDataColumnsSize(columnLength);
+      const columnLength = (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.length;
       // TODO: (@matthewkeil) this is calculated differently in removal below. Rectify with @g11tech
-      // const dataColumnsSize =
-      //   ssz.fulu.DataColumnSidecar.minSize +
-      //   columnLength * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+      // const dataColumnsSize = calculateDataColumnsSize(columnLength);
+      const dataColumnsSize =
+        ssz.fulu.DataColumnSidecar.minSize +
+        columnLength * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
       fnPromises.push(
         this.db.dataColumnSidecars
           .add({
@@ -97,7 +98,7 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
   const dataColumnsToRemove: DataColumnSidecarsWrapper[] = [];
 
   for (const blockInput of blockInputs) {
-    const block = blockInput.getBlock();
+    const {block} = blockInput.getBlock();
     const slot = blockInput.getSlot();
     const {blockRoot, rootHex} = blockInput;
     if (!this.forkChoice.hasBlockHex(rootHex)) {
@@ -109,10 +110,9 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
         const dataColumnSidecars = blockInput.getCustodyColumns();
         const dataColumnsIndex = blockInput.getCustodyIndex();
         const columnLength = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-        const dataColumnsSize = calculateDataColumnsSize(columnLength);
         // TODO: (@matthewkeil) this is calculated differently in insertion above. Rectify with @g11tech
-        // const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-        // const dataColumnsSize = ssz.fulu.Cell.fixedSize * blobsLen;
+        // const dataColumnsSize = calculateDataColumnsSize(columnLength);
+        const dataColumnsSize = ssz.fulu.Cell.fixedSize * columnLength;
         dataColumnsToRemove.push({
           blockRoot,
           slot,
