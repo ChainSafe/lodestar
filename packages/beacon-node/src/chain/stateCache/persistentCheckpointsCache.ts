@@ -544,12 +544,21 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             firstState = state;
           }
 
-          // amongst states of the same epoch, choose the one with the same view of reloadedCp
-          if (
-            reloadedCpSlot < state.slot &&
-            toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
-          ) {
-            return state;
+          try {
+            // amongst states of the same epoch, choose the one with the same view of reloadedCp
+            if (
+              reloadedCpSlot < state.slot &&
+              toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
+            ) {
+              return state;
+            }
+          } catch (e) {
+            // getBlockRootAtSlot may throw error
+            this.logger.debug(
+              "Error finding seed state to reload",
+              {epoch, root: rootHex, reloadedEpoch: reloadedCp.epoch, reloadedRoot: reloadedCp.rootHex},
+              e as Error
+            );
           }
         }
       }
