@@ -23,11 +23,11 @@ import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ImportBlockOpts} from "./types.js";
+import {BlockInput, BlockInputBlobs, isBlockInputPreDeneb} from "./utils/blockInput.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
@@ -67,7 +67,7 @@ type VerifyBlockExecutionResponse =
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
-  blocks: SignedBeaconBlock[],
+  blockInputs: BlockInput[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -77,7 +77,7 @@ export async function verifyBlocksExecutionPayload(
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
-  if (blocks.length === 0) {
+  if (blockInputs.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -141,16 +141,17 @@ export async function verifyBlocksExecutionPayload(
   //   We are optimistically safe with respect to this entire block segment if:
   //    - all the blocks are way behind the current slot
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
-  const lastBlock = blocks[blocks.length - 1];
+  const lastBlock = blockInputs[blockInputs.length - 1];
 
   const currentSlot = chain.clock.currentSlot;
   const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
   let isOptimisticallySafe =
     parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
-    lastBlock.message.slot + safeSlotsToImportOptimistically < currentSlot;
+    lastBlock.getSlot() + safeSlotsToImportOptimistically < currentSlot;
 
-  for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
-    const block = blocks[blockIndex];
+  for (let blockIndex = 0; blockIndex < blockInputs.length; blockIndex++) {
+    const blockInput = blockInputs[blockIndex];
+    const {block} = blockInput.getBlock();
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
     // In that case stop sending blocks to execution engine
     if (signal.aborted) {
@@ -158,7 +159,7 @@ export async function verifyBlocksExecutionPayload(
     }
     const verifyResponse = await verifyBlockExecutionPayload(
       chain,
-      block,
+      blockInput,
       preState0,
       opts,
       isOptimisticallySafe,
@@ -167,7 +168,7 @@ export async function verifyBlocksExecutionPayload(
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blocks);
+      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
     }
 
     // If we are here then its because executionStatus is one of MaybeValidExecutionStatus
@@ -243,7 +244,11 @@ export async function verifyBlocksExecutionPayload(
   }
 
   const executionTime = Date.now();
-  if (blocks.length === 1 && opts.seenTimestampSec !== undefined && executionStatuses[0] === ExecutionStatus.Valid) {
+  if (
+    blockInputs.length === 1 &&
+    opts.seenTimestampSec !== undefined &&
+    executionStatuses[0] === ExecutionStatus.Valid
+  ) {
     const recvToValidation = executionTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 
@@ -251,7 +256,7 @@ export async function verifyBlocksExecutionPayload(
     chain.metrics?.gossipBlock.executionPayload.validationTime.observe(validationTime);
 
     chain.logger.debug("Verified execution payload", {
-      slot: blocks[0].message.slot,
+      slot: blockInputs[0].message.slot,
       recvToValLatency,
       recvToValidation,
       validationTime,
@@ -271,12 +276,13 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  block: SignedBeaconBlock,
+  blockInput: BlockInput,
   preState0: CachedBeaconStateAllForks,
   opts: BlockProcessOpts,
   isOptimisticallySafe: boolean,
   currentSlot: Slot
 ): Promise<VerifyBlockExecutionResponse> {
+  const {block} = blockInput.getBlock();
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
     isExecutionStateType(preState0) &&
@@ -297,10 +303,9 @@ export async function verifyBlockExecutionPayload(
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
   const fork = chain.config.getForkName(block.message.slot);
-  const versionedHashes =
-    ForkSeq[fork] >= ForkSeq.deneb
-      ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
-      : undefined;
+  const versionedHashes = isBlockInputPreDeneb(blockInput)
+    ? undefined
+    : (blockInput as BlockInputBlobs).getVersionHashes();
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
