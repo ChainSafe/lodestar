@@ -535,20 +535,18 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Check block is a descendant of the finalized block at the checkpoint finalized slot.
-    // in holesky-rescue, if we start from non-finalized state, we'll get FORKCHOICE_ERROR_UNKNOWN_ANCESTOR
-    // because we don't have block at the finalized slot
-    // const blockAncestorRoot = this.getAncestor(parentRootHex, finalizedSlot);
-    // const finalizedRoot = this.fcStore.finalizedCheckpoint.rootHex;
-    // if (blockAncestorRoot !== finalizedRoot) {
-    //   throw new ForkChoiceError({
-    //     code: ForkChoiceErrorCode.INVALID_BLOCK,
-    //     err: {
-    //       code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT,
-    //       finalizedRoot,
-    //       blockAncestor: blockAncestorRoot,
-    //     },
-    //   });
-    // }
+    const blockAncestorRoot = this.getAncestor(parentRootHex, finalizedSlot);
+    const finalizedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+    if (blockAncestorRoot !== finalizedRoot) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
+        err: {
+          code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT,
+          finalizedRoot,
+          blockAncestor: blockAncestorRoot,
+        },
+      });
+    }
 
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(blockRoot);
