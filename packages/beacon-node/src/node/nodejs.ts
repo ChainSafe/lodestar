@@ -11,7 +11,7 @@ import {callFnWhenAwait, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
-import {pruneHistory} from "../chain/archiver/pruneHistory.js";
+import {pruneHistory} from "../chain/archiveStore/pruneHistory.js";
 import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {IBeaconDb} from "../db/index.js";
