@@ -6,11 +6,12 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
-import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
+import {ArchiveMode, ArchiverOpts} from "./interface.js";
 import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
-import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
+import { FrequentStateArchiveObserver } from "./observers/frequentStateArchiveObserver.js";
+import { archiveState } from "./utils/frequentStateArchive.js";
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -21,7 +22,6 @@ export class ArchiverStore {
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private prevFinalized: CheckpointWithHex;
-  private readonly statesArchiverStrategy: StateArchiveStrategy;
   private archiveBlobEpochs?: number;
 
   constructor(
@@ -32,12 +32,6 @@ export class ArchiverStore {
     private readonly opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
-    if (opts.archiveMode === ArchiveMode.Frequency) {
-      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
-    } else {
-      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
-    }
-
     this.archiveMode = opts.archiveMode;
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
@@ -82,11 +76,34 @@ export class ArchiverStore {
       {signal}
     );
     backfillObserver.subscribe(this.chain.emitter, signal);
+
+    if (this.archiveMode === ArchiveMode.Frequency) {
+      const frequentStateArchiveObserver = new FrequentStateArchiveObserver(
+        {
+          db: this.db,
+          logger: this.logger,
+          regen: this.chain.regen,
+          metrics: this.metrics,
+          bufferPool: this.chain.bufferPool,
+        },
+        {signal, archiveStateEpochFrequency: opts.archiveStateEpochFrequency}
+      );
+      frequentStateArchiveObserver.subscribe(this.chain.emitter, signal);
+    }
   }
 
   /** Archive latest finalized state */
   async persistToDisk(): Promise<void> {
-    return this.statesArchiverStrategy.archiveState(this.chain.forkChoice.getFinalizedCheckpoint());
+    return archiveState(
+      {
+        bufferPool: this.chain.bufferPool,
+        db: this.db,
+        logger: this.logger,
+        regen: this.chain.regen,
+        metrics: this.metrics,
+      },
+      this.chain.forkChoice.getFinalizedCheckpoint()
+    );
   }
 
   private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
@@ -100,10 +117,6 @@ export class ArchiverStore {
       this.chain.forkChoice.getJustifiedCheckpoint().epoch,
       headStateRoot
     );
-
-    this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
-    });
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
@@ -122,11 +135,6 @@ export class ArchiverStore {
       }
 
       this.prevFinalized = finalized;
-
-      await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);
-
-      // should be after ArchiveBlocksTask to handle restart cleanly
-      await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
 
       this.chain.regen.pruneOnFinalized(finalizedEpoch);
 
