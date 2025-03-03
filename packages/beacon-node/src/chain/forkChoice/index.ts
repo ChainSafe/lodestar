@@ -6,19 +6,23 @@ import {
   ForkChoiceStore,
   JustifiedBalancesGetter,
   ProtoArray,
+  ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
 } from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
   computeAnchorCheckpoint,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isExecutionStateType,
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {Slot, ssz} from "@lodestar/types";
 
 import {Logger, toRootHex} from "@lodestar/utils";
-import {GENESIS_SLOT} from "../../constants/index.js";
+import {GENESIS_SLOT, ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 
@@ -45,11 +49,25 @@ export function initializeForkChoice(
   justifiedBalancesGetter: JustifiedBalancesGetter,
   logger?: Logger
 ): ForkChoice {
-  const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
-  // in case of non-finalized anchor state, finalized checkpoint must not be itself
-  const finalizedCheckpoint = isFinalizedState ? {...checkpoint} : state.finalizedCheckpoint.toValue();
+  return isFinalizedState
+    ? initializeForkChoiceFromFinalizedState(config, emitter, currentSlot, state, opts, justifiedBalancesGetter, logger)
+    : initializeForkChoiceFromUnfinalizedState(config, emitter, currentSlot, state, opts, justifiedBalancesGetter, logger);
+}
 
-  // in case of non-finalized anchor state, we assume justified checkpoint is itself to grow the protoarray from there
+/**
+ * Initialized forkchoice from a finalized state.
+ */
+export function initializeForkChoiceFromFinalizedState(
+  config: ChainForkConfig,
+  emitter: ChainEventEmitter,
+  currentSlot: Slot,
+  state: CachedBeaconStateAllForks,
+  opts: ForkChoiceOpts,
+  justifiedBalancesGetter: JustifiedBalancesGetter,
+  logger?: Logger
+): ForkChoice {
+  const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
+  const finalizedCheckpoint = {...checkpoint};
   const justifiedCheckpoint = {
     ...checkpoint,
     // If not genesis epoch, justified checkpoint epoch must be set to finalized checkpoint epoch + 1
@@ -109,6 +127,110 @@ export function initializeForkChoice(
       },
       currentSlot
     ),
+    opts,
+    logger
+  );
+}
+
+/**
+ * Initialized forkchoice from an unfinalized state.
+ */
+export function initializeForkChoiceFromUnfinalizedState(
+  config: ChainForkConfig,
+  emitter: ChainEventEmitter,
+  currentSlot: Slot,
+  unFinalizedState: CachedBeaconStateAllForks,
+  opts: ForkChoiceOpts,
+  justifiedBalancesGetter: JustifiedBalancesGetter,
+  logger?: Logger
+): ForkChoice {
+  const {blockHeader} = computeAnchorCheckpoint(config, unFinalizedState);
+  const finalizedCheckpoint = unFinalizedState.finalizedCheckpoint.toValue();
+  const justifiedCheckpoint = unFinalizedState.currentJustifiedCheckpoint.toValue();
+
+  // this is not the justified state, but there is no other ways to get justified balances
+  const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unFinalizedState);
+  const store = new ForkChoiceStore(
+    currentSlot,
+    justifiedCheckpoint,
+    finalizedCheckpoint,
+    justifiedBalances,
+    justifiedBalancesGetter,
+    {
+      onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
+      onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+    }
+  );
+
+  const headRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
+
+  // this is the same to the finalized state
+  const headBlock: ProtoBlock = {
+    slot: blockHeader.slot,
+    parentRoot: toRootHex(blockHeader.parentRoot),
+    stateRoot: toRootHex(blockHeader.stateRoot),
+    blockRoot: headRoot,
+    targetRoot: headRoot,
+    timeliness: true, // Optimisitcally assume is timely
+
+    justifiedEpoch: justifiedCheckpoint.epoch,
+    justifiedRoot: toRootHex(justifiedCheckpoint.root),
+    finalizedEpoch: finalizedCheckpoint.epoch,
+    finalizedRoot: toRootHex(finalizedCheckpoint.root),
+    unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+    unrealizedJustifiedRoot: toRootHex(justifiedCheckpoint.root),
+    unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+    unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
+
+    ...(isExecutionStateType(unFinalizedState) && isMergeTransitionComplete(unFinalizedState)
+      ? {
+          executionPayloadBlockHash: toRootHex(unFinalizedState.latestExecutionPayloadHeader.blockHash),
+          executionPayloadNumber: unFinalizedState.latestExecutionPayloadHeader.blockNumber,
+          executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+        }
+      : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+  };
+
+  const parentSlot = blockHeader.slot - 1;
+  const parentEpoch = computeEpochAtSlot(parentSlot);
+  // parent of head block
+  const parentBlock: ProtoBlock = {
+    ...headBlock,
+    slot: parentSlot,
+    // link this to the dummy justified block
+    parentRoot: toRootHex(justifiedCheckpoint.root),
+    // dummy data, we're not able to regen state before headBlock
+    stateRoot: ZERO_HASH_HEX,
+    blockRoot: headBlock.parentRoot,
+    targetRoot: toRootHex(getBlockRootAtSlot(unFinalizedState, computeStartSlotAtEpoch(parentEpoch))),
+  };
+
+  const justifiedBlock: ProtoBlock = {
+    ...headBlock,
+    slot: computeStartSlotAtEpoch(justifiedCheckpoint.epoch),
+    // link this to the finalized root so that getAncestors can find the finalized block
+    parentRoot: toRootHex(finalizedCheckpoint.root),
+    // dummy data, we're not able to regen state before headBlock
+    stateRoot: ZERO_HASH_HEX,
+    blockRoot: toRootHex(justifiedCheckpoint.root),
+    // same to blockRoot
+    targetRoot: toRootHex(justifiedCheckpoint.root)
+  };
+
+  const protoArray = ProtoArray.initialize(justifiedBlock, currentSlot);
+  protoArray.onBlock(parentBlock, currentSlot);
+  protoArray.onBlock(headBlock, currentSlot);
+
+  // forkchoiceConstructor is only used for some test cases
+  // production code use ForkChoice constructor directly
+  const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
+
+  return new forkchoiceConstructor(
+    config,
+    store,
+    protoArray,
     opts,
     logger
   );
