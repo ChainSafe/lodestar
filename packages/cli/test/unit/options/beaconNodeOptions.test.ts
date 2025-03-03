@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {IBeaconNodeOptions, ArchiveMode} from "@lodestar/beacon-node";
+import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";

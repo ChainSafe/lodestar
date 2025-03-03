@@ -6,13 +6,10 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {archiveBlocks} from "./archiveBlocks.js";
-import {ArchiverOpts, ArchiveMode, StateArchiveStrategy} from "./interface.js";
+import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
+import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
 import {pruneHistory} from "./pruneHistory.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
-
-export const DEFAULT_ARCHIVE_MODE = ArchiveMode.Frequency;
-
-export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
 /**
  * Used for running tasks that depends on some events or are executed

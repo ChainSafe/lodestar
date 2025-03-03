@@ -11,7 +11,7 @@ import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/cha
 import {BeaconChain} from "../../../src/chain/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
-import {BeaconDb, ArchiveMode} from "../../../src/index.js";
+import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {testLogger} from "../../utils/logger.js";
 
