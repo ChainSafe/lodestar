@@ -11,6 +11,7 @@ import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
+import { PruneHotStateObserver } from "./observers/pruneHotStateObserver.js";
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -48,17 +49,17 @@ export class ArchiverStore {
 
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
 
       signal.addEventListener(
         "abort",
         () => {
           this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
         },
         {once: true}
       );
     }
+
+    if (!opts.disableArchiveOnCheckpoint) return;
 
     const archiveBlocksObserver = new ArchiveBlocksObserver(
       {
@@ -82,6 +83,13 @@ export class ArchiverStore {
       {signal}
     );
     backfillObserver.subscribe(this.chain.emitter, signal);
+
+    const pruneHotStateObserver = new PruneHotStateObserver({
+      forkChoice: this.chain.forkChoice,
+      regen: this.chain.regen,
+      logger: this.logger,
+    });
+    pruneHotStateObserver.subscribe(this.chain.emitter, signal);
   }
 
   /** Archive latest finalized state */
@@ -91,19 +99,6 @@ export class ArchiverStore {
 
   private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     return this.jobQueue.push(finalized);
-  };
-
-  private onCheckpoint = (): void => {
-    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(
-      this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
-      headStateRoot
-    );
-
-    this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
-    });
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
@@ -128,15 +123,9 @@ export class ArchiverStore {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
 
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
-
-      // tasks rely on extended fork choice
-      const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
-
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,
         rootHex: finalized.rootHex,
-        prunedBlocks: prunedBlocks.length,
       });
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
