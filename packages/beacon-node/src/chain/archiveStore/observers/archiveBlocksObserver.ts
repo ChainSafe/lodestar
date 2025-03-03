@@ -1,8 +1,8 @@
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/logger";
+import {QueueObserver} from "../../../beaconNodeObservers.js";
 import {IBeaconDb} from "../../../db/interface.js";
-import {QueueObserver} from "../../../system.js";
 import {IClock} from "../../../util/clock.js";
 import {LightClientServer} from "../../lightClient/index.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
