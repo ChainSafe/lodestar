@@ -5,10 +5,10 @@ import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
-import {archiveBlocks} from "./archiveBlocks.js";
+import {archiveBlocks} from "./utils/archiveBlocks1.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
-import {pruneHistory} from "./pruneHistory.js";
+import {pruneHistory} from "./utils/pruneHistory.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 
 /**
