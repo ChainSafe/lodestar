@@ -66,8 +66,8 @@ export abstract class ChainObserver extends ObserverHandlers {
   }
 
   unsubscribe(): void {
-    for (const handler of this.cleanupHandlers) {
-      handler();
+    for (const cleanupHandler of this.cleanupHandlers) {
+      cleanupHandler();
     }
   }
 }
@@ -85,7 +85,7 @@ export abstract class QueueObserver extends ChainObserver {
       async (handler, args) => {
         const eventHandler = this[handler];
         // biome-ignore lint/suspicious/noExplicitAny:
-        if (eventHandler) await eventHandler(...(args as [any, any]));
+        if (eventHandler) await eventHandler(...(args as [string, (...args: unknown[]) => void]));
       },
       {
         maxLength: maxQueueLength,
@@ -104,14 +104,14 @@ export abstract class QueueObserver extends ChainObserver {
           });
           this.jobQueue.push(handlerName, args);
         };
-        this.logger.verbose("subscribing chain event", {
+        this.logger.verbose("subscribing to chain event", {
           observer: this.constructor.name,
           event: handlersEventMap[handlerName],
         });
         emitter.addListener(handlersEventMap[handlerName], eventHandler);
 
         this.cleanupHandlers.push(() => {
-          this.logger.verbose("unsubscribing chain event", {
+          this.logger.verbose("unsubscribing from chain event", {
             observer: this.constructor.name,
             event: handlersEventMap[handlerName],
           });
