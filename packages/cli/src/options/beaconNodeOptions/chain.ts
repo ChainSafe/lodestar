@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import {DEFAULT_STATE_ARCHIVE_MODE, IBeaconNodeOptions, StateArchiveMode, defaultOptions} from "@lodestar/beacon-node";
+import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 
@@ -30,7 +30,7 @@ export type ChainArgs = {
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveBlobEpochs"?: number;
-  "chain.stateArchiveMode": StateArchiveMode;
+  "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
@@ -67,7 +67,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveBlobEpochs: args["chain.archiveBlobEpochs"],
-    stateArchiveMode: args["chain.stateArchiveMode"] ?? defaultOptions.chain.stateArchiveMode,
+    archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
@@ -231,11 +231,11 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.stateArchiveMode": {
+  "chain.archiveMode": {
     hidden: true,
-    choices: Object.values(StateArchiveMode),
-    description: `Strategy to manage archive states, only support ${DEFAULT_STATE_ARCHIVE_MODE} at this time`,
-    default: defaultOptions.chain.stateArchiveMode,
+    choices: Object.values(ArchiveMode),
+    description: `Strategy to manage archive states, only support ${DEFAULT_ARCHIVE_MODE} at this time`,
+    default: defaultOptions.chain.archiveMode,
     type: "string",
     group: "chain",
   },
