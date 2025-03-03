@@ -25,6 +25,7 @@ import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
+import { log } from "node:console";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
@@ -144,9 +145,20 @@ export function initializeForkChoiceFromUnfinalizedState(
   justifiedBalancesGetter: JustifiedBalancesGetter,
   logger?: Logger
 ): ForkChoice {
+
   const {blockHeader} = computeAnchorCheckpoint(config, unFinalizedState);
   const finalizedCheckpoint = unFinalizedState.finalizedCheckpoint.toValue();
   const justifiedCheckpoint = unFinalizedState.currentJustifiedCheckpoint.toValue();
+
+  const logCtx = {
+    currentSlot: currentSlot,
+    stateSlot: unFinalizedState.slot,
+    finalizedEpoch: finalizedCheckpoint.epoch,
+    finalizedRoot: toRootHex(finalizedCheckpoint.root),
+    justifiedEpoch: justifiedCheckpoint.epoch,
+    justifiedRoot: toRootHex(justifiedCheckpoint.root),
+  };
+  logger?.warn("Initializing fork choice from unfinalized state", logCtx);
 
   // this is not the justified state, but there is no other ways to get justified balances
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unFinalizedState);
@@ -219,9 +231,24 @@ export function initializeForkChoiceFromUnfinalizedState(
     targetRoot: toRootHex(justifiedCheckpoint.root)
   };
 
-  const protoArray = ProtoArray.initialize(justifiedBlock, currentSlot);
+  const finalizedBlock: ProtoBlock = {
+    ...headBlock,
+    slot: computeStartSlotAtEpoch(finalizedCheckpoint.epoch),
+    // we don't care parent of finalized block
+    parentRoot: ZERO_HASH_HEX,
+    // dummy data, we're not able to regen state before headBlock
+    stateRoot: ZERO_HASH_HEX,
+    blockRoot: toRootHex(finalizedCheckpoint.root),
+    // same to blockRoot
+    targetRoot: toRootHex(finalizedCheckpoint.root)
+  };
+
+  const protoArray = ProtoArray.initialize(finalizedBlock, currentSlot);
+  protoArray.onBlock(justifiedBlock, currentSlot);
   protoArray.onBlock(parentBlock, currentSlot);
   protoArray.onBlock(headBlock, currentSlot);
+
+  logger?.info("Initialized protoArray successfully", {...logCtx, length: protoArray.length()});
 
   // forkchoiceConstructor is only used for some test cases
   // production code use ForkChoice constructor directly
