@@ -3,7 +3,6 @@ import {Direction, PeerId} from "@libp2p/interface";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {P} from "vitest/dist/reporters-B7ebVMkT.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {RequestedSubnet} from "./subnetMap.js";
