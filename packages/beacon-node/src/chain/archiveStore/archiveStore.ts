@@ -9,9 +9,9 @@ import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {ArchiveMode, ArchiverOpts} from "./interface.js";
 import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
+import {FrequentStateArchiveObserver} from "./observers/frequentStateArchiveObserver.js";
+import {archiveState} from "./utils/frequentStateArchive.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
-import { FrequentStateArchiveObserver } from "./observers/frequentStateArchiveObserver.js";
-import { archiveState } from "./utils/frequentStateArchive.js";
 
 /**
  * Used for running tasks that depends on some events or are executed
