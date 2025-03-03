@@ -5,21 +5,18 @@ import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
-import {archiveBlocks} from "./archiveBlocks.js";
-import {ArchiverOpts, StateArchiveMode, StateArchiveStrategy} from "./interface.js";
-import {pruneHistory} from "./pruneHistory.js";
+import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
+import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
-
-export const DEFAULT_STATE_ARCHIVE_MODE = StateArchiveMode.Frequency;
-
-export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
+import {archiveBlocks} from "./utils/archiveBlocks.js";
+import {pruneHistory} from "./utils/pruneHistory.js";
 
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
  */
-export class Archiver {
-  private stateArchiveMode: StateArchiveMode;
+export class ArchiverStore {
+  private archiveMode: ArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private prevFinalized: CheckpointWithHex;
@@ -34,13 +31,13 @@ export class Archiver {
     private readonly opts: ArchiverOpts,
     private readonly metrics?: Metrics | null
   ) {
-    if (opts.stateArchiveMode === StateArchiveMode.Frequency) {
+    if (opts.archiveMode === ArchiveMode.Frequency) {
       this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
     } else {
-      throw new Error(`State archive strategy "${opts.stateArchiveMode}" currently not supported.`);
+      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
     }
 
-    this.stateArchiveMode = opts.stateArchiveMode;
+    this.archiveMode = opts.archiveMode;
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -81,7 +78,7 @@ export class Archiver {
     );
 
     this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {stateArchiveMode: this.stateArchiveMode}, err);
+      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
     });
   };
 

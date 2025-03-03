@@ -2,7 +2,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {RootHex} from "@lodestar/types";
 import {Metrics} from "../../metrics/metrics.js";
 
-export enum StateArchiveMode {
+export enum ArchiveMode {
   Frequency = "frequency",
   // New strategy to be implemented
   // WIP: https://github.com/ChainSafe/lodestar/pull/7005
@@ -17,7 +17,7 @@ export interface StatesArchiverOpts {
   /**
    * Strategy to store archive states
    */
-  stateArchiveMode: StateArchiveMode;
+  archiveMode: ArchiveMode;
 }
 
 export type ArchiverOpts = StatesArchiverOpts & {
