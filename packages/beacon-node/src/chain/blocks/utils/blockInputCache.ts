@@ -27,6 +27,7 @@ type BlockInputByRootHex = {
 type BlockInputByBlock = {
   block: SignedBeaconBlock;
   source: BlockInputSourceType;
+  seenTimestampSec: number;
   peerIdStr?: string;
   dataAvailability?: DataAvailabilityStatus;
 };
@@ -81,10 +82,11 @@ export class BlockInputCache {
     return blockInput;
   }
 
-  getBlockInputByBlock({block, source, peerIdStr, dataAvailability}: BlockInputByBlock): BlockInput {
+  getBlockInputByBlock({block, source, seenTimestampSec, peerIdStr, dataAvailability}: BlockInputByBlock): BlockInput {
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const rootHex = toHex(blockRoot);
     const forkName = this.config.getForkName(block.message.slot);
+    const addBlockProps = {rootHex, blockRoot, block, forkName, source, seenTimestampSec, peerIdStr, dataAvailability};
     // let dataAvailability: DataAvailabilityStatus | undefined;
 
     // if (currentEpoch !== undefined && isForkPostDeneb(forkName)) {
@@ -97,7 +99,7 @@ export class BlockInputCache {
     let blockInput = this.blockInputs.get(rootHex);
     if (blockInput) {
       if (!blockInput.hasBlock()) {
-        blockInput.addBlock({rootHex, blockRoot, block, forkName, source, peerIdStr, dataAvailability});
+        blockInput.addBlock(addBlockProps);
       } else {
         // TODO: add a metric here
       }
@@ -106,37 +108,19 @@ export class BlockInputCache {
 
     if (isForkBlobs(forkName)) {
       blockInput = BlockInputBlobs.createFromBlock({
-        block,
-        blockRoot,
-        rootHex,
-        forkName,
-        source,
-        peerIdStr,
-        dataAvailability,
+        ...addBlockProps,
         logger: this.logger,
         metrics: this.metrics,
       });
     } else if (isForkPostFulu(forkName)) {
       blockInput = BlockInputColumns.createFromBlock({
-        block,
-        blockRoot,
-        rootHex,
-        forkName,
-        source,
-        peerIdStr,
-        dataAvailability,
+        ...addBlockProps,
         logger: this.logger,
         metrics: this.metrics,
       });
     } else {
       blockInput = BlockInputPreDeneb.createFromBlock({
-        block,
-        blockRoot,
-        rootHex,
-        forkName,
-        source,
-        peerIdStr,
-        dataAvailability,
+        ...addBlockProps,
         logger: this.logger,
         metrics: this.metrics,
       });
