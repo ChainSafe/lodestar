@@ -18,7 +18,7 @@ export const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
  * Used for running tasks that depends on some events or are executed
  * periodically.
  */
-export class Archiver {
+export class ArchiverStore {
   private stateArchiveMode: StateArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
