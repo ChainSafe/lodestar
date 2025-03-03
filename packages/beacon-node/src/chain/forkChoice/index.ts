@@ -149,10 +149,13 @@ export function initializeForkChoiceFromUnfinalizedState(
   const {blockHeader} = computeAnchorCheckpoint(config, unFinalizedState);
   const finalizedCheckpoint = unFinalizedState.finalizedCheckpoint.toValue();
   const justifiedCheckpoint = unFinalizedState.currentJustifiedCheckpoint.toValue();
+  const headRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   const logCtx = {
     currentSlot: currentSlot,
     stateSlot: unFinalizedState.slot,
+    headSlot: blockHeader.slot,
+    headRoot: headRoot,
     finalizedEpoch: finalizedCheckpoint.epoch,
     finalizedRoot: toRootHex(finalizedCheckpoint.root),
     justifiedEpoch: justifiedCheckpoint.epoch,
@@ -173,8 +176,6 @@ export function initializeForkChoiceFromUnfinalizedState(
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
     }
   );
-
-  const headRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // this is the same to the finalized state
   const headBlock: ProtoBlock = {
