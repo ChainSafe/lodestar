@@ -85,7 +85,7 @@ export abstract class QueueObserver extends ChainObserver {
       async (handler, args) => {
         const eventHandler = this[handler];
         // biome-ignore lint/suspicious/noExplicitAny:
-        if (eventHandler) await eventHandler(...(args as [string, (...args: unknown[]) => void]));
+        if (eventHandler) await eventHandler(...args as any[]);
       },
       {
         maxLength: maxQueueLength,
