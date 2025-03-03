@@ -84,8 +84,8 @@ export abstract class QueueObserver extends ChainObserver {
     this.jobQueue = new JobItemQueue(
       async (handler, args) => {
         const eventHandler = this[handler];
-        // biome-ignore lint/suspicious/noExplicitAny:
-        if (eventHandler) await eventHandler(...args as any[]);
+        // biome-ignore lint/suspicious/noExplicitAny: Can not use `unknown` type here because of union
+        if (eventHandler) await eventHandler(...(args as any[]));
       },
       {
         maxLength: maxQueueLength,
