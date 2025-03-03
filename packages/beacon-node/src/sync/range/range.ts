@@ -195,7 +195,10 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // Should only be used for debugging or testing
       for (const block of blocks) await this.chain.processBlock(block, flags);
     } else {
-      await this.chain.processChainSegment(blocks, flags);
+      // await this.chain.processChainSegment(blocks, flags);
+      // with holesky-rescue, if we start from unfinalized state then head will not always exactly at epoch boundary
+      // and we don't have all blocks processed up to head so processChainSegment may fail
+      await this.chain.processChainSegment(blocks.filter((block) => block.block.message.slot > this.chain.forkChoice.getHead().slot), flags);
     }
   };
 
