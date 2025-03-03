@@ -7,8 +7,8 @@ import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
+import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
-import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
 
 /**
@@ -58,6 +58,19 @@ export class ArchiverStore {
         {once: true}
       );
     }
+
+    const archiveBlocksObserver = new ArchiveBlocksObserver(
+      {
+        forkChoice: this.chain.forkChoice,
+        clock: this.chain.clock,
+        config: this.chain.config,
+        lightClientServer: this.chain.lightClientServer,
+        db: this.db,
+        logger: this.logger,
+      },
+      {archiveBlobEpochs: this.archiveBlobEpochs, signal}
+    );
+    archiveBlocksObserver.subscribe(this.chain.emitter, signal);
   }
 
   /** Archive latest finalized state */
@@ -86,16 +99,6 @@ export class ArchiverStore {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
-      await archiveBlocks(
-        this.chain.config,
-        this.db,
-        this.chain.forkChoice,
-        this.chain.lightClientServer,
-        this.logger,
-        finalized,
-        this.chain.clock.currentEpoch,
-        this.archiveBlobEpochs
-      );
       if (this.opts.pruneHistory) {
         await pruneHistory(
           this.chain.config,
