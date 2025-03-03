@@ -6,7 +6,8 @@ import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {importBlock} from "./importBlock.js";
-import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {ImportBlockOpts} from "./types.js";
+import {BlockInput, FullyVerifiedBlock} from "./utils/blockInput.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
@@ -48,19 +49,19 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: BlockInput[],
+  blockInputs: BlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
-  if (blocks.length === 0) {
+  if (blockInputs.length === 0) {
     return; // TODO: or throw?
   }
 
-  if (blocks.length > 1) {
-    assertLinearChainSegment(this.config, blocks);
+  if (blockInputs.length > 1) {
+    assertLinearChainSegment(blockInputs);
   }
 
   try {
-    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, opts);
+    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blockInputs, opts);
 
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
@@ -70,8 +71,12 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
+    const {postStates, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs} = await verifyBlocksInEpoch.call(
+      this,
+      parentBlock,
+      relevantBlocks,
+      opts
+    );
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -84,16 +89,16 @@ export async function processBlocks(
 
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = availableBlockInputs.map(
-      (block, i): FullyVerifiedBlock => ({
-        blockInput: block,
+      (blockInput, i): FullyVerifiedBlock => ({
+        blockInput,
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
-        dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        // TODO: (@matthewkeil) capturing on BlockInput for gossip and reqresp now
+        // seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
       })
     );
 
@@ -108,7 +113,7 @@ export async function processBlocks(
     }
 
     // above functions should only throw BlockError
-    const err = getBlockError(e, blocks[0].block);
+    const err = getBlockError(e, blockInputs[0].getBlock().block);
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
@@ -147,10 +152,10 @@ export async function processBlocks(
     // LOG: Because the error is not propagated and there's a risk of db bloat, the error is logged at warn level
     // to alert the user of potential db bloat. This error _should_ never happen user must act and report to us
     if (opts.eagerPersistBlock) {
-      await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
+      await removeEagerlyPersistedBlockInputs.call(this, blockInputs).catch((e) => {
         this.logger.warn(
           "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
-          {slot: blocks.map((block) => block.block.message.slot).join(",")},
+          {slot: blockInputs.map((block) => block.blockWithSource.message.slot).join(",")},
           e
         );
       });
