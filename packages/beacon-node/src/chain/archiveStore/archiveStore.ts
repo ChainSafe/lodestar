@@ -5,11 +5,11 @@ import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
-import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
-import {pruneHistory} from "./utils/pruneHistory.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
+import {archiveBlocks} from "./utils/archiveBlocks.js";
+import {pruneHistory} from "./utils/pruneHistory.js";
 
 /**
  * Used for running tasks that depends on some events or are executed
