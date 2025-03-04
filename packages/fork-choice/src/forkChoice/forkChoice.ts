@@ -931,16 +931,17 @@ export class ForkChoice implements IForkChoice {
    * Return only the non-finalized blocks.
    */
   getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    const blocks = this.protoArray.getAllAncestorNodes(blockRoot);
-    // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
-    return blocks.slice(0, blocks.length - 1);
+    const {ancestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
+    // Exclude the last node as before
+    return ancestors.slice(0, ancestors.length - 1);
   }
 
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    return this.protoArray.getAllNonAncestorNodes(blockRoot);
+    const {nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
+    return nonAncestors;
   }
 
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null {
