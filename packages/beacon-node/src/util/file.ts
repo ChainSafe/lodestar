@@ -53,6 +53,10 @@ export async function readFileNames(folderPath: string): Promise<string[]> {
 }
 
 export async function getLastModifiedFile(folderPath: string): Promise<string | null> {
+  if (!fs.existsSync(folderPath)) {
+    return null;
+  }
+
   const files = fs.readdirSync(folderPath);
   let lastModifiedFile = null;
   let lastModifiedTime = 0;
