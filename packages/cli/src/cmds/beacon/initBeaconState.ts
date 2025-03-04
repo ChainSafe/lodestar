@@ -1,8 +1,9 @@
 import {
+  DbCPStateDatastore,
+  FileCPStateDatastore,
   IBeaconDb,
   IBeaconNodeOptions,
   checkAndPersistAnchorState,
-  checkpointToDatastoreKey,
   getStateTypeFromBytes,
   initStateFromEth1,
 } from "@lodestar/beacon-node";
@@ -162,24 +163,23 @@ export async function initBeaconState(
   }
 
   // See if we can sync state using checkpoint sync args or else start from genesis
-  if (args.checkpointState || args.wssCheckpoint) {
+  if (args.checkpointState || args.lastPersistedCheckpointState) {
     let localCpState: Uint8Array | null = null;
     isFinalized = false;
     if (args.checkpointState) {
       // local file checkpoint state specified via wssCheckpoint could be loaded here
       logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
       localCpState = await downloadOrLoadFile(args.checkpointState);
-      logger.info("Found local checkpoint state from file", {path: args.checkpointState});
-    } else if (args.wssCheckpoint) {
-      // local db checkpoint state specified via wssCheckpoint could be loaded here
-      const wssCheckpoint = getCheckpointFromArg(args.wssCheckpoint);
-      const persistedCpKey = checkpointToDatastoreKey(wssCheckpoint);
-      logger.verbose("Finding local checkpoint state from db", {checkpoint: args.wssCheckpoint});
-      localCpState = await db.checkpointState.getBinary(persistedCpKey);
+      logger.info("Found local checkpoint state from file", {path: args.checkpointState, size: formatBytes(localCpState.length)});
+    } else if (args.lastPersistedCheckpointState) {
+      // find the last persisted checkpoint state to load
+      const cpDataStore = args["chain.nHistoricalStatesFileDataStore"] ? new FileCPStateDatastore() : new DbCPStateDatastore(db);
+      logger.verbose(`Finding last persisted checkpoint state from ${cpDataStore.constructor.name}`);
+      localCpState = await cpDataStore.readLatest();
       if (localCpState === null) {
-        logger.verbose("Checkpoint state not found in db", {checkpoint: args.wssCheckpoint});
+        logger.verbose("Last persisted checkpoint state not found");
       } else {
-        logger.info("Found local checkpoint state from db", {checkpoint: args.wssCheckpoint});
+        logger.info("Found last persisted checkpoint state", {size: formatBytes(localCpState.length)});
       }
     }
 
