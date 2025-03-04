@@ -172,7 +172,7 @@ export async function initBeaconState(
       // find the last persisted checkpoint state to load
       const cpDataStore = args["chain.nHistoricalStatesFileDataStore"] ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
       logger.verbose(`Finding last persisted checkpoint state from ${cpDataStore.constructor.name}`);
-      localCpState = await cpDataStore.readLatest();
+      localCpState = await cpDataStore.readLatestSafe();
       if (localCpState === null) {
         logger.verbose("Last persisted checkpoint state not found");
       } else {

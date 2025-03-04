@@ -3,7 +3,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
-import {getLatestDatastoreKey} from "./db.js";
+import {getLatestSafeDatastoreKey} from "./db.js";
 
 const CHECKPOINT_STATES_FOLDER = "checkpoint_states";
 const CHECKPOINT_FILE_NAME_LENGTH = 82;
@@ -45,10 +45,10 @@ export class FileCPStateDatastore implements CPStateDatastore {
     return readFile(filePath);
   }
 
-  async readLatest(): Promise<Uint8Array | null> {
+  async readLatestSafe(): Promise<Uint8Array | null> {
     const fileNames = await readFileNames(this.folderPath);
     const datastoreKeys = fileNames.map((fileName) => fromHex(fileName));
-    const latest = getLatestDatastoreKey(datastoreKeys);
+    const latest = getLatestSafeDatastoreKey(datastoreKeys);
 
     if (latest == null) {
       return null;

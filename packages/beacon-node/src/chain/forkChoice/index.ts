@@ -22,10 +22,9 @@ import {
 import {Slot, ssz} from "@lodestar/types";
 
 import {Logger, toRootHex} from "@lodestar/utils";
-import {GENESIS_SLOT, ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
-import { log } from "node:console";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only

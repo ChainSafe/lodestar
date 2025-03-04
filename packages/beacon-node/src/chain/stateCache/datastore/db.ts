@@ -23,11 +23,11 @@ export class DbCPStateDatastore implements CPStateDatastore {
     return this.db.checkpointState.getBinary(serializedCheckpoint);
   }
 
-  async readLatest(): Promise<Uint8Array | null> {
+  async readLatestSafe(): Promise<Uint8Array | null> {
     const allKeys = await this.readKeys();
     if (allKeys.length === 0) return null;
 
-    const latest = getLatestDatastoreKey(allKeys);
+    const latest = getLatestSafeDatastoreKey(allKeys);
 
     if (latest == null) {
       return null;
@@ -52,7 +52,7 @@ export function checkpointToDatastoreKey(cp: phase0.Checkpoint): DatastoreKey {
 /**
  * Get the latest checkpoint state that is unique in its epoch
  */
-export function getLatestDatastoreKey(allKeys: DatastoreKey[]): DatastoreKey | null {
+export function getLatestSafeDatastoreKey(allKeys: DatastoreKey[]): DatastoreKey | null {
   const checkpointsByEpoch = new MapDef<Epoch, DatastoreKey[]>(() => []);
     for (const key of allKeys) {
       const cp = datastoreKeyToCheckpoint(key);
