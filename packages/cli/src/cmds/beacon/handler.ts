@@ -73,6 +73,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     const {anchorState, isFinalized, wsCheckpoint} = await initBeaconState(
       options,
       args,
+      beaconPaths.dataDir,
       config,
       db,
       logger,
