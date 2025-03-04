@@ -1,7 +1,7 @@
 import path from "node:path";
 import {phase0, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
+import {ensureDir, getLastModifiedFile, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 
 const CHECKPOINT_STATES_FOLDER = "checkpoint_states";
@@ -41,6 +41,13 @@ export class FileCPStateDatastore implements CPStateDatastore {
 
   async read(serializedCheckpoint: DatastoreKey): Promise<Uint8Array | null> {
     const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
+    return readFile(filePath);
+  }
+
+  async readLatest(): Promise<Uint8Array | null> {
+    const fileName = await getLastModifiedFile(this.folderPath);
+    if (!fileName) return null;
+    const filePath = path.join(this.folderPath, fileName);
     return readFile(filePath);
   }
 

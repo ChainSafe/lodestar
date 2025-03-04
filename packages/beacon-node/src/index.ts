@@ -21,3 +21,5 @@ export type {RestApiServerOpts, RestApiServerModules, RestApiServerMetrics} from
 
 // Export type util for CLI - TEMP move to lodestar-types eventually
 export {getStateTypeFromBytes, getStateSlotFromBytes} from "./util/multifork.js";
+export {DbCPStateDatastore} from "./chain/stateCache/datastore/db.js";
+export {FileCPStateDatastore} from "./chain/stateCache/datastore/file.js";

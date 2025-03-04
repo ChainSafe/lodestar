@@ -1,4 +1,6 @@
 import {
+  DbCPStateDatastore,
+  FileCPStateDatastore,
   IBeaconDb,
   IBeaconNodeOptions,
   checkAndPersistAnchorState,
@@ -35,6 +37,7 @@ async function initAndVerifyWeakSubjectivityState(
   logger: Logger,
   dbStateBytes: StateWithBytes,
   wsStateBytes: StateWithBytes,
+  isWsStateFinalized: boolean,
   wsCheckpoint: Checkpoint,
   opts: {ignoreWeakSubjectivityCheck?: boolean} = {}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
@@ -71,10 +74,12 @@ async function initAndVerifyWeakSubjectivityState(
     throw wssCheck.err;
   }
 
-  await checkAndPersistAnchorState(config, db, logger, anchorState.state, anchorState.stateBytes, {
-    isWithinWeakSubjectivityPeriod,
-    isCheckpointState,
-  });
+  if (isWsStateFinalized) {
+    await checkAndPersistAnchorState(config, db, logger, anchorState.state, anchorState.stateBytes, {
+      isWithinWeakSubjectivityPeriod,
+      isCheckpointState,
+    });
+  }
 
   // Return the latest anchorState but still return original wsCheckpoint to validate in backfill
   return {anchorState: anchorState.state, wsCheckpoint};
@@ -88,6 +93,10 @@ async function initAndVerifyWeakSubjectivityState(
  * 2. restore from db
  * 3. restore from genesis state (possibly downloaded via URL)
  * 4. create genesis state from eth1
+ *
+ * The returned anchorState could be finalized or not.
+ * - if we load from a local checkpoint state, or local file, it is supposed to be not finalized
+ * - it's finalized if from archived db, checkpointSyncUrl
  */
 export async function initBeaconState(
   options: IBeaconNodeOptions,
@@ -96,7 +105,7 @@ export async function initBeaconState(
   db: IBeaconDb,
   logger: Logger,
   signal: AbortSignal
-): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
+): Promise<{anchorState: BeaconStateAllForks; isFinalized: boolean ; wsCheckpoint?: Checkpoint}> {
   if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl)) {
     throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
   }
@@ -117,6 +126,9 @@ export async function initBeaconState(
     lastDbValidatorsBytes = validatorsBytes;
     lastDbStateWithBytes = {state, stateBytes: stateBytes};
   }
+
+  // by default, we only load finalized state
+  let isFinalized = true;
 
   if (lastDbState) {
     const config = createBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
@@ -145,29 +157,54 @@ export async function initBeaconState(
           isWithinWeakSubjectivityPeriod: wssCheck,
           isCheckpointState: false,
         });
-        return {anchorState: lastDbState};
+        return {anchorState: lastDbState, isFinalized};
       }
     }
   }
 
   // See if we can sync state using checkpoint sync args or else start from genesis
-  if (args.checkpointState) {
-    return readWSState(
-      lastDbStateWithBytes,
-      lastDbValidatorsBytes,
-      {
-        checkpointState: args.checkpointState,
-        wssCheckpoint: args.wssCheckpoint,
-        ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck,
-      },
-      chainForkConfig,
-      db,
-      logger
-    );
+  if (args.checkpointState || args.lastPersistedCheckpointState) {
+    let localCpState: Uint8Array | null = null;
+    isFinalized = false;
+    if (args.checkpointState) {
+      // local file checkpoint state specified via wssCheckpoint could be loaded here
+      logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
+      localCpState = await downloadOrLoadFile(args.checkpointState);
+      logger.info("Found local checkpoint state from file", {path: args.checkpointState, size: formatBytes(localCpState.length)});
+    } else if (args.lastPersistedCheckpointState) {
+      // find the last persisted checkpoint state to load
+      const cpDataStore = args["chain.nHistoricalStatesFileDataStore"] ? new FileCPStateDatastore() : new DbCPStateDatastore(db);
+      logger.verbose(`Finding last persisted checkpoint state from ${cpDataStore.constructor.name}`);
+      localCpState = await cpDataStore.readLatest();
+      if (localCpState === null) {
+        logger.verbose("Last persisted checkpoint state not found");
+      } else {
+        logger.info("Found last persisted checkpoint state", {size: formatBytes(localCpState.length)});
+      }
+    }
+
+    if (localCpState !== null) {
+      const stateAndCp = await readWSState(
+        lastDbStateWithBytes,
+        lastDbValidatorsBytes,
+        {
+          checkpointState: localCpState,
+          wssCheckpoint: args.wssCheckpoint,
+          ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck,
+        },
+        chainForkConfig,
+        db,
+        logger
+      );
+
+      logger.info("Loaded checkpoint state", {slot: stateAndCp.anchorState.slot});
+
+      return {...stateAndCp, isFinalized};
+    }
   }
 
   if (args.checkpointSyncUrl) {
-    return fetchWSStateFromBeaconApi(
+    const stateAndCp = await fetchWSStateFromBeaconApi(
       lastDbStateWithBytes,
       lastDbValidatorsBytes,
       {
@@ -179,6 +216,8 @@ export async function initBeaconState(
       db,
       logger
     );
+
+    return {...stateAndCp, isFinalized};
   }
 
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
@@ -193,18 +232,21 @@ export async function initBeaconState(
       isWithinWeakSubjectivityPeriod: wssCheck,
       isCheckpointState: true,
     });
-    return {anchorState};
+    return {anchorState , isFinalized};
   }
 
   // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
   const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
-  return {anchorState};
+  return {anchorState, isFinalized};
 }
 
+/**
+ * Starting from Feb 2025, reading a user provided state or local checkpoint state is consider non-finalized.
+ */
 async function readWSState(
   lastDbStateBytes: StateWithBytes | null,
   lastDbValidatorsBytes: Uint8Array | null,
-  wssOpts: {checkpointState: string; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
+  wssOpts: {checkpointState: Uint8Array; wssCheckpoint?: string; ignoreWeakSubjectivityCheck?: boolean},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
@@ -212,10 +254,10 @@ async function readWSState(
   // weak subjectivity sync from a provided state file:
   // if a weak subjectivity checkpoint has been provided, it is used for additional verification
   // otherwise, the state itself is used for verification (not bad, because the trusted state has been explicitly provided)
-  const {checkpointState, wssCheckpoint, ignoreWeakSubjectivityCheck} = wssOpts;
+  const {wssCheckpoint, ignoreWeakSubjectivityCheck} = wssOpts;
   const lastDbState = lastDbStateBytes?.state ?? null;
 
-  const stateBytes = await downloadOrLoadFile(checkpointState);
+  const stateBytes = wssOpts.checkpointState;
   let wsState: BeaconStateAllForks;
   if (lastDbState && lastDbValidatorsBytes) {
     // use lastDbState to load wsState if possible to share the same state tree
@@ -227,7 +269,8 @@ async function readWSState(
   const wsStateBytes = {state: wsState, stateBytes};
   const store = lastDbStateBytes ?? wsStateBytes;
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
-  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateBytes, checkpoint, {
+  const isFinalized = false;
+  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateBytes, isFinalized, checkpoint, {
     ignoreWeakSubjectivityCheck,
   });
 }
@@ -263,7 +306,9 @@ async function fetchWSStateFromBeaconApi(
   const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const wsStateWithBytes = {state: wsState, stateBytes: wsStateBytes};
   const store = lastDbStateBytes ?? wsStateWithBytes;
-  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateWithBytes, wsCheckpoint, {
+  // a fetched ws state is trusted to be finalized
+  const isFinalized = true;
+  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsStateWithBytes, isFinalized, wsCheckpoint, {
     ignoreWeakSubjectivityCheck: wssOpts.ignoreWeakSubjectivityCheck,
   });
 }
