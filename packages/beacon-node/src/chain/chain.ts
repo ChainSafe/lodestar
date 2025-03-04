@@ -185,6 +185,7 @@ export class BeaconChain implements IBeaconChain {
     {
       config,
       db,
+      dataDir,
       logger,
       processShutdownCallback,
       clock,
@@ -197,6 +198,7 @@ export class BeaconChain implements IBeaconChain {
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
+      dataDir: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
@@ -305,7 +307,7 @@ export class BeaconChain implements IBeaconChain {
             bufferPool: this.bufferPool,
             datastore: fileDataStore
               ? // debug option if we want to investigate any issues with the DB
-                new FileCPStateDatastore()
+                new FileCPStateDatastore(dataDir)
               : // production option
                 new DbCPStateDatastore(this.db),
           },
