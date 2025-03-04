@@ -166,12 +166,8 @@ export async function initBeaconState(
   if (args.checkpointState || args.lastPersistedCheckpointState) {
     let localCpState: Uint8Array | null = null;
     isFinalized = false;
-    if (args.checkpointState) {
-      // local file checkpoint state specified via wssCheckpoint could be loaded here
-      logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
-      localCpState = await downloadOrLoadFile(args.checkpointState);
-      logger.info("Found local checkpoint state from file", {path: args.checkpointState, size: formatBytes(localCpState.length)});
-    } else if (args.lastPersistedCheckpointState) {
+    // prioritize lastPersistedCheckpointState over checkpointState
+    if (args.lastPersistedCheckpointState) {
       // find the last persisted checkpoint state to load
       const cpDataStore = args["chain.nHistoricalStatesFileDataStore"] ? new FileCPStateDatastore() : new DbCPStateDatastore(db);
       logger.verbose(`Finding last persisted checkpoint state from ${cpDataStore.constructor.name}`);
@@ -181,6 +177,11 @@ export async function initBeaconState(
       } else {
         logger.info("Found last persisted checkpoint state", {size: formatBytes(localCpState.length)});
       }
+    } else if (args.checkpointState) {
+      // local file checkpoint state specified via wssCheckpoint could be loaded here
+      logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
+      localCpState = await downloadOrLoadFile(args.checkpointState);
+      logger.info("Found local checkpoint state from file", {path: args.checkpointState, size: formatBytes(localCpState.length)});
     }
 
     if (localCpState !== null) {
