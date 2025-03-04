@@ -1,6 +1,6 @@
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
   stateTransition,
@@ -50,9 +50,7 @@ export async function verifyBlocksStateTransitionOnly(
         // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
         executionPayloadStatus: ExecutionPayloadStatus.valid,
         // hack availability for state transition eval as availability is separately determined
-        // TODO: (@matthewkeil) this is not safe. There are two DataAvailableStatus enums!!! Don't use
-        //       the one on the BlockInput!!!  Also note the hack above
-        dataAvailableStatus: DataAvailableStatus.available,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature

@@ -3,8 +3,8 @@ import {BlobIndex, ColumnIndex, Epoch, RootHex, SignedBeaconBlock, Slot, deneb, 
 import {fromHex, LodestarError, Logger, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {kzgCommitmentToVersionedHash, VersionHash} from "../../../util/blobs.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {DataAvailabilityStatus, MaybeValidExecutionStatus} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus, CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {byteArrayEquals} from "../../../util/bytes.js";
@@ -114,7 +114,7 @@ export abstract class BlockInput<BlockType = SignedBeaconBlock, DataType = void>
   type: BlockInputType;
   blockRoot: Uint8Array;
   rootHex: string;
-  dataAvailability: DataAvailabilityStatus;
+  dataAvailability: DataAvailabilityStatus = DataAvailabilityStatus.Unknown;
   timeFirstSeenSec: number;
   protected timeCompleteSec: number;
   protected slot?: Slot;

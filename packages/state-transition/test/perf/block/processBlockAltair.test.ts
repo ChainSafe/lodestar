@@ -12,7 +12,7 @@ import {
 import {ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAltair,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "../../../src/index.js";
@@ -126,7 +126,7 @@ describe("altair processBlock", () => {
         fn: ({state, block}) => {
           const postState = stateTransition(state, block, {
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyProposer: false,
             verifySignatures: false,
             verifyStateRoot: false,

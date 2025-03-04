@@ -1,9 +1,10 @@
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {CheckpointWithHex, DataAvailabilityStatus, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   getEffectiveBalanceIncrementsZeroed,

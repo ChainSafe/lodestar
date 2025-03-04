@@ -13,13 +13,15 @@ export enum ExecutionPayloadStatus {
   valid = "valid",
 }
 
-export enum DataAvailableStatus {
-  preDeneb = "preDeneb",
-  notAvailable = "notAvailable",
-  available = "available",
+export enum DataAvailabilityStatus {
+  Unknown = "unknown",
+  PreData = "pre_data",
+  Available = "available",
+  /* validator activities can't be performed on out of range data */
+  OutOfRange = "out_of_range",
 }
 
 export interface BlockExternalData {
   executionPayloadStatus: ExecutionPayloadStatus;
-  dataAvailableStatus: DataAvailableStatus;
+  dataAvailabilityStatus: DataAvailabilityStatus;
 }

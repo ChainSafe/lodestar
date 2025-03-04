@@ -1,4 +1,5 @@
-import {DataAvailabilityStatus, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {phase0} from "@lodestar/types";
 import {ssz} from "@lodestar/types";

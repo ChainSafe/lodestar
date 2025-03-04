@@ -16,8 +16,7 @@ import {
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {BeaconChain} from "../../chain.js";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {DataAvailabilityStatus} from "@lodestar/fork-choice";
+import {computeEpochAtSlot, DataAvailabilityStatus} from "@lodestar/state-transition";
 
 type BlockInputByRootHex = {
   rootHex: string;
