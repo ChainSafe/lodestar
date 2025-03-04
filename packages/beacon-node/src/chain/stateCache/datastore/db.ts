@@ -22,6 +22,22 @@ export class DbCPStateDatastore implements CPStateDatastore {
     return this.db.checkpointState.getBinary(serializedCheckpoint);
   }
 
+  async readLatest(): Promise<Uint8Array | null> {
+    const allKeys = await this.readKeys();
+    if (allKeys.length === 0) return null;
+    let latest: DatastoreKey = allKeys[0];
+    let latestEpoch = datastoreKeyToCheckpoint(latest).epoch;
+    for (const key of allKeys) {
+      const cp = datastoreKeyToCheckpoint(key);
+      if (cp.epoch > latestEpoch) {
+        latest = key;
+        latestEpoch = cp.epoch;
+      }
+    }
+
+    return this.read(latest);
+  }
+
   async readKeys(): Promise<DatastoreKey[]> {
     return this.db.checkpointState.keys();
   }
