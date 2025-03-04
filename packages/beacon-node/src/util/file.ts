@@ -64,7 +64,7 @@ export async function getLastModifiedFile(folderPath: string): Promise<string | 
     // Check if it's a file (not a directory)
     if (stats.isFile() && stats.mtimeMs > lastModifiedTime) {
       lastModifiedTime = stats.mtimeMs;
-      lastModifiedFile = filePath;
+      lastModifiedFile = file;
     }
   }
 
