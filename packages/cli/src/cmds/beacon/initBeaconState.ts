@@ -101,6 +101,7 @@ async function initAndVerifyWeakSubjectivityState(
 export async function initBeaconState(
   options: IBeaconNodeOptions,
   args: BeaconArgs & GlobalArgs,
+  dataDir: string,
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
@@ -169,7 +170,7 @@ export async function initBeaconState(
     // prioritize lastPersistedCheckpointState over checkpointState
     if (args.lastPersistedCheckpointState) {
       // find the last persisted checkpoint state to load
-      const cpDataStore = args["chain.nHistoricalStatesFileDataStore"] ? new FileCPStateDatastore() : new DbCPStateDatastore(db);
+      const cpDataStore = args["chain.nHistoricalStatesFileDataStore"] ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
       logger.verbose(`Finding last persisted checkpoint state from ${cpDataStore.constructor.name}`);
       localCpState = await cpDataStore.readLatest();
       if (localCpState === null) {
