@@ -9,7 +9,7 @@ import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
 import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
-import {PruneHotStateObserver} from "./observers/pruneHotStateObserver.js";
+import {PruneUnfinalizedStateObserver} from "./observers/pruneUnfinalizedStateObserver.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
 
@@ -82,7 +82,7 @@ export class ArchiverStore {
     );
     backfillObserver.subscribe(this.chain.emitter, signal);
 
-    const pruneHotStateObserver = new PruneHotStateObserver({
+    const pruneHotStateObserver = new PruneUnfinalizedStateObserver({
       forkChoice: this.chain.forkChoice,
       regen: this.chain.regen,
       logger: this.logger,

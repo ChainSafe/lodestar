@@ -5,7 +5,7 @@ import {Checkpoint} from "@lodestar/types/lib/phase0/types.js";
 import {ChainObserver} from "../../../system.js";
 import {IStateRegenerator} from "../../regen/interface.js";
 
-export class PruneHotStateObserver extends ChainObserver {
+export class PruneUnfinalizedStateObserver extends ChainObserver {
   constructor(private modules: {forkChoice: IForkChoice; regen: IStateRegenerator; logger: Logger}) {
     super({logger: modules.logger});
   }
