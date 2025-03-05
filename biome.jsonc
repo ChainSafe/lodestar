@@ -202,7 +202,8 @@
         "noOctalEscape": "error",
         // Need to enable this rule with exception to anonymous functions
         "useExplicitType": "off",
-        "useGuardForIn": "error"
+        "useGuardForIn": "error",
+        "noDuplicateProperties": "error"
       }
     }
   },
