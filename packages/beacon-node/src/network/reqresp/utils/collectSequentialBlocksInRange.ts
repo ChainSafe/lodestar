@@ -30,10 +30,8 @@ export async function collectSequentialBlocksInRange(
     }
 
     const prevBlock = blocks.at(-1);
-    if (prevBlock) {
-      if (prevBlock.data.message.slot >= blockSlot) {
-        throw new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE});
-      }
+    if (prevBlock && prevBlock.data.message.slot >= blockSlot) {
+      throw new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE});
     }
 
     blocks.push({data: block, bytes: chunk.data});

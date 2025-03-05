@@ -204,7 +204,8 @@
         "useExplicitType": "off",
         "useGuardForIn": "error",
         "noDuplicateProperties": "error",
-        "useAtIndex": "error"
+        "useAtIndex": "error",
+        "useCollapsedIf": "error"
       }
     }
   },

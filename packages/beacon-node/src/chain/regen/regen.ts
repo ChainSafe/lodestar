@@ -182,7 +182,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         break;
       }
       const lastBlockToReplay = blocksToReplay.at(-1);
-      if(!lastBlockToReplay) continue;      
+      if (!lastBlockToReplay) continue;
       const epoch = computeEpochAtSlot(lastBlockToReplay.slot - 1);
       state = allowDiskReload
         ? await checkpointStateCache.getOrReloadLatest(b.blockRoot, epoch, opts)
