@@ -106,7 +106,7 @@ export async function getLatestSafeDatastoreKey(allKeys: DatastoreKey[], readFn:
       continue;
     }
 
-    if (epoch !== SLOTS_PER_EPOCH * lastProcessedSlot) {
+    if (lastProcessedSlot !== SLOTS_PER_EPOCH * epoch) {
       // should not happen after above checks, but just to be safe
       continue;
     }
