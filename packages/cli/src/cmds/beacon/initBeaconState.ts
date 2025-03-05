@@ -178,7 +178,9 @@ export async function initBeaconState(
       } else {
         logger.info("Found last persisted checkpoint state", {size: formatBytes(localCpState.length)});
       }
-    } else if (args.checkpointState) {
+    }
+
+    if (localCpState == null && args.checkpointState) {
       // local file checkpoint state specified via wssCheckpoint could be loaded here
       logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
       localCpState = await downloadOrLoadFile(args.checkpointState);
