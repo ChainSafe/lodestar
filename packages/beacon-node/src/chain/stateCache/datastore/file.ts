@@ -46,16 +46,10 @@ export class FileCPStateDatastore implements CPStateDatastore {
   }
 
   async readLatestSafe(): Promise<Uint8Array | null> {
-    const fileNames = await readFileNames(this.folderPath);
-    const datastoreKeys = fileNames.map((fileName) => fromHex(fileName));
-    const latest = getLatestSafeDatastoreKey(datastoreKeys);
+    const allKeys = await this.readKeys();
+    if (allKeys.length === 0) return null;
 
-    if (latest == null) {
-      return null;
-    }
-
-    const filePath = path.join(this.folderPath, toHex(latest));
-    return readFile(filePath);
+    return getLatestSafeDatastoreKey(allKeys, this.read.bind(this));
   }
 
   async readKeys(): Promise<DatastoreKey[]> {

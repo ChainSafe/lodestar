@@ -1,7 +1,9 @@
 import {Epoch, phase0, ssz} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconDb} from "../../../db/interface.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 import {MapDef} from "@lodestar/utils";
+import {getLastProcessedSlotFromBeaconStateSerialized, getSlotFromBeaconStateSerialized} from "../../../util/sszBytes.js";
 
 /**
  * Implementation of CPStateDatastore using db.
@@ -27,13 +29,7 @@ export class DbCPStateDatastore implements CPStateDatastore {
     const allKeys = await this.readKeys();
     if (allKeys.length === 0) return null;
 
-    const latest = getLatestSafeDatastoreKey(allKeys);
-
-    if (latest == null) {
-      return null;
-    }
-
-    return this.read(latest);
+    return getLatestSafeDatastoreKey(allKeys, this.read.bind(this));
   }
 
   async readKeys(): Promise<DatastoreKey[]> {
@@ -50,24 +46,73 @@ export function checkpointToDatastoreKey(cp: phase0.Checkpoint): DatastoreKey {
 }
 
 /**
- * Get the latest checkpoint state that is unique in its epoch
+ * Get the latest safe checkpoint state the node can use to boot from
+ *   - it should be the checkpoint state that's unique in its epoch
+ *   - its last processed block slot should be at epoch boundary
+ *   - last processed block slot should be equal to state slot
+ *   - last processed block slot should be equal to epoch * SLOTS_PER_EPOCH
+ *
+ * return the serialzied data of Current Root Checkpoint State (CRCP) which is added when we import block slot 0 of epoch n
+ *
  */
-export function getLatestSafeDatastoreKey(allKeys: DatastoreKey[]): DatastoreKey | null {
+export async function getLatestSafeDatastoreKey(allKeys: DatastoreKey[], readFn: (key: DatastoreKey) => Promise<Uint8Array | null>): Promise<Uint8Array | null> {
   const checkpointsByEpoch = new MapDef<Epoch, DatastoreKey[]>(() => []);
-    for (const key of allKeys) {
-      const cp = datastoreKeyToCheckpoint(key);
-      checkpointsByEpoch.getOrDefault(cp.epoch).push(key);
+  for (const key of allKeys) {
+    const cp = datastoreKeyToCheckpoint(key);
+    checkpointsByEpoch.getOrDefault(cp.epoch).push(key);
+  }
+
+  const dataStoreKeyByEpoch: Map<Epoch, DatastoreKey> = new Map();
+  for (const [epoch, keys] of checkpointsByEpoch.entries()) {
+    // filter out epochs with only 1 checkpoint
+    if (keys.length === 1) {
+      dataStoreKeyByEpoch.set(epoch, keys[0]);
+    }
+  }
+
+  const epochsDesc = Array.from(dataStoreKeyByEpoch.keys()).sort((a, b) => b - a);
+  for (const epoch of epochsDesc) {
+    const datastoreKey = dataStoreKeyByEpoch.get(epoch);
+    if (datastoreKey == null) {
+      // should not happen
+      continue;
     }
 
-    let latest: DatastoreKey | null = null;
-    let latestEpoch = 0;
-    for (const [epoch, keys] of checkpointsByEpoch.entries()) {
-      // filter out epochs with only 1 checkpoint
-      if (keys.length === 1 && epoch > latestEpoch) {
-        latest = keys[0];
-        latestEpoch = epoch;
-      }
+    const stateBytes = await readFn(datastoreKey);
+    if (stateBytes == null) {
+      // should not happen
+      continue;
     }
 
-    return latest;
+    const lastProcessedSlot = getLastProcessedSlotFromBeaconStateSerialized(stateBytes);
+    if (lastProcessedSlot == null) {
+      // cannot extract last processed slot from serialized state, skip
+      continue;
+    }
+
+    const stateSlot = getSlotFromBeaconStateSerialized(stateBytes);
+    if (stateSlot == null) {
+      // cannot extract slot from serialized state, skip
+      continue;
+    }
+
+    if (lastProcessedSlot !== stateSlot) {
+      // not Current Root Checkpoint State (CRCP), skip
+      continue;
+    }
+
+    if (lastProcessedSlot % SLOTS_PER_EPOCH !== 0) {
+      // not Current Root Checkpoint State (CRCP), skip
+      continue;
+    }
+
+    if (epoch !== SLOTS_PER_EPOCH * lastProcessedSlot) {
+      // should not happen after above checks, but just to be safe
+      continue;
+    }
+
+    return stateBytes;
+  }
+
+  return null;
 }
