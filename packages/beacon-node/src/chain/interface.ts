@@ -129,7 +129,6 @@ export interface IBeaconChain {
   readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
-  readonly blacklistedBlocks: Set<RootHex>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
 
