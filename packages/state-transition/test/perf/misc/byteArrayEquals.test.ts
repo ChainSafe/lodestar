@@ -61,7 +61,7 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
       const runsFactor = length > 16384 ? 100 : 1000;
       const bytes = stateBytes.subarray(0, length);
       const bytes2 = bytes.slice();
-      bytes2[bytes2.length - 1] = bytes2[bytes2.length - 1] + 1;
+      bytes2[bytes2.length - 1] = bytes2.at(-1) + 1;
       bench({
         id: `byteArrayEquals ${length} - diff last byte`,
         fn: () => {

@@ -80,7 +80,7 @@ describe.skip("eth1 / Eth1Provider", () => {
 
     // Generate mock state to query eth1 data for block proposing
     if (eth1Datas.length === 0) throw Error("No eth1Datas");
-    const {key: maxTimestamp, value: latestEth1Data} = eth1Datas[eth1Datas.length - 1];
+    const {key: maxTimestamp, value: latestEth1Data} = eth1Datas.at(-1);
 
     const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
     // block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start && ...

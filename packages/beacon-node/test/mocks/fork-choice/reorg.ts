@@ -61,7 +61,7 @@ export class ReorgedForkChoice extends ForkChoice {
    * - produceAttestation: to build on the latest node after the reorged slot
    * - importBlock: to return the old branch at the reorged slot to produce the reorg event
    */
-  getHead = (): ProtoBlock => {
+  getHead = (): ProtoBlock | undefined => {
     const currentSlot = this._fcStore.currentSlot;
     if (this.reorgedSlot === undefined || this.reorgDistance === undefined) {
       return super.getHead();
@@ -72,7 +72,7 @@ export class ReorgedForkChoice extends ForkChoice {
     if (currentSlot > this.reorgedSlot + 1) {
       // from now on build on latest node which reorged at the given slot
       const nodes = super.getAllNodes();
-      return nodes[nodes.length - 1];
+      return nodes.at(-1);
     }
 
     // importBlock flow at "this.reorgedSlot + 1" returns the old branch for oldHead computation which trigger reorg event
@@ -95,7 +95,7 @@ export class ReorgedForkChoice extends ForkChoice {
 
     // since reorgSlot, always return the latest node
     const nodes = super.getAllNodes();
-    const head = nodes[nodes.length - 1];
+    const head = nodes.at(-1);
     super.updateHead();
     return head;
   };

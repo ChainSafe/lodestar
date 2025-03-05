@@ -64,15 +64,14 @@ export function processWithdrawals(
   }
 
   // Update the nextWithdrawalIndex
-  if (expectedWithdrawals.length > 0) {
-    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
+  const latestWithdrawal = expectedWithdrawals.at(-1);
+  if (latestWithdrawal) {
     state.nextWithdrawalIndex = latestWithdrawal.index + 1;
   }
 
   // Update the nextWithdrawalValidatorIndex
-  if (expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
+  if (latestWithdrawal && expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
     // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
-    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
     state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
   } else {
     // expected withdrawals came up short in the bound, so we move nextWithdrawalValidatorIndex to

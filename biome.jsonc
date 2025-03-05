@@ -203,7 +203,8 @@
         // Need to enable this rule with exception to anonymous functions
         "useExplicitType": "off",
         "useGuardForIn": "error",
-        "noDuplicateProperties": "error"
+        "noDuplicateProperties": "error",
+        "useAtIndex": "error"
       }
     }
   },

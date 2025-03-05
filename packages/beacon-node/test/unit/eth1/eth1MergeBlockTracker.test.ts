@@ -133,7 +133,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       getState: () => Eth1ProviderState.ONLINE,
     };
 
-    await runFindMergeBlockTest(eth1Provider, blocks[blocks.length - 1]);
+    await runFindMergeBlockTest(eth1Provider, blocks.at(-1));
   });
 
   it("Should find terminal pow block fetching past blocks", async () => {
@@ -203,7 +203,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       getBlockNumber: async () => 0,
       getBlockByNumber: async (blockNumber) => {
         // Always return the same block with totalDifficulty > TTD and unknown parent
-        if (blockNumber === "latest") return blocks[blocks.length - 1];
+        if (blockNumber === "latest") return blocks.at(-1);
         return blocks[blockNumber];
       },
       getBlockByHash: async (blockHashHex) => blocksByHash.get(blockHashHex) ?? null,

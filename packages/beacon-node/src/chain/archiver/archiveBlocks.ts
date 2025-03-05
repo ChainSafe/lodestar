@@ -54,7 +54,7 @@ export async function archiveBlocks(
     await migrateBlocksFromHotToColdDb(db, finalizedCanonicalBlockRoots);
     logger.verbose("Migrated blocks from hot DB to cold DB", {
       fromSlot: finalizedCanonicalBlockRoots[0].slot,
-      toSlot: finalizedCanonicalBlockRoots[finalizedCanonicalBlockRoots.length - 1].slot,
+      toSlot: finalizedCanonicalBlockRoots.at(-1)?.slot,
       size: finalizedCanonicalBlockRoots.length,
     });
 
@@ -91,9 +91,7 @@ export async function archiveBlocks(
         const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
         if (slotsToDelete.length > 0) {
           await db.blobSidecarsArchive.batchDelete(slotsToDelete);
-          logger.verbose(
-            `blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete[slotsToDelete.length - 1]}`
-          );
+          logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
         } else {
           logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`);
         }
