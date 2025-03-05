@@ -31,7 +31,7 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "vitest --run --dir test/unit/",
+    "test:unit": "vitest run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

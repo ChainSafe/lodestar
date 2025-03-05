@@ -28,6 +28,8 @@ export enum ExecutionPayloadStatus {
   UNAVAILABLE = "UNAVAILABLE",
   /** EL replied with SYNCING or ACCEPTED when its not safe to import optimistic blocks */
   UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
+  /** EL replied with SYNCING or ACCEPTED when optimistic sync is disabled */
+  OPTIMISTIC_SYNC_DISABLED = "OPTIMISTIC_SYNC_DISABLED",
 }
 
 export enum ExecutionEngineState {

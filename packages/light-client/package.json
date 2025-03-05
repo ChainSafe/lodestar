@@ -65,11 +65,8 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "vitest --run --dir test/unit/",
-    "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
-    "test:browsers:chrome": "yarn run build:bundle && vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
-    "test:browsers:firefox": "yarn run build:bundle && vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
-    "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
+    "test:unit": "vitest run --dir test/unit/",
+    "test:browsers": "yarn run build:bundle && vitest run --config ./vitest.browser.config.ts --dir test/unit",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

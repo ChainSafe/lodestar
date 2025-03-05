@@ -1,5 +1,5 @@
 import {defineConfig, mergeConfig} from "vitest/config";
-import vitestConfig from "./vitest.base.unit.config.js";
+import vitestConfig from "./vitest.config.base.unit.js";
 
 export default mergeConfig(
   vitestConfig,
@@ -8,13 +8,10 @@ export default mergeConfig(
       coverage: {
         enabled: false,
       },
-      testTimeout: 60_000,
-      hookTimeout: 60_000,
-      passWithNoTests: true,
-      pool: "threads",
+      pool: "forks",
       poolOptions: {
-        threads: {
-          isolate: false,
+        forks: {
+          singleFork: true,
         },
       },
     },

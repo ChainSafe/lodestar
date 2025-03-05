@@ -24,9 +24,8 @@
     "declarationMap": true,
     "incremental": true,
     "preserveWatchOutput": true,
-    // Enable it when upgrade `vite-plugin-dts` 
-    // "noUncheckedSideEffectImports": true,
-    // "noCheck": true,
+    "noUncheckedSideEffectImports": true,
+    "noCheck": true,
 
     // TODO: Investigate following errors:
     // - Cannot find module 'rollup/parseAst' or its corresponding type declarations

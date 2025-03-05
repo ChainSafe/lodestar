@@ -78,6 +78,9 @@ export type BlockProcessOpts = {
   skipVerifyExecutionPayload?: boolean;
   /** Used to specify to skip block signatures validation */
   skipVerifyBlockSignatures?: boolean;
+
+  /** Will not import beacon blocks when execution client is syncing if true */
+  disableOptimisticSync?: boolean;
 };
 
 export type PoolOpts = {

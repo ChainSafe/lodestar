@@ -16,8 +16,7 @@ export function expectEqualBeaconState(
 
   const stateType = ssz[fork].BeaconState as SSZTypesFor<ForkAll, "BeaconState">;
   if (!stateType.equals(actual, expected)) {
-    expect(stateType.toJson(actual)).to.deep.equal(stateType.toJson(expected));
-    throw Error("Wrong state");
+    expect(stateType.toJson(actual)).toEqualWithMessage(stateType.toJson(expected), "Wrong state");
   }
 }
 
