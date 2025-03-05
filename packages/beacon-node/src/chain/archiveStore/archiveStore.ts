@@ -47,19 +47,17 @@ export class ArchiverStore {
       signal,
     });
 
-    if (!opts.disableArchiveOnCheckpoint) {
-      this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-
-      signal.addEventListener(
-        "abort",
-        () => {
-          this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-        },
-        {once: true}
-      );
-    }
-
     if (!opts.disableArchiveOnCheckpoint) return;
+
+    this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+
+    signal.addEventListener(
+      "abort",
+      () => {
+        this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+      },
+      {once: true}
+    );
 
     const archiveBlocksObserver = new ArchiveBlocksObserver(
       {
