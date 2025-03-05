@@ -9,6 +9,7 @@ import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {ArchiveMode, ArchiverOpts} from "./interface.js";
 import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
+import {PruneUnfinalizedStateObserver} from "./observers/pruneUnfinalizedStateObserver.js";
 import {FrequentStateArchiveObserver} from "./observers/frequentStateArchiveObserver.js";
 import {archiveState} from "./utils/frequentStateArchive.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
@@ -40,19 +41,17 @@ export class ArchiverStore {
       signal,
     });
 
-    if (!opts.disableArchiveOnCheckpoint) {
-      this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
+    if (!opts.disableArchiveOnCheckpoint) return;
 
-      signal.addEventListener(
-        "abort",
-        () => {
-          this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
-        },
-        {once: true}
-      );
-    }
+    this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+
+    signal.addEventListener(
+      "abort",
+      () => {
+        this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+      },
+      {once: true}
+    );
 
     const archiveBlocksObserver = new ArchiveBlocksObserver(
       {
@@ -76,6 +75,13 @@ export class ArchiverStore {
       {signal}
     );
     backfillObserver.subscribe(this.chain.emitter, signal);
+
+    const pruneUnfinalizedStateObserver = new PruneUnfinalizedStateObserver({
+      forkChoice: this.chain.forkChoice,
+      regen: this.chain.regen,
+      logger: this.logger,
+    });
+    pruneUnfinalizedStateObserver.subscribe(this.chain.emitter, signal);
 
     if (this.archiveMode === ArchiveMode.Frequency) {
       const frequentStateArchiveObserver = new FrequentStateArchiveObserver(
@@ -110,15 +116,6 @@ export class ArchiverStore {
     return this.jobQueue.push(finalized);
   };
 
-  private onCheckpoint = (): void => {
-    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(
-      this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
-      headStateRoot
-    );
-  };
-
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
@@ -136,15 +133,9 @@ export class ArchiverStore {
 
       this.prevFinalized = finalized;
 
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
-
-      // tasks rely on extended fork choice
-      const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
-
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,
         rootHex: finalized.rootHex,
-        prunedBlocks: prunedBlocks.length,
       });
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
