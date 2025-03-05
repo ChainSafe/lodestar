@@ -201,7 +201,8 @@
         "noIrregularWhitespace": "error",
         "noOctalEscape": "error",
         // Need to enable this rule with exception to anonymous functions
-        "useExplicitType": "off"
+        "useExplicitType": "off",
+        "useGuardForIn": "error"
       }
     }
   },
