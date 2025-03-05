@@ -10,6 +10,7 @@ import {
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
+  computeAnchorCheckpoint,
   ensureWithinWeakSubjectivityPeriod,
   isWithinWeakSubjectivityPeriod,
   loadState,
@@ -17,7 +18,7 @@ import {
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {Logger, formatBytes} from "@lodestar/utils";
+import {Logger, formatBytes, toRootHex} from "@lodestar/utils";
 
 import {
   fetchWeakSubjectivityState,
@@ -201,7 +202,10 @@ export async function initBeaconState(
         logger
       );
 
-      logger.info("Loaded checkpoint state", {slot: stateAndCp.anchorState.slot});
+      const lastProcessedSlot = stateAndCp.anchorState.latestBlockHeader.slot;
+      const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
+
+      logger.info("Loaded checkpoint state", {stateSlot: stateAndCp.anchorState.slot, lastProcessedSlot, root: toRootHex(root), epoch});
 
       return {...stateAndCp, isFinalized};
     }

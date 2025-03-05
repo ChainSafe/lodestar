@@ -48,11 +48,11 @@ export function checkpointToDatastoreKey(cp: phase0.Checkpoint): DatastoreKey {
 /**
  * Get the latest safe checkpoint state the node can use to boot from
  *   - it should be the checkpoint state that's unique in its epoch
- *   - its last processed block slot should be at epoch boundary
- *   - last processed block slot should be equal to state slot
- *   - last processed block slot should be equal to epoch * SLOTS_PER_EPOCH
+ *   - its last processed block slot should be at epoch boundary or last slot of previous epoch
+ *   - state slot should be at epoch boundary
+ *   - state slot should be equal to epoch * SLOTS_PER_EPOCH
  *
- * return the serialzied data of Current Root Checkpoint State (CRCP) which is added when we import block slot 0 of epoch n
+ * return the serialzied data of Current Root Checkpoint State (CRCS) or Previous Root Checkpoint State (PRCS)
  *
  */
 export async function getLatestSafeDatastoreKey(allKeys: DatastoreKey[], readFn: (key: DatastoreKey) => Promise<Uint8Array | null>): Promise<Uint8Array | null> {
@@ -96,17 +96,17 @@ export async function getLatestSafeDatastoreKey(allKeys: DatastoreKey[], readFn:
       continue;
     }
 
-    if (lastProcessedSlot !== stateSlot) {
-      // not Current Root Checkpoint State (CRCP), skip
+    if (lastProcessedSlot !== stateSlot && lastProcessedSlot !== stateSlot - 1) {
+      // not CRCS or PRCS, skip
       continue;
     }
 
-    if (lastProcessedSlot % SLOTS_PER_EPOCH !== 0) {
-      // not Current Root Checkpoint State (CRCP), skip
+    if (stateSlot % SLOTS_PER_EPOCH !== 0) {
+      // not at epoch boundary, skip
       continue;
     }
 
-    if (lastProcessedSlot !== SLOTS_PER_EPOCH * epoch) {
+    if (stateSlot !== SLOTS_PER_EPOCH * epoch) {
       // should not happen after above checks, but just to be safe
       continue;
     }
