@@ -58,15 +58,15 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   checkpointState: {
-    description: "Checkpoint state file path to start syncing from",
+    description: "Checkpoint state file path or url to start syncing from",
     type: "string",
     group: "weak subjectivity",
   },
 
   lastPersistedCheckpointState: {
-    description: "Set the last persisted checkpoint state to start syncing from",
+    description: "Use the last safe persisted checkpoint state to start syncing from",
     type: "boolean",
-    // this save sync time for holesky-rescue
+    // this saves sync time for holesky-rescue
     default: true,
     group: "weak subjectivity",
   },

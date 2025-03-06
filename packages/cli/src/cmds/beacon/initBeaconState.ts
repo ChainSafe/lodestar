@@ -205,14 +205,16 @@ export async function initBeaconState(
       const lastProcessedSlot = stateAndCp.anchorState.latestBlockHeader.slot;
       const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
 
-      logger.info("Loaded checkpoint state", {stateSlot: stateAndCp.anchorState.slot, lastProcessedSlot, root: toRootHex(root), epoch});
+      logger.info("Loaded checkpoint state", {stateSlot: stateAndCp.anchorState.slot, lastProcessedSlot, root: toRootHex(root), epoch, isFinalized});
 
       return {...stateAndCp, isFinalized};
     }
   }
 
   if (args.checkpointSyncUrl) {
-    isFinalized = false;
+    isFinalized = true;
+    logger.info("Found checkpoint sync url", {isFinalized});
+    // the real url is logged in fetchWSStateFromBeaconApi to hide username/password
     const stateAndCp = await fetchWSStateFromBeaconApi(
       lastDbStateWithBytes,
       lastDbValidatorsBytes,
@@ -226,15 +228,22 @@ export async function initBeaconState(
       logger
     );
 
+    const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
+    logger.info("Loaded downloaded state from checkpointSyncUrl", {stateSlot: stateAndCp.anchorState.slot, root: toRootHex(root), epoch, isFinalized});
+
     return {...stateAndCp, isFinalized};
   }
 
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
   if (genesisStateFile && !args.forceGenesis) {
+    isFinalized = true;
+    logger.info("Fetching genesis state", {isFinalized, genesisStateFile});
     let stateBytes = await downloadOrLoadFile(genesisStateFile);
+    logger.info("Fetched genesis state", {size: formatBytes(stateBytes.length)});
     // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
     stateBytes = new Uint8Array(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+    logger.info("Loaded genesis state", {stateSlot: anchorState.slot, root: toRootHex(anchorState.hashTreeRoot()), isFinalized});
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
     await checkAndPersistAnchorState(config, db, logger, anchorState, stateBytes, {
