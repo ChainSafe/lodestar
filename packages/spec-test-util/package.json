@@ -47,8 +47,8 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "vitest --run --passWithNoTests --dir test/unit/",
-    "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e/",
+    "test:unit": "vitest run --passWithNoTests --dir test/unit/",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts --dir test/e2e/",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
@@ -67,12 +67,12 @@
     "rimraf": "^4.4.1",
     "snappyjs": "^0.7.0",
     "tar": "^6.1.13",
-    "vitest": "^2.0.4"
+    "vitest": "^3.0.6"
   },
   "devDependencies": {
     "@types/tar": "^6.1.4"
   },
   "peerDependencies": {
-    "vitest": "^2.0.4"
+    "vitest": "^3.0.6"
   }
 }
