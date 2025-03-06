@@ -4,6 +4,7 @@
 # Generated image is larger than production image. Do not use this for production.
 
 FROM --platform=${BUILDPLATFORM:-amd64} node:22 AS build_dev
+ARG COMMIT
 
 WORKDIR /usr/app
 
@@ -12,6 +13,8 @@ RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools
 COPY . .
 
 RUN yarn install --non-interactive && yarn build
+
+RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 
 RUN cd node_modules/classic-level && yarn rebuild
 
