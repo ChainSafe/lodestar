@@ -4,10 +4,10 @@ import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IBeaconChain} from "../interface.js";
 import {ArchiveMode, ArchiverOpts} from "./interface.js";
-import {PruneHistoryObserver} from "./observers/pruneHistoryObserver.js";
 import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
 import {FrequentStateArchiveObserver} from "./observers/frequentStateArchiveObserver.js";
+import {PruneHistoryObserver} from "./observers/pruneHistoryObserver.js";
 import {PruneUnfinalizedStateObserver} from "./observers/pruneUnfinalizedStateObserver.js";
 import {archiveState} from "./utils/frequentStateArchive.js";
 

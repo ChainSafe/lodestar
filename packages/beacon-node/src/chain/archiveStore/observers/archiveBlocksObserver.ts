@@ -4,9 +4,9 @@ import {Logger} from "@lodestar/logger";
 import {IBeaconDb} from "../../../db/interface.js";
 import {IClock} from "../../../util/clock.js";
 import {LightClientServer} from "../../lightClient/index.js";
+import {QueueObserver} from "../../observer.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
 import {archiveBlocks} from "../utils/archiveBlocks.js";
-import { QueueObserver } from "../../observer.js";
 
 export class ArchiveBlocksObserver extends QueueObserver {
   constructor(
