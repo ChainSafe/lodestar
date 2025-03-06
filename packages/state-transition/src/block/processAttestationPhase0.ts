@@ -90,7 +90,7 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
     const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
 
     const lastCommitteeIndex = committeeIndices.at(-1);
-    if (!lastCommitteeIndex) {
+    if (lastCommitteeIndex === undefined) {
       throw Error("Attestation should have at least one committee bit set");
     }
 
