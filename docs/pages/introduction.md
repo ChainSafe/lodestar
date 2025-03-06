@@ -15,7 +15,7 @@ In an effort to promote client diversity there are several consensus beacon node
 - [Lodestar (TypeScript)](https://lodestar.chainsafe.io/)
 - [Nimbus (Nim)](https://nimbus.team/)
 - [Prysm (Golang)](https://prysmaticlabs.com/)
-- [Teku (Java)](https://consensys.net/knowledge-base/ethereum-2/teku/)
+- [Teku (Java)](https://consensys.io/teku)
 
 ## Why Client Diversity?
 
