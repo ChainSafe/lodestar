@@ -8,11 +8,11 @@ import {beforeEach, describe, expect, it} from "vitest";
 import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {IChainOptions} from "../../../../src/chain/options.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
-import {IChainOptions} from "../../../../src/chain/options.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];
