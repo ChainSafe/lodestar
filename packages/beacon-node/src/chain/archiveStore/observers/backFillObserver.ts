@@ -1,7 +1,7 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
-import {QueueObserver} from "../../../beaconNodeObservers.js";
+import { QueueObserver } from "../../observer.js";
 import {IBeaconChain} from "../../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
 

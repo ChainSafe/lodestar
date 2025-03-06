@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/logger";
-import {ChainEvent, ChainEventEmitter, IChainEvents} from "./chain/emitter.js";
-import {JobItemQueue} from "./util/queue/itemQueue.js";
+import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter.js";
+import { JobItemQueue } from "../util/queue/itemQueue.js";
 
 export type CleanupHandler = () => void;
 

@@ -3,7 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/logger";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/metrics.js";
-import {QueueObserver} from "../../../beaconNodeObservers.js";
+import { QueueObserver } from "../../observer.js";
 import {IClock} from "../../../util/clock.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
 import {pruneHistory} from "../utils/pruneHistory.js";
