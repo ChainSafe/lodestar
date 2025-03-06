@@ -1,5 +1,5 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {QueueObserver} from "../../../system.js";
+import {QueueObserver} from "../../../beaconNodeObservers.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
 import {FrequentStateArchiveModules, maybeArchiveState} from "../utils/frequentStateArchive.js";
 
