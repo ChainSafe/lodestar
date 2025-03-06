@@ -17,8 +17,6 @@ import {archiveState} from "./utils/frequentStateArchive.js";
  */
 export class ArchiverStore {
   private archiveMode: ArchiveMode;
-  private prevFinalized: CheckpointWithHex;
-  private archiveBlobEpochs?: number;
 
   constructor(
     private readonly db: IBeaconDb,
@@ -29,8 +27,6 @@ export class ArchiverStore {
     private readonly metrics?: Metrics | null
   ) {
     this.archiveMode = opts.archiveMode;
-    this.archiveBlobEpochs = opts.archiveBlobEpochs;
-    this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
 
     if (!opts.disableArchiveOnCheckpoint) return;
 
@@ -44,7 +40,7 @@ export class ArchiverStore {
         db: this.db,
         logger: this.logger,
       },
-      {archiveBlobEpochs: this.archiveBlobEpochs, signal}
+      {archiveBlobEpochs: opts.archiveBlobEpochs, signal}
     );
     archiveBlocksObserver.subscribe(this.chain.emitter, signal);
 
