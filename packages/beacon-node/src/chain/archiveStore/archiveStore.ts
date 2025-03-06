@@ -34,6 +34,7 @@ export class ArchiverStore {
 
     if (!opts.disableArchiveOnCheckpoint) return;
 
+    // Observers are run in order these are registered to emitter
     const archiveBlocksObserver = new ArchiveBlocksObserver(
       {
         forkChoice: this.chain.forkChoice,
