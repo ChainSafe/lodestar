@@ -71,6 +71,9 @@
     "@lodestar/utils": "^1.27.1",
     "bigint-buffer": "^1.1.5"
   },
+  "devDependencies": {
+    "@chainsafe/xdelta3-node": "1.0.2"
+  },
   "keywords": [
     "ethereum",
     "eth-consensus",
