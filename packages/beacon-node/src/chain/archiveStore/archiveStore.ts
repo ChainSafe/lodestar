@@ -30,7 +30,9 @@ export class ArchiverStore {
 
     if (!opts.disableArchiveOnCheckpoint) return;
 
-    // Observers are run in order these are registered to emitter
+    /**
+     * Observers are run in order these are registered to emitter
+     */
     const archiveBlocksObserver = new ArchiveBlocksObserver(
       {
         forkChoice: this.chain.forkChoice,
@@ -62,6 +64,7 @@ export class ArchiverStore {
     pruneUnfinalizedStateObserver.subscribe(this.chain.emitter, signal);
 
     if (this.archiveMode === ArchiveMode.Frequency) {
+      // should execute after archiveBlocksObserver to handle restart cleanly
       const frequentStateArchiveObserver = new FrequentStateArchiveObserver(
         {
           db: this.db,

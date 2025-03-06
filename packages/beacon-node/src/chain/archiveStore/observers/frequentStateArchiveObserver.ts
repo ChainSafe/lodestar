@@ -15,7 +15,7 @@ export class FrequentStateArchiveObserver extends QueueObserver {
   }
 
   async onForkChoiceFinalized(finalized: CheckpointWithHex): Promise<void> {
-    // should be after archiveBlocksObserver to handle restart cleanly
+    // should execute after archiveBlocksObserver to handle restart cleanly
     await maybeArchiveState(this.modules, {archiveStateEpochFrequency: this.archiveStateEpochFrequency}, finalized);
   }
 }
