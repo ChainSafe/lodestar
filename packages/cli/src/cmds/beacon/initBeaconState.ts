@@ -212,6 +212,7 @@ export async function initBeaconState(
   }
 
   if (args.checkpointSyncUrl) {
+    isFinalized = false;
     const stateAndCp = await fetchWSStateFromBeaconApi(
       lastDbStateWithBytes,
       lastDbValidatorsBytes,
