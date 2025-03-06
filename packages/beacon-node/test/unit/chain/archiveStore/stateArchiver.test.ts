@@ -1,6 +1,6 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
-import {computeStateSlotsToDelete} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import {computeStateSlotsToDelete} from "../../../../src/chain/archiveStore/utils/frequentStateArchive.js";
 
 describe("state archiver task", () => {
   describe("computeStateSlotsToDelete", () => {
