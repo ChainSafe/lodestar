@@ -4,6 +4,7 @@ import stream from "node:stream";
 import {promisify} from "node:util";
 import got from "got";
 import yaml from "js-yaml";
+import fetch from "@lodestar/utils"
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
 import {mkdir} from "./fs.js";
