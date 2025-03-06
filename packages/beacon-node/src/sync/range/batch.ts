@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, RootHex, phase0} from "@lodestar/types";
+import {Epoch, RootHex, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {BlockInput} from "../../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
@@ -7,6 +7,9 @@ import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRan
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
+import {BlobSidecarsByRootRequest} from "../../util/types.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
+import {ForkName} from "@lodestar/params";
 
 /**
  * Current state of a batch
@@ -30,6 +33,11 @@ export enum BatchStatus {
   AwaitingValidation = "AwaitingValidation",
 }
 
+export enum BatchSyncType {
+  byRange = "by_range",
+  byRoot = "by_root",
+}
+
 export type Attempt = {
   /** The peer that made the attempt */
   peer: PeerIdStr;
@@ -46,7 +54,8 @@ export type BatchState =
 
 export type BatchMetadata = {
   startEpoch: Epoch;
-  status: BatchStatus;
+  count: number;
+  slots: string;
 };
 
 /**
@@ -61,28 +70,57 @@ export type BatchMetadata = {
  * Jul2022: Offset changed from 1 to 0, see rationale in {@link BATCH_SLOT_OFFSET}
  */
 export class Batch {
+  readonly forkName: ForkName;
+  readonly startSlot: Slot;
   readonly startEpoch: Epoch;
+  readonly count: number;
   /** State of the batch. */
   state: BatchState = {status: BatchStatus.AwaitingDownload, partialDownload: null};
-  /** BeaconBlocksByRangeRequest */
-  readonly request: phase0.BeaconBlocksByRangeRequest;
   /** The `Attempts` that have been made and failed to send us this batch. */
   readonly failedProcessingAttempts: Attempt[] = [];
   /** The `Attempts` that have been made and failed because of execution malfunction. */
   readonly executionErrorAttempts: Attempt[] = [];
+  /**
+   * Start syncing batch by range, if most of the data is returned from the *ByRange
+   * requests switch to *ByRoot requests to infill the remainder
+   */
+  private syncType: BatchSyncType;
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
-  private readonly config: ChainForkConfig;
+  private readonly custodyConfig: CustodyConfig;
 
-  constructor(startEpoch: Epoch, config: ChainForkConfig) {
+  constructor(startEpoch: Epoch, forkName: ForkName, custodyConfig: CustodyConfig) {
     const {startSlot, count} = getBatchSlotRange(startEpoch);
 
-    this.config = config;
+    this.forkName = forkName;
+    this.custodyConfig = custodyConfig;
     this.startEpoch = startEpoch;
-    this.request = {
-      startSlot,
-      count,
+    this.startSlot = startSlot;
+    this.count = count;
+  }
+
+  isByRange(): boolean {
+    return this.syncType === BatchSyncType.byRange;
+  }
+
+  getBlocksByRangeRequest(): phase0.BeaconBlocksByRangeRequest {
+    return {
+      startSlot: this.startSlot,
+      count: this.count,
       step: 1,
+    };
+  }
+  getBlobByRangeRequest(): deneb.BlobSidecarsByRangeRequest {
+    return {
+      startSlot: this.startSlot,
+      count: this.count,
+    };
+  }
+  getColumnByRangeRequest(): fulu.DataColumnSidecarsByRangeRequest {
+    return {
+      startSlot: this.startSlot,
+      count: this.count,
+      columns: this.custodyConfig.sampledColumns,
     };
   }
 
@@ -94,7 +132,11 @@ export class Batch {
   }
 
   getMetadata(): BatchMetadata {
-    return {startEpoch: this.startEpoch, status: this.state.status};
+    return {
+      startEpoch: this.startEpoch,
+      count: this.count,
+      slots: `${this.startSlot} - ${this.startSlot + this.count}`,
+    };
   }
 
   /**
@@ -113,7 +155,9 @@ export class Batch {
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(downloadResult: {blocks: BlockInput[]; pendingDataColumns: null | number[]}): null | BlockInput[] {
+  downloadAttemptFinished(downloadResult: {blocks: BlockInput[]; pendingDataColumns: null | number[]}):
+    | null
+    | BlockInput[] {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
@@ -154,7 +198,7 @@ export class Batch {
     }
 
     const blocks = this.state.blocks;
-    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
+    const hash = hashBlocks(blocks); // tracks blocks to report peer on processing error
     this.state = {status: BatchStatus.Processing, attempt: {peer: this.state.peer, hash}};
     return blocks;
   }

@@ -3,6 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {BlockInput, BlockInputDataColumns, BlockInputType} from "../../chain/blocks/types.js";
+import {BlockInput as BlockInputNew} from "../../chain/blocks/utils/blockInput.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {ItTrigger} from "../../util/itTrigger.js";
@@ -22,6 +23,7 @@ import {
   toBeDownloadedStartEpoch,
   validateBatchesStatus,
 } from "./utils/index.js";
+import {downloadBatch} from "./utils/downloadBatch.js";
 
 export type SyncChainModules = {
   config: ChainForkConfig;
@@ -33,7 +35,9 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: BlockInput[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (blocks: BlockInputNew[], syncType: RangeSyncType) => Promise<void>;
+  /** Attempt to sync a batch via *ByRange requests */
+  byRangeDownloadBatch: (batch: Batch, peerIdStr: PeerIdStr) => ReturnType<typeof downloadBatch>;
   /** Must download blocks, and validate their range */
   downloadBeaconBlocksByRange: (
     peer: PeerIdStr,
@@ -105,6 +109,7 @@ export class SyncChain {
   private status = SyncChainStatus.Stopped;
 
   private readonly processChainSegment: SyncChainFns["processChainSegment"];
+  private readonly downloadBatch: SyncChainFns["byRangeDownloadBatch"];
   private readonly downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"];
   private readonly reportPeer: SyncChainFns["reportPeer"];
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
@@ -130,6 +135,7 @@ export class SyncChain {
     this.target = initialTarget;
     this.syncType = syncType;
     this.processChainSegment = fns.processChainSegment;
+    this.downloadBatch = fns.byRangeDownloadBatch;
     this.downloadBeaconBlocksByRange = fns.downloadBeaconBlocksByRange;
     this.reportPeer = fns.reportPeer;
     this.config = modules.config;
@@ -398,6 +404,39 @@ export class SyncChain {
     return batch;
   }
 
+  private async sendBatchToDownload(batch: Batch, peer: PeerIdStr): Promise<void> {
+    try {
+      batch.startDownloading(peer);
+      const peerClient = this.peersetCustody.get(peer)?.clientAgent ?? "unknown";
+
+      const res = await wrapError(this.downloadBatch(batch, peer));
+      if (res.err) {
+        return;
+      }
+
+      if (res.result.isComplete) {
+        this.logger.debug("Downloaded batch", {
+          id: this.logId,
+          ...batch.getMetadata(),
+          peer: prettyPrintPeerIdStr(peer),
+        });
+
+        this.triggerBatchProcessor();
+      } else {
+        this.logger.verbose("Batch download error", {peer, ...batch.getMetadata()});
+        batch.downloadingError();
+      }
+
+      // Preemptively request more blocks from peers whilst we process current blocks
+      this.triggerBatchDownloader();
+    } catch (err) {
+      this.batchProcessor.end(err as Error);
+    }
+
+    // TODO: (@matthewkeil) why was this here twice?
+    // this.triggerBatchDownloader();
+  }
+
   /**
    * Requests the batch assigned to the given id from a given peer.
    */
@@ -410,7 +449,7 @@ export class SyncChain {
       const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload, peerClient));
 
       if (!res.err) {
-        const blocks = batch.downloadingSuccess(res.result);
+        const blocks = batch.downloadAttemptFinished(res.result);
         if (blocks !== null) {
           let hasPostDenebBlocks = false;
           const blobs = blocks.reduce((acc, blockInput) => {

@@ -38,11 +38,13 @@ export class ChainPeersBalancer {
     const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
       this.peers.filter((peerId) => {
+        // if was partial download use all peers again
         if (partialDownload === null) {
           return true;
         }
 
         const peerColumns = this.peerset.get(peerId)?.custodyColumns ?? [];
+        // match columns we still need with columns the peer has
         const columns = peerColumns.reduce((acc, elem) => {
           if (partialDownload.pendingDataColumns.includes(elem)) {
             acc.push(elem);
@@ -54,6 +56,7 @@ export class ChainPeersBalancer {
       }),
       (peer) => (failedPeers.has(peer) ? 1 : 0), // Sort by no failed first = 0
       (peer) => this.activeRequestsByPeer.get(peer) ?? 0 // Sort by least active req
+      // should sort by most column overlap here
     );
     return sortedBestPeers[0];
   }

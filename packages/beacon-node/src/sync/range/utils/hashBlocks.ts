@@ -1,26 +1,20 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInput} from "../../../chain/blocks/types.js";
+import {BlockInput} from "../../../chain/blocks/utils/blockInput.js";
 
 /**
  * String to uniquely identify block segments. Used for peer scoring and to compare if batches are equivalent.
  */
-export function hashBlocks(blocks: BlockInput[], config: ChainForkConfig): RootHex {
+export function hashBlocks(blocks: BlockInput[]): string {
   switch (blocks.length) {
     case 0:
       return "0x";
     case 1: {
-      const block0 = blocks[0].block;
-      return toRootHex(config.getForkTypes(block0.message.slot).SignedBeaconBlock.hashTreeRoot(block0));
+      return blocks[0].rootHex;
     }
     default: {
-      const block0 = blocks[0].block;
-      const blockN = blocks[blocks.length - 1].block;
-      return (
-        toRootHex(config.getForkTypes(block0.message.slot).SignedBeaconBlock.hashTreeRoot(block0)) +
-        toRootHex(config.getForkTypes(blockN.message.slot).SignedBeaconBlock.hashTreeRoot(blockN))
-      );
+      return blocks[0].rootHex + blocks[blocks.length - 1].rootHex;
     }
   }
 }

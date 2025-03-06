@@ -13,6 +13,8 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
+import {downloadBatch} from "./utils/downloadBatch.js";
+import {Batch} from "./batch.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -196,6 +198,10 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     } else {
       await this.chain.processChainSegment(blocks, flags);
     }
+  };
+
+  private downloadBatch: SyncChainFns["downloadBatch"] = async (batch, peerIdStr) => {
+    return downloadBatch(this.chain, this.network, batch, peerIdStr);
   };
 
   /** Convenience method for `SyncChain` */
