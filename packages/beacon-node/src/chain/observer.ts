@@ -204,6 +204,7 @@ export class MediatorQueueObserver {
       },
       {
         maxLength: maxQueueLength,
+        maxConcurrency: 1,
         signal,
       }
     );
