@@ -19,7 +19,9 @@ export async function* onBeaconBlocksByRange(
 
   const finalized = db.blockArchive;
   const unfinalized = db.block;
-  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // in the case of initilizing from a non-finalized state, we don't have the finalized block so this api does not work
+  // chain.forkChoice.getFinalizeBlock().slot
+  const finalizedSlot = chain.forkChoice.getFinalizedBlockSlot();
 
   // Finalized range of blocks
   if (startSlot <= finalizedSlot) {

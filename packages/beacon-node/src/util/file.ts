@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import {promisify} from "node:util";
 
 /** Ensure a directory exists */
@@ -50,3 +51,4 @@ export async function readFileNames(folderPath: string): Promise<string[]> {
     return [];
   }
 }
+
