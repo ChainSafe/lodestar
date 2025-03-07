@@ -1,3 +1,4 @@
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/logger";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Checkpoint} from "@lodestar/types/phase0";
@@ -7,7 +8,6 @@ import {ChainEvent, ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {BaseObserver, ChainObserver, MediatorQueueObserver, QueueObserver} from "../../../src/chain/observer.js";
 import {JobItemQueue} from "../../../src/util/queue/itemQueue.js";
 import {getMockedLogger} from "../../mocks/loggerMock.js";
-import { CheckpointWithHex } from "@lodestar/fork-choice";
 
 class CustomObserver extends ChainObserver {
   onCheckpoint(_checkpoint: Checkpoint) {}
