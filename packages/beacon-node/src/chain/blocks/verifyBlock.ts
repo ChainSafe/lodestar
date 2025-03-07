@@ -195,7 +195,11 @@ export async function verifyBlocksInEpoch(
         });
       }
     } else {
-      this.logger.verbose("Block executions aborted due to execution payload", segmentExecStatus.execAborted.execError);
+      this.logger.verbose(
+        "Block verification aborted due to execution payload",
+        {},
+        segmentExecStatus.execAborted.execError
+      );
     }
 
     return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs};
