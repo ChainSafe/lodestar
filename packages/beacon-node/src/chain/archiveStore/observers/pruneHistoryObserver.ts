@@ -4,16 +4,14 @@ import {Logger} from "@lodestar/logger";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {IClock} from "../../../util/clock.js";
-import {QueueObserver} from "../../observer.js";
-import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
+import {BaseObserver} from "../../observer.js";
 import {pruneHistory} from "../utils/pruneHistory.js";
 
-export class PruneHistoryObserver extends QueueObserver {
+export class PruneHistoryObserver extends BaseObserver {
   constructor(
-    private modules: {config: BeaconConfig; db: IBeaconDb; logger: Logger; clock: IClock; metrics?: Metrics | null},
-    {signal}: {signal: AbortSignal}
+    private modules: {config: BeaconConfig; db: IBeaconDb; logger: Logger; clock: IClock; metrics?: Metrics | null}
   ) {
-    super({logger: modules.logger, maxQueueLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN, signal});
+    super({logger: modules.logger});
   }
 
   async onForkChoiceFinalized(finalized: CheckpointWithHex): Promise<void> {

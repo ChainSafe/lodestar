@@ -2,15 +2,11 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {IBeaconChain} from "../../interface.js";
-import {QueueObserver} from "../../observer.js";
-import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
+import {BaseObserver} from "../../observer.js";
 
-export class BackFillObserver extends QueueObserver {
-  constructor(
-    protected modules: {logger: Logger; chain: IBeaconChain; db: IBeaconDb},
-    {signal}: {signal: AbortSignal}
-  ) {
-    super({logger: modules.logger, maxQueueLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN, signal});
+export class BackFillObserver extends BaseObserver {
+  constructor(protected modules: {logger: Logger; chain: IBeaconChain; db: IBeaconDb}) {
+    super({logger: modules.logger});
   }
 
   /**

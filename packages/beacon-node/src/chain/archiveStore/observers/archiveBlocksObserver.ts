@@ -4,11 +4,10 @@ import {Logger} from "@lodestar/logger";
 import {IBeaconDb} from "../../../db/interface.js";
 import {IClock} from "../../../util/clock.js";
 import {LightClientServer} from "../../lightClient/index.js";
-import {QueueObserver} from "../../observer.js";
-import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
+import {BaseObserver} from "../../observer.js";
 import {archiveBlocks} from "../utils/archiveBlocks.js";
 
-export class ArchiveBlocksObserver extends QueueObserver {
+export class ArchiveBlocksObserver extends BaseObserver {
   constructor(
     protected modules: {
       config: BeaconConfig;
@@ -18,9 +17,9 @@ export class ArchiveBlocksObserver extends QueueObserver {
       logger: Logger;
       clock: IClock;
     },
-    protected opts: {signal: AbortSignal; archiveBlobEpochs?: number}
+    protected opts: {archiveBlobEpochs?: number}
   ) {
-    super({maxQueueLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN, signal: opts.signal, logger: modules.logger});
+    super({logger: modules.logger});
   }
 
   async onForkChoiceFinalized(finalized: CheckpointWithHex): Promise<void> {

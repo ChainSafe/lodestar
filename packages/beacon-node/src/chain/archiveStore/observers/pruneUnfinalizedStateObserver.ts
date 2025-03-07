@@ -2,10 +2,10 @@ import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/logger";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {ChainObserver} from "../../observer.js";
+import {BaseObserver} from "../../observer.js";
 import {IStateRegenerator} from "../../regen/interface.js";
 
-export class PruneUnfinalizedStateObserver extends ChainObserver {
+export class PruneUnfinalizedStateObserver extends BaseObserver {
   constructor(private modules: {forkChoice: IForkChoice; regen: IStateRegenerator; logger: Logger}) {
     super({logger: modules.logger});
   }

@@ -1,16 +1,15 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {QueueObserver} from "../../observer.js";
-import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "../constants.js";
+import {BaseObserver} from "../../observer.js";
 import {FrequentStateArchiveModules, maybeArchiveState} from "../utils/frequentStateArchive.js";
 
-export class FrequentStateArchiveObserver extends QueueObserver {
+export class FrequentStateArchiveObserver extends BaseObserver {
   protected archiveStateEpochFrequency: number;
 
   constructor(
     protected modules: FrequentStateArchiveModules,
-    {signal, archiveStateEpochFrequency}: {signal: AbortSignal; archiveStateEpochFrequency: number}
+    {archiveStateEpochFrequency}: {archiveStateEpochFrequency: number}
   ) {
-    super({logger: modules.logger, maxQueueLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN, signal});
+    super({logger: modules.logger});
     this.archiveStateEpochFrequency = archiveStateEpochFrequency;
   }
 

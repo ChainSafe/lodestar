@@ -3,6 +3,8 @@ import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IBeaconChain} from "../interface.js";
+import {MediatorQueueObserver} from "../observer.js";
+import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {ArchiveMode, ArchiverOpts} from "./interface.js";
 import {ArchiveBlocksObserver} from "./observers/archiveBlocksObserver.js";
 import {BackFillObserver} from "./observers/backFillObserver.js";
@@ -30,8 +32,17 @@ export class ArchiverStore {
 
     if (!opts.disableArchiveOnCheckpoint) return;
 
+    const mediator = new MediatorQueueObserver({
+      // As archive logic is splitted into separate observers, and each observer event is treated
+      // as it's own queue item. To keep matching with existing behavior multiplying old
+      // queue length with number of observers
+      maxQueueLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN * 5,
+      signal,
+      logger,
+    });
+
     /**
-     * Observers are run in order these are registered to emitter
+     * Observers are run in order these are registered to mediator
      */
     const archiveBlocksObserver = new ArchiveBlocksObserver(
       {
@@ -42,26 +53,23 @@ export class ArchiverStore {
         db: this.db,
         logger: this.logger,
       },
-      {archiveBlobEpochs: opts.archiveBlobEpochs, signal}
+      {archiveBlobEpochs: opts.archiveBlobEpochs}
     );
-    archiveBlocksObserver.subscribe(this.chain.emitter, signal);
+    mediator.registerObserver(archiveBlocksObserver);
 
-    const backfillObserver = new BackFillObserver(
-      {
-        chain: this.chain,
-        db: this.db,
-        logger: this.logger,
-      },
-      {signal}
-    );
-    backfillObserver.subscribe(this.chain.emitter, signal);
+    const backfillObserver = new BackFillObserver({
+      chain: this.chain,
+      db: this.db,
+      logger: this.logger,
+    });
+    mediator.registerObserver(backfillObserver);
 
     const pruneUnfinalizedStateObserver = new PruneUnfinalizedStateObserver({
       forkChoice: this.chain.forkChoice,
       regen: this.chain.regen,
       logger: this.logger,
     });
-    pruneUnfinalizedStateObserver.subscribe(this.chain.emitter, signal);
+    mediator.registerObserver(pruneUnfinalizedStateObserver);
 
     if (this.archiveMode === ArchiveMode.Frequency) {
       // should execute after archiveBlocksObserver to handle restart cleanly
@@ -73,24 +81,23 @@ export class ArchiverStore {
           metrics: this.metrics,
           bufferPool: this.chain.bufferPool,
         },
-        {signal, archiveStateEpochFrequency: opts.archiveStateEpochFrequency}
+        {archiveStateEpochFrequency: opts.archiveStateEpochFrequency}
       );
-      frequentStateArchiveObserver.subscribe(this.chain.emitter, signal);
+      mediator.registerObserver(frequentStateArchiveObserver);
     }
 
     if (this.opts.pruneHistory) {
-      const pruneHistoryObserver = new PruneHistoryObserver(
-        {
-          db: this.db,
-          config: this.chain.config,
-          logger: this.logger,
-          clock: this.chain.clock,
-          metrics: this.metrics,
-        },
-        {signal}
-      );
-      pruneHistoryObserver.subscribe(this.chain.emitter, signal);
+      const pruneHistoryObserver = new PruneHistoryObserver({
+        db: this.db,
+        config: this.chain.config,
+        logger: this.logger,
+        clock: this.chain.clock,
+        metrics: this.metrics,
+      });
+      mediator.registerObserver(pruneHistoryObserver);
     }
+
+    mediator.subscribe(this.chain.emitter, signal);
   }
 
   /** Archive latest finalized state */
