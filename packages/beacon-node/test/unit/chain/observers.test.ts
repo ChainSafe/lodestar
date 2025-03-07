@@ -1,11 +1,13 @@
 import {Logger} from "@lodestar/logger";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainEvent, ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {BaseObserver, ChainObserver, MediatorQueueObserver, QueueObserver} from "../../../src/chain/observer.js";
 import {JobItemQueue} from "../../../src/util/queue/itemQueue.js";
 import {getMockedLogger} from "../../mocks/loggerMock.js";
+import { CheckpointWithHex } from "@lodestar/fork-choice";
 
 class CustomObserver extends ChainObserver {
   onCheckpoint(_checkpoint: Checkpoint) {}
@@ -36,9 +38,9 @@ describe("observers", () => {
     it("should call right handler on event emit", () => {
       const checkpoint = {} as Checkpoint;
       observer.subscribe(emitter);
-      emitter.emit(ChainEvent.checkpoint, checkpoint);
+      emitter.emit(ChainEvent.checkpoint, checkpoint, {} as CachedBeaconStateAllForks);
 
-      expect(observer.onCheckpoint).toHaveBeenCalledWith(checkpoint);
+      expect(observer.onCheckpoint).toHaveBeenCalledWith(checkpoint, {});
       expect(observer.onCheckpoint).toHaveBeenCalledOnce();
     });
 
@@ -67,8 +69,8 @@ describe("observers", () => {
       multiObs.subscribe(emitter);
 
       // Emit both events to ensure each is handled
-      emitter.emit(ChainEvent.checkpoint, {});
-      emitter.emit(ChainEvent.forkChoiceJustified, {});
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
+      emitter.emit(ChainEvent.forkChoiceJustified, {} as CheckpointWithHex);
 
       expect(multiObs.onCheckpoint).toHaveBeenCalledTimes(1);
       expect(multiObs.onForkChoiceJustified).toHaveBeenCalledTimes(1);
@@ -137,12 +139,12 @@ describe("observers", () => {
     it("should call right handler on event emit", async () => {
       const checkpoint = {} as Checkpoint;
       observer.subscribe(emitter);
-      emitter.emit(ChainEvent.checkpoint, checkpoint);
+      emitter.emit(ChainEvent.checkpoint, checkpoint, {} as CachedBeaconStateAllForks);
 
       // As the event is triggered in a queue, give it some time
       await sleep(50);
 
-      expect(observer.onCheckpoint).toHaveBeenCalledWith(checkpoint);
+      expect(observer.onCheckpoint).toHaveBeenCalledWith(checkpoint, {});
       expect(observer.onCheckpoint).toHaveBeenCalledOnce();
     });
 
@@ -156,15 +158,15 @@ describe("observers", () => {
       });
 
       observer.subscribe(emitter);
-      emitter.emit(ChainEvent.checkpoint, checkpoint1);
-      emitter.emit(ChainEvent.checkpoint, checkpoint2);
+      emitter.emit(ChainEvent.checkpoint, checkpoint1, {} as CachedBeaconStateAllForks);
+      emitter.emit(ChainEvent.checkpoint, checkpoint2, {} as CachedBeaconStateAllForks);
 
       // Wait enough time for both items to process in sequence
       await sleep(150);
 
       expect(observer.onCheckpoint).toHaveBeenCalledTimes(2);
-      expect(observer.onCheckpoint).toHaveBeenNthCalledWith(1, checkpoint1);
-      expect(observer.onCheckpoint).toHaveBeenNthCalledWith(2, checkpoint2);
+      expect(observer.onCheckpoint).toHaveBeenNthCalledWith(1, checkpoint1, {});
+      expect(observer.onCheckpoint).toHaveBeenNthCalledWith(2, checkpoint2, {});
     });
 
     it("should cleanup all handlers on unsubscribe", () => {
@@ -191,11 +193,11 @@ describe("observers", () => {
       observer.subscribe(emitter);
 
       // The first emit should be fine...
-      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint);
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
 
       // The second emit should throw due to the queue limit
       expect(() => {
-        emitter.emit(ChainEvent.checkpoint, {} as Checkpoint);
+        emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       }).toThrow("QUEUE_ERROR_QUEUE_MAX_LENGTH");
     });
 
@@ -207,12 +209,12 @@ describe("observers", () => {
           }
         }
       }
-      const errorObserver = new ErrorObserver({logger, signal: controller.signal});
+      const errorObserver = new ErrorObserver({logger, signal: controller.signal, maxQueueLength: 10});
       vi.spyOn(errorObserver, "onCheckpoint");
       errorObserver.subscribe(emitter);
 
-      emitter.emit(ChainEvent.checkpoint, "error", {});
-      emitter.emit(ChainEvent.checkpoint, {}, {});
+      emitter.emit(ChainEvent.checkpoint, "error" as unknown as Checkpoint, {} as CachedBeaconStateAllForks);
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       await sleep(50);
 
       // Handler was called twice on errorObserver
@@ -268,12 +270,12 @@ describe("observers", () => {
     it("should call right handler on event emit", async () => {
       const checkpoint = {} as Checkpoint;
       mediator.subscribe(emitter);
-      emitter.emit(ChainEvent.checkpoint, checkpoint);
+      emitter.emit(ChainEvent.checkpoint, checkpoint, {} as CachedBeaconStateAllForks);
 
       // Give the queue time to process
       await sleep(50);
 
-      expect(observer1.onCheckpoint).toHaveBeenCalledWith(checkpoint);
+      expect(observer1.onCheckpoint).toHaveBeenCalledWith(checkpoint, {});
       expect(observer2.onCheckpoint).toHaveBeenCalledOnce();
     });
 
@@ -292,18 +294,18 @@ describe("observers", () => {
       });
 
       mediator.subscribe(emitter);
-      emitter.emit(ChainEvent.checkpoint, checkpoint1);
-      emitter.emit(ChainEvent.checkpoint, checkpoint2);
+      emitter.emit(ChainEvent.checkpoint, checkpoint1, {} as CachedBeaconStateAllForks);
+      emitter.emit(ChainEvent.checkpoint, checkpoint2, {} as CachedBeaconStateAllForks);
 
       await sleep(150);
 
       // Each observer sees both events, in order
       expect(observer1.onCheckpoint).toHaveBeenCalledTimes(2);
       expect(observer2.onCheckpoint).toHaveBeenCalledTimes(2);
-      expect(observer1.onCheckpoint).toHaveBeenNthCalledWith(1, checkpoint1);
-      expect(observer1.onCheckpoint).toHaveBeenNthCalledWith(2, checkpoint2);
-      expect(observer2.onCheckpoint).toHaveBeenNthCalledWith(1, checkpoint1);
-      expect(observer2.onCheckpoint).toHaveBeenNthCalledWith(2, checkpoint2);
+      expect(observer1.onCheckpoint).toHaveBeenNthCalledWith(1, checkpoint1, {});
+      expect(observer1.onCheckpoint).toHaveBeenNthCalledWith(2, checkpoint2, {});
+      expect(observer2.onCheckpoint).toHaveBeenNthCalledWith(1, checkpoint1, {});
+      expect(observer2.onCheckpoint).toHaveBeenNthCalledWith(2, checkpoint2, {});
 
       // Confirm the call order is strictly sequential
       expect(callOrder).toEqual([
@@ -335,7 +337,7 @@ describe("observers", () => {
       mediator.registerObserver(observer1);
       mediator.subscribe(emitter);
 
-      emitter.emit(ChainEvent.checkpoint, {});
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       await sleep(150);
 
       expect(observer1.onCheckpoint).toBeCalledTimes(1);
@@ -350,7 +352,7 @@ describe("observers", () => {
 
       mediator.subscribe(emitter);
       // Emit an event the partialObserver doesn't implement
-      emitter.emit(ChainEvent.forkChoiceJustified, {} as Checkpoint);
+      emitter.emit(ChainEvent.forkChoiceJustified, {} as CheckpointWithHex);
       await sleep(50);
 
       // Passes if no crash or unhandled error is thrown
@@ -367,11 +369,11 @@ describe("observers", () => {
       mediator.subscribe(emitter);
 
       // The first emit should be fine...
-      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint);
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
 
       // The second emit should throw due to the queue limit
       expect(() => {
-        emitter.emit(ChainEvent.checkpoint, {} as Checkpoint);
+        emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       }).toThrow("QUEUE_ERROR_QUEUE_MAX_LENGTH");
     });
 
@@ -391,8 +393,8 @@ describe("observers", () => {
 
       mediator.subscribe(emitter);
 
-      emitter.emit(ChainEvent.checkpoint, "error", {});
-      emitter.emit(ChainEvent.checkpoint, {}, {});
+      emitter.emit(ChainEvent.checkpoint, "error" as unknown as Checkpoint, {} as CachedBeaconStateAllForks);
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       await sleep(50);
 
       // Handler was called twice on errorObserver
@@ -406,12 +408,12 @@ describe("observers", () => {
       mediator.subscribe(emitter);
 
       // Emit one event
-      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint);
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       // Immediately unsubscribe
       mediator.unsubscribe();
 
       // Emit another event after unsubscribing
-      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint);
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       await sleep(50);
 
       // Confirm the second event is never processed
@@ -429,7 +431,7 @@ describe("observers", () => {
       noObserverMediator.subscribe(emitter);
 
       // Emit some event
-      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint);
+      emitter.emit(ChainEvent.checkpoint, {} as Checkpoint, {} as CachedBeaconStateAllForks);
       // If no error is thrown and queue processes normally, we're good
       await sleep(50);
     });
