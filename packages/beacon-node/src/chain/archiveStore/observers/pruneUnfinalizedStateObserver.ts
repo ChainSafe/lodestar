@@ -1,7 +1,7 @@
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/logger";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Checkpoint} from "@lodestar/types/lib/phase0/types.js";
+import {Checkpoint} from "@lodestar/types/phase0";
 import {ChainObserver} from "../../observer.js";
 import {IStateRegenerator} from "../../regen/interface.js";
 
