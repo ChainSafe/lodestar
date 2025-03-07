@@ -4,7 +4,7 @@ import stream from "node:stream";
 import {promisify} from "node:util";
 import got from "got";
 import yaml from "js-yaml";
-import fetch from "@lodestar/utils"
+import {fetch} from "@lodestar/utils"
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
 import {mkdir} from "./fs.js";
@@ -126,10 +126,22 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
 /**
  * Downloads a genesis file per network if it does not exist
  */
+// export async function downloadFile(pathDest: string, url: string): Promise<void> {
+//   if (!fs.existsSync(pathDest)) {
+//     mkdir(path.dirname(pathDest));
+//     await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
+//   }
+// }
+
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
     mkdir(path.dirname(pathDest));
-    await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to download file from ${url}: ${response.status} ${response.statusText}`);
+    }
+    const buffer = await response.arrayBuffer();
+    await fs.promises.writeFile(pathDest, Buffer.from(buffer));
   }
 }
 
