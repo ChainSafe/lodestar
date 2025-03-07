@@ -57,7 +57,7 @@ export function getNodeOffset(nodeId: NodeId): number {
   // Big endian means that the least significant byte comes last
   // The n % 256 is equivalent to the last byte of the node_id
   const lastByte = nodeId.at(-1);
-  if (!lastByte) throw new Error("Can not get node offset");
+  if (lastByte === undefined) throw new Error("Can not get node offset");
 
   return lastByte;
 }
