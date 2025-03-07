@@ -2,6 +2,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, phase0} from "@lodestar/types";
 import {ChainTarget} from "../range/utils/index.js";
+import {IBeaconChain} from "../../chain/interface.js";
 
 /** The type of peer relative to our current state */
 export enum PeerSyncType {
@@ -103,8 +104,11 @@ export function getRangeSyncType(local: phase0.Status, remote: phase0.Status, fo
 export function getRangeSyncTarget(
   local: phase0.Status,
   remote: phase0.Status,
-  forkChoice: IForkChoice
+  chain: IBeaconChain
 ): {syncType: RangeSyncType; startEpoch: Slot; target: ChainTarget} {
+  const forkChoice = chain.forkChoice;
+
+  // finalized sync
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
     return {
       // If  RangeSyncType.Finalized, the range of blocks fetchable from startEpoch and target must allow to switch
@@ -131,11 +135,20 @@ export function getRangeSyncTarget(
       },
     };
   }
+
+  // we don't want to sync from epoch < minEpoch
+  // if we boot from a finalized checkpoint state, we don't want to sync before anchorStateLatestBlockSlot
+  // if we boot from an unfinalized checkpoint state, anchorStateLatestBlockSlot is trusted and we also don't want to sync before it too
+  const minEpoch = Math.max(remote.finalizedEpoch, computeEpochAtSlot(chain.anchorStateLatestBlockSlot));
+
+  // head sync
   return {
     syncType: RangeSyncType.Head,
     // The new peer has the same finalized (earlier filters should prevent a peer with an
     // earlier finalized chain from reaching here).
-    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
+    // startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
+    // for holesky-rescue, we don't want to sync from finalizedEpoch which is too far away (115967)
+    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), minEpoch),
     target: {
       slot: remote.headSlot,
       root: remote.headRoot,

@@ -8,6 +8,7 @@ export interface CPStateDatastore {
   write: (cpKey: phase0.Checkpoint, stateBytes: Uint8Array) => Promise<DatastoreKey>;
   remove: (key: DatastoreKey) => Promise<void>;
   read: (key: DatastoreKey) => Promise<Uint8Array | null>;
+  readLatestSafe: () => Promise<Uint8Array | null>;
   readKeys: () => Promise<DatastoreKey[]>;
   init?: () => Promise<void>;
 }

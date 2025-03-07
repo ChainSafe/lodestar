@@ -870,6 +870,11 @@ export class ForkChoice implements IForkChoice {
     return block;
   }
 
+  getFinalizedBlockSlot(): Slot {
+    const finalizedEpoch = this.fcStore.finalizedCheckpoint.epoch;
+    return computeStartSlotAtEpoch(finalizedEpoch);
+  }
+
   /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
