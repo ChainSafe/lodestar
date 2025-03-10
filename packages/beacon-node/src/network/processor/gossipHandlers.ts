@@ -615,7 +615,8 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         return results;
       }
       // all attestations should have same attestation data as filtered by network processor
-      const {subnet, fork} = gossipHandlerParams[0].topic;
+      const {fork} = gossipHandlerParams[0].topic;
+      const subnets = gossipHandlerParams.map(({topic}) => topic.subnet);
       const validationParams = gossipHandlerParams.map((param) => ({
         attestation: null,
         serializedData: param.gossipData.serializedData,
@@ -626,7 +627,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         fork,
         chain,
         validationParams,
-        subnet
+        subnets
       );
       for (const [i, validationResult] of validationResults.entries()) {
         if (validationResult.err) {
@@ -647,6 +648,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         } = validationResult.result;
         metrics?.registerGossipUnaggregatedAttestation(gossipHandlerParams[i].seenTimestampSec, indexedAttestation);
 
+        const {subnet} = validationResult.result;
         try {
           // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
           // but don't add to attestation pool, to save CPU and RAM
