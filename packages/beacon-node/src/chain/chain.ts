@@ -98,11 +98,13 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
-import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
+import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
+import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
+import {CheckpointStateCache} from "./stateCache/types.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -177,6 +179,8 @@ export class BeaconChain implements IBeaconChain {
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
   private readonly archiver: Archiver;
+  // this is only available if nHistoricalStates is enabled
+  private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -299,23 +303,26 @@ export class BeaconChain implements IBeaconChain {
     this.bufferPool = this.opts.nHistoricalStates
       ? new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics)
       : null;
-    const checkpointStateCache = this.opts.nHistoricalStates
-      ? new PersistentCheckpointStateCache(
-          {
-            metrics,
-            logger,
-            clock,
-            blockStateCache,
-            bufferPool: this.bufferPool,
-            datastore: fileDataStore
-              ? // debug option if we want to investigate any issues with the DB
-                new FileCPStateDatastore(dataDir)
-              : // production option
-                new DbCPStateDatastore(this.db),
-          },
-          this.opts
-        )
-      : new InMemoryCheckpointStateCache({metrics});
+
+    let checkpointStateCache: CheckpointStateCache;
+    this.cpStateDatastore = undefined;
+    if (this.opts.nHistoricalStates) {
+      this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
+      checkpointStateCache = new PersistentCheckpointStateCache(
+        {
+          metrics,
+          logger,
+          clock,
+          blockStateCache,
+          bufferPool: this.bufferPool,
+          datastore: this.cpStateDatastore,
+        },
+        this.opts
+      );
+    } else {
+      checkpointStateCache = new InMemoryCheckpointStateCache({metrics});
+    }
+
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     blockStateCache.add(cachedState);
     blockStateCache.setHeadState(cachedState);
@@ -558,6 +565,20 @@ export class BeaconChain implements IBeaconChain {
 
     const data = await this.db.stateArchive.getByRoot(fromHex(stateRoot));
     return data && {state: data, executionOptimistic: false, finalized: true};
+  }
+
+  async getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
+    if (!this.cpStateDatastore) {
+      throw new Error("n-historical-state flag is not enabled");
+    }
+
+    if (checkpoint == null) {
+      // return the last safe checkpoint state by default
+      return this.cpStateDatastore.readLatestSafe();
+    }
+
+    const persistedKey = checkpointToDatastoreKey(checkpoint);
+    return this.cpStateDatastore.read(persistedKey);
   }
 
   getStateByCheckpoint(

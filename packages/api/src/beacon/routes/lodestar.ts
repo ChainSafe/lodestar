@@ -1,6 +1,6 @@
-import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {BeaconState, Epoch, RootHex, Slot, ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -11,8 +11,10 @@ import {
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyResponseCodec,
+  WithVersion,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
@@ -242,6 +244,15 @@ export type Endpoints = {
     EmptyMeta
   >;
 
+  getPersistedCheckpointState: Endpoint<
+    // ⏎
+    "GET",
+    {checkpointId?: string},
+    {params: {checkpoint_id?: string}},
+    BeaconState,
+    VersionMeta
+  >;
+
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
     // ⏎
@@ -406,6 +417,25 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: {
         data: HistoricalSummariesResponseType,
         meta: EmptyMetaCodec,
+      },
+    },
+    getPersistedCheckpointState: {
+      url: "/eth/v1/lodestar/persisted_checkpoint_state/{checkpoint_id}",
+      method: "GET",
+      req: {
+        writeReq: ({checkpointId}) => ({params: {checkpoint_id: checkpointId}}),
+        parseReq: ({params}) => ({checkpointId: params.checkpoint_id}),
+        schema: {
+          params: {checkpoint_id: Schema.String},
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => ssz[fork].BeaconState as Type<BeaconState>),
+        meta: VersionCodec,
+      },
+      init: {
+        // Default timeout is not sufficient to download state
+        timeoutMs: 5 * 60 * 1000,
       },
     },
     discv5GetKadValues: {
