@@ -107,7 +107,7 @@ export async function initBeaconState(
   db: IBeaconDb,
   logger: Logger,
   signal: AbortSignal
-): Promise<{anchorState: BeaconStateAllForks; isFinalized: boolean ; wsCheckpoint?: Checkpoint}> {
+): Promise<{anchorState: BeaconStateAllForks; isFinalized: boolean; wsCheckpoint?: Checkpoint}> {
   if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl)) {
     throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
   }
@@ -168,10 +168,12 @@ export async function initBeaconState(
   if (args.checkpointState || args.lastPersistedCheckpointState) {
     let localCpState: Uint8Array | null = null;
     isFinalized = false;
-    // prioritize lastPersistedCheckpointState over checkpointState
-    if (args.lastPersistedCheckpointState) {
+    // prioritize lastPersistedCheckpointState over checkpointState, unless forceCheckpointSync is set
+    if (args.lastPersistedCheckpointState && !args.forceCheckpointSync) {
       // find the last persisted checkpoint state to load
-      const cpDataStore = args["chain.nHistoricalStatesFileDataStore"] ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
+      const cpDataStore = args["chain.nHistoricalStatesFileDataStore"]
+        ? new FileCPStateDatastore(dataDir)
+        : new DbCPStateDatastore(db);
       logger.verbose(`Finding last persisted checkpoint state from ${cpDataStore.constructor.name}`);
       localCpState = await cpDataStore.readLatestSafe();
       if (localCpState === null) {
@@ -183,9 +185,11 @@ export async function initBeaconState(
 
     if (localCpState == null && args.checkpointState) {
       // local file checkpoint state specified via wssCheckpoint could be loaded here
-      logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
+      logger.info("Fetching checkpoint state", {checkpointState: args.checkpointState});
       localCpState = await downloadOrLoadFile(args.checkpointState);
-      logger.info("Found local checkpoint state from file", {path: args.checkpointState, size: formatBytes(localCpState.length)});
+      logger.info("Fetched checkpoint state", {
+        size: formatBytes(localCpState.length),
+      });
     }
 
     if (localCpState !== null) {
@@ -205,7 +209,13 @@ export async function initBeaconState(
       const lastProcessedSlot = stateAndCp.anchorState.latestBlockHeader.slot;
       const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
 
-      logger.info("Loaded checkpoint state", {stateSlot: stateAndCp.anchorState.slot, lastProcessedSlot, root: toRootHex(root), epoch, isFinalized});
+      logger.info("Loaded checkpoint state", {
+        stateSlot: stateAndCp.anchorState.slot,
+        lastProcessedSlot,
+        root: toRootHex(root),
+        epoch,
+        isFinalized,
+      });
 
       return {...stateAndCp, isFinalized};
     }
@@ -229,7 +239,12 @@ export async function initBeaconState(
     );
 
     const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
-    logger.info("Loaded downloaded state from checkpointSyncUrl", {stateSlot: stateAndCp.anchorState.slot, root: toRootHex(root), epoch, isFinalized});
+    logger.info("Loaded downloaded state from checkpointSyncUrl", {
+      stateSlot: stateAndCp.anchorState.slot,
+      root: toRootHex(root),
+      epoch,
+      isFinalized,
+    });
 
     return {...stateAndCp, isFinalized};
   }
@@ -237,20 +252,24 @@ export async function initBeaconState(
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
   if (genesisStateFile && !args.forceGenesis) {
     isFinalized = true;
-    logger.info("Fetching genesis state", {isFinalized, genesisStateFile});
+    logger.info("Fetching genesis state", {genesisStateFile, isFinalized});
     let stateBytes = await downloadOrLoadFile(genesisStateFile);
     logger.info("Fetched genesis state", {size: formatBytes(stateBytes.length)});
     // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
     stateBytes = new Uint8Array(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
-    logger.info("Loaded genesis state", {stateSlot: anchorState.slot, root: toRootHex(anchorState.hashTreeRoot()), isFinalized});
+    logger.info("Loaded genesis state", {
+      stateSlot: anchorState.slot,
+      root: toRootHex(anchorState.hashTreeRoot()),
+      isFinalized,
+    });
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
     await checkAndPersistAnchorState(config, db, logger, anchorState, stateBytes, {
       isWithinWeakSubjectivityPeriod: wssCheck,
       isCheckpointState: true,
     });
-    return {anchorState , isFinalized};
+    return {anchorState, isFinalized};
   }
 
   // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
