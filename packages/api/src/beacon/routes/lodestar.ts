@@ -247,7 +247,7 @@ export type Endpoints = {
   getPersistedCheckpointState: Endpoint<
     "GET",
     {
-      /** The checkpoint in `<root>:<epoch>` format to be returned instead of the last safe checkpoint state */
+      /** The checkpoint in `<root>:<epoch>` format to be returned instead of the latest safe checkpoint state */
       checkpointId?: string;
     },
     {query: {checkpoint_id?: string}},
