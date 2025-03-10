@@ -168,8 +168,8 @@ export async function initBeaconState(
   if (args.checkpointState || args.lastPersistedCheckpointState) {
     let localCpState: Uint8Array | null = null;
     isFinalized = false;
-    // prioritize lastPersistedCheckpointState over checkpointState
-    if (args.lastPersistedCheckpointState) {
+    // prioritize lastPersistedCheckpointState over checkpointState, unless forceCheckpointSync is set
+    if (args.lastPersistedCheckpointState && !args.forceCheckpointSync) {
       // find the last persisted checkpoint state to load
       const cpDataStore = args["chain.nHistoricalStatesFileDataStore"]
         ? new FileCPStateDatastore(dataDir)
@@ -185,10 +185,9 @@ export async function initBeaconState(
 
     if (localCpState == null && args.checkpointState) {
       // local file checkpoint state specified via wssCheckpoint could be loaded here
-      logger.info("Finding local checkpoint state from file", {path: args.checkpointState});
+      logger.info("Fetching checkpoint state", {checkpointState: args.checkpointState});
       localCpState = await downloadOrLoadFile(args.checkpointState);
-      logger.info("Found local checkpoint state from file", {
-        path: args.checkpointState,
+      logger.info("Fetched checkpoint state", {
         size: formatBytes(localCpState.length),
       });
     }
@@ -253,7 +252,7 @@ export async function initBeaconState(
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
   if (genesisStateFile && !args.forceGenesis) {
     isFinalized = true;
-    logger.info("Fetching genesis state", {isFinalized, genesisStateFile});
+    logger.info("Fetching genesis state", {genesisStateFile, isFinalized});
     let stateBytes = await downloadOrLoadFile(genesisStateFile);
     logger.info("Fetched genesis state", {size: formatBytes(stateBytes.length)});
     // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory

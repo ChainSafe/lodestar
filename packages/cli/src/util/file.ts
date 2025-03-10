@@ -8,6 +8,7 @@ import {fetch} from "@lodestar/utils";
 
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
+import {HttpHeader, MediaType} from "@lodestar/api";
 import {mkdir} from "./fs.js";
 
 export const yamlSchema = FAILSAFE_SCHEMA.extend({
@@ -149,7 +150,10 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await fetch(pathOrUrl);
+    const res = await fetch(pathOrUrl, {
+      // Ensure we only receive SSZ responses if REST API is queried
+      headers: {[HttpHeader.Accept]: MediaType.ssz},
+    });
     if (!res.ok) {
       throw new Error(`Failed to download file from ${pathOrUrl}: ${res.status} ${res.statusText}`);
     }
