@@ -4,7 +4,7 @@ import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
-import got from "got";
+import {fetch} from '@lodestar/utils';
 import {IValidatorCliArgs} from "../../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../../constants.js";
@@ -68,7 +68,10 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
         stdoutFilePath: logFilePath,
       },
       health: async () => {
-        await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
+        const response = await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
+        if (!response.ok) {
+          throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
+        }
       },
     },
   ]);
