@@ -86,6 +86,7 @@ export type GossipAttestation = {
   attSlot: Slot;
   // for indexed gossip queue we have attDataBase64
   attDataBase64: SeenAttDataKey;
+  subnet: SubnetID;
 };
 
 export type Step0Result = AttestationValidationResult & {
@@ -103,7 +104,6 @@ export async function validateGossipAttestationsSameAttData(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytesArr: GossipAttestation[],
-  subnets: SubnetID[],
   // for unit test, consumers do not need to pass this
   step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
@@ -116,8 +116,9 @@ export async function validateGossipAttestationsSameAttData(
   // for seen AttestationData, it's the same to await Promise.all() pattern
   // for unseen AttestationData, the 1st call will be cached and the rest will be fast
   const step0ResultOrErrors: Result<Step0Result>[] = [];
-  for (const [i, attestationOrBytes] of attestationOrBytesArr.entries()) {
-    const resultOrError = await wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnets[i]));
+  for (const attestationOrBytes of attestationOrBytesArr) {
+    const {subnet} = attestationOrBytes;
+    const resultOrError = await wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
     step0ResultOrErrors.push(resultOrError);
   }
 

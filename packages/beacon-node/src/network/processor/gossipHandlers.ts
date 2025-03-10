@@ -616,18 +616,17 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
       }
       // all attestations should have same attestation data as filtered by network processor
       const {fork} = gossipHandlerParams[0].topic;
-      const subnets = gossipHandlerParams.map(({topic}) => topic.subnet);
       const validationParams = gossipHandlerParams.map((param) => ({
         attestation: null,
         serializedData: param.gossipData.serializedData,
         attSlot: param.gossipData.msgSlot,
         attDataBase64: param.gossipData.indexed,
+        subnet: param.topic.subnet,
       })) as GossipAttestation[];
       const {results: validationResults, batchableBls} = await validateGossipAttestationsSameAttData(
         fork,
         chain,
-        validationParams,
-        subnets
+        validationParams
       );
       for (const [i, validationResult] of validationResults.entries()) {
         if (validationResult.err) {
