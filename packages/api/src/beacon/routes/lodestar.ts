@@ -245,10 +245,12 @@ export type Endpoints = {
   >;
 
   getPersistedCheckpointState: Endpoint<
-    // ⏎
     "GET",
-    {checkpointId?: string},
-    {params: {checkpoint_id?: string}},
+    {
+      /** The checkpoint in `<root>:<epoch>` format to be returned instead of the last safe checkpoint state */
+      checkpointId?: string;
+    },
+    {query: {checkpoint_id?: string}},
     BeaconState,
     VersionMeta
   >;
@@ -420,13 +422,13 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
     },
     getPersistedCheckpointState: {
-      url: "/eth/v1/lodestar/persisted_checkpoint_state/{checkpoint_id}",
+      url: "/eth/v1/lodestar/persisted_checkpoint_state",
       method: "GET",
       req: {
-        writeReq: ({checkpointId}) => ({params: {checkpoint_id: checkpointId}}),
-        parseReq: ({params}) => ({checkpointId: params.checkpoint_id}),
+        writeReq: ({checkpointId}) => ({query: {checkpoint_id: checkpointId}}),
+        parseReq: ({query}) => ({checkpointId: query.checkpoint_id}),
         schema: {
-          params: {checkpoint_id: Schema.String},
+          query: {checkpoint_id: Schema.String},
         },
       },
       resp: {
