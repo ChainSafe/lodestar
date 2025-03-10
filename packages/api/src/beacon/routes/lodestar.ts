@@ -1,6 +1,6 @@
-import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {BeaconState, Epoch, RootHex, Slot, ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -11,8 +11,10 @@ import {
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyResponseCodec,
+  WithVersion,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
@@ -242,6 +244,17 @@ export type Endpoints = {
     EmptyMeta
   >;
 
+  getPersistedCheckpointState: Endpoint<
+    "GET",
+    {
+      /** The checkpoint in `<root>:<epoch>` format to be returned instead of the latest safe checkpoint state */
+      checkpointId?: string;
+    },
+    {query: {checkpoint_id?: string}},
+    BeaconState,
+    VersionMeta
+  >;
+
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
     // ⏎
@@ -406,6 +419,25 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: {
         data: HistoricalSummariesResponseType,
         meta: EmptyMetaCodec,
+      },
+    },
+    getPersistedCheckpointState: {
+      url: "/eth/v1/lodestar/persisted_checkpoint_state",
+      method: "GET",
+      req: {
+        writeReq: ({checkpointId}) => ({query: {checkpoint_id: checkpointId}}),
+        parseReq: ({query}) => ({checkpointId: query.checkpoint_id}),
+        schema: {
+          query: {checkpoint_id: Schema.String},
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => ssz[fork].BeaconState as Type<BeaconState>),
+        meta: VersionCodec,
+      },
+      init: {
+        // Default timeout is not sufficient to download state
+        timeoutMs: 5 * 60 * 1000,
       },
     },
     discv5GetKadValues: {
