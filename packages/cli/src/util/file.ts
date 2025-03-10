@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
-import got from "got";
 import yaml from "js-yaml";
 import {fetch} from "@lodestar/utils"
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
@@ -126,13 +125,6 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
 /**
  * Downloads a genesis file per network if it does not exist
  */
-// export async function downloadFile(pathDest: string, url: string): Promise<void> {
-//   if (!fs.existsSync(pathDest)) {
-//     mkdir(path.dirname(pathDest));
-//     await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
-//   }
-// }
-
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
     mkdir(path.dirname(pathDest));
@@ -147,12 +139,15 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
 
 /**
  * Download from URL to memory or load from local filesystem
- * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await got.get(pathOrUrl, {encoding: "binary"});
-    return res.rawBody;
+    const response = await fetch(pathOrUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download file from ${pathOrUrl}: ${response.status} ${response.statusText}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
   }
   return fs.promises.readFile(pathOrUrl);
 }
