@@ -7,12 +7,14 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {Epoch, RootHex, ssz} from "@lodestar/types";
+import {Checkpoint} from "@lodestar/types/phase0";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
@@ -218,6 +220,23 @@ export function getLodestarApi({
         meta: {executionOptimistic, finalized, version: fork},
       };
     },
+
+    // the optional checkpoint is in root:epoch format
+    async getPersistedCheckpointState({checkpointId}) {
+      const checkpoint = checkpointId ? getCheckpointFromArg(checkpointId) : undefined;
+      const stateBytes = await chain.getPersistedCheckpointState(checkpoint);
+      if (stateBytes === null) {
+        throw new Error(`Checkpoint state not found for id ${checkpointId}`);
+      }
+
+      const slot = getStateSlotFromBytes(stateBytes);
+      return {
+        data: stateBytes,
+        meta: {
+          version: config.getForkName(slot),
+        },
+      };
+    },
   };
 }
 
@@ -245,6 +264,19 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
         root: regenRequest.args[0],
       };
   }
+}
+
+/**
+ * Extract a checkpoint from a string in the format `rootHex:epoch`.
+ * TODO: dedup to cli package
+ */
+export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
+  const checkpointRegex = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
+  const match = checkpointRegex.exec(checkpointStr.toLowerCase());
+  if (!match) {
+    throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);
+  }
+  return {root: fromHex(match[1]), epoch: parseInt(match[2])};
 }
 
 function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {
