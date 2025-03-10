@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
+import {HttpHeader, MediaType} from "@lodestar/api";
 import got from "got";
 import yaml from "js-yaml";
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
@@ -138,7 +139,11 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await got.get(pathOrUrl, {encoding: "binary"});
+    const res = await got.get(pathOrUrl, {
+      encoding: "binary",
+      // Ensure we only receive SSZ responses if REST API is queried
+      headers: {[HttpHeader.Accept]: MediaType.ssz},
+    });
     return res.rawBody;
   }
   return fs.promises.readFile(pathOrUrl);
