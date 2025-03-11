@@ -286,7 +286,7 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
-    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? false;
+    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     const blockStateCache = this.opts.nHistoricalStates
       ? new FIFOBlockStateCache(this.opts, {metrics})
       : new BlockStateCacheImpl({metrics});
