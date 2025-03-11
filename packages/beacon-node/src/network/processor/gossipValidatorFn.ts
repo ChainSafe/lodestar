@@ -1,6 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/interface";
 import {ChainForkConfig} from "@lodestar/config";
-import {GaugeExtra, Logger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {
@@ -8,7 +8,6 @@ import {
   GossipHandlerFn,
   GossipHandlers,
   GossipMessageInfo,
-  GossipType,
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
