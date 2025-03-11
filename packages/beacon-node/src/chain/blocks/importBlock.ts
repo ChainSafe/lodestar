@@ -216,15 +216,20 @@ export async function importBlock(
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
 
-    this.emitter.emit(routes.events.EventType.head, {
-      block: newHead.blockRoot,
-      epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-      slot: newHead.slot,
-      state: newHead.stateRoot,
-      previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-      currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-      executionOptimistic: isOptimisticBlock(newHead),
-    });
+    try {
+      this.emitter.emit(routes.events.EventType.head, {
+        block: newHead.blockRoot,
+        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+        slot: newHead.slot,
+        state: newHead.stateRoot,
+        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
+        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
+        executionOptimistic: isOptimisticBlock(newHead),
+      });
+    } catch (e) {
+      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+      this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
+    }
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
     this.logger.verbose("New chain head", {
