@@ -111,7 +111,7 @@ export class AttestationPool {
     attDataRootHex: RootHex,
     committeeValidatorIndex: number,
     committeeSize: number,
-    priority?: boolean,
+    priority?: boolean
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const fork = this.config.getForkName(slot);

@@ -273,7 +273,9 @@ export function getBeaconPoolApi({
               // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
               const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
               const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee);
+              // same to api attestation, we allow api SyncCommittee to be added to pool even when it's late
+              // see https://github.com/ChainSafe/lodestar/issues/7548
+              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee, true);
 
               // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
               if (subnets.length === 0 || subnets[subnets.length - 1] !== subnet) {
