@@ -125,7 +125,7 @@ export function getBeaconPoolApi({
                 committeeValidatorIndex,
                 committeeSize
               );
-              metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+              metrics?.opPool.attestationPoolApiInsertOutcome.inc({insertOutcome});
             }
 
             if (isForkPostElectra(fork)) {
