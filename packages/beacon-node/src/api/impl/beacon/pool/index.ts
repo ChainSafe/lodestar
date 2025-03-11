@@ -123,7 +123,11 @@ export function getBeaconPoolApi({
                 attestation,
                 attDataRootHex,
                 committeeValidatorIndex,
-                committeeSize
+                committeeSize,
+                // api attestation has high priority, we allow them to be added to pool even when it's late
+                // this is to prevent "No aggregated attestation for slot" issue
+                // see https://github.com/ChainSafe/lodestar/issues/7548
+                true
               );
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
