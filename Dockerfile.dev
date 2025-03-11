@@ -8,15 +8,11 @@ ARG COMMIT
 
 WORKDIR /usr/app
 
-RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools
-
 COPY . .
 
 RUN yarn install --non-interactive && yarn build
 
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
-
-RUN cd node_modules/classic-level && yarn rebuild
 
 ENV NODE_OPTIONS=--max-old-space-size=8192
 
