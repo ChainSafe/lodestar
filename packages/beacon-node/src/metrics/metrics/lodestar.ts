@@ -855,9 +855,14 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_attestation_pool_size",
         help: "Current size of the AttestationPool = total attestations unique by data and slot",
       }),
-      attestationPoolInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+      attestationPoolGossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
         name: "lodestar_attestation_pool_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding an attestation in a pool",
+        help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
+        labelNames: ["insertOutcome"],
+      }),
+      attestationPoolApiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+        name: "lodestar_attestation_pool_api_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
         labelNames: ["insertOutcome"],
       }),
       attesterSlashingPoolSize: register.gauge({
