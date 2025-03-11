@@ -1,6 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/interface";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {GaugeExtra, Logger} from "@lodestar/utils";
 import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {
@@ -8,6 +8,7 @@ import {
   GossipHandlerFn,
   GossipHandlers,
   GossipMessageInfo,
+  GossipType,
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
@@ -60,10 +61,13 @@ export function getGossipValidatorBatchFn(
         switch (e.action) {
           case GossipAction.IGNORE:
             metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
+            // only beacon_attestation topic is validated in batch
+            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: e.type.code});
             return TopicValidatorResult.Ignore;
-
           case GossipAction.REJECT:
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
+            // only beacon_attestation topic is validated in batch
+            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
             logger.debug(`Gossip validation ${type} rejected`, {}, e);
             return TopicValidatorResult.Reject;
         }
