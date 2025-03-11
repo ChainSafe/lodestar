@@ -86,6 +86,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       logger,
       processShutdownCallback,
       peerId,
+      dataDir: beaconPaths.dataDir,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
