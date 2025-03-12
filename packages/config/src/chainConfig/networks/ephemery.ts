@@ -36,10 +36,13 @@ const baseChainConfig: ChainConfig = {
   CAPELLA_FORK_EPOCH: 0,
   // Deneb
   DENEB_FORK_VERSION: b("0x5000101b"),
-  DENEB_FORK_EPOCH: 5,
+  DENEB_FORK_EPOCH: 0,
   // Electra
   ELECTRA_FORK_VERSION: b("0x6000101b"),
-  ELECTRA_FORK_EPOCH: Infinity,
+  ELECTRA_FORK_EPOCH: 10,
+  // Fulu
+  FULU_FORK_VERSION: b("0x7000101b"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------

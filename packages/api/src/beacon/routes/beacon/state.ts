@@ -1,15 +1,18 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {CommitteeIndex, Epoch, RootHex, Slot, StringType, ValidatorStatus, phase0, ssz} from "@lodestar/types";
+import {CommitteeIndex, Epoch, RootHex, Slot, StringType, ValidatorStatus, electra, phase0, ssz} from "@lodestar/types";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
-import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
+import {
+  ExecutionOptimisticAndFinalizedCodec,
+  ExecutionOptimisticAndFinalizedMeta,
+  ExecutionOptimisticFinalizedAndVersionCodec,
+  ExecutionOptimisticFinalizedAndVersionMeta,
+} from "../../../utils/metadata.js";
 import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 import {RootResponse, RootResponseType} from "./block.js";
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type StateId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 
@@ -266,6 +269,32 @@ export type Endpoints = {
     EpochSyncCommitteeResponse,
     ExecutionOptimisticAndFinalizedMeta
   >;
+
+  /**
+   * Get State Pending Deposits
+   *
+   * Returns pending deposits for state with given 'stateId'.
+   */
+  getPendingDeposits: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    electra.PendingDeposits,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
+
+  /**
+   * Get State Pending Partial Withdrawals
+   *
+   * Returns pending partial withdrawals for state with given 'stateId'.
+   */
+  getPendingPartialWithdrawals: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    electra.PendingPartialWithdrawals,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -481,6 +510,24 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: {
         data: ValidatorBalanceListType,
         meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getPendingDeposits: {
+      url: "/eth/v1/beacon/states/{state_id}/pending_deposits",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.electra.PendingDeposits,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getPendingPartialWithdrawals: {
+      url: "/eth/v1/beacon/states/{state_id}/pending_partial_withdrawals",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.electra.PendingPartialWithdrawals,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
   };

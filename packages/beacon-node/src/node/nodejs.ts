@@ -7,10 +7,11 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {callFnWhenAwait, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
+import {pruneHistory} from "../chain/archiver/pruneHistory.js";
 import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -21,6 +22,7 @@ import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
+import {Clock} from "../util/clock.js";
 import {TrustedFileMode, initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -164,10 +166,6 @@ export class BeaconNode {
       loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
     }
 
-    // Prune hot db repos
-    // TODO: Should this call be awaited?
-    await db.pruneHotDb();
-
     let metrics = null;
     if (
       opts.metrics.enabled ||
@@ -185,6 +183,23 @@ export class BeaconNode {
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
       signal.addEventListener("abort", metrics.close, {once: true});
+    }
+
+    const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
+
+    // Prune hot db repos
+    // TODO: Should this call be awaited?
+    await db.pruneHotDb();
+
+    if (opts.chain.pruneHistory) {
+      // prune ALL stale data before starting
+      logger.info("Pruning historical data");
+      await callFnWhenAwait(
+        pruneHistory(config, db, logger, metrics, anchorState.finalizedCheckpoint.epoch, clock.currentEpoch),
+        () => logger.info("Still pruning historical data, please wait..."),
+        30_000,
+        signal
+      );
     }
 
     const monitoring = opts.monitoring.endpoint
@@ -208,6 +223,7 @@ export class BeaconNode {
 
     const chain = new BeaconChain(opts.chain, {
       config,
+      clock,
       db,
       logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,

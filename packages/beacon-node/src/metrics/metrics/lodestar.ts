@@ -2,7 +2,7 @@ import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@l
 import {BeaconState} from "@lodestar/types";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
-import {BlockErrorCode} from "../../chain/errors/index.js";
+import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -115,6 +115,16 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_validation_error_total",
         help: "Count of total gossip validation errors detailed",
         labelNames: ["topic", "error"],
+      }),
+      gossipAttestationIgnoreByReason: register.gauge<{reason: AttestationErrorCode}>({
+        name: "lodestar_gossip_attestation_ignore_by_reason_total",
+        help: "Count of total gossip attestation ignore by reason",
+        labelNames: ["reason"],
+      }),
+      gossipAttestationRejectByReason: register.gauge<{reason: AttestationErrorCode}>({
+        name: "lodestar_gossip_attestation_reject_by_reason_total",
+        help: "Count of total gossip attestation reject by reason",
+        labelNames: ["reason"],
       }),
       executeWorkCalls: register.gauge({
         name: "lodestar_network_processor_execute_work_calls_total",
@@ -855,9 +865,14 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_attestation_pool_size",
         help: "Current size of the AttestationPool = total attestations unique by data and slot",
       }),
-      attestationPoolInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+      attestationPoolGossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
         name: "lodestar_attestation_pool_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding an attestation in a pool",
+        help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
+        labelNames: ["insertOutcome"],
+      }),
+      attestationPoolApiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+        name: "lodestar_attestation_pool_api_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
         labelNames: ["insertOutcome"],
       }),
       attesterSlashingPoolSize: register.gauge({
@@ -1802,6 +1817,25 @@ export function createLodestarMetrics(
         name: "lodestar_db_approximate_size_time_seconds",
         help: "Time to approximate db size in seconds",
         buckets: [0.0001, 0.001, 0.01, 0.1, 1],
+      }),
+    },
+
+    pruneHistory: {
+      pruneCount: register.gauge({
+        name: "lodestar_prune_history_prune_count_total",
+        help: "Total count of prune operations",
+      }),
+
+      fetchKeys: register.histogram({
+        name: "lodestar_prune_history_fetch_keys_time_seconds",
+        help: "Time to fetch keys in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
+      }),
+
+      pruneKeys: register.histogram({
+        name: "lodestar_prune_history_prune_keys_time_seconds",
+        help: "Time to prune keys in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
       }),
     },
   };

@@ -19,7 +19,7 @@ export class CheckpointHeaderRepository extends Repository<Uint8Array, LightClie
 
   // Overrides for multi-fork
   encodeValue(value: LightClientHeader): Uint8Array {
-    return this.config.getLightClientForkTypes(value.beacon.slot).LightClientHeader.serialize(value);
+    return this.config.getPostAltairForkTypes(value.beacon.slot).LightClientHeader.serialize(value);
   }
 
   decodeValue(data: Uint8Array): LightClientHeader {
@@ -27,6 +27,6 @@ export class CheckpointHeaderRepository extends Repository<Uint8Array, LightClie
   }
 
   getId(value: LightClientHeader): Uint8Array {
-    return this.config.getLightClientForkTypes(value.beacon.slot).LightClientHeader.hashTreeRoot(value);
+    return this.config.getPostAltairForkTypes(value.beacon.slot).LightClientHeader.hashTreeRoot(value);
   }
 }

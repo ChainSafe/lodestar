@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq, isForkExecution, isForkLightClient} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -169,14 +169,14 @@ export async function produceBlockBody<T extends BlockType>(
     proposerSlashings: proposerSlashings.length,
   });
 
-  if (isForkLightClient(fork)) {
+  if (isForkPostAltair(fork)) {
     Object.assign(logMeta, {
       syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
     });
   }
 
   const endExecutionPayload = stepsMetrics?.startTimer();
-  if (isForkExecution(fork)) {
+  if (isForkPostBellatrix(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -303,7 +303,7 @@ export async function produceBlockBody<T extends BlockType>(
         );
 
         if (prepareRes.isPremerge) {
-          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
+          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload =
             sszTypesFor(fork).ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
@@ -324,7 +324,7 @@ export async function produceBlockBody<T extends BlockType>(
           const {executionPayload, blobsBundle, executionRequests} = engineRes;
           shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
-          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload = executionPayload;
+          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
           executionPayloadValue = engineRes.executionPayloadValue;
           Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
 
@@ -379,7 +379,7 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as BeaconBlockBody<ForkExecution>).executionPayload =
+          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload =
             sszTypesFor(fork).ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
@@ -431,7 +431,7 @@ export async function prepareExecutionPayload(
     config: ChainForkConfig;
   },
   logger: Logger,
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   parentBlockRoot: Root,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
@@ -509,7 +509,7 @@ async function prepareExecutionPayloadHeader(
     executionBuilder?: IExecutionBuilder;
     config: ChainForkConfig;
   },
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
@@ -566,7 +566,7 @@ export async function getExecutionPayloadParentHash(
 }
 
 export async function getPayloadAttributesForSSE(
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   chain: {
     eth1: IEth1ForBlockProduction;
     config: ChainForkConfig;
@@ -604,7 +604,7 @@ export async function getPayloadAttributesForSSE(
 }
 
 function preparePayloadAttributes(
-  fork: ForkExecution,
+  fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
   },

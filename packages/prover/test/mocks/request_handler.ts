@@ -107,7 +107,7 @@ export function generateReqHandlerOptionsMock(
   config: ForkConfig
 ): Omit<ELVerifiedRequestHandlerOpts<any>, "payload"> {
   const executionPayload = config
-    .getExecutionForkTypes(parseInt(data.beacon.headers.header.message.slot))
+    .getPostBellatrixForkTypes(parseInt(data.beacon.headers.header.message.slot))
     .ExecutionPayload.fromJson(data.beacon.executionPayload);
 
   const options = {

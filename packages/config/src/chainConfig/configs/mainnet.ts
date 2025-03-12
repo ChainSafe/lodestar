@@ -52,6 +52,10 @@ export const chainConfig: ChainConfig = {
   ELECTRA_FORK_VERSION: b("0x05000000"),
   ELECTRA_FORK_EPOCH: Infinity,
 
+  // FULU
+  FULU_FORK_VERSION: b("0x06000000"),
+  FULU_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds
@@ -97,6 +101,8 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 33024, ~5 months)
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024,
 
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)

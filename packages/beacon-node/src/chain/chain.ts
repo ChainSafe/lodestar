@@ -3,9 +3,10 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateElectra,
   CachedBeaconStateAllForks,
   EffectiveBalanceIncrements,
   EpochShuffling,
@@ -350,6 +351,16 @@ export class BeaconChain implements IBeaconChain {
     this.serializedCache = new SerializedCache();
 
     this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
+
+    // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
+    const anchorStateFork = this.config.getForkName(anchorState.slot);
+    if (isForkPostElectra(anchorStateFork)) {
+      const {eth1DepositIndex, depositRequestsStartIndex} = anchorState as BeaconStateElectra;
+      if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
+        this.eth1.stopPollingEth1Data();
+      }
+    }
+
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -695,7 +706,9 @@ export class BeaconChain implements IBeaconChain {
     const bodyRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
-        : this.config.getExecutionForkTypes(slot).BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
+        : this.config
+            .getPostBellatrixForkTypes(slot)
+            .BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
     this.logger.debug("Computing block post state from the produced body", {
       slot,
       bodyRoot: toRootHex(bodyRoot),
@@ -715,7 +728,7 @@ export class BeaconChain implements IBeaconChain {
     const blockRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
-        : this.config.getExecutionForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
+        : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toRootHex(blockRoot);
 
     // track the produced block for consensus broadcast validations
@@ -852,12 +865,47 @@ export class BeaconChain implements IBeaconChain {
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
-      const sszType = this.config.getExecutionForkTypes(slot).BlindedBeaconBlock;
+      const sszType = this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock;
       void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
     } else {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;
       void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
     }
+  }
+
+  /**
+   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
+   * persist preState, postState and block for further investigation.
+   */
+  async persistInvalidStateRoot(
+    preState: CachedBeaconStateAllForks,
+    postState: CachedBeaconStateAllForks,
+    block: SignedBeaconBlock
+  ): Promise<void> {
+    const blockSlot = block.message.slot;
+    const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
+    const postStateRoot = postState.hashTreeRoot();
+    const logStr = `slot_${blockSlot}_invalid_state_root_${toRootHex(postStateRoot)}`;
+    await Promise.all([
+      this.persistSszObject(
+        `SignedBeaconBlock_slot_${blockSlot}`,
+        blockType.serialize(block),
+        blockType.hashTreeRoot(block),
+        `${logStr}_block`
+      ),
+      this.persistSszObject(
+        `preState_slot_${preState.slot}_${preState.type.typeName}`,
+        preState.serialize(),
+        preState.hashTreeRoot(),
+        `${logStr}_pre_state`
+      ),
+      this.persistSszObject(
+        `postState_slot_${postState.slot}_${postState.type.typeName}`,
+        postState.serialize(),
+        postState.hashTreeRoot(),
+        `${logStr}_post_state`
+      ),
+    ]);
   }
 
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
@@ -1009,19 +1057,14 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistSszObject(
-    typeName: string,
-    bytes: Uint8Array,
-    root: Uint8Array,
-    suffix?: string
-  ): Promise<void> {
+  private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${typeName}_${toRootHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
 
     await ensureDir(dirpath);
 
@@ -1029,7 +1072,7 @@ export class BeaconChain implements IBeaconChain {
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
     await writeIfNotExist(filepath, bytes);
 
-    this.logger.debug("Persisted invalid ssz object", {id: suffix, filepath});
+    this.logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
@@ -1143,16 +1186,6 @@ export class BeaconChain implements IBeaconChain {
     if (headState === null) {
       this.logger.verbose("Head state is null");
     }
-
-    // TODO-Electra: Deprecating eth1Data poll requires a check on a finalized checkpoint state.
-    // Will resolve this later
-    // if (cpEpoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity)) {
-    //   // finalizedState can be safely casted to Electra state since cp is already post-Electra
-    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositRequestsStartIndex) {
-    //     // Signal eth1 to stop polling eth1Data
-    //     this.eth1.stopPollingEth1Data();
-    //   }
-    // }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {

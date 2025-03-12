@@ -23,6 +23,7 @@ export interface StatesArchiverOpts {
 export type ArchiverOpts = StatesArchiverOpts & {
   disableArchiveOnCheckpoint?: boolean;
   archiveBlobEpochs?: number;
+  pruneHistory?: boolean;
 };
 
 export type ProposalStats = {

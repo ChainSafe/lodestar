@@ -61,7 +61,12 @@ export class SyncCommitteeMessagePool {
   }
 
   // TODO: indexInSubcommittee: number should be indicesInSyncCommittee
-  add(subnet: SubnetID, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
+  add(
+    subnet: SubnetID,
+    signature: altair.SyncCommitteeMessage,
+    indexInSubcommittee: number,
+    priority?: boolean
+  ): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;
     const rootHex = toRootHex(beaconBlockRoot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -72,7 +77,7 @@ export class SyncCommitteeMessagePool {
     }
 
     // validator gets SyncCommitteeContribution at 2/3 of slot, it's no use to preaggregate later than that time
-    if (this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+    if (!priority && this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
       return InsertOutcome.Late;
     }
 

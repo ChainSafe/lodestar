@@ -1,11 +1,11 @@
 import {
-  ForkBlobs,
-  ForkExecution,
-  ForkLightClient,
   ForkName,
-  isForkBlobs,
-  isForkExecution,
-  isForkLightClient,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  isForkPostAltair,
+  isForkPostBellatrix,
+  isForkPostDeneb,
 } from "@lodestar/params";
 import {SSZTypesFor, sszTypesFor} from "@lodestar/types";
 
@@ -19,25 +19,25 @@ export function toForkName(version: string): ForkName {
   return version as ForkName;
 }
 
-export function getLightClientForkTypes(fork: ForkName): SSZTypesFor<ForkLightClient> {
-  if (!isForkLightClient(fork)) {
-    throw Error(`Invalid fork=${fork} for lightclient fork types`);
+export function getPostAltairForkTypes(fork: ForkName): SSZTypesFor<ForkPostAltair> {
+  if (!isForkPostAltair(fork)) {
+    throw Error(`Invalid fork=${fork} for post-altair fork types`);
   }
 
   return sszTypesFor(fork);
 }
 
-export function getExecutionForkTypes(fork: ForkName): SSZTypesFor<ForkExecution> {
-  if (!isForkExecution(fork)) {
-    throw Error(`Invalid fork=${fork} for execution fork types`);
+export function getPostBellatrixForkTypes(fork: ForkName): SSZTypesFor<ForkPostBellatrix> {
+  if (!isForkPostBellatrix(fork)) {
+    throw Error(`Invalid fork=${fork} for post-bellatrix fork types`);
   }
 
   return sszTypesFor(fork);
 }
 
-export function getBlobsForkTypes(fork: ForkName): SSZTypesFor<ForkBlobs> {
-  if (!isForkBlobs(fork)) {
-    throw Error(`Invalid fork=${fork} for blobs fork types`);
+export function getPostDenebForkTypes(fork: ForkName): SSZTypesFor<ForkPostDeneb> {
+  if (!isForkPostDeneb(fork)) {
+    throw Error(`Invalid fork=${fork} for post-deneb fork types`);
   }
 
   return sszTypesFor(fork);

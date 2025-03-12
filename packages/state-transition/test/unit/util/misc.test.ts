@@ -17,10 +17,10 @@ describe("getBlockRoot", () => {
   });
   it("should fail if slot is current slot", () => {
     const state = generateState({slot: GENESIS_SLOT});
-    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow("");
+    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow();
   });
   it("should fail if slot is not within SLOTS_PER_HISTORICAL_ROOT of current slot", () => {
     const state = generateState({slot: GENESIS_SLOT + SLOTS_PER_HISTORICAL_ROOT + 1});
-    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow("");
+    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow();
   });
 });

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkAll, ForkLightClient} from "@lodestar/params";
+import {ForkAll, ForkPostAltair} from "@lodestar/params";
 import {SSZTypesFor, Slot} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
@@ -61,9 +61,9 @@ const SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER = 0;
 export function getLightClientHeaderTypeFromBytes(
   config: ChainForkConfig,
   bytes: Buffer | Uint8Array
-): SSZTypesFor<ForkLightClient, "LightClientHeader"> {
+): SSZTypesFor<ForkPostAltair, "LightClientHeader"> {
   const slot = bytesToInt(
     bytes.subarray(SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER, SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER + SLOT_BYTE_COUNT)
   );
-  return config.getLightClientForkTypes(slot).LightClientHeader;
+  return config.getPostAltairForkTypes(slot).LightClientHeader;
 }
