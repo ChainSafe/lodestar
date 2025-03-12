@@ -15,6 +15,7 @@ import {
   upgradeStateToCapella,
   upgradeStateToDeneb,
   upgradeStateToElectra,
+  upgradeStateToEip7805,
 } from "./slot/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -22,6 +23,7 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
+  CachedBeaconStateElectra,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -263,6 +265,9 @@ function processSlotsWithTransientCache(
       }
       if (stateEpoch === config.ELECTRA_FORK_EPOCH) {
         postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
+      }
+      if (stateEpoch === config.EIP7805_FORK_EPOCH) {
+        postState = upgradeStateToEip7805(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;
