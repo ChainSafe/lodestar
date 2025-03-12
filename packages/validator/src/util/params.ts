@@ -108,9 +108,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // electra
     ELECTRA_FORK_VERSION: electraForkRelevant,
     ELECTRA_FORK_EPOCH: electraForkRelevant,
-    // fulu
-    FULU_FORK_VERSION: electraForkRelevant,
-    FULU_FORK_EPOCH: electraForkRelevant,
     // EIP-7805
     EIP7805_FORK_VERSION: eip7805ForkRelevant,
     EIP7805_FORK_EPOCH: eip7805ForkRelevant,
