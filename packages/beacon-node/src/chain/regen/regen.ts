@@ -11,7 +11,7 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0} from "@lodestar/types";
+import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -318,7 +318,12 @@ export class StateRegenerator implements IStateRegeneratorInternal {
  * emitting "checkpoint" events after every epoch processed.
  */
 async function processSlotsByCheckpoint(
-  modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
+  modules: {
+    checkpointStateCache: CheckpointStateCache;
+    metrics: Metrics | null;
+    emitter: ChainEventEmitter;
+    logger: Logger;
+  },
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
@@ -338,8 +343,13 @@ async function processSlotsByCheckpoint(
  *
  * Stops processing after no more full epochs can be processed.
  */
-async function processSlotsToNearestCheckpoint(
-  modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
+export async function processSlotsToNearestCheckpoint(
+  modules: {
+    checkpointStateCache: CheckpointStateCache;
+    metrics: Metrics | null;
+    emitter: ChainEventEmitter | null;
+    logger: Logger | null;
+  },
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
@@ -349,16 +359,23 @@ async function processSlotsToNearestCheckpoint(
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState;
-  const {checkpointStateCache, emitter, metrics} = modules;
+  const {checkpointStateCache, emitter, metrics, logger} = modules;
+  let count = 0;
 
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
+    logger?.verbose("Processing slots over epochs", {
+      slot: postState.slot,
+      nextEpochSlot,
+      postSlot,
+      caller: regenCaller,
+    });
     // processSlots calls .clone() before mutating
     postState = processSlots(postState, nextEpochSlot, opts, metrics);
-    modules.metrics?.epochTransitionByCaller.inc({caller: regenCaller});
+    metrics?.epochTransitionByCaller.inc({caller: regenCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block
     // then when we process the 1st block of epoch, we don't have to do state transition again
@@ -368,7 +385,31 @@ async function processSlotsToNearestCheckpoint(
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
     // consumers should not mutate or get the transfered cache
-    emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
+    emitter?.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
+
+    if (count >= 1) {
+      // in normal condition, we only process 1 epoch so never reach this
+      // in that case, we want to prune state at the last 1/3 slot of slot 0 of the next epoch after importing the 1st block of epoch
+      // in non-finality time, we may process a lot of epochs so need to prune the cache to keep the node healthy
+      // this happened to holesky on Feb 2025, see https://github.com/ChainSafe/lodestar/issues/7495#issuecomment-2680800898
+      // cannot use getBlockRootAtSlot() because nextEpochSlot = postState
+      const latestBlockHex = toRootHex(cp.root);
+      try {
+        const persistCount = await checkpointStateCache.processState(latestBlockHex, checkpointState);
+        logger?.verbose("pruning checkpointStateCache during processSlotsToNearestCheckpoint", {
+          root: latestBlockHex,
+          epoch: cp.epoch,
+          persistCount,
+        });
+      } catch (e) {
+        logger?.debug(
+          "CheckpointStateCache failed to process checkpoint state",
+          {root: latestBlockHex, epoch: cp.epoch},
+          e as Error
+        );
+      }
+    }
+    count++;
 
     // this avoids keeping our node busy processing blocks
     await nextEventLoop();

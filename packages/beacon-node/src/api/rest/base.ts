@@ -189,8 +189,9 @@ export class RestApiServer {
   async listen(): Promise<void> {
     try {
       const host = this.opts.address;
-      const address = await this.server.listen({port: this.opts.port, host});
-      this.logger.info("Started REST API server", {address});
+      await this.server.listen({port: this.opts.port, host});
+      const {address, port} = this.server.addresses()[0];
+      this.logger.info("Started REST API server", {address: `http://${address}:${port}`});
       if (!host || !isLocalhostIP(host)) {
         this.logger.warn("REST API server is exposed, ensure untrusted traffic cannot reach this API");
       }

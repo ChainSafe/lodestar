@@ -110,7 +110,8 @@ export class AttestationPool {
     attestation: SingleAttestation,
     attDataRootHex: RootHex,
     committeeValidatorIndex: number,
-    committeeSize: number
+    committeeSize: number,
+    priority?: boolean
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const fork = this.config.getForkName(slot);
@@ -121,8 +122,9 @@ export class AttestationPool {
       return InsertOutcome.Old;
     }
 
-    // Reject attestations in the current slot but come to this pool very late
-    if (this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+    // Reject gossip attestations in the current slot but come to this pool very late
+    // for api attestations, we allow them to be added to the pool
+    if (!priority && this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
       return InsertOutcome.Late;
     }
 
