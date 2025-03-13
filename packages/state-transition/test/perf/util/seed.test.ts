@@ -24,7 +24,7 @@ describe("computeProposerIndex", () => {
     effectiveBalanceIncrements[i] = 32;
   }
 
-  const activeIndices = Array.from({length: vc}, (_, i) => i);
+  const activeIndices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
   const runsFactor = 100;
   bench({
     id: `naive computeProposerIndex ${vc} validators`,
@@ -50,7 +50,7 @@ describe("computeProposerIndex", () => {
 describe("getNextSyncCommitteeIndices electra", () => {
   for (const vc of [1_000, 10_000, 100_000]) {
     const state = generatePerfTestCachedStateAltair({vc, goBackOneSlot: false});
-    const activeIndices = Array.from({length: state.validators.length}, (_, i) => i);
+    const activeIndices = new Uint32Array(Array.from({length: state.validators.length}, (_, i) => i));
     const effectiveBalanceIncrements = new Uint16Array(state.validators.length);
     for (let i = 0; i < state.validators.length; i++) {
       // make it the worse case where each validator has 32 ETH effective balance
