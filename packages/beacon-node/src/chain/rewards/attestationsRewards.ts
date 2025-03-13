@@ -5,11 +5,13 @@ import {
   ForkName,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
   MAX_EFFECTIVE_BALANCE,
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
   PARTICIPATION_FLAG_WEIGHTS,
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -67,7 +69,9 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
 ): [IdealAttestationsReward[], AttestationsPenalty[]] {
   const baseRewardPerIncrement = transitionCache.baseRewardPerIncrement;
   const activeBalanceByIncrement = transitionCache.totalActiveStakeByIncrement;
-  const maxEffectiveBalanceByIncrement = Math.floor(MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT);
+  const fork = state.config.getForkName(state.slot);
+  const maxEffectiveBalance = isForkPostElectra(fork) ? MAX_EFFECTIVE_BALANCE_ELECTRA : MAX_EFFECTIVE_BALANCE;
+  const maxEffectiveBalanceByIncrement = Math.floor(maxEffectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
   const idealRewards = Array.from({length: maxEffectiveBalanceByIncrement + 1}, (_, effectiveBalanceByIncrement) => ({
     ...defaultAttestationsReward,
