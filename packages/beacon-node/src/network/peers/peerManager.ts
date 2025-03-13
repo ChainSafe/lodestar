@@ -467,6 +467,7 @@ export class PeerManager {
       // if the head falls behind the threshold, we are starved
       this.clock.currentSlot - status.headSlot > STARVATION_THRESHOLD_SLOTS;
     this.lastStatus = status;
+    this.metrics?.peerManager.starved.set(starved ? 1 : 0);
 
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {

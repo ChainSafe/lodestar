@@ -40,15 +40,24 @@ const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
 type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
 
+/**
+ * Comparison of our status vs a peer's status.
+ *
+ * The main usage of this score is to feed into peer priorization during syncing, and especially when the node is having trouble finding data during syncing
+ *
+ * For network stability, we DON'T distinguish peers that are far behind us vs peers that are close to us.
+ */
 enum StatusScore {
-  /** The peer is far behind our chain */
-  FAR_BEHIND = -2,
   /** The peer is close to our chain */
   CLOSE_TO_US = -1,
   /** The peer is far ahead of chain */
   FAR_AHEAD = 0,
 }
 
+/**
+ * In practice, this score only tracks if the peer is far ahead of us or not during syncing.
+ * When the node is synced, the peer is always CLOSE_TO_US.
+ */
 function computeStatusScore(ours: phase0.Status, theirs: phase0.Status | null, opts: PrioritizePeersOpts): StatusScore {
   if (theirs === null) {
     return StatusScore.CLOSE_TO_US;
@@ -62,7 +71,8 @@ function computeStatusScore(ours: phase0.Status, theirs: phase0.Status | null, o
     return StatusScore.FAR_AHEAD;
   }
 
-  // It seems dangerous to downscore peers that are far behind.
+  // It's dangerous to downscore peers that are far behind.
+  // This means we'd be more likely to disconnect peers that are attempting to sync, which would affect network stability.
   // if (ours.headSlot > theirs.headSlot + opts.starvationThresholdSlots) {
   //   return StatusScore.FAR_BEHIND;
   // }
@@ -432,7 +442,7 @@ function pruneExcessPeers(
 /**
  * Sort peers ascending, peer-0 has the most chance to prune, peer-n has the least.
  * Shuffling first to break ties.
- * prefer sorting by dutied subnets first then number of long lived subnets,
+ * prefer sorting by status score (applicable during syncing), then dutied subnets, then number of long lived subnets, then peer score
  * peer score is the last criteria since they are supposed to be in the same score range,
  * bad score peers are removed by peer manager anyway
  */
