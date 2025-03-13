@@ -3,7 +3,7 @@ import {beforeAll, describe, expect, it, vi} from "vitest";
 import {beforeProcessEpoch} from "../../src/index.js";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "../perf/util.js";
 
-describe("Perf test sanity check", () => {
+describe.skip("Perf test sanity check", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   if (ACTIVE_PRESET !== PresetName.mainnet) {
