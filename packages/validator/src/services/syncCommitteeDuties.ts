@@ -286,7 +286,7 @@ export class SyncCommitteeDutiesService {
       //
       // Using `alreadyWarnedReorg` avoids excessive logs.
 
-      // TODO: Use memory-efficient toHexString()
+      // Using memory-efficient toPubkeyHex implementation
       const pubkeyHex = toPubkeyHex(duty.pubkey);
       dutiesByIndex.set(validatorIndex, {duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
     }
