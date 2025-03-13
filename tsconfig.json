@@ -3,8 +3,6 @@
   "compilerOptions": {
     "emitDeclarationOnly": false,
     "incremental": false,
-    // Enable it when upgrade `vite-plugin-dts` 
-    // "noCheck": false,
     "noEmit": true,
     // To be used in the test fixtures
     "resolveJsonModule": true,
