@@ -32,7 +32,6 @@ describe.skip("eth1 / Eth1Provider", () => {
   const logger = testLogger();
 
   let db: BeaconDb;
-  let interval: NodeJS.Timeout;
 
   beforeAll(async () => {
     // Nuke DB to make sure it's empty
@@ -42,7 +41,6 @@ describe.skip("eth1 / Eth1Provider", () => {
   });
 
   afterAll(async () => {
-    clearInterval(interval);
     controller.abort();
     await db.close();
     await LevelDbController.destroy(dbLocation);
