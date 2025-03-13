@@ -52,6 +52,7 @@ export type BeaconNodeInitModules = {
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
   peerId: PeerId;
+  dataDir: string;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -149,6 +150,7 @@ export class BeaconNode {
     logger,
     processShutdownCallback,
     peerId,
+    dataDir,
     peerStoreDir,
     anchorState,
     wsCheckpoint,
@@ -224,6 +226,7 @@ export class BeaconNode {
     const chain = new BeaconChain(opts.chain, {
       config,
       clock,
+      dataDir,
       db,
       logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,

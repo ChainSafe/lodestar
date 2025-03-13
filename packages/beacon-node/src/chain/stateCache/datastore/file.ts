@@ -13,9 +13,10 @@ const CHECKPOINT_FILE_NAME_LENGTH = 82;
 export class FileCPStateDatastore implements CPStateDatastore {
   private readonly folderPath: string;
 
-  constructor(parentDir = ".") {
-    // by default use the beacon folder `/beacon/checkpoint_states`
-    this.folderPath = path.join(parentDir, CHECKPOINT_STATES_FOLDER);
+  constructor(dataDir: string) {
+    // service deployment: `/beacon/checkpoint_states`
+    // docker deployment: `/data/checkpoint_states`
+    this.folderPath = path.join(dataDir, CHECKPOINT_STATES_FOLDER);
   }
 
   async init(): Promise<void> {

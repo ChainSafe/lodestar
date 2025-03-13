@@ -54,8 +54,7 @@ describe("validateAttestation", () => {
     const {chain, subnet} = getValidData();
     await expectGossipError(
       chain,
-      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0, attDataBase64: "invalid"},
-      subnet,
+      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0, attDataBase64: "invalid", subnet},
       GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE
     );
   });
@@ -75,8 +74,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.BAD_TARGET_EPOCH
     );
   });
@@ -94,8 +93,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.PAST_SLOT
     );
   });
@@ -113,8 +112,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.FUTURE_SLOT
     );
   });
@@ -138,8 +137,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
     );
   });
@@ -158,8 +157,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
     );
   });
@@ -182,8 +181,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
     );
   });
@@ -202,8 +201,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.INVALID_TARGET_ROOT
     );
   });
@@ -229,8 +228,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
     );
   });
@@ -248,8 +247,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet: invalidSubnet,
       },
-      invalidSubnet,
       AttestationErrorCode.INVALID_SUBNET_ID
     );
   });
@@ -268,8 +267,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
     );
   });
@@ -290,8 +289,8 @@ describe("validateAttestation", () => {
         serializedData,
         attSlot: attestation.data.slot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet,
       },
-      subnet,
       AttestationErrorCode.INVALID_SIGNATURE
     );
   });
@@ -309,11 +308,10 @@ describe("validateAttestation", () => {
   async function expectGossipError(
     chain: IBeaconChain,
     attestationOrBytes: GossipAttestation,
-    subnet: SubnetID,
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
-    const {results} = await validateGossipAttestationsSameAttData(fork, chain, [attestationOrBytes], subnet);
+    const {results} = await validateGossipAttestationsSameAttData(fork, chain, [attestationOrBytes]);
     expect(results.length).toEqual(1);
     expect((results[0].err as LodestarError<{code: string}>).type.code).toEqual(errorCode);
   }
