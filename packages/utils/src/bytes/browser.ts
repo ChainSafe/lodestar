@@ -28,12 +28,14 @@ export function toRootHex(root: Uint8Array): string {
   return String.fromCharCode(...rootCharCodes);
 }
 
+// Shared buffer for pubkey hex conversion
 const pubkeyCharCodes = new Array<number>(48 * 2 + 2);
 pubkeyCharCodes[0] = CHAR_CODE_0;
 pubkeyCharCodes[1] = CHAR_CODE_X;
 
 /**
  * Convert a Uint8Array, length 48, to 0x-prefixed hex string
+ * Uses a shared buffer for memory efficiency
  */
 export function toPubkeyHex(pubkey: Uint8Array): string {
   if (pubkey.length !== CHAR_CODE_0) {
