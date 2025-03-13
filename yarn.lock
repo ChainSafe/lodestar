@@ -430,13 +430,8 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/as-chacha20poly1305/-/as-chacha20poly1305-0.1.0.tgz#7da6f8796f9b42dac6e830a086d964f1f9189e09"
   integrity sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==
 
-"@chainsafe/as-sha256@0.5.0", "@chainsafe/as-sha256@file:../ssz/packages/as-sha256":
-  version "0.5.0"
-
-"@chainsafe/as-sha256@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.0.0.tgz#9095ad42dce13887b5877fce70592e573940ecd7"
-  integrity sha512-EYw5IZ99Mhn7K8d1eDDH66AFhPy9GcD7bfiqm9mwFjsg8MViEEicGl62b5YPzufBTFh7X7qWAe6yWpr/gbaVEw==
+"@chainsafe/as-sha256@1.1.0", "@chainsafe/as-sha256@file:../ssz/packages/as-sha256":
+  version "1.1.0"
 
 "@chainsafe/as-sha256@^0.4.1":
   version "0.4.1"
@@ -690,12 +685,10 @@
   dependencies:
     "@chainsafe/is-ip" "^2.0.1"
 
-"@chainsafe/persistent-merkle-tree@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.8.0.tgz#18e2f0a5de3a0b59c6e5be8797a78e0d209dd7dc"
-  integrity sha512-hh6C1JO6SKlr0QGNTNtTLqgGVMA/Bc20wD6CeMHp+wqbFKCULRJuBUxhF4WDx/7mX8QlqF3nFriF/Eo8oYJ4/A==
+"@chainsafe/persistent-merkle-tree@1.1.0", "@chainsafe/persistent-merkle-tree@file:../ssz/packages/persistent-merkle-tree":
+  version "1.1.0"
   dependencies:
-    "@chainsafe/as-sha256" "0.5.0"
+    "@chainsafe/as-sha256" "1.1.0"
     "@chainsafe/hashtree" "1.0.1"
     "@noble/hashes" "^1.3.0"
 
@@ -705,13 +698,6 @@
   integrity sha512-gcENLemRR13+1MED2NeZBMA7FRS0xQPM7L2vhMqvKkjqtFT4YfjSVADq5U0iLuQLhFUJEMVuA8fbv5v+TN6O9A==
   dependencies:
     "@chainsafe/as-sha256" "^0.4.1"
-    "@noble/hashes" "^1.3.0"
-
-"@chainsafe/persistent-merkle-tree@file:../ssz/packages/persistent-merkle-tree":
-  version "0.8.0"
-  dependencies:
-    "@chainsafe/as-sha256" "0.5.0"
-    "@chainsafe/hashtree" "1.0.1"
     "@noble/hashes" "^1.3.0"
 
 "@chainsafe/persistent-ts@^0.19.1":
@@ -769,10 +755,10 @@
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
 "@chainsafe/ssz@file:../ssz/packages/ssz":
-  version "0.18.0"
+  version "1.1.0"
   dependencies:
-    "@chainsafe/as-sha256" "0.5.0"
-    "@chainsafe/persistent-merkle-tree" "0.8.0"
+    "@chainsafe/as-sha256" "1.1.0"
+    "@chainsafe/persistent-merkle-tree" "1.1.0"
 
 "@chainsafe/swap-or-not-shuffle-darwin-arm64@0.0.2":
   version "0.0.2"
