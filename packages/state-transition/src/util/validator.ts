@@ -66,10 +66,7 @@ export function getBalanceChurnLimit(epochCtx: EpochCache): number {
   return churn - (churn % EFFECTIVE_BALANCE_INCREMENT);
 }
 
-export function getActivationExitChurnLimit(epochCtx: EpochCache, holeskyRevival?: boolean): number {
-  if (holeskyRevival) {
-    return epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT;
-  }
+export function getActivationExitChurnLimit(epochCtx: EpochCache): number {
   return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimit(epochCtx));
 }
 

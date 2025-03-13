@@ -46,21 +46,20 @@ export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, 
   // This is a pseudo-fork to support the "hack" option D discussed here:
   // https://notes.ethereum.org/@ethpandaops/post-finality-path-forward-holesky
   //
-  // The implementation is to create a revival period, configured via these constants.
-  // On the fork epoch, the earliestExitEpoch is reset to the current epoch's activation exit epoch.
-  // During the period, the churn limit is set to the maximum churn limit.
+  // The implementation is to create a fork that is active for HOLESKY_REVIVAL_DURATION epochs, configured via these constants.
 
   const HOLESKY_REVIVAL_EPOCH = Infinity;
   const HOLESKY_REVIVAL_DURATION = 256;
+  const HOLESKY_REVIVAL_CHURN_LIMIT = 256000000000;
 
   const epoch = state.epochCtx.epoch;
 
   let earliestExitEpoch = Math.max(state.earliestExitEpoch, computeActivationExitEpoch(state.epochCtx.epoch));
-  const perEpochChurn = getActivationExitChurnLimit(
-    state.epochCtx,
-    // Holesky revival period
+  const perEpochChurn =
+    // during the revival period, the churn limit is set to HOLESKY_REVIVAL_CHURN_LIMIT
     epoch >= HOLESKY_REVIVAL_EPOCH && epoch < HOLESKY_REVIVAL_EPOCH + HOLESKY_REVIVAL_DURATION
-  );
+      ? HOLESKY_REVIVAL_CHURN_LIMIT
+      : getActivationExitChurnLimit(state.epochCtx);
 
   // reset the churn limit (only needs to happen once)
   if (epoch === HOLESKY_REVIVAL_EPOCH) {
