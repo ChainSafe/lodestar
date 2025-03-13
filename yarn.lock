@@ -767,10 +767,8 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/ssz@^1.0.2":
+"@chainsafe/ssz@file:../ssz/packages/ssz":
   version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-1.0.2.tgz#af09775ac1f14c19a75bfd45279f71dce67545a1"
-  integrity sha512-T/hiLYRJoM0NkTgTc6XLIL5Nobc/poNqFnJ/8GlvG08czCcri5l8H5DF/6RKdL+1a++LRZCdtHElMaFryszkww==
   dependencies:
     "@chainsafe/as-sha256" "1.0.0"
     "@chainsafe/persistent-merkle-tree" "1.0.1"
