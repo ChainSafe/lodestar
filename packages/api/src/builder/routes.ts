@@ -30,8 +30,6 @@ import {fromHeaders} from "../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 // Mev-boost might not return any data if there are no bids from builders or min-bid threshold was not reached.
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
 // handler already checks the status code and will not attempt to parse the body, but it will return no value.

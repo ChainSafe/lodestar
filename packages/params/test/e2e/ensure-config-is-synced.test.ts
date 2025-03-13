@@ -42,7 +42,10 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
 
   // Check each key for better debuggability
   for (const key of Object.keys(remotePreset) as (keyof BeaconPreset)[]) {
-    expect(filteredLocalPreset[key]).toBe(remotePreset[key]);
+    const localValue = filteredLocalPreset[key];
+    const remoteValue = remotePreset[key];
+
+    expect(localValue).toBeWithMessage(remoteValue, `${key} does not match ${localValue} != ${remoteValue}`);
   }
 
   expect(filteredLocalPreset).toEqual(remotePreset);
@@ -50,12 +53,15 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {
   const downloadedParams = await Promise.all(
-    Object.values(ForkName).map((forkName) =>
-      axios({
-        url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
-        timeout: 30 * 1000,
-      }).then((response) => loadConfigYaml(response.data))
-    )
+    Object.values(ForkName)
+      // TODO Fulu: check against remote presets
+      .filter((forkName) => forkName !== ForkName.fulu)
+      .map((forkName) =>
+        axios({
+          url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
+          timeout: 30 * 1000,
+        }).then((response) => loadConfigYaml(response.data))
+      )
   );
 
   // Merge all the fetched yamls for the different forks

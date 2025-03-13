@@ -658,7 +658,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               committeeValidatorIndex,
               committeeSize
             );
-            metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+            metrics?.opPool.attestationPoolGossipInsertOutcome.inc({insertOutcome});
           }
         } catch (e) {
           logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);

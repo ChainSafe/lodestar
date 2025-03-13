@@ -873,6 +873,41 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  /**
+   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
+   * persist preState, postState and block for further investigation.
+   */
+  async persistInvalidStateRoot(
+    preState: CachedBeaconStateAllForks,
+    postState: CachedBeaconStateAllForks,
+    block: SignedBeaconBlock
+  ): Promise<void> {
+    const blockSlot = block.message.slot;
+    const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
+    const postStateRoot = postState.hashTreeRoot();
+    const logStr = `slot_${blockSlot}_invalid_state_root_${toRootHex(postStateRoot)}`;
+    await Promise.all([
+      this.persistSszObject(
+        `SignedBeaconBlock_slot_${blockSlot}`,
+        blockType.serialize(block),
+        blockType.hashTreeRoot(block),
+        `${logStr}_block`
+      ),
+      this.persistSszObject(
+        `preState_slot_${preState.slot}_${preState.type.typeName}`,
+        preState.serialize(),
+        preState.hashTreeRoot(),
+        `${logStr}_pre_state`
+      ),
+      this.persistSszObject(
+        `postState_slot_${postState.slot}_${postState.type.typeName}`,
+        postState.serialize(),
+        postState.hashTreeRoot(),
+        `${logStr}_post_state`
+      ),
+    ]);
+  }
+
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
@@ -1022,19 +1057,14 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistSszObject(
-    typeName: string,
-    bytes: Uint8Array,
-    root: Uint8Array,
-    suffix?: string
-  ): Promise<void> {
+  private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${typeName}_${toRootHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
 
     await ensureDir(dirpath);
 
@@ -1042,7 +1072,7 @@ export class BeaconChain implements IBeaconChain {
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
     await writeIfNotExist(filepath, bytes);
 
-    this.logger.debug("Persisted invalid ssz object", {id: suffix, filepath});
+    this.logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
   }
 
   private onScrapeMetrics(metrics: Metrics): void {

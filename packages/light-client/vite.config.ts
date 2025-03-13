@@ -2,7 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import {defineConfig, mergeConfig} from "vite";
 import dts from "vite-plugin-dts";
-import {getBaseViteConfig} from "../../vite.base.config.js";
+import {getBaseViteConfig} from "../../configs/vite.config.base.js";
 
 import pkgJSON from "./package.json";
 
