@@ -60,10 +60,13 @@ export function getGossipValidatorBatchFn(
         switch (e.action) {
           case GossipAction.IGNORE:
             metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
+            // only beacon_attestation topic is validated in batch
+            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: e.type.code});
             return TopicValidatorResult.Ignore;
-
           case GossipAction.REJECT:
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
+            // only beacon_attestation topic is validated in batch
+            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
             logger.debug(`Gossip validation ${type} rejected`, {}, e);
             return TopicValidatorResult.Reject;
         }
