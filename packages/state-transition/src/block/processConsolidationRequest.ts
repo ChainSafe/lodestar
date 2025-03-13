@@ -7,7 +7,7 @@ import {
   hasCompoundingWithdrawalCredential,
   hasExecutionWithdrawalCredential,
   isPubkeyKnown,
-  switchToCompoundingValidator
+  switchToCompoundingValidator,
 } from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
@@ -59,6 +59,7 @@ export function processConsolidationRequest(
     return;
   }
 
+  // Verify source withdrawal credentials
   const hasCorrectCredential = hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials);
   const isCorrectSourceAddress = Buffer.compare(sourceWithdrawalAddress, sourceAddress) === 0;
   if (!(hasCorrectCredential && isCorrectSourceAddress)) {
