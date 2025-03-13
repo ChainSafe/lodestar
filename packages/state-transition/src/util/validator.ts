@@ -67,6 +67,14 @@ export function getBalanceChurnLimit(epochCtx: EpochCache): number {
 }
 
 export function getActivationExitChurnLimit(epochCtx: EpochCache): number {
+  /**
+   * This is a pseudo-fork to support the "hack" option D discussed here:
+   * https://notes.ethereum.org/@ethpandaops/post-finality-path-forward-holesky
+   */
+  const HOLESKY_REVIVAL_EPOCH = Infinity;
+  if (epochCtx.epoch >= HOLESKY_REVIVAL_EPOCH) {
+    return epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT;
+  }
   return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimit(epochCtx));
 }
 
