@@ -128,13 +128,15 @@ export async function processBlocks(
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;
-        const forkTypes = this.config.getForkTypes(blockSlot);
-        const invalidRoot = toRootHex(postState.hashTreeRoot());
-
-        const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
-        this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
-        this.persistInvalidSszView(preState, `${suffix}_preState`);
-        this.persistInvalidSszView(postState, `${suffix}_postState`);
+        const preRoot = preState.hashTreeRoot();
+        const postRoot = postState.hashTreeRoot();
+        this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
+          this.logger.error(
+            "Error persisting invalid state root objects",
+            {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
+            e
+          );
+        });
       }
     }
 

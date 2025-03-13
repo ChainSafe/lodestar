@@ -88,7 +88,7 @@ const defaultOptions: SpecTestOptions<any, any> = {
   shouldError: () => false,
   shouldSkip: () => false,
   expectFunc: (_testCase, expected, actual) => expect(actual).toEqual(expected),
-  timeout: 10 * 60 * 1000,
+  timeout: 1000 * 60 * 15,
 };
 
 export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>(
@@ -103,8 +103,8 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
   }
 
   describe(name, () => {
-    if (options.timeout !== undefined) {
-      vi.setConfig({testTimeout: options.timeout ?? 10 * 60 * 1000});
+    if (options.timeout) {
+      vi.setConfig({testTimeout: options.timeout, hookTimeout: options.timeout});
     }
 
     for (const testSubDirname of fs.readdirSync(testCaseDirectoryPath)) {

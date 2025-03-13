@@ -3,7 +3,12 @@ import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
-import {hasCompoundingWithdrawalCredential, isPubkeyKnown, switchToCompoundingValidator} from "../util/electra.js";
+import {
+  hasCompoundingWithdrawalCredential,
+  hasExecutionWithdrawalCredential,
+  isPubkeyKnown,
+  switchToCompoundingValidator,
+} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 
@@ -54,7 +59,10 @@ export function processConsolidationRequest(
     return;
   }
 
-  if (Buffer.compare(sourceWithdrawalAddress, sourceAddress) !== 0) {
+  // Verify source withdrawal credentials
+  const hasCorrectCredential = hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials);
+  const isCorrectSourceAddress = Buffer.compare(sourceWithdrawalAddress, sourceAddress) === 0;
+  if (!(hasCorrectCredential && isCorrectSourceAddress)) {
     return;
   }
 
