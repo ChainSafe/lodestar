@@ -31,7 +31,13 @@ export class JobItemQueue<Args extends any[], R> {
     metrics?: QueueMetrics
   ) {
     this.opts = {...defaultQueueOpts, ...opts};
-    this.opts.signal.addEventListener("abort", this.abortAllJobs, {once: true});
+    this.opts.signal.addEventListener("abort", () => {
+      if(this.opts.dropAllJobOnAbort) {
+        this.dropAllJobs();
+      } else {
+        this.abortAllJobs;
+      }
+    }, {once: true});
 
     if (metrics) {
       this.metrics = metrics;

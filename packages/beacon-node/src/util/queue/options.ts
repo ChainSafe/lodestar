@@ -16,6 +16,8 @@ export type JobQueueOpts = {
   type?: QueueType;
   /**By default yield per push()*/
   noYieldIfOneItem?: boolean;
+  /** If set will not raise abort error instead drop all jobs */
+  dropAllJobOnAbort?: boolean;
 };
 
 export type QueueMetrics = {
@@ -28,10 +30,11 @@ export type QueueMetrics = {
 };
 
 export const defaultQueueOpts: Required<
-  Pick<JobQueueOpts, "maxConcurrency" | "yieldEveryMs" | "type" | "noYieldIfOneItem">
+  Pick<JobQueueOpts, "maxConcurrency" | "yieldEveryMs" | "type" | "noYieldIfOneItem" | "dropAllJobOnAbort">
 > = {
   maxConcurrency: 1,
   yieldEveryMs: 50,
   type: QueueType.FIFO,
   noYieldIfOneItem: false,
+  dropAllJobOnAbort: false,
 };
