@@ -35,7 +35,7 @@ export class JobItemQueue<Args extends any[], R> {
       if(this.opts.dropAllJobOnAbort) {
         this.dropAllJobs();
       } else {
-        this.abortAllJobs;
+        this.abortAllJobs();
       }
     }, {once: true});
 
