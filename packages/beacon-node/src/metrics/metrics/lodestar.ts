@@ -906,6 +906,13 @@ export function createLodestarMetrics(
       }),
     },
 
+    chain: {
+      blacklistedBlocks: register.gauge({
+        name: "lodestar_blacklisted_blocks_total",
+        help: "Total number of blacklisted blocks",
+      }),
+    },
+
     // Validator monitoring
 
     validatorMonitor: {

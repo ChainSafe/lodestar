@@ -168,6 +168,7 @@ export class BeaconChain implements IBeaconChain {
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
+  readonly blacklistedBlocks: Set<RootHex>;
 
   readonly serializedCache: SerializedCache;
 
@@ -184,6 +185,7 @@ export class BeaconChain implements IBeaconChain {
     {
       config,
       db,
+      dataDir,
       logger,
       processShutdownCallback,
       clock,
@@ -196,6 +198,7 @@ export class BeaconChain implements IBeaconChain {
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
+      dataDir: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
@@ -230,6 +233,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
+    this.blacklistedBlocks = new Set(opts.blacklistedBlocks ?? []);
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(
       config,
@@ -284,7 +288,7 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
-    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? false;
+    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     const blockStateCache = this.opts.nHistoricalStates
       ? new FIFOBlockStateCache(this.opts, {metrics})
       : new BlockStateCacheImpl({metrics});
@@ -301,7 +305,7 @@ export class BeaconChain implements IBeaconChain {
             bufferPool: this.bufferPool,
             datastore: fileDataStore
               ? // debug option if we want to investigate any issues with the DB
-                new FileCPStateDatastore()
+                new FileCPStateDatastore(dataDir)
               : // production option
                 new DbCPStateDatastore(this.db),
           },
@@ -1086,6 +1090,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+    metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
     const forkChoiceMetrics = this.forkChoice.getMetrics();
     metrics.forkChoice.votes.set(forkChoiceMetrics.votes);

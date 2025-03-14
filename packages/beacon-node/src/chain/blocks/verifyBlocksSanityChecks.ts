@@ -1,10 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {IChainOptions} from "../options.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
@@ -20,7 +21,13 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig},
+  chain: {
+    forkChoice: IForkChoice;
+    clock: IClock;
+    config: ChainForkConfig;
+    opts: IChainOptions;
+    blacklistedBlocks: Set<RootHex>;
+  },
   blocks: BlockInput[],
   opts: ImportBlockOpts
 ): {
@@ -39,6 +46,16 @@ export function verifyBlocksSanityChecks(
   for (const blockInput of blocks) {
     const {block} = blockInput;
     const blockSlot = block.message.slot;
+    const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+
+    if (chain.blacklistedBlocks.has(blockHash)) {
+      throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
+    }
+
+    if (chain.blacklistedBlocks.has(toRootHex(block.message.parentRoot))) {
+      chain.blacklistedBlocks.add(blockHash);
+      throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
+    }
 
     // Not genesis block
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
@@ -82,7 +99,6 @@ export function verifyBlocksSanityChecks(
 
     // Not already known
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
-    const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
     if (chain.forkChoice.hasBlockHex(blockHash)) {
       if (opts.ignoreIfKnown) {
         continue;

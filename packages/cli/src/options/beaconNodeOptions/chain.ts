@@ -1,9 +1,11 @@
 import * as path from "node:path";
 import {DEFAULT_STATE_ARCHIVE_MODE, IBeaconNodeOptions, StateArchiveMode, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
+import {ensure0xPrefix} from "../../util/format.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
@@ -40,6 +42,7 @@ export type ChainArgs = {
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
+    blacklistedBlocks: args["chain.blacklistedBlocks"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
@@ -104,6 +107,19 @@ export const options: CliCommandOptions<ChainArgs> = {
     description: "Always use main threads for BLS verification",
     defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
     group: "chain",
+  },
+
+  "chain.blacklistedBlocks": {
+    hidden: true,
+    type: "array",
+    description:
+      "Comma-separated list of 0x-prefixed root hex's for blocks that should not be allowed through processing",
+    group: "chain",
+    coerce: (blocks: string[]): string[] =>
+      blocks
+        .flatMap((hex) => hex.split(","))
+        .map((hex) => hex.trim())
+        .map(ensure0xPrefix),
   },
 
   "chain.disableBlsBatchVerify": {
