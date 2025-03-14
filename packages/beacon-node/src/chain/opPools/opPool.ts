@@ -199,8 +199,8 @@ export class OpPool {
 
     const stepsMetrics =
       blockType === BlockType.Full
-        ? metrics?.executionBlockProductionTimeSteps
-        : metrics?.builderBlockProductionTimeSteps;
+        ? metrics?.blockProduction.executionBlockProductionTimeSteps
+        : metrics?.blockProduction.builderBlockProductionTimeSteps;
 
     const endProposerSlashing = stepsMetrics?.startTimer();
     for (const proposerSlashing of this.proposerSlashings.values()) {

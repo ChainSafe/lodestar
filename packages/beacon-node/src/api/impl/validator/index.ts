@@ -424,7 +424,7 @@ export function getValidatorApi(
     }
 
     const source = ProducedBlockSource.builder;
-    metrics?.blockProductionRequests.inc({source});
+    metrics?.api.blockProductionRequests.inc({source});
 
     // Error early for builder if builder flow not active
     if (!chain.executionBuilder) {
@@ -447,7 +447,7 @@ export function getValidatorApi(
 
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
-      timer = metrics?.blockProductionTime.startTimer();
+      timer = metrics?.api.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
@@ -458,9 +458,12 @@ export function getValidatorApi(
         commonBlockBody,
       });
 
-      metrics?.blockProductionSuccess.inc({source});
-      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+      metrics?.api.blockProductionSuccess.inc({source});
+      metrics?.api.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.api.blockProductionExecutionPayloadValue.observe(
+        {source},
+        Number(formatWeiToEth(executionPayloadValue))
+      );
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
@@ -499,7 +502,7 @@ export function getValidatorApi(
       ) = {}
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
-    metrics?.blockProductionRequests.inc({source});
+    metrics?.api.blockProductionRequests.inc({source});
 
     let parentBlockRoot: Root;
     if (skipHeadChecksAndUpdate !== true) {
@@ -514,7 +517,7 @@ export function getValidatorApi(
 
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
-      timer = metrics?.blockProductionTime.startTimer();
+      timer = metrics?.api.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
@@ -533,9 +536,12 @@ export function getValidatorApi(
         }
       }
 
-      metrics?.blockProductionSuccess.inc({source});
-      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+      metrics?.api.blockProductionSuccess.inc({source});
+      metrics?.api.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.api.blockProductionExecutionPayloadValue.observe(
+        {source},
+        Number(formatWeiToEth(executionPayloadValue))
+      );
       logger.verbose("Produced execution block", {
         slot,
         executionPayloadValue,
@@ -753,7 +759,7 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(engine.value),
       });
 
-      metrics?.blockProductionSelectionResults.inc({
+      metrics?.api.blockProductionSelectionResults.inc({
         source: ProducedBlockSource.engine,
         reason: EngineBlockSelectionReason.BuilderCensorship,
       });
@@ -776,7 +782,7 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(builder.value),
       });
 
-      metrics?.blockProductionSelectionResults.inc({
+      metrics?.api.blockProductionSelectionResults.inc({
         source: ProducedBlockSource.builder,
         reason,
       });
@@ -803,7 +809,7 @@ export function getValidatorApi(
         ...getBlockValueLogInfo(engine.value),
       });
 
-      metrics?.blockProductionSelectionResults.inc({
+      metrics?.api.blockProductionSelectionResults.inc({
         source: ProducedBlockSource.engine,
         reason,
       });
@@ -820,7 +826,7 @@ export function getValidatorApi(
       });
       const executionPayloadSource = result.source;
 
-      metrics?.blockProductionSelectionResults.inc(result);
+      metrics?.api.blockProductionSelectionResults.inc(result);
 
       logger.info(`Selected ${executionPayloadSource} block`, {
         reason: result.reason,

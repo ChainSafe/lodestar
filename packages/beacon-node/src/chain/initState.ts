@@ -197,8 +197,8 @@ export async function checkAndPersistAnchorState(
 }
 
 export function initBeaconMetrics(metrics: Metrics, state: BeaconStateAllForks): void {
-  metrics.headSlot.set(state.slot);
-  metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
-  metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
-  metrics.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
+  metrics.beaconMetricsSpecsInterop.headSlot.set(state.slot);
+  metrics.beaconMetricsSpecsInterop.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
+  metrics.beaconMetricsSpecsInterop.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
+  metrics.beaconMetricsSpecsInterop.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
 }

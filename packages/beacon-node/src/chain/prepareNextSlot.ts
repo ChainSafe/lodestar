@@ -1,6 +1,6 @@
-import {routes} from "@lodestar/api";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import { routes } from "@lodestar/api";
+import { ChainForkConfig } from "@lodestar/config";
+import { ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra } from "@lodestar/params";
 import {
   BeaconStateElectra,
   CachedBeaconStateAllForks,
@@ -10,16 +10,16 @@ import {
   computeTimeAtSlot,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
-import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
-import {Metrics} from "../metrics/index.js";
-import {ClockEvent} from "../util/clock.js";
-import {isQueueErrorAborted} from "../util/queue/index.js";
-import {ForkchoiceCaller} from "./forkChoice/index.js";
-import {IBeaconChain} from "./interface.js";
-import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
-import {RegenCaller} from "./regen/index.js";
+import { Slot } from "@lodestar/types";
+import { Logger, fromHex, isErrorAborted, sleep } from "@lodestar/utils";
+import { GENESIS_SLOT, ZERO_HASH_HEX } from "../constants/constants.js";
+import { Metrics } from "../metrics/index.js";
+import { ClockEvent } from "../util/clock.js";
+import { isQueueErrorAborted } from "../util/queue/index.js";
+import { ForkchoiceCaller } from "./forkChoice/index.js";
+import { IBeaconChain } from "./interface.js";
+import { getPayloadAttributesForSSE, prepareExecutionPayload } from "./produceBlock/produceBlockBody.js";
+import { RegenCaller } from "./regen/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
@@ -52,7 +52,7 @@ export class PrepareNextSlotScheduler {
       () => {
         this.chain.clock.off(ClockEvent.slot, this.prepareForNextSlot);
       },
-      {once: true}
+      { once: true }
     );
   }
 
@@ -79,14 +79,14 @@ export class PrepareNextSlotScheduler {
       await sleep(slotMs - slotMs / SCHEDULER_LOOKAHEAD_FACTOR, this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead(
+      const { slot: headSlot, blockRoot: headRoot } = this.chain.recomputeForkChoiceHead(
         ForkchoiceCaller.prepareNextSlot
       );
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
       if (prepareSlot - headSlot > PREPARE_EPOCH_LIMIT * SLOTS_PER_EPOCH) {
-        this.metrics?.precomputeNextEpochTransition.count.inc({result: "skip"}, 1);
+        this.metrics?.precomputeNextEpochTransition.count.inc({ result: "skip" }, 1);
         this.logger.debug("Skipping PrepareNextSlotScheduler - head slot is too behind current slot", {
           nextEpoch,
           headSlot,
@@ -120,7 +120,7 @@ export class PrepareNextSlotScheduler {
         // beforeProcessEpoch and should theoretically be ready immediately after the synchronous epoch transition finished and the
         // event loop is free.  In long periods of non-finality too many forks will cause the shufflingCache to throw an error for
         // too many queued shufflings so only run async during normal epoch transition. See issue ChainSafe/lodestar#7244
-        {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true},
+        { dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true },
         RegenCaller.precomputeEpoch
       );
 
@@ -132,7 +132,7 @@ export class PrepareNextSlotScheduler {
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.predictProposerHead(clockSlot);
+          const { slot: proposerHeadSlot, blockRoot: proposerHeadRoot } = this.chain.predictProposerHead(clockSlot);
 
           // If we predict we can reorg, update prepareState with proposer head block
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
@@ -142,11 +142,11 @@ export class PrepareNextSlotScheduler {
               headSlot,
               headRoot,
             });
-            this.metrics?.weakHeadDetected.inc();
+            this.metrics?.prepareNextSlot.weakHeadDetected.inc();
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
-              {dontTransferCache: !isEpochTransition},
+              { dontTransferCache: !isEpochTransition },
               RegenCaller.predictProposerHead
             )) as CachedBeaconStateExecutions;
             updatedHeadRoot = proposerHeadRoot;
@@ -156,7 +156,7 @@ export class PrepareNextSlotScheduler {
           this.chain.updateBuilderStatus(clockSlot);
           if (this.chain.executionBuilder?.status) {
             this.chain.executionBuilder.checkStatus().catch((e) => {
-              this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
+              this.logger.error("Builder disabled as the check status api failed", { prepareSlot }, e as Error);
             });
           }
 
@@ -199,7 +199,7 @@ export class PrepareNextSlotScheduler {
             // feeRecipient, so just pass zero hash for now till a real use case arises
             feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
           });
-          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, { data, version: fork });
         }
       } else {
         this.computeStateHashTreeRoot(prepareState, isEpochTransition);
@@ -209,7 +209,7 @@ export class PrepareNextSlotScheduler {
       //  + when gossip block comes, we need to validate and run state transition
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
-        this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
+        this.metrics?.precomputeNextEpochTransition.count.inc({ result: "success" }, 1);
         const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
@@ -230,8 +230,8 @@ export class PrepareNextSlotScheduler {
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-        this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
-        this.logger.error("Failed to run prepareForNextSlot", {nextEpoch, isEpochTransition, prepareSlot}, e as Error);
+        this.metrics?.precomputeNextEpochTransition.count.inc({ result: "error" }, 1);
+        this.logger.error("Failed to run prepareForNextSlot", { nextEpoch, isEpochTransition, prepareSlot }, e as Error);
       }
     }
   };

@@ -735,11 +735,13 @@ export class BeaconChain implements IBeaconChain {
     if (blockType === BlockType.Full) {
       this.logger.debug("Setting executionPayload cache for produced block", {blockRootHex, slot, blockType});
       this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
-      this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
+      this.metrics?.blockProduction.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
     } else {
       this.logger.debug("Tracking the produced blinded block", {blockRootHex, slot, blockType});
       this.producedBlindedBlockRoot.add(blockRootHex);
-      this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
+      this.metrics?.blockProduction.blockProductionCaches.producedBlindedBlockRoot.set(
+        this.producedBlindedBlockRoot.size
+      );
     }
 
     // Cache for latter broadcasting
@@ -750,7 +752,7 @@ export class BeaconChain implements IBeaconChain {
       // body is of full type here
       const {blockHash, contents} = blobs;
       this.producedContentsCache.set(blockHash, contents);
-      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
+      this.metrics?.blockProduction.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
     return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
@@ -1105,7 +1107,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     this.forkChoice.updateTime(slot);
-    this.metrics?.clockSlot.set(slot);
+    this.metrics?.clock.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
@@ -1116,14 +1118,16 @@ export class BeaconChain implements IBeaconChain {
 
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.producedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-    this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
+    this.metrics?.blockProduction.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
 
     pruneSetToMax(this.producedBlindedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-    this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
+    this.metrics?.blockProduction.blockProductionCaches.producedBlindedBlockRoot.set(
+      this.producedBlindedBlockRoot.size
+    );
 
     if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
       pruneSetToMax(this.producedContentsCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
+      this.metrics?.blockProduction.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
     const metrics = this.metrics;
@@ -1138,7 +1142,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onClockEpoch(epoch: Epoch): void {
-    this.metrics?.clockEpoch.set(epoch);
+    this.metrics?.clock.clockEpoch.set(epoch);
 
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);

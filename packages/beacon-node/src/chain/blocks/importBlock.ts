@@ -234,7 +234,7 @@ export async function importBlock(
     });
 
     if (this.metrics) {
-      this.metrics.headSlot.set(newHead.slot);
+      this.metrics.beaconMetricsSpecsInterop.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
@@ -267,7 +267,7 @@ export async function importBlock(
       this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
       this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
 
-      this.metrics?.forkChoice.reorg.inc();
+      this.metrics?.beaconMetricsSpecsInterop.reorgEventsTotal.inc();
       this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
 
@@ -347,8 +347,8 @@ export async function importBlock(
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
     const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
-    this.metrics?.currentActiveValidators.set(activeValidatorsCount);
-    this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
+    this.metrics?.beaconMetricsSpecsInterop.currentActiveValidators.set(activeValidatorsCount);
+    // this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
     const parentBlockSummary = this.forkChoice.getBlock(checkpointState.latestBlockHeader.parentRoot);
 
@@ -358,8 +358,10 @@ export async function importBlock(
       const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
         this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
-        this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
-        this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
+        this.metrics?.beaconMetricsSpecsInterop.previousJustifiedEpoch.set(
+          checkpointState.previousJustifiedCheckpoint.epoch
+        );
+        this.metrics?.beaconMetricsSpecsInterop.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
       const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
       const finalizedEpoch = finalizedCheckpoint.epoch;
@@ -372,7 +374,7 @@ export async function importBlock(
           executionOptimistic: false,
         });
         this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
-        this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
+        this.metrics?.beaconMetricsSpecsInterop.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
     }
   }
@@ -435,7 +437,7 @@ export async function importBlock(
   }
 
   // Register stat metrics about the block after importing it
-  this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
+  this.metrics?.importedBlock.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
