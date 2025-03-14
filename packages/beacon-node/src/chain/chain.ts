@@ -168,6 +168,7 @@ export class BeaconChain implements IBeaconChain {
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
+  readonly blacklistedBlocks: Set<RootHex>;
 
   readonly serializedCache: SerializedCache;
 
@@ -232,6 +233,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
+    this.blacklistedBlocks = new Set(opts.blacklistedBlocks ?? []);
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(
       config,
@@ -1088,6 +1090,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+    metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
     const forkChoiceMetrics = this.forkChoice.getMetrics();
     metrics.forkChoice.votes.set(forkChoiceMetrics.votes);
