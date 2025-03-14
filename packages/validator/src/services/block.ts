@@ -230,8 +230,6 @@ export class BlockProposingService {
       executionPayloadValue: prettyWeiToEth(meta.executionPayloadValue),
       consensusBlockValue: prettyWeiToEth(meta.consensusBlockValue),
       totalBlockValue: prettyWeiToEth(meta.executionPayloadValue + meta.consensusBlockValue),
-      // TODO PR: should be used in api call instead of adding in log
-      strictFeeRecipientCheck,
       builderSelection,
       api: "produceBlockV3",
     };
