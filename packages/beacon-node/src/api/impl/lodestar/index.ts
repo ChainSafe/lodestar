@@ -167,6 +167,12 @@ export function getLodestarApi({
       };
     },
 
+    async getBlacklistedBlocks() {
+      return {
+        data: Array.from(chain.blacklistedBlocks.entries()).map(([root, slot]) => ({root, slot})),
+      };
+    },
+
     async discv5GetKadValues() {
       return {
         data: await network.dumpDiscv5KadValues(),

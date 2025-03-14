@@ -90,6 +90,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         {
           config: state.config,
           db,
+          dataDir: ".",
           logger,
           processShutdownCallback: () => {},
           metrics: null,
