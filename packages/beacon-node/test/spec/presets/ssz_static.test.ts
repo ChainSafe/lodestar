@@ -41,7 +41,6 @@ const sszStatic =
     if (skippedTypes?.includes(typeName)) {
       return;
     }
-    console.log(fork);
 
     /* eslint-disable @typescript-eslint/strict-boolean-expressions */
     const sszType =
