@@ -126,7 +126,7 @@ export class ListValidatorTreeViewDU extends ListCompositeTreeViewDU<ValidatorNo
   }
 }
 
-function doBatchHashTreeRootValidators(
+export function doBatchHashTreeRootValidators(
   indices: ValidatorIndex[],
   validators: Map<ValidatorIndex, ContainerNodeStructTreeViewDU<typeof ValidatorType>>
 ): void {
