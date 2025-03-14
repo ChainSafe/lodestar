@@ -206,6 +206,11 @@ export class MediatorQueueObserver {
         maxLength: maxQueueLength,
         maxConcurrency: 1,
         signal,
+        // In earlier implementation we were only processing `onFinalizedCheckpoint` in the queue
+        // and not the `onCheckpoint` event. In current implementation we are processing all events
+        // in queue. So tests are fail with ERROR_QUEUE_ABORT as there are a lot of checkpoints jobs
+        // pending during the tests. So we set this option to drop all jobs on abort
+        dropAllJobOnAbort: true,
       }
     );
   }
@@ -245,7 +250,7 @@ export class MediatorQueueObserver {
     }
 
     if (signal) {
-      signal.addEventListener("abort", () => this.unsubscribe());
+      signal.addEventListener("abort", () => this.unsubscribe(), {once: true});
     }
   }
 
