@@ -6,6 +6,7 @@ import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
+import { pendingDepositChunkIterator } from "../util/generator.js";
 
 /**
  * Starting from Electra:
@@ -25,12 +26,12 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   let isChurnLimitReached = false;
   const finalizedSlot = computeStartSlotAtEpoch(state.finalizedCheckpoint.epoch);
 
-  let startIndex = 0;
-  // TODO: is this a good number?
-  const chunk = 100;
-  const pendingDepositsLength = state.pendingDeposits.length;
-  outer: while (startIndex < pendingDepositsLength) {
-    const deposits = state.pendingDeposits.getReadonlyByRange(startIndex, chunk);
+  const iterator = pendingDepositChunkIterator(state);
+
+  let depositChunk = iterator.next();
+
+  outer: while (!depositChunk.done) {
+    const deposits = depositChunk.value;
 
     for (const deposit of deposits) {
       // Do not process deposit requests if Eth1 bridge deposits are not yet applied.
@@ -84,8 +85,6 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
       // Regardless of how the deposit was handled, we move on in the queue.
       nextDepositIndex++;
     }
-
-    startIndex += chunk;
   }
 
   const remainingPendingDeposits = state.pendingDeposits.sliceFrom(nextDepositIndex);
