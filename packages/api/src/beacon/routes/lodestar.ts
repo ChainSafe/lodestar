@@ -75,6 +75,8 @@ export type LodestarNodePeer = NodePeer & {
   agentVersion: string;
 };
 
+export type BlacklistedBlock = {root: RootHex; slot: Slot | null};
+
 export type LodestarThreadType = "main" | "network" | "discv5";
 
 const HistoricalSummariesResponseType = new ContainerType(
@@ -224,6 +226,16 @@ export type Endpoints = {
     {query: {state?: PeerState[]; direction?: PeerDirection[]}},
     LodestarNodePeer[],
     {count: number}
+  >;
+
+  /** Returns root/slot of blacklisted blocks */
+  getBlacklistedBlocks: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    BlacklistedBlock[],
+    EmptyMeta
   >;
 
   /** Returns historical summaries and proof for a given state ID */
@@ -385,6 +397,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         parseReq: ({query}) => ({state: query.state, direction: query.direction}),
         schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
       },
+      resp: JsonOnlyResponseCodec,
+    },
+    getBlacklistedBlocks: {
+      url: "/eth/v1/lodestar/blacklisted_blocks",
+      method: "GET",
+      req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
     },
     getHistoricalSummaries: {

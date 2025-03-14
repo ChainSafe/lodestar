@@ -26,7 +26,7 @@ export function verifyBlocksSanityChecks(
     clock: IClock;
     config: ChainForkConfig;
     opts: IChainOptions;
-    blacklistedBlocks: Set<RootHex>;
+    blacklistedBlocks: Map<RootHex, Slot | null>;
   },
   blocks: BlockInput[],
   opts: ImportBlockOpts
@@ -49,11 +49,16 @@ export function verifyBlocksSanityChecks(
     const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
 
     if (chain.blacklistedBlocks.has(blockHash)) {
+      // Blacklisting blocks via CLI flag only requires to set the block hash
+      if (chain.blacklistedBlocks.get(blockHash) === null) {
+        // Set actual slot observed when processing the block
+        chain.blacklistedBlocks.set(blockHash, blockSlot);
+      }
       throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
     }
 
     if (chain.blacklistedBlocks.has(toRootHex(block.message.parentRoot))) {
-      chain.blacklistedBlocks.add(blockHash);
+      chain.blacklistedBlocks.set(blockHash, blockSlot);
       throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
     }
 
