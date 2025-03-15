@@ -26,13 +26,9 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   let isChurnLimitReached = false;
   const finalizedSlot = computeStartSlotAtEpoch(state.finalizedCheckpoint.epoch);
 
-  const iterator = pendingDepositIterator(state);
+  const depositIterator = pendingDepositIterator(state);
 
-  let iteratorResult = iterator.next();
-
-  while (!iteratorResult.done) {
-    const deposit = iteratorResult.value;
-
+  for (const deposit of depositIterator) {
     // Do not process deposit requests if Eth1 bridge deposits are not yet applied.
     if (
       // Is deposit request
@@ -80,7 +76,6 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
       processedAmount += deposit.amount;
       applyPendingDeposit(state, deposit, cache);
 
-      iteratorResult = iterator.next();
     }
 
     // Regardless of how the deposit was handled, we move on in the queue.
