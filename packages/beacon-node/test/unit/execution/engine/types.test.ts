@@ -110,6 +110,20 @@ describe("execution / engine / types", () => {
       expect(serializeExecutionRequests(executionRequests)).toEqual(serializedOmitted);
     });
 
+    it("should exclude execution request has no data", () => {
+      const serializedNoData = [serializedRequests[0], "0x01", serializedRequests[2]];
+
+      const executionRequests = deserializeExecutionRequests(serializedNoData);
+
+      expect(executionRequests.deposits.length).toBe(2);
+      // Asserts that execution request is correctly excluded either way. This cannot
+      // cause a chain split in any way. And even if we wouldn't exclude it correctly,
+      // the worst case that would happen is that we miss the block proposal as other
+      // clients reject the block.
+      expect(executionRequests.withdrawals.length).toBe(0);
+      expect(executionRequests.consolidations.length).toBe(1);
+    });
+
     it("should throw an error if execution requests order is incorrect", () => {
       const serializedUnordered = [serializedRequests[0], serializedRequests[2], serializedRequests[1]];
 
