@@ -1,14 +1,15 @@
-import { BeaconStateElectra } from "../types";
-
+import {BeaconStateElectra} from "../types";
 
 type LatestBeaconState = BeaconStateElectra;
 
-type BeaconStateIterableKey = Extract<keyof LatestBeaconState, "pendingDeposits" | "pendingConsolidations" | "pendingPartialWithdrawals">;
+type BeaconStateIterableKey = Extract<
+  keyof LatestBeaconState,
+  "pendingDeposits" | "pendingConsolidations" | "pendingPartialWithdrawals"
+>;
 type BeaconStateIterableType = LatestBeaconState[BeaconStateIterableKey];
 
-
-export function* pendingDepositIterator(state: BeaconStateElectra, chunkSize: number = 100, startIndex: number = 0) {
-    yield* iterateBeaconStateIterableInChunks(state.pendingDeposits, chunkSize, startIndex);
+export function* pendingDepositIterator(state: BeaconStateElectra, startIndex?: number, chunkSize?: number) {
+  yield* iterateBeaconStateIterableInChunks(state.pendingDeposits, startIndex, chunkSize);
 }
 
 /**
@@ -17,15 +18,15 @@ export function* pendingDepositIterator(state: BeaconStateElectra, chunkSize: nu
  * @param chunkSize - Number of items to retrieve per iteration (default: 100)
  * @param startIndex - Starting index for iteration (default: 0)
  */
-function* iterateBeaconStateIterableInChunks(iterable: BeaconStateIterableType, chunkSize: number = 100, startIndex: number = 0) {
-    const iterableLength = iterable.length;
-    let chunkStartIndex = startIndex;
+function* iterateBeaconStateIterableInChunks(iterable: BeaconStateIterableType, startIndex = 0, chunkSize = 100) {
+  const iterableLength = iterable.length;
+  let chunkStartIndex = startIndex;
 
-    while (chunkStartIndex < iterableLength) {
-        const currentChunk = iterable.getReadonlyByRange(chunkStartIndex, chunkSize);
-        for (const element of currentChunk) {
-            yield element;
-        }
-        chunkStartIndex += chunkSize;
+  while (chunkStartIndex < iterableLength) {
+    const currentChunk = iterable.getReadonlyByRange(chunkStartIndex, chunkSize);
+    for (const element of currentChunk) {
+      yield element;
     }
+    chunkStartIndex += chunkSize;
+  }
 }

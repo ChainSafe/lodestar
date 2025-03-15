@@ -5,8 +5,8 @@ import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
+import {pendingDepositIterator} from "../util/generator.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
-import { pendingDepositIterator } from "../util/generator.js";
 
 /**
  * Starting from Electra:
