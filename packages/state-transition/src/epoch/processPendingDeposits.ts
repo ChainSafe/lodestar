@@ -6,7 +6,7 @@ import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
-import { pendingDepositChunkIterator } from "../util/generator.js";
+import { pendingDepositIterator } from "../util/generator.js";
 
 /**
  * Starting from Electra:
@@ -26,65 +26,65 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   let isChurnLimitReached = false;
   const finalizedSlot = computeStartSlotAtEpoch(state.finalizedCheckpoint.epoch);
 
-  const iterator = pendingDepositChunkIterator(state);
+  const iterator = pendingDepositIterator(state);
 
-  let depositChunk = iterator.next();
+  let iteratorResult = iterator.next();
 
-  outer: while (!depositChunk.done) {
-    const deposits = depositChunk.value;
+  while (!iteratorResult.done) {
+    const deposit = iteratorResult.value;
 
-    for (const deposit of deposits) {
-      // Do not process deposit requests if Eth1 bridge deposits are not yet applied.
-      if (
-        // Is deposit request
-        deposit.slot > GENESIS_SLOT &&
-        // There are pending Eth1 bridge deposits
-        state.eth1DepositIndex < state.depositRequestsStartIndex
-      ) {
-        break outer;
-      }
-
-      // Check if deposit has been finalized, otherwise, stop processing.
-      if (deposit.slot > finalizedSlot) {
-        break outer;
-      }
-
-      // Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-      if (nextDepositIndex >= MAX_PENDING_DEPOSITS_PER_EPOCH) {
-        break outer;
-      }
-
-      // Read validator state
-      let isValidatorExited = false;
-      let isValidatorWithdrawn = false;
-
-      const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
-      if (isValidatorKnown(state, validatorIndex)) {
-        const validator = state.validators.getReadonly(validatorIndex);
-        isValidatorExited = validator.exitEpoch < FAR_FUTURE_EPOCH;
-        isValidatorWithdrawn = validator.withdrawableEpoch < nextEpoch;
-      }
-
-      if (isValidatorWithdrawn) {
-        // Deposited balance will never become active. Increase balance but do not consume churn
-        applyPendingDeposit(state, deposit, cache);
-      } else if (isValidatorExited) {
-        // Validator is exiting, postpone the deposit until after withdrawable epoch
-        depositsToPostpone.push(deposit);
-      } else {
-        // Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
-        isChurnLimitReached = processedAmount + deposit.amount > availableForProcessing;
-        if (isChurnLimitReached) {
-          break outer;
-        }
-        // Consume churn and apply deposit.
-        processedAmount += deposit.amount;
-        applyPendingDeposit(state, deposit, cache);
-      }
-
-      // Regardless of how the deposit was handled, we move on in the queue.
-      nextDepositIndex++;
+    // Do not process deposit requests if Eth1 bridge deposits are not yet applied.
+    if (
+      // Is deposit request
+      deposit.slot > GENESIS_SLOT &&
+      // There are pending Eth1 bridge deposits
+      state.eth1DepositIndex < state.depositRequestsStartIndex
+    ) {
+      break;
     }
+
+    // Check if deposit has been finalized, otherwise, stop processing.
+    if (deposit.slot > finalizedSlot) {
+      break;
+    }
+
+    // Check if number of processed deposits has not reached the limit, otherwise, stop processing.
+    if (nextDepositIndex >= MAX_PENDING_DEPOSITS_PER_EPOCH) {
+      break;
+    }
+
+    // Read validator state
+    let isValidatorExited = false;
+    let isValidatorWithdrawn = false;
+
+    const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
+    if (isValidatorKnown(state, validatorIndex)) {
+      const validator = state.validators.getReadonly(validatorIndex);
+      isValidatorExited = validator.exitEpoch < FAR_FUTURE_EPOCH;
+      isValidatorWithdrawn = validator.withdrawableEpoch < nextEpoch;
+    }
+
+    if (isValidatorWithdrawn) {
+      // Deposited balance will never become active. Increase balance but do not consume churn
+      applyPendingDeposit(state, deposit, cache);
+    } else if (isValidatorExited) {
+      // Validator is exiting, postpone the deposit until after withdrawable epoch
+      depositsToPostpone.push(deposit);
+    } else {
+      // Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
+      isChurnLimitReached = processedAmount + deposit.amount > availableForProcessing;
+      if (isChurnLimitReached) {
+        break;
+      }
+      // Consume churn and apply deposit.
+      processedAmount += deposit.amount;
+      applyPendingDeposit(state, deposit, cache);
+
+      iteratorResult = iterator.next();
+    }
+
+    // Regardless of how the deposit was handled, we move on in the queue.
+    nextDepositIndex++;
   }
 
   const remainingPendingDeposits = state.pendingDeposits.sliceFrom(nextDepositIndex);

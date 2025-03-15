@@ -1,4 +1,3 @@
-
 import { BeaconStateElectra } from "../types";
 
 
@@ -8,23 +7,25 @@ type BeaconStateIterableKey = Extract<keyof LatestBeaconState, "pendingDeposits"
 type BeaconStateIterableType = LatestBeaconState[BeaconStateIterableKey];
 
 
-export function* pendingDepositChunkIterator(state: BeaconStateElectra, chunk: number = 100, startIndex: number = 0) {
-    yield* iterateBeaconStateIterableInChunks(state.pendingDeposits, chunk, startIndex);
+export function* pendingDepositIterator(state: BeaconStateElectra, chunkSize: number = 100, startIndex: number = 0) {
+    yield* iterateBeaconStateIterableInChunks(state.pendingDeposits, chunkSize, startIndex);
 }
 
-
 /**
- * Generator function that iterates over a chunked range of a BeaconState iterable property.
+ * Generator function that abstracts away getReadonlyByRange. Should be a generator version of `getAllReadonly()` but lazy load by chunks
  * @param iterable - An iterable property of the latest beacon state that has `getReadonlyByRange`
- * @param chunk - Number of items to retrieve per iteration (default: 100)
+ * @param chunkSize - Number of items to retrieve per iteration (default: 100)
  * @param startIndex - Starting index for iteration (default: 0)
  */
-function* iterateBeaconStateIterableInChunks(iterable: BeaconStateIterableType, chunk: number = 100, startIndex: number = 0): Generator<ReturnType<BeaconStateIterableType["getReadonlyByRange"]>> {
+function* iterateBeaconStateIterableInChunks(iterable: BeaconStateIterableType, chunkSize: number = 100, startIndex: number = 0) {
     const iterableLength = iterable.length;
     let chunkStartIndex = startIndex;
 
     while (chunkStartIndex < iterableLength) {
-        yield iterable.getReadonlyByRange(chunkStartIndex, chunk);
-        chunkStartIndex += chunk;
+        const currentChunk = iterable.getReadonlyByRange(chunkStartIndex, chunkSize);
+        for (const element of currentChunk) {
+            yield element;
+        }
+        chunkStartIndex += chunkSize;
     }
 }
