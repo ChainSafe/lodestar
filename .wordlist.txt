@@ -166,6 +166,7 @@ gnosis
 gpg
 heapdump
 heaptrack
+hoodi
 holesky
 interop
 js
