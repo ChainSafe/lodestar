@@ -10,7 +10,7 @@ import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella
 import {interopPubkeysCached} from "../utils/interop.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 
-describe.skip("CachedBeaconState", () => {
+describe("CachedBeaconState", () => {
   vi.setConfig({testTimeout: 20_000, hookTimeout: 20_000});
 
   it("Clone and mutate", () => {
