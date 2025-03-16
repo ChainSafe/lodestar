@@ -27,7 +27,7 @@
     "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
-    "test:unit": "vitest run --dir test/unit/",
+    "test:unit": "vitest run --min-workers=1 --max-workers=1 --dir test/unit/",
     "test": "yarn test:unit && yarn test:e2e",
     "test:spec": "vitest run --config vitest.spec.config.ts --dir test/spec/",
     "test:e2e": "vitest run --config vitest.e2e.config.ts --dir test/e2e",
