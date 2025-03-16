@@ -44,5 +44,4 @@ export const hoodiChainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 560048,
   DEPOSIT_NETWORK_ID: 560048,
-  DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
 };
