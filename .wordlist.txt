@@ -166,8 +166,8 @@ gnosis
 gpg
 heapdump
 heaptrack
-hoodi
 holesky
+hoodi
 interop
 js
 keymanager
