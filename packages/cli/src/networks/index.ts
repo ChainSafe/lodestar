@@ -20,9 +20,9 @@ import * as dev from "./dev.js";
 import * as ephemery from "./ephemery.js";
 import * as gnosis from "./gnosis.js";
 import * as holesky from "./holesky.js";
+import * as hoodi from "./hoodi.js";
 import * as mainnet from "./mainnet.js";
 import * as sepolia from "./sepolia.js";
-import * as hoodi from "./hoodi.js";
 
 export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "hoodi" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
