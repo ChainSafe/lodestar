@@ -94,6 +94,7 @@ export async function getDevBeaconNode(
     logger,
     processShutdownCallback: () => {},
     peerId,
+    dataDir: ".",
     peerStoreDir,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,

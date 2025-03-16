@@ -22,6 +22,7 @@ export type IChainOptions = BlockProcessOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
+    blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
@@ -97,6 +98,7 @@ export type SeenCacheOpts = {
 export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
+  blacklistedBlocks: [],
   disableBlsBatchVerify: false,
   proposerBoost: true,
   proposerBoostReorg: false,
@@ -117,7 +119,11 @@ export const defaultChainOptions: IChainOptions = {
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
   nHistoricalStates: true,
-  nHistoricalStatesFileDataStore: false,
+  // as of Feb 2025, this option turned out to be very useful:
+  //   - it allows to share a persisted checkpoint state to other nodes
+  //   - users can prune the persisted checkpoint state files manually to save disc space
+  //   - it helps debug easier when network is unfinalized
+  nHistoricalStatesFileDataStore: true,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
 };
