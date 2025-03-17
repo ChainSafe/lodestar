@@ -12,7 +12,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {pruneHistory} from "../chain/archiveStore/utils/pruneHistory.js";
-import {HistoricalStateRegen} from "../chain/historicalState/index.js";
+import {HistoricalStateRegen} from "../chain/archiveStore/historicalState/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";

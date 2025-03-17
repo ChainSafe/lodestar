@@ -58,7 +58,7 @@ import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {HistoricalStateRegen} from "./historicalState/index.js";
+import {HistoricalStateRegen} from "./archiveStore/historicalState/index.js";
 import {
   BlockHash,
   CommonBlockBody,
