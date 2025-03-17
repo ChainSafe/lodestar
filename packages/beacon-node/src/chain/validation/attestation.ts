@@ -503,7 +503,7 @@ async function validateAttestationNoSignatureCheck(
     if (attDataKey) {
       chain.seenAttestationDatas.add(attSlot, committeeIndex, attDataKey, {
         committeeValidatorIndices,
-        committeeIndex,
+        committeeIndex: isForkPostElectra(fork) ? committeeIndex : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX,
         signingRoot: signatureSet.signingRoot,
         subnet: expectedSubnet,
         // precompute this to be used in forkchoice
