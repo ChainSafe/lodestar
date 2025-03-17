@@ -112,6 +112,7 @@ export const options: CliCommandOptions<ChainArgs> = {
   "chain.blacklistedBlocks": {
     hidden: true,
     type: "array",
+    string: true,
     description:
       "Comma-separated list of 0x-prefixed root hex's for blocks that should not be allowed through processing",
     group: "chain",

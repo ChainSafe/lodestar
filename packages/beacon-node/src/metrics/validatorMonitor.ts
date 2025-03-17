@@ -78,7 +78,11 @@ export type ValidatorMonitor = {
     syncContributionAndProof: altair.ContributionAndProof,
     syncCommitteeParticipantIndices: ValidatorIndex[]
   ): void;
-  registerSyncAggregateInBlock(epoch: Epoch, syncAggregate: altair.SyncAggregate, syncCommitteeIndices: number[]): void;
+  registerSyncAggregateInBlock(
+    epoch: Epoch,
+    syncAggregate: altair.SyncAggregate,
+    syncCommitteeIndices: Uint32Array
+  ): void;
   onceEveryEndOfEpoch(state: CachedBeaconStateAllForks): void;
   scrapeMetrics(slotClock: Slot): void;
 };

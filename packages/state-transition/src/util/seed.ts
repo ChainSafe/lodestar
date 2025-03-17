@@ -1,5 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
 import {
+  computeProposerIndex as nativeComputeProposerIndex,
+  computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
+} from "@chainsafe/swap-or-not-shuffle";
+import {
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -24,7 +28,7 @@ import {computeEpochAtSlot} from "./epoch.js";
 export function computeProposers(
   fork: ForkSeq,
   epochSeed: Uint8Array,
-  shuffling: {epoch: Epoch; activeIndices: ArrayLike<ValidatorIndex>},
+  shuffling: {epoch: Epoch; activeIndices: Uint32Array},
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): number[] {
   const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
@@ -103,82 +107,32 @@ export function naiveComputeProposerIndex(
 export function computeProposerIndex(
   fork: ForkSeq,
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
-  indices: ArrayLike<ValidatorIndex>,
+  indices: Uint32Array,
   seed: Uint8Array
 ): ValidatorIndex {
   if (indices.length === 0) {
     throw Error("Validator indices must not be empty");
   }
 
+  let maxEffectiveBalance: number;
+  let randByteCount: number;
   if (fork >= ForkSeq.electra) {
-    // electra, see inline comments for the optimization
-    const MAX_RANDOM_VALUE = 2 ** 16 - 1;
-    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
-
-    const shuffledIndexFn = getComputeShuffledIndexFn(indices.length, seed);
-    // this simple cache makes sure we don't have to recompute the shuffled index for the next round of activeValidatorCount
-    const shuffledResult = new Map<number, number>();
-
-    let i = 0;
-    const cachedHashInput = Buffer.allocUnsafe(32 + 8);
-    cachedHashInput.set(seed, 0);
-    cachedHashInput.writeUint32LE(0, 32 + 4);
-    let cachedHash: Uint8Array | null = null;
-    while (true) {
-      // an optimized version of the below naive code
-      // const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
-      const index = i % indices.length;
-      let shuffledIndex = shuffledResult.get(index);
-      if (shuffledIndex == null) {
-        shuffledIndex = shuffledIndexFn(index);
-        shuffledResult.set(index, shuffledIndex);
-      }
-      const candidateIndex = indices[shuffledIndex];
-
-      // compute a new hash every 16 iterations
-      if (i % 16 === 0) {
-        cachedHashInput.writeUint32LE(Math.floor(i / 16), 32);
-        cachedHash = digest(cachedHashInput);
-      }
-
-      if (cachedHash == null) {
-        // there is always a cachedHash, handle this to make the compiler happy
-        throw new Error("cachedHash should not be null");
-      }
-
-      const randomBytes = cachedHash;
-      const offset = (i % 16) * 2;
-      // this is equivalent to bytesToInt(randomBytes.subarray(offset, offset + 2));
-      // but it does not get through BigInt
-      const lowByte = randomBytes[offset];
-      const highByte = randomBytes[offset + 1];
-      const randomValue = lowByte + highByte * 256;
-
-      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
-      if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
-        return candidateIndex;
-      }
-
-      i += 1;
-    }
+    maxEffectiveBalance = MAX_EFFECTIVE_BALANCE_ELECTRA;
+    randByteCount = 2;
   } else {
-    // preelectra, this function is the same to the naive version
-    const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
-
-    let i = 0;
-    while (true) {
-      const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
-      const randomByte = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 32), 8, "le")]))[i % 32];
-
-      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
-      if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomByte) {
-        return candidateIndex;
-      }
-
-      i += 1;
-    }
+    maxEffectiveBalance = MAX_EFFECTIVE_BALANCE;
+    randByteCount = 1;
   }
+
+  return nativeComputeProposerIndex(
+    seed,
+    indices,
+    effectiveBalanceIncrements,
+    randByteCount,
+    maxEffectiveBalance,
+    EFFECTIVE_BALANCE_INCREMENT,
+    SHUFFLE_ROUND_COUNT
+  );
 }
 
 /**
@@ -257,91 +211,32 @@ export function naiveGetNextSyncCommitteeIndices(
 export function getNextSyncCommitteeIndices(
   fork: ForkSeq,
   state: BeaconStateAllForks,
-  activeValidatorIndices: ArrayLike<ValidatorIndex>,
+  activeValidatorIndices: Uint32Array,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
-): ValidatorIndex[] {
-  const syncCommitteeIndices = [];
+): Uint32Array {
+  let maxEffectiveBalance: number;
+  let randByteCount: number;
 
   if (fork >= ForkSeq.electra) {
-    // electra, see inline comments for the optimization
-    const MAX_RANDOM_VALUE = 2 ** 16 - 1;
-    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
-
-    const epoch = computeEpochAtSlot(state.slot) + 1;
-    const activeValidatorCount = activeValidatorIndices.length;
-    const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
-    const shuffledIndexFn = getComputeShuffledIndexFn(activeValidatorCount, seed);
-
-    let i = 0;
-    let cachedHash: Uint8Array | null = null;
-    const cachedHashInput = Buffer.allocUnsafe(32 + 8);
-    cachedHashInput.set(seed, 0);
-    cachedHashInput.writeUInt32LE(0, 32 + 4);
-    // this simple cache makes sure we don't have to recompute the shuffled index for the next round of activeValidatorCount
-    const shuffledResult = new Map<number, number>();
-    while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
-      // optimized version of the below naive code
-      // const shuffledIndex = shuffledIndexFn(i % activeValidatorCount);
-      const index = i % activeValidatorCount;
-      let shuffledIndex = shuffledResult.get(index);
-      if (shuffledIndex == null) {
-        shuffledIndex = shuffledIndexFn(index);
-        shuffledResult.set(index, shuffledIndex);
-      }
-      const candidateIndex = activeValidatorIndices[shuffledIndex];
-
-      // compute a new hash every 16 iterations
-      if (i % 16 === 0) {
-        cachedHashInput.writeUint32LE(Math.floor(i / 16), 32);
-        cachedHash = digest(cachedHashInput);
-      }
-
-      if (cachedHash == null) {
-        // there is always a cachedHash, handle this to make the compiler happy
-        throw new Error("cachedHash should not be null");
-      }
-
-      const randomBytes = cachedHash;
-      const offset = (i % 16) * 2;
-
-      // this is equivalent to bytesToInt(randomBytes.subarray(offset, offset + 2));
-      // but it does not get through BigInt
-      const lowByte = randomBytes[offset];
-      const highByte = randomBytes[offset + 1];
-      const randomValue = lowByte + highByte * 256;
-
-      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
-      if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
-        syncCommitteeIndices.push(candidateIndex);
-      }
-
-      i += 1;
-    }
+    maxEffectiveBalance = MAX_EFFECTIVE_BALANCE_ELECTRA;
+    randByteCount = 2;
   } else {
-    // pre-electra, keep the same naive version
-    const MAX_RANDOM_BYTE = 2 ** 8 - 1;
-    const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
-
-    const epoch = computeEpochAtSlot(state.slot) + 1;
-    const activeValidatorCount = activeValidatorIndices.length;
-    const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
-
-    let i = 0;
-    while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
-      const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
-      const candidateIndex = activeValidatorIndices[shuffledIndex];
-      const randomByte = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 32), 8, "le")]))[i % 32];
-
-      const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
-      if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomByte) {
-        syncCommitteeIndices.push(candidateIndex);
-      }
-
-      i += 1;
-    }
+    maxEffectiveBalance = MAX_EFFECTIVE_BALANCE;
+    randByteCount = 1;
   }
 
-  return syncCommitteeIndices;
+  const epoch = computeEpochAtSlot(state.slot) + 1;
+  const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
+  return nativeComputeSyncCommitteeIndices(
+    seed,
+    activeValidatorIndices,
+    effectiveBalanceIncrements,
+    randByteCount,
+    SYNC_COMMITTEE_SIZE,
+    maxEffectiveBalance,
+    EFFECTIVE_BALANCE_INCREMENT,
+    SHUFFLE_ROUND_COUNT
+  );
 }
 
 /**

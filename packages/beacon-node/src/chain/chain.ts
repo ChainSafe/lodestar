@@ -168,7 +168,7 @@ export class BeaconChain implements IBeaconChain {
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
-  readonly blacklistedBlocks: Set<RootHex>;
+  readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
 
@@ -233,7 +233,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
-    this.blacklistedBlocks = new Set(opts.blacklistedBlocks ?? []);
+    this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(
       config,
