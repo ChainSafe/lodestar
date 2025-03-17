@@ -90,17 +90,6 @@ export class ArchiveStore {
   }
 
   async init(): Promise<void> {
-    this.historicalStateRegen = await HistoricalStateRegen.init({
-      opts: {
-        genesisTime: this.chain.clock.genesisTime,
-        dbLocation: this.opts.dbName,
-      },
-      config: this.chain.config,
-      metrics: this.metrics,
-      logger: this.logger,
-      signal: this.signal,
-    });
-
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
@@ -118,6 +107,17 @@ export class ArchiveStore {
         this.signal
       );
     }
+
+    this.historicalStateRegen = await HistoricalStateRegen.init({
+      opts: {
+        genesisTime: this.chain.clock.genesisTime,
+        dbLocation: this.opts.dbName,
+      },
+      config: this.chain.config,
+      metrics: this.metrics,
+      logger: this.logger,
+      signal: this.signal,
+    });
   }
 
   async close(): Promise<void> {
