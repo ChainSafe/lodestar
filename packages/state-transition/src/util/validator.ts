@@ -83,11 +83,15 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
 }
 
 export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
-  let total = 0;
+  const pendingPartialWithdrawalsLength = state.pendingPartialWithdrawals.length;
 
+  if (pendingPartialWithdrawalsLength === 0) {
+    return 0;
+  }
+
+  let total = 0;
   let chunkStartIndex = 0;
   const chunkSize = 100;
-  const pendingPartialWithdrawalsLength = state.pendingPartialWithdrawals.length;
 
   while (chunkStartIndex < pendingPartialWithdrawalsLength) {
     const pendingPartialWIthdrawalChunk = state.pendingPartialWithdrawals.getReadonlyByRange(
