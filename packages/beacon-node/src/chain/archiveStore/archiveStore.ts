@@ -9,7 +9,7 @@ import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
 import {HistoricalStateRegen} from "./historicalState/index.js";
-import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
+import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
@@ -21,6 +21,8 @@ type ArchiveStoreModules = {
   logger: LoggerNode;
   metrics: Metrics | null;
 };
+
+type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -37,16 +39,12 @@ export class ArchiveStore {
   private readonly db: IBeaconDb;
   private readonly logger: LoggerNode;
   private readonly metrics: Metrics | null;
-  private readonly opts: ArchiverOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
+  private readonly opts: ArchiveStoreInitOpts;
   private readonly signal: AbortSignal;
 
   private historicalStateRegen?: HistoricalStateRegen;
 
-  constructor(
-    modules: ArchiveStoreModules,
-    opts: ArchiverOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}},
-    signal: AbortSignal
-  ) {
+  constructor(modules: ArchiveStoreModules, opts: ArchiveStoreInitOpts, signal: AbortSignal) {
     this.chain = modules.chain;
     this.db = modules.db;
     this.logger = modules.logger;

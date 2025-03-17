@@ -9,7 +9,7 @@ export enum ArchiveMode {
   // Differential = "diff",
 }
 
-export interface StatesArchiverOpts {
+export interface StatesArchiveOpts {
   /**
    * Minimum number of epochs between archived states
    */
@@ -20,7 +20,7 @@ export interface StatesArchiverOpts {
   archiveMode: ArchiveMode;
 }
 
-export type ArchiverOpts = StatesArchiverOpts & {
+export type ArchiveStoreOpts = StatesArchiveOpts & {
   disableArchiveOnCheckpoint?: boolean;
   archiveBlobEpochs?: number;
   pruneHistory?: boolean;
