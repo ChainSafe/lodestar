@@ -176,7 +176,7 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  private readonly archiverStore: ArchiveStore;
+  private readonly archiveStore: ArchiveStore;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -354,7 +354,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.serializedCache = new SerializedCache();
 
-    this.archiverStore = new ArchiveStore({db, chain: this, logger, metrics}, opts, signal);
+    this.archiveStore = new ArchiveStore({db, chain: this, logger, metrics}, opts, signal);
 
     // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
     const anchorStateFork = this.config.getForkName(anchorState.slot);
@@ -425,7 +425,7 @@ export class BeaconChain implements IBeaconChain {
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
-    await this.archiverStore.persistToDisk();
+    await this.archiveStore.persistToDisk();
     await this.opPool.toPersisted(this.db);
   }
 

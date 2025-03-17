@@ -84,8 +84,8 @@ export class ArchiveStore {
     return new ArchiveStore(modules, opts, signal);
   }
 
-  /** 
-   * Archive latest finalized state 
+  /**
+   * Archive latest finalized state
    * */
   async persistToDisk(): Promise<void> {
     return this.statesArchiverStrategy.archiveState(this.chain.forkChoice.getFinalizedCheckpoint());
