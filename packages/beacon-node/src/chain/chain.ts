@@ -50,7 +50,7 @@ import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {ArchiverStore} from "./archiveStore/archiveStore.js";
+import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -176,7 +176,7 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  private readonly archiverStore: ArchiverStore;
+  private readonly archiverStore: ArchiveStore;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -354,7 +354,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.serializedCache = new SerializedCache();
 
-    this.archiverStore = new ArchiverStore(db, this, logger, signal, opts, metrics);
+    this.archiverStore = new ArchiveStore({db, chain: this, logger, metrics}, opts, signal);
 
     // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
     const anchorStateFork = this.config.getForkName(anchorState.slot);

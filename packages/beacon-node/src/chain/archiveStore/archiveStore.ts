@@ -10,46 +10,66 @@ import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
+import {updateBackfillRange} from "./utils/updateBackfillRange.js";
+
+type ArchiveStoreModules = {
+  chain: IBeaconChain;
+  db: IBeaconDb;
+  logger: Logger;
+  metrics: Metrics | null;
+};
 
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
  */
-export class ArchiverStore {
+export class ArchiveStore {
   private archiveMode: ArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private prevFinalized: CheckpointWithHex;
-  private readonly statesArchiverStrategy: StateArchiveStrategy;
   private archiveBlobEpochs?: number;
+  private readonly statesArchiverStrategy: StateArchiveStrategy;
+  private readonly chain: IBeaconChain;
+  private readonly db: IBeaconDb;
+  private readonly logger: Logger;
+  private readonly metrics: Metrics | null;
+  private readonly opts: ArchiverOpts;
+  private readonly signal: AbortSignal;
 
-  constructor(
-    private readonly db: IBeaconDb,
-    private readonly chain: IBeaconChain,
-    private readonly logger: Logger,
-    signal: AbortSignal,
-    private readonly opts: ArchiverOpts,
-    private readonly metrics?: Metrics | null
-  ) {
-    if (opts.archiveMode === ArchiveMode.Frequency) {
-      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(chain.regen, db, logger, opts, chain.bufferPool);
-    } else {
-      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
-    }
-
+  constructor(modules: ArchiveStoreModules, opts: ArchiverOpts, signal: AbortSignal) {
+    this.chain = modules.chain;
+    this.db = modules.db;
+    this.logger = modules.logger;
+    this.metrics = modules.metrics;
+    this.opts = opts;
+    this.signal = signal;
     this.archiveMode = opts.archiveMode;
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
-    this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
+    this.prevFinalized = this.chain.forkChoice.getFinalizedCheckpoint();
+
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
       signal,
     });
 
+    if (opts.archiveMode === ArchiveMode.Frequency) {
+      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(
+        this.chain.regen,
+        this.db,
+        this.logger,
+        opts,
+        this.chain.bufferPool
+      );
+    } else {
+      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
+    }
+
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
       this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
 
-      signal.addEventListener(
+      this.signal.addEventListener(
         "abort",
         () => {
           this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
@@ -60,11 +80,20 @@ export class ArchiverStore {
     }
   }
 
-  /** Archive latest finalized state */
+  async init(modules: ArchiveStoreModules, opts: ArchiverOpts, signal: AbortSignal): Promise<ArchiveStore> {
+    return new ArchiveStore(modules, opts, signal);
+  }
+
+  /** 
+   * Archive latest finalized state 
+   * */
   async persistToDisk(): Promise<void> {
     return this.statesArchiverStrategy.archiveState(this.chain.forkChoice.getFinalizedCheckpoint());
   }
 
+  //-------------------------------------------------------------------------
+  // Event handlers
+  //-------------------------------------------------------------------------
   private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     return this.jobQueue.push(finalized);
   };
@@ -118,7 +147,7 @@ export class ArchiverStore {
 
       // tasks rely on extended fork choice
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
-      await this.updateBackfillRange(finalized);
+      await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,
@@ -127,49 +156,6 @@ export class ArchiverStore {
       });
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
-    }
-  };
-
-  /**
-   * Backfill sync relies on verified connected ranges (which are represented as key,value
-   * with a verified jump from a key back to value). Since the node could have progressed
-   * ahead from, we need to save the forward progress of this node as another backfill
-   * range entry, that backfill sync will use to jump back if this node is restarted
-   * for any reason.
-   * The current backfill has its own backfill entry from anchor slot to last backfilled
-   * slot. And this would create the entry from the current finalized slot to the anchor
-   * slot.
-   */
-  private updateBackfillRange = async (finalized: CheckpointWithHex): Promise<void> => {
-    try {
-      // Mark the sequence in backfill db from finalized block's slot till anchor slot as
-      // filled.
-      const finalizedBlockFC = this.chain.forkChoice.getBlockHex(finalized.rootHex);
-      if (finalizedBlockFC && finalizedBlockFC.slot > this.chain.anchorStateLatestBlockSlot) {
-        await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.chain.anchorStateLatestBlockSlot);
-
-        // Clear previously marked sequence till anchorStateLatestBlockSlot, without
-        // touching backfill sync process sequence which are at
-        // <=anchorStateLatestBlockSlot i.e. clear >anchorStateLatestBlockSlot
-        // and < currentSlot
-        const filteredSeqs = await this.db.backfilledRanges.entries({
-          gt: this.chain.anchorStateLatestBlockSlot,
-          lt: finalizedBlockFC.slot,
-        });
-        this.logger.debug("updated backfilledRanges", {
-          key: finalizedBlockFC.slot,
-          value: this.chain.anchorStateLatestBlockSlot,
-        });
-        if (filteredSeqs.length > 0) {
-          await this.db.backfilledRanges.batchDelete(filteredSeqs.map((entry) => entry.key));
-          this.logger.debug(
-            `Forward Sync - cleaned up backfilledRanges between ${finalizedBlockFC.slot},${this.chain.anchorStateLatestBlockSlot}`,
-            {seqs: JSON.stringify(filteredSeqs)}
-          );
-        }
-      }
-    } catch (e) {
-      this.logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
     }
   };
 }
