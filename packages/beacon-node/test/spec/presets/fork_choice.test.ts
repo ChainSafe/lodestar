@@ -112,6 +112,7 @@ const forkChoiceTest =
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
             dataDir: ".",
+            dbName: ",",
             logger,
             processShutdownCallback: () => {},
             clock,

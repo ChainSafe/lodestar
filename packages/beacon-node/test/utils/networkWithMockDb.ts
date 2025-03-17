@@ -61,6 +61,7 @@ export async function getNetworkForTest(
       config: beaconConfig,
       db,
       dataDir: ".",
+      dbName: ".",
       logger,
       processShutdownCallback: () => {},
       // set genesis time so that we are at ALTAIR_FORK_EPOCH
