@@ -2,7 +2,7 @@
 
 This is a step-by-step guide to utilize [@ChainSafe/lodestar-quickstart](https://github.com/ChainSafe/lodestar-quickstart) to setup a Ubuntu-based full Ethereum node using a local execution client and ChainSafe's Lodestar consensus client via Docker (the recommended method to use Lodestar for production environments). This is an adaptation of [Somer Esat's guides](https://someresat.medium.com/) for the Ethereum staking community.
 
-This guide will provide instructions which include running a local execution node. This guide uses Lodestar's `stable` release branch and supports **Holesky** testnet setups and **Mainnet**.
+This guide will provide instructions which include running a local execution node. This guide uses Lodestar's `stable` release branch and supports **Hoodi** testnet setups and **Mainnet**.
 
 :::info
 This guide specifically focuses on using Lodestar's Quickstart scripts which allows for near instant setup with the following technologies:
@@ -209,12 +209,12 @@ ls *.vars
 
 ### Select your Network
 
-Each network has specifics variables that you may want to setup for use. We will use `Holesky` to demonstrate connecting to a public testnet.
+Each network has specifics variables that you may want to setup for use. We will use `Hoodi` to demonstrate connecting to a public testnet.
 
-Open the `holesky.vars` file.
+Open the `hoodi.vars` file.
 
 ```bash
-nano holesky.vars
+nano hoodi.vars
 ```
 
 ### Configure MEV-boost relays
@@ -464,10 +464,10 @@ Optional: If you want to setup validators with your mnemonic. Otherwise, skip th
 
 #### Setup Mnemonic
 
-Select the `.vars` file corresponding to the network you want to run. For Holesky, select `holesky.vars`. Open the file with the `nano` text editor and edit the configuration:
+Select the `.vars` file corresponding to the network you want to run. For Hoodi, select `hoodi.vars`. Open the file with the `nano` text editor and edit the configuration:
 
 ```
-nano holesky.vars
+nano hoodi.vars
 ```
 
 We will modify the `LODESTAR_VALIDATOR_MNEMONIC_ARGS=`. Specifically, the mnemonic located after the `--fromMnemonic` flag.
@@ -510,10 +510,10 @@ The following are **_example commands_** as a template for initiating the quicks
 ./setup.sh --dataDir mainnet-data --elClient nethermind --network mainnet --dockerWithSudo --detached
 ```
 
-3. Startup Holesky beacon node with validator client (using mnemonic in /keystores) and Erigon execution client detached from containers:
+3. Startup Hoodi beacon node with validator client (using mnemonic in /keystores) and Erigon execution client detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient erigon --network holesky --dockerWithSudo --detached --withValidatorMnemonic ~/lodestar-quickstart/
+./setup.sh --dataDir hoodi-data --elClient erigon --network hoodi --dockerWithSudo --detached --withValidatorMnemonic ~/lodestar-quickstart/
 ```
 
 4. Startup Mainnet beacon node with validator client (using keystores) with MEV-Boost and Hyperledger Besu execution client detached from containers:
@@ -522,10 +522,10 @@ The following are **_example commands_** as a template for initiating the quicks
 ./setup.sh --dataDir mainnet-data --elClient besu --network mainnet --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/ --withMevBoost
 ```
 
-5. Startup Holesky beacon node with validator client set one (using keystores) and execution client Geth detached from containers:
+5. Startup Hoodi beacon node with validator client set one (using keystores) and execution client Geth detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient geth --network holesky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset1
+./setup.sh --dataDir hoodi-data --elClient geth --network hoodi --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset1
 ```
 
 :::warning
@@ -535,7 +535,7 @@ You can only start up one set of validator keystores per validator client on the
 6. Startup validator client only with validator client set two (using keystores) and execution client Geth detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient geth --network holesky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset2 --justVC
+./setup.sh --dataDir hoodi-data --elClient geth --network hoodi --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset2 --justVC
 ```
 
 :::info
@@ -550,7 +550,7 @@ Configure the above commands with what you intend to run using the Quickstart Sc
 | ------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dataDir`                 | Required          | File location (volume) of the configuration & data for setup. This directory should be non-existent for the first run. If the directory exists, it will skip fetching the configuration, assuming it has been done previously. You can also clean individual directors of CL/EL between the re-runs.                                                                                                                       |
 | `elClient`                | Required          | The selected EL client you want to run with Lodestar. Options are `nethermind`, `besu`, `erigon` or `geth`.                                                                                                                                                                                                                                                                                                                |
-| `network`                 | Required          | The network/chain you want to load, reads the corresponding `.vars` (for e.g. `holesky.vars`) network configuration , like images, or urls for EL/CL to interact. Example: Default for Holesky is `--network holesky` using `holesky.vars`.                                                                                                                                                                                |
+| `network`                 | Required          | The network/chain you want to load, reads the corresponding `.vars` (for e.g. `hoodi.vars`) network configuration , like images, or urls for EL/CL to interact. Example: Default for Hoodi is `--network hoodi` using `hoodi.vars`.                                                                                                                                                                                |
 | `dockerWithSudo`          | Optional          | Provide this argument if your Docker needs a `sudo` prefix.                                                                                                                                                                                                                                                                                                                                                                |
 | `--withTerminal`          | Optional\*        | Provide the terminal command prefix for CL and EL processes to run in your favourite terminal. You may use an alias or a terminal launching script as long as it waits for the command it runs till ends and then closes. If not provided, it will launch the docker processes in in-terminal mode.                                                                                                                        |
 | `--detached`              | Optional\*        | By default the script will wait for processes and use user input (ctrl +c) to end the processes, however you can pass this option to skip this behavior and just return, for e.g. in case you just want to leave it running.                                                                                                                                                                                               |
@@ -641,8 +641,8 @@ sudo docker logs goerli-validator
 You should see something similar to:
 
 ```
-Mar-01 03:06:35.048[]                 info: Lodestar network=holesky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
-Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-holesky
+Mar-01 03:06:35.048[]                 info: Lodestar network=hoodi, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
+Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-hoodi
 Mar-01 03:06:35.697[]                 info: 100% of keystores imported. current=2 total=2 rate=1318.68keys/m
 Mar-01 03:06:35.698[]                 info: 2 local keystores
 Mar-01 03:06:35.698[]                 info: 0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea

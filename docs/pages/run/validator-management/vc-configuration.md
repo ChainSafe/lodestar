@@ -118,10 +118,10 @@ Please use the official Ethereum Launchpad to perform your deposits. Ensure your
 - [Ethereum Mainnet Launchpad](https://launchpad.ethereum.org)
 - [Beacon Chain Deposit Contract](https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa) `0x00000000219ab540356cBB839Cbe05303d7705Fa`
 
-#### Holesky Testnet
+#### Hoodi Testnet
 
-- [Ethereum Holesky Testnet Launchpad](https://holesky.launchpad.ethereum.org)
-- [Holesky Beacon Chain Deposit Contract](https://holesky.etherscan.io/address/0x4242424242424242424242424242424242424242) `0x4242424242424242424242424242424242424242`
+- [Ethereum Hoodi Testnet Launchpad](https://hoodi.launchpad.ethereum.org)
+- [Hoodi Beacon Chain Deposit Contract](https://hoodi.etherscan.io/address/0x4242424242424242424242424242424242424242) `0x4242424242424242424242424242424242424242`
 
 #### Ephemery Testnet
 
@@ -139,8 +139,8 @@ To start a Lodestar validator run the command:
 You should see confirmation that modules have started.
 
 ```txt
-Mar-01 03:06:35.048[]                 info: Lodestar network=holesky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
-Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-holesky
+Mar-01 03:06:35.048[]                 info: Lodestar network=hoodi, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
+Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-hoodi
 Mar-01 03:06:35.697[]                 info: 100% of keystores imported. current=2 total=2 rate=1318.68keys/m
 Mar-01 03:06:35.698[]                 info: 2 local keystores
 Mar-01 03:06:35.698[]                 info: 0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
