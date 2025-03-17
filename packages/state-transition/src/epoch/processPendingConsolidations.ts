@@ -24,7 +24,7 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
   let chunkStartIndex = 0;
   const chunkSize = 100;
   const pendingConsolidationsLength = state.pendingConsolidations.length;
-  outer: while(chunkStartIndex < pendingConsolidationsLength) {
+  outer: while (chunkStartIndex < pendingConsolidationsLength) {
     const consolidationChunk = state.pendingConsolidations.getReadonlyByRange(chunkStartIndex, chunkSize);
 
     for (const pendingConsolidation of consolidationChunk) {
