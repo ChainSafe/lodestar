@@ -120,7 +120,6 @@ export class ArchiveStore {
 
   async close(): Promise<void> {
     await this.historicalStateRegen?.close();
-    await this.persistToDisk();
   }
 
   async scrapeMetrics(): Promise<string> {
