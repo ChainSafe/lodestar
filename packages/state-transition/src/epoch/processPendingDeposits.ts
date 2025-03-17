@@ -29,6 +29,13 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   // TODO: is this a good number?
   const chunk = 100;
   const pendingDepositsLength = state.pendingDeposits.length;
+
+  if (pendingDepositsLength === 0) {
+    // Need to handle length = 0 case because state.pendingDeposits.getReadonlyByRange will throw error
+    state.depositBalanceToConsume = 0n;
+    return;
+  }
+
   outer: while (startIndex < pendingDepositsLength) {
     const deposits = state.pendingDeposits.getReadonlyByRange(startIndex, chunk);
 
