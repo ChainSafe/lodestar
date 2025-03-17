@@ -47,3 +47,13 @@ export interface StateArchiveStrategy {
   maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
   archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
 }
+
+export interface IArchiveStore {
+  init(): Promise<void>;
+  close(): Promise<void>;
+  scrapeMetrics(): Promise<string>;
+  getHistoricalStateBySlot(
+    slot: number
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  persistToDisk(): Promise<void>;
+}

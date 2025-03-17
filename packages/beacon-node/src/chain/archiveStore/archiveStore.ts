@@ -1,11 +1,14 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {Logger} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
+import {Checkpoint} from "@lodestar/types/phase0";
+import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
+import {HistoricalStateRegen} from "./historicalState/index.js";
 import {ArchiveMode, ArchiverOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
@@ -15,7 +18,7 @@ import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 type ArchiveStoreModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
-  logger: Logger;
+  logger: LoggerNode;
   metrics: Metrics | null;
 };
 
@@ -32,12 +35,18 @@ export class ArchiveStore {
   private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
-  private readonly logger: Logger;
+  private readonly logger: LoggerNode;
   private readonly metrics: Metrics | null;
-  private readonly opts: ArchiverOpts;
+  private readonly opts: ArchiverOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
   private readonly signal: AbortSignal;
 
-  constructor(modules: ArchiveStoreModules, opts: ArchiverOpts, signal: AbortSignal) {
+  private historicalStateRegen?: HistoricalStateRegen;
+
+  constructor(
+    modules: ArchiveStoreModules,
+    opts: ArchiverOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}},
+    signal: AbortSignal
+  ) {
     this.chain = modules.chain;
     this.db = modules.db;
     this.logger = modules.logger;
@@ -80,8 +89,62 @@ export class ArchiveStore {
     }
   }
 
-  async init(modules: ArchiveStoreModules, opts: ArchiverOpts, signal: AbortSignal): Promise<ArchiveStore> {
-    return new ArchiveStore(modules, opts, signal);
+  async init(): Promise<void> {
+    this.historicalStateRegen = await HistoricalStateRegen.init({
+      opts: {
+        genesisTime: this.chain.clock.genesisTime,
+        dbLocation: this.opts.dbName,
+      },
+      config: this.chain.config,
+      metrics: this.metrics,
+      logger: this.logger,
+      signal: this.signal,
+    });
+
+    if (this.opts.pruneHistory) {
+      // prune ALL stale data before starting
+      this.logger.info("Pruning historical data");
+      await callFnWhenAwait(
+        pruneHistory(
+          this.chain.config,
+          this.db,
+          this.logger,
+          this.metrics,
+          this.opts.anchorState.finalizedCheckpoint.epoch,
+          this.chain.clock.currentEpoch
+        ),
+        () => this.logger.info("Still pruning historical data, please wait..."),
+        30_000,
+        this.signal
+      );
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.historicalStateRegen?.close();
+    await this.persistToDisk();
+  }
+
+  async scrapeMetrics(): Promise<string> {
+    return this.historicalStateRegen?.scrapeMetrics() ?? "";
+  }
+
+  async getHistoricalStateBySlot(
+    slot: number
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedBlock = this.chain.forkChoice.getFinalizedBlock();
+
+    if (slot >= finalizedBlock.slot) {
+      return null;
+    }
+
+    // request for finalized state using historical state regen
+    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
+    if (!stateSerialized) {
+      return null;
+    }
+
+    return {state: stateSerialized, executionOptimistic: false, finalized: true};
   }
 
   /**

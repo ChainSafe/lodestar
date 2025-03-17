@@ -135,6 +135,8 @@ export interface IBeaconChain {
 
   readonly opts: IChainOptions;
 
+  /** Start the processing of chian and load state from disk and related actions */
+  init(): Promise<void>;
   /** Stop beacon chain processing */
   close(): Promise<void>;
   /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */

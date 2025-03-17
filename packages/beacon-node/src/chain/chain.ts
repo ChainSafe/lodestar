@@ -40,6 +40,7 @@ import {
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {LoggerNode} from "@lodestar/logger/node";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -58,7 +59,6 @@ import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {HistoricalStateRegen} from "./archiveStore/historicalState/index.js";
 import {
   BlockHash,
   CommonBlockBody,
@@ -132,7 +132,7 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly historicalStateRegen?: HistoricalStateRegen;
+  readonly archiveStore: ArchiveStore;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -176,7 +176,6 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  private readonly archiveStore: ArchiveStore;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -185,6 +184,7 @@ export class BeaconChain implements IBeaconChain {
     {
       config,
       db,
+      dbName,
       dataDir,
       logger,
       processShutdownCallback,
@@ -194,10 +194,10 @@ export class BeaconChain implements IBeaconChain {
       eth1,
       executionEngine,
       executionBuilder,
-      historicalStateRegen,
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
+      dbName: string;
       dataDir: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
@@ -208,7 +208,6 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
-      historicalStateRegen?: HistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -223,7 +222,6 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    this.historicalStateRegen = historicalStateRegen;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -354,7 +352,11 @@ export class BeaconChain implements IBeaconChain {
 
     this.serializedCache = new SerializedCache();
 
-    this.archiveStore = new ArchiveStore({db, chain: this, logger, metrics}, opts, signal);
+    this.archiveStore = new ArchiveStore(
+      {db, chain: this, logger: logger as LoggerNode, metrics},
+      {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
+      signal
+    );
 
     // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
     const anchorStateFork = this.config.getForkName(anchorState.slot);
@@ -381,8 +383,14 @@ export class BeaconChain implements IBeaconChain {
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
   }
 
+  async init(): Promise<void> {
+    await this.archiveStore.init();
+    await this.loadFromDisk();
+  }
+
   async close(): Promise<void> {
     this.abortController.abort();
+    await this.archiveStore.close();
     await this.bls.close();
   }
 
@@ -505,19 +513,7 @@ export class BeaconChain implements IBeaconChain {
   async getHistoricalStateBySlot(
     slot: number
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.forkChoice.getFinalizedBlock();
-
-    if (slot >= finalizedBlock.slot) {
-      return null;
-    }
-
-    // request for finalized state using historical state regen
-    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
-    if (!stateSerialized) {
-      return null;
-    }
-
-    return {state: stateSerialized, executionOptimistic: false, finalized: true};
+    return this.archiveStore.getHistoricalStateBySlot(slot);
   }
 
   async getStateByStateRoot(
