@@ -389,9 +389,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async close(): Promise<void> {
-    this.abortController.abort();
     await this.archiveStore.close();
     await this.bls.close();
+    this.abortController.abort();
   }
 
   seenBlock(blockRoot: RootHex): boolean {
