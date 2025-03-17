@@ -501,9 +501,11 @@ async function validateAttestationNoSignatureCheck(
     // add cached attestation data before verifying signature
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
     if (attDataKey) {
-      chain.seenAttestationDatas.add(attSlot, committeeIndex, attDataKey, {
+      // for pre-electra, committee index key is 0. See SeenAttestationDatas.add() documentation
+      const committeeIndexKey = isForkPostElectra(fork) ? committeeIndex : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
+      chain.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
         committeeValidatorIndices,
-        committeeIndex: isForkPostElectra(fork) ? committeeIndex : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX,
+        committeeIndex,
         signingRoot: signatureSet.signingRoot,
         subnet: expectedSubnet,
         // precompute this to be used in forkchoice
