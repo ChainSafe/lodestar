@@ -502,7 +502,9 @@ async function validateAttestationNoSignatureCheck(
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
     if (attDataKey) {
       // for pre-electra, committee index key is 0. See SeenAttestationDatas.add() documentation
-      const committeeIndexKey = isForkPostElectra(fork) ? committeeIndex : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
+      const committeeIndexKey = isForkPostElectra(fork)
+        ? committeeIndex
+        : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
       chain.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
         committeeValidatorIndices,
         committeeIndex,
