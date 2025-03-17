@@ -1,8 +1,8 @@
 import {Epoch} from "@lodestar/types";
+import {MetricsRegister} from "@lodestar/utils";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
-import {MetricsRegister} from "@lodestar/utils";
 
 export type BeaconStateTransitionMetrics = ReturnType<typeof getMetrics>;
 
@@ -93,15 +93,7 @@ export function getMetrics(register: MetricsRegister) {
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
-    registerValidatorStatuses: (
-      currentEpoch: Epoch,
-      inclusionDelays: number[],
-      flags: number[],
-      isActiveCurrEpoch: boolean[],
-      isActivePrevEpoch: boolean[],
-      balances?: number[]
-    ): void => {}
-  }
+  };
 }
 
 export function onStateCloneMetrics(

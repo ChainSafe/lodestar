@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, getCurrentSlot, BeaconStateTransitionMetrics} from "@lodestar/state-transition";
+import {BeaconStateAllForks, BeaconStateTransitionMetrics, getCurrentSlot} from "@lodestar/state-transition";
+import {getMetrics} from "@lodestar/state-transition/src/metrics.js";
 import {Logger} from "@lodestar/utils";
 import {Metric, Registry} from "prom-client";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
@@ -9,8 +10,8 @@ import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 import {ValidatorMonitor, createValidatorMonitor} from "./validatorMonitor.js";
 
-
-export type Metrics = BeaconMetrics & BeaconStateTransitionMetrics &
+export type Metrics = BeaconMetrics &
+  BeaconStateTransitionMetrics &
   LodestarMetrics &
   ValidatorMonitor & {register: RegistryMetricCreator; close: () => void};
 
@@ -24,6 +25,7 @@ export function createMetrics(
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
+  const stateTransition = getMetrics(register);
 
   const genesisTime = anchorState.genesisTime;
   const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime, logger, opts);
@@ -49,6 +51,7 @@ export function createMetrics(
     ...beacon,
     ...lodestar,
     ...validatorMonitor,
+    ...stateTransition,
     register,
     close,
   };

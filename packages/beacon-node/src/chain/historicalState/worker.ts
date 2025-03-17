@@ -123,7 +123,6 @@ if (metricsRegister) {
       name: "lodestar_historical_state_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
-    registerValidatorStatuses: () => {},
 
     // historical state regen metrics
     regenTime: metricsRegister.histogram({
