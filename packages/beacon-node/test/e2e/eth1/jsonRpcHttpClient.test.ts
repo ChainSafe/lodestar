@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import {FetchError} from "@lodestar/api";
-import {sleep} from "@lodestar/utils";
+import {FetchError, sleep} from "@lodestar/utils";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {RpcPayload} from "../../../src/eth1/interface.js";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
@@ -198,8 +197,9 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
         },
       })
     ).rejects.toThrow("getaddrinfo ENOTFOUND");
-    expect(retryCount).toBeWithMessage(retries, "ENOTFOUND should be retried before failing");
-  });
+    expect(retryCount).toBe(retries);
+    expect("code ECONNREFUSED should be retried before failing").toBeTruthy();
+      });
 
   it("should retry ECONNREFUSED", async () => {
     let retryCount = 0;
@@ -220,7 +220,8 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
         },
       })
     ).rejects.toThrow(expect.objectContaining({code: "ECONNREFUSED"}));
-    expect(retryCount).toBeWithMessage(retries, "code ECONNREFUSED should be retried before failing");
+    expect(retryCount).toBe(retries);
+    expect("code ECONNREFUSED should be retried before failing").toBeTruthy();
   });
 
   it("should retry 404", async () => {
@@ -250,8 +251,9 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
     await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries})).rejects.toThrow("Not Found");
-    expect(requestCount).toBeWithMessage(retries + 1, "404 responses should be retried before failing");
-  });
+    expect(requestCount).toBe(retries + 1);
+    expect("404 responses should be retried before failing").toBeTruthy();
+      });
 
   it("should retry timeout", async () => {
     let requestCount = 0;
@@ -281,8 +283,9 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
     await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries, timeout})).rejects.toThrow("Timeout request");
-    expect(requestCount).toBeWithMessage(retries + 1, "Timeout request should be retried before failing");
-  });
+    expect(requestCount).toBe(retries + 1);
+    expect("Timeout request should be retried before failing").toBeTruthy();
+      });
 
   it("should not retry aborted", async () => {
     let requestCount = 0;
@@ -311,8 +314,9 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
     setTimeout(() => controller.abort(), 50);
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
     await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries, timeout})).rejects.toThrow("Aborted");
-    expect(requestCount).toBeWithMessage(1, "Aborted request should not be retried");
-  });
+    expect(requestCount).toBe(1);
+    expect("Aborted request should not be retried").toBeTruthy();
+      });
 
   it("should not retry payload error", async () => {
     let requestCount = 0;
@@ -341,6 +345,6 @@ describe("eth1 / jsonRpcHttpClient - with retries", () => {
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
     await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries})).rejects.toThrow("Method not found");
-    expect(requestCount).toBeWithMessage(1, "Payload error (non-network error) should not be retried");
-  });
+    expect(requestCount).toBe(1);
+    expect("Payload error (non-network error) should not be retried").toBeTruthy();  });
 });
