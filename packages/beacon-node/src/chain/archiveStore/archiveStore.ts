@@ -7,7 +7,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
-import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN} from "./constants.js";
+import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
 import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
@@ -56,7 +56,7 @@ export class ArchiveStore {
     this.prevFinalized = this.chain.forkChoice.getFinalizedCheckpoint();
 
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
-      maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
+      maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
       signal,
     });
 
