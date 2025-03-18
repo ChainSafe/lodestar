@@ -1,4 +1,4 @@
-import {fetch} from "@lodestar/api";
+import {fetch} from "@lodestar/utils";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName, activePreset} from "@lodestar/params";
 import {describe, it} from "vitest";

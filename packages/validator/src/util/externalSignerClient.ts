@@ -1,5 +1,4 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {fetch} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkPreBellatrix, ForkSeq} from "@lodestar/params";
 import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
@@ -18,7 +17,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {fetch, toHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 
 export enum SignableMessageType {

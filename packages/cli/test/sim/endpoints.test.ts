@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
-import {fetch, routes} from "@lodestar/api";
+import {fetch} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";
