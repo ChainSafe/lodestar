@@ -137,7 +137,7 @@ export interface IBeaconChain {
 
   readonly opts: IChainOptions;
 
-  /** Start the processing of chian and load state from disk and related actions */
+  /** Start the processing of chain and load state from disk and related actions */
   init(): Promise<void>;
   /** Stop beacon chain processing */
   close(): Promise<void>;
