@@ -9,7 +9,7 @@ import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {IStateRegenerator} from "../../regen/interface.js";
 import {serializeState} from "../../serializeState.js";
-import {StateArchiveStrategy, StatesArchiverOpts} from "../interface.js";
+import {StateArchiveStrategy, StatesArchiveOpts} from "../interface.js";
 
 /**
  * Minimum number of epochs between single temp archived states
@@ -27,7 +27,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
     private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
     private readonly logger: Logger,
-    private readonly opts: StatesArchiverOpts,
+    private readonly opts: StatesArchiveOpts,
     private readonly bufferPool?: BufferPool | null
   ) {}
 

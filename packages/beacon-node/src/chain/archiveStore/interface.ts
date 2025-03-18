@@ -9,7 +9,7 @@ export enum ArchiveMode {
   // Differential = "diff",
 }
 
-export interface StatesArchiverOpts {
+export interface StatesArchiveOpts {
   /**
    * Minimum number of epochs between archived states
    */
@@ -20,7 +20,7 @@ export interface StatesArchiverOpts {
   archiveMode: ArchiveMode;
 }
 
-export type ArchiverOpts = StatesArchiverOpts & {
+export type ArchiveStoreOpts = StatesArchiveOpts & {
   disableArchiveOnCheckpoint?: boolean;
   archiveBlobEpochs?: number;
   pruneHistory?: boolean;
@@ -46,4 +46,29 @@ export interface StateArchiveStrategy {
   onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
   maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
   archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
+}
+
+export interface IArchiveStore {
+  /**
+   * Initialize archive store and load any worker required
+   */
+  init(): Promise<void>;
+  /**
+   * Cleanup and close any worker
+   */
+  close(): Promise<void>;
+  /**
+   * Scrape metrics from the archive store
+   */
+  scrapeMetrics(): Promise<string>;
+  /**
+   * Get historical state by slot
+   */
+  getHistoricalStateBySlot(
+    slot: number
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  /**
+   * Archive latest finalized state
+   */
+  persistToDisk(): Promise<void>;
 }

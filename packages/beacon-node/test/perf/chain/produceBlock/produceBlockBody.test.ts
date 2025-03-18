@@ -42,6 +42,7 @@ describe("produceBlockBody", () => {
         config: state.config,
         db,
         dataDir: ".",
+        dbName: ".",
         logger,
         processShutdownCallback: () => {},
         metrics: null,

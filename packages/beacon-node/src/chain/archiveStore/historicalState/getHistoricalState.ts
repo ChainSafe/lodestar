@@ -8,7 +8,7 @@ import {
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconDb} from "../../../db/index.js";
 import {HistoricalStateRegenMetrics, RegenErrorType} from "./types.js";
 
 /**
