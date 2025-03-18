@@ -6,7 +6,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {BlockAltairOpts, getBlockAltair} from "../../../../../state-transition/test/perf/block/util.js";
 import {
   cachedStateAltairPopulateCaches,
@@ -15,9 +15,10 @@ import {
 import {computeBlockRewards} from "../../../../src/chain/rewards/blockRewards.js";
 
 describe("chain / rewards / blockRewards", () => {
-  const testCases: {id: string; opts: BlockAltairOpts}[] = [
+  const testCases: {id: string; timeout?: number; opts: BlockAltairOpts}[] = [
     {
       id: "Normal case",
+      timeout: 90_000,
       opts: {
         proposerSlashingLen: 1,
         attesterSlashingLen: 2,
@@ -78,7 +79,11 @@ describe("chain / rewards / blockRewards", () => {
     },
   ];
 
-  for (const {id, opts} of testCases) {
+  for (const {id, timeout, opts} of testCases) {
+    if (timeout) {
+      vi.setConfig({testTimeout: timeout, hookTimeout: timeout});
+    }
+
     it(`${id}`, async () => {
       const state = generatePerfTestCachedStateAltair();
       const block = getBlockAltair(state, opts);

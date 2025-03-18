@@ -3,6 +3,7 @@ import {chiadoChainConfig} from "./chainConfig/networks/chiado.js";
 import {ephemeryChainConfig} from "./chainConfig/networks/ephemery.js";
 import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
 import {holeskyChainConfig} from "./chainConfig/networks/holesky.js";
+import {hoodiChainConfig} from "./chainConfig/networks/hoodi.js";
 import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
@@ -11,16 +12,18 @@ export {
   gnosisChainConfig,
   sepoliaChainConfig,
   holeskyChainConfig,
+  hoodiChainConfig,
   chiadoChainConfig,
   ephemeryChainConfig,
 };
 
-export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery";
+export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "holesky" | "hoodi" | "chiado" | "ephemery";
 export const networksChainConfig: Record<NetworkName, ChainConfig> = {
   mainnet: mainnetChainConfig,
   gnosis: gnosisChainConfig,
   sepolia: sepoliaChainConfig,
   holesky: holeskyChainConfig,
+  hoodi: hoodiChainConfig,
   chiado: chiadoChainConfig,
   ephemery: ephemeryChainConfig,
 };
@@ -46,6 +49,10 @@ export const genesisData: Record<NetworkName, GenesisData> = {
   holesky: {
     genesisTime: 1695902400,
     genesisValidatorsRoot: "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1",
+  },
+  hoodi: {
+    genesisTime: 1742213400,
+    genesisValidatorsRoot: "0x212f13fc4df078b6cb7db228f1c8307566dcecf900867401a92023d7ba99cb5f",
   },
   chiado: {
     genesisTime: 1665396300,

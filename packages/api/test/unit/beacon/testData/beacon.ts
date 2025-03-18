@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {
   BlockHeaderResponse,
   BroadcastValidation,
@@ -34,15 +34,15 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getBlockV2: {
     args: {blockId: "head"},
     res: {
-      data: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.bellatrix},
+      data: ssz.electra.SignedBeaconBlock.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
   getBlindedBlock: {
     args: {blockId: "head"},
     res: {
-      data: ssz.deneb.SignedBlindedBeaconBlock.defaultValue(),
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.deneb},
+      data: ssz.electra.SignedBlindedBeaconBlock.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
   getBlockAttestations: {
@@ -69,29 +69,32 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
   publishBlock: {
-    args: {signedBlockOrContents: ssz.phase0.SignedBeaconBlock.defaultValue()},
+    args: {signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue()},
     res: undefined,
   },
   publishBlockV2: {
     args: {
-      signedBlockOrContents: ssz.phase0.SignedBeaconBlock.defaultValue(),
+      signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue(),
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,
   },
   publishBlindedBlock: {
-    args: {signedBlindedBlock: getDefaultBlindedBlock(64)},
+    args: {signedBlindedBlock: ssz.electra.SignedBlindedBeaconBlock.defaultValue()},
     res: undefined,
   },
   publishBlindedBlockV2: {
-    args: {signedBlindedBlock: getDefaultBlindedBlock(64), broadcastValidation: BroadcastValidation.consensus},
+    args: {
+      signedBlindedBlock: ssz.electra.SignedBlindedBeaconBlock.defaultValue(),
+      broadcastValidation: BroadcastValidation.consensus,
+    },
     res: undefined,
   },
   getBlobSidecars: {
     args: {blockId: "head", indices: [0]},
     res: {
       data: [ssz.deneb.BlobSidecar.defaultValue()],
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.deneb},
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
 
@@ -130,7 +133,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   submitPoolAttestationsV2: {
-    args: {signedAttestations: [ssz.phase0.Attestation.defaultValue()]},
+    args: {signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]},
     res: undefined,
   },
   submitPoolAttesterSlashings: {
@@ -138,7 +141,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   submitPoolAttesterSlashingsV2: {
-    args: {attesterSlashing: ssz.phase0.AttesterSlashing.defaultValue()},
+    args: {attesterSlashing: ssz.electra.AttesterSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolProposerSlashings: {
@@ -292,9 +295,3 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: ssz.phase0.Genesis.defaultValue()},
   },
 };
-
-function getDefaultBlindedBlock(slot: Slot): SignedBlindedBeaconBlock {
-  const block = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
-  block.message.slot = slot;
-  return block;
-}

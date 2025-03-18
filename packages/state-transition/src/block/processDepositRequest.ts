@@ -5,7 +5,7 @@ import {CachedBeaconStateElectra} from "../types.js";
 
 export function processDepositRequest(state: CachedBeaconStateElectra, depositRequest: electra.DepositRequest): void {
   if (state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
-    state.depositRequestsStartIndex = BigInt(depositRequest.index);
+    state.depositRequestsStartIndex = depositRequest.index;
   }
 
   // Create pending deposit

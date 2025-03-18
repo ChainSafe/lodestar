@@ -134,11 +134,18 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.electra:
       // No changes to LightClientHeader in Electra
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
+
+    case ForkName.fulu:
+      // No changes to LightClientHeader in Electra
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.fulu) break;
   }
   return upgradedHeader;
 }

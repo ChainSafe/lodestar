@@ -49,6 +49,7 @@ describe("validate gossip attestation", () => {
         serializedData,
         attSlot,
         attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+        subnet: subnet0,
       };
     });
 
@@ -56,7 +57,7 @@ describe("validate gossip attestation", () => {
       id: `batch validate gossip attestation - vc ${vc} - chunk ${chunkSize}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {
-        await validateGossipAttestationsSameAttData(fork, chain, attestationOrBytesArr, subnet0);
+        await validateGossipAttestationsSameAttData(fork, chain, attestationOrBytesArr);
       },
       runsFactor: chunkSize,
     });

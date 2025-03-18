@@ -36,6 +36,9 @@ export const sepoliaChainConfig: ChainConfig = {
   // Electra
   ELECTRA_FORK_VERSION: b("0x90000074"),
   ELECTRA_FORK_EPOCH: 222464,
+  // Fulu
+  FULU_FORK_VERSION: b("0x90000075"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------

@@ -167,6 +167,7 @@ gpg
 heapdump
 heaptrack
 holesky
+hoodi
 interop
 js
 keymanager
