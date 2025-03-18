@@ -13,7 +13,7 @@ This guide specifically focuses on using Lodestar's Quickstart scripts which all
   - [Go-Ethereum (Geth)](https://geth.ethereum.org/) | [Github](https://github.com/ethereum/go-ethereum/releases/)
   - [Hyperledger Besu](https://www.hyperledger.org/) | [Github](https://github.com/hyperledger/besu)
   - [Nethermind](https://nethermind.io/) | [Github](https://github.com/NethermindEth/nethermind)
-  - [Rust](https://reth.rs) | [Github](https://github.com/paradigmxyz/reth)
+  - [Reth](https://reth.rs) | [Github](https://github.com/paradigmxyz/reth)
 - [ChainSafe's Lodestar Ethereum Consensus Client](https://lodestar.chainsafe.io/) | [Github](https://github.com/ChainSafe/lodestar)
 - [Docker Engine](https://docs.docker.com/engine/)
   :::
