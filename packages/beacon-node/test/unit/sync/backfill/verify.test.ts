@@ -44,7 +44,8 @@ describe("backfill sync - verify block sequence", () => {
         blocks
           .filter((b) => b.data.message.slot !== 2)
           .slice(0, blocks.length - 2),
-        blocks.at(-1).data.message.parentRoot
+        // biome-ignore lint/style/noNonNullAssertion: using .at
+        blocks.at(-1)?.data.message.parentRoot!
       );
       if (error != null) throw new BackfillSyncError({code: error});
     }).toThrow(BackfillSyncErrorCode.NOT_LINEAR);
