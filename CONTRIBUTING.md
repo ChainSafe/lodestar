@@ -241,19 +241,19 @@ If the PR introduces large-scale changes, affecting multiple areas of the codeba
 
 - Document the feature first before opening any PR.
 - Open a Github issue with a detailed technical proposal explaining the feature. This ideally will include some details like:
-    = Big picture explanation of how and why the feature will help or will change the codebase
-    = Rough outline of the classes and interfaces that will be implemented
-    = If a functional implementation is used, a brief description of what each function will do, possibly with a basic function signature if it is clear what will be needed
-     = Broad overview of how data will flow and integrate with the surrounding sub-systems
-     = Rough discussion of potential performance (cpu and memory) implications
+  - Big picture explanation of how and why the feature will help or will change the codebase
+  - Rough outline of the classes and interfaces that will be implemented
+  - If a functional implementation is used, a brief description of what each function will do, possibly with a basic function signature if it is clear what will be needed
+  - Broad overview of how data will flow and integrate with the surrounding sub-systems
+  - Rough discussion of potential performance (cpu and memory) implications
 - Share the document with the team and gather feedback before implementation.
-- Create a feature branch to showcase the entire implementation.  The idea will be to get this branch deployed on a feature group to test and tune the code on a devnet.
-- First merge any refactor work necessary to get `unstable` prepared for the feature 
-- Create a second empty feature branch off of `unstable` that fork after the refactor work is merged.  (Can also do this before the refactor work but then it will need to be rebased onto `unstable` after that refactor work is merged)
+- Create a feature branch to showcase the entire implementation. The idea will be to get this branch deployed on a feature group to test and tune the code on a devnet.
+- First merge any refactor work necessary to get `unstable` prepared for the feature
+- Create a second empty feature branch off of `unstable` that fork after the refactor work is merged. (Can also do this before the refactor work but then it will need to be rebased onto `unstable` after that refactor work is merged)
 - Break down the implementation into smaller, manageable PRs that merge into the empty feature branch
-- Each PR should focus on a specific part of the feature.  This middle part of the review is focussed on API, implementation overview and other high level pieces but will be relatively limited as the API discussion, analysis of the feature branch and full review on merge to `unstable` are the important steps.
+- Each PR should focus on a specific part of the feature. This middle part of the review is focussed on API, implementation overview and other high level pieces but will be relatively limited as the API discussion, analysis of the feature branch and full review on merge to `unstable` are the important steps.
 - Link the design document in each PR description so reviewers can always refer to the full scope.
-- Merge the smaller PRs into the feature branch until the complete feature is ready for a final merge into the `unstable` branch.  This is the "formal review process" where several team members will likely get involved.  Up to this point its mostly peer review.  The merge to `unstable` is where details like naming, function signature, type definitions, etc will be scrutinized.  This is also where metrics from the initial implementation branch will get detailed analysis (ideally this has already been happening along the way to make sure there are no performance regressions).
+- Merge the smaller PRs into the feature branch until the complete feature is ready for a final merge into the `unstable` branch. This is the "formal review process" where several team members will likely get involved. Up to this point its mostly peer review. The merge to `unstable` is where details like naming, function signature, type definitions, etc will be scrutinized. This is also where metrics from the initial implementation branch will get detailed analysis (ideally this has already been happening along the way to make sure there are no performance regressions).
 
 ## Logging policy
 
