@@ -209,6 +209,45 @@ for (const blockResult of blocksResult) {
 }
 ```
 
+## Managing and Opening Feature/Large PRs
+
+To maintain code quality, improve collaboration, and ensure clarity in large or complex changes, we follow these guidelines when opening pull requests (PRs). Depending on the nature of the change, PRs fall into three categories:
+
+### 1. Single, Complete PR
+
+If the PR contains a self-contained and complete feature or bug fix that does not require major refactoring or cross-team discussions, then:
+
+- Clearly explain the rationale and motivation behind the change in the PR description.
+- Provide relevant context, including:
+- Problem the PR is solving.
+- Why the approach was chosen.
+- Any alternatives considered.
+- If the PR modifies critical code paths, add references to relevant issues, benchmarks, or related discussions.
+- Ensure the PR adheres to our standard PR etiquette and commit message guidelines.
+
+### 2. PR with Major Refactoring
+
+If the PR involves significant code refactoring, structural changes, or fundamental modifications where team input is needed:
+
+- Start a GitHub Discussion before writing code.
+- Outline the problem, your proposed approach, and any alternative solutions.
+- Request feedback and build consensus with the team.
+- Link the discussion in the PR description once consensus is reached.
+- If changes affect multiple packages or require coordination with ongoing development, summarize any key decisions from the discussion in the PR description.
+
+### 3. Large Feature or Multi-PR Implementation
+
+If the PR introduces large-scale changes, affecting multiple areas of the codebase or requiring step-by-step integration:
+
+- Document the feature first before opening any PR.
+- Write a design doc, RFC, or detailed technical proposal explaining the feature.
+- Share the document with the team and gather feedback before implementation.
+- Create a dedicated feature branch instead of a single massive PR.
+- Break down the implementation into smaller, manageable PRs.
+- Each PR should focus on a specific part of the feature.
+- Link the design document in each PR description so reviewers can always refer to the full scope.
+- Merge the smaller PRs into the feature branch until the complete feature is ready for a final merge into the unstable branch.
+
 ## Logging policy
 
 ### Logging Levels
