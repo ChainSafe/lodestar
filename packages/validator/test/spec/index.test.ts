@@ -12,7 +12,7 @@ import {testLogger} from "../utils/logger.js";
 
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
-  const pubkey = Buffer.alloc(96, 1);
+  const pubkey = Buffer.alloc(48, 1);
   let db: LevelDbController;
   let slashingProtection: SlashingProtection;
 
@@ -54,7 +54,7 @@ describe("slashing-protection custom tests", () => {
   });
 
   it("Should detect surrounding votes (slashable)", async () => {
-    const pubkey2 = Buffer.alloc(96, 2); // Using a new pubkey to avoid interference
+    const pubkey2 = Buffer.alloc(48, 2); // Using a new pubkey to avoid interference
     
     // First attestation with source 2 -> target 4
     const attestation1: SlashingProtectionAttestation = {
@@ -77,7 +77,7 @@ describe("slashing-protection custom tests", () => {
   });
 
   it("Should detect surrounded votes (slashable)", async () => {
-    const pubkey3 = Buffer.alloc(96, 3); // Using a new pubkey to avoid interference
+    const pubkey3 = Buffer.alloc(48, 3); // Using a new pubkey to avoid interference
     
     // First attestation with source 1 -> target 5
     const attestation1: SlashingProtectionAttestation = {
@@ -100,7 +100,7 @@ describe("slashing-protection custom tests", () => {
   });
 
   it("Should correctly check hasAttestedInEpoch", async () => {
-    const pubkey4 = Buffer.alloc(96, 4); // Using a new pubkey to avoid interference
+    const pubkey4 = Buffer.alloc(48, 4); // Using a new pubkey to avoid interference
     const targetEpoch = 2000;
     
     // Check before inserting attestation - should return false
@@ -122,7 +122,7 @@ describe("slashing-protection custom tests", () => {
   });
 
   it("Should correctly list pubkeys", async () => {
-    const uniquePubkey = Buffer.alloc(96, 5); // Using a new pubkey
+    const uniquePubkey = Buffer.alloc(48, 5); // Using a new pubkey
     
     // Insert attestation with unique pubkey
     const attestation: SlashingProtectionAttestation = {
