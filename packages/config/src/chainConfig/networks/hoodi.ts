@@ -41,7 +41,7 @@ export const hoodiChainConfig: ChainConfig = {
 
   // Time parameters
   // ---------------------------------------------------------------
-  // 12 Update from older mainnet default of 14
+  // 12 (update from older mainnet default of 14)
   SECONDS_PER_ETH1_BLOCK: 12,
 
   // Deposit contract
