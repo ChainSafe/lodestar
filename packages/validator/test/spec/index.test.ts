@@ -53,7 +53,7 @@ describe("slashing-protection custom tests", () => {
     );
   });
 
-  it("Should detect surrounding votes (slashable)", async () => {
+  it("Should detect surounding votes (slashable)", async () => {
     const pubkey2 = Buffer.alloc(48, 2); // Using a new pubkey to avoid interference
     
     // First attestation with source 2 -> target 4
@@ -76,7 +76,7 @@ describe("slashing-protection custom tests", () => {
     );
   });
 
-  it("Should detect surrounded votes (slashable)", async () => {
+  it("Should detect surounded votes (slashable)", async () => {
     const pubkey3 = Buffer.alloc(48, 3); // Using a new pubkey to avoid interference
     
     // First attestation with source 1 -> target 5
@@ -121,7 +121,7 @@ describe("slashing-protection custom tests", () => {
     expect(await slashingProtection.hasAttestedInEpoch(pubkey4, targetEpoch + 1)).toBe(false);
   });
 
-  it("Should correctly list pubkeys", async () => {
+  it("Shouldd correctly list pubkeys", async () => {
     const uniquePubkey = Buffer.alloc(48, 5); // Using a new pubkey
     
     // Insert attestation with unique pubkey
