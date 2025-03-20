@@ -3,6 +3,7 @@ import {defineConfig} from "vitest/config";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
 import {e2eProjectConfig} from "./configs/vitest.config.e2e.js";
 import {specProjectConfig} from "./configs/vitest.config.spec.js";
+import {typesTestProject} from "./configs/vitest.config.types.js";
 import {
   unitTestConstantsMainnetProject,
   unitTestConstantsProject,
@@ -40,6 +41,10 @@ export default defineConfig({
       {
         extends: true,
         ...specProjectConfig,
+      },
+      {
+        extends: true,
+        ...typesTestProject,
       },
     ],
     exclude: [
