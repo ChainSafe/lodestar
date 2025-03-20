@@ -1,9 +1,10 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.3/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "clientKind": "git",
     "enabled": true,
-    "useIgnoreFile": true
+    "useIgnoreFile": true,
+    "defaultBranch": "unstable"
   },
   "files": {
     "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "configs/**/*.ts"]
@@ -38,7 +39,9 @@
           }
         },
         "useArrayLiterals": "error",
-        "noUndeclaredVariables": "error"
+        "noUndeclaredVariables": "error",
+        // TODO: We want this rule but it's not working properly with mono repos
+        "noUndeclaredDependencies": "off"
       },
       "performance": {
         // This rule should be enabled but with considerations and careful review
@@ -201,7 +204,11 @@
         "noIrregularWhitespace": "error",
         "noOctalEscape": "error",
         // Need to enable this rule with exception to anonymous functions
-        "useExplicitFunctionReturnType": "off"
+        "useExplicitType": "off",
+        "useGuardForIn": "error",
+        "noDuplicateProperties": "error",
+        "useAtIndex": "error",
+        "useCollapsedIf": "error"
       }
     }
   },

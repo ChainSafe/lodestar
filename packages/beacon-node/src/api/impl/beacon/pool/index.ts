@@ -280,7 +280,7 @@ export function getBeaconPoolApi({
               chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee, priority);
 
               // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
-              if (subnets.length === 0 || subnets[subnets.length - 1] !== subnet) {
+              if (subnets.length === 0 || subnets.at(-1) !== subnet) {
                 subnets.push(subnet);
               }
             }

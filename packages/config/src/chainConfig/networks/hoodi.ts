@@ -12,7 +12,6 @@ export const hoodiChainConfig: ChainConfig = {
 
   // Genesis
   // ---------------------------------------------------------------
-  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1000000,
   // 2025-Mar-17 12:00:00 PM UTC
   MIN_GENESIS_TIME: 1742212800,
   GENESIS_DELAY: 600,

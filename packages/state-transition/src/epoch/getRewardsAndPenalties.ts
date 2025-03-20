@@ -114,10 +114,8 @@ export function getRewardsAndPenaltiesAltair(
       penalties[i] += timelyTargetPenalty;
     }
 
-    if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
-      if (!isInInactivityLeakBn) {
-        rewards[i] += timelyHeadReward;
-      }
+    if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED) && !isInInactivityLeakBn) {
+      rewards[i] += timelyHeadReward;
     }
 
     // Same logic to getInactivityPenaltyDeltas

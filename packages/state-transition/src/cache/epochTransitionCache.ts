@@ -487,19 +487,17 @@ export function beforeProcessEpoch(
     }
   }
 
-  if (opts?.assertCorrectProgressiveBalances) {
+  if (opts?.assertCorrectProgressiveBalances && forkSeq >= ForkSeq.altair) {
     // TODO: describe issue. Compute progressive target balances
-    if (forkSeq >= ForkSeq.altair) {
-      if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
-        throw Error(
-          `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-        );
-      }
-      if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
-        throw Error(
-          `previousTargetUnslashedBalanceIncrements is wrong, expect ${prevTargetUnslStake} got ${epochCtx.previousTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-        );
-      }
+    if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
+      throw Error(
+        `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
+      );
+    }
+    if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
+      throw Error(
+        `previousTargetUnslashedBalanceIncrements is wrong, expect ${prevTargetUnslStake} got ${epochCtx.previousTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
+      );
     }
   }
 
