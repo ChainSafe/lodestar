@@ -19,6 +19,7 @@ import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
 import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
+import {NodeId} from "../subnets/interface.js";
 import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
@@ -40,6 +41,7 @@ export type Eth2Context = {
 
 export type Eth2GossipsubModules = {
   config: BeaconConfig;
+  nodeId: NodeId;
   libp2p: Libp2p;
   logger: Logger;
   metricsRegister: RegistryMetricCreator | null;
@@ -87,7 +89,7 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metricsRegister, peersData, events} = modules;
+    const {config, logger, metricsRegister, peersData, events, nodeId} = modules;
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -126,7 +128,7 @@ export class Eth2Gossipsub extends GossipSub {
       ),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
-        ? getMetricsTopicStrToLabel(config, {disableLightClientServer: opts.disableLightClientServer ?? false})
+        ? getMetricsTopicStrToLabel(config, nodeId, {disableLightClientServer: opts.disableLightClientServer ?? false})
         : undefined,
       asyncValidation: true,
 
@@ -326,11 +328,15 @@ function attSubnetLabel(subnet: SubnetID): string {
   return `0${subnet}`;
 }
 
-function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
+function getMetricsTopicStrToLabel(
+  config: BeaconConfig,
+  nodeId: NodeId,
+  opts: {disableLightClientServer: boolean}
+): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(config, fork, {
+    const topics = getCoreTopicsAtFork(config, fork, nodeId, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });

@@ -29,13 +29,14 @@ import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
 import {GetReqRespHandlerFn, OutgoingRequestArgs} from "../reqresp/types.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
-import {CommitteeSubscription, IAttnetsService, computeNodeId} from "../subnets/interface.js";
+import {CommitteeSubscription, IAttnetsService, NodeId, computeNodeId} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 
 type Mods = {
+  nodeId: NodeId;
   libp2p: Libp2p;
   gossip: Eth2Gossipsub;
   reqResp: ReqRespBeaconNode;
@@ -98,6 +99,7 @@ export class NetworkCore implements INetworkCore {
   private readonly clock: IClock;
   private readonly statusCache: LocalStatusCache;
   private readonly metrics: NetworkCoreMetrics | null;
+  private readonly nodeId: NodeId;
   private readonly opts: NetworkOptions;
 
   // Internal state
@@ -105,6 +107,7 @@ export class NetworkCore implements INetworkCore {
   private closed = false;
 
   constructor(modules: Mods) {
+    this.nodeId = modules.nodeId;
     this.libp2p = modules.libp2p;
     this.gossip = modules.gossip;
     this.reqResp = modules.reqResp;
@@ -172,8 +175,11 @@ export class NetworkCore implements INetworkCore {
       opts
     );
 
+    const nodeId = computeNodeId(peerId);
+
     const gossip = new Eth2Gossipsub(opts, {
       config,
+      nodeId,
       libp2p,
       logger,
       metricsRegister: metricsRegistry,
@@ -193,7 +199,6 @@ export class NetworkCore implements INetworkCore {
     // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
-    const nodeId = computeNodeId(peerId);
     const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
@@ -230,6 +235,7 @@ export class NetworkCore implements INetworkCore {
     metadata.upstreamValues(clock.currentEpoch);
 
     return new NetworkCore({
+      nodeId,
       libp2p,
       reqResp,
       gossip,
@@ -506,7 +512,7 @@ export class NetworkCore implements INetworkCore {
     this.subscribedForks.add(fork);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(config, fork, {
+    for (const topic of getCoreTopicsAtFork(config, fork, this.nodeId, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
@@ -519,7 +525,7 @@ export class NetworkCore implements INetworkCore {
     this.subscribedForks.delete(fork);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(config, fork, {
+    for (const topic of getCoreTopicsAtFork(config, fork, this.nodeId, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {

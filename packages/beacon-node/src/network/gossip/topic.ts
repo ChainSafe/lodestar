@@ -11,6 +11,8 @@ import {
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {getDataColumns} from "../../util/dataColumns.js";
+import {NodeId} from "../subnets/interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
@@ -229,6 +231,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 export function getCoreTopicsAtFork(
   config: ChainConfig,
   fork: ForkName,
+  nodeId: NodeId,
   opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
@@ -242,8 +245,11 @@ export function getCoreTopicsAtFork(
 
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
-    // TODO: @matthewkeil check if this needs to be updated for custody groups
-    for (let index = 0; index < DATA_COLUMN_SIDECAR_SUBNET_COUNT; index++) {
+    const sampleSubnets = getDataColumns(
+      nodeId,
+      Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
+    );
+    for (const index of sampleSubnets) {
       topics.push({type: GossipType.data_column_sidecar, index});
     }
   }
