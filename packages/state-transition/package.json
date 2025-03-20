@@ -53,7 +53,7 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "vitest run --min-workers=1 --max-workers=1 --dir test/unit/",
+    "test:unit": "vitest run --project unit",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",

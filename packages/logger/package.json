@@ -56,9 +56,9 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "vitest run --dir test/unit/",
-    "test:browsers": "vitest run --config ./vitest.browser.config.ts --dir test/unit",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts --dir test/e2e",
+    "test:unit": "vitest run --project unit",
+    "test:browsers": "vitest run --project browser",
+    "test:e2e": "vitest run --project e2e",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",

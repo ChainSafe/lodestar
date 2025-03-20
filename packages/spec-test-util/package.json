@@ -47,8 +47,8 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "vitest run --passWithNoTests --dir test/unit/",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts --dir test/e2e/",
+    "test:unit": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
