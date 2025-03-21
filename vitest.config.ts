@@ -59,7 +59,6 @@ export default defineConfig({
     ],
     env: {
       NODE_ENV: "test",
-      LODESTAR_PRESET: "minimal",
     },
     // restoreMock: true,
     reporters: process.env.GITHUB_ACTIONS
