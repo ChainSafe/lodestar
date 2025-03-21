@@ -37,8 +37,8 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
 
-  if (hasher.name !== "as-sha256") {
-    throw Error(`Loaded incorrect hasher ${hasher.name}, expected as-sha256`);
+  if (hasher.name !== "hashtree") {
+    throw Error(`Loaded incorrect hasher ${hasher.name}, expected hashtree`);
   }
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
