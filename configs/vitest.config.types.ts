@@ -4,7 +4,7 @@ import {defineProject} from "vitest/config";
 export const typesTestProject = defineProject({
   test: {
     name: "types",
-    include: ["**/test/types/**/*.ts"],
+    include: ["**/test/types/**/*.d.ts"],
     setupFiles: [
       path.join(import.meta.dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(import.meta.dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
