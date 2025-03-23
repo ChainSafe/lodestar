@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
   BlockInput,
@@ -14,6 +15,7 @@ import {PeerIdStr} from "../../../util/peerId.js";
 import {Batch} from "../batch.js";
 import {
   ForkName,
+  ForkPostDeneb,
   isForkBlobs,
   isForkPostDeneb,
   isForkPostFulu,
@@ -22,450 +24,386 @@ import {
 } from "@lodestar/params";
 import {INetwork} from "../../../network/index.js";
 import {linspace} from "../../../util/numpy.js";
-import {deneb, fulu, phase0, RootHex, Slot} from "@lodestar/types";
+import {ColumnIndex, deneb, fulu, phase0, RootHex, SignedBeaconBlock, Slot, WithBytes} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {LodestarError} from "@lodestar/utils";
 
-const BY_RANGE_EFFECTIVENESS_THRESHOLD = 50;
+export enum DownloadByRangeErrorCode {
+  MISSING_BLOBS_REQUEST = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_REQUEST",
+  MISSING_COLUMNS_REQUEST = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_REQUEST",
+  START_SLOT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_START_SLOT_MISMATCH",
+  COUNT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_COUNT_MISMATCH",
+  REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
+  MISSING_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS",
+  MISSING_BLOBS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_RESPONSE",
+  MISSING_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS",
+  MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
+  MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
 
-type BlockInputsByRangeResponse = {
-  startSlot: number;
-  endSlot: number;
-  missedSlots: number[];
-  incomplete: BlockInputByRootRequests;
-  complete: number[];
-};
-
-function calculateByRangeEffectiveness(response: BlockInputsByRangeResponse): number {
-  return 100;
+  /**
+   *
+   *
+   *
+   */
+  //   INVALID_EXPECTED_BLOBS_COUNT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_EXPECTED_BLOBS_COUNT",
+  RANGE_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_RANGE_MISMATCH",
+  Z = "DOWNLOAD_BY_RANGE_ERROR_Z",
 }
 
-async function downloadBlockInputsByRange(
-  chain: IBeaconChain,
-  network: INetwork,
-  peerIdStr: PeerIdStr,
-  dataAvailability: DataAvailabilityStatus,
-  blocksRequest: phase0.BeaconBlocksByRangeRequest,
-  blobRequest?: deneb.BlobSidecarsByRangeRequest,
-  columnRequest?: fulu.DataColumnSidecarsByRangeRequest
-): BlockInputsByRangeResponse {
-  const updatedBlockInputs = new Map<Slot, BlockInput>();
-  const errors: {slot: Slot; error: Error}[] = [];
+export type DownloadByRangeErrorType =
+  | {
+      code:
+        | DownloadByRangeErrorCode.MISSING_BLOBS_REQUEST
+        | DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE
+        | DownloadByRangeErrorCode.MISSING_COLUMNS_REQUEST
+        | DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE;
+      slotRange: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.START_SLOT_MISMATCH;
+      blockStartSlot: number;
+      dataStartSlot: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.COUNT_MISMATCH;
+      blockCount: number;
+      dataCount: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.REQ_RESP_ERROR;
+      name: string;
+      message: string;
+      stack: string | undefined;
+    }
+  | {
+      code: DownloadByRangeErrorCode.MISSING_BLOCKS;
+      missingSlots: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.MISSING_BLOBS;
+      expectedBlobCount: number;
+      missingBlobCount: number;
+      slotsWithIndices: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.MISSING_COLUMNS;
+      missingColumnCount: number;
+      indicesWithSlots: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.INADEQUATE_COLUMN_CUSTODY;
+    };
+//   | {
+//       code: DownloadByRangeErrorCode.INVALID_EXPECTED_BLOBS_COUNT;
+//       slot: number;
+//     }
+//   | {
+//       code: DownloadByRangeErrorCode.RANGE_MISMATCH;
+//       blockRange: string;
+//       dataRange: string;
+//     }
+
+export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}
+
+type DownloadByRangeRequests = {
+  blocksRequest: phase0.BeaconBlocksByRangeRequest;
+  blobRequest?: deneb.BlobSidecarsByRangeRequest;
+  columnRequest?: fulu.DataColumnSidecarsByRangeRequest;
+};
+
+type DownloadByRangeResponses = {
+  blocks: WithBytes<SignedBeaconBlock>[];
+  blobSidecars?: deneb.BlobSidecars;
+  columnSidecars?: fulu.DataColumnSidecars;
+};
+
+export async function downloadByRange({
+  config,
+  dataAvailabilityStatus,
+  blocksRequest,
+  blobRequest,
+  columnRequest,
+}: DownloadByRangeRequests & {config: ChainForkConfig; dataAvailabilityStatus: DataAvailabilityStatus}) {
+  const slotRange = `[ ${blocksRequest.startSlot} - ${blocksRequest.startSlot + blocksRequest.count}`;
+
+  // TODO: should we check for requests across a fork boundary?
+
+  if (dataAvailabilityStatus === DataAvailabilityStatus.Available) {
+    const forkName = config.getForkName(blocksRequest.startSlot);
+    if (isForkBlobs(forkName) && !blobRequest) {
+      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.MISSING_BLOBS_REQUEST, slotRange});
+    }
+    if (isForkPostFulu(forkName) && !columnRequest) {
+      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.MISSING_COLUMNS_REQUEST, slotRange});
+    }
+  }
+
+  const dataRequest = blobRequest ?? columnRequest;
+  if (dataRequest) {
+    if (blocksRequest.startSlot !== dataRequest.startSlot) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.START_SLOT_MISMATCH,
+        blockStartSlot: blocksRequest.startSlot,
+        dataStartSlot: dataRequest.startSlot,
+      });
+    }
+    if (blocksRequest.count !== dataRequest.count) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.COUNT_MISMATCH,
+        blockStart: blocksRequest.count,
+        dataStart: dataRequest.count,
+      });
+    }
+  }
+
+  let response: DownloadByRangeResponses;
+  try {
+    response = requestByRange();
+  } catch (err) {
+    throw new DownloadByRangeError({
+      code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
+      name: (err as Error).name,
+      message: (err as Error).message,
+      stack: (err as Error).stack,
+    });
+  }
+
+  compareByRangeRequestsToResponse({config, slotRange, blocksRequest, blobRequest, columnRequest, ...response});
+
+  return response;
+}
+
+// Should not be called directly. Only exported for unit testing purposes
+export async function requestByRange({
+  network,
+  peerIdStr,
+  blocksRequest,
+  blobRequest,
+  columnRequest,
+}: DownloadByRangeRequests & {
+  network: INetwork;
+  peerIdStr: PeerIdStr;
+}): // {errors: Error[]} &
+DownloadByRangeResponses {
+  // const errors: Error[] = [];
+  const blocks: WithBytes<SignedBeaconBlock>[] = [];
+  const blobSidecars: deneb.BlobSidecars = [];
+  const columnSidecars: fulu.DataColumnSidecars = [];
 
   const requests: Promise[] = [
     network
       .sendBeaconBlocksByRange(peerIdStr, blocksRequest)
-      .then((blockResponses) => {
-        for (const block of blockResponses) {
-          try {
-            const blockInput = chain.blockInputCache.getBlockInputByBlock({
-              block: block.data,
-              peerIdStr,
-              dataAvailability,
-              seenTimestampSec: Date.now() / 1000,
-              source: BlockInputSourceType.byRange,
-            });
-            if (!updatedBlockInputs.has(block.data.message.slot)) {
-              updatedBlockInputs.set(blockInput.getSlot(), blockInput);
-            }
-          } catch (error) {
-            errors.push({slot: block.data.message.slot, error});
-          }
-        }
-      })
-      .catch(errors.push),
+      .then((blockResponse) => {
+        blocks.push(...blockResponse);
+      }),
+    // .catch(errors.push),
   ];
 
-  let dataStartSlot = Infinity;
-  let dataCount = 0;
-  if (dataAvailability === DataAvailabilityStatus.Available) {
-    if (blobRequest && columnRequest) {
-      throw new Error("Cannot attempt *ByRange request for both blobs and columns on same epoch");
-    }
+  if (blobRequest) {
+    requests.push(
+      network
+        .sendBlobSidecarsByRange(peerIdStr, blobRequest)
+        .then((blobResponse) => {
+          blobSidecars.push(...blobResponse);
+        })
+      // .catch(errors.push)
+    );
+  }
 
-    if (!(blobRequest || columnRequest)) {
-      throw new Error("Must attempt *ByRange request for either blobs or columns in an epoch with available data");
-    }
-
-    if (blobRequest) {
-      dataStartSlot = blobRequest.startSlot;
-      dataCount = blobRequest.count;
-      requests.push(
-        network
-          .sendBlobSidecarsByRange(peerIdStr, blobRequest)
-          .then((blobResponses) => {
-            for (const blobSidecar of blobResponses) {
-              const slot = blobSidecar.signedBlockHeader.message.slot;
-              try {
-                const blockInput = chain.blockInputCache.getBlockInputByBlob({
-                  blobSidecar,
-                  source: BlockInputSourceType.byRange,
-                  seenTimestampSec: Date.now() / 1000,
-                  peerIdStr,
-                });
-                if (!updatedBlockInputs.has(slot)) {
-                  updatedBlockInputs.set(slot, blockInput);
-                }
-              } catch (error) {
-                errors.push({error, slot});
-              }
-            }
-          })
-          .catch(errors.push)
-      );
-    }
-
-    if (columnRequest) {
-      dataStartSlot = columnRequest.startSlot;
-      dataCount = columnRequest.count;
-      requests.push(
-        network
-          .sendDataColumnSidecarsByRange(peerIdStr, columnRequest)
-          .then((columnsSidecars) => {
-            for (const columnSidecar of columnsSidecars) {
-              const slot = columnSidecar.signedBlockHeader.message.slot;
-              try {
-                const blockInput = chain.blockInputCache.getBlockInputByColumn({
-                  columnSidecar,
-                  source: BlockInputSourceType.byRange,
-                  seenTimestampSec: Date.now() / 1000,
-                  peerIdStr,
-                });
-                if (!updatedBlockInputs.has(slot)) {
-                  updatedBlockInputs.set(slot, blockInput);
-                }
-              } catch (error) {
-                errors.push({slot, error});
-              }
-            }
-          })
-          .catch(errors.push)
-      );
-    }
+  if (columnRequest) {
+    requests.push(
+      network
+        .sendDataColumnSidecarsByRange(peerIdStr, columnRequest)
+        .then((columnResponse) => {
+          columnSidecars.push(...columnResponse);
+        })
+      // .catch(errors.push)
+    );
   }
 
   await Promise.all(requests);
 
-  const missedSlots: number[] = [];
-  const incomplete: BlockInputByRootRequests = [];
-  const complete: number[] = [];
+  return {
+    // errors,
+    blocks,
+    blobSidecars: blobRequest ? blobSidecars : undefined,
+    columnSidecars: columnRequest ? columnSidecars : undefined,
+  };
+}
 
-  const startSlot = Math.min(blocksRequest.startSlot, dataStartSlot);
-  const endSlot = Math.max(blocksRequest.startSlot + blocksRequest.count, dataStartSlot + dataCount);
-  for (let slot = startSlot; slot < endSlot; slot++) {
-    const blockInput = updatedBlockInputs.get(slot);
-    if (!blockInput) {
-      missedSlots.push(slot);
-    } else if (blockInput.isComplete()) {
-      complete.push(slot);
-    } else {
-      incomplete.push(blockInput.getRootRequests());
+// Should not be called directly. Only exported for unit testing purposes
+export function compareBlockByRangeRequestAndResponse(
+  blocksRequest: phase0.BeaconBlocksByRangeRequest,
+  blocks: WithBytes<SignedBeaconBlock>[]
+): {missingSlots: number[]} {
+  const {startSlot, count} = blocksRequest;
+  const slotsReceived = blocks.map((block) => block.data.message.slot);
+
+  const missingSlots: number[] = [];
+  for (let slot = startSlot; slot < startSlot + count; slot++) {
+    if (!slotsReceived.includes(slot)) {
+      missingSlots.push(slot);
     }
   }
 
   return {
-    startSlot,
-    endSlot,
-    missedSlots,
-    incomplete,
-    complete,
+    missingSlots,
   };
 }
 
-async function downloadBlockInputsByRoot(
-  chain: IBeaconChain,
-  network: INetwork,
-  peerIdStr: PeerIdStr,
-  dataAvailability: DataAvailabilityStatus,
-  requests: BlockInputByRootRequests[]
-) {
-  const blocksRequest: phase0.BeaconBlocksByRootRequest = [];
-  const blobsRequest: phase0.BeaconBlocksByRootRequest = [];
-  const columnsRequest: phase0.BeaconBlocksByRootRequest = [];
+type BlobComparisonResponse = {
+  expectedBlobCount: number;
+  missingBlobCount: number;
+  missingBlobsDescription: string[];
+};
+// Should not be called directly. Only exported for unit testing purposes
+export function compareBlobsByRangeRequestAndResponse(
+  blocks: WithBytes<SignedBeaconBlock>[],
+  blobSidecars: deneb.BlobSidecars
+): BlobComparisonResponse {
+  let expectedBlobCount = 0;
+  let missingBlobCount = 0;
+  const missingBlobsDescription: string[] = [];
+  for (const block of blocks) {
+    const slot = block.data.message.slot;
+    const expectedBlobs = (block.data as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
+    expectedBlobCount += expectedBlobs;
+    const receivedBlobs = blobSidecars.filter((blobSidecar) => blobSidecar.signedBlockHeader.message.slot === slot);
 
-  for (const {block, blobs, columns} of requests) {
-    if (block) {
-      blocksRequest.push(block);
+    const missingIndices: number[] = [];
+    for (const index of linspace(0, expectedBlobs - 1)) {
+      if (!receivedBlobs.includes(index)) {
+        missingIndices.push(index);
+      }
     }
-    if (blobs) {
-      blobsRequest.push(blobs);
+    if (missingIndices.length > 0) {
+      missingBlobCount += missingIndices;
+      missingBlobsDescription.push(`${slot}[${missingIndices.join(",")}]`);
     }
-    if (columns) {
-      columnsRequest.push(columns);
-    }
-  }
-
-  // TODO check for MAX_REQUEST_BLOCKS or MAX_REQUEST_BLOCKS_DENEB
-  if (blocksRequest.length > MAX_REQUEST_BLOCKS) {
-    throw new Error("Cannot request more than MAX_REQUEST_BLOCKS");
-  }
-  if (blobsRequest.length > chain.config.getMaxRequestBlobSidecars()) {
-    throw new Error("Cannot request more than MAX_REQUEST_BLOB_SIDECARS");
-  }
-  if (columnsRequest.length > MAX_REQUEST_DATA_COLUMN_SIDECARS) {
-    throw new Error("Cannot request more than MAX_REQUEST_DATA_COLUMN_SIDECARS");
-  }
-
-  const responses: Promise[] = [];
-  const errors: Error[] = [];
-  const updatedBlockInputs = new Map<Slot, BlockInput>();
-
-  if (blocksRequest.length) {
-    responses.push(
-      network
-        .sendBeaconBlocksByRoot(peerIdStr, blocksRequest)
-        .then((blocks) => {
-          for (const {data} of blocks) {
-            try {
-              const blockInput = chain.blockInputCache.getBlockInputByBlock({
-                block: data,
-                peerIdStr,
-                dataAvailability,
-                seenTimestampSec: Date.now() / 1000,
-                source: BlockInputSourceType.byRoot,
-              });
-              if (!updatedBlockInputs.has(data.message.slot)) {
-                updatedBlockInputs.set(blockInput.getSlot(), blockInput);
-              }
-            } catch (error) {
-              errors.push({slot: data.message.slot, error});
-            }
-          }
-        })
-        .catch(errors.push)
-    );
-  }
-  if (blobsRequest.length) {
-    responses.push(
-      network
-        .sendBlobSidecarsByRoot(peerIdStr, blocksRequest)
-        .then((blobSidecars) => {
-          for (const blobSidecar of blobSidecars) {
-            const slot = blobSidecar.signedBlockHeader.message.slot;
-            try {
-              const blockInput = chain.blockInputCache.getBlockInputByBlob({
-                blobSidecar,
-                source: BlockInputSourceType.byRoot,
-                seenTimestampSec: Date.now() / 1000,
-                peerIdStr,
-              });
-              if (!updatedBlockInputs.has(slot)) {
-                updatedBlockInputs.set(slot, blockInput);
-              }
-            } catch (error) {
-              errors.push({error, slot});
-            }
-          }
-        })
-        .catch(errors.push)
-    );
-  }
-  if (columnsRequest.length) {
-    responses.push(
-      network
-        .sendDataColumnSidecarsByRoot(peerIdStr, blocksRequest)
-        .then((columnsSidecars) => {
-          for (const columnSidecar of columnsSidecars) {
-            const slot = columnSidecar.signedBlockHeader.message.slot;
-            try {
-              const blockInput = chain.blockInputCache.getBlockInputByColumn({
-                columnSidecar,
-                source: BlockInputSourceType.byRoot,
-                seenTimestampSec: Date.now() / 1000,
-                peerIdStr,
-              });
-              if (!updatedBlockInputs.has(slot)) {
-                updatedBlockInputs.set(slot, blockInput);
-              }
-            } catch (error) {
-              errors.push({slot, error});
-            }
-          }
-        })
-        .catch(errors.push)
-    );
-  }
-
-  await Promise.all(responses);
-
-  const complete: number[] = [];
-  const incomplete: BlockInputByRootRequests[] = [];
-
-  for (const blockInput of updatedBlockInputs.values()) {
-    if (blockInput.isComplete()) complete.push(blockInput.getSlot());
-    else incomplete.push(blockInput.getRootRequests());
   }
 
   return {
-    complete,
-    incomplete,
+    expectedBlobCount,
+    missingBlobCount,
+    missingBlobsDescription,
   };
 }
 
-async function downloadBatch(chain: IBeaconChain, network: INetwork, peerIdStr: string, batch: Batch) {
-  const currentEpoch = chain.clock.currentEpoch;
-  const batchEpoch = batch.startEpoch;
-  const forkName = chain.config.getForkName(batch.startSlot);
-  const dataAvailabilityStatus = !isForkPostDeneb(forkName)
-    ? DataAvailabilityStatus.PreData
-    : batchEpoch >= currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-      ? DataAvailabilityStatus.Available
-      : DataAvailabilityStatus.OutOfRange;
+type ColumnComparisonResponse = {
+  missingByIndex: Map<number, Slot[]>;
+  extraByIndex: Map<number, Slot[]>;
+};
+// Should not be called directly. Only exported for unit testing purposes
+export function compareColumnsByRangeRequestAndResponse(
+  columnRequest: fulu.DataColumnSidecarsByRangeRequest,
+  columnSidecars: fulu.DataColumnSidecars
+): ColumnComparisonResponse {
+  const {startSlot, count, columns: expectedColumns} = columnRequest;
 
-  const byRangeResponse = await downloadBlockInputsByRange(
-    chain,
-    network,
-    peerIdStr,
-    dataAvailabilityStatus,
-    batch.getBlocksByRangeRequest(),
-    batch.getBlobByRangeRequest(),
-    batch.getColumnByRangeRequest()
-  );
+  const missingByIndex = new Map<number, Slot[]>();
+  const extraByIndex = new Map<number, Slot[]>();
 
-  const effectiveness = calculateByRangeEffectiveness(byRangeResponse);
+  for (let slot = startSlot; slot < startSlot + count; slot++) {
+    const receivedIndices = columnSidecars
+      .filter((columnSidecar) => columnSidecar.signedBlockHeader.message.slot === slot)
+      .map((columnSidecar) => columnSidecar.index);
 
-  if (effectiveness < BY_RANGE_EFFECTIVENESS_THRESHOLD) {
-    throw new Error("ByRange request was ineffective.  Try to reattempt");
+    for (const index of receivedIndices) {
+      if (!expectedColumns.includes(index)) {
+        const extraSlots = extraByIndex.get(index) ?? [];
+        extraSlots.push(slot);
+        extraByIndex.set(index, extraSlots);
+      }
+    }
+
+    for (const index of expectedColumns) {
+      if (!receivedIndices.includes(index)) {
+        const missingSlots = missingByIndex.get(index) ?? [];
+        missingSlots.push(slot);
+        missingByIndex.set(index, missingSlots);
+      }
+    }
   }
 
-  const {startSlot, endSlot, missedSlots, complete: completeByRange, incomplete: incompleteByRange} = byRangeResponse;
-
-  const {complete: completeByRoot, incomplete} = await downloadBlockInputsByRoot(
-    chain,
-    network,
-    peerIdStr,
-    incompleteByRange
-  );
-
   return {
-    startSlot,
-    endSlot,
-    missedSlots,
-    complete: completeByRange.concat(...completeByRoot).sort((a, b) => a - b),
-    incomplete,
+    missingByIndex,
+    extraByIndex,
   };
 }
 
-// export async function downloadBatch2(
-//   chain: IBeaconChain,
-//   network: INetwork,
-//   peerIdStr: PeerIdStr,
-//   batch: Batch
-// ): Promise<ByRangeDownloadBatchResponse> {
-//   chain.config.MAX_REQUEST_BLOB_SIDECARS;
-//   const currentEpoch = chain.clock.currentEpoch;
-//   const batchEpoch = batch.startEpoch;
-//   const dataAvailability =
-//     batchEpoch >= currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-//       ? DataAvailabilityStatus.Available
-//       : DataAvailabilityStatus.OutOfRange;
+// Should not be called directly. Only exported for unit testing purposes
+export function compareByRangeRequestsToResponse({
+  slotRange,
+  slotRangeString,
+  blocksRequest,
+  blobRequest,
+  columnRequest,
+  blocks,
+  blobSidecars,
+  columnSidecars,
+}: DownloadByRangeRequests & DownloadByRangeResponses & {slotRange: number; slotRangeString: string}): void {
+  const {missingSlots} = compareBlockByRangeRequestAndResponse(blocksRequest, blocks);
 
-//   const updated = new Map<string, BlockInput>();
-//   const errors: Error[] = [];
+  if (missingSlots) {
+    throw new DownloadByRangeError({
+      code: DownloadByRangeErrorCode.MISSING_BLOCKS,
+      missingSlots: `[ ${missingSlots.concat(",")} ]`,
+    });
+  }
 
-//   const byRangeResults = {
-//     blocks: {
-//       requested: 0,
-//       received: 0,
-//     },
-//     blobs: {
-//       requested: 0,
-//       received: 0,
-//     },
-//     columns: {
-//       requested: 0,
-//       received: 0,
-//     },
-//   };
+  if (blobRequest) {
+    if (!blobSidecars) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
+        slotRange: slotRangeString,
+      });
+    }
+    const {expectedBlobCount, missingBlobCount, missingBlobsDescription} = compareBlobsByRangeRequestAndResponse(
+      blocks,
+      blobSidecars
+    );
 
-//   if (batch.isByRange()) {
-//     const byRangeResponses: Promise[] = [];
-//     const blockRequestMissedSlots: number[] = [];
+    if (missingBlobCount > 0) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISSING_BLOBS,
+        expectedBlobCount,
+        missingBlobCount,
+        slotsWithIndices: missingBlobsDescription.join(","),
+      });
+    }
+  }
 
-//     const blocksRequest = batch.getBlocksByRangeRequest();
-//     const {count, startSlot} = blocksRequest;
-//     byRangeResults.blocks.requested += count;
-
-//     byRangeResponses.push(
-//       network
-//         .sendBeaconBlocksByRange(peerIdStr, blocksRequest)
-//         .then((blockResponses) => {
-//           for (const block of blockResponses) {
-//             chain.blockInputCache.getBlockInputByBlock({
-//               block: block.data,
-//               peerIdStr,
-//               dataAvailability,
-//               seenTimestampSec: Date.now() / 1000,
-//               source: BlockInputSourceType.byRange,
-//             });
-//           }
-
-//           byRangeResults.blocks.received += blockResponses.length;
-//           if (blockResponses.length !== count) {
-//             const receivedSlots = blockResponses.map(({data}) => data.message.slot);
-//             for (let slot = startSlot; slot < startSlot + count; slot++) {
-//               if (!receivedSlots.includes(slot)) {
-//                 blockRequestMissedSlots.push(slot);
-//               }
-//             }
-//           }
-//         })
-//         .catch(errors.push)
-//     );
-
-//     const missingBlobs: MissingBlob[] = [];
-//     const missingColumns: MissingData[] = [];
-
-//     if (dataAvailability === DataAvailabilityStatus.Available) {
-//       if (isForkBlobs(batch.forkName)) {
-//         const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock();
-//         let totalBlobsForRequest = 0;
-
-//         network
-//           .sendBlobSidecarsByRange(peerIdStr, batch.getBlobByRangeRequest())
-//           .then((blobResponses) => {
-//             byRangeResults.blobs.received += blobResponses.length;
-
-//             for (const blobSidecar of blobResponses) {
-//               const blockInput = chain.blockInputCache.getBlockInputByBlob({
-//                 blobSidecar,
-//                 source: BlockInputSourceType.byRange,
-//                 seenTimestampSec: Date.now() / 1000,
-//                 peerIdStr,
-//               });
-
-//               totalBlobsForRequest += blockInput.numberOfBlobs() ?? maxBlobsPerBlock;
-//               const missing = blockInput.getMissingBlobIndices();
-//               if (missing) {
-//                 missingBlobs.push(missing);
-//               }
-//             }
-
-//             byRangeResults.blobs.requested = totalBlobsForRequest;
-//           })
-//           .catch(errors.push);
-//       }
-
-//       if (isForkPostFulu(batch.forkName)) {
-//         const columnsByRangeRequest = batch.getColumnByRangeRequest();
-//         const {count, columns} = columnsByRangeRequest;
-//         byRangeResults.columns.requested += count * columns.length;
-
-//         network
-//           .sendDataColumnSidecarsByRange(peerIdStr)
-//           .then((columnsSidecars) => {
-//             for (const columnSidecar of columnsSidecars) {
-//               const blockInput = chain.blockInputCache.getBlockInputByColumn({
-//                 columnSidecar,
-//                 source: BlockInputSourceType.byRange,
-//                 seenTimestampSec: Date.now() / 1000,
-//                 peerIdStr,
-//               });
-//               missingColumns.push(...blockInput.getMissingColumnIndices());
-//             }
-//           })
-//           .catch(errors.push);
-//       }
-//     }
-
-//     await Promise.all(byRangeResponses);
-//   }
-// }
+  if (columnRequest) {
+    if (!columnSidecars) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
+        slotRange: slotRangeString,
+      });
+    }
+    const {missingByIndex, extraByIndex} = compareColumnsByRangeRequestAndResponse(columnRequest, columnSidecars);
+    if (extraByIndex.size()) {
+      throw new DownloadByRangeError({});
+    }
+    if (missingByIndex.size()) {
+      const missingPeerCustody = [];
+      let missingColumnCount = 0;
+      const indicesWithSlots = [];
+      for (const [index, missingSlots] of missingByIndex) {
+        if (missingSlots.length === slotRange) {
+          missingPeerCustody.push(index);
+        } else {
+          missingColumnCount += missingSlots;
+          indicesWithSlots.push(`${index}[ ${missingSlots.join(",")} ]`);
+        }
+      }
+      if (missingPeerCustody.length) {
+        throw new DownloadByRangeError({code: DownloadByRangeErrorCode});
+      }
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISSING_COLUMNS,
+        missingColumnCount,
+        indicesWithSlots: indicesWithSlots.join(", "),
+      });
+    }
+  }
+}
