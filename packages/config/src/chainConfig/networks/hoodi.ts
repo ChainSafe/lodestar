@@ -12,7 +12,6 @@ export const hoodiChainConfig: ChainConfig = {
 
   // Genesis
   // ---------------------------------------------------------------
-  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1000000,
   // 2025-Mar-17 12:00:00 PM UTC
   MIN_GENESIS_TIME: 1742212800,
   GENESIS_DELAY: 600,
@@ -39,6 +38,11 @@ export const hoodiChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x70000910"),
   FULU_FORK_EPOCH: Infinity,
+
+  // Time parameters
+  // ---------------------------------------------------------------
+  // 12 (update from older mainnet default of 14)
+  SECONDS_PER_ETH1_BLOCK: 12,
 
   // Deposit contract
   // ---------------------------------------------------------------

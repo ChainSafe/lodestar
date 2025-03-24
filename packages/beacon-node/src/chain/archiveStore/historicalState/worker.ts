@@ -5,10 +5,10 @@ import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
-import {BeaconDb} from "../../db/index.js";
-import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
-import {JobFnQueue} from "../../util/queue/fnQueue.js";
-import {QueueMetrics} from "../../util/queue/options.js";
+import {BeaconDb} from "../../../db/index.js";
+import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
+import {JobFnQueue} from "../../../util/queue/fnQueue.js";
+import {QueueMetrics} from "../../../util/queue/options.js";
 import {getHistoricalState} from "./getHistoricalState.js";
 import {
   HistoricalStateRegenMetrics,

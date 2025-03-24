@@ -3,7 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 import {BeaconStateTransitionMetrics} from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {Metrics} from "../../../metrics/index.js";
 
 export type HistoricalStateRegenInitModules = {
   opts: {
