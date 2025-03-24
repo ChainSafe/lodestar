@@ -72,3 +72,8 @@ export interface IArchiveStore {
    */
   persistToDisk(): Promise<void>;
 }
+
+export interface IStateDiffCodec {
+  compute(base: Uint8Array, changed: Uint8Array): Uint8Array;
+  apply(base: Uint8Array, delta: Uint8Array): Uint8Array;
+}
