@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import type {PeerId, PeerInfo} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, SubnetID} from "@lodestar/types";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {ColumnIndex} from "@lodestar/types";
@@ -20,6 +20,7 @@ import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {type GroupQueries } from "./utils/prioritizePeers.js";
+import {IClock} from "../../util/clock.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -40,6 +41,7 @@ export type PeerDiscoveryOpts = {
 export type PeerDiscoveryModules = {
   nodeId: NodeId;
   libp2p: Libp2p;
+  clock: IClock;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
   logger: LoggerNode;
@@ -93,7 +95,8 @@ type CachedENR = {
   multiaddrTCP: Multiaddr;
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
-  peerCustodyGroups: number[];
+  // peerCustodyGroups is null for pre-fulu
+  peerCustodyGroups: number[] | null;
 };
 
 /**
@@ -103,6 +106,7 @@ type CachedENR = {
 export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
+  private readonly clock: IClock;
   // TODO-das: remove nodeId and sampleSubnets once we remove onlyConnect* flag
   private nodeId: NodeId;
   private sampleSubnets: number[];
@@ -129,8 +133,9 @@ export class PeerDiscovery {
   private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
-    const {libp2p, peerRpcScores, metrics, logger, config, nodeId} = modules;
+    const {libp2p, clock, peerRpcScores, metrics, logger, config, nodeId} = modules;
     this.libp2p = libp2p;
+    this.clock = clock;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
@@ -217,6 +222,7 @@ export class PeerDiscovery {
 
   /**
    * Request to find peers, both on specific subnets and in general
+   * pre-fulu groupRequests is empty
    */
   discoverPeers(
     peersToConnect: number,
@@ -251,21 +257,25 @@ export class PeerDiscovery {
     // starting from PeerDAS, we need to prioritize column subnet peers first in order to have stable subnet sampling
     const groupsToDiscover = new Set<CustodyIndex>();
     let groupPeersToDiscover = 0;
-    group: for (const [group, maxPeersToConnect] of groupRequests) {
-      let cachedENRsInGroup = 0;
-      for (const cachedENR of cachedENRsReverse) {
-        if (cachedENR.peerCustodyGroups.includes(group)) {
-          cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
 
-          if (++cachedENRsInGroup >= maxPeersToConnect) {
-            continue group;
+    const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
+    if (forkSeq >= ForkSeq.fulu) {
+      group: for (const [group, maxPeersToConnect] of groupRequests) {
+        let cachedENRsInGroup = 0;
+        for (const cachedENR of cachedENRsReverse) {
+          if (cachedENR.peerCustodyGroups && cachedENR.peerCustodyGroups.includes(group)) {
+            cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
+
+            if (++cachedENRsInGroup >= maxPeersToConnect) {
+              continue group;
+            }
           }
-        }
 
-        const groupPeersToConnect = Math.max(maxPeersToConnect - cachedENRsInGroup, 0);
-        this.groupRequests.set(group, groupPeersToConnect);
-        groupsToDiscover.add(group);
-        groupPeersToDiscover += groupPeersToConnect;
+          const groupPeersToConnect = Math.max(maxPeersToConnect - cachedENRsInGroup, 0);
+          this.groupRequests.set(group, groupPeersToConnect);
+          groupsToDiscover.add(group);
+          groupPeersToDiscover += groupPeersToConnect;
+        }
       }
     }
 
@@ -464,13 +474,16 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.already_dialing;
       }
 
+      const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
+
       // Should dial peer?
       const cachedPeer: CachedENR = {
         peerId,
         multiaddrTCP,
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
-        peerCustodyGroups: getCustodyGroups(nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT),
+        // for pre-fulu, peerCustodyGroups is null
+        peerCustodyGroups: forkSeq >= ForkSeq.fulu ? getCustodyGroups(nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT) : null,
       };
 
       // Only dial peer if necessary
@@ -491,58 +504,62 @@ export class PeerDiscovery {
   }
 
   private shouldDialPeer(peer: CachedENR): boolean {
-    // begin onlyConnect* experimental logic
-    // TODO-das: remove
-    const nodeId = computeNodeId(peer.peerId);
-    const peerCustodyGroupCount = peer.peerCustodyGroups.length;
-    const peerCustodyColumns = getDataColumns(nodeId, peerCustodyGroupCount);
+    const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
+    if (forkSeq >= ForkSeq.fulu && peer.peerCustodyGroups !== null) {
+      // begin onlyConnect* experimental logic
+      // TODO-das: remove
+      const nodeId = computeNodeId(peer.peerId);
+      const peerCustodyGroupCount = peer.peerCustodyGroups.length;
+      const peerCustodyColumns = getDataColumns(nodeId, peerCustodyGroupCount);
 
-    const matchingSubnetsNum = this.sampleSubnets.reduce(
-      (acc, elem) => acc + (peerCustodyColumns.includes(elem) ? 1 : 0),
-      0
-    );
-    const hasAllColumns = matchingSubnetsNum === this.sampleSubnets.length;
-    const hasMinCustodyMatchingColumns = matchingSubnetsNum >= Math.max(this.config.CUSTODY_REQUIREMENT);
+      const matchingSubnetsNum = this.sampleSubnets.reduce(
+        (acc, elem) => acc + (peerCustodyColumns.includes(elem) ? 1 : 0),
+        0
+      );
+      const hasAllColumns = matchingSubnetsNum === this.sampleSubnets.length;
+      const hasMinCustodyMatchingColumns = matchingSubnetsNum >= Math.max(this.config.CUSTODY_REQUIREMENT);
 
-    this.logger.warn("peerCustodyColumns", {
-      peerId: peer.peerId.toString(),
-      peerNodeId: toHexString(nodeId),
-      hasAllColumns,
-      peerCustodyGroupCount,
-      peerCustodyColumns: peerCustodyColumns.join(" "),
-      sampleSubnets: this.sampleSubnets.join(" "),
-      nodeId: `${toHexString(this.nodeId)}`,
-    });
-    if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {
-      return false;
-    }
-
-    if (this.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
-      return false;
-    }
-    // end onlyConnect* experimental logic
-
-    // starting from PeerDAS fork, we need to make sure we have stable subnet sampling peers first
-    // given CUSTODY_REQUIREMENT = 4 and 100 peers, we have 400 custody columns from peers
-    // with NUMBER_OF_CUSTODY_GROUPS = 128, we have 400 / 128 = 3.125 peers per column in average
-    // it would not be hard to find TARGET_SUBNET_PEERS(6) peers per SAMPLES_PER_SLOT(8) columns
-    // after some first heartbeats, we should have no more column requested, then go with conditions of prior forks
-    let hasMatchingGroup = false;
-    let groupRequestCount = 0;
-    for (const [group, peersToConnect] of this.groupRequests.entries()) {
-      if (peersToConnect <= 0) {
-        this.groupRequests.delete(group);
-      } else if (peer.peerCustodyGroups.includes(group)) {
-        this.groupRequests.set(group, Math.max(0, peersToConnect - 1));
-        hasMatchingGroup = true;
-        groupRequestCount += peersToConnect;
+      this.logger.warn("peerCustodyColumns", {
+        peerId: peer.peerId.toString(),
+        peerNodeId: toHexString(nodeId),
+        hasAllColumns,
+        peerCustodyGroupCount,
+        peerCustodyColumns: peerCustodyColumns.join(" "),
+        sampleSubnets: this.sampleSubnets.join(" "),
+        nodeId: `${toHexString(this.nodeId)}`,
+      });
+      if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {
+        return false;
       }
-    }
 
-    // if subnet sampling peers are not stable and this peer is not in the requested columns, ignore it
-    if (groupRequestCount > 0 && !hasMatchingGroup) {
-      this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.not_contain_requested_sampling_groups});
-      return false;
+      if (this.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
+        return false;
+      }
+      // end onlyConnect* experimental logic
+
+      // pre-fulu `this.groupRequests` is empty
+      // starting from fulu, we need to make sure we have stable subnet sampling peers first
+      // given CUSTODY_REQUIREMENT = 4 and 100 peers, we have 400 custody columns from peers
+      // with NUMBER_OF_CUSTODY_GROUPS = 128, we have 400 / 128 = 3.125 peers per column in average
+      // it would not be hard to find TARGET_SUBNET_PEERS(6) peers per SAMPLES_PER_SLOT(8) columns
+      // after some first heartbeats, we should have no more column requested, then go with conditions of prior forks
+      let hasMatchingGroup = false;
+      let groupRequestCount = 0;
+      for (const [group, peersToConnect] of this.groupRequests.entries()) {
+        if (peersToConnect <= 0) {
+          this.groupRequests.delete(group);
+        } else if (peer.peerCustodyGroups.includes(group)) {
+          this.groupRequests.set(group, Math.max(0, peersToConnect - 1));
+          hasMatchingGroup = true;
+          groupRequestCount += peersToConnect;
+        }
+      }
+
+      // if subnet sampling peers are not stable and this peer is not in the requested columns, ignore it
+      if (groupRequestCount > 0 && !hasMatchingGroup) {
+        this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.not_contain_requested_sampling_groups});
+        return false;
+      }
     }
 
     // logics up to Deneb fork

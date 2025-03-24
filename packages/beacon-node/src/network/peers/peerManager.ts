@@ -2,7 +2,7 @@ import {BitArray, toHexString} from "@chainsafe/ssz";
 import {Connection, PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, Metadata, fulu, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
@@ -174,10 +174,12 @@ export class PeerManager {
     this.nodeId = modules.nodeId;
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
+    // TODO(das): may not need this, use `this.samplingGroups` instead
     this.sampleSubnets = getDataColumns(
       this.nodeId,
       Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
     );
+    // TODO(das): get from custodyConfig or a centralized place every time, instead of computing once here
     this.samplingGroups = getCustodyGroups(
       this.nodeId,
       Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
@@ -546,6 +548,8 @@ export class PeerManager {
       }
     }
 
+    const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
+
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, groupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
@@ -561,7 +565,8 @@ export class PeerManager {
       // Collect subnets which we need peers for in the current slot
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
-      this.samplingGroups,
+      // ignore samplingGroups for pre-fulu forks
+      forkSeq >= ForkSeq.fulu ? this.samplingGroups : undefined,
       this.opts,
       this.metrics
     );

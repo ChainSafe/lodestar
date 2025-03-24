@@ -41,7 +41,7 @@ const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
 type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
 /**
- * A map of column subnet id to maxPeersToDiscover
+ * A map of das custody group index to maxPeersToDiscover
  */
 export type GroupQueries = Map<CustodyIndex, number>;
 
@@ -77,6 +77,8 @@ export enum ExcessPeerDisconnectReason {
  * - Don't exceed `maxPeers`
  * - Ensure there are enough peers per active subnet
  * - Prioritize peers with good score
+ *
+ * pre-fulu samplingGroups is not used and this function returns empty groupQueries
  */
 export function prioritizePeers(
   connectedPeersInfo: {
@@ -89,7 +91,7 @@ export function prioritizePeers(
   }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  samplingGroups: CustodyIndex[],
+  samplingGroups: CustodyIndex[] = [],
   opts: PrioritizePeersOpts,
   metrics: NetworkCoreMetrics | null
 ): {
@@ -154,12 +156,13 @@ export function prioritizePeers(
 
 /**
  * If more peers are needed in attnets and syncnets and column subnets, create SubnetDiscvQuery for each subnet
+ * pre-fulu samplingGroups is not used and this function returns empty groupQueries
  */
 function requestSubnetPeers(
   connectedPeers: PeerInfo[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  samplingGroups: CustodyIndex[],
+  samplingGroups: CustodyIndex[] = [],
   opts: PrioritizePeersOpts,
   metrics: NetworkCoreMetrics | null
 ): {
