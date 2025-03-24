@@ -229,10 +229,10 @@ If the PR contains a self-contained and complete feature or bug fix that does no
 
 If the PR involves significant code refactoring, structural changes, or fundamental modifications where team input is needed:
 
-- Start a GitHub Discussion before writing code.
+- Start a GitHub Discussion or Discord thread before writing code.
 - Outline the problem, your proposed approach, and any alternative solutions.
 - Request feedback and build consensus with the team.
-- Link the discussion in the PR description once consensus is reached.
+- Summarize the outcome and link the discussion in the PR description once consensus is reached.
 - If changes affect multiple packages or require coordination with ongoing development, summarize any key decisions from the discussion in the PR description.
 
 ### 3. Large Feature or Multi-PR Implementation
