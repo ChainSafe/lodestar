@@ -75,7 +75,6 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
       // Consume churn and apply deposit.
       processedAmount += deposit.amount;
       applyPendingDeposit(state, deposit, cache);
-
     }
 
     // Regardless of how the deposit was handled, we move on in the queue.
