@@ -1,6 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
+import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {PeerId} from "@libp2p/interface";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
@@ -157,6 +158,10 @@ export class BeaconNode {
     wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
+    if (hasher.name !== "hashtree") {
+      throw Error(`Loaded incorrect hasher ${hasher.name}, expected hashtree`);
+    }
+
     const controller = new AbortController();
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     // Since it is perfectly fine to have listeners > 10

@@ -439,7 +439,7 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/as-chacha20poly1305/-/as-chacha20poly1305-0.1.0.tgz#7da6f8796f9b42dac6e830a086d964f1f9189e09"
   integrity sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==
 
-"@chainsafe/as-sha256@1.1.0":
+"@chainsafe/as-sha256@1.1.0", "@chainsafe/as-sha256@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.1.0.tgz#949082ab96e0b266484f01f59a71930761afc6c4"
   integrity sha512-pLlxYtfYy2YW5GN+7d946UAjBOS9VOFulkfFN6Z+84ZhMP0Ey8XsCG21CZTczwq1C8J7/4z8LGzmrAtmQ37VCQ==
@@ -448,11 +448,6 @@
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.4.1.tgz#cfc0737e25f8c206767bdb6703e7943e5d44513e"
   integrity sha512-IqeeGwQihK6Y2EYLFofqs2eY2ep1I2MvQXHzOAI+5iQN51OZlUkrLgyAugu2x86xZewDk5xas7lNczkzFzF62w==
-
-"@chainsafe/as-sha256@^1.0.0", "@chainsafe/as-sha256@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.0.1.tgz#9fa9ab73c9748c1160ec5125059bd9f4f9185f68"
-  integrity sha512-4Y/kQm0LsJ6QRtGcMq6gOdQP+fZhWDfIV2eIqP6oFJZBWYGmdh3wm8YbrXDPLJO87X2Fu6koRLdUS00O3k14Hw==
 
 "@chainsafe/benchmark@^1.2.3":
   version "1.2.3"
@@ -701,7 +696,7 @@
   dependencies:
     "@chainsafe/is-ip" "^2.0.1"
 
-"@chainsafe/persistent-merkle-tree@1.1.0":
+"@chainsafe/persistent-merkle-tree@1.1.0", "@chainsafe/persistent-merkle-tree@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-1.1.0.tgz#d10d9e926f2c5751d02a188b8fb6823821572aca"
   integrity sha512-UIcKEGkEGghTXbFTvKqIiN2iljg2f6c2Y8GxdQEyle5UI6YIB8d3ACYTkAhrHSB4YsNlG9pc/A0NGJw/3Hf9wQ==
@@ -716,15 +711,6 @@
   integrity sha512-gcENLemRR13+1MED2NeZBMA7FRS0xQPM7L2vhMqvKkjqtFT4YfjSVADq5U0iLuQLhFUJEMVuA8fbv5v+TN6O9A==
   dependencies:
     "@chainsafe/as-sha256" "^0.4.1"
-    "@noble/hashes" "^1.3.0"
-
-"@chainsafe/persistent-merkle-tree@^1.0.1":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-1.0.2.tgz#e6154d3f6a2046c06f0ff64ac5634b72057959f3"
-  integrity sha512-9yPy1T8VIsN5pogFjMOW7bUATyoQShoKRu/7YUpHb8bkAeMk+5jUHA9FY3rWdGTApnAQnCQNbVcg+VCJfZt8cg==
-  dependencies:
-    "@chainsafe/as-sha256" "^1.0.1"
-    "@chainsafe/hashtree" "1.0.1"
     "@noble/hashes" "^1.3.0"
 
 "@chainsafe/persistent-ts@^1.0.0":
