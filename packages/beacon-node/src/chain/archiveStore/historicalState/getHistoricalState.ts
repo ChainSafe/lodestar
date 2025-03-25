@@ -1,3 +1,4 @@
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -10,6 +11,11 @@ import {
 } from "@lodestar/state-transition";
 import {IBeaconDb} from "../../../db/index.js";
 import {HistoricalStateRegenMetrics, RegenErrorType} from "./types.js";
+
+/**
+ * Data in a BeaconBlock is bounded so we can use a single HashComputationGroup for all blocks
+ */
+const blockHCGroup = new HashComputationGroup();
 
 /**
  * Populate a PubkeyIndexMap with any new entries based on a BeaconState
@@ -95,7 +101,7 @@ export async function getHistoricalState(
       throw e;
     }
     blockCount++;
-    if (Buffer.compare(state.hashTreeRoot(), block.message.stateRoot) !== 0) {
+    if (Buffer.compare(state.batchHashTreeRoot(blockHCGroup), block.message.stateRoot) !== 0) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
     }
   }

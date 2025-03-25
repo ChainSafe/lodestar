@@ -1,3 +1,4 @@
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -32,6 +33,11 @@ export type RegenModules = {
   logger: Logger;
   metrics: Metrics | null;
 };
+
+/**
+ * Data in a BeaconBlock is bounded so we can use a single HashComputationGroup for all blocks
+ */
+const blockHCGroup = new HashComputationGroup();
 
 /**
  * Regenerates states that have already been processed by the fork choice
@@ -270,7 +276,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
           source: StateHashTreeRootSource.regenState,
         });
-        const stateRoot = toRootHex(state.hashTreeRoot());
+        const stateRoot = toRootHex(state.batchHashTreeRoot(blockHCGroup));
         hashTreeRootTimer?.();
 
         if (b.stateRoot !== stateRoot) {

@@ -114,9 +114,9 @@ export function stateTransition(
   // Note: time only on success. This does not include hashTreeRoot() time
   processBlockTimer?.();
 
-  const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
-  postState.commit();
-  processBlockCommitTimer?.();
+  // do not commit here, we're not able to batch hash validators without parameters in commit()
+  // consumers should commit()/ check hashTreeRoot()/batchHashTreeRoot() on its own or specify verifyStateRoot=true
+  // as of Mar 2025, all consumers call batchHashTreeRoot() after state transition, which calls commit() inside
 
   if (metrics) {
     onPostStateMetrics(postState, metrics);
