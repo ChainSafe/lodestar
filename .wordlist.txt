@@ -160,7 +160,6 @@ feeRecipient
 flamegraph
 flamegraphs
 floodsub
-focussed
 fsSL
 getNetworkIdentity
 gnosis
