@@ -248,9 +248,6 @@ export function beforeProcessEpoch(
 
   let totalActiveStakeByIncrement = 0;
   const validatorCount = state.validators.length;
-  if (forkSeq >= ForkSeq.electra) {
-    isCompoundingValidatorArr.length = validatorCount;
-  }
   nextEpochShufflingActiveValidatorIndices.length = validatorCount;
   let nextEpochShufflingActiveIndicesLength = 0;
   // pre-fill with true (most validators are active)
