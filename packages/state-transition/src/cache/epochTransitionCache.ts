@@ -284,10 +284,6 @@ export function beforeProcessEpoch(
   state.validators.forEachValue((validator, i) => {
     let flag = 0;
 
-    if (forkSeq >= ForkSeq.electra) {
-      isCompoundingValidatorArr[i] = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials);
-    }
-
     if (validator.slashed) {
       if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
