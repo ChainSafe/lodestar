@@ -18,6 +18,7 @@ export {
   type AncestorResult,
   AncestorStatus,
   type ForkChoiceMetrics,
+  NotReorgedReason,
 } from "./forkChoice/interface.js";
 export {
   ForkChoiceStore,

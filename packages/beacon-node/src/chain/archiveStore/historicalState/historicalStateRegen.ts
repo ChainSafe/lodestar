@@ -10,7 +10,7 @@ import {
 } from "./types.js";
 
 // Worker constructor consider the path relative to the current working directory
-const WORKER_DIR = process.env.NODE_ENV === "test" ? "../../../lib/chain/historicalState" : "./";
+const WORKER_DIR = process.env.NODE_ENV === "test" ? "../../../../lib/chain/archiveStore/historicalState" : "./";
 
 /**
  * HistoricalStateRegen limits the damage from recreating historical states
