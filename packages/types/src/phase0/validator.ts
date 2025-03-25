@@ -60,6 +60,8 @@ export class ValidatorNodeStructType extends ContainerNodeStructType<typeof Vali
 
     return offset;
   }
+
+  // TODO: consider improving value_toTree
 }
 
 export const ValidatorNodeStruct = new ValidatorNodeStructType();
