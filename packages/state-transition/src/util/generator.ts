@@ -1,5 +1,5 @@
-import { CompositeViewDU, ListCompositeTreeViewDU } from "@chainsafe/ssz";
-import {BeaconStateElectra} from "../types";
+import {CompositeViewDU, ListCompositeTreeViewDU} from "@chainsafe/ssz";
+import {BeaconStateElectra} from "../types.js";
 
 type LatestBeaconState = BeaconStateElectra;
 
@@ -7,13 +7,21 @@ type BeaconStateIterableKey = Extract<
   keyof LatestBeaconState,
   "pendingDeposits" | "pendingConsolidations" | "pendingPartialWithdrawals"
 >;
-type BeaconStateIterableType = LatestBeaconState[BeaconStateIterableKey];
 
 type ElementType = LatestBeaconState[BeaconStateIterableKey] extends ListCompositeTreeViewDU<infer T> ? T : never;
-type DepositType = LatestBeaconState[Extract<BeaconStateIterableKey, "pendingDeposits">] extends ListCompositeTreeViewDU<infer T> ? T : never;
+type DepositType = LatestBeaconState[Extract<
+  BeaconStateIterableKey,
+  "pendingDeposits"
+>] extends ListCompositeTreeViewDU<infer T>
+  ? T
+  : never;
 
-export function* pendingDepositIterator(state: BeaconStateElectra, startIndex?: number, chunkSize?: number): Generator<CompositeViewDU<DepositType>> {
-  for (const deposit of iterateBeaconStateIterableInChunks(state.pendingDeposits, startIndex, chunkSize)) {
+export function* pendingDepositIterator(
+  state: BeaconStateElectra,
+  startIndex?: number,
+  chunkSize?: number
+): Generator<CompositeViewDU<DepositType>> {
+  for (const deposit of chunkedIterator(state.pendingDeposits, startIndex, chunkSize)) {
     yield deposit as CompositeViewDU<DepositType>;
   }
 }
@@ -24,7 +32,11 @@ export function* pendingDepositIterator(state: BeaconStateElectra, startIndex?: 
  * @param chunkSize - Number of items to retrieve per iteration (default: 100)
  * @param startIndex - Starting index for iteration (default: 0)
  */
-function* iterateBeaconStateIterableInChunks(iterable: BeaconStateIterableType, startIndex = 0, chunkSize = 100): Generator<CompositeViewDU<ElementType>> {
+function* chunkedIterator(
+  iterable: ListCompositeTreeViewDU<ElementType>,
+  startIndex = 0,
+  chunkSize = 100
+): Generator<CompositeViewDU<ElementType>> {
   const iterableLength = iterable.length;
   let chunkStartIndex = startIndex;
 
