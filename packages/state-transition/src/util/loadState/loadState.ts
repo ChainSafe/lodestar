@@ -1,3 +1,4 @@
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
@@ -8,6 +9,11 @@ import {findModifiedValidators} from "./findModifiedValidators.js";
 import {loadValidator} from "./loadValidator.js";
 
 type MigrateStateOutput = {state: BeaconStateAllForks; modifiedValidators: number[]};
+
+/**
+ * Use a single HashComputationGroup for reload
+ */
+const hcGroup = new HashComputationGroup();
 
 /**
  * Load state from bytes given a seed state so that we share the same base tree. This gives some benefits:
@@ -61,7 +67,9 @@ export function loadState(
       stateBytes.subarray(inactivityScoresRange.start, inactivityScoresRange.end)
     );
   }
-  migratedState.commit();
+
+  // a normal state usually has cached root so we compute root of migratedState after the reload
+  migratedState.batchHashTreeRoot(hcGroup);
 
   return {state: migratedState, modifiedValidators};
 }
