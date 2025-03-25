@@ -1,3 +1,4 @@
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {
   CachedBeaconStateAllForks,
   DataAvailableStatus,
@@ -8,6 +9,11 @@ import {
 import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
+
+/**
+ * Data in a BeaconBlock is bounded so we can use a single HashComputationGroup for all blocks
+ */
+const blockHCGroup = new HashComputationGroup();
 
 /**
  * Instead of running fastStateTransition(), only need to process block since
@@ -48,7 +54,8 @@ export function computeNewStateRoot(
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
     source: StateHashTreeRootSource.computeNewStateRoot,
   });
-  const newStateRoot = postState.hashTreeRoot();
+  // state root is computed inside stateTransition(), so it should take no time here
+  const newStateRoot = postState.batchHashTreeRoot(blockHCGroup);
   hashTreeRootTimer?.();
 
   return {newStateRoot, proposerReward};

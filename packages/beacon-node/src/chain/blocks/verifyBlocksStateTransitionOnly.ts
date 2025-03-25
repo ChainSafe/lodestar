@@ -1,3 +1,4 @@
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {
   CachedBeaconStateAllForks,
   DataAvailableStatus,
@@ -12,6 +13,11 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
+
+/**
+ * Data in a BeaconBlock is bounded so we can use a single HashComputationGroup for all blocks
+ */
+const blockHCGroup = new HashComputationGroup();
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -63,7 +69,7 @@ export async function verifyBlocksStateTransitionOnly(
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
     });
-    const stateRoot = postState.hashTreeRoot();
+    const stateRoot = postState.batchHashTreeRoot(blockHCGroup);
     hashTreeRootTimer?.();
 
     // Check state root matches
