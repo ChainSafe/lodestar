@@ -82,7 +82,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
       },
       health: async () => {
         try {
-          const response = await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
+            await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
           } catch (err) {
           if (err instanceof Error && 'cause' in err) {
             return;

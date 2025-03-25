@@ -88,7 +88,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       },
       health: async () => {
         try {
-          const response = await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
+          await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
           // Lighthouse health endpoint returns 200 or throws, no need to check response.ok
         } catch (err) {
           // Keep original behavior: if error is not connection refused, consider it healthy

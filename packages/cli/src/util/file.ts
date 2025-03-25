@@ -132,13 +132,20 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
     if (!response.ok) {
       throw new Error(`Failed to download file from ${url}: ${response.status} ${response.statusText}`);
     }
-    const buffer = await response.arrayBuffer();
-    await fs.promises.writeFile(pathDest, Buffer.from(buffer));
+
+    if (!response.body) {
+      throw new Error("Response body is null");
+    }
+
+    const responseStream = stream.Readable.fromWeb(response.body as any);
+    const fileStream = fs.createWriteStream(pathDest);
+    await promisify(stream.pipeline)(responseStream, fileStream);
   }
 }
 
 /**
  * Download from URL to memory or load from local filesystem
+ * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
