@@ -6,6 +6,7 @@ import {CachedBeaconStateAllForks} from "./types.js";
 
 export type BeaconStateTransitionMetrics = {
   epochTransitionTime: Histogram;
+  epochHashTreeRootTime: Histogram;
   epochTransitionCommitTime: Histogram;
   epochTransitionStepTime: Histogram<{step: EpochTransitionStep}>;
   processBlockTime: Histogram;

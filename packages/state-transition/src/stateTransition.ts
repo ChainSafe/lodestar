@@ -62,12 +62,18 @@ export enum StateHashTreeRootSource {
 }
 
 /**
- * Data in a BeaconBlock is bounded so we can use a single HashComputationGroup for all blocks
+ * Use a single HashComputationGroup for all blocks
  */
-const hcGroup = new HashComputationGroup();
+const blockHcGroup = new HashComputationGroup();
+
+/**
+ * Use a single HashComputationGroup for all epoch transition
+ */
+const epochHcGroup = new HashComputationGroup();
 
 /**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
+ * After the batch hash work, consumers must call commit() or hashTreeRoot() or batchHashTreeRoot() on its own or specify verifyStateRoot=true
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
@@ -115,7 +121,7 @@ export function stateTransition(
   processBlockTimer?.();
 
   // do not commit here, we're not able to batch hash validators without parameters in commit()
-  // consumers should commit()/ check hashTreeRoot()/batchHashTreeRoot() on its own or specify verifyStateRoot=true
+  // consumers must call commit()/ or hashTreeRoot()/batchHashTreeRoot() on its own or specify verifyStateRoot=true
   // as of Mar 2025, all consumers call batchHashTreeRoot() after state transition, which calls commit() inside
 
   if (metrics) {
@@ -127,10 +133,7 @@ export function stateTransition(
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.stateTransition,
     });
-    // commit() is done inside batchHashTreeRoot()
-    // with batchHashTreeRoot(), we're not able to measure commit() time separately
-    // note that at commit() phase, we batch hash validators via ListValidatorTreeViewDU so this metric is a little bit confusing
-    const stateRoot = postState.batchHashTreeRoot(hcGroup);
+    const stateRoot = postState.batchHashTreeRoot(blockHcGroup);
     hashTreeRootTimer?.();
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
@@ -167,7 +170,8 @@ export function processSlots(
 
   postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, metrics);
 
-  // Apply changes to state, must do before hashing
+  // Apply changes to state, must do before returning to consumers
+  // if it's an epoch transition, we computed root in processSlotsWithTransientCache() already
   postState.commit();
 
   return postState;
@@ -244,11 +248,11 @@ function processSlotsWithTransientCache(
         timer?.();
       }
 
-      // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
-      // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
+      // usually there is single epoch transition so should not be an issue calling batchHashTreeRoot() here, consumer need it anyway
+      // if we do commit() here without param, we can't batch hash validators
       {
-        const timer = metrics?.epochTransitionCommitTime.startTimer();
-        postState.commit();
+        const timer = metrics?.epochHashTreeRootTime.startTimer();
+        postState.batchHashTreeRoot(epochHcGroup);
         timer?.();
       }
 

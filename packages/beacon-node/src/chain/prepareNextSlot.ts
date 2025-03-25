@@ -1,4 +1,3 @@
-import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
@@ -27,11 +26,6 @@ export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
 
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
-
-/**
- * The same HashComputationGroup to be used for all epoch transition.
- */
-const epochHCGroup = new HashComputationGroup();
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -248,12 +242,9 @@ export class PrepareNextSlotScheduler {
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
       source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
     });
-    if (isEpochTransition) {
-      state.batchHashTreeRoot(epochHCGroup);
-    } else {
-      // normal slot, not worth to batch hash
-      state.node.rootHashObject;
-    }
+    // for epoch transition, it's not worth to do batch hash here since state-transition does that already
+    // for slot transition, only state.slot is changed, it's also not worth to do batch hash here
+    state.hashTreeRoot();
     hashTreeRootTimer?.();
   }
 

@@ -49,6 +49,12 @@ if (metricsRegister) {
       // Epoch transitions are 100ms on very fast clients, and average 800ms on heavy networks
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 3, 10],
     }),
+    epochHashTreeRootTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_epoch_hash_tree_root_seconds",
+      help: "Time to compute the hash tree root after an epoch transition in seconds",
+      // BeaconState hash_tree_root time is around 100ms with hashtree
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5],
+    }),
     epochTransitionCommitTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_epoch_transition_commit_seconds",
       help: "Time to call commit after process a single epoch transition in seconds",

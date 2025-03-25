@@ -46,6 +46,7 @@ export type HistoricalStateRegenMetrics = BeaconStateTransitionMetrics & {
   regenTime: Histogram;
   loadStateTime: Histogram;
   stateTransitionTime: Histogram;
+  epochHashTreeRootTime: Histogram;
   stateTransitionBlocks: Histogram;
   stateSerializationTime: Histogram;
   regenRequestCount: Gauge;
