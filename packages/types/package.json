@@ -74,6 +74,9 @@
     "@lodestar/params": "^1.28.1",
     "ethereum-cryptography": "^2.0.0"
   },
+  "devDependencies": {
+    "@lodestar/utils": "^1.28.1"
+  },
   "keywords": [
     "ethereum",
     "eth-consensus",
