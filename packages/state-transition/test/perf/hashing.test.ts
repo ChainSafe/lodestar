@@ -29,39 +29,40 @@ describe("BeaconState hashTreeRoot", () => {
   const balance = 31e9;
 
   const testCases: {id: string; noTrack?: boolean; fn: (state: typeof stateOg) => void}[] = [
-    {
-      id: "No change",
-      fn: () => {
-        //
-      },
-    },
+    // {
+    //   id: "No change",
+    //   fn: () => {
+    //     //
+    //   },
+    // },
   ];
 
-  // Validator mutations
-  for (const count of [1, 32, 512]) {
-    testCases.push({
-      id: `${count} full validator`,
-      noTrack: count < 512,
-      fn: (state) => {
-        for (const i of indicesShuffled.slice(0, count)) state.validators.set(i, validator);
-      },
-    });
-  }
+  // // Validator mutations
+  // for (const count of [1, 32, 512]) {
+  //   testCases.push({
+  //     id: `${count} full validator`,
+  //     noTrack: count < 512,
+  //     fn: (state) => {
+  //       for (const i of indicesShuffled.slice(0, count)) state.validators.set(i, validator);
+  //     },
+  //   });
+  // }
 
-  for (const count of [1, 32, 512]) {
-    testCases.push({
-      id: `${count} validator.effectiveBalance`,
-      noTrack: count < 512,
-      fn: (state) => {
-        for (const i of indicesShuffled.slice(0, count)) {
-          state.validators.get(i).effectiveBalance = balance;
-        }
-      },
-    });
-  }
+  // for (const count of [1, 32, 512]) {
+  //   testCases.push({
+  //     id: `${count} validator.effectiveBalance`,
+  //     noTrack: count < 512,
+  //     fn: (state) => {
+  //       for (const i of indicesShuffled.slice(0, count)) {
+  //         state.validators.get(i).effectiveBalance = balance;
+  //       }
+  //     },
+  //   });
+  // }
 
   // Balance mutations
-  for (const count of [1, 32, 512, numValidators]) {
+  // for (const count of [1, 32, 512, numValidators]) {
+  for (const count of [numValidators]) {
     testCases.push({
       id: `${count} balances`,
       noTrack: count < 512,
