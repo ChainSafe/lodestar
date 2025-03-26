@@ -11,9 +11,11 @@ import {toRootHex} from "@lodestar/utils";
 import {BeaconState} from "../../src/altair/sszTypes.js";
 
 const vc = 200_000;
-const numModified = vc / 2;
-// every time we change vc, need to change this value accordingly
-const expectedRoot = "0x365bba57add6804e7688dbac8793792bb2b4a61eb368cfb0c04860c3db02c313";
+
+const testCases: {numModified: number; expectedRoot: string}[] = [
+  {numModified: 0, expectedRoot: "0x77f8e77943e88926d1c4021e6f5672a3664158999f9be3f349d9e1eb32f1e331"},
+  {numModified: vc / 2, expectedRoot: "0x365bba57add6804e7688dbac8793792bb2b4a61eb368cfb0c04860c3db02c313"},
+];
 
 /**
  * This simulates a BeaconState being modified after an epoch transition in lodestar
@@ -22,84 +24,87 @@ const expectedRoot = "0x365bba57add6804e7688dbac8793792bb2b4a61eb368cfb0c04860c3
  * cannot compute HashComputationGroup again.
  * Increasing number of validators could be OOM since we have to create BeaconState every time
  */
-describe(`BeaconState ViewDU partially modified tree vc=${vc} numModified=${numModified}`, () => {
-  setBenchOpts({
-    minMs: 20_000,
-  });
 
-  const hc = new HashComputationGroup();
-  bench({
-    id: `BeaconState ViewDU batchHashTreeRoot vc=${vc} mod=${numModified}`,
-    beforeEach: () => createPartiallyModifiedDenebState(),
-    fn: (state: CompositeViewDU<typeof BeaconState>) => {
-      // commit() step is inside hashTreeRoot(), reuse HashComputationGroup
-      if (toRootHex(state.batchHashTreeRoot(hc)) !== expectedRoot) {
-        throw new Error(
-          `batchHashTreeRoot ${toRootHex(state.batchHashTreeRoot(hc))} does not match expectedRoot ${expectedRoot}`
-        );
-      }
-      state.batchHashTreeRoot(hc);
-    },
-  });
+for (const {numModified, expectedRoot} of testCases) {
+  describe(`BeaconState ViewDU partially modified tree vc=${vc} numModified=${numModified}`, () => {
+    setBenchOpts({
+      minMs: 20_000,
+    });
 
-  bench({
-    id: `BeaconState ViewDU batchHashTreeRoot - commit step vc=${vc} mod=${numModified}`,
-    beforeEach: () => createPartiallyModifiedDenebState(),
-    fn: (state: CompositeViewDU<typeof BeaconState>) => {
-      state.commit(0, []);
-    },
-  });
+    const hc = new HashComputationGroup();
+    bench({
+      id: `BeaconState ViewDU batchHashTreeRoot vc=${vc} mod=${numModified}`,
+      beforeEach: () => createPartiallyModifiedDenebState(numModified),
+      fn: (state: CompositeViewDU<typeof BeaconState>) => {
+        // commit() step is inside hashTreeRoot(), reuse HashComputationGroup
+        if (toRootHex(state.batchHashTreeRoot(hc)) !== expectedRoot) {
+          throw new Error(
+            `batchHashTreeRoot ${toRootHex(state.batchHashTreeRoot(hc))} does not match expectedRoot ${expectedRoot}`
+          );
+        }
+        state.batchHashTreeRoot(hc);
+      },
+    });
 
-  bench({
-    id: `BeaconState ViewDU batchHashTreeRoot - hash step vc=${vc} mod=${numModified}`,
-    beforeEach: () => {
-      const state = createPartiallyModifiedDenebState();
-      const hcByLevel: HashComputationLevel[] = [];
-      state.commit(0, hcByLevel);
-      return hcByLevel;
-    },
-    fn: (hcByLevel) => {
-      executeHashComputations(hcByLevel);
-    },
-  });
+    bench({
+      id: `BeaconState ViewDU batchHashTreeRoot - commit step vc=${vc} mod=${numModified}`,
+      beforeEach: () => createPartiallyModifiedDenebState(numModified),
+      fn: (state: CompositeViewDU<typeof BeaconState>) => {
+        state.commit(0, []);
+      },
+    });
 
-  bench({
-    id: `BeaconState ViewDU hashTreeRoot() vc=${vc} mod=${numModified}`,
-    beforeEach: () => createPartiallyModifiedDenebState(),
-    fn: (state: CompositeViewDU<typeof BeaconState>) => {
-      state.hashTreeRoot();
-      if (toRootHex(state.node.root) !== expectedRoot) {
-        throw new Error(`hashTreeRoot ${toRootHex(state.node.root)} does not match expectedRoot ${expectedRoot}`);
-      }
-    },
-  });
+    bench({
+      id: `BeaconState ViewDU batchHashTreeRoot - hash step vc=${vc} mod=${numModified}`,
+      beforeEach: () => {
+        const state = createPartiallyModifiedDenebState(numModified);
+        const hcByLevel: HashComputationLevel[] = [];
+        state.commit(0, hcByLevel);
+        return hcByLevel;
+      },
+      fn: (hcByLevel) => {
+        executeHashComputations(hcByLevel);
+      },
+    });
 
-  bench({
-    id: `BeaconState ViewDU hashTreeRoot - commit step vc=${vc} mod=${numModified}`,
-    beforeEach: () => createPartiallyModifiedDenebState(),
-    fn: (state: CompositeViewDU<typeof BeaconState>) => {
-      state.commit();
-    },
-  });
+    bench({
+      id: `BeaconState ViewDU hashTreeRoot() vc=${vc} mod=${numModified}`,
+      beforeEach: () => createPartiallyModifiedDenebState(numModified),
+      fn: (state: CompositeViewDU<typeof BeaconState>) => {
+        state.hashTreeRoot();
+        if (toRootHex(state.node.root) !== expectedRoot) {
+          throw new Error(`hashTreeRoot ${toRootHex(state.node.root)} does not match expectedRoot ${expectedRoot}`);
+        }
+      },
+    });
 
-  bench({
-    id: `BeaconState ViewDU hashTreeRoot - validator tree creation vc=${numModified} mod=${numModified}`,
-    beforeEach: () => {
-      const state = createPartiallyModifiedDenebState();
-      state.commit();
-      return state;
-    },
-    fn: (state: CompositeViewDU<typeof BeaconState>) => {
-      const validators = state.validators;
-      for (let i = 0; i < numModified; i++) {
-        validators.getReadonly(i).node.left;
-      }
-    },
+    bench({
+      id: `BeaconState ViewDU hashTreeRoot - commit step vc=${vc} mod=${numModified}`,
+      beforeEach: () => createPartiallyModifiedDenebState(numModified),
+      fn: (state: CompositeViewDU<typeof BeaconState>) => {
+        state.commit();
+      },
+    });
+
+    bench({
+      id: `BeaconState ViewDU hashTreeRoot - validator tree creation vc=${numModified} mod=${numModified}`,
+      beforeEach: () => {
+        const state = createPartiallyModifiedDenebState(numModified);
+        state.commit();
+        return state;
+      },
+      fn: (state: CompositeViewDU<typeof BeaconState>) => {
+        const validators = state.validators;
+        for (let i = 0; i < numModified; i++) {
+          validators.getReadonly(i).node.left;
+        }
+      },
+    });
   });
-});
+}
 
 let originalState: CompositeViewDU<typeof BeaconState> | null = null;
-function createPartiallyModifiedDenebState(): CompositeViewDU<typeof BeaconState> {
+function createPartiallyModifiedDenebState(numModified: number): CompositeViewDU<typeof BeaconState> {
   if (originalState === null) {
     originalState = createState(vc);
     // cache all roots
