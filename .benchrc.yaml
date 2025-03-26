@@ -9,3 +9,5 @@ triggerGC: false
 sort: true
 convergence: linear
 averageCalculation: clean-outliers
+setupFiles:
+  - ./setHasher.mjs

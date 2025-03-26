@@ -1,4 +1,5 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
 import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -82,6 +83,23 @@ describe("BeaconState hashTreeRoot", () => {
       },
       fn: (state) => {
         state.hashTreeRoot();
+      },
+    });
+  }
+
+  const hc = new HashComputationGroup();
+
+  for (const {id, noTrack, fn} of testCases) {
+    bench<typeof stateOg, typeof stateOg>({
+      id: `BeaconState.batchHashTreeRoot - ${id}`,
+      noThreshold: noTrack,
+      beforeEach: () => {
+        const state = stateOg.clone();
+        fn(state);
+        return state;
+      },
+      fn: (state) => {
+        state.batchHashTreeRoot(hc);
       },
     });
   }
