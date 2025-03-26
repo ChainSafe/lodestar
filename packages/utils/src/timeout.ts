@@ -1,6 +1,5 @@
-import {anySignal} from "any-signal";
-import {TimeoutError} from "./errors.js";
-import {sleep} from "./sleep.js";
+import { TimeoutError } from "./errors.js";
+import { sleep } from "./sleep.js";
 
 export async function withTimeout<T>(
   asyncFn: (timeoutAndParentSignal?: AbortSignal) => Promise<T>,
@@ -8,7 +7,11 @@ export async function withTimeout<T>(
   signal?: AbortSignal
 ): Promise<T> {
   const timeoutAbortController = new AbortController();
-  const timeoutAndParentSignal = anySignal([timeoutAbortController.signal, ...(signal ? [signal] : [])]);
+
+  // Create a merged signal manually
+  if (signal) {
+    signal.addEventListener('abort', () => timeoutAbortController.abort()); // Corrected line
+  }
 
   async function timeoutPromise(signal: AbortSignal): Promise<never> {
     await sleep(timeoutMs, signal);
@@ -16,7 +19,10 @@ export async function withTimeout<T>(
   }
 
   try {
-    return await Promise.race([asyncFn(timeoutAndParentSignal), timeoutPromise(timeoutAndParentSignal)]);
+    return await Promise.race([
+      asyncFn(timeoutAbortController.signal),
+      timeoutPromise(timeoutAbortController.signal)
+    ]);
   } finally {
     timeoutAbortController.abort();
   }
