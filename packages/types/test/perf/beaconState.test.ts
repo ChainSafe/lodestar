@@ -11,9 +11,9 @@ import {toRootHex} from "@lodestar/utils";
 import {BeaconState} from "../../src/altair/sszTypes.js";
 
 const vc = 200_000;
-const numModified = vc / 2;
+const numModified = 0;
 // every time we change vc, need to change this value accordingly
-const expectedRoot = "0x365bba57add6804e7688dbac8793792bb2b4a61eb368cfb0c04860c3db02c313";
+const expectedRoot = "0x77f8e77943e88926d1c4021e6f5672a3664158999f9be3f349d9e1eb32f1e331";
 
 /**
  * This simulates a BeaconState being modified after an epoch transition in lodestar
