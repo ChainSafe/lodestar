@@ -72,22 +72,6 @@ describe("BeaconState hashTreeRoot", () => {
     });
   }
 
-  for (const {id, noTrack, fn} of testCases) {
-    bench<typeof stateOg, typeof stateOg>({
-      id: `BeaconState.hashTreeRoot - ${id}`,
-      noThreshold: noTrack,
-      beforeEach: () => {
-        const state = stateOg.clone();
-        fn(state);
-        return state;
-      },
-      fn: (state) => {
-        // commit() is inside hashTreeRoot(), count it here so that we can compare to batchHashTreeRoot()
-        state.balances.hashTreeRoot();
-      },
-    });
-  }
-
   const hc = new HashComputationGroup();
 
   for (const {id, noTrack, fn} of testCases) {
@@ -102,6 +86,22 @@ describe("BeaconState hashTreeRoot", () => {
       fn: (state) => {
         // commit() is inside batchHashTreeRoot()
         state.balances.batchHashTreeRoot(hc);
+      },
+    });
+  }
+
+  for (const {id, noTrack, fn} of testCases) {
+    bench<typeof stateOg, typeof stateOg>({
+      id: `BeaconState.hashTreeRoot - ${id}`,
+      noThreshold: noTrack,
+      beforeEach: () => {
+        const state = stateOg.clone();
+        fn(state);
+        return state;
+      },
+      fn: (state) => {
+        // commit() is inside hashTreeRoot(), count it here so that we can compare to batchHashTreeRoot()
+        state.balances.hashTreeRoot();
       },
     });
   }
