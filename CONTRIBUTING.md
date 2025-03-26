@@ -255,6 +255,7 @@ If the PR introduces large-scale changes, affecting multiple areas of the codeba
 - Link the design document in each PR description so reviewers can always refer to the full scope.
 - Merge the smaller PRs into the feature branch until the complete feature is ready for a final merge into the `unstable` branch. This is the "formal review process" where several team members will likely get involved. Up to this point its mostly peer review. The merge to `unstable` is where details like naming, function signature, type definitions, etc will be scrutinized. This is also where metrics from the initial implementation branch will get detailed analysis (ideally this has already been happening along the way to make sure there are no performance regressions).
 - Some corner cases can be observed while testing on feature group. If any such issue is identified which was not brainstormed earlier must be bring to attention of the team.
+- If and when possible try to release big features under opt-in feature flags.
 
 ## Logging policy
 
