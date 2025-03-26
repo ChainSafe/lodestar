@@ -78,11 +78,11 @@ describe("BeaconState hashTreeRoot", () => {
       beforeEach: () => {
         const state = stateOg.clone();
         fn(state);
-        state.commit();
         return state;
       },
       fn: (state) => {
-        state.hashTreeRoot();
+        // commit() is inside hashTreeRoot(), count it here so that we can compare to batchHashTreeRoot()
+        state.balances.hashTreeRoot();
       },
     });
   }
@@ -99,7 +99,8 @@ describe("BeaconState hashTreeRoot", () => {
         return state;
       },
       fn: (state) => {
-        state.batchHashTreeRoot(hc);
+        // commit() is inside batchHashTreeRoot()
+        state.balances.batchHashTreeRoot(hc);
       },
     });
   }
