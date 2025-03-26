@@ -3,7 +3,7 @@ import {mergeHeaders} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
-import {fetch, isFetchError} from "./fetch.js";
+import {fetch, isFetchError} from "@lodestar/utils"
 import {Metrics} from "./metrics.js";
 import {
   ApiRequestInit,
