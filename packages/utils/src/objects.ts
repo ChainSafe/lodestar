@@ -64,15 +64,17 @@ export function isEmptyObject(value: unknown): boolean {
  * Inspired on lodash.mapValues, see https://lodash.com/docs/4.17.15#mapValues
  */
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export function mapValues<T extends {[K: string]: any}, R>(
+export function mapValues<T extends Record<string, any>, R>(
   obj: T,
   iteratee: (value: T[keyof T], key: keyof T) => R
-): {[K in keyof T]: R} {
-  const output = {} as {[K in keyof T]: R};
-  for (const [key, value] of Object.entries(obj)) {
-    output[key as keyof T] = iteratee(value, key);
+): { [K in keyof T]: R } {
+  const output: Partial<{ [K in keyof T]: R }> = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      output[key] = iteratee(obj[key], key);
+    }
   }
-  return output;
+  return output as { [K in keyof T]: R };
 }
 
 export function objectToExpectedCase<T extends Record<string, unknown> | Record<string, unknown>[] | unknown[]>(
