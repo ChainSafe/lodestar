@@ -68,7 +68,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
           // Assume valid and available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
-          verifyStateRoot: verify,
+          verifyStateRoot: true,
           verifyProposer: verify,
           verifySignatures: verify,
           assertCorrectProgressiveBalances,
