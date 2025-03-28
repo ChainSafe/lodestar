@@ -21,6 +21,7 @@ import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {type GroupQueries } from "./utils/prioritizePeers.js";
 import {IClock} from "../../util/clock.js";
+import {NetworkGlobal} from "../global.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -39,13 +40,12 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
-  nodeId: NodeId;
+  networkGlobal: NetworkGlobal;
   libp2p: Libp2p;
   clock: IClock;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
   logger: LoggerNode;
-  config: BeaconConfig;
 };
 
 type PeerIdStr = string;
@@ -133,21 +133,21 @@ export class PeerDiscovery {
   private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
-    const {libp2p, clock, peerRpcScores, metrics, logger, config, nodeId} = modules;
+    const {libp2p, clock, peerRpcScores, metrics, logger, networkGlobal} = modules;
     this.libp2p = libp2p;
     this.clock = clock;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
-    this.config = config;
+    this.config = networkGlobal.getConfig();
     this.discv5 = discv5;
     // TODO-das: remove
-    this.nodeId = nodeId;
+    this.nodeId = networkGlobal.getNodeId();
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
     this.sampleSubnets = getDataColumns(
-      nodeId,
-      Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
+      this.nodeId,
+      Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
     );
     this.groupRequests = new Map();
 
@@ -208,7 +208,7 @@ export class PeerDiscovery {
       peerId: modules.libp2p.peerId,
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
-      config: modules.config,
+      config: modules.networkGlobal.getConfig(),
     });
 
     return new PeerDiscovery(modules, opts, discv5);

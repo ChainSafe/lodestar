@@ -1,6 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
 import {ChainForkConfig} from "@lodestar/config";
-import {DATA_COLUMN_SIDECAR_SUBNET_COUNT, NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
+import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
 import {ColumnIndex, CustodyIndex} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
@@ -13,7 +13,10 @@ export type CustodyConfig = {
   sampledColumns: ColumnIndex[];
 };
 
-export function getCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
+/**
+ * Compute CustodyConfig, should be computed once after startup and when connected validators change.
+ */
+export function computeCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
   const custodyColumns = getDataColumns(nodeId, Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT));
   const sampledColumns = getDataColumns(
     nodeId,

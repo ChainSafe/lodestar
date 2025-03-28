@@ -30,6 +30,7 @@ import {
   renderIrrelevantPeerType,
   PrioritizePeersOpts,
 } from "./utils/index.js";
+import {NetworkGlobal} from "../global.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -96,7 +97,6 @@ export interface IReqRespBeaconNodePeerManager {
 }
 
 export type PeerManagerModules = {
-  nodeId: NodeId;
   libp2p: Libp2p;
   logger: LoggerNode;
   metrics: NetworkCoreMetrics | null;
@@ -105,9 +105,9 @@ export type PeerManagerModules = {
   attnetsService: SubnetsService;
   syncnetsService: SubnetsService;
   clock: IClock;
-  config: BeaconConfig;
   peerRpcScores: IPeerRpcScoreStore;
   events: INetworkEventBus;
+  networkGlobal: NetworkGlobal;
   peersData: PeersData;
   statusCache: StatusCache;
 };
@@ -165,13 +165,13 @@ export class PeerManager {
     this.syncnetsService = modules.syncnetsService;
     this.statusCache = modules.statusCache;
     this.clock = modules.clock;
-    this.config = modules.config;
+    this.config = modules.networkGlobal.getConfig();
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
     this.discovery = discovery;
-    this.nodeId = modules.nodeId;
+    this.nodeId = modules.networkGlobal.getNodeId();
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
     // TODO(das): may not need this, use `this.samplingGroups` instead

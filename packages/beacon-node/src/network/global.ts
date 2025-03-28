@@ -1,0 +1,42 @@
+import { BeaconConfig, ChainForkConfig } from "@lodestar/config";
+import { NodeId, computeNodeId } from "./subnets";
+import { CustodyConfig, computeCustodyConfig } from "../util/dataColumns";
+import { PeerId } from "@libp2p/interface";
+
+/**
+ * Store shared data for different modules in the network stack.
+ * TODO: consider moving similar shared data, for example PeersData, under NetworkGlobal.
+ */
+export class NetworkGlobal {
+  private readonly nodeId: NodeId;
+  private readonly config: BeaconConfig;
+  private custodyConfig: CustodyConfig;
+
+  constructor(peerId: PeerId, config: BeaconConfig) {
+    this.nodeId = computeNodeId(peerId);
+    this.config = config;
+    this.custodyConfig = computeCustodyConfig(this.nodeId, config);
+  }
+
+  getConfig(): BeaconConfig {
+    return this.config;
+  }
+
+  getNodeId(): NodeId {
+    return this.nodeId;
+  }
+
+  /**
+   * Consumer should never mutate returned CustodyConfig
+   */
+  getCustodyConfig(): CustodyConfig {
+    return this.custodyConfig;
+  }
+
+  /**
+   * Recompute CustodyConfig based on connected validators.
+   */
+  recomputeCustodyConfig(): void {
+    // TODO - das
+  }
+}

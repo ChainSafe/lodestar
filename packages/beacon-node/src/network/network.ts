@@ -32,7 +32,7 @@ import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {CustodyConfig, getCustodyConfig} from "../util/dataColumns.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
@@ -120,7 +120,7 @@ export class Network implements INetwork {
     this.peerId = modules.peerId;
     this.nodeId = modules.nodeId;
     this.config = modules.config;
-    this.custodyConfig = getCustodyConfig(modules.nodeId, modules.config);
+    this.custodyConfig = modules.chain.custodyConfig;
     this.logger = modules.logger;
     this.chain = modules.chain;
     this.clock = modules.chain.clock;

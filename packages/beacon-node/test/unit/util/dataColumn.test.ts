@@ -8,7 +8,7 @@ import {afterEach, beforeAll, describe, expect, it} from "vitest";
 
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
-import {getCustodyConfig, getDataColumns} from "../../../src/util/dataColumns.js";
+import {computeCustodyConfig, getDataColumns} from "../../../src/util/dataColumns.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
@@ -24,7 +24,7 @@ describe("getCustodyConfig", () => {
       FULU_FORK_EPOCH: Infinity,
     });
     const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
-    const custodyConfig = getCustodyConfig(nodeId, config);
+    const custodyConfig = computeCustodyConfig(nodeId, config);
     const {custodyColumnsLen, custodyColumns, sampledColumns} = custodyConfig;
 
     expect(custodyColumnsLen).toEqual(4);
