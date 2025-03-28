@@ -12,6 +12,10 @@ export type BeaconStateTransitionMetrics = {
   processBlockCommitTime: Histogram;
   stateHashTreeRootTime: Histogram<{source: StateHashTreeRootSource}>;
   numEffectiveBalanceUpdates: Gauge;
+  validatorsInQueueToActive: Gauge;
+  validatorsInQueueToExit: Gauge;
+  pendingConsolidations: Gauge;
+  pendingPartialWithdrawals: Gauge;
   preStateBalancesNodesPopulatedMiss: Gauge<{source: StateCloneSource}>;
   preStateBalancesNodesPopulatedHit: Gauge<{source: StateCloneSource}>;
   preStateValidatorsNodesPopulatedMiss: Gauge<{source: StateCloneSource}>;

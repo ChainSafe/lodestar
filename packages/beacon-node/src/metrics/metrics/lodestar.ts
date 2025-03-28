@@ -346,6 +346,22 @@ export function createLodestarMetrics(
       name: "lodestar_stfn_effective_balance_updates_count",
       help: "Total count of effective balance updates",
     }),
+    validatorsInQueueToActive: register.gauge({
+      name: "lodestar_stfn_validators_in_queue_to_active_total",
+      help: "Total count of validators in the queue to active",
+    }),
+    validatorsInQueueToExit: register.gauge({
+      name: "lodestar_stfn_validators_in_queue_to_exit_total",
+      help: "Total count of validators in the queue to exit",
+    }),
+    pendingConsolidations: register.gauge({
+      name: "lodestar_stfn_pending_consolidations_total",
+      help: "Total count of pending consolidations",
+    }),
+    pendingPartialWithdrawals: register.gauge({
+      name: "lodestar_stfn_pending_partial_withdrawals_total",
+      help: "Total count of pending partial withdrawals",
+    }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",

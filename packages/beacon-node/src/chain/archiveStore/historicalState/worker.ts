@@ -82,6 +82,22 @@ if (metricsRegister) {
       name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
       help: "Count of effective balance updates in epoch transition",
     }),
+    validatorsInQueueToActive: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_queue_to_active_total",
+      help: "Total count of validators in the queue to active",
+    }),
+    validatorsInQueueToExit: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_queue_to_exit_total",
+      help: "Total count of validators in the queue to exit",
+    }),
+    pendingConsolidations: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_pending_consolidations_total",
+      help: "Total count of pending consolidations",
+    }),
+    pendingPartialWithdrawals: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_pending_partial_withdrawals_total",
+      help: "Total count of pending partial withdrawals",
+    }),
     preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
       name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",

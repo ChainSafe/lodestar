@@ -27,6 +27,7 @@ import {
   FLAG_UNSLASHED,
   hasMarkers,
 } from "../util/attesterStatus.js";
+import {BeaconStateTransitionMetrics} from "./../metrics.js";
 
 export type EpochTransitionCacheOpts = {
   /**
@@ -229,7 +230,8 @@ const currentEpochParticipation = new Array<number>();
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
-  opts?: EpochTransitionCacheOpts
+  opts?: EpochTransitionCacheOpts,
+  metrics?: BeaconStateTransitionMetrics | null
 ): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
@@ -334,6 +336,7 @@ export function beforeProcessEpoch(
       validator.effectiveBalance >= MIN_ACTIVATION_BALANCE
     ) {
       indicesEligibleForActivationQueue.push(i);
+      metrics?.validatorsInQueueToActive.set(indicesEligibleForActivationQueue.length);
     }
 
     // To optimize process_registry_updates():
@@ -369,6 +372,7 @@ export function beforeProcessEpoch(
       validator.effectiveBalance <= config.EJECTION_BALANCE
     ) {
       indicesToEject.push(i);
+      metrics?.validatorsInQueueToExit.set(indicesToEject.length);
     }
 
     if (!isActiveNext) {

@@ -8,6 +8,7 @@ import {
 import {electra, phase0, ssz} from "@lodestar/types";
 
 import {toHex} from "@lodestar/utils";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
@@ -17,7 +18,8 @@ import {initiateValidatorExit} from "./initiateValidatorExit.js";
 export function processWithdrawalRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra,
-  withdrawalRequest: electra.WithdrawalRequest
+  withdrawalRequest: electra.WithdrawalRequest,
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   const amount = Number(withdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
@@ -76,6 +78,7 @@ export function processWithdrawalRequest(
       withdrawableEpoch,
     });
     state.pendingPartialWithdrawals.push(pendingPartialWithdrawal);
+    metrics?.pendingPartialWithdrawals.set(state.pendingPartialWithdrawals.length);
   }
 }
 

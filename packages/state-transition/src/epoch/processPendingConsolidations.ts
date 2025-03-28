@@ -1,3 +1,4 @@
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/balance.js";
 import {getMaxEffectiveBalance} from "../util/validator.js";
@@ -15,7 +16,11 @@ import {getMaxEffectiveBalance} from "../util/validator.js";
  * Dequeue all processed consolidations from `state.pendingConsolidation`
  *
  */
-export function processPendingConsolidations(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
+export function processPendingConsolidations(
+  state: CachedBeaconStateElectra,
+  cache: EpochTransitionCache,
+  metrics?: BeaconStateTransitionMetrics | null
+): void {
   const nextEpoch = state.epochCtx.epoch + 1;
   let nextPendingConsolidation = 0;
   const validators = state.validators;
@@ -49,4 +54,5 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
   }
 
   state.pendingConsolidations = state.pendingConsolidations.sliceFrom(nextPendingConsolidation);
+  metrics?.pendingConsolidations.set(state.pendingConsolidations.length);
 }

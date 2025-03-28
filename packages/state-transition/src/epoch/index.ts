@@ -141,7 +141,7 @@ export function processEpoch(
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processPendingConsolidations,
       });
-      processPendingConsolidations(stateElectra, cache);
+      processPendingConsolidations(stateElectra, cache, metrics);
       timer?.();
     }
   }
