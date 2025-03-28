@@ -10,6 +10,7 @@ export type CustodyConfig = {
   custodyColumnsIndex: Uint8Array;
   custodyColumnsLen: number;
   custodyColumns: ColumnIndex[];
+  custodyGroups: CustodyIndex[];
   sampledColumns: ColumnIndex[];
   sampledSubnets: number[];
 };
@@ -19,13 +20,18 @@ export type CustodyConfig = {
  */
 export function computeCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
   const custodyColumns = getDataColumns(nodeId, Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT));
-  const sampledColumns = getDataColumns(
-    nodeId,
-    Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
-  );
+  // the same to getDataColumns but here we compute step by step to also get custodyGroups
+  // const sampledColumns = getDataColumns(
+  //   nodeId,
+  //   Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
+  // );
+  const custodyGroupCount = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT);
+  const custodyGroups = getCustodyGroups(nodeId, custodyGroupCount)
+  const sampledColumns = custodyGroups.flatMap(computeColumnsForCustodyGroup)
+    .sort((a, b) => a - b);
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
   const sampledSubnets = sampledColumns.map(computeSubnetForDataColumn);
-  return {...custodyMeta, custodyColumns, sampledColumns, sampledSubnets};
+  return {...custodyMeta, custodyColumns, custodyGroups, sampledColumns, sampledSubnets};
 }
 
 function computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
