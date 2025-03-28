@@ -1,6 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
 import {ChainForkConfig} from "@lodestar/config";
-import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
+import {DATA_COLUMN_SIDECAR_SUBNET_COUNT, NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
 import {ColumnIndex, CustodyIndex} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
@@ -11,6 +11,7 @@ export type CustodyConfig = {
   custodyColumnsLen: number;
   custodyColumns: ColumnIndex[];
   sampledColumns: ColumnIndex[];
+  sampledSubnets: number[];
 };
 
 /**
@@ -23,7 +24,12 @@ export function computeCustodyConfig(nodeId: NodeId, config: ChainForkConfig): C
     Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
   );
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
-  return {...custodyMeta, custodyColumns, sampledColumns};
+  const sampledSubnets = sampledColumns.map(computeSubnetForDataColumn);
+  return {...custodyMeta, custodyColumns, sampledColumns, sampledSubnets};
+}
+
+function computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
+  return columnIndex % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }
 
 function getCustodyColumnsMeta(custodyColumns: ColumnIndex[]): {
@@ -48,14 +54,14 @@ function getCustodyColumnsMeta(custodyColumns: ColumnIndex[]): {
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#compute_columns_for_custody_group
  */
-export function computeColumnsForCustodyGroup(custodyGroup: CustodyIndex): ColumnIndex[] {
-  if (custodyGroup > NUMBER_OF_CUSTODY_GROUPS) {
-    custodyGroup = NUMBER_OF_CUSTODY_GROUPS;
+export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): ColumnIndex[] {
+  if (custodyIndex > NUMBER_OF_CUSTODY_GROUPS) {
+    custodyIndex = NUMBER_OF_CUSTODY_GROUPS;
   }
   const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / NUMBER_OF_CUSTODY_GROUPS);
   const columnIndexes = [];
   for (let i = 0; i < columnsPerCustodyGroup; i++) {
-    columnIndexes.push(NUMBER_OF_CUSTODY_GROUPS * i + custodyGroup);
+    columnIndexes.push(NUMBER_OF_CUSTODY_GROUPS * i + custodyIndex);
   }
   columnIndexes.sort((a, b) => a - b);
   return columnIndexes;
