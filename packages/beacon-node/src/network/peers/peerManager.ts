@@ -156,6 +156,8 @@ export class PeerManager {
   private intervals: NodeJS.Timeout[] = [];
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
+    const {networkGlobal} = modules;
+    const custodyConfig = networkGlobal.getCustodyConfig();
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
@@ -165,25 +167,19 @@ export class PeerManager {
     this.syncnetsService = modules.syncnetsService;
     this.statusCache = modules.statusCache;
     this.clock = modules.clock;
-    this.config = modules.networkGlobal.getConfig();
+    this.config = networkGlobal.getConfig();
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
     this.discovery = discovery;
-    this.nodeId = modules.networkGlobal.getNodeId();
+    this.nodeId = networkGlobal.getNodeId();
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
     // TODO(das): may not need this, use `this.samplingGroups` instead
-    this.sampleSubnets = getDataColumns(
-      this.nodeId,
-      Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
-    );
+    this.sampleSubnets = custodyConfig.sampledSubnets;
     // TODO(das): get from custodyConfig or a centralized place every time, instead of computing once here
-    this.samplingGroups = getCustodyGroups(
-      this.nodeId,
-      Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
-    );
+    this.samplingGroups = custodyConfig.sampleGroups;
 
     const {metrics} = modules;
     if (metrics) {

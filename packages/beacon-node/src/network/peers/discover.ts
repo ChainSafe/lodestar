@@ -6,7 +6,6 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, SubnetID} from "@lodestar/types";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
-import {ColumnIndex} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
@@ -145,10 +144,7 @@ export class PeerDiscovery {
     this.nodeId = networkGlobal.getNodeId();
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
-    this.sampleSubnets = getDataColumns(
-      this.nodeId,
-      Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT, this.config.SAMPLES_PER_SLOT)
-    );
+    this.sampleSubnets = networkGlobal.getCustodyConfig().sampledSubnets;
     this.groupRequests = new Map();
 
     this.discv5StartMs = 0;

@@ -10,7 +10,7 @@ export type CustodyConfig = {
   custodyColumnsIndex: Uint8Array;
   custodyColumnsLen: number;
   custodyColumns: ColumnIndex[];
-  custodyGroups: CustodyIndex[];
+  sampleGroups: CustodyIndex[];
   sampledColumns: ColumnIndex[];
   sampledSubnets: number[];
 };
@@ -26,12 +26,12 @@ export function computeCustodyConfig(nodeId: NodeId, config: ChainForkConfig): C
   //   Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT)
   // );
   const custodyGroupCount = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT, config.SAMPLES_PER_SLOT);
-  const custodyGroups = getCustodyGroups(nodeId, custodyGroupCount)
-  const sampledColumns = custodyGroups.flatMap(computeColumnsForCustodyGroup)
+  const sampleGroups = getCustodyGroups(nodeId, custodyGroupCount)
+  const sampledColumns = sampleGroups.flatMap(computeColumnsForCustodyGroup)
     .sort((a, b) => a - b);
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
   const sampledSubnets = sampledColumns.map(computeSubnetForDataColumn);
-  return {...custodyMeta, custodyColumns, custodyGroups, sampledColumns, sampledSubnets};
+  return {...custodyMeta, custodyColumns, sampleGroups, sampledColumns, sampledSubnets};
 }
 
 function computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
