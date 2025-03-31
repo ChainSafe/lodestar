@@ -13,6 +13,7 @@ const testFnByType: Record<string, (input: any, output?: any) => any> = {
   verify_blob_kzg_proof: verifyBlobKzgProof,
   verify_blob_kzg_proof_batch: verifyBlobKzgProofBatch,
   verify_kzg_proof: verifyKzgProof,
+  compute_cells: computeCells,
   compute_cells_and_kzg_proofs: computeCellsAndKzgProofs,
   recover_cells_and_kzg_proofs: recoverCellsAndKzgProofs,
   verify_cell_kzg_proof_batch: verifyCellKzgProofBatch,
@@ -133,6 +134,19 @@ function verifyBlobKzgProofBatch(input: VerifyBlobKzgProofBatchInput): boolean |
 
   try {
     return ckzg.verifyBlobKzgProofBatch(blobs, commitments, proofs);
+  } catch {
+    return null;
+  }
+}
+
+type ComputeCellsInput = {
+  blob: string;
+};
+function computeCells(input: ComputeCellsInput): string[] | null {
+  const blob = fromHexString(input.blob);
+  try {
+    const cells = ckzg.computeCells(blob);
+    return cells.map(toHexString);
   } catch {
     return null;
   }
