@@ -222,63 +222,81 @@ describe("AggregatedAttestationPool - Electra", () => {
     vi.clearAllMocks();
   });
 
-  it("Multiple attestations with same attestation data different committee", () => {
-    // Attestation from committee 0
-    const committeeBits0 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0);
+  // notSeenByCommittees: item i is for committe i, each item is number[][] which is the indices of validators not seen by the committee
+  // expectedCommitteeBits is by returned attestations: expectedCommitteeBits[0] is for returned attestation 0, ...
+  // expectedAggregationBits is the aggregation bits of the returned attestations: expectedAggregationBits[0] is for returned attestation 0, ...
+  const testCases: {
+    name: string;
+    notSeenByCommittees: number[][][];
+    expectedCommitteeBits: number[][];
+    expectedAggregationBits: number[];
+  }[] = [
+    {
+      name: "Full participation",
+      notSeenByCommittees: [[[]], [[]], [[]], [[]]],
+      expectedCommitteeBits: [[0, 1, 2, 3]],
+      expectedAggregationBits: [committeeLength * 4],
+    },
+    {
+      name: "Committee 1 and 2 has 2 versions of aggregationBits",
+      // committee 1 has 2 attestations, one with not seen validator 0, one with not seen validator 1
+      // committee 2 has 2 attestations, one with not seen validator 1, one with not seen validator 2
+      // other committees have 1 attestation each, and all validators are seen
+      notSeenByCommittees: [[[]], [[0], [1]], [[1], [2]], [[]]],
+      // 2nd consolidation only has 2 committees: 1 and 2
+      expectedCommitteeBits: [
+        [0, 1, 2, 3],
+        [1, 2],
+      ],
+      expectedAggregationBits: [committeeLength * 4, committeeLength * 2],
+    },
+    {
+      name: "Only committee 1 has 2 versions of aggregationBits",
+      // committee 1 has 2 attestations, one with not seen validator 0, one with not seen validator 1
+      // other committees have 1 attestation each, and all validators are seen
+      notSeenByCommittees: [[[]], [[0], [1]], [[]], [[]]],
+      // 2nd consolidation only has 1 committeee
+      expectedCommitteeBits: [[0, 1, 2, 3], [1]],
+      expectedAggregationBits: [committeeLength * 4, committeeLength],
+    },
+  ];
 
-    const attestation0: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits0,
-    };
+  for (const {name, notSeenByCommittees, expectedCommitteeBits, expectedAggregationBits} of testCases) {
+    it(name, () => {
+      for (let i = 0; i < committeeIndices.length; i++) {
+        const committeeIndex = committeeIndices[i];
+        const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex);
+        // same committee, each is by attestation
+        const notSeenValidatorsByAtt = notSeenByCommittees[i];
+        for (const notSeenValidators of notSeenValidatorsByAtt) {
+          const aggregationBits = new BitArray(new Uint8Array(committeeLength / 8).fill(255), committeeLength);
+          for (const index of notSeenValidators) {
+            aggregationBits.set(index, false);
+          }
+          const attestationi: Attestation<ForkPostElectra> = {
+            ...attestation,
+            aggregationBits,
+            committeeBits,
+          };
 
-    // Attestation from committee 1
-    const committeeBits1 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 1);
+          pool.add(attestationi, attDataRootHex, aggregationBits.getTrueBitIndexes().length, committees[i]);
+        }
+      }
 
-    const attestation1: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits1,
-    };
-    // Attestation from committee 2
-    const committeeBits2 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 2);
+      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
 
-    const attestation2: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits2,
-    };
-
-    // Attestation from committee 3
-    const committeeBits3 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 3);
-
-    const attestation3: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits3,
-    };
-
-    pool.add(attestation0, attDataRootHex, attestation0.aggregationBits.getTrueBitIndexes().length, committees[0]);
-
-    pool.add(attestation1, attDataRootHex, attestation1.aggregationBits.getTrueBitIndexes().length, committees[1]);
-
-    pool.add(attestation2, attDataRootHex, attestation2.aggregationBits.getTrueBitIndexes().length, committees[2]);
-
-    pool.add(attestation3, attDataRootHex, attestation3.aggregationBits.getTrueBitIndexes().length, committees[3]);
-
-    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
-    forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
-
-    const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, electraState);
-
-    expect(blockAttestations.length).toBe(1); // Expect attestations from committee 0, 1, 2 and 3 to be aggregated into one
-    expect((blockAttestations[0] as Attestation<ForkPostElectra>).committeeBits.getTrueBitIndexes()).toStrictEqual(
-      committeeIndices
-    );
-    expect((blockAttestations[0] as Attestation<ForkPostElectra>).aggregationBits.bitLen).toStrictEqual(
-      committeeLength * 4
-    );
-  });
+      const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, electraState);
+      // make sure test data is correct
+      expect(expectedCommitteeBits.length).toBe(expectedAggregationBits.length);
+      expect(blockAttestations.length).toBe(expectedCommitteeBits.length);
+      for (let attIndex = 0; attIndex < blockAttestations.length; attIndex++) {
+        const returnedAttestation = blockAttestations[attIndex] as Attestation<ForkPostElectra>;
+        expect(returnedAttestation.committeeBits.getTrueBitIndexes()).toStrictEqual(expectedCommitteeBits[attIndex]);
+        expect(returnedAttestation.aggregationBits.bitLen).toStrictEqual(expectedAggregationBits[attIndex]);
+      }
+    });
+  }
 });
 
 describe("MatchingDataAttestationGroup.add()", () => {

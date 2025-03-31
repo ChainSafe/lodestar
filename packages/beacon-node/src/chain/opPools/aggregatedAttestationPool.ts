@@ -338,7 +338,7 @@ export class AggregatedAttestationPool {
       }
 
       const slotDelta = stateSlot - slot;
-      // CommitteeIndex    0           1            2    ...   Consolidation
+      // CommitteeIndex    0           1            2    ...   Consolidation (sameAttDataCons)
       // Attestations    att00  ---   att10  ---  att20  ---   0 (att 00 10 20)
       //                 att01  ---     -    ---  att21  ---   1 (att 01 __ 21)
       //                   -    ---     -    ---  att22  ---   2 (att __ __ 22)
@@ -377,6 +377,7 @@ export class AggregatedAttestationPool {
           for (const [i, attestationNonParticipation] of attestationGroup
             .getAttestationsForBlock(fork, notSeenAttestingIndices)
             .entries()) {
+            // sameAttDataCons shares the same index for different committees so we use index `i` here
             if (sameAttDataCons[i] === undefined) {
               sameAttDataCons[i] = {
                 byCommittee: new Map(),
