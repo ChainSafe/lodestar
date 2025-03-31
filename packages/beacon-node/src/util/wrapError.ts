@@ -1,4 +1,4 @@
-export type Result<T> = {err: null; result: T} | {err: Error};
+export type Result<T, E extends Error> = {err: null; result: T} | {err: E};
 
 /**
  * Wraps a promise to return either an error or result
@@ -13,10 +13,10 @@ export type Result<T> = {err: null; result: T} | {err: Error};
  * only EITHER fn A() and fn B() are called, but never both. In the snipped above
  * if A() throws, B() would be called.
  */
-export async function wrapError<T>(promise: Promise<T>): Promise<Result<T>> {
+export async function wrapError<T, E extends Error>(promise: Promise<T>): Promise<Result<T, E>> {
   try {
     return {err: null, result: await promise};
   } catch (err) {
-    return {err: err as Error};
+    return {err: err as E};
   }
 }

@@ -3,19 +3,22 @@ import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {Batch, BatchStatus} from "../batch.js";
 
+export type PeerWithMeta = {
+  peerId: PeerIdStr;
+  custodyColumns?: number[];
+  clientAgent?: string;
+};
 /**
  * Balance and organize peers to perform requests with a SyncChain
  * Shuffles peers only once on instantiation
  */
 export class ChainPeersBalancer {
-  private peers: PeerIdStr[];
-  private peerset: Map<PeerIdStr, {custodyColumns: number[]}>;
+  private peers: PeerWithMeta[];
   private activeRequestsByPeer = new Map<PeerIdStr, number>();
 
   // TODO: @matthewkeil check if this needs to be updated for custody groups
-  constructor(peers: PeerIdStr[], peerset: Map<PeerIdStr, {custodyColumns: number[]}>, batches: Batch[]) {
+  constructor(peers: PeerWithMeta[], batches: Batch[]) {
     this.peers = shuffle(peers);
-    this.peerset = peerset;
 
     // Compute activeRequestsByPeer from all batches internal states
     for (const batch of batches) {
@@ -27,37 +30,39 @@ export class ChainPeersBalancer {
 
   /**
    * Return the most suitable peer to retry
-   * Sort peers by (1) no failed request (2) less active requests, then pick first
+   * Sort peers by (1) most column overlap (post-fulu) (2) no failed request (3) less active requests, then pick first
    */
-  bestPeerToRetryBatch(batch: Batch): PeerIdStr | undefined {
-    if (batch.state.status !== BatchStatus.AwaitingDownload) {
-      return;
+  bestPeerToRetryBatch(batch: Batch): PeerWithMeta {
+    let unsorted = this.peers;
+    // if we have a column download look for the peer with the best
+    // overlap of custody to pull from
+    if (batch.neededColumns) {
+      const overlappingPeers: PeerWithMeta[] = [];
+      for (const peer of this.peers) {
+        const overlap = [];
+        for (const peerColumn of peer.custodyColumns ?? []) {
+          if (batch.neededColumns.includes(peerColumn)) {
+            overlap.push(peerColumn);
+          }
+        }
+        if (overlap.length) {
+          overlappingPeers.push({peerId: peer.peerId, custodyColumns: overlap, clientAgent: peer.clientAgent});
+        }
+      }
+      // TODO: should we throw and error or maybe log something here if there is no column overlap with any peer?
+      if (overlappingPeers.length) {
+        unsorted = overlappingPeers;
+      }
     }
-    const {partialDownload} = batch.state;
 
     const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
-      this.peers.filter((peerId) => {
-        // if was partial download use all peers again
-        if (partialDownload === null) {
-          return true;
-        }
-
-        const peerColumns = this.peerset.get(peerId)?.custodyColumns ?? [];
-        // match columns we still need with columns the peer has
-        const columns = peerColumns.reduce((acc, elem) => {
-          if (partialDownload.pendingDataColumns.includes(elem)) {
-            acc.push(elem);
-          }
-          return acc;
-        }, [] as number[]);
-
-        return columns.length > 0;
-      }),
+      unsorted.sort((a, b) => b.custodyColumns?.length - a.custodyColumns?.length),
+      // TODO: Should the overlap sort go before or after these conditions
       (peer) => (failedPeers.has(peer) ? 1 : 0), // Sort by no failed first = 0
       (peer) => this.activeRequestsByPeer.get(peer) ?? 0 // Sort by least active req
-      // should sort by most column overlap here
     );
+
     return sortedBestPeers[0];
   }
 
