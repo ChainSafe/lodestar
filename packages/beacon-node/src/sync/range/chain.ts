@@ -12,6 +12,7 @@ import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./b
 import {
   ChainPeersBalancer,
   PeerWithMeta,
+  PeerWithOverlap,
   batchStartEpochIsAfterSlot,
   computeMostCommonTarget,
   getBatchSlotRange,
@@ -414,13 +415,13 @@ export class SyncChain {
   /**
    * Requests the batch assigned to the given id from a given peer.
    */
-  private async sendBatch(batch: Batch, peer: PeerWithMeta): Promise<void> {
+  private async sendBatch(batch: Batch, peer: PeerWithOverlap): Promise<void> {
     try {
       batch.startDownloading(peer);
 
       // wrapError ensures to never call both batch success() and batch error()
       const res = await wrapError<DownloadByRangeResults, DownloadByRangeError>(
-        this.downloadByRange(peer, batch.request)
+        this.downloadByRange(peer, batch.requests)
       );
 
       if (res.err) {

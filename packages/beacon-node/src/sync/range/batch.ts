@@ -5,7 +5,7 @@ import {BlockInput} from "../../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
+import {getBatchSlotRange, hashBlocks, PeerWithOverlap} from "./utils/index.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {DownloadByRangeErrorCode, DownloadByRangeRequests} from "./utils/downloadByRange.js";
@@ -48,7 +48,7 @@ export type ProcessingAttempt = {
 
 export type BatchState =
   | {status: BatchStatus.AwaitingDownload; blocks?: BlockInput[]}
-  | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks?: BlockInput[]}
+  | {status: BatchStatus.Downloading; peer: PeerWithOverlap; blocks?: BlockInput[]}
   | {status: BatchStatus.AwaitingProcessing; peer: PeerIdStr; blocks: BlockInput[]}
   | {status: BatchStatus.Processing; attempt: ProcessingAttempt}
   | {status: BatchStatus.AwaitingValidation; attempt: ProcessingAttempt};
@@ -114,14 +114,14 @@ export class Batch {
   }
 
   get requests(): DownloadByRangeRequests {
-    if (this.state.status !== BatchStatus.AwaitingDownload) {
-      throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
+    if (this.state.status !== BatchStatus.Downloading) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
     return {
       blocksRequest: this.state.blocks ? undefined : {count: this.count, startSlot: this.startSlot, step: 1},
       blobsRequest: this.forkType === BatchForkType.blobs ? {count: this.count, startSlot: this.startSlot} : undefined,
-      columnsRequest: this.neededColumns
-        ? {count: this.count, startSlot: this.startSlot, columns: this.neededColumns}
+      columnsRequest: this.state.peer.overlappingColumns
+        ? {count: this.count, startSlot: this.startSlot, columns: this.state.peer.overlappingColumns}
         : undefined,
     };
   }
@@ -140,7 +140,7 @@ export class Batch {
   /**
    * AwaitingDownload -> Downloading
    */
-  startDownloading(peer: PeerIdStr): void {
+  startDownloading(peer: PeerWithOverlap): void {
     if (this.state.status !== BatchStatus.AwaitingDownload) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
@@ -160,7 +160,7 @@ export class Batch {
     if (this.neededColumns) {
       this.state = {status: BatchStatus.AwaitingDownload, blocks};
     } else {
-      this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
+      this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer.peerId, blocks};
     }
   }
 

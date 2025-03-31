@@ -8,6 +8,12 @@ export type PeerWithMeta = {
   custodyColumns?: number[];
   clientAgent?: string;
 };
+
+export type PeerWithOverlap = {
+  peerId: PeerIdStr;
+  overlappingColumns?: number[];
+  clientAgent?: string;
+};
 /**
  * Balance and organize peers to perform requests with a SyncChain
  * Shuffles peers only once on instantiation
@@ -32,21 +38,21 @@ export class ChainPeersBalancer {
    * Return the most suitable peer to retry
    * Sort peers by (1) most column overlap (post-fulu) (2) no failed request (3) less active requests, then pick first
    */
-  bestPeerToRetryBatch(batch: Batch): PeerWithMeta {
+  bestPeerToRetryBatch(batch: Batch): PeerWithOverlap {
     let unsorted = this.peers;
     // if we have a column download look for the peer with the best
     // overlap of custody to pull from
     if (batch.neededColumns) {
       const overlappingPeers: PeerWithMeta[] = [];
       for (const peer of this.peers) {
-        const overlap = [];
+        const overlappingColumns = [];
         for (const peerColumn of peer.custodyColumns ?? []) {
           if (batch.neededColumns.includes(peerColumn)) {
-            overlap.push(peerColumn);
+            overlappingColumns.push(peerColumn);
           }
         }
-        if (overlap.length) {
-          overlappingPeers.push({peerId: peer.peerId, custodyColumns: overlap, clientAgent: peer.clientAgent});
+        if (overlappingColumns.length) {
+          overlappingPeers.push({peerId: peer.peerId, overlappingColumns, clientAgent: peer.clientAgent});
         }
       }
       // TODO: should we throw and error or maybe log something here if there is no column overlap with any peer?
