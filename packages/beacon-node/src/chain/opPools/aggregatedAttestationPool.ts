@@ -18,6 +18,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
   computeEpochAtSlot,
+  computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
@@ -174,7 +175,7 @@ export class AggregatedAttestationPool {
 
     const slotsToRetain = isForkPostDeneb(fork)
       ? // Post deneb, attestations from current and previous epoch can be included
-        SLOTS_PER_EPOCH * 2
+        computeSlotsSinceEpochStart(clockSlot, computeEpochAtSlot(clockSlot) - 1)
       : // Before deneb, only retain SLOTS_PER_EPOCH slots
         SLOTS_PER_EPOCH;
 
