@@ -4729,13 +4729,13 @@ byte-size@8.1.1:
   resolved "https://registry.yarnpkg.com/byte-size/-/byte-size-8.1.1.tgz#3424608c62d59de5bfda05d31e0313c6174842ae"
   integrity sha512-tUkzZWK0M/qdoLEqikxBWe4kumyuwjl3HO6zHTr4yEI23EojPtLYXdG1+AQY7MN0cGyNDvEaJ8wiYQm6P2bPxg==
 
-c-kzg@^4.0.1:
-  version "4.0.1"
-  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-4.0.1.tgz#742fe22420d6668418d4028b36af1c98ee7f71f9"
-  integrity sha512-ptOi4tTIMxLDFH3J5Fgd4WRQvKiTCAU9Y9hn9VpczelzcmBN2SvrT2OU/Vnt3cCWsMIG7ps+Rc9knYZro2YoLw==
+c-kzg@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-4.1.0.tgz#56b8499c9c9c0d94a0831ce0dad32bb6bdb280e9"
+  integrity sha512-eliOBB2GKoT5Nk4LwN418O8kWfXCwepHj3kd6z0zKrzIdJbry0Y8IDPYzE5Dxw/fs386PGO6zQRqy8LSVtR5tQ==
   dependencies:
     bindings "^1.5.0"
-    node-addon-api "^5.0.0"
+    node-addon-api "^8.3.1"
 
 cac@^6.7.14:
   version "6.7.14"
@@ -9442,10 +9442,10 @@ node-addon-api@^3.2.1:
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-3.2.1.tgz#81325e0a2117789c0128dab65e7e38f07ceba161"
   integrity sha512-mmcei9JghVNDYydghQmeDX8KoAm0FAiYyIcUt/N4nhyAipB17pllZQDOJD2fotxABnt4Mdz+dKTO7eftLg4d0A==
 
-node-addon-api@^5.0.0:
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-5.1.0.tgz#49da1ca055e109a23d537e9de43c09cca21eb762"
-  integrity sha512-eh0GgfEkpnoWDq+VY8OyvYhFEzBk6jIYbRKdIlyTiAXIVJ8PyBaKb0rp7oDtoddbdoHWhq8wwr+XZ81F1rpNdA==
+node-addon-api@^8.3.1:
+  version "8.3.1"
+  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-8.3.1.tgz#53bc8a4f8dbde3de787b9828059da94ba9fd4eed"
+  integrity sha512-lytcDEdxKjGJPTLEfW4mYMigRezMlyJY8W4wxJK8zE533Jlb8L8dRuObJFWg2P+AuOIxoCgKF+2Oq4d4Zd0OUA==
 
 node-domexception@^1.0.0:
   version "1.0.0"
