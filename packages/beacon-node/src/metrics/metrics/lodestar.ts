@@ -850,17 +850,23 @@ export function createLodestarMetrics(
     },
 
     opPool: {
-      // Note: Current opPool metrics only track current size.
-      //       I don't believe tracking total add() count is relevant since that can be seen with gossip ACCEPTs
-      aggregatedAttestationPoolSize: register.gauge({
-        name: "lodestar_oppool_aggregated_attestation_pool_size",
-        help: "Current size of the AggregatedAttestationPool = total attestations",
-      }),
-      /** This metric helps view how many overlapping attestations we keep per data on average */
-      aggregatedAttestationPoolUniqueData: register.gauge({
-        name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
-        help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
-      }),
+      aggregatedAttestationPool: {
+        attDataPerSlot: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_attestation_data_per_slot_total",
+          help: "Total number of attestation data per slot in AggregatedAttestationPool",
+        }),
+        // max number of attestations per committee will become number of consolidations
+        maxAttestationsPerCommittee: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_max_attestations_per_committee",
+          help: "Max number of attestations per committee in AggregatedAttestationPool",
+        }),
+        attestationsPerCommittee: register.histogram({
+          name: "lodestar_oppool_aggregated_attestation_pool_attestations_per_committee",
+          help: "Number of attestations per committee in AggregatedAttestationPool",
+          // TODO: monitor this on hoodi
+          buckets: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        }),
+      },
       attestationPoolSize: register.gauge({
         name: "lodestar_oppool_attestation_pool_size",
         help: "Current size of the AttestationPool = total attestations unique by data and slot",
