@@ -863,8 +863,7 @@ export function createLodestarMetrics(
         attestationsPerCommittee: register.histogram({
           name: "lodestar_oppool_aggregated_attestation_pool_attestations_per_committee",
           help: "Number of attestations per committee in AggregatedAttestationPool",
-          // TODO: monitor this on hoodi
-          buckets: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+          buckets: [0, 2, 4, 8],
         }),
       },
       attestationPoolSize: register.gauge({
