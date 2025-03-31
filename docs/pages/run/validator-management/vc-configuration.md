@@ -121,7 +121,7 @@ Please use the official Ethereum Launchpad to perform your deposits. Ensure your
 #### Hoodi Testnet
 
 - [Ethereum Hoodi Testnet Launchpad](https://hoodi.launchpad.ethereum.org)
-- [Hoodi Beacon Chain Deposit Contract](https://hoodi.etherscan.io/address/0x4242424242424242424242424242424242424242) `0x4242424242424242424242424242424242424242`
+- [Hoodi Beacon Chain Deposit Contract](https://hoodi.etherscan.io/address/0x00000000219ab540356cBB839Cbe05303d7705Fa) `0x00000000219ab540356cBB839Cbe05303d7705Fa`
 
 #### Ephemery Testnet
 
