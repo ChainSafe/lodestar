@@ -81,11 +81,10 @@ const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
 const MAX_ATTESTATIONS_PER_GROUP = 3;
 
 /**
- * For electra, each block has up to 8 aggregated attestations, assuming there are 3 for the "best"
- * attestation data, there are still 5 for other attestation data so this constant is still good.
- * We should separate to 2 constant based on conditions of different networks
+ * For electra, there is on chain aggregation of attestations across committees, so we can just pick up to 8
+ * attestations per group, sort by scores get get first 8.
  */
-const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = 3;
+const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = MAX_ATTESTATIONS_ELECTRA;
 
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
