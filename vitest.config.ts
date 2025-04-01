@@ -60,7 +60,7 @@ export default defineConfig({
     env: {
       NODE_ENV: "test",
     },
-    // restoreMock: true,
+    clearMocks: true,
     reporters: process.env.GITHUB_ACTIONS
       ? ["verbose", "hanging-process", "github-actions"]
       : [process.env.TEST_COMPACT_OUTPUT ? "basic" : "verbose", "hanging-process"],
