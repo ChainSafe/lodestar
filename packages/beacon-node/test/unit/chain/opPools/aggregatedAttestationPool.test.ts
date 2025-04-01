@@ -300,6 +300,10 @@ describe("AggregatedAttestationPool - Electra", () => {
 });
 
 describe("MatchingDataAttestationGroup.add()", () => {
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+  });
+
   const testCases: {id: string; attestationsToAdd: {bits: number[]; res: InsertOutcome; isKept: boolean}[]}[] = [
     {
       id: "2 intersecting",
@@ -338,7 +342,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
 
   for (const {id, attestationsToAdd} of testCases) {
     it(id, () => {
-      const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
+      const attestationGroup = new MatchingDataAttestationGroup(config, committee, attestationData);
 
       const attestations = attestationsToAdd.map(
         ({bits}): phase0.Attestation => ({
@@ -368,6 +372,10 @@ describe("MatchingDataAttestationGroup.add()", () => {
 });
 
 describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+  });
+
   const maxAttestations = 2;
   const testCases: {
     id: string;
@@ -425,7 +433,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   for (const {id, notSeenAttestingBits, effectiveBalanceIncrements, attestationsToAdd} of testCases) {
     // TODO: tests electra
     it(id, () => {
-      const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
+      const attestationGroup = new MatchingDataAttestationGroup(config, committee, attestationData);
 
       const attestations = attestationsToAdd.map(
         ({bits}): phase0.Attestation => ({

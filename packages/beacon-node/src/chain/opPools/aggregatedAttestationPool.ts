@@ -73,6 +73,15 @@ type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
 
 /**
+ * This is the same to MAX_RETAINED_ATTESTATIONS_PER_GROUP but for electra
+ * As monitored in hoodi, max attestations per group could be up to > 10. But in electra we can
+ * consolidate attestations across committees, so we can just pick up to 8 attestations per group.
+ * Also the MatchingDataAttestationGroup.getAttestationsForBlock() is improved not to have to scan each
+ * committee member for previous slot.
+ */
+const MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA = 8;
+
+/**
  * Pre-electra, each slot has 64 committees, and each block has 128 attestations max so in average
  * we get 2 attestation per groups.
  * Starting from Jan 2024, we have a performance issue getting attestations for a block. Based on the
@@ -85,7 +94,10 @@ const MAX_ATTESTATIONS_PER_GROUP = 3;
  * For electra, there is on chain aggregation of attestations across committees, so we can just pick up to 8
  * attestations per group, sort by scores get get first 8.
  */
-const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = MAX_ATTESTATIONS_ELECTRA;
+const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
+  MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA,
+  MAX_ATTESTATIONS_ELECTRA
+);
 
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
@@ -150,7 +162,7 @@ export class AggregatedAttestationPool {
     assert.notNull(committeeIndex, "Committee index should not be null in aggregated attestation pool");
     let attestationGroup = attestationGroupByIndex.get(committeeIndex);
     if (!attestationGroup) {
-      attestationGroup = new MatchingDataAttestationGroup(committee, attestation.data);
+      attestationGroup = new MatchingDataAttestationGroup(this.config, committee, attestation.data);
       attestationGroupByIndex.set(committeeIndex, attestationGroup);
     }
 
@@ -482,6 +494,7 @@ export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
   constructor(
+    private readonly config: ChainForkConfig,
     readonly committee: Uint32Array,
     readonly data: phase0.AttestationData
   ) {}
@@ -530,13 +543,15 @@ export class MatchingDataAttestationGroup {
 
     this.attestations.push(attestation);
 
+    const maxRetained = isForkPostElectra(this.config.getForkName(this.data.slot))
+      ? MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA
+      : MAX_RETAINED_ATTESTATIONS_PER_GROUP;
+
     // Remove the attestations with less participation
-    if (this.attestations.length > MAX_RETAINED_ATTESTATIONS_PER_GROUP) {
+    if (this.attestations.length > maxRetained) {
+      // TODO: for electra, ideally we should sort by effective balance
       this.attestations.sort((a, b) => b.trueBitsCount - a.trueBitsCount);
-      this.attestations.splice(
-        MAX_RETAINED_ATTESTATIONS_PER_GROUP,
-        this.attestations.length - MAX_RETAINED_ATTESTATIONS_PER_GROUP
-      );
+      this.attestations.splice(maxRetained, this.attestations.length - maxRetained);
     }
 
     return InsertOutcome.NewData;
