@@ -20,7 +20,7 @@ export const unitTestProject = defineProject({
     pool: "threads",
     env: {
       LODESTAR_PRESET: "minimal",
-    }
+    },
   },
 });
 
@@ -37,7 +37,7 @@ export const unitTestMainnetProject = defineProject({
     pool: "threads",
     env: {
       LODESTAR_PRESET: "mainnet",
-    }
+    },
   },
 });
 
@@ -54,10 +54,9 @@ export const unitTestConstantsProject = defineProject({
     pool: "threads",
     env: {
       LODESTAR_PRESET: "minimal",
-    }
+    },
   },
 });
-
 
 export const unitTestConstantsMainnetProject = defineProject({
   test: {
@@ -72,6 +71,6 @@ export const unitTestConstantsMainnetProject = defineProject({
     pool: "threads",
     env: {
       LODESTAR_PRESET: "mainnet",
-    }
+    },
   },
 });
