@@ -2,7 +2,7 @@ import path from "node:path";
 import {defineConfig} from "vitest/config";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
 import {e2eProjectConfig} from "./configs/vitest.config.e2e.js";
-import {specProjectConfig} from "./configs/vitest.config.spec.js";
+import {specProjectMinimalConfig, specProjectMainnetConfig} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
 import {unitTestMainnetProject, unitTestProject} from "./configs/vitest.config.unit.js";
 
@@ -27,7 +27,11 @@ export default defineConfig({
       },
       {
         extends: true,
-        ...specProjectConfig,
+        ...specProjectMinimalConfig,
+      },
+      {
+        extends: true,
+        ...specProjectMainnetConfig,
       },
       {
         extends: true,

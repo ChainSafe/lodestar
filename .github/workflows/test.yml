@@ -223,3 +223,6 @@ jobs:
       - name: Spec tests mainnet
         run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec:mainnet
         working-directory: packages/beacon-node
+      - name: Spec tests validator
+        run: yarn test:spec
+        working-directory: packages/validator
