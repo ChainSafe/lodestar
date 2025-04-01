@@ -310,10 +310,7 @@ export class AggregatedAttestationPool {
     const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
     // Track score of each `AttestationsConsolidation`
     const consolidations = new Map<AttestationsConsolidation, number>();
-    let minScore = Number.MAX_SAFE_INTEGER;
-    let slotCount = 0;
     slot: for (const slot of slots) {
-      slotCount++;
       const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
       // should not happen
       if (!attestationGroupByIndexByDataHash) {
@@ -338,28 +335,23 @@ export class AggregatedAttestationPool {
       for (const attestationGroupByIndex of attestationGroupByIndexByDataHash.values()) {
         // sameAttDataCons could be up to MAX_ATTESTATIONS_PER_GROUP_ELECTRA
         const sameAttDataCons: AttestationsConsolidation[] = [];
+        const allAttestationGroups = Array.from(attestationGroupByIndex.values());
+        if (allAttestationGroups.length === 0) {
+          continue;
+        }
+
+        if (!validateAttestationDataFn(allAttestationGroups[0].data)) {
+          continue;
+        }
+
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
           const notSeenAttestingIndices = notSeenValidatorsFn(epoch, slot, committeeIndex);
           if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
             continue;
           }
 
-          // cannot apply this optimization like pre-electra because consolidation needs to be done across committees
-          // if (
-          //   slotCount > 2 &&
-          //   consolidations.size >= MAX_ATTESTATIONS_ELECTRA &&
-          //   notSeenAttestingIndices.size / slotDelta < minScore
-          // ) {
-          //   // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS_ELECTRA attestations and break the for loop early
-          //   // if not, we may have to scan all slots in the pool
-          //   // if we have enough attestations and the max possible score is lower than scores of `attestationsByScore`, we should skip
-          //   // otherwise it takes time to check attestation, add it and remove it later after the sort by score
-          //   continue;
-          // }
-
-          if (!validateAttestationDataFn(attestationGroup.data)) {
-            continue;
-          }
+          // cannot apply this optimization like pre-electra because consolidation needs to be done across committees:
+          // "after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS_ELECTRA attestations and break the for loop early"
 
           // TODO: Is it necessary to validateAttestation for:
           // - Attestation committee index not within current committee count
@@ -387,18 +379,15 @@ export class AggregatedAttestationPool {
             sameAttDataCons[i].byCommittee.set(committeeIndex, attestationNonParticipation);
             sameAttDataCons[i].totalNotSeenEffectiveBalance += attestationNonParticipation.notSeenEffectiveBalance;
           }
-          for (const consolidation of sameAttDataCons) {
-            const score = consolidation.totalNotSeenEffectiveBalance / slotDelta;
-            if (score < minScore) {
-              minScore = score;
-            }
+        } // all committees are processed
 
-            consolidations.set(consolidation, score);
-
-            // Stop accumulating attestations there are enough that may have good scoring
-            if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
-              break slot;
-            }
+        // after all committees are processed, we have a list of sameAttDataCons
+        for (const consolidation of sameAttDataCons) {
+          const score = consolidation.totalNotSeenEffectiveBalance / slotDelta;
+          consolidations.set(consolidation, score);
+          // Stop accumulating attestations there are enough that may have good scoring
+          if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
+            break slot;
           }
         }
       }
