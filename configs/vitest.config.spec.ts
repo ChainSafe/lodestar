@@ -15,11 +15,6 @@ export const specProjectConfig = defineProject({
     // So I have to increase these values to such extreme
     testTimeout: 1000 * 60 * 15,
     hookTimeout: 1000 * 60 * 15,
-    pool: "threads",
-    poolOptions: {
-      threads: {
-        isolate: false,
-      },
-    },
+    pool: "forks",
   },
 });
