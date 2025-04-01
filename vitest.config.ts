@@ -48,6 +48,8 @@ export default defineConfig({
       NODE_ENV: "test",
     },
     clearMocks: true,
+    // We have a few spec tests suits (specially spec tests) which don't have individual tests
+    passWithNoTests: true,
     reporters: process.env.GITHUB_ACTIONS
       ? ["verbose", "hanging-process", "github-actions"]
       : [process.env.TEST_COMPACT_OUTPUT ? "basic" : "verbose", "hanging-process"],
