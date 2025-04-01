@@ -27,7 +27,7 @@
     "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
-    "test:unit": "vitest run --project unit",
+    "test:unit": "vitest run --project unit --project unit-mainnet",
     "test": "yarn test:unit && yarn test:e2e",
     "test:spec": "vitest run --project spec",
     "test:e2e": "vitest run --project e2e",
