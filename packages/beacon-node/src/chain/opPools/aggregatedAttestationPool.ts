@@ -647,13 +647,14 @@ export function aggregateConsolidation({byCommittee, attData}: AttestationsConso
  * has already attested or not.
  */
 export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNotSeenValidatorsFn {
-  if (state.config.getForkName(state.slot) === ForkName.phase0) {
+  const stateSlot = state.slot;
+  if (state.config.getForkName(stateSlot) === ForkName.phase0) {
     // Get attestations to be included in a phase0 block.
     // As we are close to altair, this is not really important, it's mainly for e2e.
     // The performance is not great due to the different BeaconState data structure to altair.
     // check for phase0 block already
     const phase0State = state as CachedBeaconStatePhase0;
-    const stateEpoch = computeEpochAtSlot(state.slot);
+    const stateEpoch = computeEpochAtSlot(stateSlot);
 
     const previousEpochParticipants = extractParticipationPhase0(
       phase0State.previousEpochAttestations.getAllReadonly(),
@@ -690,7 +691,7 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
   const altairState = state as CachedBeaconStateAltair;
   const previousParticipation = altairState.previousEpochParticipation.getAll();
   const currentParticipation = altairState.currentEpochParticipation.getAll();
-  const stateEpoch = computeEpochAtSlot(state.slot);
+  const stateEpoch = computeEpochAtSlot(stateSlot);
   // this function could be called multiple times with same slot + committeeIndex
   const cachedNotSeenValidators = new Map<string, Set<number>>();
 
@@ -712,7 +713,8 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
     notSeenAttestingIndices = new Set<number>();
     for (const [i, validatorIndex] of committee.entries()) {
       // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
-      if (participationStatus[validatorIndex] === 0) {
+      // attestations for the previous slot are not included in the state, so we don't need to check for them
+      if (slot === stateSlot - 1 || participationStatus[validatorIndex] === 0) {
         notSeenAttestingIndices.add(i);
       }
     }

@@ -48,7 +48,8 @@ describe("AggregatedAttestationPool - Altair", () => {
 
   const committeeIndex = 0;
   const attestation = ssz.phase0.Attestation.defaultValue();
-  attestation.data.slot = currentSlot;
+  // state slot is (currentSlot + 1) so if set attestation slot to currentSlot, it will be included in the block
+  attestation.data.slot = currentSlot - 1;
   attestation.data.index = committeeIndex;
   attestation.data.target.epoch = currentEpoch;
   const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
@@ -64,7 +65,7 @@ describe("AggregatedAttestationPool - Altair", () => {
   const committeeLength = 4;
   const validators = generateValidators(vc, validatorOpts);
   const originalState = generateCachedAltairState({slot: currentSlot + 1, validators}, altairForkEpoch);
-  const committee = originalState.epochCtx.getBeaconCommittee(currentSlot, committeeIndex);
+  const committee = originalState.epochCtx.getBeaconCommittee(currentSlot - 1, committeeIndex);
   expect(committee.length).toEqual(committeeLength);
   // 0 and 1 in committee are fully participated
   const epochParticipation = newFilledArray(vc, 0b111);
@@ -98,15 +99,10 @@ describe("AggregatedAttestationPool - Altair", () => {
     // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
     // 0 and 1 are fully participated
     const notSeenValidatorFn = getNotSeenValidatorsFn(altairState);
-    const participation = notSeenValidatorFn(currentEpoch, currentSlot, committeeIndex);
     // seen attesting indices are 0, 1 => not seen are 2, 3
-    expect(participation).toEqual(
-      // {
-      // validatorIndices: [null, null, committee[2], committee[3]],
-      // attestingIndices: new Set([2, 3]),
-      // }
-      new Set([2, 3])
-    );
+    expect(notSeenValidatorFn(currentEpoch, currentSlot - 1, committeeIndex)).toEqual(new Set([2, 3]));
+    // attestations in current slot are always included (since altairState.slot = currentSlot + 1)
+    expect(notSeenValidatorFn(currentEpoch, currentSlot, committeeIndex)).toEqual(new Set([0, 1, 2, 3]));
   });
 
   // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
@@ -562,7 +558,7 @@ describe("aggregateConsolidation", () => {
         };
         consolidation.byCommittee.set(committeeIndex, {
           attestation: aggAttestation,
-          notSeenAttesterCount: aggregationBitsArr[i].filter((item) => item).length,
+          notSeenEffectiveBalance: aggregationBitsArr[i].filter((item) => item).length * 32,
         });
       }
 
