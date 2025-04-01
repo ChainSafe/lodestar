@@ -17,7 +17,7 @@ export const unitTestProject = defineProject({
     // for now I tried to identify such tests an increase the limit a bit higher
     testTimeout: 20_000,
     hookTimeout: 20_000,
-    pool: "threads",
+    pool: "forks",
     env: {
       LODESTAR_PRESET: "minimal",
     },
@@ -34,7 +34,7 @@ export const unitTestMainnetProject = defineProject({
     // for now I tried to identify such tests an increase the limit a bit higher
     testTimeout: 20_000,
     hookTimeout: 20_000,
-    pool: "threads",
+    pool: "forks",
     env: {
       LODESTAR_PRESET: "mainnet",
     },
