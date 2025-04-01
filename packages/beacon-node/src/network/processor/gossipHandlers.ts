@@ -67,6 +67,7 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
+import { InclusionListError, InclusionListErrorCode } from "../../chain/errors/inclusionList.js";
 
 /**
  * Gossip handler options as part of network options
@@ -618,7 +619,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
       // TODO EIP-7805: should we persist invalid ssz value?
-      await validateGossipInclusionList(chain, inclusionList);
+      try {
+        await validateGossipInclusionList(chain, inclusionList);
+      } catch (e) {
+        chain.logger.debug(`Gossip Inclusion List validation error ${JSON.stringify(e)}`);
+        if (e instanceof InclusionListError) {
+          if (e.type.code === InclusionListErrorCode.INVALID_COMMITTEE_ROOT) {
+            chain.logger.debug(`Expected ILC Root ${toRootHex(e.type.expected)} Received ILC Root ${toRootHex(e.type.received)}`);
+          }
+        }
+        throw e;
+      }
 
       try {
         const insertOutcome = chain.inclusionListPool.add(inclusionList);
