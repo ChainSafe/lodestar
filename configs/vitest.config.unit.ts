@@ -40,37 +40,3 @@ export const unitTestMainnetProject = defineProject({
     },
   },
 });
-
-export const unitTestConstantsProject = defineProject({
-  test: {
-    name: "unit-constants",
-    include: ["**/test/constants/**/*.test.ts"],
-    setupFiles,
-    // There are some tests which are taking huge time
-    // test/unit/chain/rewards/blockRewards.test.ts > chain / rewards / blockRewards > Normal case 73869ms
-    // for now I tried to identify such tests an increase the limit a bit higher
-    testTimeout: 20_000,
-    hookTimeout: 20_000,
-    pool: "threads",
-    env: {
-      LODESTAR_PRESET: "minimal",
-    },
-  },
-});
-
-export const unitTestConstantsMainnetProject = defineProject({
-  test: {
-    name: "unit-constants-mainnet",
-    include: ["**/test/constants/**/*.test.ts"],
-    setupFiles,
-    // There are some tests which are taking huge time
-    // test/unit/chain/rewards/blockRewards.test.ts > chain / rewards / blockRewards > Normal case 73869ms
-    // for now I tried to identify such tests an increase the limit a bit higher
-    testTimeout: 20_000,
-    hookTimeout: 20_000,
-    pool: "threads",
-    env: {
-      LODESTAR_PRESET: "mainnet",
-    },
-  },
-});

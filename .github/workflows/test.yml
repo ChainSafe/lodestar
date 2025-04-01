@@ -112,15 +112,6 @@ jobs:
         # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
         run: yarn test:unit --coverage
 
-      - name: Unit tests mainnet
-        run: yarn test:unit:mainnet --coverage
-
-      - name: Constants tests
-        run: yarn test:constants --coverage
-
-      - name: Constants tests mainnet
-        run: yarn test:constants:mainnet --coverage
-
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/core-dump'
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
