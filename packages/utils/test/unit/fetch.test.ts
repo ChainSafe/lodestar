@@ -18,6 +18,7 @@ describe("FetchError", () => {
   }[] = [
     {
       id: "Bad domain",
+      // Use random bytes to ensure no collisions
       url: `https://${randomHex}.infura.io`,
       errorType: "failed",
       errorCode: "ENOTFOUND",
@@ -89,11 +90,11 @@ describe("FetchError", () => {
   afterEach(async () => {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
-      if (afterHook) {
+      if (afterHook) 
         await afterHook().catch((e: Error) => {
           console.error("Error in afterEach hook", e);
         });
-      }
+      
     }
   });
 
