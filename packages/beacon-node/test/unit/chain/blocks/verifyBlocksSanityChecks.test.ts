@@ -130,7 +130,7 @@ function verifyBlocksSanityChecks(
     opts
   );
   return {
-    relevantBlocks: relevantBlocks.map(({block}) => block),
+    relevantBlocks: relevantBlocks.map((blockInput) => blockInput.getBlock().block),
     parentSlots,
     parentBlock,
   };
