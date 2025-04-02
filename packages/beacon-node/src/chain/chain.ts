@@ -219,7 +219,10 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
-    const validatorMonitor = createValidatorMonitor(metrics, config, anchorState.genesisTime, logger, opts);
+    const validatorMonitor =
+      metrics && opts.validatorMonitorLogs
+        ? createValidatorMonitor(metrics, config, anchorState.genesisTime, logger, opts)
+        : null;
     this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;

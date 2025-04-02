@@ -1062,4 +1062,3 @@ export class RootHexCache {
     return root;
   }
 }
-
