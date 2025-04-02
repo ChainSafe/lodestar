@@ -26,7 +26,7 @@ import {
   DownloadByRangeError,
   DownloadByRangeErrorCode,
   DownloadByRangeRequests,
-  DownloadByRangeResults,
+  DownloadAndCacheByRangeResults,
   prettyPrintArray,
 } from "./utils/downloadByRange.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -43,9 +43,10 @@ export type SyncChainFns = {
    * If SOME blocks are processed must throw BlockProcessorError()
    */
   processChainSegment: (blocks: BlockInput[], syncType: RangeSyncType) => Promise<void>;
-  downloadByRange: (peerId: PeerIdStr, batch: Batch) => Promise<DownloadByRangeResults>;
-  /** Must download blocks, and validate their range */
-  downloadBeaconBlocksByRange: (peer: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest) => Promise<BlockInput[]>;
+  downloadAndCacheByRange: (
+    peerId: PeerIdStr,
+    requests: DownloadByRangeRequests
+  ) => Promise<DownloadAndCacheByRangeResults>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Hook called when Chain state completes */
@@ -110,8 +111,7 @@ export class SyncChain {
   private status = SyncChainStatus.Stopped;
 
   private readonly processChainSegment: SyncChainFns["processChainSegment"];
-  private readonly downloadByRange: SyncChainFns["downloadByRange"];
-  private readonly downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"];
+  private readonly downloadAndCacheByRange: SyncChainFns["downloadAndCacheByRange"];
   private readonly reportPeer: SyncChainFns["reportPeer"];
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
   private readonly batchProcessor = new ItTrigger();
@@ -139,7 +139,6 @@ export class SyncChain {
     this.syncType = syncType;
     this.processChainSegment = fns.processChainSegment;
     this.downloadByRange = fns.downloadByRange;
-    this.downloadBeaconBlocksByRange = fns.downloadBeaconBlocksByRange;
     this.reportPeer = fns.reportPeer;
     this.config = modules.config;
     this.custodyConfig = modules.custodyConfig;
@@ -420,8 +419,8 @@ export class SyncChain {
       batch.startDownloading(peer);
 
       // wrapError ensures to never call both batch success() and batch error()
-      const res = await wrapError<DownloadByRangeResults, DownloadByRangeError>(
-        this.downloadByRange(peer, batch.requests)
+      const res = await wrapError<DownloadAndCacheByRangeResults, DownloadByRangeError>(
+        this.downloadAndCacheByRange(peer, batch.requests)
       );
 
       if (res.err) {
@@ -431,44 +430,29 @@ export class SyncChain {
           res.err
         );
         batch.downloadingError(res.err.type.code); // Throws after MAX_DOWNLOAD_ATTEMPTS
-        // this.triggerBatchDownloader();
-        // return;
       } else {
-        batch.downloadingSuccess(res.result);
+        batch.downloadingSuccess(res.result.blockInputs, peer.neededColumns);
 
         const logMeta: Record<string, string | number> = {
           id: this.logId,
           peer: prettyPrintPeerIdStr(peer),
           ...batch.getMetadata(),
-          ...res.result,
         };
+        for (const [key, value] of Object.entries(res.result)) {
+          if (key === "blockInputs") continue;
+          if (value !== 0) logMeta[key] = value;
+        }
+
         if (batch.neededColumns?.length) {
           // incomplete download
           logMeta.neededColumns = prettyPrintArray(batch.neededColumns);
           this.logger.debug("Partial batch download", logMeta);
         } else {
           // complete download
+          this.logger.debug("Completed batch download", logMeta);
           this.triggerBatchProcessor();
         }
       }
-      // let hasPostDenebBlocks = false;
-      // const blobs = res.result.reduce((acc, blockInput) => {
-      //   hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
-      //   return hasPostDenebBlocks
-      //     ? acc + (blockInput.type === BlockInputType.availableData ? blockInput.blockData.blobs.length : 0)
-      //     : 0;
-      // }, 0);
-      // const downloadInfo = {blocks: res.result.length};
-      // if (hasPostDenebBlocks) {
-      //   Object.assign(downloadInfo, {blobs});
-      // }
-      // this.logger.debug("Downloaded batch", {
-      //   id: this.logId,
-      //   ...batch.getMetadata(),
-      //   ...downloadInfo,
-      //   peer: prettyPrintPeerIdStr(peer),
-      // });
-
       // Preemptively request more blocks from peers whilst we process current blocks
       this.triggerBatchDownloader();
     } catch (e) {
@@ -476,6 +460,7 @@ export class SyncChain {
       this.batchProcessor.end(e as Error);
     }
 
+    // TODO: (@matthewkeil) why is this here for a second time?
     // Preemptively request more blocks from peers whilst we process current blocks
     this.triggerBatchDownloader();
   }
@@ -558,7 +543,10 @@ export class SyncChain {
             case DownloadByRangeErrorCode.EXTRA_COLUMNS_ALL_SLOTS:
             case DownloadByRangeErrorCode.EXTRA_COLUMNS_SOME_SLOTS:
             case DownloadByRangeErrorCode.PEER_CUSTODY_FAILURE:
-              this.reportPeer(attempt.peer, PeerAction.LowToleranceError, "PeerCustody Failure");
+              this.reportPeer(attempt.peer, PeerAction.LowToleranceError, "PeerCustodyFailure");
+              break;
+            case DownloadByRangeErrorCode.CACHING_ERROR:
+              this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "InvalidObjectServed");
               break;
             case DownloadByRangeErrorCode.MISSING_BLOBS:
             case DownloadByRangeErrorCode.MISSING_BLOCKS:

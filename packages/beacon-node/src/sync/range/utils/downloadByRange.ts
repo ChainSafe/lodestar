@@ -4,6 +4,8 @@ import {
   BlockInput,
   BlockInputBlobs,
   BlockInputByRootRequests,
+  BlockInputError,
+  BlockInputErrorType,
   BlockInputSourceType,
   BlockInputType,
   MissingBlob,
@@ -24,15 +26,17 @@ import {
 } from "@lodestar/params";
 import {INetwork, prettyPrintPeerIdStr} from "../../../network/index.js";
 import {linspace} from "../../../util/numpy.js";
-import {ColumnIndex, deneb, fulu, phase0, RootHex, SignedBeaconBlock, Slot, WithBytes} from "@lodestar/types";
+import {ColumnIndex, deneb, Epoch, fulu, phase0, RootHex, SignedBeaconBlock, Slot, WithBytes} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
+import {BlobSidecar} from "@lodestar/types/lib/deneb/types.js";
 
-function prettyPrintArray(arr: unknown[]): string {
+export function prettyPrintArray(arr: unknown[]): string {
   return `[ ${arr.join(",")} ]`;
 }
 
-type DownloadByRangeRequests = {
+export type DownloadByRangeRequests = {
+  startEpoch: Epoch;
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;
   columnsRequest?: fulu.DataColumnSidecarsByRangeRequest;
@@ -44,6 +48,154 @@ type DownloadByRangeResponses = {
   columnSidecars?: fulu.DataColumnSidecars;
 };
 
+type DownloadByRangeProps = Omit<DownloadByRangeRequests, "startEpoch"> & {
+  network: INetwork;
+  config: ChainForkConfig;
+  peerIdStr: string;
+  dataAvailabilityStatus: DataAvailabilityStatus;
+};
+
+export type DownloadAndCacheByRangeProps = DownloadByRangeProps & {chain: IBeaconChain};
+
+export type DownloadAndCacheByRangeResults = {
+  blockInputs: BlockInput[];
+  numberOfBlocks: number;
+  numberOfBlobs: number;
+  numberOfColumns: number;
+};
+
+export async function downloadAndCacheByRange(request: DownloadAndCacheByRangeProps): DownloadAndCacheByRangeResults {
+  const {chain, dataAvailabilityStatus, peerIdStr} = request;
+  const {blocks, blobSidecars, columnSidecars} = await downloadByRange(request);
+  const blockInputs = new Map<RootHex, BlockInput>();
+  const seenTimestampSec = Date.now() / 1000;
+  const cache = chain.blockInputCache;
+
+  function uncacheBlocks() {
+    for (const blockInput of blockInputs.values()) {
+      try {
+        cache.removeBlockFromBlockInput(blockInput);
+      } catch (e) {
+        chain.logger.error("Cannot remove block from BlockInput", blockInput.getLogMeta(), e);
+      }
+    }
+  }
+
+  function uncacheBlobs(processed: Map<RootHex, number[]>) {
+    for (const [rootHex, indices] of processed.entries()) {
+      try {
+        cache.removeBlobsFromBlockInput(rootHex, indices);
+      } catch (e) {
+        chain.logger.error(`Cannot remove blobs from BlockInput rootHex=${rootHex} indices=${indices}`, {}, e);
+      }
+    }
+  }
+
+  function uncacheColumns(processed: Map<RootHex, number[]>) {
+    for (const [rootHex, indices] of processed.entries()) {
+      try {
+        cache.removeBlockFromBlockInput(rootHex, indices);
+      } catch (e) {
+        chain.logger.error(`Cannot remove columns from BlockInput rootHex=${rootHex} indices=${indices}`, {}, e);
+      }
+    }
+  }
+
+  let numberOfBlocks = 0;
+  if (blocks) {
+    try {
+      for (const block of blocks) {
+        const blockInput = cache.getBlockInputByBlock({
+          peerIdStr,
+          seenTimestampSec,
+          block: block.data,
+          source: BlockInputSourceType.byRange,
+          dataAvailability: dataAvailabilityStatus,
+        });
+        numberOfBlocks++;
+        blockInputs.set(blockInput.rootHex, blockInput);
+      }
+    } catch (err) {
+      chain.logger.verbose("Error caching ByRange fetched block", {peerId: prettyPrintPeerIdStr(peerIdStr)}, err);
+      uncacheBlocks();
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.CACHING_ERROR,
+        peerId: prettyPrintPeerIdStr(peerIdStr),
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  const processedBlobs = new Map<RootHex, number[]>();
+  let numberOfBlobs = 0;
+  if (blobSidecars) {
+    try {
+      for (const blobSidecar of blobSidecars) {
+        const blockInput = cache.getBlockInputByBlob({
+          peerIdStr,
+          blobSidecar,
+          seenTimestampSec,
+          source: BlockInputSourceType.byRange,
+        });
+        numberOfBlobs++;
+        blockInputs.set(blockInput.rootHex, blockInput);
+        const indices = processedBlobs.get(blockInput.rootHex) ?? [];
+        indices.push(blobSidecar.index);
+        processedBlobs.set(blockInput.rootHex, indices);
+      }
+    } catch (err) {
+      chain.logger.verbose("Error caching ByRange fetched blob", {peerId: prettyPrintPeerIdStr(peerIdStr)}, err);
+      uncacheBlobs(processedBlobs);
+      if (numberOfBlocks !== 0) {
+        uncacheBlocks();
+      }
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.CACHING_ERROR,
+        peerId: prettyPrintPeerIdStr(peerIdStr),
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  const processedColumns = new Map<RootHex, number[]>();
+  let numberOfColumns = 0;
+  if (columnSidecars) {
+    try {
+      for (const columnSidecar of columnSidecars) {
+        const blockInput = cache.getBlockInputByColumn({
+          peerIdStr,
+          columnSidecar,
+          seenTimestampSec,
+          source: BlockInputSourceType.byRange,
+        });
+        numberOfColumns++;
+        blockInputs.set(blockInput.rootHex, blockInput);
+        const indices = processedBlobs.get(blockInput.rootHex) ?? [];
+        indices.push(columnSidecar.index);
+        processedBlobs.set(blockInput.rootHex, indices);
+      }
+    } catch (err) {
+      chain.logger.verbose("Error caching ByRange fetched column", {peerId: prettyPrintPeerIdStr(peerIdStr)}, err);
+      uncacheColumns(processedColumns);
+      if (numberOfBlocks !== 0) {
+        uncacheBlocks();
+      }
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.CACHING_ERROR,
+        peerId: prettyPrintPeerIdStr(peerIdStr),
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  return {
+    blockInputs: Array.from(blockInputs.values()),
+    numberOfBlocks,
+    numberOfBlobs,
+    numberOfColumns,
+  };
+}
+
 export async function downloadByRange({
   network,
   config,
@@ -52,23 +204,24 @@ export async function downloadByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
-}: DownloadByRangeRequests & {
-  network: INetwork;
-  config: ChainForkConfig;
-  peerIdStr: string;
-  dataAvailabilityStatus: DataAvailabilityStatus;
-}): DownloadByRangeResponses {
-  const slotRange = `[ ${blocksRequest.startSlot} - ${blocksRequest.startSlot + blocksRequest.count}`;
+}: DownloadByRangeProps): DownloadByRangeResponses {
+  const slotRangeString = `${blocksRequest.startSlot} - ${blocksRequest.startSlot + blocksRequest.count}`;
 
   // TODO: should we check for requests across a fork boundary?
 
   if (dataAvailabilityStatus === DataAvailabilityStatus.Available) {
     const forkName = config.getForkName(blocksRequest.startSlot);
     if (isForkBlobs(forkName) && !blobsRequest) {
-      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.MISSING_BLOBS_REQUEST, slotRange});
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISSING_BLOBS_REQUEST,
+        slotRange: slotRangeString,
+      });
     }
     if (isForkPostFulu(forkName) && !columnsRequest) {
-      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.MISSING_COLUMNS_REQUEST, slotRange});
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISSING_COLUMNS_REQUEST,
+        slotRange: slotRangeString,
+      });
     }
   }
 
@@ -111,7 +264,7 @@ export async function downloadByRange({
 
   compareByRangeRequestsToResponse({
     peerIdStr,
-    slotRange,
+    slotRangeString,
     blocksRequest,
     blobsRequest,
     columnsRequest,
@@ -274,20 +427,20 @@ export function compareColumnsByRangeRequestAndResponse(
 // Should not be called directly. Only exported for unit testing purposes
 export function compareByRangeRequestsToResponse({
   peerIdStr,
-  slotRange,
+  slotRangeString,
   blocksRequest,
   blobsRequest,
   columnsRequest,
   blocks,
   blobSidecars,
   columnSidecars,
-}: DownloadByRangeRequests & DownloadByRangeResponses & {peerIdStr: string; slotRange: string}): void {
+}: DownloadByRangeRequests & DownloadByRangeResponses & {peerIdStr: string; slotRangeString: string}): void {
   if (blocksRequest) {
     if (!blocks) {
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-          slotRange: slotRange,
+          slotRange: slotRangeString,
         },
         "No blocks to check blockRequest against"
       );
@@ -311,7 +464,7 @@ export function compareByRangeRequestsToResponse({
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-          slotRange: slotRange,
+          slotRange: slotRangeString,
         },
         "Must request blocks and blobs together when doing a *ByRange request"
       );
@@ -320,7 +473,7 @@ export function compareByRangeRequestsToResponse({
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
-          slotRange: slotRange,
+          slotRange: slotRangeString,
         },
         "No blobSidecars to check blobRequest against"
       );
@@ -347,7 +500,7 @@ export function compareByRangeRequestsToResponse({
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
-          slotRange: slotRange,
+          slotRange: slotRangeString,
         },
         "No columnSidecars to check columnRequest against"
       );
@@ -434,7 +587,7 @@ export enum DownloadByRangeErrorCode {
   EXTRA_COLUMNS_ALL_SLOTS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS_ALL_SLOTS",
   EXTRA_COLUMNS_SOME_SLOTS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS_SOME_SLOTS",
   PEER_CUSTODY_FAILURE = "DOWNLOAD_BY_RANGE_ERROR_PEER_CUSTODY_FAILURE",
-  // Z = "DOWNLOAD_BY_RANGE_ERROR_Z",
+  CACHING_ERROR = "DOWNLOAD_BY_RANGE_CACHING_ERROR",
 }
 
 export type DownloadByRangeErrorType =
@@ -463,6 +616,11 @@ export type DownloadByRangeErrorType =
       name: string;
       message: string;
       stack: string | undefined;
+    }
+  | {
+      code: DownloadByRangeErrorCode.CACHING_ERROR;
+      peerId: string;
+      message: string;
     }
   | {
       code: DownloadByRangeErrorCode.MISSING_BLOCKS;

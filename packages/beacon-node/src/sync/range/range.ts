@@ -1,6 +1,6 @@
 import {EventEmitter} from "node:events";
 import {BeaconConfig} from "@lodestar/config";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Epoch, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {StrictEventEmitter} from "strict-event-emitter-types";
@@ -13,8 +13,9 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
-import {downloadBatch} from "./utils/downloadBatch.js";
+import {downloadByRange} from "./utils/downloadByRange.js";
 import {Batch} from "./batch.js";
+import {isForkPostDeneb} from "@lodestar/params";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -200,27 +201,23 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   };
 
-  private downloadBatch: SyncChainFns["downloadBatch"] = async (batch, peerIdStr) => {
-    return downloadBatch(this.chain, this.network, batch, peerIdStr);
-  };
-
-  /** Convenience method for `SyncChain` */
-  private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
-    peerId,
-    request,
-    partialDownload,
-    peerClient
-  ) => {
-    return beaconBlocksMaybeBlobsByRange(
-      this.config,
-      this.network,
-      peerId,
-      request,
-      this.chain.clock.currentEpoch,
-      partialDownload,
-      peerClient,
-      this.logger
-    );
+  private downloadAndCacheByRange: SyncChainFns["downloadAndCacheByRange"] = async (peerIdStr, requests) => {
+    const currentEpoch = this.chain.clock.currentEpoch;
+    let dataAvailabilityStatus: DataAvailabilityStatus;
+    if (!isForkPostDeneb(this.chain.clock.currentSlot)) {
+      dataAvailabilityStatus = DataAvailabilityStatus.PreData;
+    } else if (requests.startEpoch < currentEpoch - this.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
+      dataAvailabilityStatus = DataAvailabilityStatus.OutOfRange;
+    } else {
+      dataAvailabilityStatus = DataAvailabilityStatus.Available;
+    }
+    return downloadByRange({
+      config: this.config,
+      network: this.network,
+      peerIdStr,
+      dataAvailabilityStatus,
+      ...requests,
+    });
   };
 
   /** Convenience method for `SyncChain` */

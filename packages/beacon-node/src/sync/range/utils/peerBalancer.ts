@@ -9,10 +9,8 @@ export type PeerWithMeta = {
   clientAgent?: string;
 };
 
-export type PeerWithOverlap = {
-  peerId: PeerIdStr;
-  overlappingColumns?: number[];
-  clientAgent?: string;
+export type PeerWithOverlap = PeerWithMeta & {
+  neededColumns?: number[];
 };
 /**
  * Balance and organize peers to perform requests with a SyncChain
@@ -52,7 +50,11 @@ export class ChainPeersBalancer {
           }
         }
         if (overlappingColumns.length) {
-          overlappingPeers.push({peerId: peer.peerId, overlappingColumns, clientAgent: peer.clientAgent});
+          overlappingPeers.push({
+            peerId: peer.peerId,
+            custodyColumns: overlappingColumns,
+            clientAgent: peer.clientAgent,
+          });
         }
       }
       // TODO: should we throw and error or maybe log something here if there is no column overlap with any peer?
@@ -69,7 +71,12 @@ export class ChainPeersBalancer {
       (peer) => this.activeRequestsByPeer.get(peer) ?? 0 // Sort by least active req
     );
 
-    return sortedBestPeers[0];
+    const bestPeer = sortedBestPeers[0];
+    const neededColumns = batch.neededColumns?.filter((index) => !bestPeer.custodyColumns?.includes(index));
+    return {
+      ...bestPeer,
+      neededColumns,
+    };
   }
 
   /**

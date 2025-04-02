@@ -118,10 +118,11 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
     return {
+      startEpoch: this.startEpoch,
       blocksRequest: this.state.blocks ? undefined : {count: this.count, startSlot: this.startSlot, step: 1},
       blobsRequest: this.forkType === BatchForkType.blobs ? {count: this.count, startSlot: this.startSlot} : undefined,
-      columnsRequest: this.state.peer.overlappingColumns
-        ? {count: this.count, startSlot: this.startSlot, columns: this.state.peer.overlappingColumns}
+      columnsRequest: this.state.peer.custodyColumns
+        ? {count: this.count, startSlot: this.startSlot, columns: this.state.peer.custodyColumns}
         : undefined,
     };
   }
