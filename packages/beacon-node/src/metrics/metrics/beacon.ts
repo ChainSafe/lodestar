@@ -215,10 +215,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     blockInputFetchStats: {
       // of already available blocks which didn't have to go through blobs pull
-      totalDataAvailableBlockInputBlobs: register.gauge({
-        name: "beacon_blockinput_blobs_already_available_total",
-        help: "Total number of block input blobs that of already available blocks",
-      }),
+      // totalDataAvailableBlockInputBlobs: register.gauge({
+      //   name: "beacon_blockinput_blobs_already_available_total",
+      //   help: "Total number of block input blobs that of already available blocks",
+      // }),
 
       // blobs resolution stats
       dataPromiseBlobsAlreadyAvailable: register.gauge({
@@ -283,10 +283,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
 
       // blockinput resolution stats
-      totalDataAvailableBlockInputs: register.gauge({
-        name: "beacon_blockinputs_already_available_total",
-        help: "Total number of block inputs whose blobs were already available",
-      }),
+      // totalDataAvailableBlockInputs: register.gauge({
+      //   name: "beacon_blockinputs_already_available_total",
+      //   help: "Total number of block inputs whose blobs were already available",
+      // }),
       totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
         name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
         help: "Count of block inputs that became available using non-null get blobs requests",

@@ -836,14 +836,14 @@ export function createLodestarMetrics(
       }),
     },
     importBlock: {
-      persistBlockNoSerializedDataCount: register.gauge({
-        name: "lodestar_import_block_persist_block_no_serialized_data_count",
-        help: "Count persisting block with no serialized data",
-      }),
-      persistBlockWithSerializedDataCount: register.gauge({
-        name: "lodestar_import_block_persist_block_with_serialized_data_count",
-        help: "Count persisting block with serialized data",
-      }),
+      // persistBlockNoSerializedDataCount: register.gauge({
+      //   name: "lodestar_import_block_persist_block_no_serialized_data_count",
+      //   help: "Count persisting block with no serialized data",
+      // }),
+      // persistBlockWithSerializedDataCount: register.gauge({
+      //   name: "lodestar_import_block_persist_block_with_serialized_data_count",
+      //   help: "Count persisting block with serialized data",
+      // }),
       elapsedTimeTillBecomeHead: register.histogram({
         name: "lodestar_gossip_block_elapsed_time_till_become_head",
         help: "Time elapsed between block slot time and the time block becomes head",
