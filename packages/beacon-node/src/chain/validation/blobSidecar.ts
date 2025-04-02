@@ -172,60 +172,7 @@ export async function validateGossipBlobSidecar(
   }
 }
 
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#validate_blobs_sidecar
-export function validateBlobSidecars(
-  blockSlot: Slot,
-  blockRoot: Root,
-  expectedKzgCommitments: deneb.BlobKzgCommitments,
-  blobSidecars: deneb.BlobSidecars,
-  opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
-): void {
-  // assert len(expected_kzg_commitments) == len(blobs)
-  if (expectedKzgCommitments.length !== blobSidecars.length) {
-    throw new Error(
-      `blobSidecars length to commitments length mismatch. Blob length: ${blobSidecars.length}, Expected commitments length ${expectedKzgCommitments.length}`
-    );
-  }
-
-  // No need to verify the aggregate proof of zero blobs
-  if (blobSidecars.length > 0) {
-    // Verify the blob slot and root matches
-    const blobs = [];
-    const proofs = [];
-
-    for (let index = 0; index < blobSidecars.length; index++) {
-      const blobSidecar = blobSidecars[index];
-      // TODO: (@matthewkeil) This check                                                    et deleted
-      // const blobBlockHeader = blobSidecar.signedBlockHeader.message;
-      // const blobBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
-      // if (
-      //   blobBlockHeader.slot !== blockSlot ||
-      //   !byteArrayEquals(blobBlockRoot, blockRoot) ||
-      //   blobSidecar.index !== index ||
-      //   !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
-      // ) {
-      //   throw new Error(
-      //     `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toRootHex(blobBlockRoot)} index=${
-      //       blobSidecar.index
-      //     } for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} index=${index}`
-      //   );
-      // }
-      blobs.push(blobSidecar.blob);
-      proofs.push(blobSidecar.kzgProof);
-    }
-
-    // TODO: (@matthewkeil) Should the proof check also get handled when the blob is added to the BlockInput?
-    // TODO: (@matthewkeil) This is getting called twice??  Once in gossip for each blob and once in block
-    //       processing for the batch of proofs (but uses the commitments from the block).  This should not
-    //       be necessary because the commitments are bytewise checked to match in the block and sidecar on
-    //       import to the BlockInput
-    if (!opts.skipProofsCheck) {
-      validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
-    }
-  }
-}
-
-function validateBlobsAndProofs(
+export function validateBlobsAndProofs(
   expectedKzgCommitments: deneb.BlobKzgCommitments,
   blobs: deneb.Blobs,
   proofs: deneb.KZGProofs
