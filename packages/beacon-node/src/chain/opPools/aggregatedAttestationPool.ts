@@ -101,6 +101,12 @@ const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_ATTESTATIONS_ELECTRA
 );
 
+export enum ScannedSlotsTerminationReason {
+  MaxConsolidationReached = "max_consolidation_reached",
+  ScannedAllSlots = "scanned_all_slots",
+  SlotBeforePreviousEpoch = "slot_before_previous_epoch",
+}
+
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
  * or api. The returned attestations are aggregated to maximise the number of validators that can be
@@ -325,6 +331,7 @@ export class AggregatedAttestationPool {
     // Track score of each `AttestationsConsolidation`
     const consolidations = new Map<AttestationsConsolidation, number>();
     let scannedSlots = 0;
+    let stopReason: ScannedSlotsTerminationReason | null = null;
     slot: for (const slot of slots) {
       const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
       // should not happen
@@ -336,7 +343,8 @@ export class AggregatedAttestationPool {
       // validateAttestation condition: Attestation target epoch not in previous or current epoch
       if (!(epoch === stateEpoch || epoch === statePrevEpoch)) {
         // we process slot in desc order, this means slot is out of current or previous epoch, we should stop
-        break slot; // Invalid attestations
+        stopReason = ScannedSlotsTerminationReason.SlotBeforePreviousEpoch;
+        break; // Invalid attestations
       }
 
       // validateAttestation condition: Attestation slot not within inclusion window
@@ -377,8 +385,7 @@ export class AggregatedAttestationPool {
           // These properties should not change after being validate in gossip
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
-          const attestationsSameGroup = attestationGroup
-          .getAttestationsForBlock(
+          const attestationsSameGroup = attestationGroup.getAttestationsForBlock(
             fork,
             state.epochCtx.effectiveBalanceIncrements,
             notSeenAttestingIndices,
@@ -408,6 +415,7 @@ export class AggregatedAttestationPool {
           consolidations.set(consolidation, score);
           // Stop accumulating attestations there are enough that may have good scoring
           if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
+            stopReason = ScannedSlotsTerminationReason.MaxConsolidationReached;
             break slot;
           }
         }
@@ -416,6 +424,8 @@ export class AggregatedAttestationPool {
       // finished processing a slot
       scannedSlots++;
     }
+
+    this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.totalConsolidations.set(consolidations.size);
 
     const sortedConsolidationsByScore = Array.from(consolidations.entries())
       .sort((a, b) => b[1] - a[1])
@@ -437,7 +447,10 @@ export class AggregatedAttestationPool {
       packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalEffectiveBalance);
     }
 
-    packedAttestationsMetrics?.scannedSlots.set(scannedSlots);
+    if (stopReason === null) {
+      stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;
+    }
+    packedAttestationsMetrics?.scannedSlots.set({reason: stopReason}, scannedSlots);
     packedAttestationsMetrics?.totalSlots.set(slots.length);
 
     return packedAttestations;
@@ -605,7 +618,7 @@ export class MatchingDataAttestationGroup {
         fork,
         effectiveBalanceIncrements,
         notSeenAttestingIndices,
-        new Set(attestations.map((a) => a.attestation)),
+        new Set(attestations.map((a) => a.attestation))
       );
 
       if (mostValuableAttestation === null) {
@@ -628,7 +641,7 @@ export class MatchingDataAttestationGroup {
     fork: ForkName,
     effectiveBalanceIncrements: EffectiveBalanceIncrements,
     notSeenAttestingIndices: Set<number>,
-    excluded: Set<Attestation>,
+    excluded: Set<Attestation>
   ): AttestationNonParticipant | null {
     if (notSeenAttestingIndices.size === 0) {
       // no more attesters to consider

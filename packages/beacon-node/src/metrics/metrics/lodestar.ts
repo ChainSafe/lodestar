@@ -3,6 +3,7 @@ import {BeaconState} from "@lodestar/types";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
+import {ScannedSlotsTerminationReason} from "../../chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -891,14 +892,19 @@ export function createLodestarMetrics(
             help: "Total effective balance of attesters in packed attestation ${index}",
             labelNames: ["index"],
           }),
-          scannedSlots: register.gauge({
+          scannedSlots: register.gauge<{reason: ScannedSlotsTerminationReason}>({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_scanned_slots_total",
             help: "Total number of scanned slots to produce packed attestations",
+            labelNames: ["reason"],
           }),
           totalSlots: register.gauge({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_slots_total",
             help: "Total number of slots in pool when producing packed attestations",
-          })
+          }),
+          totalConsolidations: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_consolidations_total",
+            help: "Total number of consolidations before truncate",
+          }),
         },
       },
       attestationPoolSize: register.gauge({
