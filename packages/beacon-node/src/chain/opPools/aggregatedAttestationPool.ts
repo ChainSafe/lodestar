@@ -95,6 +95,8 @@ const MAX_ATTESTATIONS_PER_GROUP = 3;
 /**
  * For electra, there is on chain aggregation of attestations across committees, so we can just pick up to 8
  * attestations per group, sort by scores get get first 8.
+ * The new algorithm is improved to get most valuable attestation helped not to get not-useful attestations anyway.
+ * The more consolidations we have per block, the less likely we have to scan all slots in the pool.
  */
 const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA,
