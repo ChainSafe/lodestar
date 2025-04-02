@@ -185,7 +185,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       if (removeCachedBlock) {
-        chain.blockInputCache.removeBlockFromBlockInput(blockInput);
+        chain.blockInputCache.removeBlockFromBlockInput(blockInput.rootHex);
       }
 
       throw e;
@@ -280,7 +280,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
 
         if (removeCachedBlock) {
-          chain.blockInputCache.removeBlockFromBlockInput(blockInput);
+          chain.blockInputCache.removeBlockFromBlockInput(blockInput.rootHex);
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
         logger[logLevel]("Error receiving block", {slot: block.message.slot, peer: peerIdStr}, e as Error);

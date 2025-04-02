@@ -74,7 +74,7 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
   function uncacheBlocks() {
     for (const blockInput of blockInputs.values()) {
       try {
-        cache.removeBlockFromBlockInput(blockInput);
+        cache.removeBlockFromBlockInput(blockInput.rootHex);
       } catch (e) {
         chain.logger.error("Cannot remove block from BlockInput", blockInput.getLogMeta(), e);
       }
@@ -94,7 +94,7 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
   function uncacheColumns(processed: Map<RootHex, number[]>) {
     for (const [rootHex, indices] of processed.entries()) {
       try {
-        cache.removeBlockFromBlockInput(rootHex, indices);
+        cache.removeColumnsFromBlockInput(rootHex, indices);
       } catch (e) {
         chain.logger.error(`Cannot remove columns from BlockInput rootHex=${rootHex} indices=${indices}`, {}, e);
       }

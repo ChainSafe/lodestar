@@ -33,11 +33,13 @@ type BlockInputByBlock = {
 type BlockInputByBlob = {
   blobSidecar: deneb.BlobSidecar;
   source: BlockInputSource;
+  seenTimestampSec: number;
   peerIdStr?: string;
 };
 type BlockInputByColumn = {
   columnSidecar: fulu.DataColumnSidecar;
   source: BlockInputSource;
+  seenTimestampSec: number;
   peerIdStr?: string;
 };
 export class BlockInputCache {
@@ -223,7 +225,8 @@ export class BlockInputCache {
    * Removes block from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
    * not yet have any data associated for that rootHex then the blockInput will be pruned from the cache.
    */
-  removeBlockFromBlockInput(blockInput: BlockInput): void {
+  removeBlockFromBlockInput(rootHex: RootHex): void {
+    const blockInput = this.blockInputs.get(rootHex);
     blockInput.removeBlock();
     if (!blockInput.hasData()) {
       this.blockInputs.delete(blockInput.rootHex);
@@ -234,7 +237,8 @@ export class BlockInputCache {
    * Removes blob from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
    * not yet have a block or any data associated for that rootHex then the blockInput will be pruned from the cache.
    */
-  removeBlobsFromBlockInput(blockInput: BlockInput, blobIndices: number[]): void {
+  removeBlobsFromBlockInput(rootHex: RootHex, blobIndices: number[]): void {
+    const blockInput = this.blockInputs.get(rootHex);
     for (const index of blobIndices) {
       blockInput.removeBlobSidecar(index);
     }
@@ -247,7 +251,8 @@ export class BlockInputCache {
    * Removes blob from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
    * not yet have a block or any data associated for that rootHex then the blockInput will be pruned from the cache.
    */
-  removeColumnsFromBlockInput(blockInput: BlockInput, columnIndices: number[]): void {
+  removeColumnsFromBlockInput(rootHex: RootHex, columnIndices: number[]): void {
+    const blockInput = this.blockInputs.get(rootHex);
     for (const index of columnIndices) {
       blockInput.removeColumn(index);
     }
