@@ -18,7 +18,6 @@ import {
 import {BeaconBlock, altair, capella, ssz} from "@lodestar/types";
 import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -110,6 +109,7 @@ export async function importBlock(
 
   // We want to import block asap so call all event handler in the next event loop
   callInNextEventLoop(async () => {
+    // TODO: (@matthewkeil) this happens below as well... should this be emitted twice?
     this.emitter.emit(routes.events.EventType.block, {
       block: rootHex,
       slot: blockSlot,
