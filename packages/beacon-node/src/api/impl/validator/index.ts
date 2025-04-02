@@ -387,6 +387,7 @@ export function getValidatorApi(
       );
   }
 
+  // TODO: (@matthewkeil) need to double check out of range data impls
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
     if (!protoBeaconBlock) {

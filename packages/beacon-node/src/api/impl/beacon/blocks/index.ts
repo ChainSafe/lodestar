@@ -27,21 +27,11 @@ import {
   isSignedBlockContents,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {
-  BlobsSource,
   BlockInput,
-  BlockInputAvailableData,
   BlockInputBlobs,
-  BlockInputDataColumns,
-  BlockSource,
-  DataColumnsSource,
-  ImportBlockOpts,
-  getBlockInput,
-} from "../../../../chain/blocks/types.js";
-import {
-  BlockInput as BlockInputNew,
-  BlockInputBlobs as BlockInputBlobsNew,
-  BlockInputColumns as BlockInputColumnsNew,
+  BlockInputColumns,
   BlockInputType,
   BlockInputSourceType,
   isBlockInputBlobs,
@@ -89,7 +79,7 @@ export function getBeaconBlockApi({
   ) => {
     const seenTimestampSec = Date.now() / 1000;
 
-    let blockInput: BlockInputNew;
+    let blockInput: BlockInput;
     if (!isSignedBlockContents(signedBlockOrContents)) {
       const blockRoot = this.config
         .getForkTypes(signedBlockOrContents.message.slot)
@@ -100,37 +90,34 @@ export function getBeaconBlockApi({
         .getForkTypes(signedBlockOrContents.signedBlock.message.slot)
         .SignedBeaconBlock.hashTreeRoot(signedBlockOrContents.signedBlock.message);
       blockInput = chain.blockInputCache.getBlockInputByBlock({blockRoot, block: signedBlockOrContents.signedBlock});
-      switch (blockInput.type) {
-        case BlockInputType.PreDeneb:
-          throw new Error("SignedBlockContents were sent to publishBlockV2 but BlockInput is PreDeneb");
-        case BlockInputType.Blobs:
-          // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
-          //                     computeBlobSidecars to SignedBlockContents and get rid of the third
-          for (const blobSidecar of computeBlobSidecars(
-            config,
-            signedBlockOrContents.signedBlock,
-            signedBlockOrContents
-          )) {
-            (blockInput as BlockInputBlobsNew).addBlob(blobSidecar, BlockInputSourceType.api);
-          }
-          break;
-        case BlockInputType.Columns:
-          // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
-          //                     computeDataColumnSidecars to SignedBlockContents and get rid of the third
-          for (const columnSidecar of computeDataColumnSidecars(
-            config,
-            signedBlockOrContents.signedBlock,
-            signedBlockOrContents
-          )) {
-            (blockInput as BlockInputColumnsNew).addColumnSidecar(columnSidecar, BlockInputSourceType.api);
-          }
-          break;
+      if (isBlockInputBlobs(blockInput)) {
+        // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
+        //                     computeBlobSidecars to SignedBlockContents and get rid of the third
+        for (const blobSidecar of computeBlobSidecars(
+          config,
+          signedBlockOrContents.signedBlock,
+          signedBlockOrContents
+        )) {
+          blockInput.addBlobSidecar(blobSidecar, BlockInputSourceType.api);
+        }
+      } else if (isBlockInputColumns(blockInput)) {
+        // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
+        //                     computeDataColumnSidecars to SignedBlockContents and get rid of the third
+        for (const columnSidecar of computeDataColumnSidecars(
+          config,
+          signedBlockOrContents.signedBlock,
+          signedBlockOrContents
+        )) {
+          blockInput.addColumnSidecar(columnSidecar, BlockInputSourceType.api);
+        }
+      } else {
+        throw new Error("SignedBlockContents were sent to publishBlockV2 but BlockInput is PreDeneb");
       }
     }
 
     const slot = blockInput.getSlot();
     const forkName = blockInput.getForkName();
-    const signedBlock = blockInput.getBlock();
+    const signedBlock = blockInput.getBlock().block;
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockInput.rootHex) || chain.producedBlindedBlockRoot.has(blockInput.rootHex);
     // bodyRoot should be the same to produced block
