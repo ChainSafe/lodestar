@@ -335,8 +335,10 @@ export class AggregatedAttestationPool {
       const epoch = computeEpochAtSlot(slot);
       // validateAttestation condition: Attestation target epoch not in previous or current epoch
       if (!(epoch === stateEpoch || epoch === statePrevEpoch)) {
-        continue; // Invalid attestations
+        // we process slot in desc order, this means slot is out of current or previous epoch, we should stop
+        break slot; // Invalid attestations
       }
+
       // validateAttestation condition: Attestation slot not within inclusion window
       if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot)) {
         continue; // Invalid attestations
