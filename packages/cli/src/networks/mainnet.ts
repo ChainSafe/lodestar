@@ -2,9 +2,9 @@ export {mainnetChainConfig as chainConfig} from "@lodestar/config/networks";
 
 export const depositContractDeployBlock = 11052984;
 export const genesisFileUrl =
-  "https://raw.githubusercontent.com/eth-clients/eth2-networks/master/shared/mainnet/genesis.ssz";
+  "https://raw.githubusercontent.com/eth-clients/mainnet/refs/heads/main/metadata/genesis.ssz";
 export const bootnodesFileUrl =
-  "https://raw.githubusercontent.com/eth-clients/eth2-networks/master/shared/mainnet/bootstrap_nodes.txt";
+  "https://raw.githubusercontent.com/eth-clients/mainnet/refs/heads/main/metadata/bootstrap_nodes.yaml";
 
 export const bootEnrs = [
   // Teku team's bootnodes
@@ -27,4 +27,7 @@ export const bootEnrs = [
   // Nimbus team's bootnodes
   "enr:-LK4QA8FfhaAjlb_BXsXxSfiysR7R52Nhi9JBt4F8SPssu8hdE1BXQQEtVDC3qStCW60LSO7hEsVHv5zm8_6Vnjhcn0Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC1MD8qAAAAAP__________gmlkgnY0gmlwhAN4aBKJc2VjcDI1NmsxoQJerDhsJ-KxZ8sHySMOCmTO6sHM3iCFQ6VMvLTe948MyYN0Y3CCI4yDdWRwgiOM",
   "enr:-LK4QKWrXTpV9T78hNG6s8AM6IO4XH9kFT91uZtFg1GcsJ6dKovDOr1jtAAFPnS2lvNltkOGA9k29BUN7lFh_sjuc9QBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC1MD8qAAAAAP__________gmlkgnY0gmlwhANAdd-Jc2VjcDI1NmsxoQLQa6ai7y9PMN5hpLe5HmiJSlYzMuzP7ZhwRiwHvqNXdoN0Y3CCI4yDdWRwgiOM",
+  // Lodestar team's bootnodes
+  "enr:-IS4QPi-onjNsT5xAIAenhCGTDl4z-4UOR25Uq-3TmG4V3kwB9ljLTb_Kp1wdjHNj-H8VVLRBSSWVZo3GUe3z6k0E-IBgmlkgnY0gmlwhKB3_qGJc2VjcDI1NmsxoQMvAfgB4cJXvvXeM6WbCG86CstbSxbQBSGx31FAwVtOTYN1ZHCCIyg",
+  "enr:-KG4QCb8NC3gEM3I0okStV5BPX7Bg6ZXTYCzzbYyEXUPGcZtHmvQtiJH4C4F2jG7azTcb9pN3JlgpfxAnRVFzJ3-LykBgmlkgnY0gmlwhFPlR9KDaXA2kP6AAAAAAAAAAlBW__4my5iJc2VjcDI1NmsxoQLdUv9Eo9sxCt0tc_CheLOWnX59yHJtkBSOL7kpxdJ6GYN1ZHCCIyiEdWRwNoIjKA",
 ];
