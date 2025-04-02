@@ -53,7 +53,9 @@ type AttestationWithScore = {attestation: Attestation; score: number};
 export type AttestationsConsolidation = {
   byCommittee: Map<CommitteeIndex, AttestationNonParticipant>;
   attData: phase0.AttestationData;
-  totalNotSeenEffectiveBalance: number;
+  totalEffectiveBalance: number;
+  notSeenAttesters: number;
+  committeeSize: number;
 };
 
 /**
@@ -119,7 +121,7 @@ export class AggregatedAttestationPool {
 
   constructor(
     private readonly config: ChainForkConfig,
-    metrics: Metrics | null = null
+    private readonly metrics: Metrics | null = null
   ) {
     metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
   }
@@ -322,6 +324,7 @@ export class AggregatedAttestationPool {
     const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
     // Track score of each `AttestationsConsolidation`
     const consolidations = new Map<AttestationsConsolidation, number>();
+    let scannedSlots = 0;
     slot: for (const slot of slots) {
       const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
       // should not happen
@@ -372,30 +375,34 @@ export class AggregatedAttestationPool {
           // These properties should not change after being validate in gossip
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
-          for (const [i, attestationNonParticipation] of attestationGroup
-            .getAttestationsForBlock(
-              fork,
-              state.epochCtx.effectiveBalanceIncrements,
-              notSeenAttestingIndices,
-              MAX_ATTESTATIONS_PER_GROUP_ELECTRA
-            )
-            .entries()) {
+          const attestationsSameGroup = attestationGroup
+          .getAttestationsForBlock(
+            fork,
+            state.epochCtx.effectiveBalanceIncrements,
+            notSeenAttestingIndices,
+            MAX_ATTESTATIONS_PER_GROUP_ELECTRA
+          );
+
+          for (const [i, attestationNonParticipation] of attestationsSameGroup.entries()) {
             // sameAttDataCons shares the same index for different committees so we use index `i` here
             if (sameAttDataCons[i] === undefined) {
               sameAttDataCons[i] = {
                 byCommittee: new Map(),
                 attData: attestationNonParticipation.attestation.data,
-                totalNotSeenEffectiveBalance: 0,
+                totalEffectiveBalance: 0,
+                notSeenAttesters: 0,
+                committeeSize: attestationGroup.committee.length,
               };
             }
             sameAttDataCons[i].byCommittee.set(committeeIndex, attestationNonParticipation);
-            sameAttDataCons[i].totalNotSeenEffectiveBalance += attestationNonParticipation.notSeenEffectiveBalance;
+            sameAttDataCons[i].totalEffectiveBalance += attestationNonParticipation.notSeenEffectiveBalance;
+            sameAttDataCons[i].notSeenAttesters += attestationNonParticipation.notSeenAttendingIndices.size;
           }
         } // all committees are processed
 
         // after all committees are processed, we have a list of sameAttDataCons
         for (const consolidation of sameAttDataCons) {
-          const score = consolidation.totalNotSeenEffectiveBalance / slotDelta;
+          const score = consolidation.totalEffectiveBalance / slotDelta;
           consolidations.set(consolidation, score);
           // Stop accumulating attestations there are enough that may have good scoring
           if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
@@ -403,14 +410,35 @@ export class AggregatedAttestationPool {
           }
         }
       }
+
+      // finished processing a slot
+      scannedSlots++;
     }
+
     const sortedConsolidationsByScore = Array.from(consolidations.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([consolidation, _]) => consolidation)
       .slice(0, MAX_ATTESTATIONS_ELECTRA);
 
     // on chain aggregation is expensive, only do it after all
-    return sortedConsolidationsByScore.map(aggregateConsolidation);
+    const packedAttestationsMetrics = this.metrics?.opPool.aggregatedAttestationPool.packedAttestations;
+    const packedAttestations: electra.Attestation[] = new Array(sortedConsolidationsByScore.length);
+    for (const [i, consolidation] of sortedConsolidationsByScore.entries()) {
+      packedAttestations[i] = aggregateConsolidation(consolidation);
+
+      // record metrics of packed attestations
+      const committeeCount = consolidation.byCommittee.size;
+      packedAttestationsMetrics?.committeeBits.set({index: i}, committeeCount);
+      packedAttestationsMetrics?.committeeMembers.set({index: i}, consolidation.committeeSize * committeeCount);
+      packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
+      packedAttestationsMetrics?.slotDelta.set({index: i}, stateSlot - packedAttestations[i].data.slot);
+      packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalEffectiveBalance);
+    }
+
+    packedAttestationsMetrics?.scannedSlots.set(scannedSlots);
+    packedAttestationsMetrics?.totalSlots.set(slots.length);
+
+    return packedAttestations;
   }
 
   /**
@@ -482,6 +510,7 @@ type AttestationNonParticipant = {
   // since electra, we prioritize total effective balance over attester count
   // this is only updated and used in removeBySeenValidators function
   notSeenEffectiveBalance: number;
+  notSeenAttendingIndices: Set<number>;
 };
 
 /**
@@ -569,7 +598,45 @@ export class MatchingDataAttestationGroup {
     maxAttestation: number
   ): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
+    for (let i = 0; i < maxAttestation; i++) {
+      const mostValuableAttestation = this.getMostValuableAttestation(
+        fork,
+        effectiveBalanceIncrements,
+        notSeenAttestingIndices,
+        new Set(attestations.map((a) => a.attestation)),
+      );
+
+      if (mostValuableAttestation === null) {
+        // stop looking for attestation because all attesters are seen or no attestation has missing attesters
+        break;
+      }
+
+      attestations.push(mostValuableAttestation);
+      // this will narrow down the notSeenAttestingIndices for the next iteration
+      notSeenAttestingIndices = mostValuableAttestation.notSeenAttendingIndices;
+    }
+
+    return attestations;
+  }
+
+  /**
+   * Most valuable attestation is attestation has the most effective balance of not seen validators.
+   */
+  getMostValuableAttestation(
+    fork: ForkName,
+    effectiveBalanceIncrements: EffectiveBalanceIncrements,
+    notSeenAttestingIndices: Set<number>,
+    excluded: Set<Attestation>,
+  ): AttestationNonParticipant | null {
+    if (notSeenAttestingIndices.size === 0) {
+      // no more attesters to consider
+      return null;
+    }
+
     const isPostElectra = isForkPostElectra(fork);
+
+    let maxNotSeenEffectiveBalance = 0;
+    let mostValuableAttestation: AttestationNonParticipant | null = null;
     for (const {attestation} of this.attestations) {
       if (
         (isPostElectra && !isElectraAttestation(attestation)) ||
@@ -578,25 +645,30 @@ export class MatchingDataAttestationGroup {
         continue;
       }
 
+      if (excluded.has(attestation)) {
+        continue;
+      }
+
+      const notSeen = new Set<number>();
+
       // from electra, we prioritize total effective balance over attester count
       let notSeenEffectiveBalance = 0;
       const {aggregationBits} = attestation;
       for (const notSeenIndex of notSeenAttestingIndices) {
         if (aggregationBits.get(notSeenIndex)) {
           notSeenEffectiveBalance += effectiveBalanceIncrements[this.committee[notSeenIndex]];
+        } else {
+          notSeen.add(notSeenIndex);
         }
       }
 
-      if (notSeenEffectiveBalance > 0) {
-        attestations.push({attestation, notSeenEffectiveBalance});
+      if (notSeenEffectiveBalance > maxNotSeenEffectiveBalance) {
+        maxNotSeenEffectiveBalance = notSeenEffectiveBalance;
+        mostValuableAttestation = {attestation, notSeenEffectiveBalance, notSeenAttendingIndices: notSeen};
       }
     }
 
-    if (attestations.length <= maxAttestation) {
-      return attestations;
-    }
-
-    return attestations.sort((a, b) => b.notSeenEffectiveBalance - a.notSeenEffectiveBalance).slice(0, maxAttestation);
+    return mostValuableAttestation;
   }
 
   /** Get attestations for API. */

@@ -865,6 +865,41 @@ export function createLodestarMetrics(
           help: "Number of attestations per committee in AggregatedAttestationPool",
           buckets: [0, 2, 4, 8],
         }),
+        packedAttestations: {
+          committeeBits: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_committee_bits_total",
+            help: "Total number of committee bits in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          committeeMembers: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_committee_members_total",
+            help: "Total number of committee members in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          nonParticipation: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_non_participation_total",
+            help: "Total number of not seen attesters in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          slotDelta: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_slot_delta_total",
+            help: "How far the packed attestations ${index} from the block slot",
+            labelNames: ["index"],
+          }),
+          totalEffectiveBalance: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_effective_balance",
+            help: "Total effective balance of attesters in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          scannedSlots: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_scanned_slots_total",
+            help: "Total number of scanned slots to produce packed attestations",
+          }),
+          totalSlots: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_slots_total",
+            help: "Total number of slots in pool when producing packed attestations",
+          })
+        },
       },
       attestationPoolSize: register.gauge({
         name: "lodestar_oppool_attestation_pool_size",

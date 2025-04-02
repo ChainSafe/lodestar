@@ -391,23 +391,36 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       ],
     },
     {
-      id: "Some have attested - same effective balance",
+      id: "Same effective balance - 2nd attestation is not valuable",
       // same to seenAttestingBits: [0b11110001]
       notSeenAttestingBits: [0b00001110],
       effectiveBalanceIncrements: new Uint16Array(8).fill(32),
       attestationsToAdd: [
         {bits: [0b11111110], notSeenEffectiveBalance: 3 * 32, returnedIndex: 0},
-        {bits: [0b00000011], notSeenEffectiveBalance: 1 * 32, returnedIndex: 1},
+        // not valueable because seen attestations are all included in attestation 0
+        {bits: [0b00000011], notSeenEffectiveBalance: 1 * 32, returnedIndex: -1},
       ],
     },
     {
-      id: "Some have attested - prioritize bigger effective balance",
+      id: "Same effective balance - include both",
+      // same to seenAttestingBits: [0b11110001]
+      notSeenAttestingBits: [0b00001110],
+      effectiveBalanceIncrements: new Uint16Array(8).fill(32),
+      attestationsToAdd: [
+        {bits: [0b11111010], notSeenEffectiveBalance: 2 * 32, returnedIndex: 0},
+        {bits: [0b10000101], notSeenEffectiveBalance: 1 * 32, returnedIndex: 1},
+      ],
+    },
+    {
+      id: "Prioritize bigger effective balance",
       notSeenAttestingBits: [0b11111111],
       effectiveBalanceIncrements: new Uint16Array([32, 2048, 32, 32, 32, 32, 32, 32]),
       attestationsToAdd: [
-        {bits: [0b11111001], notSeenEffectiveBalance: 6 * 32, returnedIndex: 1},
+        // notSeenEffectiveBalance is not 6 * 32 considering the 1st included attestation
+        {bits: [0b11111001], notSeenEffectiveBalance: 4 * 32, returnedIndex: 1},
         // although this has less not seen attesters, it has bigger effective balance so returned index is 0
         {bits: [0b10000011], notSeenEffectiveBalance: 2048 + 2 * 32, returnedIndex: 0},
+        // maxAttestation is only 2
         {bits: [0b00001101], notSeenEffectiveBalance: 3 * 32, returnedIndex: -1},
       ],
     },
@@ -417,8 +430,9 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       notSeenAttestingBits: [0b11111111],
       effectiveBalanceIncrements: new Uint16Array(8).fill(32),
       attestationsToAdd: [
-        {bits: [0b11111110], notSeenEffectiveBalance: 7 * 32, returnedIndex: 0},
-        {bits: [0b00000011], notSeenEffectiveBalance: 2 * 32, returnedIndex: 1},
+        {bits: [0b00111110], notSeenEffectiveBalance: 5 * 32, returnedIndex: 0},
+        // notSeenEffectiveBalance is not 3 * 32 considering the 1st included attestation already include attester 1
+        {bits: [0b01000011], notSeenEffectiveBalance: 2 * 32, returnedIndex: 1},
       ],
     },
   ];
@@ -540,7 +554,9 @@ describe("aggregateConsolidation", () => {
       const consolidation: AttestationsConsolidation = {
         byCommittee: new Map(),
         attData: attData,
-        totalNotSeenEffectiveBalance: 0,
+        totalEffectiveBalance: 0,
+        committeeSize: 32,
+        notSeenAttesters: 0,
       };
       // to simplify, instead of signing the signingRoot, just sign the attData root
       const sigArr = skArr.map((sk) => sk.sign(ssz.phase0.AttestationData.hashTreeRoot(attData)));
@@ -559,6 +575,7 @@ describe("aggregateConsolidation", () => {
         consolidation.byCommittee.set(committeeIndex, {
           attestation: aggAttestation,
           notSeenEffectiveBalance: aggregationBitsArr[i].filter((item) => item).length * 32,
+          notSeenAttendingIndices: new Set(),
         });
       }
 
