@@ -19,6 +19,7 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
+import {ValidatorMonitor} from "../validatorMonitor.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {IStateRegeneratorInternal, RegenCaller, StateRegenerationOpts} from "./interface.js";
 
@@ -31,6 +32,7 @@ export type RegenModules = {
   emitter: ChainEventEmitter;
   logger: Logger;
   metrics: Metrics | null;
+  validatorMonitor: ValidatorMonitor | null;
 };
 
 /**
@@ -264,7 +266,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
             verifyProposer: false,
             verifySignatures: false,
           },
-          this.modules.metrics
+          this.modules.metrics,
+          this.modules.validatorMonitor
         );
 
         const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
@@ -323,6 +326,7 @@ async function processSlotsByCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
     metrics: Metrics | null;
+    validatorMonitor: ValidatorMonitor | null;
     emitter: ChainEventEmitter;
     logger: Logger;
   },
@@ -333,7 +337,7 @@ async function processSlotsByCheckpoint(
 ): Promise<CachedBeaconStateAllForks> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
   if (postState.slot < slot) {
-    postState = processSlots(postState, slot, opts, modules.metrics);
+    postState = processSlots(postState, slot, opts, modules.metrics, modules.validatorMonitor);
   }
   return postState;
 }
@@ -349,6 +353,7 @@ export async function processSlotsToNearestCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
     metrics: Metrics | null;
+    validatorMonitor: ValidatorMonitor | null;
     emitter: ChainEventEmitter | null;
     logger: Logger | null;
   },
@@ -361,7 +366,7 @@ export async function processSlotsToNearestCheckpoint(
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState;
-  const {checkpointStateCache, emitter, metrics, logger} = modules;
+  const {checkpointStateCache, emitter, metrics, validatorMonitor, logger} = modules;
   let count = 0;
 
   for (
@@ -376,7 +381,7 @@ export async function processSlotsToNearestCheckpoint(
       caller: regenCaller,
     });
     // processSlots calls .clone() before mutating
-    postState = processSlots(postState, nextEpochSlot, opts, metrics);
+    postState = processSlots(postState, nextEpochSlot, opts, metrics, validatorMonitor);
     metrics?.epochTransitionByCaller.inc({caller: regenCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block

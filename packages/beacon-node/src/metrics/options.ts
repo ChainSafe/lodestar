@@ -1,5 +1,5 @@
+import {ValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {HttpMetricsServerOpts} from "./server/index.js";
-import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export type LodestarMetadata = {
   /** "v0.16.0/developer/feature-1/ac99f2b5" */
