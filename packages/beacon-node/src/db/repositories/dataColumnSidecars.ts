@@ -6,6 +6,7 @@ import {ssz} from "@lodestar/types";
 
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
+// TODO: (@matthewkeil) is this the best way to store these?
 export const dataColumnSidecarsWrapperSsz = new ContainerType(
   {
     blockRoot: ssz.Root,
