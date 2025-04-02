@@ -13,7 +13,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
-import {downloadByRange} from "./utils/downloadByRange.js";
+import {downloadAndCacheByRange} from "./utils/downloadByRange.js";
 import {Batch} from "./batch.js";
 import {isForkPostDeneb} from "@lodestar/params";
 
@@ -211,8 +211,9 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     } else {
       dataAvailabilityStatus = DataAvailabilityStatus.Available;
     }
-    return downloadByRange({
+    return downloadAndCacheByRange({
       config: this.config,
+      chain: this.chain,
       network: this.network,
       peerIdStr,
       dataAvailabilityStatus,
