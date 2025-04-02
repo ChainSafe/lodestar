@@ -196,8 +196,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     //
     // Handler - MUST NOT `await`, to allow validation result to be propagated
     //
-    const signedBlock = blockInput.getBlock();
-    metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+    const {block} = blockInput.getBlock();
+    metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, block.message);
 
     if (blockInput.needData()) {
       // Wait for data to arrive over gossip before attempting to ReqResp the rest of the BlockInput.  This will also get
@@ -240,7 +240,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
-        const delaySec = chain.clock.secFromSlot(signedBlock.message.slot);
+        const delaySec = chain.clock.secFromSlot(block.message.slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
         chain.blockInputCache.prune(blockInput);
       })
@@ -283,7 +283,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           chain.blockInputCache.removeBlockFromBlockInput(blockInput);
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+        logger[logLevel]("Error receiving block", {slot: block.message.slot, peer: peerIdStr}, e as Error);
       });
   }
 
@@ -346,7 +346,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       if (removeCachedBlob) {
-        chain.blockInputCache.removeBlobsFromBlockInput(blockInput, [blobSidecar.index]);
+        chain.blockInputCache.removeBlobsFromBlockInput(blockInput.rootHex, [blobSidecar.index]);
       }
       throw e;
     }
@@ -411,7 +411,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       if (removeCachedColumn) {
-        chain.blockInputCache.removeColumnsFromBlockInput(blockInput, [columnSidecar]);
+        chain.blockInputCache.removeColumnsFromBlockInput(blockInput.rootHex, [columnSidecar.index]);
       }
 
       throw e;
