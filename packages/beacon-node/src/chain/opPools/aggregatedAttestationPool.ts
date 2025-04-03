@@ -37,6 +37,7 @@ import {
 import {assert, MapDef, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -967,7 +968,14 @@ function isValidShuffling(
 
   let attestationDependentRoot: string;
   try {
-    attestationDependentRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+    // should not use forkChoice.getDependentRoot directly, see https://github.com/ChainSafe/lodestar/issues/7651
+    // attestationDependentRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+    attestationDependentRoot = getShufflingDependentRoot(
+      forkChoice,
+      targetEpoch,
+      computeEpochAtSlot(beaconBlock.slot),
+      beaconBlock
+    );
   } catch (_) {
     // getDependent root may throw error if the dependent root of attestation data is prior to finalized slot
     // ignore this attestation data in that case since we're not sure it's compatible to the state
