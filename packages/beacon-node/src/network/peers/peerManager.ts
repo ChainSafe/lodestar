@@ -30,7 +30,7 @@ import {
   renderIrrelevantPeerType,
   PrioritizePeersOpts,
 } from "./utils/index.js";
-import {NetworkGlobal} from "../global.js";
+import {NetworkConfig} from "../global.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -107,7 +107,7 @@ export type PeerManagerModules = {
   clock: IClock;
   peerRpcScores: IPeerRpcScoreStore;
   events: INetworkEventBus;
-  networkGlobal: NetworkGlobal;
+  networkConfig: NetworkConfig;
   peersData: PeersData;
   statusCache: StatusCache;
 };
@@ -156,8 +156,8 @@ export class PeerManager {
   private intervals: NodeJS.Timeout[] = [];
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
-    const {networkGlobal} = modules;
-    const custodyConfig = networkGlobal.getCustodyConfig();
+    const {networkConfig} = modules;
+    const custodyConfig = networkConfig.getCustodyConfig();
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
@@ -167,13 +167,13 @@ export class PeerManager {
     this.syncnetsService = modules.syncnetsService;
     this.statusCache = modules.statusCache;
     this.clock = modules.clock;
-    this.config = networkGlobal.getConfig();
+    this.config = networkConfig.getConfig();
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
     this.discovery = discovery;
-    this.nodeId = networkGlobal.getNodeId();
+    this.nodeId = networkConfig.getNodeId();
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
     // TODO(das): may not need this, use `this.samplingGroups` instead

@@ -34,7 +34,7 @@ import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
-import {NetworkGlobal} from "../global.js";
+import {NetworkConfig} from "../global.js";
 
 type Mods = {
   libp2p: Libp2p;
@@ -43,7 +43,7 @@ type Mods = {
   attnetsService: IAttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
-  networkGlobal: NetworkGlobal;
+  networkConfig: NetworkConfig;
   peersData: PeersData;
   metadata: MetadataController;
   logger: LoggerNode;
@@ -90,7 +90,7 @@ export class NetworkCore implements INetworkCore {
   private readonly attnetsService: IAttnetsService;
   private readonly syncnetsService: SyncnetsService;
   private readonly peerManager: PeerManager;
-  private readonly networkGlobal: NetworkGlobal;
+  private readonly networkConfig: NetworkConfig;
   private readonly peersData: PeersData;
   private readonly reqResp: ReqRespBeaconNode;
   private readonly gossip: Eth2Gossipsub;
@@ -114,7 +114,7 @@ export class NetworkCore implements INetworkCore {
     this.attnetsService = modules.attnetsService;
     this.syncnetsService = modules.syncnetsService;
     this.peerManager = modules.peerManager;
-    this.networkGlobal = modules.networkGlobal;
+    this.networkConfig = modules.networkConfig;
     this.peersData = modules.peersData;
     this.metadata = modules.metadata;
     this.logger = modules.logger;
@@ -197,8 +197,8 @@ export class NetworkCore implements INetworkCore {
     // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
-    const networkGlobal = new NetworkGlobal(peerId, config);
-    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, networkGlobal.getNodeId(), opts);
+    const networkConfig = new NetworkConfig(peerId, config);
+    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, networkConfig.getNodeId(), opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
@@ -213,7 +213,7 @@ export class NetworkCore implements INetworkCore {
         clock,
         peerRpcScores,
         events,
-        networkGlobal,
+        networkConfig: networkConfig,
         peersData,
         statusCache,
       },
@@ -239,7 +239,7 @@ export class NetworkCore implements INetworkCore {
       attnetsService,
       syncnetsService,
       peerManager,
-      networkGlobal,
+      networkConfig: networkConfig,
       peersData,
       metadata,
       logger,
@@ -278,8 +278,8 @@ export class NetworkCore implements INetworkCore {
     this.closed = true;
   }
 
-  getNetworkGlobal(): NetworkGlobal {
-    return this.networkGlobal;
+  getNetworkConfig(): NetworkConfig {
+    return this.networkConfig;
   }
 
   async scrapeMetrics(): Promise<string> {

@@ -1,13 +1,13 @@
-import { BeaconConfig, ChainForkConfig } from "@lodestar/config";
-import { NodeId, computeNodeId } from "./subnets";
-import { CustodyConfig, computeCustodyConfig } from "../util/dataColumns";
-import { PeerId } from "@libp2p/interface";
+import {BeaconConfig} from "@lodestar/config";
+import {NodeId, computeNodeId} from "./subnets";
+import {CustodyConfig, computeCustodyConfig} from "../util/dataColumns";
+import {PeerId} from "@libp2p/interface";
 
 /**
  * Store shared data for different modules in the network stack.
- * TODO: consider moving similar shared data, for example PeersData, under NetworkGlobal.
+ * TODO: consider moving similar shared data, for example PeersData, under NetworkConfig.
  */
-export class NetworkGlobal {
+export class NetworkConfig {
   private readonly nodeId: NodeId;
   private readonly config: BeaconConfig;
   private custodyConfig: CustodyConfig;

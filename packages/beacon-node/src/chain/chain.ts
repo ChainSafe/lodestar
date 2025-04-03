@@ -122,7 +122,7 @@ export class BeaconChain implements IBeaconChain {
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   // TODO - das: mutate custodyConfig due to VALIDATOR_CUSTODY_REQURIEMENT
-  // need to sync with networkGlobal inside Network too
+  // need to sync with networkConfig inside Network too
   readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;

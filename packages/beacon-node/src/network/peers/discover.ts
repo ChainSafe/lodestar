@@ -20,7 +20,7 @@ import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {type GroupQueries } from "./utils/prioritizePeers.js";
 import {IClock} from "../../util/clock.js";
-import {NetworkGlobal} from "../global.js";
+import {NetworkConfig} from "../global.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -39,7 +39,7 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
-  networkGlobal: NetworkGlobal;
+  networkConfig: NetworkConfig;
   libp2p: Libp2p;
   clock: IClock;
   peerRpcScores: IPeerRpcScoreStore;
@@ -132,19 +132,19 @@ export class PeerDiscovery {
   private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
-    const {libp2p, clock, peerRpcScores, metrics, logger, networkGlobal} = modules;
+    const {libp2p, clock, peerRpcScores, metrics, logger, networkConfig} = modules;
     this.libp2p = libp2p;
     this.clock = clock;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
-    this.config = networkGlobal.getConfig();
+    this.config = networkConfig.getConfig();
     this.discv5 = discv5;
     // TODO-das: remove
-    this.nodeId = networkGlobal.getNodeId();
+    this.nodeId = networkConfig.getNodeId();
     // we will only connect to peers that can provide us custody
     // TODO: @matthewkeil check if this needs to be updated for custody groups
-    this.sampleSubnets = networkGlobal.getCustodyConfig().sampledSubnets;
+    this.sampleSubnets = networkConfig.getCustodyConfig().sampledSubnets;
     this.groupRequests = new Map();
 
     this.discv5StartMs = 0;
@@ -204,7 +204,7 @@ export class PeerDiscovery {
       peerId: modules.libp2p.peerId,
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
-      config: modules.networkGlobal.getConfig(),
+      config: modules.networkConfig.getConfig(),
     });
 
     return new PeerDiscovery(modules, opts, discv5);
