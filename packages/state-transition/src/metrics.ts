@@ -21,6 +21,8 @@ export type BeaconStateTransitionMetrics = {
   postStateBalancesNodesPopulatedHit: Gauge;
   postStateValidatorsNodesPopulatedMiss: Gauge;
   postStateValidatorsNodesPopulatedHit: Gauge;
+  newSeenAttesters: Gauge;
+  newSeenAttestersEffectiveBalance: Gauge;
   registerValidatorStatuses: (
     currentEpoch: Epoch,
     inclusionDelays: number[],

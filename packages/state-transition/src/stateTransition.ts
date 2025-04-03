@@ -103,7 +103,7 @@ export function stateTransition(
   // Note: time only on success
   const processBlockTimer = metrics?.processBlockTime.startTimer();
 
-  processBlock(fork, postState, block, options, options);
+  processBlock(fork, postState, block, options, options, metrics);
 
   const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
   postState.commit();

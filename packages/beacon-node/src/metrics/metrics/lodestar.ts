@@ -387,6 +387,14 @@ export function createLodestarMetrics(
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
+    newSeenAttesters: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_per_block__total",
+      help: "Total count of new seen attesters per block",
+    }),
+    newSeenAttestersEffectiveBalance: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_effective_balance_total",
+      help: "Total effective balance increment of new seen attesters per block",
+    }),
 
     // BLS verifier thread pool and queue
 
