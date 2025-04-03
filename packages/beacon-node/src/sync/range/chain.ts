@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
-import {BlockInput, BlockInputType} from "../../chain/blocks/types.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -30,6 +29,7 @@ import {
   prettyPrintArray,
 } from "./utils/downloadByRange.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
+import {BlockInput} from "../../chain/blocks/utils/blockInput.js";
 
 export type SyncChainModules = {
   config: ChainForkConfig;
@@ -138,7 +138,7 @@ export class SyncChain {
     this.target = initialTarget;
     this.syncType = syncType;
     this.processChainSegment = fns.processChainSegment;
-    this.downloadByRange = fns.downloadByRange;
+    this.downloadAndCacheByRange = fns.downloadAndCacheByRange;
     this.reportPeer = fns.reportPeer;
     this.config = modules.config;
     this.custodyConfig = modules.custodyConfig;
@@ -421,13 +421,13 @@ export class SyncChain {
 
       // wrapError ensures to never call both batch success() and batch error()
       const res = await wrapError<DownloadAndCacheByRangeResults, DownloadByRangeError>(
-        this.downloadAndCacheByRange(peer, batch.requests)
+        this.downloadAndCacheByRange(peer.peerId, batch.requests)
       );
 
       if (res.err) {
         this.logger.verbose(
           "Batch download error",
-          {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer)},
+          {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
         batch.downloadingError(res.err.type.code); // Throws after MAX_DOWNLOAD_ATTEMPTS
@@ -436,12 +436,12 @@ export class SyncChain {
 
         const logMeta: Record<string, string | number> = {
           id: this.logId,
-          peer: prettyPrintPeerIdStr(peer),
+          peer: prettyPrintPeerIdStr(peer.peerId),
           ...batch.getMetadata(),
         };
         for (const [key, value] of Object.entries(res.result)) {
           if (key === "blockInputs") continue;
-          if (value !== 0) logMeta[key] = value;
+          if (value !== 0) logMeta[key] = value as number;
         }
 
         if (batch.neededColumns?.length) {
@@ -552,7 +552,7 @@ export class SyncChain {
             case DownloadByRangeErrorCode.MISSING_BLOBS:
             case DownloadByRangeErrorCode.MISSING_BLOCKS:
             case DownloadByRangeErrorCode.MISSING_COLUMNS:
-              this.removePeer(attempt.peer, PeerAction.HighToleranceError, "IncompleteDownloadAttempt");
+              this.reportPeer(attempt.peer, PeerAction.HighToleranceError, "IncompleteDownloadAttempt");
           }
         }
       }

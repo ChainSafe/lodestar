@@ -36,7 +36,6 @@ export function prettyPrintArray(arr: unknown[]): string {
 }
 
 export type DownloadByRangeRequests = {
-  startEpoch: Epoch;
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;
   columnsRequest?: fulu.DataColumnSidecarsByRangeRequest;
@@ -48,14 +47,13 @@ type DownloadByRangeResponses = {
   columnSidecars?: fulu.DataColumnSidecars;
 };
 
-type DownloadByRangeProps = Omit<DownloadByRangeRequests, "startEpoch"> & {
+export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   network: INetwork;
+  chain: IBeaconChain;
   config: ChainForkConfig;
   peerIdStr: string;
   dataAvailabilityStatus: DataAvailabilityStatus;
 };
-
-export type DownloadAndCacheByRangeProps = DownloadByRangeProps & {chain: IBeaconChain};
 
 export type DownloadAndCacheByRangeResults = {
   blockInputs: BlockInput[];
@@ -64,7 +62,9 @@ export type DownloadAndCacheByRangeResults = {
   numberOfColumns: number;
 };
 
-export async function downloadAndCacheByRange(request: DownloadAndCacheByRangeProps): DownloadAndCacheByRangeResults {
+export async function downloadAndCacheByRange(
+  request: DownloadAndCacheByRangeProps
+): Promise<DownloadAndCacheByRangeResults> {
   const {chain, dataAvailabilityStatus, peerIdStr} = request;
   const {blocks, blobSidecars, columnSidecars} = await downloadByRange(request);
   const blockInputs = new Map<RootHex, BlockInput>();
@@ -76,7 +76,7 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
       try {
         cache.removeBlockFromBlockInput(blockInput.rootHex);
       } catch (e) {
-        chain.logger.error("Cannot remove block from BlockInput", blockInput.getLogMeta(), e);
+        chain.logger.error("Cannot remove block from BlockInput", blockInput.getLogMeta(), e as Error);
       }
     }
   }
@@ -86,7 +86,7 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
       try {
         cache.removeBlobsFromBlockInput(rootHex, indices);
       } catch (e) {
-        chain.logger.error(`Cannot remove blobs from BlockInput rootHex=${rootHex} indices=${indices}`, {}, e);
+        chain.logger.error(`Cannot remove blobs from BlockInput rootHex=${rootHex} indices=${indices}`, {}, e as Error);
       }
     }
   }
@@ -96,7 +96,11 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
       try {
         cache.removeColumnsFromBlockInput(rootHex, indices);
       } catch (e) {
-        chain.logger.error(`Cannot remove columns from BlockInput rootHex=${rootHex} indices=${indices}`, {}, e);
+        chain.logger.error(
+          `Cannot remove columns from BlockInput rootHex=${rootHex} indices=${indices}`,
+          {},
+          e as Error
+        );
       }
     }
   }
@@ -116,7 +120,11 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
         blockInputs.set(blockInput.rootHex, blockInput);
       }
     } catch (err) {
-      chain.logger.verbose("Error caching ByRange fetched block", {peerId: prettyPrintPeerIdStr(peerIdStr)}, err);
+      chain.logger.verbose(
+        "Error caching ByRange fetched block",
+        {peerId: prettyPrintPeerIdStr(peerIdStr)},
+        err as Error
+      );
       uncacheBlocks();
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.CACHING_ERROR,
@@ -144,7 +152,11 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
         processedBlobs.set(blockInput.rootHex, indices);
       }
     } catch (err) {
-      chain.logger.verbose("Error caching ByRange fetched blob", {peerId: prettyPrintPeerIdStr(peerIdStr)}, err);
+      chain.logger.verbose(
+        "Error caching ByRange fetched blob",
+        {peerId: prettyPrintPeerIdStr(peerIdStr)},
+        err as Error
+      );
       uncacheBlobs(processedBlobs);
       if (numberOfBlocks !== 0) {
         uncacheBlocks();
@@ -175,7 +187,11 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
         processedBlobs.set(blockInput.rootHex, indices);
       }
     } catch (err) {
-      chain.logger.verbose("Error caching ByRange fetched column", {peerId: prettyPrintPeerIdStr(peerIdStr)}, err);
+      chain.logger.verbose(
+        "Error caching ByRange fetched column",
+        {peerId: prettyPrintPeerIdStr(peerIdStr)},
+        err as Error
+      );
       uncacheColumns(processedColumns);
       if (numberOfBlocks !== 0) {
         uncacheBlocks();
@@ -198,19 +214,22 @@ export async function downloadAndCacheByRange(request: DownloadAndCacheByRangePr
 
 export async function downloadByRange({
   network,
+  chain,
   config,
   peerIdStr,
   dataAvailabilityStatus,
   blocksRequest,
   blobsRequest,
   columnsRequest,
-}: DownloadByRangeProps): DownloadByRangeResponses {
-  const slotRangeString = `${blocksRequest.startSlot} - ${blocksRequest.startSlot + blocksRequest.count}`;
+}: DownloadAndCacheByRangeProps): Promise<DownloadByRangeResponses> {
+  const startSlot = (blocksRequest?.startSlot ?? blobsRequest?.startSlot ?? columnsRequest?.startSlot) as number;
+  const count = (blocksRequest?.count ?? blobsRequest?.count ?? columnsRequest?.count) as number;
+  const slotRangeString = `${startSlot} - ${startSlot + count}`;
 
   // TODO: should we check for requests across a fork boundary?
 
   if (dataAvailabilityStatus === DataAvailabilityStatus.Available) {
-    const forkName = config.getForkName(blocksRequest.startSlot);
+    const forkName = config.getForkName(startSlot);
     if (isForkBlobs(forkName) && !blobsRequest) {
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISSING_BLOBS_REQUEST,
@@ -226,7 +245,7 @@ export async function downloadByRange({
   }
 
   const dataRequest = blobsRequest ?? columnsRequest;
-  if (dataRequest) {
+  if (blocksRequest && dataRequest) {
     if (blocksRequest.startSlot !== dataRequest.startSlot) {
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.START_SLOT_MISMATCH,
@@ -245,7 +264,7 @@ export async function downloadByRange({
 
   let response: DownloadByRangeResponses;
   try {
-    response = requestByRange({
+    response = await requestByRange({
       network,
       peerIdStr,
       blocksRequest,
@@ -253,12 +272,11 @@ export async function downloadByRange({
       columnsRequest,
     });
   } catch (err) {
+    chain.logger.verbose("RangeSync *ByRange error", {}, err as Error);
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
       peerId: peerIdStr,
-      name: (err as Error).name,
-      message: (err as Error).message,
-      stack: (err as Error).stack,
+      slotRange: slotRangeString,
     });
   }
 
@@ -284,12 +302,12 @@ export async function requestByRange({
 }: DownloadByRangeRequests & {
   network: INetwork;
   peerIdStr: PeerIdStr;
-}): DownloadByRangeResponses {
+}): Promise<DownloadByRangeResponses> {
   let blocks: undefined | WithBytes<SignedBeaconBlock>[];
   let blobSidecars: undefined | deneb.BlobSidecars;
   let columnSidecars: undefined | fulu.DataColumnSidecars;
 
-  const requests: Promise[] = [];
+  const requests: Promise<unknown>[] = [];
 
   if (blocksRequest) {
     requests.push(
@@ -361,7 +379,9 @@ export function compareBlobsByRangeRequestAndResponse(
     const slot = block.data.message.slot;
     const expectedBlobs = (block.data as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
     expectedBlobCount += expectedBlobs;
-    const receivedBlobs = blobSidecars.filter((blobSidecar) => blobSidecar.signedBlockHeader.message.slot === slot);
+    const receivedBlobs = blobSidecars
+      .filter((blobSidecar) => blobSidecar.signedBlockHeader.message.slot === slot)
+      .map((blobSidecar) => blobSidecar.index);
 
     const missingIndices: number[] = [];
     for (const index of linspace(0, expectedBlobs - 1)) {
@@ -370,7 +390,7 @@ export function compareBlobsByRangeRequestAndResponse(
       }
     }
     if (missingIndices.length > 0) {
-      missingBlobCount += missingIndices;
+      missingBlobCount += missingIndices.length;
       missingBlobsDescription.push(`${slot}${prettyPrintArray(missingIndices)}`);
     }
   }
@@ -508,7 +528,7 @@ export function compareByRangeRequestsToResponse({
 
     const {missingByIndex, extraByIndex} = compareColumnsByRangeRequestAndResponse(columnsRequest, columnSidecars);
 
-    if (extraByIndex.size() > 0) {
+    if (extraByIndex.size > 0) {
       const fullExtraColumns: number[] = [];
       let extraColumnCount = 0;
       const partialExtraColumns: string[] = [];
@@ -516,7 +536,7 @@ export function compareByRangeRequestsToResponse({
         if (extraSlots.length === columnsRequest.count) {
           fullExtraColumns.push(index);
         } else {
-          extraColumnCount += extraSlots;
+          extraColumnCount += extraSlots.length;
           partialExtraColumns.push(`${index}${prettyPrintArray(extraSlots)}`);
         }
       }
@@ -539,7 +559,7 @@ export function compareByRangeRequestsToResponse({
       });
     }
 
-    if (missingByIndex.size() > 0) {
+    if (missingByIndex.size > 0) {
       const missingPeerCustody = [];
       let missingColumnCount = 0;
       const indicesWithSlots = [];
@@ -547,7 +567,7 @@ export function compareByRangeRequestsToResponse({
         if (missingSlots.length === columnsRequest.count) {
           missingPeerCustody.push(index);
         } else {
-          missingColumnCount += missingSlots;
+          missingColumnCount += missingSlots.length;
           indicesWithSlots.push(`${index}${prettyPrintArray(missingSlots)}`);
         }
       }
@@ -613,9 +633,7 @@ export type DownloadByRangeErrorType =
   | {
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR;
       peerId: string;
-      name: string;
-      message: string;
-      stack: string | undefined;
+      slotRange: string;
     }
   | {
       code: DownloadByRangeErrorCode.CACHING_ERROR;
@@ -648,6 +666,7 @@ export type DownloadByRangeErrorType =
   | {
       code: DownloadByRangeErrorCode.EXTRA_COLUMNS_SOME_SLOTS;
       peerId: string;
+      extraColumnCount: number;
       indicesWithSlots: string;
     }
   | {

@@ -204,7 +204,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private downloadAndCacheByRange: SyncChainFns["downloadAndCacheByRange"] = async (peerIdStr, requests) => {
     const currentEpoch = this.chain.clock.currentEpoch;
     let dataAvailabilityStatus: DataAvailabilityStatus;
-    if (!isForkPostDeneb(this.chain.clock.currentSlot)) {
+    if (!isForkPostDeneb(this.config.getForkName(this.chain.clock.currentSlot))) {
       dataAvailabilityStatus = DataAvailabilityStatus.PreData;
     } else if (requests.startEpoch < currentEpoch - this.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
       dataAvailabilityStatus = DataAvailabilityStatus.OutOfRange;
@@ -245,11 +245,11 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         syncType,
         {
           processChainSegment: this.processChainSegment,
-          downloadBeaconBlocksByRange: this.downloadBeaconBlocksByRange,
+          downloadAndCacheByRange: this.downloadAndCacheByRange,
           reportPeer: this.reportPeer,
           onEnd: this.onSyncChainEnd,
         },
-        {config: this.config, logger: this.logger}
+        {config: this.config, logger: this.logger, custodyConfig: this.network.custodyConfig}
       );
       this.chains.set(syncType, syncChain);
 

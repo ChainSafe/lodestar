@@ -1,8 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ColumnIndex, Epoch, RootHex, fulu, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {BlockInput} from "../../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
+import {BlockInput} from "../../chain/blocks/utils/blockInput.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
 import {getBatchSlotRange, hashBlocks, PeerWithOverlap} from "./utils/index.js";
@@ -98,10 +98,11 @@ export class Batch {
 
   constructor(startEpoch: Epoch, config: ChainForkConfig, custodyConfig: CustodyConfig) {
     const {startSlot, count} = getBatchSlotRange(startEpoch);
-    if (isForkPostFulu()) {
+    const forkName = config.getForkName(startSlot);
+    if (isForkPostFulu(forkName)) {
       this.forkType = BatchForkType.columns;
       this.neededColumns = custodyConfig.sampledColumns;
-    } else if (isForkPostDeneb()) {
+    } else if (isForkPostDeneb(forkName)) {
       this.forkType = BatchForkType.blobs;
     } else {
       this.forkType = BatchForkType.noData;
@@ -131,7 +132,7 @@ export class Batch {
    * Gives a list of peers from which this batch has had a failed download or processing attempt.
    */
   getFailedPeers(): PeerIdStr[] {
-    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.map((a) => a.peer)];
+    return [...this.failedDownloadAttempts.map((a) => a.peer), ...this.failedProcessingAttempts.map((a) => a.peer)];
   }
 
   getMetadata(): BatchMetadata {
@@ -173,7 +174,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.failedDownloadAttempts.push({peer: this.state.peer, errorCode});
+    this.failedDownloadAttempts.push({peer: this.state.peer.peerId, errorCode});
     if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
     }
@@ -190,7 +191,7 @@ export class Batch {
     }
 
     const blocks = this.state.blocks;
-    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
+    const hash = hashBlocks(blocks); // tracks blocks to report peer on processing error
     this.state = {status: BatchStatus.Processing, attempt: {peer: this.state.peer, hash}};
     return blocks;
   }
