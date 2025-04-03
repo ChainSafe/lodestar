@@ -13,7 +13,7 @@ import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {SyncChainDebugState, SyncState, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {RangeSync, RangeSyncEvent, RangeSyncStatus} from "./range/range.js";
-import {UnknownBlockSync} from "./unknownBlock.js";
+import {BlockInputSync} from "./blockInput.js";
 import {PeerSyncType, getPeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 
 export class BeaconSync implements IBeaconSync {
@@ -24,7 +24,7 @@ export class BeaconSync implements IBeaconSync {
   private readonly opts: SyncOptions;
 
   private readonly rangeSync: RangeSync;
-  private readonly unknownBlockSync: UnknownBlockSync;
+  private readonly blockInputSync: BlockInputSync;
 
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
@@ -38,7 +38,7 @@ export class BeaconSync implements IBeaconSync {
     this.metrics = metrics;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
-    this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
+    this.blockInputSync = new BlockInputSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = opts.slotImportTolerance ?? SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
@@ -51,7 +51,7 @@ export class BeaconSync implements IBeaconSync {
       this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
     } else {
       // test code, this is needed for Unknown block sync sim test
-      this.unknownBlockSync.subscribeToNetwork();
+      this.blockInputSync.subscribeToNetwork();
       this.logger.debug("RangeSync disabled.");
 
       // In case node is started with `rangeSync` disabled and `unknownBlockSync` is enabled.
@@ -83,7 +83,7 @@ export class BeaconSync implements IBeaconSync {
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
     this.rangeSync.close();
-    this.unknownBlockSync.close();
+    this.blockInputSync.close();
   }
 
   getSyncStatus(): SyncingStatus {
@@ -230,8 +230,8 @@ export class BeaconSync implements IBeaconSync {
       }
 
       // also start searching for unknown blocks
-      if (!this.unknownBlockSync.isSubscribedToNetwork()) {
-        this.unknownBlockSync.subscribeToNetwork();
+      if (!this.blockInputSync.isSubscribedToNetwork()) {
+        this.blockInputSync.subscribeToNetwork();
         this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "subscribed"});
       }
     }
@@ -254,8 +254,8 @@ export class BeaconSync implements IBeaconSync {
         }
 
         // also stop searching for unknown blocks
-        if (this.unknownBlockSync.isSubscribedToNetwork()) {
-          this.unknownBlockSync.unsubscribeFromNetwork();
+        if (this.blockInputSync.isSubscribedToNetwork()) {
+          this.blockInputSync.unsubscribeFromNetwork();
           this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "unsubscribed"});
         }
       }
