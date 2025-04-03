@@ -209,7 +209,7 @@ export class BlockInputCache {
     blockInput = BlockInputColumns.createFromColumnSidecar({
       blockRoot,
       rootHex,
-      forkName: this.config.getForkName(columnSidecar.signedBlockHeader.message.slot),,
+      forkName: this.config.getForkName(columnSidecar.signedBlockHeader.message.slot),
       columnSidecar,
       source,
       peerIdStr,
@@ -227,6 +227,9 @@ export class BlockInputCache {
    */
   removeBlockFromBlockInput(rootHex: RootHex): void {
     const blockInput = this.blockInputs.get(rootHex);
+    if (!blockInput) {
+      return;
+    }
     blockInput.removeBlock();
     if (!blockInput.hasData()) {
       this.blockInputs.delete(blockInput.rootHex);
@@ -239,6 +242,9 @@ export class BlockInputCache {
    */
   removeBlobsFromBlockInput(rootHex: RootHex, blobIndices: number[]): void {
     const blockInput = this.blockInputs.get(rootHex);
+    if (!blockInput) {
+      return;
+    }
     for (const index of blobIndices) {
       blockInput.removeBlobSidecar(index);
     }
@@ -253,6 +259,9 @@ export class BlockInputCache {
    */
   removeColumnsFromBlockInput(rootHex: RootHex, columnIndices: number[]): void {
     const blockInput = this.blockInputs.get(rootHex);
+    if (!blockInput) {
+      return;
+    }
     for (const index of columnIndices) {
       blockInput.removeColumn(index);
     }
