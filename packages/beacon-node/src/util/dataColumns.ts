@@ -40,7 +40,7 @@ export type PeerCustody = {
 export function getCustodyConfig(nodeId: NodeId, config: ChainForkConfig): CustodyConfig {
   const numberOfCustodyGroups = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
   const custodyColumns = getDataColumns(nodeId, numberOfCustodyGroups);
-  const sampledColumns = getDataColumns(nodeId, Math.max(custodyColumns, config.SAMPLES_PER_SLOT));
+  const sampledColumns = getDataColumns(nodeId, Math.max(custodyColumns.length, config.SAMPLES_PER_SLOT));
   const custodyMeta = getCustodyColumnsMeta(custodyColumns);
   return {...custodyMeta, custodyColumns, sampledColumns};
 }
