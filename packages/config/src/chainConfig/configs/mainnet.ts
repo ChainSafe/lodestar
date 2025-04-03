@@ -50,7 +50,7 @@ export const chainConfig: ChainConfig = {
 
   // ELECTRA
   ELECTRA_FORK_VERSION: b("0x05000000"),
-  ELECTRA_FORK_EPOCH: Infinity,
+  ELECTRA_FORK_EPOCH: 364032, // May 7, 2025, 10:05:11am UTC
 
   // FULU
   FULU_FORK_VERSION: b("0x06000000"),
