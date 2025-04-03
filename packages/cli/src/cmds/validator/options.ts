@@ -315,7 +315,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   doppelgangerProtection: {
-    alias: ["doppelgangerProtectionEnabled"],
+    alias: ["doppelgangerProtection"],
     description: "Enables Doppelganger protection",
     default: false,
     type: "boolean",
