@@ -45,7 +45,7 @@ export type SyncChainFns = {
   processChainSegment: (blocks: BlockInput[], syncType: RangeSyncType) => Promise<void>;
   downloadAndCacheByRange: (
     peerId: PeerIdStr,
-    requests: DownloadByRangeRequests
+    requests: DownloadByRangeRequests & {startEpoch: Epoch}
   ) => Promise<DownloadAndCacheByRangeResults>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
@@ -373,6 +373,7 @@ export class SyncChain {
       if (!batch) {
         break;
       }
+      // TODO: (@matthewkeil) figure out column overlap here. Need to pass that in
       void this.sendBatch(batch, peer);
     }
   }

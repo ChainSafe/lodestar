@@ -113,7 +113,7 @@ export class Batch {
     this.count = count;
   }
 
-  get requests(): DownloadByRangeRequests {
+  get requests(): DownloadByRangeRequests & {startEpoch: Epoch} {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
