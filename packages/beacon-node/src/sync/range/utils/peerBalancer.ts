@@ -27,7 +27,10 @@ export class ChainPeersBalancer {
     // Compute activeRequestsByPeer from all batches internal states
     for (const batch of batches) {
       if (batch.state.status === BatchStatus.Downloading) {
-        this.activeRequestsByPeer.set(batch.state.peer, (this.activeRequestsByPeer.get(batch.state.peer) ?? 0) + 1);
+        this.activeRequestsByPeer.set(
+          batch.state.peer.peerId,
+          (this.activeRequestsByPeer.get(batch.state.peer.peerId) ?? 0) + 1
+        );
       }
     }
   }
@@ -65,10 +68,15 @@ export class ChainPeersBalancer {
 
     const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
-      unsorted.sort((a, b) => b.custodyColumns?.length - a.custodyColumns?.length),
+      unsorted.sort((a, b) => {
+        if (a.custodyColumns && b.custodyColumns) {
+          return b.custodyColumns.length - a.custodyColumns.length;
+        }
+        return 0;
+      }),
       // TODO: Should the overlap sort go before or after these conditions
-      (peer) => (failedPeers.has(peer) ? 1 : 0), // Sort by no failed first = 0
-      (peer) => this.activeRequestsByPeer.get(peer) ?? 0 // Sort by least active req
+      (peer) => (failedPeers.has(peer.peerId) ? 1 : 0), // Sort by no failed first = 0
+      (peer) => this.activeRequestsByPeer.get(peer.peerId) ?? 0 // Sort by least active req
     );
 
     const bestPeer = sortedBestPeers[0];
@@ -82,9 +90,9 @@ export class ChainPeersBalancer {
   /**
    * Return peers with 0 or no active requests
    */
-  idlePeers(): PeerIdStr[] {
+  idlePeers(): PeerWithMeta[] {
     return this.peers.filter((peer) => {
-      const activeRequests = this.activeRequestsByPeer.get(peer);
+      const activeRequests = this.activeRequestsByPeer.get(peer.peerId);
       return activeRequests === undefined || activeRequests === 0;
     });
   }
