@@ -351,6 +351,7 @@ export class AggregatedAttestationPool {
 
       // validateAttestation condition: Attestation slot not within inclusion window
       if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot)) {
+        // this should not happen and slot is decreased so no need to track in metric
         continue; // Invalid attestations
       }
 
@@ -364,16 +365,19 @@ export class AggregatedAttestationPool {
         const sameAttDataCons: AttestationsConsolidation[] = [];
         const allAttestationGroups = Array.from(attestationGroupByIndex.values());
         if (allAttestationGroups.length === 0) {
+          this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.emptyAttestationData.inc();
           continue;
         }
 
         if (!validateAttestationDataFn(allAttestationGroups[0].data)) {
+          this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.invalidAttestationData.inc();
           continue;
         }
 
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
           const notSeenAttestingIndices = notSeenValidatorsFn(epoch, slot, committeeIndex);
           if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
+            this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.seenCommittees.inc();
             continue;
           }
 
