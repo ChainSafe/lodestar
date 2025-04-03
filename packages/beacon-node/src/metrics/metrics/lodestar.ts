@@ -886,14 +886,19 @@ export function createLodestarMetrics(
             help: "Total number of not seen attesters in packed attestation ${index}",
             labelNames: ["index"],
           }),
-          slotDelta: register.gauge<{index: number}>({
-            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_slot_delta_total",
-            help: "How far the packed attestations ${index} from the block slot",
+          newSeenAttesters: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_new_seen_attesters_total",
+            help: "Total number of new seen attesters in packed attestation ${index}",
             labelNames: ["index"],
           }),
           totalEffectiveBalance: register.gauge<{index: number}>({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_effective_balance",
-            help: "Total effective balance of attesters in packed attestation ${index}",
+            help: "Total effective balance of new seen attesters in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          inclusionDistance: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_slot_delta_total",
+            help: "How far the packed attestations ${index} from the block slot",
             labelNames: ["index"],
           }),
           scannedSlots: register.gauge<{reason: ScannedSlotsTerminationReason}>({

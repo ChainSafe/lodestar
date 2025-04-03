@@ -53,7 +53,8 @@ type AttestationWithScore = {attestation: Attestation; score: number};
 export type AttestationsConsolidation = {
   byCommittee: Map<CommitteeIndex, AttestationNonParticipant>;
   attData: phase0.AttestationData;
-  totalEffectiveBalance: number;
+  totalNewSeenEffectiveBalance: number;
+  newSeenAttesters: number;
   notSeenAttesters: number;
   committeeSize: number;
 };
@@ -278,7 +279,10 @@ export class AggregatedAttestationPool {
           // These properties should not change after being validate in gossip
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
-          for (const {attestation, notSeenEffectiveBalance} of attestationGroup.getAttestationsForBlock(
+          for (const {
+            attestation,
+            newSeenEffectiveBalance: notSeenEffectiveBalance,
+          } of attestationGroup.getAttestationsForBlock(
             fork,
             state.epochCtx.effectiveBalanceIncrements,
             notSeenAttestingIndices,
@@ -404,20 +408,22 @@ export class AggregatedAttestationPool {
               sameAttDataCons[i] = {
                 byCommittee: new Map(),
                 attData: attestationNonParticipation.attestation.data,
-                totalEffectiveBalance: 0,
+                totalNewSeenEffectiveBalance: 0,
+                newSeenAttesters: 0,
                 notSeenAttesters: 0,
                 committeeSize: attestationGroup.committee.length,
               };
             }
             sameAttDataCons[i].byCommittee.set(committeeIndex, attestationNonParticipation);
-            sameAttDataCons[i].totalEffectiveBalance += attestationNonParticipation.notSeenEffectiveBalance;
+            sameAttDataCons[i].totalNewSeenEffectiveBalance += attestationNonParticipation.newSeenEffectiveBalance;
+            sameAttDataCons[i].newSeenAttesters += attestationNonParticipation.newSeenAttesters;
             sameAttDataCons[i].notSeenAttesters += attestationNonParticipation.notSeenAttendingIndices.size;
           }
         } // all committees are processed
 
         // after all committees are processed, we have a list of sameAttDataCons
         for (const consolidation of sameAttDataCons) {
-          const score = consolidation.totalEffectiveBalance / slotDelta;
+          const score = consolidation.totalNewSeenEffectiveBalance / slotDelta;
           consolidations.set(consolidation, score);
           // Stop accumulating attestations there are enough that may have good scoring
           if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
@@ -449,8 +455,8 @@ export class AggregatedAttestationPool {
       packedAttestationsMetrics?.committeeBits.set({index: i}, committeeCount);
       packedAttestationsMetrics?.committeeMembers.set({index: i}, consolidation.committeeSize * committeeCount);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
-      packedAttestationsMetrics?.slotDelta.set({index: i}, stateSlot - packedAttestations[i].data.slot);
-      packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalEffectiveBalance);
+      packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
+      packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalNewSeenEffectiveBalance);
     }
 
     if (stopReason === null) {
@@ -533,7 +539,8 @@ type AttestationNonParticipant = {
   // this was `notSeenAttesterCount` in pre-electra
   // since electra, we prioritize total effective balance over attester count
   // this is only updated and used in removeBySeenValidators function
-  notSeenEffectiveBalance: number;
+  newSeenEffectiveBalance: number;
+  newSeenAttesters: number;
   notSeenAttendingIndices: Set<number>;
 };
 
@@ -659,7 +666,8 @@ export class MatchingDataAttestationGroup {
 
     const isPostElectra = isForkPostElectra(fork);
 
-    let maxNotSeenEffectiveBalance = 0;
+    let maxNewSeenEffectiveBalance = 0;
+    let newSeenAttesters = 0;
     let mostValuableAttestation: AttestationNonParticipant | null = null;
     for (const {attestation} of this.attestations) {
       if (
@@ -676,19 +684,25 @@ export class MatchingDataAttestationGroup {
       const notSeen = new Set<number>();
 
       // from electra, we prioritize total effective balance over attester count
-      let notSeenEffectiveBalance = 0;
+      let newSeenEffectiveBalance = 0;
       const {aggregationBits} = attestation;
       for (const notSeenIndex of notSeenAttestingIndices) {
         if (aggregationBits.get(notSeenIndex)) {
-          notSeenEffectiveBalance += effectiveBalanceIncrements[this.committee[notSeenIndex]];
+          newSeenEffectiveBalance += effectiveBalanceIncrements[this.committee[notSeenIndex]];
+          newSeenAttesters++;
         } else {
           notSeen.add(notSeenIndex);
         }
       }
 
-      if (notSeenEffectiveBalance > maxNotSeenEffectiveBalance) {
-        maxNotSeenEffectiveBalance = notSeenEffectiveBalance;
-        mostValuableAttestation = {attestation, notSeenEffectiveBalance, notSeenAttendingIndices: notSeen};
+      if (newSeenEffectiveBalance > maxNewSeenEffectiveBalance) {
+        maxNewSeenEffectiveBalance = newSeenEffectiveBalance;
+        mostValuableAttestation = {
+          attestation,
+          newSeenEffectiveBalance,
+          newSeenAttesters,
+          notSeenAttendingIndices: notSeen,
+        };
       }
     }
 
