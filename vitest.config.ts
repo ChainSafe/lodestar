@@ -52,6 +52,8 @@ export default defineConfig({
       NODE_ENV: "test",
     },
     clearMocks: true,
+    // Some test files allocate a lot of data, which could cause more time for teardown
+    teardownTimeout: 5_000,
     // We have a few spec tests suits (specially spec tests) which don't have individual tests
     passWithNoTests: true,
     reporters: process.env.GITHUB_ACTIONS
