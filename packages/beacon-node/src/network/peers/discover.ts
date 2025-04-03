@@ -20,7 +20,7 @@ import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {type GroupQueries } from "./utils/prioritizePeers.js";
 import {IClock} from "../../util/clock.js";
-import {NetworkConfig} from "../global.js";
+import {NetworkConfig} from "../networkConfig.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;

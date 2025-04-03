@@ -30,7 +30,7 @@ import {
   renderIrrelevantPeerType,
   PrioritizePeersOpts,
 } from "./utils/index.js";
-import {NetworkConfig} from "../global.js";
+import {NetworkConfig} from "../networkConfig.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;

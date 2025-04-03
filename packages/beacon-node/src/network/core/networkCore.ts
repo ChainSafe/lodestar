@@ -34,7 +34,7 @@ import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
-import {NetworkConfig} from "../global.js";
+import {NetworkConfig} from "../networkConfig.js";
 
 type Mods = {
   libp2p: Libp2p;
