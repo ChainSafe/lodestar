@@ -126,7 +126,7 @@ describe("AggregatedAttestationPool - Altair", () => {
         aggregationBits.getTrueBitIndexes().length,
         committee
       );
-      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock({slot: attestation.data.slot}));
       forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
       if (isReturned) {
         expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState).length).toBeGreaterThan(0);
@@ -152,7 +152,7 @@ describe("AggregatedAttestationPool - Altair", () => {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock({slot: attestation.data.slot}));
     forkchoiceStub.getDependentRoot.mockReturnValue("0xWeird");
     expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
     // "forkchoice should be called to check pivot block"
