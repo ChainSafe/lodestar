@@ -456,6 +456,7 @@ export class AggregatedAttestationPool {
       packedAttestationsMetrics?.committeeMembers.set({index: i}, consolidation.committeeSize * committeeCount);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
       packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
+      packedAttestationsMetrics?.newSeenAttesters.set({index: i}, consolidation.newSeenAttesters);
       packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalNewSeenEffectiveBalance);
     }
 
