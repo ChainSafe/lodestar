@@ -856,6 +856,10 @@ export function createLodestarMetrics(
           name: "lodestar_oppool_aggregated_attestation_pool_attestation_data_per_slot_total",
           help: "Total number of attestation data per slot in AggregatedAttestationPool",
         }),
+        committeesPerSlot: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_committees_per_slot_total",
+          help: "Total number of committees per slot in AggregatedAttestationPool",
+        }),
         // max number of attestations per committee will become number of consolidations
         maxAttestationsPerCommittee: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_max_attestations_per_committee",

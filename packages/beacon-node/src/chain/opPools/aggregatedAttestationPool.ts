@@ -507,14 +507,17 @@ export class AggregatedAttestationPool {
         metrics.opPool.aggregatedAttestationPool.attDataPerSlot.set(groupByIndexByDataHex.size);
 
         let maxAttestations = 0;
+        let committeeCount = 0;
         for (const groupByIndex of groupByIndexByDataHex.values()) {
           for (const group of groupByIndex.values()) {
             const attestationCount = group.getAttestationCount();
             maxAttestations = Math.max(maxAttestations, attestationCount);
             metrics.opPool.aggregatedAttestationPool.attestationsPerCommittee.observe(attestationCount);
+            committeeCount += 1;
           }
         }
         metrics.opPool.aggregatedAttestationPool.maxAttestationsPerCommittee.set(maxAttestations);
+        metrics.opPool.aggregatedAttestationPool.committeesPerSlot.set(committeeCount);
       }
     }
   }
@@ -866,7 +869,9 @@ export function getValidateAttestationDataFn(
       return false;
     }
 
-    if (!ssz.phase0.Checkpoint.equals(attData.source, justifiedCheckpoint)) return false;
+    if (!ssz.phase0.Checkpoint.equals(attData.source, justifiedCheckpoint)) {
+      return false;
+    }
 
     // Shuffling can't have changed if we're in the first few epochs
     // Also we can't look back 2 epochs if target epoch is 1 or less
