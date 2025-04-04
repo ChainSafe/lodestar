@@ -631,12 +631,13 @@ export class MatchingDataAttestationGroup {
     maxAttestation: number
   ): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
+    const excluded = new Set<Attestation>();
     for (let i = 0; i < maxAttestation; i++) {
       const mostValuableAttestation = this.getMostValuableAttestation(
         fork,
         effectiveBalanceIncrements,
         notSeenAttestingIndices,
-        new Set(attestations.map((a) => a.attestation))
+        excluded
       );
 
       if (mostValuableAttestation === null) {
@@ -645,6 +646,7 @@ export class MatchingDataAttestationGroup {
       }
 
       attestations.push(mostValuableAttestation);
+      excluded.add(mostValuableAttestation.attestation);
       // this will narrow down the notSeenAttestingIndices for the next iteration
       notSeenAttestingIndices = mostValuableAttestation.notSeenAttendingIndices;
     }
