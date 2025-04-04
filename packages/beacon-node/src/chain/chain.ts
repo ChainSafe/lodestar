@@ -239,7 +239,7 @@ export class BeaconChain implements IBeaconChain {
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
     );
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config);
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,
       preAggregateCutOffTime,
@@ -373,7 +373,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (metrics) {
-      metrics.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics(metrics));
+      metrics.opPool.attestationPoolSize.addCollect(() => this.onScrapeMetrics(metrics));
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -1076,9 +1076,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
-    const {attestationCount, attestationDataCount} = this.aggregatedAttestationPool.getAttestationCount();
-    metrics.opPool.aggregatedAttestationPoolSize.set(attestationCount);
-    metrics.opPool.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
+    // aggregatedAttestationPool tracks metrics on its own
     metrics.opPool.attestationPoolSize.set(this.attestationPool.getAttestationCount());
     metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);

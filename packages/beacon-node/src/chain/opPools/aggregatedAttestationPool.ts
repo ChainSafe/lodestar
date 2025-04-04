@@ -38,6 +38,7 @@ import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import { Metrics } from "../../metrics/metrics.js";
 
 type DataRootHex = string;
 
@@ -105,21 +106,11 @@ export class AggregatedAttestationPool {
   >(() => new Map<DataRootHex, Map<CommitteeIndex, MatchingDataAttestationGroup>>());
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly config: ChainForkConfig) {}
-
-  /** For metrics to track size of the pool */
-  getAttestationCount(): {attestationCount: number; attestationDataCount: number} {
-    let attestationCount = 0;
-    let attestationDataCount = 0;
-    for (const attestationGroupByIndexByDataHex of this.attestationGroupByIndexByDataHexBySlot.values()) {
-      for (const attestationGroupByIndex of attestationGroupByIndexByDataHex.values()) {
-        attestationDataCount += attestationGroupByIndex.size;
-        for (const attestationGroup of attestationGroupByIndex.values()) {
-          attestationCount += attestationGroup.getAttestationCount();
-        }
-      }
-    }
-    return {attestationCount, attestationDataCount};
+  constructor(
+    private readonly config: ChainForkConfig,
+    private readonly metrics: Metrics | null = null
+  ) {
+    metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
   }
 
   add(
@@ -440,6 +431,53 @@ export class AggregatedAttestationPool {
       }
     }
     return attestations;
+  }
+
+  private onScrapeMetrics(metrics: Metrics): void {
+    const aggregatedAttestationPoolMetrics = metrics.opPool.aggregatedAttestationPool;
+    const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
+
+    // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
+    if (allSlots.length > 1) {
+      // same to allSlots[allSlots.length - 2];
+      const previousSlot = allSlots.at(-2);
+      if (previousSlot == null) {
+        // only happen right after we start the node
+        return;
+      }
+
+      const groupByIndexByDataHex = this.attestationGroupByIndexByDataHexBySlot.get(previousSlot);
+      if (groupByIndexByDataHex != null) {
+        aggregatedAttestationPoolMetrics.attDataPerSlot.set(groupByIndexByDataHex.size);
+
+        let maxAttestations = 0;
+        let committeeCount = 0;
+        for (const groupByIndex of groupByIndexByDataHex.values()) {
+          for (const group of groupByIndex.values()) {
+            const attestationCount = group.getAttestationCount();
+            maxAttestations = Math.max(maxAttestations, attestationCount);
+            aggregatedAttestationPoolMetrics.attestationsPerCommittee.observe(attestationCount);
+            committeeCount += 1;
+          }
+        }
+        aggregatedAttestationPoolMetrics.maxAttestationsPerCommittee.set(maxAttestations);
+        aggregatedAttestationPoolMetrics.committeesPerSlot.set(committeeCount);
+      }
+    }
+
+    let attestationCount = 0;
+    let attestationDataCount = 0;
+    for (const attestationGroupByIndexByDataHex of this.attestationGroupByIndexByDataHexBySlot.values()) {
+      for (const attestationGroupByIndex of attestationGroupByIndexByDataHex.values()) {
+        attestationDataCount += attestationGroupByIndex.size;
+        for (const attestationGroup of attestationGroupByIndex.values()) {
+          attestationCount += attestationGroup.getAttestationCount();
+        }
+      }
+    }
+
+    aggregatedAttestationPoolMetrics.aggregatedAttestationPoolSize.set(attestationCount);
+    aggregatedAttestationPoolMetrics.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
   }
 }
 
