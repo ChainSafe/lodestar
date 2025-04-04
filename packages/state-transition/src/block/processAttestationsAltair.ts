@@ -130,8 +130,9 @@ export function processAttestationsAltair(
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
   }
 
-  metrics?.newSeenAttesters.set(newSeenAttesters);
-  metrics?.newSeenAttestersEffectiveBalance.set(newSeenAttestersEffectiveBalance);
+  metrics?.newSeenAttestersPerBlock.set(newSeenAttesters);
+  metrics?.newSeenAttestersEffectiveBalancePerBlock.set(newSeenAttestersEffectiveBalance);
+  metrics?.attestationsPerBlock.set(attestations.length);
 
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
   state.proposerRewards.attestations = proposerReward;
