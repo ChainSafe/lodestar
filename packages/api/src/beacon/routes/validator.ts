@@ -369,11 +369,11 @@ export type Endpoints = {
     "GET",
     {
       /** The committee index for which an attestation data should be created */
-      committeeIndex: CommitteeIndex;
+      committeeIndex?: CommitteeIndex;
       /** The slot for which an attestation data should be created */
       slot: Slot;
     },
-    {query: {slot: number; committee_index: number}},
+    {query: {slot: number; committee_index?: number}},
     phase0.AttestationData,
     EmptyMeta
   >;
@@ -792,7 +792,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReq: ({committeeIndex, slot}) => ({query: {slot, committee_index: committeeIndex}}),
         parseReq: ({query}) => ({committeeIndex: query.committee_index, slot: query.slot}),
         schema: {
-          query: {slot: Schema.UintRequired, committee_index: Schema.UintRequired},
+          query: {slot: Schema.UintRequired, committee_index: Schema.Uint},
         },
       },
       resp: {

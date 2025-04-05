@@ -33,6 +33,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
+  CommitteeIndex,
   Epoch,
   ProducedBlockSource,
   Root,
@@ -923,6 +924,16 @@ export function getValidatorApi(
       const headBlockRoot = fromHex(headBlockRootHex);
       const fork = config.getForkName(slot);
 
+      let index: CommitteeIndex;
+      if (isForkPostElectra(fork)) {
+        index = 0;
+      } else {
+        if (committeeIndex === undefined) {
+          throw new ApiError(400, `Committee index must be provided for pre-electra fork=${fork}`);
+        }
+        index = committeeIndex;
+      }
+
       const beaconBlockRoot =
         slot >= headSlot
           ? // When attesting to the head slot or later, always use the head of the chain.
@@ -953,7 +964,7 @@ export function getValidatorApi(
       return {
         data: {
           slot,
-          index: isForkPostElectra(fork) ? 0 : committeeIndex,
+          index,
           beaconBlockRoot,
           source: attEpochState.currentJustifiedCheckpoint,
           target: {epoch: attEpoch, root: targetRoot},

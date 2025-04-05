@@ -10,6 +10,7 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
+  isForkPostDeneb,
   isForkPostElectra,
 } from "@lodestar/params";
 import {
@@ -17,6 +18,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
   computeEpochAtSlot,
+  computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
@@ -169,9 +171,16 @@ export class AggregatedAttestationPool {
 
   /** Remove attestations which are too old to be included in a block. */
   prune(clockSlot: Slot): void {
-    // Only retain SLOTS_PER_EPOCH slots
-    pruneBySlot(this.attestationGroupByIndexByDataHexBySlot, clockSlot, SLOTS_PER_EPOCH);
-    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_PER_EPOCH, 0);
+    const fork = this.config.getForkName(clockSlot);
+
+    const slotsToRetain = isForkPostDeneb(fork)
+      ? // Post deneb, attestations from current and previous epoch can be included
+        computeSlotsSinceEpochStart(clockSlot, computeEpochAtSlot(clockSlot) - 1)
+      : // Before deneb, only retain SLOTS_PER_EPOCH slots
+        SLOTS_PER_EPOCH;
+
+    pruneBySlot(this.attestationGroupByIndexByDataHexBySlot, clockSlot, slotsToRetain);
+    this.lowestPermissibleSlot = Math.max(clockSlot - slotsToRetain, 0);
   }
 
   getAttestationsForBlock(fork: ForkName, forkChoice: IForkChoice, state: CachedBeaconStateAllForks): Attestation[] {

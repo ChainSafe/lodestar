@@ -21,31 +21,39 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
   const validators = state.validators;
   const cachedBalances = cache.balances;
 
-  for (const pendingConsolidation of state.pendingConsolidations.getAllReadonly()) {
-    const {sourceIndex, targetIndex} = pendingConsolidation;
-    const sourceValidator = validators.getReadonly(sourceIndex);
+  let chunkStartIndex = 0;
+  const chunkSize = 100;
+  const pendingConsolidationsLength = state.pendingConsolidations.length;
+  outer: while (chunkStartIndex < pendingConsolidationsLength) {
+    const consolidationChunk = state.pendingConsolidations.getReadonlyByRange(chunkStartIndex, chunkSize);
 
-    if (sourceValidator.slashed) {
+    for (const pendingConsolidation of consolidationChunk) {
+      const {sourceIndex, targetIndex} = pendingConsolidation;
+      const sourceValidator = validators.getReadonly(sourceIndex);
+
+      if (sourceValidator.slashed) {
+        nextPendingConsolidation++;
+        continue;
+      }
+
+      if (sourceValidator.withdrawableEpoch > nextEpoch) {
+        break outer;
+      }
+
+      // Calculate the consolidated balance
+      const sourceEffectiveBalance = Math.min(state.balances.get(sourceIndex), sourceValidator.effectiveBalance);
+
+      // Move active balance to target. Excess balance is withdrawable.
+      decreaseBalance(state, sourceIndex, sourceEffectiveBalance);
+      increaseBalance(state, targetIndex, sourceEffectiveBalance);
+      if (cachedBalances) {
+        cachedBalances[sourceIndex] -= sourceEffectiveBalance;
+        cachedBalances[targetIndex] += sourceEffectiveBalance;
+      }
+
       nextPendingConsolidation++;
-      continue;
     }
-
-    if (sourceValidator.withdrawableEpoch > nextEpoch) {
-      break;
-    }
-    // Move active balance to target. Excess balance is withdrawable.
-    const sourceEffectiveBalance = Math.min(
-      state.balances.get(sourceIndex),
-      state.validators.getReadonly(sourceIndex).effectiveBalance
-    );
-    decreaseBalance(state, sourceIndex, sourceEffectiveBalance);
-    increaseBalance(state, targetIndex, sourceEffectiveBalance);
-    if (cachedBalances) {
-      cachedBalances[sourceIndex] -= sourceEffectiveBalance;
-      cachedBalances[targetIndex] += sourceEffectiveBalance;
-    }
-
-    nextPendingConsolidation++;
+    chunkStartIndex += chunkSize;
   }
 
   state.pendingConsolidations = state.pendingConsolidations.sliceFrom(nextPendingConsolidation);
