@@ -3,7 +3,6 @@ import {noise} from "@chainsafe/libp2p-noise";
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
 import {PrivateKey} from "@libp2p/interface";
-import {PeerId} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
