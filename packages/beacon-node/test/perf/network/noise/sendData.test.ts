@@ -1,6 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {Upgrader} from "@libp2p/interface";
 import {defaultLogger} from "@libp2p/logger";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import drain from "it-drain";
@@ -29,8 +30,9 @@ describe("network / noise / sendData", () => {
         const privateKeyB = await generateKeyPair("secp256k1");
         const peerA = peerIdFromPrivateKey(privateKeyA);
         const peerB = peerIdFromPrivateKey(privateKeyB);
-        const noiseA = noise()({logger: defaultLogger(), privateKey: privateKeyA, peerId: peerA});
-        const noiseB = noise()({logger: defaultLogger(), privateKey: privateKeyB, peerId: peerB});
+        const upgrader = {getStreamMuxers: () => new Map()} as Upgrader;
+        const noiseA = noise()({logger: defaultLogger(), privateKey: privateKeyA, peerId: peerA, upgrader});
+        const noiseB = noise()({logger: defaultLogger(), privateKey: privateKeyB, peerId: peerB, upgrader});
 
         const [inboundConnection, outboundConnection] = duplexPair<Uint8Array | Uint8ArrayList>();
         const [outbound, inbound] = await Promise.all([
