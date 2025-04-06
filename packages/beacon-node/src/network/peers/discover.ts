@@ -485,6 +485,8 @@ export class PeerDiscovery {
       this.logger.debug("peer multiaddrs", {
         peer: peerIdShort,
         mus: (await this.libp2p.peerStore.get(peerId)).addresses.map((a) => a.multiaddr.toString()).join(", "),
+        muTcp: JSON.stringify(multiaddrTCP),
+        muQuic: JSON.stringify(multiaddrQUIC),
       });
     }
   }
