@@ -676,45 +676,9 @@
     uint8arrays "^5.0.0"
     wherearewe "^2.0.1"
 
-"@chainsafe/libp2p-quic-darwin-arm64@1.1.1":
+"@chainsafe/libp2p-quic@https://github.com/chainsafe/js-libp2p-quic/raw/lodestar-test/package.tgz":
   version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-arm64/-/libp2p-quic-darwin-arm64-1.1.1.tgz#a84873b0b40ec16ab2fde96b22d0da4fcf345561"
-  integrity sha512-2INg6niu0u3GtKIsHC3gzEaufg/3ZgFvSeqIjuF+u5eXGIcTo1uare228icWC5/hn/DwQ83l6WafoMkuguSakA==
-
-"@chainsafe/libp2p-quic-darwin-x64@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-x64/-/libp2p-quic-darwin-x64-1.1.1.tgz#757d8a2fbba18d98070158e571b187b9d848b85d"
-  integrity sha512-xHU6GqjI7/4daslX04VIjTrVxyb/O3Yc1hH2dubtEmqnpJEM5+7qf03MBK/ddNhbAqzC0b7QuU/ecEgtqjHsRA==
-
-"@chainsafe/libp2p-quic-linux-arm64-gnu@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-gnu/-/libp2p-quic-linux-arm64-gnu-1.1.1.tgz#a6805dac5bc5057825ee141e7d4093acd52c87ff"
-  integrity sha512-HmjZ/2cb8xvkUBn1hPFkwl5s6m3hwkCiEE9ITlu/3UPajALpk4vrLjeoKDHV6M3c+ohIMauyKVqV50EEl6VM4Q==
-
-"@chainsafe/libp2p-quic-linux-arm64-musl@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-musl/-/libp2p-quic-linux-arm64-musl-1.1.1.tgz#41c1bfef51a61bba0d0869b41cd8d02b59ec0299"
-  integrity sha512-G7R4WhzDriLNpVRWPIlsyRUUDIik+4SJoX+ZKQ6T54r+wyJTght6coA1rJANjkXWa8wKK0b5iIQol1SZEGH3Jg==
-
-"@chainsafe/libp2p-quic-linux-x64-gnu@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-gnu/-/libp2p-quic-linux-x64-gnu-1.1.1.tgz#4583dab95304f5bed09ce18ad619e81e09192de6"
-  integrity sha512-ARZbIj+ueD/LTCwB7CLMtokNZkqu640gi9YIuhHqEqenLZ75FbpJpYnqY/Jx+vdK/+gV0NyRZ395o4pH1W5SXQ==
-
-"@chainsafe/libp2p-quic-linux-x64-musl@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-musl/-/libp2p-quic-linux-x64-musl-1.1.1.tgz#7f123d15d24bfb87afee74cb0e4f42fdc1efb417"
-  integrity sha512-lsBlcYlukwTDupe9SxI7hmhhSlZfBhGWXlb4gRqd+xcBptadX15lPhJDBi6P9T2CMwsAIoZNLDZhMqPf8RL5fw==
-
-"@chainsafe/libp2p-quic-win32-x64-msvc@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-win32-x64-msvc/-/libp2p-quic-win32-x64-msvc-1.1.1.tgz#622638c05d82ba6db8e7d169a685fefa2d38b34d"
-  integrity sha512-5O5ffgtzD8fpb6LeP4/clscOdWk17JXrjfMTlp9zUtTa+0vcAzBT8RtWzv12Vaqf9PPsTp+dUQ5595LWMcZVEA==
-
-"@chainsafe/libp2p-quic@^1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic/-/libp2p-quic-1.1.1.tgz#9bf77218f8961911eb31cf690bdf3e8ce5edec5d"
-  integrity sha512-fnL6n82ngQ1qzcuI/bdVshHU/GumO4azloP3RG1z6hkmcro8gdVDAYgmP47rXOQUf2GlczwKyI2epIPMRVwDhg==
+  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/lodestar-test/package.tgz#954c5e1d9c14b0de5ad8fd1b6c036143bb8c9ff8"
   dependencies:
     "@libp2p/crypto" "^5.0.12"
     "@libp2p/interface" "^2.6.0"
@@ -723,14 +687,6 @@
     "@multiformats/multiaddr-matcher" "^1.6.0"
     it-stream-types "^2.0.2"
     uint8arraylist "^2.4.8"
-  optionalDependencies:
-    "@chainsafe/libp2p-quic-darwin-arm64" "1.1.1"
-    "@chainsafe/libp2p-quic-darwin-x64" "1.1.1"
-    "@chainsafe/libp2p-quic-linux-arm64-gnu" "1.1.1"
-    "@chainsafe/libp2p-quic-linux-arm64-musl" "1.1.1"
-    "@chainsafe/libp2p-quic-linux-x64-gnu" "1.1.1"
-    "@chainsafe/libp2p-quic-linux-x64-musl" "1.1.1"
-    "@chainsafe/libp2p-quic-win32-x64-msvc" "1.1.1"
 
 "@chainsafe/netmask@^2.0.0":
   version "2.0.0"
