@@ -482,6 +482,10 @@ export class PeerDiscovery {
       timer?.({status: "error"});
       formatLibp2pDialError(e as Error);
       this.logger.debug("Error dialing discovered peer", {peer: peerIdShort}, e as Error);
+      this.logger.debug("peer multiaddrs", {
+        peer: peerIdShort,
+        mus: (await this.libp2p.peerStore.get(peerId)).addresses.map((a) => a.multiaddr.toString()).join(", "),
+      });
     }
   }
 
