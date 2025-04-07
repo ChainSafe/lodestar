@@ -9,27 +9,22 @@ export async function withTimeout<T>(
   const timeoutAbortController = new AbortController();
   const timeoutAndParentSignal = timeoutAbortController.signal;
 
-  let abortListener: (() => void) | undefined;
-
   if (signal) {
-    abortListener = () => timeoutAbortController.abort();
-    signal.addEventListener("abort", abortListener);
+    signal.addEventListener(
+      "abort",
+      () => timeoutAbortController.abort(signal.reason),
+      { signal }
+    );
   }
 
-  async function timeoutPromise(signal: AbortSignal): Promise<never> {
-    await sleep(timeoutMs, signal);
+  async function timeoutPromise(): Promise<never> {
+    await sleep(timeoutMs);
+    timeoutAbortController.abort(new TimeoutError()); 
     throw new TimeoutError();
   }
 
-  try {
-    return await Promise.race([
-      asyncFn(timeoutAndParentSignal),
-      timeoutPromise(timeoutAndParentSignal),
-    ]);
-  } finally {
-    timeoutAbortController.abort();
-    if (signal && abortListener) {
-      signal.removeEventListener("abort", abortListener);
-    }
-  }
+  return await Promise.race([
+    asyncFn(timeoutAndParentSignal),
+    timeoutPromise(),
+  ]);
 }

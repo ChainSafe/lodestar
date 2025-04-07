@@ -1,6 +1,6 @@
-import {afterEach, describe, expect, it} from "vitest";
-import {ErrorAborted, TimeoutError} from "../../src/errors.js";
-import {withTimeout} from "../../src/timeout.js";
+import { afterEach, describe, expect, it } from "vitest";
+import { ErrorAborted, TimeoutError } from "../../src/errors.js";
+import { withTimeout } from "../../src/timeout.js";
 
 describe("withTimeout", () => {
   const data = "DATA";
@@ -70,5 +70,16 @@ describe("withTimeout", () => {
     await expect(withTimeout(() => pause(shortTimeoutMs, data), shortTimeoutMs, controller.signal)).rejects.toThrow(
       ErrorAborted
     );
+  });
+
+  it("Should forward the abort reason from the parent signal", async () => {
+    const controller = new AbortController();
+    const customReason = new Error("Custom reason");
+
+    setTimeout(() => controller.abort(customReason), shortTimeoutMs);
+
+    await expect(
+      withTimeout(() => pause(longTimeoutMs, data), longTimeoutMs, controller.signal)
+    ).rejects.toBe(customReason);
   });
 });
