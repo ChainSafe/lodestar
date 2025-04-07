@@ -1,4 +1,4 @@
-import {encodeSync, decodeSync} from "@chainsafe/xdelta3-node";
+import {decodeSync, encodeSync} from "@chainsafe/xdelta3-node";
 import {IStateDiffCodec} from "../interface.js";
 
 export class XDelta3Codec implements IStateDiffCodec {

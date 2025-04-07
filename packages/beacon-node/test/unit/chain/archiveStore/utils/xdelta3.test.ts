@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, expect, beforeAll} from "vitest";
-import {BeaconState, Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
+import {BeaconState, Epoch, RootHex, Slot, phase0, ssz} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {beforeAll, describe, expect, it} from "vitest";
+import {IStateDiffCodec} from "../../../../../src/chain/archiveStore/interface.js";
 import {XDelta3Codec} from "../../../../../src/chain/archiveStore/utils/xdelta3.js";
 import {generateState} from "../../../../utils/state.js";
-import {IStateDiffCodec} from "../../../../../src/chain/archiveStore/interface.js";
 
 const testsCases: {title: string; base: () => Uint8Array; changed: () => Uint8Array}[] = [
   {
