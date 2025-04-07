@@ -86,6 +86,7 @@ export type GossipAttestation = {
   attSlot: Slot;
   // for indexed gossip queue we have attDataBase64
   attDataBase64: SeenAttDataKey;
+  subnet: SubnetID;
 };
 
 export type Step0Result = AttestationValidationResult & {
@@ -103,7 +104,6 @@ export async function validateGossipAttestationsSameAttData(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytesArr: GossipAttestation[],
-  subnet: SubnetID,
   // for unit test, consumers do not need to pass this
   step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
@@ -117,6 +117,7 @@ export async function validateGossipAttestationsSameAttData(
   // for unseen AttestationData, the 1st call will be cached and the rest will be fast
   const step0ResultOrErrors: Result<Step0Result>[] = [];
   for (const attestationOrBytes of attestationOrBytesArr) {
+    const {subnet} = attestationOrBytes;
     const resultOrError = await wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
     step0ResultOrErrors.push(resultOrError);
   }
@@ -500,7 +501,11 @@ async function validateAttestationNoSignatureCheck(
     // add cached attestation data before verifying signature
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
     if (attDataKey) {
-      chain.seenAttestationDatas.add(attSlot, committeeIndex, attDataKey, {
+      // for pre-electra, committee index key is 0. See SeenAttestationDatas.add() documentation
+      const committeeIndexKey = isForkPostElectra(fork)
+        ? committeeIndex
+        : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
+      chain.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
         committeeValidatorIndices,
         committeeIndex,
         signingRoot: signatureSet.signingRoot,

@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/validator",
-  "version": "1.27.1",
+  "version": "1.28.1",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -27,10 +27,10 @@
     "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
-    "test:unit": "vitest --run --dir test/unit/",
+    "test:unit": "vitest run --min-workers=1 --max-workers=1 --dir test/unit/",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:spec": "vitest --run --config vitest.spec.config.ts --dir test/spec/",
-    "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e",
+    "test:spec": "vitest run --config vitest.spec.config.ts --dir test/spec/",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts --dir test/e2e",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "check-readme": "typescript-docs-verifier"
   },
@@ -46,18 +46,18 @@
   ],
   "dependencies": {
     "@chainsafe/blst": "^2.1.0",
-    "@chainsafe/ssz": "^1.0.2",
-    "@lodestar/api": "^1.27.1",
-    "@lodestar/config": "^1.27.1",
-    "@lodestar/db": "^1.27.1",
-    "@lodestar/params": "^1.27.1",
-    "@lodestar/state-transition": "^1.27.1",
-    "@lodestar/types": "^1.27.1",
-    "@lodestar/utils": "^1.27.1",
+    "@chainsafe/ssz": "^1.2.0",
+    "@lodestar/api": "^1.28.1",
+    "@lodestar/config": "^1.28.1",
+    "@lodestar/db": "^1.28.1",
+    "@lodestar/params": "^1.28.1",
+    "@lodestar/state-transition": "^1.28.1",
+    "@lodestar/types": "^1.28.1",
+    "@lodestar/utils": "^1.28.1",
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
-    "@lodestar/test-utils": "^1.27.1",
+    "@lodestar/test-utils": "^1.28.1",
     "bigint-buffer": "^1.1.5",
     "rimraf": "^4.4.1"
   }

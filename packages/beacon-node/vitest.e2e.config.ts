@@ -1,6 +1,6 @@
 import {defineConfig, mergeConfig} from "vitest/config";
 import {buildTargetPlugin} from "../../scripts/vite/plugins/buildTargetPlugin";
-import vitestConfig from "../../vitest.base.e2e.config";
+import vitestConfig from "../../configs/vitest.config.base.e2e";
 
 export default mergeConfig(
   vitestConfig,

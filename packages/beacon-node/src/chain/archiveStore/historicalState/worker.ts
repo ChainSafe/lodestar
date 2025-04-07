@@ -5,10 +5,10 @@ import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
-import {BeaconDb} from "../../db/index.js";
-import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
-import {JobFnQueue} from "../../util/queue/fnQueue.js";
-import {QueueMetrics} from "../../util/queue/options.js";
+import {BeaconDb} from "../../../db/index.js";
+import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
+import {JobFnQueue} from "../../../util/queue/fnQueue.js";
+import {QueueMetrics} from "../../../util/queue/options.js";
 import {getHistoricalState} from "./getHistoricalState.js";
 import {
   HistoricalStateRegenMetrics,
@@ -122,6 +122,18 @@ if (metricsRegister) {
     postStateValidatorsNodesPopulatedMiss: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
+    }),
+    newSeenAttestersPerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_new_seen_attesters_per_block_total",
+      help: "Count of new seen attesters in epoch transition",
+    }),
+    newSeenAttestersEffectiveBalancePerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_new_seen_attesters_effective_balance_per_block_total",
+      help: "Total effective balance increment of new seen attesters per block",
+    }),
+    attestationsPerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_attestations_per_block_total",
+      help: "Count of attestations per block",
     }),
     registerValidatorStatuses: () => {},
 

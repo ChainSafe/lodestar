@@ -40,6 +40,7 @@ import {
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {LoggerNode} from "@lodestar/logger/node";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -50,7 +51,7 @@ import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {Archiver} from "./archiver/archiver.js";
+import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -58,7 +59,6 @@ import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {HistoricalStateRegen} from "./historicalState/index.js";
 import {
   BlockHash,
   CommonBlockBody,
@@ -132,7 +132,7 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly historicalStateRegen?: HistoricalStateRegen;
+  readonly archiveStore: ArchiveStore;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -168,6 +168,7 @@ export class BeaconChain implements IBeaconChain {
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
+  readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
 
@@ -175,7 +176,6 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  private readonly archiver: Archiver;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -184,6 +184,8 @@ export class BeaconChain implements IBeaconChain {
     {
       config,
       db,
+      dbName,
+      dataDir,
       logger,
       processShutdownCallback,
       clock,
@@ -192,10 +194,11 @@ export class BeaconChain implements IBeaconChain {
       eth1,
       executionEngine,
       executionBuilder,
-      historicalStateRegen,
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
+      dbName: string;
+      dataDir: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
@@ -205,7 +208,6 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
-      historicalStateRegen?: HistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -220,7 +222,6 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    this.historicalStateRegen = historicalStateRegen;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -230,6 +231,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
+    this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(
       config,
@@ -237,7 +239,7 @@ export class BeaconChain implements IBeaconChain {
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
     );
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config);
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,
       preAggregateCutOffTime,
@@ -284,7 +286,7 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
-    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? false;
+    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     const blockStateCache = this.opts.nHistoricalStates
       ? new FIFOBlockStateCache(this.opts, {metrics})
       : new BlockStateCacheImpl({metrics});
@@ -301,7 +303,7 @@ export class BeaconChain implements IBeaconChain {
             bufferPool: this.bufferPool,
             datastore: fileDataStore
               ? // debug option if we want to investigate any issues with the DB
-                new FileCPStateDatastore()
+                new FileCPStateDatastore(dataDir)
               : // production option
                 new DbCPStateDatastore(this.db),
           },
@@ -350,7 +352,11 @@ export class BeaconChain implements IBeaconChain {
 
     this.serializedCache = new SerializedCache();
 
-    this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
+    this.archiveStore = new ArchiveStore(
+      {db, chain: this, logger: logger as LoggerNode, metrics},
+      {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
+      signal
+    );
 
     // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
     const anchorStateFork = this.config.getForkName(anchorState.slot);
@@ -367,7 +373,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (metrics) {
-      metrics.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics(metrics));
+      metrics.opPool.attestationPoolSize.addCollect(() => this.onScrapeMetrics(metrics));
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -377,9 +383,15 @@ export class BeaconChain implements IBeaconChain {
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
   }
 
+  async init(): Promise<void> {
+    await this.archiveStore.init();
+    await this.loadFromDisk();
+  }
+
   async close(): Promise<void> {
-    this.abortController.abort();
+    await this.archiveStore.close();
     await this.bls.close();
+    this.abortController.abort();
   }
 
   seenBlock(blockRoot: RootHex): boolean {
@@ -421,7 +433,7 @@ export class BeaconChain implements IBeaconChain {
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
-    await this.archiver.persistToDisk();
+    await this.archiveStore.persistToDisk();
     await this.opPool.toPersisted(this.db);
   }
 
@@ -501,19 +513,7 @@ export class BeaconChain implements IBeaconChain {
   async getHistoricalStateBySlot(
     slot: number
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.forkChoice.getFinalizedBlock();
-
-    if (slot >= finalizedBlock.slot) {
-      return null;
-    }
-
-    // request for finalized state using historical state regen
-    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
-    if (!stateSerialized) {
-      return null;
-    }
-
-    return {state: stateSerialized, executionOptimistic: false, finalized: true};
+    return this.archiveStore.getHistoricalStateBySlot(slot);
   }
 
   async getStateByStateRoot(
@@ -873,6 +873,41 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  /**
+   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
+   * persist preState, postState and block for further investigation.
+   */
+  async persistInvalidStateRoot(
+    preState: CachedBeaconStateAllForks,
+    postState: CachedBeaconStateAllForks,
+    block: SignedBeaconBlock
+  ): Promise<void> {
+    const blockSlot = block.message.slot;
+    const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
+    const postStateRoot = postState.hashTreeRoot();
+    const logStr = `slot_${blockSlot}_invalid_state_root_${toRootHex(postStateRoot)}`;
+    await Promise.all([
+      this.persistSszObject(
+        `SignedBeaconBlock_slot_${blockSlot}`,
+        blockType.serialize(block),
+        blockType.hashTreeRoot(block),
+        `${logStr}_block`
+      ),
+      this.persistSszObject(
+        `preState_slot_${preState.slot}_${preState.type.typeName}`,
+        preState.serialize(),
+        preState.hashTreeRoot(),
+        `${logStr}_pre_state`
+      ),
+      this.persistSszObject(
+        `postState_slot_${postState.slot}_${postState.type.typeName}`,
+        postState.serialize(),
+        postState.hashTreeRoot(),
+        `${logStr}_post_state`
+      ),
+    ]);
+  }
+
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
@@ -1022,19 +1057,14 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistSszObject(
-    typeName: string,
-    bytes: Uint8Array,
-    root: Uint8Array,
-    suffix?: string
-  ): Promise<void> {
+  private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${typeName}_${toRootHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
 
     await ensureDir(dirpath);
 
@@ -1042,13 +1072,11 @@ export class BeaconChain implements IBeaconChain {
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
     await writeIfNotExist(filepath, bytes);
 
-    this.logger.debug("Persisted invalid ssz object", {id: suffix, filepath});
+    this.logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
-    const {attestationCount, attestationDataCount} = this.aggregatedAttestationPool.getAttestationCount();
-    metrics.opPool.aggregatedAttestationPoolSize.set(attestationCount);
-    metrics.opPool.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
+    // aggregatedAttestationPool tracks metrics on its own
     metrics.opPool.attestationPoolSize.set(this.attestationPool.getAttestationCount());
     metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
@@ -1056,6 +1084,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+    metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
     const forkChoiceMetrics = this.forkChoice.getMetrics();
     metrics.forkChoice.votes.set(forkChoiceMetrics.votes);

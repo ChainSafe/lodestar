@@ -1,11 +1,7 @@
 import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
-import {
-  BlockSelectionResult,
-  BuilderBlockSelectionReason,
-  EngineBlockSelectionReason,
-} from "../../api/impl/validator/index.js";
+import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 

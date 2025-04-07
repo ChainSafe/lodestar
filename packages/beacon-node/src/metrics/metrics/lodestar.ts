@@ -2,7 +2,7 @@ import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@l
 import {BeaconState} from "@lodestar/types";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
-import {BlockErrorCode} from "../../chain/errors/index.js";
+import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -115,6 +115,16 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_validation_error_total",
         help: "Count of total gossip validation errors detailed",
         labelNames: ["topic", "error"],
+      }),
+      gossipAttestationIgnoreByReason: register.gauge<{reason: AttestationErrorCode}>({
+        name: "lodestar_gossip_attestation_ignore_by_reason_total",
+        help: "Count of total gossip attestation ignore by reason",
+        labelNames: ["reason"],
+      }),
+      gossipAttestationRejectByReason: register.gauge<{reason: AttestationErrorCode}>({
+        name: "lodestar_gossip_attestation_reject_by_reason_total",
+        help: "Count of total gossip attestation reject by reason",
+        labelNames: ["reason"],
       }),
       executeWorkCalls: register.gauge({
         name: "lodestar_network_processor_execute_work_calls_total",
@@ -376,6 +386,18 @@ export function createLodestarMetrics(
     postStateValidatorsNodesPopulatedMiss: register.gauge({
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
+    }),
+    newSeenAttestersPerBlock: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_per_block_total",
+      help: "Total count of new seen attesters per block",
+    }),
+    newSeenAttestersEffectiveBalancePerBlock: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_effective_balance_per_block_total",
+      help: "Total effective balance increment of new seen attesters per block",
+    }),
+    attestationsPerBlock: register.gauge({
+      name: "lodestar_stfn_attestations_per_block_total",
+      help: "Total count of attestations per block",
     }),
 
     // BLS verifier thread pool and queue
@@ -840,24 +862,46 @@ export function createLodestarMetrics(
     },
 
     opPool: {
-      // Note: Current opPool metrics only track current size.
-      //       I don't believe tracking total add() count is relevant since that can be seen with gossip ACCEPTs
-      aggregatedAttestationPoolSize: register.gauge({
-        name: "lodestar_oppool_aggregated_attestation_pool_size",
-        help: "Current size of the AggregatedAttestationPool = total attestations",
-      }),
-      /** This metric helps view how many overlapping attestations we keep per data on average */
-      aggregatedAttestationPoolUniqueData: register.gauge({
-        name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
-        help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
-      }),
+      aggregatedAttestationPool: {
+        poolSize: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_size",
+          help: "Current size of the AggregatedAttestationPool = total attestations",
+        }),
+        poolUniqueData: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
+          help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
+        }),
+        attDataPerSlot: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_attestation_data_per_slot_total",
+          help: "Total number of attestation data per slot in AggregatedAttestationPool",
+        }),
+        committeesPerSlot: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_committees_per_slot_total",
+          help: "Total number of committees per slot in AggregatedAttestationPool",
+        }),
+        // max number of attestations per committee will become number of consolidations
+        maxAttestationsPerCommittee: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_max_attestations_per_committee",
+          help: "Max number of attestations per committee in AggregatedAttestationPool",
+        }),
+        attestationsPerCommittee: register.histogram({
+          name: "lodestar_oppool_aggregated_attestation_pool_attestations_per_committee",
+          help: "Number of attestations per committee in AggregatedAttestationPool",
+          buckets: [0, 2, 4, 8],
+        }),
+      },
       attestationPoolSize: register.gauge({
         name: "lodestar_oppool_attestation_pool_size",
         help: "Current size of the AttestationPool = total attestations unique by data and slot",
       }),
-      attestationPoolInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+      attestationPoolGossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
         name: "lodestar_attestation_pool_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding an attestation in a pool",
+        help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
+        labelNames: ["insertOutcome"],
+      }),
+      attestationPoolApiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+        name: "lodestar_attestation_pool_api_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
         labelNames: ["insertOutcome"],
       }),
       attesterSlashingPoolSize: register.gauge({
@@ -888,6 +932,13 @@ export function createLodestarMetrics(
       syncContributionAndProofPoolSize: register.gauge({
         name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
         help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
+      }),
+    },
+
+    chain: {
+      blacklistedBlocks: register.gauge({
+        name: "lodestar_blacklisted_blocks_total",
+        help: "Total number of blacklisted blocks",
       }),
     },
 

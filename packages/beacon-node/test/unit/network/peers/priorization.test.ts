@@ -1,6 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
@@ -17,7 +18,8 @@ type Result = ReturnType<typeof prioritizePeers>;
 describe("network / peers / priorization", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
-    const peer = await createSecp256k1PeerId();
+    const pk = await generateKeyPair("secp256k1");
+    const peer = peerIdFromPrivateKey(pk);
     peer.toString = () => `peer-${i}`;
     peers.push(peer);
   }
@@ -266,7 +268,8 @@ describe("network / peers / priorization", async () => {
 describe("sortPeersToPrune", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
-    const peer = await createSecp256k1PeerId();
+    const pk = await generateKeyPair("secp256k1");
+    const peer = peerIdFromPrivateKey(pk);
     peer.toString = () => `peer-${i}`;
     peers.push(peer);
   }

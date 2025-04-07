@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "exclude": ["../../node_modules/it-pipe"],
-  "include": ["src"],
+  "include": ["src", "test"],
   "compilerOptions": {
     "outDir": "lib"
   }

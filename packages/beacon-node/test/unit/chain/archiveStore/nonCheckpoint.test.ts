@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {beforeAll, describe, expect, it} from "vitest";
-import {getNonCheckpointBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
+import {getNonCheckpointBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 
 describe("chain / archive / getNonCheckpointBlocks", () => {
   beforeAll(() => {
