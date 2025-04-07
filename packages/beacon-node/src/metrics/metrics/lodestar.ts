@@ -851,11 +851,11 @@ export function createLodestarMetrics(
 
     opPool: {
       aggregatedAttestationPool: {
-        aggregatedAttestationPoolSize: register.gauge({
+        poolSize: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_size",
           help: "Current size of the AggregatedAttestationPool = total attestations",
         }),
-        aggregatedAttestationPoolUniqueData: register.gauge({
+        poolUniqueData: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
           help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
         }),

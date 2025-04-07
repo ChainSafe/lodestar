@@ -424,13 +424,13 @@ export class AggregatedAttestationPool {
     return attestations;
   }
 
-  private onScrapeMetrics(metrics: Metrics): void {
-    const aggregatedAttestationPoolMetrics = metrics.opPool.aggregatedAttestationPool;
+  private onScrapeMetrics({opPool}: Metrics): void {
+    const aggregatedAttestationPoolMetrics = opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 
     // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
     if (allSlots.length > 1) {
-      // same to allSlots[allSlots.length - 2];
+      // last item is current slot, we want the previous one
       const previousSlot = allSlots.at(-2);
       if (previousSlot == null) {
         // only happen right after we start the node
@@ -467,8 +467,8 @@ export class AggregatedAttestationPool {
       }
     }
 
-    aggregatedAttestationPoolMetrics.aggregatedAttestationPoolSize.set(attestationCount);
-    aggregatedAttestationPoolMetrics.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
+    aggregatedAttestationPoolMetrics.poolSize.set(attestationCount);
+    aggregatedAttestationPoolMetrics.poolUniqueData.set(attestationDataCount);
   }
 }
 
