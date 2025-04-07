@@ -123,6 +123,18 @@ if (metricsRegister) {
       name: "lodestar_historical_state_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
+    newSeenAttestersPerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_new_seen_attesters_per_block_total",
+      help: "Count of new seen attesters in epoch transition",
+    }),
+    newSeenAttestersEffectiveBalancePerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_new_seen_attesters_effective_balance_per_block_total",
+      help: "Total effective balance increment of new seen attesters per block",
+    }),
+    attestationsPerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_attestations_per_block_total",
+      help: "Count of attestations per block",
+    }),
     registerValidatorStatuses: () => {},
 
     // historical state regen metrics

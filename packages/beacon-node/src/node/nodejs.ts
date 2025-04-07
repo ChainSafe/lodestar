@@ -2,7 +2,7 @@ import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {PeerId} from "@libp2p/interface";
+import {PrivateKey} from "@libp2p/interface";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -50,7 +50,7 @@ export type BeaconNodeInitModules = {
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   dataDir: string;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
@@ -148,7 +148,7 @@ export class BeaconNode {
     db,
     logger,
     processShutdownCallback,
-    peerId,
+    privateKey,
     dataDir,
     peerStoreDir,
     anchorState,
@@ -243,7 +243,7 @@ export class BeaconNode {
       metrics,
       chain,
       db,
-      peerId,
+      privateKey,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
     });
