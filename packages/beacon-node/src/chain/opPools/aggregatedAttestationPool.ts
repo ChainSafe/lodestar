@@ -425,7 +425,7 @@ export class AggregatedAttestationPool {
   }
 
   private onScrapeMetrics({opPool}: Metrics): void {
-    const aggregatedAttestationPoolMetrics = opPool.aggregatedAttestationPool;
+    const metrics = opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 
     // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
@@ -439,7 +439,7 @@ export class AggregatedAttestationPool {
 
       const groupByIndexByDataHex = this.attestationGroupByIndexByDataHexBySlot.get(previousSlot);
       if (groupByIndexByDataHex != null) {
-        aggregatedAttestationPoolMetrics.attDataPerSlot.set(groupByIndexByDataHex.size);
+        metrics.attDataPerSlot.set(groupByIndexByDataHex.size);
 
         let maxAttestations = 0;
         let committeeCount = 0;
@@ -447,12 +447,12 @@ export class AggregatedAttestationPool {
           for (const group of groupByIndex.values()) {
             const attestationCount = group.getAttestationCount();
             maxAttestations = Math.max(maxAttestations, attestationCount);
-            aggregatedAttestationPoolMetrics.attestationsPerCommittee.observe(attestationCount);
+            metrics.attestationsPerCommittee.observe(attestationCount);
             committeeCount += 1;
           }
         }
-        aggregatedAttestationPoolMetrics.maxAttestationsPerCommittee.set(maxAttestations);
-        aggregatedAttestationPoolMetrics.committeesPerSlot.set(committeeCount);
+        metrics.maxAttestationsPerCommittee.set(maxAttestations);
+        metrics.committeesPerSlot.set(committeeCount);
       }
     }
 
@@ -467,8 +467,8 @@ export class AggregatedAttestationPool {
       }
     }
 
-    aggregatedAttestationPoolMetrics.poolSize.set(attestationCount);
-    aggregatedAttestationPoolMetrics.poolUniqueData.set(attestationDataCount);
+    metrics.poolSize.set(attestationCount);
+    metrics.poolUniqueData.set(attestationDataCount);
   }
 }
 
