@@ -45,10 +45,10 @@ To derive the right values for layers, we developed a mathematical approach that
 
 $$
 \begin{align*}
-Cost &= \frac{w_{s}* Storage + w_{b} \times Backup Time + w_{r} \times Restore Time}{(n \times T_{diff} + T_{full}) \times G_{max}} + (G_{min} \times T_{replay}) \\
-TotalStorage &= F \times S_{full} + \sum\limits_{i=1}^{n}D_{i}\times S_{diff}\\
-BackupTime &= F \times T_{full} + \sum\limits_{i=1}^{n}D_{i} \times T_{diff}\\
-RestoreTime &= F \times R_{full} + \sum\limits_{i=1}^{n}D_{i} \times R_{diff}\\
+Cost &= \frac{w_{s}* Storage + w_{b} \times Backup_Time + w_{r} \times Restore_Time}{(n \times T_{diff} + T_{full}) \times G_{max}} + (G_{min} \times T_{replay}) \\
+Total_Storage &= F \times S_{full} + \sum\limits_{i=1}^{n}D_{i}\times S_{diff}\\
+Backup_Time &= F \times T_{full} + \sum\limits_{i=1}^{n}D_{i} \times T_{diff}\\
+Restore_Time &= F \times R_{full} + \sum\limits_{i=1}^{n}D_{i} \times R_{diff}\\
 \\
 \text{Where as}\\
 \\
@@ -60,7 +60,7 @@ T_{full} &= \text{Time to take full backup}\\
 T_{diff} &= \text{Time to take differential backup}\\
 T_{replay} &= \text{Time to replay a block}\\
 R_{full} &= \text{Time to restore full backup}\\
-R_{diff} &= \text{Tiem to restore differential backup}\\
+R_{diff} &= \text{Time to restore differential backup}\\
 G_{max} &= \text{Max gap between backups (usually the snapshot gap)}\\
 G_{min} &= \text{Minimum gap between backups (usually the top layer gap)}\\
 w_{s} &= \text{Weight for total storage}\\
