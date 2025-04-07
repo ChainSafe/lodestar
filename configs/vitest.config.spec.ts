@@ -1,7 +1,7 @@
 import path from "node:path";
 import {defineProject} from "vitest/config";
 
-export const specProjectMinimalConfig = defineProject({
+export const specProjectMinimal = defineProject({
   test: {
     name: "spec",
     include: ["**/test/spec/**/*.test.ts"],
@@ -17,12 +17,12 @@ export const specProjectMinimalConfig = defineProject({
     hookTimeout: 1000 * 60 * 15,
     pool: "forks",
     env: {
-      LODESTAR_PRESET: "minimal"
-    }
+      LODESTAR_PRESET: "minimal",
+    },
   },
 });
 
-export const specProjectMainnetConfig = defineProject({
+export const specProjectMainnet = defineProject({
   test: {
     name: "spec-mainnet",
     include: ["**/test/spec/**/*.test.ts"],
@@ -38,7 +38,7 @@ export const specProjectMainnetConfig = defineProject({
     hookTimeout: 1000 * 60 * 15,
     pool: "forks",
     env: {
-      LODESTAR_PRESET: "mainnet"
-    }
+      LODESTAR_PRESET: "mainnet",
+    },
   },
 });
