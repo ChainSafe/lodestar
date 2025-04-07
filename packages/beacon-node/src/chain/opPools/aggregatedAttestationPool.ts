@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {EpochDifference, IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkSeq,

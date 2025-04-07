@@ -270,8 +270,8 @@ export function createLodestarMetrics(
         name: "lodestar_produced_aggregate_participants",
         help: "API impl produced aggregates histogram of participants",
         // We care more about tracking low quality aggregates with low participation
-        // Max committee sizes are: 0.5e6 vc: 244, 1e6 vc: 488
-        buckets: [1, 5, 20, 50, 100, 200, 400],
+        // Max committee sizes are: 0.5e6 vc: 244, 1e6 vc: 488, 1.1e6 vc: 537
+        buckets: [1, 5, 25, 50, 100, 200, 300, 400, 500, 600],
       }),
       producedSyncContributionParticipants: register.histogram({
         name: "lodestar_produced_sync_contribution_participants",
@@ -890,20 +890,26 @@ export function createLodestarMetrics(
           buckets: [0, 2, 4, 8],
         }),
       },
-      attestationPoolSize: register.gauge({
-        name: "lodestar_oppool_attestation_pool_size",
-        help: "Current size of the AttestationPool = total attestations unique by data and slot",
-      }),
-      attestationPoolGossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-        name: "lodestar_attestation_pool_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
-        labelNames: ["insertOutcome"],
-      }),
-      attestationPoolApiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-        name: "lodestar_attestation_pool_api_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
-        labelNames: ["insertOutcome"],
-      }),
+      attestationPool: {
+        poolSize: register.gauge({
+          name: "lodestar_oppool_attestation_pool_size",
+          help: "Current size of the AttestationPool = total attestations unique by data and slot",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_attestation_pool_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
+          labelNames: ["insertOutcome"],
+        }),
+        getAggregateCacheMisses: register.counter({
+          name: "lodestar_attestation_pool_get_aggregate_cache_misses_total",
+          help: "Total number of getAggregate calls with no aggregate for slot, attestation data root, and committee index",
+        }),
+      },
       attesterSlashingPoolSize: register.gauge({
         name: "lodestar_oppool_attester_slashing_pool_size",
         help: "Current size of the AttesterSlashingPool",
