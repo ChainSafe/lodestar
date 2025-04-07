@@ -863,11 +863,11 @@ export function createLodestarMetrics(
 
     opPool: {
       aggregatedAttestationPool: {
-        poolSize: register.gauge({
+        size: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_size",
           help: "Current size of the AggregatedAttestationPool = total attestations",
         }),
-        poolUniqueData: register.gauge({
+        uniqueData: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
           help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
         }),
@@ -891,22 +891,22 @@ export function createLodestarMetrics(
         }),
       },
       attestationPool: {
-        poolSize: register.gauge({
+        size: register.gauge({
           name: "lodestar_oppool_attestation_pool_size",
           help: "Current size of the AttestationPool = total attestations unique by data and slot",
         }),
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-          name: "lodestar_attestation_pool_insert_outcome_total",
+          name: "lodestar_oppool_attestation_pool_gossip_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
           labelNames: ["insertOutcome"],
         }),
         apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-          name: "lodestar_attestation_pool_api_insert_outcome_total",
+          name: "lodestar_oppool_attestation_pool_api_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
           labelNames: ["insertOutcome"],
         }),
         getAggregateCacheMisses: register.counter({
-          name: "lodestar_attestation_pool_get_aggregate_cache_misses_total",
+          name: "lodestar_oppool_attestation_pool_get_aggregate_cache_misses_total",
           help: "Total number of getAggregate calls with no aggregate for slot, attestation data root, and committee index",
         }),
       },

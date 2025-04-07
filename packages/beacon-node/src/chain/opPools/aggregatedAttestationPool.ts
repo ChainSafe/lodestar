@@ -424,8 +424,8 @@ export class AggregatedAttestationPool {
     return attestations;
   }
 
-  private onScrapeMetrics({opPool}: Metrics): void {
-    const metrics = opPool.aggregatedAttestationPool;
+  private onScrapeMetrics(metrics: Metrics): void {
+    const aggregatedAttestationPoolMetrics = metrics.opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 
     // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
@@ -439,7 +439,7 @@ export class AggregatedAttestationPool {
 
       const groupByIndexByDataHex = this.attestationGroupByIndexByDataHexBySlot.get(previousSlot);
       if (groupByIndexByDataHex != null) {
-        metrics.attDataPerSlot.set(groupByIndexByDataHex.size);
+        aggregatedAttestationPoolMetrics.attDataPerSlot.set(groupByIndexByDataHex.size);
 
         let maxAttestations = 0;
         let committeeCount = 0;
@@ -447,12 +447,12 @@ export class AggregatedAttestationPool {
           for (const group of groupByIndex.values()) {
             const attestationCount = group.getAttestationCount();
             maxAttestations = Math.max(maxAttestations, attestationCount);
-            metrics.attestationsPerCommittee.observe(attestationCount);
+            aggregatedAttestationPoolMetrics.attestationsPerCommittee.observe(attestationCount);
             committeeCount += 1;
           }
         }
-        metrics.maxAttestationsPerCommittee.set(maxAttestations);
-        metrics.committeesPerSlot.set(committeeCount);
+        aggregatedAttestationPoolMetrics.maxAttestationsPerCommittee.set(maxAttestations);
+        aggregatedAttestationPoolMetrics.committeesPerSlot.set(committeeCount);
       }
     }
 
@@ -467,8 +467,8 @@ export class AggregatedAttestationPool {
       }
     }
 
-    metrics.poolSize.set(attestationCount);
-    metrics.poolUniqueData.set(attestationDataCount);
+    aggregatedAttestationPoolMetrics.size.set(attestationCount);
+    aggregatedAttestationPoolMetrics.uniqueData.set(attestationDataCount);
   }
 }
 
