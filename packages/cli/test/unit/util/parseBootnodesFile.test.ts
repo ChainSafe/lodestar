@@ -82,7 +82,8 @@ describe("config / bootnodes / parsing", () => {
 
 # Lodestar team's bootnodes
 - enr:-IS4QPi-onjNsT5xAIAenhCGTDl4z-4UOR25Uq-3TmG4V3kwB9ljLTb_Kp1wdjHNj-H8VVLRBSSWVZo3GUe3z6k0E-IBgmlkgnY0gmlwhKB3_qGJc2VjcDI1NmsxoQMvAfgB4cJXvvXeM6WbCG86CstbSxbQBSGx31FAwVtOTYN1ZHCCIyg # 160.119.254.161 | hostafrica-southafrica
-- enr:-KG4QCb8NC3gEM3I0okStV5BPX7Bg6ZXTYCzzbYyEXUPGcZtHmvQtiJH4C4F2jG7azTcb9pN3JlgpfxAnRVFzJ3-LykBgmlkgnY0gmlwhFPlR9KDaXA2kP6AAAAAAAAAAlBW__4my5iJc2VjcDI1NmsxoQLdUv9Eo9sxCt0tc_CheLOWnX59yHJtkBSOL7kpxdJ6GYN1ZHCCIyiEdWRwNoIjKA # 83.229.71.210 | kamatera-telaviv-israel`,
+- enr:-KG4QCb8NC3gEM3I0okStV5BPX7Bg6ZXTYCzzbYyEXUPGcZtHmvQtiJH4C4F2jG7azTcb9pN3JlgpfxAnRVFzJ3-LykBgmlkgnY0gmlwhFPlR9KDaXA2kP6AAAAAAAAAAlBW__4my5iJc2VjcDI1NmsxoQLdUv9Eo9sxCt0tc_CheLOWnX59yHJtkBSOL7kpxdJ6GYN1ZHCCIyiEdWRwNoIjKA # 83.229.71.210 | kamatera-telaviv-israel
+`,
       expected: [
         "enr:-Iu4QLm7bZGdAt9NSeJG0cEnJohWcQTQaI9wFLu3Q7eHIDfrI4cwtzvEW3F3VbG9XdFXlrHyFGeXPn9snTCQJ9bnMRABgmlkgnY0gmlwhAOTJQCJc2VjcDI1NmsxoQIZdZD6tDYpkpEfVo5bgiU8MGRjhcOmHGD2nErK0UKRrIN0Y3CCIyiDdWRwgiMo",
         "enr:-Iu4QEDJ4Wa_UQNbK8Ay1hFEkXvd8psolVK6OhfTL9irqz3nbXxxWyKwEplPfkju4zduVQj6mMhUCm9R2Lc4YM5jPcIBgmlkgnY0gmlwhANrfESJc2VjcDI1NmsxoQJCYz2-nsqFpeEj6eov9HSi9QssIVIVNr0I89J1vXM9foN0Y3CCIyiDdWRwgiMo",
