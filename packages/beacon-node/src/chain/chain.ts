@@ -237,7 +237,8 @@ export class BeaconChain implements IBeaconChain {
       config,
       clock,
       preAggregateCutOffTime,
-      this.opts?.preaggregateSlotDistance
+      this.opts?.preaggregateSlotDistance,
+      metrics
     );
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
