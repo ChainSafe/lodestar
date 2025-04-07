@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {HierarchicalLayers, Layers} from "../../../../../src/chain/archiveStore/utils/hierarchicalLayers.js";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {describe, expect, it} from "vitest";
+import {HierarchicalLayers, Layers} from "../../../../../src/chain/archiveStore/utils/hierarchicalLayers.js";
 
 describe("HierarchicalLayers", () => {
   describe("toString", () => {
