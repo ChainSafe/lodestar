@@ -270,7 +270,7 @@ export function createLodestarMetrics(
         name: "lodestar_produced_aggregate_participants",
         help: "API impl produced aggregates histogram of participants",
         // We care more about tracking low quality aggregates with low participation
-        // Max committee sizes are: 0.5e6 vc: 244, 1e6 vc: 488, 1.1e6 vc: 537
+        // Max committee sizes are: 1e6 vc: 488, 1.1e6 vc: 537
         buckets: [1, 5, 25, 50, 100, 200, 300, 400, 500, 600],
       }),
       producedSyncContributionParticipants: register.histogram({
