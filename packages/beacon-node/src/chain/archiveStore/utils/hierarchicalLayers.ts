@@ -1,5 +1,5 @@
-import {Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, Slot} from "@lodestar/types";
 import {ArchiveMode, HistoricalStateStorageType} from "../interface.js";
 
 /*
@@ -27,7 +27,9 @@ export class HierarchicalLayers {
    * The last value which should be highest should be consider as snapshot layer.
    */
   constructor(epochs: Epoch[]) {
-    this.snapshotEverySlot = epochs[epochs.length - 1] * SLOTS_PER_EPOCH;
+    const lastEpoch = epochs.at(-1);
+    if (!lastEpoch) throw new Error("Must provide a list of epochs");
+    this.snapshotEverySlot = lastEpoch * SLOTS_PER_EPOCH;
 
     this.diffEverySlot = epochs
       .slice(0, -1)
