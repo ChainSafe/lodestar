@@ -5,9 +5,9 @@ import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
-import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
-import {LightClientServer} from "../lightClient/index.js";
+import {IBeaconDb} from "../../../db/index.js";
+import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {LightClientServer} from "../../lightClient/index.js";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts

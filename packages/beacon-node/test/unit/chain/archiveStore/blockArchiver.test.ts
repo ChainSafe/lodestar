@@ -2,7 +2,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
+import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";

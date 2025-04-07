@@ -10,6 +10,7 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
+  isForkPostDeneb,
   isForkPostElectra,
 } from "@lodestar/params";
 import {
@@ -17,6 +18,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
   computeEpochAtSlot,
+  computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
@@ -32,7 +34,9 @@ import {
   ssz,
 } from "@lodestar/types";
 import {assert, MapDef, toRootHex} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -102,21 +106,11 @@ export class AggregatedAttestationPool {
   >(() => new Map<DataRootHex, Map<CommitteeIndex, MatchingDataAttestationGroup>>());
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly config: ChainForkConfig) {}
-
-  /** For metrics to track size of the pool */
-  getAttestationCount(): {attestationCount: number; attestationDataCount: number} {
-    let attestationCount = 0;
-    let attestationDataCount = 0;
-    for (const attestationGroupByIndexByDataHex of this.attestationGroupByIndexByDataHexBySlot.values()) {
-      for (const attestationGroupByIndex of attestationGroupByIndexByDataHex.values()) {
-        attestationDataCount += attestationGroupByIndex.size;
-        for (const attestationGroup of attestationGroupByIndex.values()) {
-          attestationCount += attestationGroup.getAttestationCount();
-        }
-      }
-    }
-    return {attestationCount, attestationDataCount};
+  constructor(
+    private readonly config: ChainForkConfig,
+    private readonly metrics: Metrics | null = null
+  ) {
+    metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
   }
 
   add(
@@ -169,9 +163,16 @@ export class AggregatedAttestationPool {
 
   /** Remove attestations which are too old to be included in a block. */
   prune(clockSlot: Slot): void {
-    // Only retain SLOTS_PER_EPOCH slots
-    pruneBySlot(this.attestationGroupByIndexByDataHexBySlot, clockSlot, SLOTS_PER_EPOCH);
-    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_PER_EPOCH, 0);
+    const fork = this.config.getForkName(clockSlot);
+
+    const slotsToRetain = isForkPostDeneb(fork)
+      ? // Post deneb, attestations from current and previous epoch can be included
+        computeSlotsSinceEpochStart(clockSlot, computeEpochAtSlot(clockSlot) - 1)
+      : // Before deneb, only retain SLOTS_PER_EPOCH slots
+        SLOTS_PER_EPOCH;
+
+    pruneBySlot(this.attestationGroupByIndexByDataHexBySlot, clockSlot, slotsToRetain);
+    this.lowestPermissibleSlot = Math.max(clockSlot - slotsToRetain, 0);
   }
 
   getAttestationsForBlock(fork: ForkName, forkChoice: IForkChoice, state: CachedBeaconStateAllForks): Attestation[] {
@@ -308,10 +309,7 @@ export class AggregatedAttestationPool {
     const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
     // Track score of each `AttestationsConsolidation`
     const consolidations = new Map<AttestationsConsolidation, number>();
-    let minScore = Number.MAX_SAFE_INTEGER;
-    let slotCount = 0;
     slot: for (const slot of slots) {
-      slotCount++;
       const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
       // should not happen
       if (!attestationGroupByIndexByDataHash) {
@@ -329,34 +327,30 @@ export class AggregatedAttestationPool {
       }
 
       const slotDelta = stateSlot - slot;
-      // CommitteeIndex    0           1            2    ...   Consolidation
+      // CommitteeIndex    0           1            2    ...   Consolidationn (sameAttDataCons)
       // Attestations    att00  ---   att10  ---  att20  ---   0 (att 00 10 20)
       //                 att01  ---     -    ---  att21  ---   1 (att 01 __ 21)
       //                   -    ---     -    ---  att22  ---   2 (att __ __ 22)
       for (const attestationGroupByIndex of attestationGroupByIndexByDataHash.values()) {
         // sameAttDataCons could be up to MAX_ATTESTATIONS_PER_GROUP_ELECTRA
         const sameAttDataCons: AttestationsConsolidation[] = [];
+        const allAttestationGroups = Array.from(attestationGroupByIndex.values());
+        if (allAttestationGroups.length === 0) {
+          continue;
+        }
+
+        if (!validateAttestationDataFn(allAttestationGroups[0].data)) {
+          continue;
+        }
+
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
           const notSeenAttestingIndices = notSeenValidatorsFn(epoch, slot, committeeIndex);
           if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
             continue;
           }
 
-          if (
-            slotCount > 2 &&
-            consolidations.size >= MAX_ATTESTATIONS_ELECTRA &&
-            notSeenAttestingIndices.size / slotDelta < minScore
-          ) {
-            // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS_ELECTRA attestations and break the for loop early
-            // if not, we may have to scan all slots in the pool
-            // if we have enough attestations and the max possible score is lower than scores of `attestationsByScore`, we should skip
-            // otherwise it takes time to check attestation, add it and remove it later after the sort by score
-            continue;
-          }
-
-          if (!validateAttestationDataFn(attestationGroup.data)) {
-            continue;
-          }
+          // cannot apply this optimization like pre-electra because consolidation needs to be done across committees:
+          // "after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS_ELECTRA attestations and break the for loop early"
 
           // TODO: Is it necessary to validateAttestation for:
           // - Attestation committee index not within current committee count
@@ -378,18 +372,16 @@ export class AggregatedAttestationPool {
             sameAttDataCons[i].byCommittee.set(committeeIndex, attestationNonParticipation);
             sameAttDataCons[i].totalNotSeenCount += attestationNonParticipation.notSeenAttesterCount;
           }
-          for (const consolidation of sameAttDataCons) {
-            const score = consolidation.totalNotSeenCount / slotDelta;
-            if (score < minScore) {
-              minScore = score;
-            }
+        } // all committees are processed
 
-            consolidations.set(consolidation, score);
+        // after all committees are processed, we have a list of sameAttDataCons
+        for (const consolidation of sameAttDataCons) {
+          const score = consolidation.totalNotSeenCount / slotDelta;
+          consolidations.set(consolidation, score);
 
-            // Stop accumulating attestations there are enough that may have good scoring
-            if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
-              break slot;
-            }
+          // Stop accumulating attestations there are enough that may have good scoring
+          if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
+            break slot;
           }
         }
       }
@@ -430,6 +422,53 @@ export class AggregatedAttestationPool {
       }
     }
     return attestations;
+  }
+
+  private onScrapeMetrics({opPool}: Metrics): void {
+    const metrics = opPool.aggregatedAttestationPool;
+    const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
+
+    // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
+    if (allSlots.length > 1) {
+      // last item is current slot, we want the previous one
+      const previousSlot = allSlots.at(-2);
+      if (previousSlot == null) {
+        // only happen right after we start the node
+        return;
+      }
+
+      const groupByIndexByDataHex = this.attestationGroupByIndexByDataHexBySlot.get(previousSlot);
+      if (groupByIndexByDataHex != null) {
+        metrics.attDataPerSlot.set(groupByIndexByDataHex.size);
+
+        let maxAttestations = 0;
+        let committeeCount = 0;
+        for (const groupByIndex of groupByIndexByDataHex.values()) {
+          for (const group of groupByIndex.values()) {
+            const attestationCount = group.getAttestationCount();
+            maxAttestations = Math.max(maxAttestations, attestationCount);
+            metrics.attestationsPerCommittee.observe(attestationCount);
+            committeeCount += 1;
+          }
+        }
+        metrics.maxAttestationsPerCommittee.set(maxAttestations);
+        metrics.committeesPerSlot.set(committeeCount);
+      }
+    }
+
+    let attestationCount = 0;
+    let attestationDataCount = 0;
+    for (const attestationGroupByIndexByDataHex of this.attestationGroupByIndexByDataHexBySlot.values()) {
+      for (const attestationGroupByIndex of attestationGroupByIndexByDataHex.values()) {
+        attestationDataCount += attestationGroupByIndex.size;
+        for (const attestationGroup of attestationGroupByIndex.values()) {
+          attestationCount += attestationGroup.getAttestationCount();
+        }
+      }
+    }
+
+    metrics.poolSize.set(attestationCount);
+    metrics.poolUniqueData.set(attestationDataCount);
   }
 }
 
@@ -806,7 +845,14 @@ function isValidShuffling(
 
   let attestationDependentRoot: string;
   try {
-    attestationDependentRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+    // should not use forkChoice.getDependentRoot directly, see https://github.com/ChainSafe/lodestar/issues/7651
+    // attestationDependentRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+    attestationDependentRoot = getShufflingDependentRoot(
+      forkChoice,
+      targetEpoch,
+      computeEpochAtSlot(beaconBlock.slot),
+      beaconBlock
+    );
   } catch (_) {
     // getDependent root may throw error if the dependent root of attestation data is prior to finalized slot
     // ignore this attestation data in that case since we're not sure it's compatible to the state
