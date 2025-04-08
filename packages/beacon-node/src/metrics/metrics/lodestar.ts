@@ -269,9 +269,10 @@ export function createLodestarMetrics(
       producedAggregateParticipants: register.histogram({
         name: "lodestar_produced_aggregate_participants",
         help: "API impl produced aggregates histogram of participants",
-        // We care more about tracking low quality aggregates with low participation
+        // We expect most aggregates to have 400-600 participants depending on the
+        // validator count of the network, anything lower than that is not acceptable
         // Max committee sizes are: 1e6 vc: 488, 1.1e6 vc: 537, 1.4e6 vc: 683
-        buckets: [1, 5, 25, 50, 100, 200, 300, 400, 500, 600],
+        buckets: [1, 25, 50, 100, 250, 400, 500, 600],
       }),
       producedSyncContributionParticipants: register.histogram({
         name: "lodestar_produced_sync_contribution_participants",
