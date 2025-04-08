@@ -913,7 +913,7 @@ export function createLodestarMetrics(
         }),
         apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_attestation_pool_api_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding a single attestation from api in the pool",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from api to the pool",
           labelNames: ["insertOutcome"],
         }),
         getAggregateCacheMisses: register.counter({
