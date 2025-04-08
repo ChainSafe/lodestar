@@ -1320,12 +1320,14 @@ export function getValidatorApi(
               beaconBlockRoot
             );
 
-            chain.aggregatedAttestationPool.add(
+            const insertOutcome = chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
               attDataRootHex,
               indexedAttestation.attestingIndices.length,
               committeeIndices
             );
+            metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
+
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
             metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {

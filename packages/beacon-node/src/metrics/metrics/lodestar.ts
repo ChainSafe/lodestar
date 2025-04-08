@@ -890,6 +890,16 @@ export function createLodestarMetrics(
           help: "Number of attestations per committee in AggregatedAttestationPool",
           buckets: [0, 2, 4, 8],
         }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_aggregated_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an aggregated attestation from gossip in the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_aggregated_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an aggregated attestation from api in the pool",
+          labelNames: ["insertOutcome"],
+        }),
       },
       attestationPool: {
         size: register.gauge({
@@ -898,12 +908,12 @@ export function createLodestarMetrics(
         }),
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_attestation_pool_gossip_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from gossip to the pool",
           labelNames: ["insertOutcome"],
         }),
         apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_attestation_pool_api_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from api in the pool",
           labelNames: ["insertOutcome"],
         }),
         getAggregateCacheMisses: register.counter({
