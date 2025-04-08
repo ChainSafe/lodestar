@@ -428,15 +428,14 @@ export class AggregatedAttestationPool {
     const metrics = opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 
-    // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
-    if (allSlots.length > 1) {
-      // last item is current slot, we want the previous one
-      const previousSlot = allSlots.at(-2);
-      if (previousSlot == null) {
-        // only happen right after we start the node
-        return;
-      }
+    // last item is current slot, we want the previous one, if available.
+    const previousSlot = allSlots.length > 1 ? (allSlots.at(-2) ?? null) : null;
 
+    let attestationCount = 0;
+    let attestationDataCount = 0;
+
+    // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
+    if (previousSlot !== null) {
       const groupByIndexByDataHex = this.attestationGroupByIndexByDataHexBySlot.get(previousSlot);
       if (groupByIndexByDataHex != null) {
         metrics.attDataPerSlot.set(groupByIndexByDataHex.size);
@@ -444,11 +443,14 @@ export class AggregatedAttestationPool {
         let maxAttestations = 0;
         let committeeCount = 0;
         for (const groupByIndex of groupByIndexByDataHex.values()) {
+          attestationDataCount += groupByIndex.size;
           for (const group of groupByIndex.values()) {
-            const attestationCount = group.getAttestationCount();
-            maxAttestations = Math.max(maxAttestations, attestationCount);
-            metrics.attestationsPerCommittee.observe(attestationCount);
+            const attestationCountInGroup = group.getAttestationCount();
+            maxAttestations = Math.max(maxAttestations, attestationCountInGroup);
+            metrics.attestationsPerCommittee.observe(attestationCountInGroup);
             committeeCount += 1;
+
+            attestationCount += attestationCountInGroup;
           }
         }
         metrics.maxAttestationsPerCommittee.set(maxAttestations);
@@ -456,9 +458,11 @@ export class AggregatedAttestationPool {
       }
     }
 
-    let attestationCount = 0;
-    let attestationDataCount = 0;
-    for (const attestationGroupByIndexByDataHex of this.attestationGroupByIndexByDataHexBySlot.values()) {
+    for (const [slot, attestationGroupByIndexByDataHex] of this.attestationGroupByIndexByDataHexBySlot) {
+      // We have already updated attestationDataCount and attestationCount when looping over `previousSlot`
+      if (slot === previousSlot) {
+        continue;
+      }
       for (const attestationGroupByIndex of attestationGroupByIndexByDataHex.values()) {
         attestationDataCount += attestationGroupByIndex.size;
         for (const attestationGroup of attestationGroupByIndex.values()) {
