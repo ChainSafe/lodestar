@@ -57,7 +57,7 @@ export const browserTestProject = defineProject({
   ],
   resolve: {
     alias: {
-      "node:perf_hooks": path.join(import.meta.dirname, ".../scripts/vitest/polyfills/perf_hooks.js"),
+      "node:perf_hooks": path.join(import.meta.dirname, "../scripts/vitest/polyfills/perf_hooks.js"),
     },
   },
   optimizeDeps: {
