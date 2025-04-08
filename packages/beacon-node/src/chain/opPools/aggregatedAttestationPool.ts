@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {EpochDifference, IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkSeq,
@@ -424,8 +424,8 @@ export class AggregatedAttestationPool {
     return attestations;
   }
 
-  private onScrapeMetrics({opPool}: Metrics): void {
-    const metrics = opPool.aggregatedAttestationPool;
+  private onScrapeMetrics(metrics: Metrics): void {
+    const aggregatedAttestationPoolMetrics = metrics.opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 
     // last item is current slot, we want the previous one, if available.
@@ -438,7 +438,7 @@ export class AggregatedAttestationPool {
     if (previousSlot !== null) {
       const groupByIndexByDataHex = this.attestationGroupByIndexByDataHexBySlot.get(previousSlot);
       if (groupByIndexByDataHex != null) {
-        metrics.attDataPerSlot.set(groupByIndexByDataHex.size);
+        aggregatedAttestationPoolMetrics.attDataPerSlot.set(groupByIndexByDataHex.size);
 
         let maxAttestations = 0;
         let committeeCount = 0;
@@ -447,14 +447,14 @@ export class AggregatedAttestationPool {
           for (const group of groupByIndex.values()) {
             const attestationCountInGroup = group.getAttestationCount();
             maxAttestations = Math.max(maxAttestations, attestationCountInGroup);
-            metrics.attestationsPerCommittee.observe(attestationCountInGroup);
+            aggregatedAttestationPoolMetrics.attestationsPerCommittee.observe(attestationCountInGroup);
             committeeCount += 1;
 
             attestationCount += attestationCountInGroup;
           }
         }
-        metrics.maxAttestationsPerCommittee.set(maxAttestations);
-        metrics.committeesPerSlot.set(committeeCount);
+        aggregatedAttestationPoolMetrics.maxAttestationsPerCommittee.set(maxAttestations);
+        aggregatedAttestationPoolMetrics.committeesPerSlot.set(committeeCount);
       }
     }
 
@@ -471,8 +471,8 @@ export class AggregatedAttestationPool {
       }
     }
 
-    metrics.poolSize.set(attestationCount);
-    metrics.poolUniqueData.set(attestationDataCount);
+    aggregatedAttestationPoolMetrics.size.set(attestationCount);
+    aggregatedAttestationPoolMetrics.uniqueData.set(attestationDataCount);
   }
 }
 

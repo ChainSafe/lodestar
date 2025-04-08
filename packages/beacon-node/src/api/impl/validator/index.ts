@@ -1248,7 +1248,7 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
+      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, null);
       const fork = chain.config.getForkName(slot);
 
       if (isForkPostElectra(fork)) {
@@ -1275,12 +1275,12 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, committeeIndex, dataRootHex);
+      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, committeeIndex);
 
       if (!aggregate) {
         throw new ApiError(
           404,
-          `No aggregated attestation for slot=${slot}, committeeIndex=${committeeIndex}, dataRoot=${dataRootHex}`
+          `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}, committeeIndex=${committeeIndex}`
         );
       }
 
