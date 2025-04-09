@@ -168,7 +168,11 @@ export async function verifyBlocksExecutionPayload(
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
+      return getSegmentErrorResponse(
+        {verifyResponse, blockIndex},
+        parentBlock,
+        blockInputs.map((blockInput) => blockInput.getBlock().block)
+      );
     }
 
     // If we are here then its because executionStatus is one of MaybeValidExecutionStatus
@@ -256,7 +260,7 @@ export async function verifyBlocksExecutionPayload(
     chain.metrics?.gossipBlock.executionPayload.validationTime.observe(validationTime);
 
     chain.logger.debug("Verified execution payload", {
-      slot: blockInputs[0].message.slot,
+      slot: blockInputs[0].getSlot(),
       recvToValLatency,
       recvToValidation,
       validationTime,

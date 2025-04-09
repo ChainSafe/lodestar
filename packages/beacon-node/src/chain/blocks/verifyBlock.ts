@@ -107,7 +107,7 @@ export async function verifyBlocksInEpoch(
           } as SegmentExecStatus),
 
       // data availability
-      isDataAvailable(this, blocksInputs, abortController.signal, opts),
+      isDataAvailable(this, blocksInputs, abortController.signal),
 
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API

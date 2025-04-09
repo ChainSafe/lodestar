@@ -104,7 +104,7 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(rootHex, postState);
 
-  this.metrics?.importBlock.bySource.inc({source: blockSource});
+  // this.metrics?.importBlock.bySource.inc({source: blockSource});
   this.logger.verbose("Added block to fork-choice and state cache", {slot: blockSlot, root: rootHex});
 
   // We want to import block asap so call all event handler in the next event loop
@@ -124,8 +124,8 @@ export async function importBlock(
     // --------------
     if (isBlockInputBlobs(blockInput)) {
       const versionedHashes = blockInput.getVersionHashes();
-      for (const {blobSidecar, source: blobsSource} of blockInput.getAllBlobs()) {
-        this.metrics?.importBlock.blobsBySource.inc({blobsSource});
+      for (const {blobSidecar /*, source: blobsSource */} of blockInput.getAllBlobs()) {
+        // this.metrics?.importBlock.blobsBySource.inc({blobsSource});
         // TODO: (@matthewkeil) this event is not being consumed anywhere. Talk to @g11tech about what it could be
         // used for.  The column one is not implemented yet so will either implement for columns or will remove
         // for blobs so its consistent

@@ -5,18 +5,8 @@ import {UintNum64, deneb} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {validateBlobsAndProofs, validateBlobSidecars} from "../validation/blobSidecar.js";
-import {validateDataColumnsSidecars} from "../validation/dataColumnSidecar.js";
+import {validateBlobsAndProofs} from "../validation/blobSidecar.js";
 import {BlockInput, isBlockInputBlobs, isBlockInputColumns, isBlockInputPreDeneb} from "./utils/blockInput.js";
-import {
-  BlobSidecarValidation,
-  // BlockInput,
-  BlockInputAvailableData,
-  BlockInputDataColumns,
-  BlockInputType,
-  ImportBlockOpts,
-  getBlockInput,
-} from "./types.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block
@@ -37,10 +27,7 @@ export async function isDataAvailable(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger; metrics: Metrics | null},
   blocks: BlockInput[],
   signal: AbortSignal
-): Promise<{
-  availableTime: number;
-  availableBlockInputs: BlockInput[];
-}> {
+): Promise<{availableBlockInputs: BlockInput[]}> {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
