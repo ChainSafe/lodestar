@@ -694,7 +694,6 @@ export class MatchingDataAttestationGroup {
     const isPostElectra = isForkPostElectra(fork);
 
     let maxNewSeenEffectiveBalance = 0;
-    let newSeenAttesters = 0;
     let mostValuableAttestation: AttestationNonParticipant | null = null;
     for (const {attestation} of this.attestations) {
       if (
@@ -712,6 +711,7 @@ export class MatchingDataAttestationGroup {
 
       // we prioritize total effective balance over attester count
       let newSeenEffectiveBalance = 0;
+      let newSeenAttesters = 0;
       const {aggregationBits} = attestation;
       for (const notSeenIndex of notSeenAttestingIndices) {
         if (aggregationBits.get(notSeenIndex)) {
