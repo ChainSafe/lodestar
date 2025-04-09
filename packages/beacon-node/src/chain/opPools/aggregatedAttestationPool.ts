@@ -57,7 +57,7 @@ export type AttestationsConsolidation = {
   totalNewSeenEffectiveBalance: number;
   newSeenAttesters: number;
   notSeenAttesters: number;
-  committeeSize: number;
+  committeeMembers: number;
 };
 
 /**
@@ -409,13 +409,18 @@ export class AggregatedAttestationPool {
                 totalNewSeenEffectiveBalance: 0,
                 newSeenAttesters: 0,
                 notSeenAttesters: 0,
-                committeeSize: attestationGroup.committee.length,
+                committeeMembers: 0,
               };
             }
-            sameAttDataCons[i].byCommittee.set(committeeIndex, attestationNonParticipation);
-            sameAttDataCons[i].totalNewSeenEffectiveBalance += attestationNonParticipation.newSeenEffectiveBalance;
-            sameAttDataCons[i].newSeenAttesters += attestationNonParticipation.newSeenAttesters;
-            sameAttDataCons[i].notSeenAttesters += attestationNonParticipation.notSeenAttendingIndices.size;
+            const sameAttDataCon = sameAttDataCons[i];
+            // committeeIndex was from a map so it should be unique, but just in case
+            if (!sameAttDataCon.byCommittee.has(committeeIndex)) {
+              sameAttDataCon.byCommittee.set(committeeIndex, attestationNonParticipation);
+              sameAttDataCon.totalNewSeenEffectiveBalance += attestationNonParticipation.newSeenEffectiveBalance;
+              sameAttDataCon.newSeenAttesters += attestationNonParticipation.newSeenAttesters;
+              sameAttDataCon.notSeenAttesters += attestationNonParticipation.notSeenAttendingIndices.size;
+              sameAttDataCon.committeeMembers += attestationGroup.committee.length;
+            }
           }
         } // all committees are processed
 
@@ -451,7 +456,7 @@ export class AggregatedAttestationPool {
       // record metrics of packed attestations
       const committeeCount = consolidation.byCommittee.size;
       packedAttestationsMetrics?.committeeBits.set({index: i}, committeeCount);
-      packedAttestationsMetrics?.committeeMembers.set({index: i}, consolidation.committeeSize * committeeCount);
+      packedAttestationsMetrics?.committeeMembers.set({index: i}, consolidation.committeeMembers);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
       packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
       packedAttestationsMetrics?.newSeenAttesters.set({index: i}, consolidation.newSeenAttesters);
@@ -705,7 +710,7 @@ export class MatchingDataAttestationGroup {
 
       const notSeen = new Set<number>();
 
-      // from electra, we prioritize total effective balance over attester count
+      // we prioritize total effective balance over attester count
       let newSeenEffectiveBalance = 0;
       const {aggregationBits} = attestation;
       for (const notSeenIndex of notSeenAttestingIndices) {
