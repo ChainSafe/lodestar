@@ -8,7 +8,6 @@ import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork} from "../../network/index.js";
-import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";

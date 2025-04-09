@@ -94,7 +94,6 @@ import {
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
@@ -153,7 +152,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenGossipBlockInput: SeenGossipBlockInput;
   readonly blockInputCache: BlockInputCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
@@ -255,8 +253,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
-    this.seenGossipBlockInput = new SeenGossipBlockInput(custodyConfig);
-    this.blockInputCache = new BlockInputCache(config, custodyConfig, logger, metrics);
+    this.blockInputCache = new BlockInputCache(config, custodyConfig, metrics, logger);
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
@@ -393,7 +390,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenGossipBlockInput.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.blockInputCache.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {

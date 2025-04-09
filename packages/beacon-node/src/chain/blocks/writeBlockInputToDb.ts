@@ -6,6 +6,7 @@ import {BeaconChain} from "../chain.js";
 import {BlockInput, isBlockInputBlobs, isBlockInputColumns} from "./utils/blockInput.js";
 import {BlobSidecarsWrapper} from "../../db/repositories/blobSidecars.js";
 import {DataColumnSidecarsWrapper} from "../../db/repositories/dataColumnSidecars.js";
+import {prettyPrintArray} from "../../sync/range/utils/downloadByRange.js";
 
 // function calculateDataColumnsSize(columnLength: number): number {
 //   return (
@@ -35,8 +36,9 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
     });
 
     // TODO: this conditions should not ever be hit. double check all callers to write to db
-    if (blockInput.isComplete()) {
-      await blockInput.waitForBlockAndData();
+    if (!blockInput.isComplete()) {
+      // add short delay here so this does not throw if write gets called before importBlock
+      await blockInput.waitForBlockAndData(1000);
     }
 
     // NOTE: Old data is pruned on archive
@@ -52,8 +54,8 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
         )
       );
     } else if (isBlockInputColumns(blockInput)) {
-      const columnSidecars = blockInput.getCustodyColumns();
-      const dataColumnIndex = blockInput.getCustodyIndex();
+      const dataColumnSidecars = blockInput.getCustodyColumns();
+      const dataColumnsIndex = blockInput.getCustodyIndex();
       const columnLength = (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.length;
       // TODO: (@matthewkeil) this is calculated differently in removal below. Rectify with @g11tech
       // const dataColumnsSize = calculateDataColumnsSize(columnLength);
@@ -65,16 +67,16 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
           .add({
             blockRoot,
             slot,
-            dataColumnsLen: columnSidecars.length,
+            dataColumnsLen: dataColumnSidecars.length,
             dataColumnsSize,
-            dataColumnIndex,
-            columnSidecars,
+            dataColumnsIndex,
+            dataColumnSidecars,
           })
           .then(() =>
             this.logger.debug("Persisted dataColumnSidecars to hot DB", {
               slot,
               rootHex,
-              numberOfColumns: columnSidecars.length,
+              numberOfColumns: dataColumnSidecars.length,
               dataColumnsSize,
             })
           )
@@ -84,7 +86,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
 
   await Promise.all(fnPromises);
   this.logger.debug("Persisted blocksInputs to db", {
-    slots: blocksInputs.map((blockInput) => `[ ${blockInput.getSlot().join(", ")} ]`),
+    slots: prettyPrintArray(blocksInputs.map((blockInput) => blockInput.getSlot())),
     numberOfBlocksInputs: blocksInputs.length,
   });
 }
@@ -105,7 +107,11 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
       blockToRemove.push(block);
 
       if (isBlockInputBlobs(blockInput)) {
-        blobsToRemove.push({blockRoot, slot, blobSidecars: blockInput.getBlobs()});
+        blobsToRemove.push({
+          blockRoot,
+          slot,
+          blobSidecars: blockInput.getAllBlobs().map(({blobSidecar}) => blobSidecar),
+        });
       } else if (isBlockInputColumns(blockInput)) {
         const dataColumnSidecars = blockInput.getCustodyColumns();
         const dataColumnsIndex = blockInput.getCustodyIndex();

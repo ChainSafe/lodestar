@@ -56,7 +56,6 @@ import {
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
@@ -123,7 +122,6 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenGossipBlockInput: SeenGossipBlockInput;
   readonly blockInputCache: BlockInputCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
