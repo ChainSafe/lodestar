@@ -49,7 +49,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           root: blockRootHex,
         });
       } else {
-        const {custodyConfig} = this.seenGossipBlockInput;
+        const {custodyConfig} = this;
         const {custodyColumnsIndex, custodyColumns} = custodyConfig;
         const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
         let dataColumnsLen: number;
@@ -126,7 +126,7 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
           const blobSidecars = blockData.blobs;
           blobsToRemove.push({blockRoot, slot, blobSidecars});
         } else {
-          const {custodyConfig} = this.seenGossipBlockInput;
+          const {custodyConfig} = this;
           const {custodyColumnsIndex: dataColumnsIndex, custodyColumns} = custodyConfig;
           const dataColumnsLen = custodyColumns.length;
           const dataColumnSidecars = (blockData as BlockInputDataColumns).dataColumns.filter((dataColumnSidecar) =>

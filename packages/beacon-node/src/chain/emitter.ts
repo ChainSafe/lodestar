@@ -4,7 +4,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
+import {phase0, fulu} from "@lodestar/types";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -42,6 +42,11 @@ export enum ChainEvent {
    * This event signals that the chain is ready to advertise the given group count to the network.
    */
   updateAdvertisedGroupCount = "updateAdvertisedGroupCount",
+  /**
+   * This event signals that data columns have been fetched from the execution engine
+   * and are ready to be published.
+   */
+  publishDataColumns = "publishDataColumns",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -58,6 +63,8 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.updateTargetGroupCount]: (targetGroupCount: number) => void;
   [ChainEvent.updateAdvertisedGroupCount]: (advertisedGroupCount: number) => void;
+
+  [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
 };
 
 /**

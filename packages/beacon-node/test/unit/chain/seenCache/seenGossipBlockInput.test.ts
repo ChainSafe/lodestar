@@ -7,6 +7,11 @@ import {
   BlockInputMetaPendingBlockWithBlobs,
   SeenGossipBlockInput,
 } from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
+import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
+import {ZERO_HASH_HEX} from "@lodestar/params";
+import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
+import {testLogger} from "../../../utils/logger.js";
+import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 
 describe("SeenGossipBlockInput", () => {
   const chainConfig = createChainForkConfig({
@@ -17,12 +22,32 @@ describe("SeenGossipBlockInput", () => {
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
-  const seenGossipBlockInput = new SeenGossipBlockInput({
-    sampledColumns: [],
-    custodyColumns: [],
-    custodyColumnsIndex: Uint8Array.from([1, 2, 3]),
-    custodyColumnsLen: 0,
+
+  // Execution engine
+  const executionEngineBackend = new ExecutionEngineMockBackend({
+    onlyPredefinedResponses: false,
+    genesisBlockHash: ZERO_HASH_HEX,
   });
+  const controller = new AbortController();
+  const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
+    signal: controller.signal,
+    logger: testLogger("executionEngine"),
+  });
+
+  const emitter = new ChainEventEmitter();
+
+  const seenGossipBlockInput = new SeenGossipBlockInput(
+    {
+      sampledColumns: [],
+      custodyColumns: [],
+      custodyColumnsIndex: Uint8Array.from([1, 2, 3]),
+      custodyColumnsLen: 0,
+      sampleGroups: [],
+      sampledSubnets: [],
+    },
+    executionEngine,
+    emitter
+  );
 
   // array of numBlobs, events where events are array of
   // [block|blob11|blob2, pd | bp | null | error string reflecting the expected result]

@@ -1,6 +1,6 @@
 import type {ChainForkConfig} from "@lodestar/config";
 import type {DataAvailabilityStatus, MaybeValidExecutionStatus} from "@lodestar/fork-choice";
-import {type ForkPostDeneb, type ForkName, ForkSeq} from "@lodestar/params";
+import {type ForkPostDeneb, ForkSeq, ForkPreFulu, ForkPostFulu} from "@lodestar/params";
 import {type CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 
@@ -48,7 +48,7 @@ export enum BlobsSource {
   byRoot = "req_resp_by_root",
 }
 type ForkBlobsInfo = {
-  fork: ForkPostDeneb;
+  fork: ForkPostDeneb & ForkPreFulu;
 };
 export type BlockInputBlobs = ForkBlobsInfo & {
   blobs: deneb.BlobSidecars;
@@ -73,7 +73,7 @@ export enum DataColumnsSource {
   byRoot = "req_resp_by_root",
 }
 type ForkDataColumnsInfo = {
-  fork: ForkName.fulu;
+  fork: ForkPostFulu;
 };
 type DataColumnData = {
   dataColumn: fulu.DataColumnSidecar;

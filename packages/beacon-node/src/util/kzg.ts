@@ -13,6 +13,7 @@ export let ckzg: {
   verifyKzgProof(commitmentBytes: Uint8Array, zBytes: Uint8Array, yBytes: Uint8Array, proofBytes: Uint8Array): boolean;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
+  computeCells(blob: Uint8Array): Uint8Array[];
   computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
   recoverCellsAndKzgProofs(cellIndices: number[], cells: Uint8Array[]): [Uint8Array[], Uint8Array[]];
   verifyCellKzgProofBatch(
@@ -29,6 +30,7 @@ export let ckzg: {
   verifyKzgProof: ckzgNotLoaded,
   verifyBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProofBatch: ckzgNotLoaded,
+  computeCells: ckzgNotLoaded,
   computeCellsAndKzgProofs: ckzgNotLoaded,
   recoverCellsAndKzgProofs: ckzgNotLoaded,
   verifyCellKzgProofBatch: ckzgNotLoaded,
