@@ -57,7 +57,8 @@ export type AttestationsConsolidation = {
   totalNewSeenEffectiveBalance: number;
   newSeenAttesters: number;
   notSeenAttesters: number;
-  committeeMembers: number;
+  // total number of committee members across all committees in this consolidation
+  crossCommitteeMembers: number;
 };
 
 /**
@@ -96,9 +97,11 @@ const MAX_ATTESTATIONS_PER_GROUP = 3;
 
 /**
  * For electra, there is on chain aggregation of attestations across committees, so we can just pick up to 8
- * attestations per group, sort by scores get get first 8.
- * The new algorithm is improved to get most valuable attestation helped not to get not-useful attestations anyway.
+ * attestations per group, sort by scores to get first 8.
+ * The new algorithm helps not to inlclude useless attestations so we usually cannot get up to 8.
  * The more consolidations we have per block, the less likely we have to scan all slots in the pool.
+ * This is max attestations returned per group, it does not make sense to have this number greater than MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA
+ * and MAX_ATTESTATIONS_ELECTRA.
  */
 const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA,
@@ -344,11 +347,15 @@ export class AggregatedAttestationPool {
       }
 
       const epoch = computeEpochAtSlot(slot);
+      if (epoch < statePrevEpoch) {
+        // we process slot in desc order, this means next slot is not eligible, we should stop
+        stopReason = ScannedSlotsTerminationReason.SlotBeforePreviousEpoch;
+        break;
+      }
+
       // validateAttestation condition: Attestation target epoch not in previous or current epoch
       if (!(epoch === stateEpoch || epoch === statePrevEpoch)) {
-        // we process slot in desc order, this means slot is out of current or previous epoch, we should stop
-        stopReason = ScannedSlotsTerminationReason.SlotBeforePreviousEpoch;
-        break; // Invalid attestations
+        continue; // Invalid attestations
       }
 
       // validateAttestation condition: Attestation slot not within inclusion window
@@ -409,7 +416,7 @@ export class AggregatedAttestationPool {
                 totalNewSeenEffectiveBalance: 0,
                 newSeenAttesters: 0,
                 notSeenAttesters: 0,
-                committeeMembers: 0,
+                crossCommitteeMembers: 0,
               };
             }
             const sameAttDataCon = sameAttDataCons[i];
@@ -419,7 +426,7 @@ export class AggregatedAttestationPool {
               sameAttDataCon.totalNewSeenEffectiveBalance += attestationNonParticipation.newSeenEffectiveBalance;
               sameAttDataCon.newSeenAttesters += attestationNonParticipation.newSeenAttesters;
               sameAttDataCon.notSeenAttesters += attestationNonParticipation.notSeenAttendingIndices.size;
-              sameAttDataCon.committeeMembers += attestationGroup.committee.length;
+              sameAttDataCon.crossCommitteeMembers += attestationGroup.committee.length;
             }
           }
         } // all committees are processed
@@ -456,7 +463,7 @@ export class AggregatedAttestationPool {
       // record metrics of packed attestations
       const committeeCount = consolidation.byCommittee.size;
       packedAttestationsMetrics?.committeeBits.set({index: i}, committeeCount);
-      packedAttestationsMetrics?.committeeMembers.set({index: i}, consolidation.committeeMembers);
+      packedAttestationsMetrics?.crossCommitteeMembers.set({index: i}, consolidation.crossCommitteeMembers);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
       packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
       packedAttestationsMetrics?.newSeenAttesters.set({index: i}, consolidation.newSeenAttesters);
@@ -644,7 +651,7 @@ export class MatchingDataAttestationGroup {
 
   /**
    * Get AttestationNonParticipant for this groups of same attestation data.
-   * @param notSeenCommitteeMembers not seen attestting indices, i.e. indices in the same committee
+   * @param notSeenCommitteeMembers not seen attesting indices, i.e. indices in the same committee
    * @returns an array of AttestationNonParticipant
    */
   getAttestationsForBlock(
@@ -678,9 +685,9 @@ export class MatchingDataAttestationGroup {
   }
 
   /**
-   * Most valuable attestation is attestation has the most effective balance of not seen validators.
+   * Select the attestation with the highest total effective balance of not seen validators.
    */
-  getMostValuableAttestation(
+  private getMostValuableAttestation(
     fork: ForkName,
     effectiveBalanceIncrements: EffectiveBalanceIncrements,
     notSeenAttestingIndices: Set<number>,

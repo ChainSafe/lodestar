@@ -703,7 +703,7 @@ describe("aggregateConsolidation", () => {
         byCommittee: new Map(),
         attData: attData,
         totalNewSeenEffectiveBalance: 0,
-        committeeMembers: 32,
+        crossCommitteeMembers: 32,
         newSeenAttesters: 0,
         notSeenAttesters: 0,
       };
