@@ -396,7 +396,7 @@ async function validateAttestationNoSignatureCheck(
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
-    committeeValidatorIndices = getCommitteeIndices(shuffling, attSlot, committeeIndex);
+    committeeValidatorIndices = getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
     getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
     expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
   }
@@ -788,7 +788,7 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
  * Get a list of indices of validators in the given committee
  * attestationIndex - Index of the committee in shuffling.committees
  */
-export function getCommitteeIndices(
+export function getCommitteeValidatorIndices(
   shuffling: EpochShuffling,
   attestationSlot: Slot,
   attestationIndex: number
