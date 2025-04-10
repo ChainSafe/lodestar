@@ -451,7 +451,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       bits: number[];
       newSeenEffectiveBalance: number;
       newSeenAttesters: number;
-      notSeenAttendingIndices: Set<number> | null;
+      notSeenAttestingIndices: Set<number> | null;
       returnedIndex: number;
     }[];
   }[] = [
@@ -466,14 +466,14 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b11111110],
           newSeenEffectiveBalance: 0,
           newSeenAttesters: 0,
-          notSeenAttendingIndices: null,
+          notSeenAttestingIndices: null,
           returnedIndex: -1,
         },
         {
           bits: [0b00000011],
           newSeenEffectiveBalance: 0,
           newSeenAttesters: 0,
-          notSeenAttendingIndices: null,
+          notSeenAttestingIndices: null,
           returnedIndex: -1,
         },
       ],
@@ -488,7 +488,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b11111110],
           newSeenEffectiveBalance: 3 * 32,
           newSeenAttesters: 3,
-          notSeenAttendingIndices: new Set([]),
+          notSeenAttestingIndices: new Set([]),
           returnedIndex: 0,
         },
         // not valueable because seen attestations are all included in attestation 0
@@ -496,7 +496,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b00000011],
           newSeenEffectiveBalance: 0,
           newSeenAttesters: 0,
-          notSeenAttendingIndices: null,
+          notSeenAttestingIndices: null,
           returnedIndex: -1,
         },
       ],
@@ -511,14 +511,14 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b11111010],
           newSeenEffectiveBalance: 2 * 32,
           newSeenAttesters: 2,
-          notSeenAttendingIndices: new Set([2]),
+          notSeenAttestingIndices: new Set([2]),
           returnedIndex: 0,
         },
         {
           bits: [0b10000101],
           newSeenEffectiveBalance: 1 * 32,
           newSeenAttesters: 1,
-          notSeenAttendingIndices: new Set(),
+          notSeenAttestingIndices: new Set(),
           returnedIndex: 1,
         },
       ],
@@ -533,7 +533,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b11111001],
           newSeenEffectiveBalance: 4 * 32,
           newSeenAttesters: 4,
-          notSeenAttendingIndices: new Set([2]),
+          notSeenAttestingIndices: new Set([2]),
           returnedIndex: 1,
         },
         // although this has less not seen attesters, it has bigger effective balance so returned index is 0
@@ -541,7 +541,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b10000011],
           newSeenEffectiveBalance: 2048 + 2 * 32,
           newSeenAttesters: 3,
-          notSeenAttendingIndices: new Set([2, 3, 4, 5, 6]),
+          notSeenAttestingIndices: new Set([2, 3, 4, 5, 6]),
           returnedIndex: 0,
         },
         // maxAttestation is only 2
@@ -549,7 +549,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b00001101],
           newSeenEffectiveBalance: 0,
           newSeenAttesters: 0,
-          notSeenAttendingIndices: null,
+          notSeenAttestingIndices: null,
           returnedIndex: -1,
         },
       ],
@@ -564,7 +564,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b00111110],
           newSeenEffectiveBalance: 5 * 32,
           newSeenAttesters: 5,
-          notSeenAttendingIndices: new Set([0, 6, 7]),
+          notSeenAttestingIndices: new Set([0, 6, 7]),
           returnedIndex: 0,
         },
         // newSeenEffectiveBalance is not 3 * 32 considering the 1st included attestation already include attester 1
@@ -572,7 +572,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           bits: [0b01000011],
           newSeenEffectiveBalance: 2 * 32,
           newSeenAttesters: 2,
-          notSeenAttendingIndices: new Set([7]),
+          notSeenAttestingIndices: new Set([7]),
           returnedIndex: 1,
         },
       ],
@@ -617,7 +617,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
 
       for (const [
         i,
-        {newSeenEffectiveBalance, newSeenAttesters, notSeenAttendingIndices, returnedIndex},
+        {newSeenEffectiveBalance, newSeenAttesters, notSeenAttestingIndices: notSeenAttendingIndices, returnedIndex},
       ] of attestationsToAdd.entries()) {
         const attestationIndex = attestationsForBlock.findIndex((a) => a.attestation === attestations[i]);
         expect(attestationIndex).toBe(returnedIndex);
@@ -626,7 +626,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
         if (returnedIndex !== -1) {
           expect(attestation ? attestation.newSeenEffectiveBalance : 0).toBe(newSeenEffectiveBalance);
           expect(attestation ? attestation.newSeenAttesters : 0).toBe(newSeenAttesters);
-          expect(attestation ? attestation.notSeenAttendingIndices : 0).toStrictEqual(notSeenAttendingIndices);
+          expect(attestation ? attestation.notSeenAttestingIndices : 0).toStrictEqual(notSeenAttendingIndices);
         }
       }
     });
@@ -724,7 +724,7 @@ describe("aggregateConsolidation", () => {
         consolidation.byCommittee.set(committeeIndex, {
           attestation: aggAttestation,
           newSeenEffectiveBalance: aggregationBitsArr[i].filter((item) => item).length * 32,
-          notSeenAttendingIndices: new Set(),
+          notSeenAttestingIndices: new Set(),
           newSeenAttesters: 0,
         });
       }

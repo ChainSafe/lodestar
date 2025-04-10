@@ -425,7 +425,7 @@ export class AggregatedAttestationPool {
               sameAttDataCon.byCommittee.set(committeeIndex, attestationNonParticipation);
               sameAttDataCon.totalNewSeenEffectiveBalance += attestationNonParticipation.newSeenEffectiveBalance;
               sameAttDataCon.newSeenAttesters += attestationNonParticipation.newSeenAttesters;
-              sameAttDataCon.notSeenAttesters += attestationNonParticipation.notSeenAttendingIndices.size;
+              sameAttDataCon.notSeenAttesters += attestationNonParticipation.notSeenAttestingIndices.size;
               sameAttDataCon.crossCommitteeMembers += attestationGroup.committee.length;
             }
           }
@@ -572,7 +572,7 @@ type AttestationNonParticipant = {
   // this is only updated and used in removeBySeenValidators function
   newSeenEffectiveBalance: number;
   newSeenAttesters: number;
-  notSeenAttendingIndices: Set<number>;
+  notSeenAttestingIndices: Set<number>;
 };
 
 /**
@@ -678,7 +678,7 @@ export class MatchingDataAttestationGroup {
       attestations.push(mostValuableAttestation);
       excluded.add(mostValuableAttestation.attestation);
       // this will narrow down the notSeenAttestingIndices for the next iteration
-      notSeenAttestingIndices = mostValuableAttestation.notSeenAttendingIndices;
+      notSeenAttestingIndices = mostValuableAttestation.notSeenAttestingIndices;
     }
 
     return attestations;
@@ -735,7 +735,7 @@ export class MatchingDataAttestationGroup {
           attestation,
           newSeenEffectiveBalance,
           newSeenAttesters,
-          notSeenAttendingIndices: notSeen,
+          notSeenAttestingIndices: notSeen,
         };
       }
     }
