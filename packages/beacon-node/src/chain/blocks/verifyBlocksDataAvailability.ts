@@ -34,7 +34,8 @@ export async function verifyBlocksDataAvailability(
   availableTime: number;
   availableBlockInputs: BlockInput[];
 }> {
-  if (blocks.length === 0) {
+  const lastBlock = blocks.at(-1);
+  if (!lastBlock) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -54,7 +55,7 @@ export async function verifyBlocksDataAvailability(
     availableBlockInputs.push(availableBlockInput);
   }
 
-  const availableTime = blocks[blocks.length - 1].type === BlockInputType.dataPromise ? Date.now() : seenTime;
+  const availableTime = lastBlock.type === BlockInputType.dataPromise ? Date.now() : seenTime;
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined && blocks[0].type !== BlockInputType.preData) {
     const recvToAvailableTime = availableTime / 1000 - opts.seenTimestampSec;
     const numBlobs = (blocks[0].block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments.length;

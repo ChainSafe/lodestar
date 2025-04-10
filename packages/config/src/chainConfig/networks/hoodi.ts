@@ -39,6 +39,11 @@ export const hoodiChainConfig: ChainConfig = {
   FULU_FORK_VERSION: b("0x70000910"),
   FULU_FORK_EPOCH: Infinity,
 
+  // Time parameters
+  // ---------------------------------------------------------------
+  // 12 (update from older mainnet default of 14)
+  SECONDS_PER_ETH1_BLOCK: 12,
+
   // Deposit contract
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 560048,

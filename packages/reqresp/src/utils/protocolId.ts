@@ -16,20 +16,21 @@ export function parseProtocolID(protocolId: string): ProtocolAttributes {
     throw new Error(`Invalid protocol id: ${protocolId}`);
   }
 
-  const encoding = result[result.length - 1] as Encoding;
+  const encoding = result.at(-1) as Encoding;
   if (!Object.values(Encoding).includes(encoding)) {
-    throw new Error(`Invalid protocol encoding: ${result[result.length - 1]}`);
+    throw new Error(`Invalid protocol encoding: ${encoding}`);
   }
 
-  if (!/^-?[0-9]+$/.test(result[result.length - 2])) {
-    throw new Error(`Invalid protocol version: ${result[result.length - 2]}`);
+  const versionStr = result.at(-2) as string;
+  if (!/^-?[0-9]+$/.test(versionStr)) {
+    throw new Error(`Invalid protocol version: ${versionStr}`);
   }
 
   // an ordinal version number (e.g. 1, 2, 3…).
-  const version = parseInt(result[result.length - 2]);
+  const version = parseInt(versionStr);
 
   // each request is identified by a name consisting of English alphabet, digits and underscores (_).
-  const method = result[result.length - 3];
+  const method = result.at(-3) as string;
 
   // messages are grouped into families identified by a shared libp2p protocol name prefix
   const protocolPrefix = result.slice(0, result.length - 3).join("/");

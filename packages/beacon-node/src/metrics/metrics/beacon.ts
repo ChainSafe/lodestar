@@ -162,7 +162,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     blockProductionNumAggregated: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_num_aggregated_total",
       help: "Count of all aggregated attestations in our produced block",
-      buckets: [32, 64, 96, 128],
+      buckets: [1, 2, 4, 6, 8],
       labelNames: ["source"],
     }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({

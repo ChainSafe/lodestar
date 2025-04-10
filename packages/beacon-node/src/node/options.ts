@@ -1,5 +1,5 @@
 import {ApiOptions, defaultApiOptions} from "../api/options.js";
-import {DEFAULT_STATE_ARCHIVE_MODE, IChainOptions, StateArchiveMode, defaultChainOptions} from "../chain/options.js";
+import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
 import {Eth1Options, defaultEth1Options} from "../eth1/options.js";
 import {
@@ -18,7 +18,7 @@ import {SyncOptions, defaultSyncOptions} from "../sync/options.js";
 export {allNamespaces} from "../api/rest/index.js";
 
 // Re-export to use as default values in CLI args
-export {defaultExecutionEngineHttpOpts, defaultExecutionBuilderHttpOpts, StateArchiveMode, DEFAULT_STATE_ARCHIVE_MODE};
+export {defaultExecutionEngineHttpOpts, defaultExecutionBuilderHttpOpts, ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
 export interface IBeaconNodeOptions {
   api: ApiOptions;

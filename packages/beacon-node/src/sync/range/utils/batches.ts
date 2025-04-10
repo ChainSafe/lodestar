@@ -69,7 +69,7 @@ export function getNextBatchToProcess(batches: Batch[]): Batch | null {
  */
 export function toBeDownloadedStartEpoch(batches: Batch[], startEpoch: Epoch): Epoch {
   // Note: batches are inserted in ascending `startEpoch` order
-  const lastBatch = batches[batches.length - 1] as undefined | Batch;
+  const lastBatch = batches.at(-1);
   return lastBatch ? lastBatch.startEpoch + EPOCHS_PER_BATCH : startEpoch;
 }
 

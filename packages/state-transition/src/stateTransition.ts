@@ -93,10 +93,8 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, options, metrics);
 
   // Verify proposer signature only
-  if (verifyProposer) {
-    if (!verifyProposerSignature(postState, signedBlock)) {
-      throw new Error("Invalid block signature");
-    }
+  if (verifyProposer && !verifyProposerSignature(postState, signedBlock)) {
+    throw new Error("Invalid block signature");
   }
 
   // Process block
@@ -105,7 +103,7 @@ export function stateTransition(
   // Note: time only on success
   const processBlockTimer = metrics?.processBlockTime.startTimer();
 
-  processBlock(fork, postState, block, options, options);
+  processBlock(fork, postState, block, options, options, metrics);
 
   const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
   postState.commit();

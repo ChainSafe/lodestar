@@ -75,9 +75,10 @@ export async function verifyBlocksExecutionPayload(
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const lastBlock = blocks.at(-1);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
-  if (blocks.length === 0) {
+  if (!lastBlock) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -141,8 +142,6 @@ export async function verifyBlocksExecutionPayload(
   //   We are optimistically safe with respect to this entire block segment if:
   //    - all the blocks are way behind the current slot
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
-  const lastBlock = blocks[blocks.length - 1];
-
   const currentSlot = chain.clock.currentSlot;
   const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
   let isOptimisticallySafe =
