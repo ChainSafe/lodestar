@@ -7,7 +7,6 @@ import {
   ForkPostElectra,
   MAX_COMMITTEES_PER_SLOT,
   MAX_EFFECTIVE_BALANCE,
-  MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";

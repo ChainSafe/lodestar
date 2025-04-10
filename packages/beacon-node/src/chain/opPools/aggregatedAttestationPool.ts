@@ -678,8 +678,8 @@ export class MatchingDataAttestationGroup {
       attestations.push(mostValuableAttestation);
       excluded.add(mostValuableAttestation.attestation);
       // this will narrow down the notSeenAttestingIndices for the next iteration
-      // so usually it will not take much time , however it could take time for during
-      // non-finality of the network when there is too few participation, but in that case
+      // so usually it will not take much time, however it could take more time during
+      // non-finality of the network when there is low participation, but in this case
       // we pre-aggregate aggregated attestations and bound the total attestations per group
       notSeenAttestingIndices = mostValuableAttestation.notSeenAttestingIndices;
     }
