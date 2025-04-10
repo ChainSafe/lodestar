@@ -57,8 +57,8 @@ export type AttestationsConsolidation = {
   totalNewSeenEffectiveBalance: number;
   newSeenAttesters: number;
   notSeenAttesters: number;
-  // total number of committee members across all committees in this consolidation
-  crossCommitteeMembers: number;
+  // total number of attesters across all committees in this consolidation
+  totalAttesters: number;
 };
 
 /**
@@ -98,10 +98,10 @@ const MAX_ATTESTATIONS_PER_GROUP = 3;
 /**
  * For electra, there is on chain aggregation of attestations across committees, so we can just pick up to 8
  * attestations per group, sort by scores to get first 8.
- * The new algorithm helps not to inlclude useless attestations so we usually cannot get up to 8.
+ * The new algorithm helps not to include useless attestations so we usually cannot get up to 8.
  * The more consolidations we have per block, the less likely we have to scan all slots in the pool.
- * This is max attestations returned per group, it does not make sense to have this number greater than MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA
- * and MAX_ATTESTATIONS_ELECTRA.
+ * This is max attestations returned per group, it does not make sense to have this number greater
+ * than MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA or MAX_ATTESTATIONS_ELECTRA.
  */
 const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA,
@@ -116,7 +116,7 @@ export enum ScannedSlotsTerminationReason {
 
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
- * or api. The returned attestations are aggregated to maximise the number of validators that can be
+ * or api. The returned attestations are aggregated to maximize the number of validators that can be
  * included.
  * Note that we want to remove attestations with attesters that were included in the chain.
  */
@@ -416,7 +416,7 @@ export class AggregatedAttestationPool {
                 totalNewSeenEffectiveBalance: 0,
                 newSeenAttesters: 0,
                 notSeenAttesters: 0,
-                crossCommitteeMembers: 0,
+                totalAttesters: 0,
               };
             }
             const sameAttDataCon = sameAttDataCons[i];
@@ -426,7 +426,7 @@ export class AggregatedAttestationPool {
               sameAttDataCon.totalNewSeenEffectiveBalance += attestationNonParticipation.newSeenEffectiveBalance;
               sameAttDataCon.newSeenAttesters += attestationNonParticipation.newSeenAttesters;
               sameAttDataCon.notSeenAttesters += attestationNonParticipation.notSeenAttestingIndices.size;
-              sameAttDataCon.crossCommitteeMembers += attestationGroup.committee.length;
+              sameAttDataCon.totalAttesters += attestationGroup.committee.length;
             }
           }
         } // all committees are processed
@@ -463,7 +463,7 @@ export class AggregatedAttestationPool {
       // record metrics of packed attestations
       const committeeCount = consolidation.byCommittee.size;
       packedAttestationsMetrics?.committeeBits.set({index: i}, committeeCount);
-      packedAttestationsMetrics?.crossCommitteeMembers.set({index: i}, consolidation.crossCommitteeMembers);
+      packedAttestationsMetrics?.totalAttesters.set({index: i}, consolidation.totalAttesters);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
       packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
       packedAttestationsMetrics?.newSeenAttesters.set({index: i}, consolidation.newSeenAttesters);
@@ -474,7 +474,7 @@ export class AggregatedAttestationPool {
       stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;
     }
     packedAttestationsMetrics?.scannedSlots.set({reason: stopReason}, scannedSlots);
-    packedAttestationsMetrics?.totalSlots.set(slots.length);
+    packedAttestationsMetrics?.poolSlots.set(slots.length);
 
     return packedAttestations;
   }
@@ -678,6 +678,9 @@ export class MatchingDataAttestationGroup {
       attestations.push(mostValuableAttestation);
       excluded.add(mostValuableAttestation.attestation);
       // this will narrow down the notSeenAttestingIndices for the next iteration
+      // so usually it will not take much time , however it could take time for during
+      // non-finality of the network when there is too few participation, but in that case
+      // we pre-aggregate aggregated attestations and bound the total attestations per group
       notSeenAttestingIndices = mostValuableAttestation.notSeenAttestingIndices;
     }
 

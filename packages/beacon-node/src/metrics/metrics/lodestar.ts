@@ -907,9 +907,9 @@ export function createLodestarMetrics(
             help: "Total number of committee bits in packed attestation ${index}",
             labelNames: ["index"],
           }),
-          crossCommitteeMembers: register.gauge<{index: number}>({
-            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_cross_committee_members_total",
-            help: "Total number of committee members across committees in packed attestation ${index}",
+          totalAttesters: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_attesters_total",
+            help: "Total number of attesters in packed attestation ${index}",
             labelNames: ["index"],
           }),
           nonParticipation: register.gauge<{index: number}>({
@@ -929,7 +929,7 @@ export function createLodestarMetrics(
           }),
           inclusionDistance: register.gauge<{index: number}>({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_slot_delta_total",
-            help: "How far the packed attestations ${index} from the block slot",
+            help: "How far the packed attestation ${index} slot is from the block slot",
             labelNames: ["index"],
           }),
           scannedSlots: register.gauge<{reason: ScannedSlotsTerminationReason}>({
@@ -937,8 +937,8 @@ export function createLodestarMetrics(
             help: "Total number of scanned slots to produce packed attestations",
             labelNames: ["reason"],
           }),
-          totalSlots: register.gauge({
-            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_slots_total",
+          poolSlots: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_pool_slots_total",
             help: "Total number of slots in pool when producing packed attestations",
           }),
           totalConsolidations: register.gauge({
@@ -955,7 +955,7 @@ export function createLodestarMetrics(
           }),
           seenCommittees: register.gauge({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
-            help: "Total number of committees that all members are seen when producing packed attestations",
+            help: "Total number of committees for which all members are seen when producing packed attestations",
           }),
         },
       },

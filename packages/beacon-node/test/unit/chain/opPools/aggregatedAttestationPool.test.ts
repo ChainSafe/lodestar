@@ -491,7 +491,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
           notSeenAttestingIndices: new Set([]),
           returnedIndex: 0,
         },
-        // not valueable because seen attestations are all included in attestation 0
+        // not valuable because seen attestations are all included in attestation 0
         {
           bits: [0b00000011],
           newSeenEffectiveBalance: 0,
@@ -703,7 +703,7 @@ describe("aggregateConsolidation", () => {
         byCommittee: new Map(),
         attData: attData,
         totalNewSeenEffectiveBalance: 0,
-        crossCommitteeMembers: 32,
+        totalAttesters: 32,
         newSeenAttesters: 0,
         notSeenAttesters: 0,
       };
@@ -712,13 +712,13 @@ describe("aggregateConsolidation", () => {
       const attestationSeed = ssz.electra.Attestation.defaultValue();
       for (let i = 0; i < committeeIndices.length; i++) {
         const committeeIndex = committeeIndices[i];
-        const commiteeBits = BitArray.fromBoolArray(
+        const committeeBits = BitArray.fromBoolArray(
           Array.from({length: MAX_COMMITTEES_PER_SLOT}, (_, i) => i === committeeIndex)
         );
         const aggAttestation = {
           ...attestationSeed,
           aggregationBits: new BitArray(new Uint8Array(aggregationBitsArr[i]), 3),
-          committeeBits: commiteeBits,
+          committeeBits,
           signature: sigArr[i].toBytes(),
         };
         consolidation.byCommittee.set(committeeIndex, {
