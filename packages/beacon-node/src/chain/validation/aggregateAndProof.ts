@@ -245,5 +245,5 @@ async function validateAggregateAndProof(
     false
   );
 
-  return {indexedAttestation, committeeIndices, attDataRootHex};
+  return {indexedAttestation, committeeValidatorIndices, attDataRootHex};
 }

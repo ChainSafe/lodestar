@@ -427,7 +427,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       // Handler
-      const {indexedAttestation, committeeIndices, attDataRootHex} = validationResult;
+      const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = validationResult;
       metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
@@ -435,7 +435,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         aggregatedAttestation,
         attDataRootHex,
         indexedAttestation.attestingIndices.length,
-        committeeIndices
+        committeeValidatorIndices
       );
       metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
 
