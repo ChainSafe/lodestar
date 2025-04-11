@@ -283,12 +283,13 @@ export class AggregatedAttestationPool {
           // These properties should not change after being validate in gossip
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
-          for (const {attestation, newSeenEffectiveBalance} of attestationGroup.getAttestationsForBlock(
+          const getAttestationsResult = attestationGroup.getAttestationsForBlock(
             fork,
             state.epochCtx.effectiveBalanceIncrements,
             notSeenCommitteeMembers,
             MAX_ATTESTATIONS_PER_GROUP
-          )) {
+          );
+          for (const {attestation, newSeenEffectiveBalance} of getAttestationsResult.result) {
             const score = newSeenEffectiveBalance / slotDelta;
             if (score < minScore) {
               minScore = score;
@@ -364,7 +365,9 @@ export class AggregatedAttestationPool {
         continue; // Invalid attestations
       }
 
-      const slotDelta = stateSlot - slot;
+      const inclusionDistance = stateSlot - slot;
+      let returnedAttestationsPerSlot = 0;
+      let totalAttestationsPerSlot = 0;
       // CommitteeIndex    0           1            2    ...   Consolidation (sameAttDataCons)
       // Attestations    att00  ---   att10  ---  att20  ---   0 (att 00 10 20)
       //                 att01  ---     -    ---  att21  ---   1 (att 01 __ 21)
@@ -400,12 +403,15 @@ export class AggregatedAttestationPool {
           // These properties should not change after being validate in gossip
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
-          const attestationsSameGroup = attestationGroup.getAttestationsForBlock(
+          const getAttestationGroupResult = attestationGroup.getAttestationsForBlock(
             fork,
             state.epochCtx.effectiveBalanceIncrements,
             notSeenCommitteeMembers,
             MAX_ATTESTATIONS_PER_GROUP_ELECTRA
           );
+          const attestationsSameGroup = getAttestationGroupResult.result;
+          returnedAttestationsPerSlot += attestationsSameGroup.length;
+          totalAttestationsPerSlot += getAttestationGroupResult.totalAttestations;
 
           for (const [i, attestationNonParticipation] of attestationsSameGroup.entries()) {
             // sameAttDataCons shares the same index for different committees so we use index `i` here
@@ -431,9 +437,18 @@ export class AggregatedAttestationPool {
           }
         } // all committees are processed
 
+        this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.returnedAttestations.set(
+          {inclusionDistance},
+          returnedAttestationsPerSlot
+        );
+        this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.scannedAttestations.set(
+          {inclusionDistance},
+          totalAttestationsPerSlot
+        );
+
         // after all committees are processed, we have a list of sameAttDataCons
         for (const consolidation of sameAttDataCons) {
-          const score = consolidation.totalNewSeenEffectiveBalance / slotDelta;
+          const score = consolidation.totalNewSeenEffectiveBalance / inclusionDistance;
           consolidations.set(consolidation, score);
           // Stop accumulating attestations there are enough that may have good scoring
           if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
@@ -575,6 +590,11 @@ type AttestationNonParticipant = {
   notSeenCommitteeMembers: Set<number>;
 };
 
+type GetAttestationsGroupResult = {
+  result: AttestationNonParticipant[];
+  totalAttestations: number;
+};
+
 /**
  * Maintain a pool of AggregatedAttestation which all share the same AttestationData.
  * Preaggregate into smallest number of attestations.
@@ -659,7 +679,7 @@ export class MatchingDataAttestationGroup {
     effectiveBalanceIncrements: EffectiveBalanceIncrements,
     notSeenCommitteeMembers: Set<number>,
     maxAttestation: number
-  ): AttestationNonParticipant[] {
+  ): GetAttestationsGroupResult {
     const attestations: AttestationNonParticipant[] = [];
     const excluded = new Set<Attestation>();
     for (let i = 0; i < maxAttestation; i++) {
@@ -684,7 +704,7 @@ export class MatchingDataAttestationGroup {
       notSeenCommitteeMembers = mostValuableAttestation.notSeenCommitteeMembers;
     }
 
-    return attestations;
+    return {result: attestations, totalAttestations: this.attestations.length};
   }
 
   /**

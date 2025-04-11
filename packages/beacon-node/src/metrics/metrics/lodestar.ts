@@ -937,6 +937,16 @@ export function createLodestarMetrics(
             help: "Total number of scanned slots to produce packed attestations",
             labelNames: ["reason"],
           }),
+          scannedAttestations: register.gauge<{inclusionDistance: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_scanned_attestations_total",
+            help: "Total number of scanned attestations per scanned slot to produce packed attestations",
+            labelNames: ["inclusionDistance"],
+          }),
+          returnedAttestations: register.gauge<{inclusionDistance: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_returned_attestations_total",
+            help: "Total number of returned attestations per scanned slot to produce packed attestations",
+            labelNames: ["inclusionDistance"],
+          }),
           poolSlots: register.gauge({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_pool_slots_total",
             help: "Total number of slots in pool when producing packed attestations",

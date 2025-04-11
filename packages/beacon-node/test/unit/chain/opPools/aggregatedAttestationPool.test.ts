@@ -631,7 +631,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
         effectiveBalanceIncrements,
         notSeenCommitteeMembers,
         maxAttestations
-      );
+      ).result;
 
       for (const [
         i,
