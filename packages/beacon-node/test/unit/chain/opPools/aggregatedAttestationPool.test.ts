@@ -215,15 +215,17 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
 
   const testCases: {
     name: string;
-    // item is is for committee i, which contains array of attester indices that's not seen (seen by default)
+    // item i is for committee i, which contains array of attester indices that's not seen (seen by default)
     notSeenInStateByCommittee: number[][];
     // item i is for committee i, each item is number[][] which is the indices of validators not seen by the committee
     // each item i also decides how many attestations added to the pool for that committee
     attParticipationByCommittee: number[][][];
     // expected committeeBits of packed attestations, item 0 is for returned attestation 0, ...
     packedCommitteeBits: number[][];
-    // expected aggregationBits of packed attestations: item 0 is for returned attestation 0, ...
-    packedAggregationBits: number[];
+    // expected length of aggregationBits of packed attestations: item 0 is for returned attestation 0, ...
+    packedAggregationBitsLen: number[];
+    // expected backed Uint8Array of aggreationBits of packed attestations: item 0 is for returned attestation 0, ...
+    packedAggregationBitsUint8Array: Uint8Array[];
   }[] = [
     {
       name: "Full participation",
@@ -237,7 +239,10 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       attParticipationByCommittee: [[[]], [[]], [[]], [[]]],
       // 1 full packed attestation
       packedCommitteeBits: [[0, 1, 2, 3]],
-      packedAggregationBits: [committeeLength * 4],
+      packedAggregationBitsLen: [committeeLength * 4],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]),
+      ],
     },
     {
       name: "Full participation but all are seen in the state",
@@ -246,7 +251,8 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       attParticipationByCommittee: [[[]], [[]], [[]], [[]]],
       // no packed attestation
       packedCommitteeBits: [],
-      packedAggregationBits: [],
+      packedAggregationBitsLen: [],
+      packedAggregationBitsUint8Array: [],
     },
     {
       name: "Committee 1 and 2 has 2 versions of aggregationBits",
@@ -265,7 +271,11 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
         [0, 1, 2, 3],
         [1, 2],
       ],
-      packedAggregationBits: [committeeLength * 4, committeeLength * 2],
+      packedAggregationBitsLen: [committeeLength * 4, committeeLength * 2],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 0b11111110, 255, 255, 255, 0b11111101, 255, 255, 255, 255, 255, 255, 255]),
+        new Uint8Array([0b11111101, 255, 255, 255, 0b11111011, 255, 255, 255]),
+      ],
     },
     {
       // same to above but no-participation validators are all seen in the state so only 1 attestation is returned
@@ -280,9 +290,11 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       // committee 2 has 2 attestations, one with no participation validator 1, one with no participation validator 2
       // committee 0 and 3 has 1 attestation each, and all validators are seen
       attParticipationByCommittee: [[[]], [[0], [1]], [[1], [2]], [[]]],
-      // 2nd packed attestation only has 2 committees: 1 and 2
       packedCommitteeBits: [[0, 1, 2, 3]],
-      packedAggregationBits: [committeeLength * 4],
+      packedAggregationBitsLen: [committeeLength * 4],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 0b11111110, 255, 255, 255, 0b11111011, 255, 255, 255, 255, 255, 255, 255]),
+      ],
     },
     {
       name: "Only committee 1 has 2 versions of aggregationBits",
@@ -298,7 +310,11 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       // 2nd packed attestation only has 1 committeee
       packedCommitteeBits: [[0, 1, 2, 3], [1]],
       // 2nd packed attestation only has 1 committee
-      packedAggregationBits: [committeeLength * 4, committeeLength],
+      packedAggregationBitsLen: [committeeLength * 4, committeeLength],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 0b11111110, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]),
+        new Uint8Array([0b11111101, 255, 255, 255]),
+      ],
     },
   ];
 
@@ -307,7 +323,8 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
     notSeenInStateByCommittee,
     attParticipationByCommittee,
     packedCommitteeBits,
-    packedAggregationBits,
+    packedAggregationBitsLen,
+    packedAggregationBitsUint8Array,
   } of testCases) {
     it(name, () => {
       // this is related to NotSeenValidatorsFn, all validators are seen by default
@@ -353,12 +370,13 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
 
       const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, electraState);
       // make sure test data is correct
-      expect(packedCommitteeBits.length).toBe(packedAggregationBits.length);
+      expect(packedCommitteeBits.length).toBe(packedAggregationBitsLen.length);
       expect(blockAttestations.length).toBe(packedCommitteeBits.length);
       for (let attIndex = 0; attIndex < blockAttestations.length; attIndex++) {
         const returnedAttestation = blockAttestations[attIndex] as Attestation<ForkPostElectra>;
         expect(returnedAttestation.committeeBits.getTrueBitIndexes()).toStrictEqual(packedCommitteeBits[attIndex]);
-        expect(returnedAttestation.aggregationBits.bitLen).toStrictEqual(packedAggregationBits[attIndex]);
+        expect(returnedAttestation.aggregationBits.bitLen).toStrictEqual(packedAggregationBitsLen[attIndex]);
+        expect(returnedAttestation.aggregationBits.uint8Array).toStrictEqual(packedAggregationBitsUint8Array[attIndex]);
       }
     });
   }
@@ -451,6 +469,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       newSeenEffectiveBalance: number;
       newSeenAttesters: number;
       notSeenCommitteeMembers: Set<number> | null;
+      // this comes from the find() api, -1 means not found
       returnedIndex: number;
     }[];
   }[] = [
