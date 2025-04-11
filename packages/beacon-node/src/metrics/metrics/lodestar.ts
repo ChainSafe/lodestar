@@ -928,7 +928,7 @@ export function createLodestarMetrics(
             labelNames: ["index"],
           }),
           inclusionDistance: register.gauge<{index: number}>({
-            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_slot_delta_total",
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_inclusion_distance_total",
             help: "How far the packed attestation ${index} slot is from the block slot",
             labelNames: ["index"],
           }),

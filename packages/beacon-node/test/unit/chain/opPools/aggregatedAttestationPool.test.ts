@@ -224,7 +224,7 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
     packedCommitteeBits: number[][];
     // expected length of aggregationBits of packed attestations: item 0 is for returned attestation 0, ...
     packedAggregationBitsLen: number[];
-    // expected backed Uint8Array of aggreationBits of packed attestations: item 0 is for returned attestation 0, ...
+    // expected backed Uint8Array of aggregationBits of packed attestations: item 0 is for returned attestation 0, ...
     packedAggregationBitsUint8Array: Uint8Array[];
   }[] = [
     {
@@ -307,7 +307,7 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       // committee 1 has 2 attestations, one with no participation validator 0, one with no participation validator 1
       // other committees have 1 attestation each, and all validators are seen
       attParticipationByCommittee: [[[]], [[0], [1]], [[]], [[]]],
-      // 2nd packed attestation only has 1 committeee
+      // 2nd packed attestation only has 1 committee
       packedCommitteeBits: [[0, 1, 2, 3], [1]],
       // 2nd packed attestation only has 1 committee
       packedAggregationBitsLen: [committeeLength * 4, committeeLength],
@@ -349,8 +349,8 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
         const committeeIndex = committeeIndices[i];
         const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex);
         // same committee, each is by attestation
-        const notSeenValidatorsByAttationIndex = attParticipationByCommittee[i];
-        for (const notSeenValidators of notSeenValidatorsByAttationIndex) {
+        const notSeenValidatorsByAttestationIndex = attParticipationByCommittee[i];
+        for (const notSeenValidators of notSeenValidatorsByAttestationIndex) {
           const aggregationBits = new BitArray(new Uint8Array(committeeLength / 8).fill(255), committeeLength);
           for (const index of notSeenValidators) {
             aggregationBits.set(index, false);

@@ -57,12 +57,12 @@ export type AttestationsConsolidation = {
   totalNewSeenEffectiveBalance: number;
   newSeenAttesters: number;
   notSeenAttesters: number;
-  // total number of attesters across all committees in this consolidation
+  /** total number of attesters across all committees in this consolidation */
   totalAttesters: number;
 };
 
 /**
- * This function returns not seen participation for a given epoch and slot and committe index.
+ * This function returns not seen participation for a given epoch and slot and committee index.
  * Return null if all validators are seen or no info to check.
  */
 type GetNotSeenValidatorsFn = (epoch: Epoch, slot: Slot, committeeIndex: number) => Set<number> | null;
@@ -78,8 +78,8 @@ type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
 
 /**
- * This is the same to MAX_RETAINED_ATTESTATIONS_PER_GROUP but for electra
- * As monitored in hoodi, max attestations per group could be up to > 10. But in electra we can
+ * This is the same to MAX_RETAINED_ATTESTATIONS_PER_GROUP but for electra.
+ * As monitored in hoodi, max attestations per group could be up to > 10. But since electra we can
  * consolidate attestations across committees, so we can just pick up to 8 attestations per group.
  * Also the MatchingDataAttestationGroup.getAttestationsForBlock() is improved not to have to scan each
  * committee member for previous slot.
@@ -252,7 +252,7 @@ export class AggregatedAttestationPool {
         continue; // Invalid attestations
       }
 
-      const slotDelta = stateSlot - slot;
+      const inclusionDistance = stateSlot - slot;
       for (const attestationGroupByIndex of attestationGroupByIndexByDataHash.values()) {
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
           const notSeenCommitteeMembers = notSeenValidatorsFn(epoch, slot, committeeIndex);
@@ -263,7 +263,7 @@ export class AggregatedAttestationPool {
           if (
             slotCount > 2 &&
             attestationsByScore.length >= MAX_ATTESTATIONS &&
-            notSeenCommitteeMembers.size / slotDelta < minScore
+            notSeenCommitteeMembers.size / inclusionDistance < minScore
           ) {
             // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS attestations and break the for loop early
             // if not, we may have to scan all slots in the pool
@@ -290,7 +290,7 @@ export class AggregatedAttestationPool {
             MAX_ATTESTATIONS_PER_GROUP
           );
           for (const {attestation, newSeenEffectiveBalance} of getAttestationsResult.result) {
-            const score = newSeenEffectiveBalance / slotDelta;
+            const score = newSeenEffectiveBalance / inclusionDistance;
             if (score < minScore) {
               minScore = score;
             }
@@ -361,7 +361,7 @@ export class AggregatedAttestationPool {
 
       // validateAttestation condition: Attestation slot not within inclusion window
       if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot)) {
-        // this should not happen and slot is decreased so no need to track in metric
+        // this should not happen as slot is decreased so no need to track in metric
         continue; // Invalid attestations
       }
 
@@ -476,8 +476,7 @@ export class AggregatedAttestationPool {
       packedAttestations[i] = aggregateConsolidation(consolidation);
 
       // record metrics of packed attestations
-      const committeeCount = consolidation.byCommittee.size;
-      packedAttestationsMetrics?.committeeCount.set({index: i}, committeeCount);
+      packedAttestationsMetrics?.committeeCount.set({index: i}, consolidation.byCommittee.size);
       packedAttestationsMetrics?.totalAttesters.set({index: i}, consolidation.totalAttesters);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
       packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
@@ -584,6 +583,7 @@ type AttestationNonParticipant = {
   attestation: Attestation;
   // this was `notSeenAttesterCount` in pre-electra
   // since electra, we prioritize total effective balance over attester count
+  // as attestation value can vary significantly between validators due to EIP-7251
   // this is only updated and used in removeBySeenValidators function
   newSeenEffectiveBalance: number;
   newSeenAttesters: number;
