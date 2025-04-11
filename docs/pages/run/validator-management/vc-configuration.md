@@ -128,6 +128,10 @@ Please use the official Ethereum Launchpad to perform your deposits. Ensure your
 - [Ethereum Ephemery Testnet Launchpad](https://launchpad.ephemery.dev/)
 - [Ephemeral Testnet Resources](https://ephemery.dev/)
 
+### Slashing protection
+
+Slashing protection is enabled by default and cannot be disabled by the user. The slashing protection database is stored in non human-readable format in the `validator-db` folder, which can be found in the root data directory (see flag `--dataDir`). If you migrate to or from a different client, please use the [slashing protection import](./validator-cli.md#validator-slashing-protection-import) or [export](./validator-cli.md#validator-slashing-protection-export) commands to transfer your data.
+
 ## Run the validator
 
 To start a Lodestar validator run the command:
