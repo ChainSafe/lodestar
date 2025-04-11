@@ -255,15 +255,15 @@ export class AggregatedAttestationPool {
       const slotDelta = stateSlot - slot;
       for (const attestationGroupByIndex of attestationGroupByIndexByDataHash.values()) {
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
-          const notSeenAttestingIndices = notSeenValidatorsFn(epoch, slot, committeeIndex);
-          if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
+          const notSeenCommitteeMembers = notSeenValidatorsFn(epoch, slot, committeeIndex);
+          if (notSeenCommitteeMembers === null || notSeenCommitteeMembers.size === 0) {
             continue;
           }
 
           if (
             slotCount > 2 &&
             attestationsByScore.length >= MAX_ATTESTATIONS &&
-            notSeenAttestingIndices.size / slotDelta < minScore
+            notSeenCommitteeMembers.size / slotDelta < minScore
           ) {
             // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS attestations and break the for loop early
             // if not, we may have to scan all slots in the pool
@@ -286,7 +286,7 @@ export class AggregatedAttestationPool {
           for (const {attestation, newSeenEffectiveBalance} of attestationGroup.getAttestationsForBlock(
             fork,
             state.epochCtx.effectiveBalanceIncrements,
-            notSeenAttestingIndices,
+            notSeenCommitteeMembers,
             MAX_ATTESTATIONS_PER_GROUP
           )) {
             const score = newSeenEffectiveBalance / slotDelta;
@@ -384,8 +384,8 @@ export class AggregatedAttestationPool {
         }
 
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
-          const notSeenAttestingIndices = notSeenValidatorsFn(epoch, slot, committeeIndex);
-          if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
+          const notSeenCommitteeMembers = notSeenValidatorsFn(epoch, slot, committeeIndex);
+          if (notSeenCommitteeMembers === null || notSeenCommitteeMembers.size === 0) {
             this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.seenCommittees.inc();
             continue;
           }
@@ -403,7 +403,7 @@ export class AggregatedAttestationPool {
           const attestationsSameGroup = attestationGroup.getAttestationsForBlock(
             fork,
             state.epochCtx.effectiveBalanceIncrements,
-            notSeenAttestingIndices,
+            notSeenCommitteeMembers,
             MAX_ATTESTATIONS_PER_GROUP_ELECTRA
           );
 
@@ -425,7 +425,7 @@ export class AggregatedAttestationPool {
               sameAttDataCon.byCommittee.set(committeeIndex, attestationNonParticipation);
               sameAttDataCon.totalNewSeenEffectiveBalance += attestationNonParticipation.newSeenEffectiveBalance;
               sameAttDataCon.newSeenAttesters += attestationNonParticipation.newSeenAttesters;
-              sameAttDataCon.notSeenAttesters += attestationNonParticipation.notSeenAttestingIndices.size;
+              sameAttDataCon.notSeenAttesters += attestationNonParticipation.notSeenCommitteeMembers.size;
               sameAttDataCon.totalAttesters += attestationGroup.committee.length;
             }
           }
@@ -572,7 +572,7 @@ type AttestationNonParticipant = {
   // this is only updated and used in removeBySeenValidators function
   newSeenEffectiveBalance: number;
   newSeenAttesters: number;
-  notSeenAttestingIndices: Set<number>;
+  notSeenCommitteeMembers: Set<number>;
 };
 
 /**
@@ -651,13 +651,13 @@ export class MatchingDataAttestationGroup {
 
   /**
    * Get AttestationNonParticipant for this groups of same attestation data.
-   * @param notSeenCommitteeMembers not seen attesting indices, i.e. indices in the same committee
+   * @param notSeenCommitteeMembers not seen committee members, i.e. indices in the same committee (starting from 0 till (committee.size - 1))
    * @returns an array of AttestationNonParticipant
    */
   getAttestationsForBlock(
     fork: ForkName,
     effectiveBalanceIncrements: EffectiveBalanceIncrements,
-    notSeenAttestingIndices: Set<number>,
+    notSeenCommitteeMembers: Set<number>,
     maxAttestation: number
   ): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
@@ -666,7 +666,7 @@ export class MatchingDataAttestationGroup {
       const mostValuableAttestation = this.getMostValuableAttestation(
         fork,
         effectiveBalanceIncrements,
-        notSeenAttestingIndices,
+        notSeenCommitteeMembers,
         excluded
       );
 
@@ -677,11 +677,11 @@ export class MatchingDataAttestationGroup {
 
       attestations.push(mostValuableAttestation);
       excluded.add(mostValuableAttestation.attestation);
-      // this will narrow down the notSeenAttestingIndices for the next iteration
+      // this will narrow down the notSeenCommitteeMembers for the next iteration
       // so usually it will not take much time, however it could take more time during
       // non-finality of the network when there is low participation, but in this case
       // we pre-aggregate aggregated attestations and bound the total attestations per group
-      notSeenAttestingIndices = mostValuableAttestation.notSeenAttestingIndices;
+      notSeenCommitteeMembers = mostValuableAttestation.notSeenCommitteeMembers;
     }
 
     return attestations;
@@ -693,10 +693,10 @@ export class MatchingDataAttestationGroup {
   private getMostValuableAttestation(
     fork: ForkName,
     effectiveBalanceIncrements: EffectiveBalanceIncrements,
-    notSeenAttestingIndices: Set<number>,
+    notSeenCommitteeMembers: Set<number>,
     excluded: Set<Attestation>
   ): AttestationNonParticipant | null {
-    if (notSeenAttestingIndices.size === 0) {
+    if (notSeenCommitteeMembers.size === 0) {
       // no more attesters to consider
       return null;
     }
@@ -723,7 +723,7 @@ export class MatchingDataAttestationGroup {
       let newSeenEffectiveBalance = 0;
       let newSeenAttesters = 0;
       const {aggregationBits} = attestation;
-      for (const notSeenIndex of notSeenAttestingIndices) {
+      for (const notSeenIndex of notSeenCommitteeMembers) {
         if (aggregationBits.get(notSeenIndex)) {
           newSeenEffectiveBalance += effectiveBalanceIncrements[this.committee[notSeenIndex]];
           newSeenAttesters++;
@@ -738,7 +738,7 @@ export class MatchingDataAttestationGroup {
           attestation,
           newSeenEffectiveBalance,
           newSeenAttesters,
-          notSeenAttestingIndices: notSeen,
+          notSeenCommitteeMembers: notSeen,
         };
       }
     }
@@ -820,13 +820,13 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
       }
       const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
 
-      const notSeenAttestingIndices = new Set<number>();
+      const notSeenCommitteeMembers = new Set<number>();
       for (const [i, validatorIndex] of committee.entries()) {
         if (!participants.has(validatorIndex)) {
-          notSeenAttestingIndices.add(i);
+          notSeenCommitteeMembers.add(i);
         }
       }
-      return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
+      return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
     };
   }
 
@@ -850,24 +850,24 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
       return null;
     }
     const cacheKey = slot + "_" + committeeIndex;
-    let notSeenAttestingIndices = cachedNotSeenValidators.get(cacheKey);
-    if (notSeenAttestingIndices != null) {
+    let notSeenCommitteeMembers = cachedNotSeenValidators.get(cacheKey);
+    if (notSeenCommitteeMembers != null) {
       // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-      return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
+      return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
     }
 
     const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
-    notSeenAttestingIndices = new Set<number>();
+    notSeenCommitteeMembers = new Set<number>();
     for (const [i, validatorIndex] of committee.entries()) {
       // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
       // attestations for the previous slot are not included in the state, so we don't need to check for them
       if (slot === stateSlot - 1 || participationStatus[validatorIndex] === 0) {
-        notSeenAttestingIndices.add(i);
+        notSeenCommitteeMembers.add(i);
       }
     }
-    cachedNotSeenValidators.set(cacheKey, notSeenAttestingIndices);
+    cachedNotSeenValidators.set(cacheKey, notSeenCommitteeMembers);
     // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-    return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
+    return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
   };
 }
 
