@@ -524,7 +524,7 @@ export class AggregatedAttestationPool {
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
-    const aggregatedAttestationPoolMetrics = metrics.opPool.aggregatedAttestationPool;
+    const poolMetrics = metrics.opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 
     // last item is current slot, we want the previous one, if available.
@@ -537,7 +537,7 @@ export class AggregatedAttestationPool {
     if (previousSlot !== null) {
       const groupByIndexByDataHex = this.attestationGroupByIndexByDataHexBySlot.get(previousSlot);
       if (groupByIndexByDataHex != null) {
-        aggregatedAttestationPoolMetrics.attDataPerSlot.set(groupByIndexByDataHex.size);
+        poolMetrics.attDataPerSlot.set(groupByIndexByDataHex.size);
 
         let maxAttestations = 0;
         let committeeCount = 0;
@@ -546,14 +546,14 @@ export class AggregatedAttestationPool {
           for (const group of groupByIndex.values()) {
             const attestationCountInGroup = group.getAttestationCount();
             maxAttestations = Math.max(maxAttestations, attestationCountInGroup);
-            aggregatedAttestationPoolMetrics.attestationsPerCommittee.observe(attestationCountInGroup);
+            poolMetrics.attestationsPerCommittee.observe(attestationCountInGroup);
             committeeCount += 1;
 
             attestationCount += attestationCountInGroup;
           }
         }
-        aggregatedAttestationPoolMetrics.maxAttestationsPerCommittee.set(maxAttestations);
-        aggregatedAttestationPoolMetrics.committeesPerSlot.set(committeeCount);
+        poolMetrics.maxAttestationsPerCommittee.set(maxAttestations);
+        poolMetrics.committeesPerSlot.set(committeeCount);
       }
     }
 
@@ -570,8 +570,8 @@ export class AggregatedAttestationPool {
       }
     }
 
-    aggregatedAttestationPoolMetrics.size.set(attestationCount);
-    aggregatedAttestationPoolMetrics.uniqueData.set(attestationDataCount);
+    poolMetrics.size.set(attestationCount);
+    poolMetrics.uniqueData.set(attestationDataCount);
   }
 }
 
