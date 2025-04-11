@@ -902,9 +902,9 @@ export function createLodestarMetrics(
           labelNames: ["insertOutcome"],
         }),
         packedAttestations: {
-          committeeBits: register.gauge<{index: number}>({
-            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_committee_bits_total",
-            help: "Total number of committee bits in packed attestation ${index}",
+          committeeCount: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_committee_count",
+            help: "Total number of committees in packed attestation ${index}",
             labelNames: ["index"],
           }),
           totalAttesters: register.gauge<{index: number}>({

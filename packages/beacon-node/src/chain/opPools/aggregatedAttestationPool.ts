@@ -477,7 +477,7 @@ export class AggregatedAttestationPool {
 
       // record metrics of packed attestations
       const committeeCount = consolidation.byCommittee.size;
-      packedAttestationsMetrics?.committeeBits.set({index: i}, committeeCount);
+      packedAttestationsMetrics?.committeeCount.set({index: i}, committeeCount);
       packedAttestationsMetrics?.totalAttesters.set({index: i}, consolidation.totalAttesters);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
       packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
