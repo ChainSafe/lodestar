@@ -1,6 +1,6 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import {fetch} from '@lodestar/utils';
+import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
 import {SHARED_JWT_SECRET} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
@@ -119,22 +119,22 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     },
     health: async () => {
       const response = await fetch(ethRpcPublicUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
           method: "net_version",
           params: [],
-          id: 67
+          id: 67,
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
       }
-      
+
       // Verify the response contains valid JSON-RPC response
       const json = await response.json();
       if (json.error) {

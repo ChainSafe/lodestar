@@ -1,4 +1,4 @@
-import {fetch, ErrorAborted, Histogram, Logger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Histogram, Logger, TimeoutError, fetch} from "@lodestar/utils";
 import {Registry} from "prom-client";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {createClientStats} from "./clientStats.js";

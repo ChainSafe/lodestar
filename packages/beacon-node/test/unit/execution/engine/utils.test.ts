@@ -1,4 +1,4 @@
-import {FetchError, ErrorAborted} from "@lodestar/utils";
+import {ErrorAborted, FetchError} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {
