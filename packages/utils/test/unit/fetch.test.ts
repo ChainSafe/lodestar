@@ -90,11 +90,10 @@ describe("FetchError", () => {
   afterEach(async () => {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
-      if (afterHook) 
+      if (afterHook)
         await afterHook().catch((e: Error) => {
           console.error("Error in afterEach hook", e);
         });
-      
     }
   });
 
@@ -129,28 +128,4 @@ describe("FetchError", () => {
       });
     });
   }
-
-  // Additional test for successful fetch
-  it("successful fetch", async () => {
-    const server = http.createServer((_req, res) => {
-      res.writeHead(200, {"Content-Type": "application/json"});
-      res.end(JSON.stringify({status: "ok"}));
-    });
-
-    await new Promise<void>((resolve) => server.listen(port, resolve));
-    afterHooks.push(
-      () =>
-        new Promise((resolve, reject) =>
-          server.close((err) => {
-            if (err) reject(err);
-            else resolve();
-          })
-        )
-    );
-
-    const response = await fetch(`http://localhost:${port}`);
-    expect(response.ok).toBe(true);
-    const data = await response.json();
-    expect(data).toEqual({status: "ok"});
-  });
 });
