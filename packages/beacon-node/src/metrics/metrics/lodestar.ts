@@ -923,7 +923,7 @@ export function createLodestarMetrics(
             labelNames: ["index"],
           }),
           totalEffectiveBalance: register.gauge<{index: number}>({
-            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_effective_balance",
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_effective_balance_total",
             help: "Total effective balance of new seen attesters in packed attestation ${index}",
             labelNames: ["index"],
           }),
