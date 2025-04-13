@@ -12,6 +12,7 @@ import {ckzg} from "../../util/kzg.js";
 import {DataColumnSidecarErrorCode, DataColumnSidecarGossipError} from "../errors/dataColumnSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
+import {Metrics} from "../../metrics/metrics.js";
 
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
@@ -43,7 +44,7 @@ export async function validateGossipDataColumnSidecar(
     });
   }
 
-  if (!validateInclusionProof(dataColumnSideCar)) {
+  if (!validateInclusionProof(dataColumnSideCar, chain.metrics)) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
       slot: dataColumnSideCar.signedBlockHeader.message.slot,
@@ -57,6 +58,7 @@ export function validateDataColumnsSidecars(
   blockRoot: Root,
   blockKzgCommitments: deneb.BlobKzgCommitments,
   dataColumnSidecars: fulu.DataColumnSidecars,
+  metrics: Metrics | null,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): void {
   const commitmentBytes: Uint8Array[] = [];
@@ -108,7 +110,9 @@ export function validateDataColumnsSidecars(
 
   let valid: boolean;
   try {
+    const timer = metrics?.peerDas.kzgVerificationDataColumnBatchSeconds.startTimer();
     valid = ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
+    timer?.();
   } catch (err) {
     (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toHex(blockRoot)}`;
     throw err;
@@ -119,12 +123,15 @@ export function validateDataColumnsSidecars(
   }
 }
 
-function validateInclusionProof(dataColumnSidecar: fulu.DataColumnSidecar): boolean {
-  return verifyMerkleBranch(
+function validateInclusionProof(dataColumnSidecar: fulu.DataColumnSidecar, metrics: Metrics | null): boolean {
+  const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationSeconds.startTimer();
+  const result = verifyMerkleBranch(
     ssz.deneb.BlobKzgCommitments.hashTreeRoot(dataColumnSidecar.kzgCommitments),
     dataColumnSidecar.kzgCommitmentsInclusionProof,
     KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
     KZG_COMMITMENTS_SUBTREE_INDEX,
     dataColumnSidecar.signedBlockHeader.message.bodyRoot
   );
+  timer?.();
+  return result;
 }

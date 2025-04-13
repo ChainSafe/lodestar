@@ -85,6 +85,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           dataColumnSidecars,
         };
         fnPromises.push(this.db.dataColumnSidecars.add(writeData));
+        this.metrics?.peerDas.custodyColumnsCountTotal.inc(dataColumnSidecars.length);
 
         this.logger.debug("Persisted dataColumnSidecars to hot DB", {
           dataColumnsSize,

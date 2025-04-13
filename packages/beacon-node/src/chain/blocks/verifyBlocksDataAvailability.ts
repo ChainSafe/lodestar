@@ -82,7 +82,7 @@ export async function verifyBlocksDataAvailability(
 }
 
 async function maybeValidateBlobs(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; metrics: Metrics | null; logger: Logger},
   blockInput: BlockInput,
   signal: AbortSignal,
   opts: ImportBlockOpts
@@ -126,7 +126,9 @@ async function maybeValidateBlobs(
       } else if (blockData.fork === ForkName.fulu) {
         const {dataColumns} = blockData as BlockInputDataColumns;
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-        validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, {skipProofsCheck});
+        validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, chain.metrics, {
+          skipProofsCheck,
+        });
       }
 
       const availableBlockInput = getBlockInput.availableData(
