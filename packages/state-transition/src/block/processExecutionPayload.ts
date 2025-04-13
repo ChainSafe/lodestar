@@ -52,7 +52,7 @@ export function processExecutionPayload(
     const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(forkName);
     const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
-      throw Error(`blobKzgCommitmentsLen exceeds limit=${maxBlobsPerBlock}`);
+      throw Error(`blobKzgCommitmentsLen of ${blobKzgCommitmentsLen} exceeds limit=${maxBlobsPerBlock}`);
     }
   }
 
