@@ -1,7 +1,7 @@
-import {BeaconConfig} from "@lodestar/config";
-import {NodeId, computeNodeId} from "./subnets";
-import {CustodyConfig, computeCustodyConfig} from "../util/dataColumns";
 import {PeerId} from "@libp2p/interface";
+import {BeaconConfig} from "@lodestar/config";
+import {CustodyConfig, computeCustodyConfig} from "../util/dataColumns.js";
+import {NodeId, computeNodeId} from "./subnets/interface.js";
 
 /**
  * Store shared data for different modules in the network stack.
