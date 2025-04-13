@@ -86,6 +86,7 @@ export type ChainConfig = {
   SAMPLES_PER_SLOT: number;
   CUSTODY_REQUIREMENT: number;
   NODE_CUSTODY_REQUIREMENT: number;
+  MAX_BLOBS_PER_BLOCK_FULU: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -164,6 +165,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   SAMPLES_PER_SLOT: "number",
   CUSTODY_REQUIREMENT: "number",
   NODE_CUSTODY_REQUIREMENT: "number",
+  MAX_BLOBS_PER_BLOCK_FULU: "number",
 };
 
 /** Allows values in a Spec file */
