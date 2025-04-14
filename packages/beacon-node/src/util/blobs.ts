@@ -97,12 +97,12 @@ export function computeDataColumnSidecars(
   return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
     // columnIndex'th column
     const column = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
-    const columnKzgProofs = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]);
+    const kzgProofs = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]);
     return {
       index: columnIndex,
       column,
       kzgCommitments: blobKzgCommitments,
-      kzgProofs: columnKzgProofs,
+      kzgProofs,
       signedBlockHeader,
       kzgCommitmentsInclusionProof,
     };
