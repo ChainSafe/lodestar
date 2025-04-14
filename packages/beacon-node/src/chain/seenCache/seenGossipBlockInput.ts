@@ -385,22 +385,21 @@ export class SeenGossipBlockInput {
       return;
     }
 
-    // Process KZG commitments into versioned hashes
-    let versionedHashes: Uint8Array[];
-
+    let commitments: undefined | Uint8Array[];
     if (blockCache.block) {
       const block = blockCache.block as fulu.SignedBeaconBlock;
-      versionedHashes = block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
-    } else if (blockCache.cachedData) {
-      const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
-      if (!firstSidecar) {
-        throw new Error("blockInputCache missing both block and data column sidecar");
-      }
-
-      versionedHashes = firstSidecar.dataColumn.kzgCommitments.map(kzgCommitmentToVersionedHash);
+      commitments = block.message.body.blobKzgCommitments;
     } else {
+      const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
+      commitments = firstSidecar?.dataColumn.kzgCommitments;
+    }
+
+    if (!commitments) {
       throw new Error("blockInputCache missing both block and cachedData");
     }
+
+    // Process KZG commitments into versioned hashes
+    const versionedHashes: Uint8Array[] = commitments.map(kzgCommitmentToVersionedHash);
 
     // Return if block has no blobs
     if (versionedHashes.length === 0) {
@@ -428,14 +427,12 @@ export class SeenGossipBlockInput {
         blockCache.block as fulu.SignedBeaconBlock,
         cellsAndProofs
       );
-    } else if (blockCache.cachedData) {
+    } else {
       const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
       if (!firstSidecar) {
         throw new Error("blockInputCache missing both block and data column sidecar");
       }
       dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar.dataColumn, cellsAndProofs);
-    } else {
-      throw new Error("blockInputCache missing both block and cachedData");
     }
 
     // Publish columns if and only if subscribed to them
