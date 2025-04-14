@@ -10,7 +10,7 @@ import {NodeId, computeNodeId} from "./subnets/interface.js";
 export class NetworkConfig {
   private readonly nodeId: NodeId;
   private readonly config: BeaconConfig;
-  readonly custodyConfig: CustodyConfig;
+  private readonly custodyConfig: CustodyConfig;
 
   constructor(peerId: PeerId, config: BeaconConfig) {
     this.nodeId = computeNodeId(peerId);
@@ -24,6 +24,13 @@ export class NetworkConfig {
 
   getNodeId(): NodeId {
     return this.nodeId;
+  }
+
+  /**
+   * Consumer should never mutate returned CustodyConfig
+   */
+  getCustodyConfig(): CustodyConfig {
+    return this.custodyConfig;
   }
 
   setTargetGroupCount(count: number): void {
