@@ -202,11 +202,10 @@ export function getDataColumns(nodeId: NodeId, custodyGroupCount: number): Colum
  * SPEC FUNCTION (note: spec currently computes proofs, but we already have them)
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#compute_matrix
  */
-export function getCellsAndProofs(blobs: fulu.BlobAndProofV2[]): [Uint8Array[], Uint8Array[]][] {
-  return blobs.map((blob) => {
-    const cells = ckzg.computeCells(blob.blob);
-    const proofs = blob.proofs;
-    return [cells, proofs];
+export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): [Uint8Array[], Uint8Array[]][] {
+  return blobBundles.map(({blob, proofs: cellProofs}) => {
+    const cells = ckzg.computeCells(blob);
+    return [cells, cellProofs];
   });
 }
 
