@@ -1,14 +1,18 @@
+import {CELLS_PER_EXT_BLOB, ForkBlobs, ForkSeq} from "@lodestar/params";
 import {ExecutionPayload} from "@lodestar/types";
 import {BlobsBundle} from "../../execution/index.js";
-import { CELLS_PER_EXT_BLOB, ForkBlobs, ForkSeq } from "@lodestar/params";
-import { ckzg } from "../../util/kzg.js";
+import {ckzg} from "../../util/kzg.js";
 
 /**
  * Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
  * https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/validator.md#blob-kzg-commitments
  */
 
-export function validateBlobsAndKzgCommitments(fork: ForkBlobs, _payload: ExecutionPayload, blobsBundle: BlobsBundle): void {
+export function validateBlobsAndKzgCommitments(
+  fork: ForkBlobs,
+  _payload: ExecutionPayload,
+  blobsBundle: BlobsBundle,
+): void {
   if (blobsBundle.blobs.length !== blobsBundle.commitments.length) {
     throw Error(
       `Blobs bundle blobs len ${blobsBundle.blobs.length} != commitments len ${blobsBundle.commitments.length}`
@@ -37,7 +41,9 @@ export function validateBlobsAndKzgCommitments(fork: ForkBlobs, _payload: Execut
     }
   } else {
     if (blobsBundle.proofs.length !== blobsBundle.blobs.length) {
-      throw new Error(`Invalid proofs length for BlobsBundleV1 format: expected ${blobsBundle.blobs.length}, got ${blobsBundle.proofs.length}`);
+      throw new Error(
+        `Invalid proofs length for BlobsBundleV1 format: expected ${blobsBundle.blobs.length}, got ${blobsBundle.proofs.length}`
+      );
     }
   }
 }
