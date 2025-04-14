@@ -430,7 +430,7 @@ export class SeenGossipBlockInput {
     } else if (blockCache.cachedData) {
       const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
       if (!firstSidecar) {
-        return;
+        throw new Error("blockInputCache missing both block and data column sidecar");
       }
       dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar.dataColumn, cellsAndProofs);
     } else {
