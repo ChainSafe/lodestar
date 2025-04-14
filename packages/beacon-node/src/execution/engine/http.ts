@@ -101,6 +101,13 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  */
 const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 
+/**
+ * Maximum number of version hashes that can be sent in a getBlobs request
+ * Clients must support at least 128 versionedHashes, so we avoid sending more
+ * https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#specification-3
+ */
+const MAX_VERSIONED_HASHES = 128;
+
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
@@ -494,9 +501,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       }
     }
 
-    // Clients must support at least 128 versionedHashes, so we avoid sending more
-    // https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#specification-3
-    assertReqSizeLimit(versionedHashes.length, 128);
+    assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
     const response = await this.rpc
       .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
