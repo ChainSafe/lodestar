@@ -271,7 +271,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     seenTimestampSec: number
   ): Promise<BlockInput | NullBlockInput> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
-    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationSeconds.startTimer();
+    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
 
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;

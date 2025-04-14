@@ -110,7 +110,7 @@ export function validateDataColumnsSidecars(
 
   let valid: boolean;
   try {
-    const timer = metrics?.peerDas.kzgVerificationDataColumnBatchSeconds.startTimer();
+    const timer = metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
     valid = ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
     timer?.();
   } catch (err) {
@@ -124,7 +124,7 @@ export function validateDataColumnsSidecars(
 }
 
 function validateInclusionProof(dataColumnSidecar: fulu.DataColumnSidecar, metrics: Metrics | null): boolean {
-  const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationSeconds.startTimer();
+  const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
   const result = verifyMerkleBranch(
     ssz.deneb.BlobKzgCommitments.hashTreeRoot(dataColumnSidecar.kzgCommitments),
     dataColumnSidecar.kzgCommitmentsInclusionProof,
