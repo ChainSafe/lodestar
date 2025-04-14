@@ -460,7 +460,7 @@ export class SeenGossipBlockInput {
     };
     blockCache.cachedData.resolveAvailability(blockData);
 
-    if (blockCache.block) {
+    if (blockCache.block !== undefined) {
       const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);
 
       blockCache.resolveBlockInput(blockInput);
