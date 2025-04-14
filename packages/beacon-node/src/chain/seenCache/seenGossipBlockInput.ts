@@ -375,11 +375,15 @@ export class SeenGossipBlockInput {
       return;
     }
 
+    if (!blockCache.cachedData) {
+      // this condition should never get hit... just a sanity check
+      throw new Error("invalid blockCache");
+    }
+
     // If already have all columns, exit
     if (
-      blockCache.cachedData &&
-      (blockCache.cachedData.fork !== ForkName.fulu ||
-        this.hasSampledDataColumns(blockCache.cachedData.dataColumnsCache))
+      blockCache.cachedData.fork !== ForkName.fulu ||
+      this.hasSampledDataColumns(blockCache.cachedData.dataColumnsCache)
     ) {
       return;
     }
@@ -389,7 +393,7 @@ export class SeenGossipBlockInput {
       const block = blockCache.block as fulu.SignedBeaconBlock;
       commitments = block.message.body.blobKzgCommitments;
     } else {
-      const firstSidecar = blockCache.cachedData?.dataColumnsCache.values().next().value;
+      const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
       commitments = firstSidecar?.dataColumn.kzgCommitments;
     }
 
@@ -414,7 +418,7 @@ export class SeenGossipBlockInput {
     }
 
     // Return if we received all data columns while waiting for getBlobs
-    if (blockCache.cachedData && this.hasSampledDataColumns(blockCache.cachedData.dataColumnsCache)) {
+    if (this.hasSampledDataColumns(blockCache.cachedData.dataColumnsCache)) {
       return;
     }
 
@@ -426,14 +430,12 @@ export class SeenGossipBlockInput {
         blockCache.block as fulu.SignedBeaconBlock,
         cellsAndProofs
       );
-    } else if (blockCache.cachedData) {
+    } else {
       const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
       if (!firstSidecar) {
         throw new Error("blockInputCache missing both block and data column sidecar");
       }
       dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar.dataColumn, cellsAndProofs);
-    } else {
-      throw new Error("blockInputCache missing both block and cached data");
     }
 
     // Publish columns if and only if subscribed to them
@@ -441,29 +443,27 @@ export class SeenGossipBlockInput {
 
     this.emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
 
-    if (blockCache.cachedData) {
-      for (const column of sampledColumns) {
-        blockCache.cachedData.dataColumnsCache.set(column.index, {dataColumn: column, dataColumnBytes: null});
-      }
+    for (const column of sampledColumns) {
+      blockCache.cachedData.dataColumnsCache.set(column.index, {dataColumn: column, dataColumnBytes: null});
+    }
 
-      if (blockCache.block) {
-        const allDataColumns = getBlockInputDataColumns(
-          blockCache.cachedData.dataColumnsCache,
-          this.custodyConfig.sampledColumns
-        );
-        // TODO: Add metrics
-        // metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const blockData: BlockInputDataColumns = {
-          fork: blockCache.cachedData.fork,
-          ...allDataColumns,
-          dataColumnsSource: DataColumnsSource.gossip,
-        };
-        blockCache.cachedData.resolveAvailability(blockData);
+    const allDataColumns = getBlockInputDataColumns(
+      blockCache.cachedData.dataColumnsCache,
+      this.custodyConfig.sampledColumns
+    );
+    // TODO: Add metrics
+    // metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+    const blockData: BlockInputDataColumns = {
+      fork: blockCache.cachedData.fork,
+      ...allDataColumns,
+      dataColumnsSource: DataColumnsSource.gossip,
+    };
+    blockCache.cachedData.resolveAvailability(blockData);
 
-        const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);
+    if (blockCache.block) {
+      const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);
 
-        blockCache.resolveBlockInput(blockInput);
-      }
+      blockCache.resolveBlockInput(blockInput);
     }
   }
 }
