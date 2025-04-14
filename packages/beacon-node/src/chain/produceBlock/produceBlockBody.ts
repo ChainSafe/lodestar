@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
+import {ForkBlobs, ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -343,24 +343,13 @@ export async function produceBlockBody<T extends BlockType>(
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
 
-          if (ForkSeq[fork] >= ForkSeq.fulu) {
+          if (ForkSeq[fork] >= ForkSeq.deneb) {
             if (blobsBundle === undefined) {
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            (blockBody as fulu.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-            const blockHash = toRootHex(executionPayload.blockHash);
-            const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
-            blobsResult = {type: BlobsResultType.produced, contents, blockHash};
-
-            Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
-          } else if (ForkSeq[fork] >= ForkSeq.deneb) {
-            if (blobsBundle === undefined) {
-              throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
-            }
-
-            if (this.opts.sanityCheckExecutionEngineBlobs) {
-              validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
+            if (ForkSeq[fork] >= ForkSeq.fulu || this.opts.sanityCheckExecutionEngineBlobs) {
+              validateBlobsAndKzgCommitments(fork as ForkBlobs, executionPayload, blobsBundle);
             }
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;

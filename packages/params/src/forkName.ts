@@ -112,10 +112,10 @@ export function isForkPostFulu(fork: ForkName): fork is ForkPostFulu {
 
 export type ForkPreBlobs = ForkPreDeneb;
 export type ForkPostBlobs = ForkPostFulu;
-export type ForkBlobs = ForkName.deneb | ForkName.electra;
-export const forkBlobs = [ForkName.deneb, ForkName.electra];
+export type ForkBlobs = ForkName.deneb | ForkName.electra | ForkName.fulu;
+export const forkBlobs = [ForkName.deneb, ForkName.electra, ForkName.fulu];
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
-  return fork === ForkName.deneb || fork === ForkName.electra;
+  return fork === ForkName.deneb || fork === ForkName.electra || fork === ForkName.fulu;
 }
 
 /*
