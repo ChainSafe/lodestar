@@ -1,5 +1,6 @@
 import {ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
@@ -33,7 +34,8 @@ export function processBlock(
   state: CachedBeaconStateAllForks,
   block: BeaconBlock | BlindedBeaconBlock,
   externalData: BlockExternalData & ProcessBlockOpts,
-  opts?: ProcessBlockOpts
+  opts?: ProcessBlockOpts,
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   const {verifySignatures = true} = opts ?? {};
 
@@ -58,7 +60,7 @@ export function processBlock(
 
   processRandao(state, block, verifySignatures);
   processEth1Data(state, block.body.eth1Data);
-  processOperations(fork, state, block.body, opts);
+  processOperations(fork, state, block.body, opts, metrics);
   if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
   }

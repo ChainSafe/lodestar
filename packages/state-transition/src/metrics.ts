@@ -21,6 +21,9 @@ export type BeaconStateTransitionMetrics = {
   postStateBalancesNodesPopulatedHit: Gauge;
   postStateValidatorsNodesPopulatedMiss: Gauge;
   postStateValidatorsNodesPopulatedHit: Gauge;
+  newSeenAttestersPerBlock: Gauge;
+  newSeenAttestersEffectiveBalancePerBlock: Gauge;
+  attestationsPerBlock: Gauge;
 };
 
 export function onStateCloneMetrics(

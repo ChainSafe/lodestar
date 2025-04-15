@@ -39,11 +39,11 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra, ca
       if (sourceValidator.withdrawableEpoch > nextEpoch) {
         break outer;
       }
+
+      // Calculate the consolidated balance
+      const sourceEffectiveBalance = Math.min(state.balances.get(sourceIndex), sourceValidator.effectiveBalance);
+
       // Move active balance to target. Excess balance is withdrawable.
-      const sourceEffectiveBalance = Math.min(
-        state.balances.get(sourceIndex),
-        state.validators.getReadonly(sourceIndex).effectiveBalance
-      );
       decreaseBalance(state, sourceIndex, sourceEffectiveBalance);
       increaseBalance(state, targetIndex, sourceEffectiveBalance);
       if (cachedBalances) {

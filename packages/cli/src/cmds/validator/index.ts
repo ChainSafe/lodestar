@@ -15,11 +15,11 @@ export const validator: CliCommand<IValidatorCliArgs, GlobalArgs> = {
   docsFolder: "run/validator-management",
   examples: [
     {
-      command: "validator --network holesky",
+      command: "validator --network hoodi",
       title: "Base `validator` command",
       description:
         "Run one validator client with all the keystores available in the directory" +
-        ` ${getAccountPaths({dataDir: ".holesky"}, "holesky").keystoresDir}`,
+        ` ${getAccountPaths({dataDir: ".hoodi"}, "hoodi").keystoresDir}`,
     },
   ],
   options: validatorOptions,

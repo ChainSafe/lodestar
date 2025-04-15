@@ -130,7 +130,7 @@ export function getBeaconPoolApi({
                 committeeSize,
                 priority
               );
-              metrics?.opPool.attestationPoolApiInsertOutcome.inc({insertOutcome});
+              metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
             }
 
             if (isForkPostElectra(fork)) {

@@ -53,7 +53,7 @@ export const gnosisChainConfig: ChainConfig = {
   DENEB_FORK_EPOCH: 889856, // 2024-03-11T18:30:20.000Z
   // Electra
   ELECTRA_FORK_VERSION: b("0x05000064"),
-  ELECTRA_FORK_EPOCH: Infinity,
+  ELECTRA_FORK_EPOCH: 1337856, // 2025-04-30T14:03:40.000Z
   // Fulu
   FULU_FORK_VERSION: b("0x06000064"),
   FULU_FORK_EPOCH: Infinity,
