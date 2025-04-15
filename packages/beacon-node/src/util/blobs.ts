@@ -3,7 +3,6 @@ import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkAll,
-  ForkPostDeneb,
   ForkName,
   KZG_COMMITMENTS_GINDEX,
   KZG_COMMITMENT_GINDEX0,
@@ -74,7 +73,7 @@ export function computeBlobSidecars(
 export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: fulu.Contents & {kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof}
+  contents: fulu.Contents & {kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof, cells?: fulu.Cell[][]}
 ): fulu.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -89,7 +88,7 @@ export function computeDataColumnSidecars(
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
   const {blobs, kzgProofs} = contents;
   const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
-    const cells = ckzg.computeCells(blobs[rowNumber]);
+    const cells = contents.cells?.[rowNumber] ?? ckzg.computeCells(blobs[rowNumber]);
     const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);
     return {cells, proofs};
   });

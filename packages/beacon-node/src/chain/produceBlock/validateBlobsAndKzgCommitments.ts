@@ -1,5 +1,5 @@
 import {CELLS_PER_EXT_BLOB, ForkBlobs, ForkSeq} from "@lodestar/params";
-import {ExecutionPayload} from "@lodestar/types";
+import {ExecutionPayload, fulu} from "@lodestar/types";
 import {BlobsBundle} from "../../execution/index.js";
 import {ckzg} from "../../util/kzg.js";
 
@@ -12,6 +12,7 @@ export function validateBlobsAndKzgCommitments(
   fork: ForkBlobs,
   _payload: ExecutionPayload,
   blobsBundle: BlobsBundle,
+  cells?: fulu.Cell[][]
 ): void {
   if (blobsBundle.blobs.length !== blobsBundle.commitments.length) {
     throw Error(
@@ -20,6 +21,10 @@ export function validateBlobsAndKzgCommitments(
   }
 
   if (ForkSeq[fork] >= ForkSeq.fulu) {
+    if (!cells) {
+      cells = blobsBundle.blobs.map((blob) => ckzg.computeCells(blob));
+    }
+
     const expectedProofsLength = blobsBundle.blobs.length * CELLS_PER_EXT_BLOB;
     if (blobsBundle.proofs.length !== expectedProofsLength) {
       throw Error(
@@ -31,11 +36,10 @@ export function validateBlobsAndKzgCommitments(
     const cellIndices = Array.from({length: blobsBundle.blobs.length}).flatMap(() =>
       Array.from({length: CELLS_PER_EXT_BLOB}, (_, i) => i)
     );
-    const cells = blobsBundle.blobs.flatMap((blob) => ckzg.computeCells(blob));
     const proofBytes = blobsBundle.proofs.flat();
 
     try {
-      ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
+      ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells.flat(), proofBytes);
     } catch {
       throw new Error("Error in verifyCellKzgProofBatch");
     }

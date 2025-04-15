@@ -1,10 +1,10 @@
-import {describe, expect, it, beforeAll} from "vitest";
-import {BlobsBundle} from "../../../../src/execution/index.js";
-import {validateBlobsAndKzgCommitments} from "../../../../src/chain/produceBlock/validateBlobsAndKzgCommitments.js";
-import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../../src/util/kzg.js";
 import {CELLS_PER_EXT_BLOB, ForkName} from "@lodestar/params";
-import {generateRandomBlob} from "../../../utils/kzg.js";
 import {ExecutionPayload} from "@lodestar/types";
+import {beforeAll, describe, expect, it} from "vitest";
+import {validateBlobsAndKzgCommitments} from "../../../../src/chain/produceBlock/validateBlobsAndKzgCommitments.js";
+import {BlobsBundle} from "../../../../src/execution/index.js";
+import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../../src/util/kzg.js";
+import {generateRandomBlob} from "../../../utils/kzg.js";
 
 describe("validateBlobsAndKzgCommitments", () => {
   beforeAll(async () => {

@@ -45,6 +45,7 @@ import {
   getExpectedGasLimit,
 } from "../../execution/index.js";
 import {fromGraffitiBuffer} from "../../util/graffiti.js";
+import {ckzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -98,7 +99,7 @@ export enum BlobsResultType {
 
 export type BlobsResult =
   | {type: BlobsResultType.preDeneb}
-  | {type: BlobsResultType.produced; contents: deneb.Contents; blockHash: RootHex}
+  | {type: BlobsResultType.produced; contents: deneb.Contents & {cells?: fulu.Cell[][]}; blockHash: RootHex}
   | {type: BlobsResultType.blinded};
 
 export async function produceBlockBody<T extends BlockType>(
@@ -348,13 +349,21 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            if (ForkSeq[fork] >= ForkSeq.fulu || this.opts.sanityCheckExecutionEngineBlobs) {
+            let contents: deneb.Contents | fulu.Contents & {cells?: fulu.Cell[][]} = {
+              kzgProofs: blobsBundle.proofs,
+              blobs: blobsBundle.blobs
+            };
+
+            if (ForkSeq[fork] >= ForkSeq.fulu) {
+              const cells = blobsBundle.blobs.map((blob) => ckzg.computeCells(blob));
+              contents = {...contents, cells};
+              validateBlobsAndKzgCommitments(fork as ForkBlobs, executionPayload, blobsBundle, cells);
+            } else if (this.opts.sanityCheckExecutionEngineBlobs) {
               validateBlobsAndKzgCommitments(fork as ForkBlobs, executionPayload, blobsBundle);
             }
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
             const blockHash = toRootHex(executionPayload.blockHash);
-            const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
             blobsResult = {type: BlobsResultType.produced, contents, blockHash};
 
             Object.assign(logMeta, {blobs: blobsBundle.commitments.length});

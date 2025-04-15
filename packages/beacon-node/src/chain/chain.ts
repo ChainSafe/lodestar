@@ -34,6 +34,7 @@ import {
   Wei,
   bellatrix,
   deneb,
+  fulu,
   isBlindedBeaconBlock,
   phase0,
 } from "@lodestar/types";
@@ -166,7 +167,7 @@ export class BeaconChain implements IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
+  readonly producedContentsCache = new Map<BlockHash, deneb.Contents & {cells?: fulu.Cell[][]}>();
 
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
@@ -775,7 +776,7 @@ export class BeaconChain implements IBeaconChain {
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents & {cells?: fulu.Cell[][]} {
     const blockHash = toRootHex(beaconBlock.body.executionPayload.blockHash);
     const contents = this.producedContentsCache.get(blockHash);
     if (!contents) {
