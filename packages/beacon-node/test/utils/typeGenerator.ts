@@ -43,7 +43,7 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     timeliness: false,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    dataAvailabilityStatus: DataAvailabilityStatus.preData,
     ...overrides,
   } as ProtoBlock;
 }

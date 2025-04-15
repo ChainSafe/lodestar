@@ -46,7 +46,7 @@ describe("Forkchoice / GetProposerHead", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
-    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    dataAvailabilityStatus: DataAvailabilityStatus.preData,
   };
 
   const baseHeadBlock: ProtoBlockWithWeight = {
@@ -71,7 +71,7 @@ describe("Forkchoice / GetProposerHead", () => {
     timeliness: false,
 
     weight: 29,
-    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    dataAvailabilityStatus: DataAvailabilityStatus.preData,
   };
 
   const baseParentHeadBlock: ProtoBlockWithWeight = {
@@ -95,7 +95,7 @@ describe("Forkchoice / GetProposerHead", () => {
 
     timeliness: false,
     weight: 212, // 240 - 29 + 1
-    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    dataAvailabilityStatus: DataAvailabilityStatus.preData,
   };
 
   const fcStore: IForkChoiceStore = {

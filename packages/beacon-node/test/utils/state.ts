@@ -178,5 +178,5 @@ export const zeroProtoBlock: ProtoBlock = {
   timeliness: false,
 
   ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-  dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+  dataAvailabilityStatus: DataAvailabilityStatus.preData,
 };

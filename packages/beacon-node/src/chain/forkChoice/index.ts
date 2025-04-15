@@ -101,7 +101,7 @@ export function initializeForkChoice(
             }
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        dataAvailabilityStatus: DataAvailabilityStatus.preData,
       },
       currentSlot
     ),

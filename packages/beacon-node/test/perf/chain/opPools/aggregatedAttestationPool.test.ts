@@ -66,7 +66,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           executionStatus: ExecutionStatus.PreMerge,
 
           timeliness: false,
-          dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+          dataAvailabilityStatus: DataAvailabilityStatus.preData,
         },
         originalState.slot
       );
@@ -91,7 +91,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             executionPayloadBlockHash: null,
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
-            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+            dataAvailabilityStatus: DataAvailabilityStatus.preData,
           },
           slot
         );

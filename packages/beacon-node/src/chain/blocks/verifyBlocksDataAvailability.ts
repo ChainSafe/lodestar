@@ -79,7 +79,7 @@ async function maybeValidateBlobs(
 ): Promise<{dataAvailabilityStatus: DataAvailabilityStatus; availableBlockInput: BlockInput}> {
   switch (blockInput.type) {
     case BlockInputType.preData:
-      return {dataAvailabilityStatus: DataAvailabilityStatus.PreData, availableBlockInput: blockInput};
+      return {dataAvailabilityStatus: DataAvailabilityStatus.preData, availableBlockInput: blockInput};
 
     case BlockInputType.outOfRangeData:
       return {dataAvailabilityStatus: DataAvailabilityStatus.OutOfRange, availableBlockInput: blockInput};

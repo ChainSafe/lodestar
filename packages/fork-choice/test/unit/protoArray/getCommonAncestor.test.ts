@@ -43,7 +43,7 @@ describe("getCommonAncestor", () => {
       timeliness: false,
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+      dataAvailabilityStatus: DataAvailabilityStatus.preData,
     },
     0
   );
@@ -69,7 +69,7 @@ describe("getCommonAncestor", () => {
         timeliness: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        dataAvailabilityStatus: DataAvailabilityStatus.preData,
       },
       block.slot
     );

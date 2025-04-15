@@ -33,7 +33,7 @@ describe("ProtoArray", () => {
         timeliness: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        dataAvailabilityStatus: DataAvailabilityStatus.preData,
       },
       genesisSlot
     );
@@ -59,7 +59,7 @@ describe("ProtoArray", () => {
         timeliness: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        dataAvailabilityStatus: DataAvailabilityStatus.preData,
       },
       genesisSlot + 1
     );
@@ -85,7 +85,7 @@ describe("ProtoArray", () => {
         timeliness: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        dataAvailabilityStatus: DataAvailabilityStatus.preData,
       },
       genesisSlot + 1
     );
