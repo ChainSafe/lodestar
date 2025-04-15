@@ -122,6 +122,15 @@ export const BlobSidecar = new ContainerType(
   {typeName: "BlobSidecar", jsonCase: "eth2"}
 );
 
+export const BlobsBundle = new ContainerType(
+  {
+    commitments: denebSsz.BlobKzgCommitments,
+    proofs: KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlobsBundle", jsonCase: "eth2"}
+);
+
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...electraSsz.BlindedBeaconBlockBody.fields,
@@ -161,7 +170,8 @@ export const SignedBuilderBid = new ContainerType(
 
 export const ExecutionPayloadAndBlobsBundle = new ContainerType(
   {
-    ...denebSsz.ExecutionPayloadAndBlobsBundle.fields,
+    executionPayload: ExecutionPayload,
+    blobsBundle: BlobsBundle,
   },
   {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
