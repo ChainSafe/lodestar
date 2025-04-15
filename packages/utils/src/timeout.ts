@@ -6,13 +6,18 @@ export async function withTimeout<T>(
   timeoutMs: number,
   signal?: AbortSignal
 ): Promise<T> {
+  
+  if (signal?.aborted) {
+    throw signal.reason || new Error("Aborted");
+  }
+
   const timeoutAbortController = new AbortController();
   const timeoutAndParentSignal = timeoutAbortController.signal;
 
   if (signal) {
     signal.addEventListener(
       "abort",
-      () => timeoutAbortController.abort(signal.reason),
+      (reason) => timeoutAbortController.abort(reason),
       { signal }
     );
   }
