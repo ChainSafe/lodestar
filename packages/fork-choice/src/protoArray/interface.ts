@@ -39,7 +39,7 @@ export enum DataAvailabilityStatus {
   preData = "PreData",
   /* validator activities can't be performed on out of range data */
   OutOfRange = "OutOfRange",
-  Available = "Available",
+  available = "Available",
 }
 
 export type BlockExtraMeta =
