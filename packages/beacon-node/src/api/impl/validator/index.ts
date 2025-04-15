@@ -392,7 +392,7 @@ export function getValidatorApi(
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
 
-    if (protoBeaconBlock.dataAvailabilityStatus === DataAvailabilityStatus.OutOfRange)
+    if (protoBeaconBlock.dataAvailabilityStatus === DataAvailabilityStatus.outOfRange)
       throw new NodeIsSyncing("Block's data is out of range and not validated");
   }
 
